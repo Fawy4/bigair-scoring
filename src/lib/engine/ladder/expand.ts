@@ -1,0 +1,143 @@
+import { RoundSpecSchema, type FormatTemplate, type RoundSpec } from "@/lib/schemas/format-template";
+import { makeSlot, outcomeOf, refreshIdentifierWarnings, sourceSlots } from "./build";
+import { generateDingleElimination, generatePoolsToFinal, generateSingleElimination } from "./generators";
+import { recompute } from "./recompute";
+import { dealByRule, defaultRngSeed, roundLayout, shuffleSeeds } from "./seeding";
+import type { DivisionDraw, DrawHeat, DrawOverrides, DrawRound, Entrant, LadderWarning } from "./types";
+
+/** Concrete rounds for `n` riders: the fixed list, or whatever the generator produces. */
+function roundSpecsFor(template: FormatTemplate, n: number, warnings: LadderWarning[]): RoundSpec[] {
+  const { min, max } = template.entrants;
+  if (max !== null && n > max) {
+    if (template.kind === "fixed") throw new Error(`${template.name} takes at most ${max} riders (this division has ${n}).`);
+    warnings.push({ type: "above_template_max", message: `${n} riders is above the template maximum of ${max}.` });
+  }
+  if (n < min) {
+    warnings.push({ type: "below_template_min", message: `${n} riders is below the template minimum of ${min}.` });
+    if (template.kind === "fixed") {
+      if (n > 10) throw new Error(`${template.name} needs at least ${min} riders (this division has ${n}).`);
+      warnings.push({ type: "small_division_single_final", message: `All ${n} riders will ride one final.` });
+      const last = template.rounds![template.rounds!.length - 1];
+      return [
+        RoundSpecSchema.parse({ id: "F", name: "Final", shortName: "F", heatSize: Math.max(n, 1), durationMin: last.durationMin, seeding: "sequential", advance: [{ places: "rest", to: "final_placing" }] }),
+      ];
+    }
+  }
+  if (template.kind === "fixed") return template.rounds!;
+  const g = template.generator!;
+  switch (g.type) {
+    case "single_elimination":
+      return generateSingleElimination(n, g.params);
+    case "dingle_elimination":
+      return generateDingleElimination(n, g.params);
+    case "pools_to_final":
+      return generatePoolsToFinal(n, g.params);
+  }
+}
+
+function eliminatesNobodyWarnings(round: DrawRound): LadderWarning[] {
+  const real = round.heats.filter((h) => !h.bye);
+  const eliminates = (h: DrawHeat) => Array.from({ length: h.slots.length }, (_, i) => outcomeOf(round.spec, i + 1)).filter((o) => o === "eliminated").length;
+  if (round.spec.crossHeat || !real.some((h) => eliminates(h) > 0)) return [];
+  const advancing = Math.max(...real.map((h) => h.slots.length - eliminates(h)));
+  const suggested = Math.floor(round.expectedEntrants / (advancing + 1));
+  return real
+    .filter((h) => eliminates(h) === 0)
+    .map((h) => ({
+      type: "eliminates_nobody" as const,
+      round: round.id,
+      heatId: h.id,
+      message: `Heat ${h.number} eliminates nobody (${h.slots.length} riders, top ${advancing} advance)`,
+      suggestion:
+        suggested >= 1 && suggested < round.heats.length
+          ? `Set heatCountOverride for ${round.shortName} to ${suggested} so every heat eliminates somebody.`
+          : `Set heatCountOverride for ${round.shortName} to change the number of heats.`,
+    }));
+}
+
+/**
+ * Turns a template and the entry list (in seed order) into a full draw: rounds, heats, slots (riders or
+ * placeholders), division-wide heat numbers, vest colours, warnings. docs/04 §3.
+ */
+export function expandFormat(template: FormatTemplate, entrants: Entrant[], overrides: DrawOverrides = {}): DivisionDraw {
+  const active = entrants.filter((e) => !e.withdrawn);
+  if (active.length === 0) throw new Error("A division needs at least one rider.");
+  const warnings: LadderWarning[] = [];
+  const specs = roundSpecsFor(template, active.length, warnings);
+
+  for (const s of specs) {
+    if (s.entrantsFrom.some((x) => x.type === "seeds") && s.entrantsFrom.some((x) => x.type === "round_places")) {
+      throw new Error(`Round ${s.id} mixes the seed list with earlier rounds, which is not supported yet.`);
+    }
+  }
+
+  // Seed order (a random draw shuffles the entry list once and stores the seed).
+  let ordered = active;
+  let rngSeed = overrides.rngSeed;
+  if (specs.some((s) => s.seeding === "random" && s.entrantsFrom.every((x) => x.type === "seeds"))) {
+    if (rngSeed === undefined) {
+      rngSeed = defaultRngSeed(active.map((e) => e.id));
+      warnings.push({ type: "random_seed_defaulted", message: `No shuffle seed was given, so seed ${rngSeed} (from the entry list) was used and stored.` });
+    }
+    ordered = shuffleSeeds(active, rngSeed);
+  }
+
+  const draw: DivisionDraw = {
+    templateId: template.id,
+    template,
+    overrides: { ...overrides },
+    status: "draft",
+    entrants: entrants.map((e) => ({ ...e })),
+    seedOrder: ordered.map((e) => e.id),
+    ...(rngSeed !== undefined ? { rngSeed } : {}),
+    rounds: [],
+    results: {},
+    warnings,
+  };
+
+  // Structure: heat counts and sizes of every round, with placeholder slots.
+  specs.forEach((spec, ri) => {
+    const seedFed = spec.entrantsFrom.every((s) => s.type === "seeds");
+    const expectedEntrants = seedFed ? ordered.length : sourceSlots(draw.rounds, spec).length;
+    const layout = roundLayout(expectedEntrants, { ...spec, heatCountOverride: overrides.heatCountOverride?.[spec.id] ?? spec.heatCountOverride });
+    const isLastRound = ri === specs.length - 1;
+    const heats: DrawHeat[] = layout.capacities.map((cap, i) => ({
+      id: `${spec.id}-H${i + 1}`,
+      round: spec.id,
+      index: i + 1,
+      number: null,
+      bye: cap === 1 && !isLastRound,
+      slots: Array.from({ length: cap }, (_, k) => makeSlot(draw, k, {})),
+      durationMin: spec.durationMin ?? template.timing.defaultHeatMin,
+      breakAfterHeatMin: spec.breakAfterHeatMin ?? template.timing.defaultBreakAfterHeatMin,
+      breakAfterRoundMin: spec.breakAfterRoundMin ?? template.timing.defaultBreakAfterRoundMin,
+      roundLast: false,
+      status: "pending",
+      manualOverride: false,
+    }));
+    const round: DrawRound = { id: spec.id, name: spec.name, shortName: spec.shortName, spec, expectedEntrants, heats, seeded: false, seededNow: false, arrivals: [] };
+    draw.rounds.push(round);
+
+    if (seedFed) {
+      const dealt = dealByRule(ordered, layout, spec.seeding);
+      round.heats.forEach((h, i) => {
+        h.slots = dealt[i].map((e, k) => makeSlot(draw, k, { entrantId: e.id, seed: ordered.indexOf(e) + 1 }));
+        h.manualOverride = spec.seeding === "manual";
+      });
+      round.seeded = true;
+    }
+  });
+
+  // Division-wide heat numbers (byes have none) and the last riding heat of each round.
+  let number = 1;
+  for (const r of draw.rounds) {
+    for (const h of r.heats) h.number = h.bye ? null : number++;
+    const riding = r.heats.filter((h) => !h.bye);
+    if (riding.length) riding[riding.length - 1].roundLast = true;
+    warnings.push(...eliminatesNobodyWarnings(r));
+  }
+
+  recompute(draw); // byes advance, rounds whose sources are all byes get seeded, placeholders, identifier warnings
+  refreshIdentifierWarnings(draw);
+  return draw;
+}
