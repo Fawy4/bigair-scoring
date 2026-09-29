@@ -79,6 +79,13 @@ KOTA preset. Red counted 8.6, 8.0, 7.2 + impression 7.4 → 31.20. Blue counted 
 | 24 | [1, 12, 13, 24] · [2, 11, 14, 23] · [3, 10, 15, 22] · [4, 9, 16, 21] · [5, 8, 17, 20] · [6, 7, 18, 19] |
 Heat size 3: N = 7 → 3 heats; N = 18 → 6 heats ([1,12,13] · [2,11,14] · [3,10,15] · [4,9,16] · [5,8,17] · [6,7,18]).
 
+Capacity-aware snake, N = 13 (docs/04 §3 step 3):
+| N | Heat size | `uneven` | Heats |
+|---|---|---|---|
+| 13 | 3 | `smaller_heats_for_top_seeds` (default) | [1, 10] · [2, 9] · [3, 8, 11] · [4, 7, 12] · [5, 6, 13] |
+| 13 | 3 | `one_larger_heat` | [1, 8, 9] · [2, 7, 10] · [3, 6, 11] · [4, 5, 12, 13] |
+| 13 | 4 | `one_larger_heat` | [1, 6, 7, 12] · [2, 5, 8, 11] · [3, 4, 9, 10, 13] |
+
 ### 2B — `single_elimination` generator, heatSize 4, advancePerHeat 2, finalSize 4
 - N = 16 → R1 4 heats → Semi 2 heats (8 riders) → Final 1 heat (4). Round count 3.
 - N = 10 → R1 3 heats (3/3/4) → 6 advance → Semi 2 heats (3/3) → Final of 4. Eliminated in R1 share 7th (4 riders) with `placings.eliminated = shared`.

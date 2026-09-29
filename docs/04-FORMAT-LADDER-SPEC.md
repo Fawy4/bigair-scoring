@@ -34,8 +34,9 @@ type RoundSpec = {
   heatSize: number;                                                     // target riders per heat
   durationMin: number; breakAfterHeatMin?: number; breakAfterRoundMin?: number;
   entrantsFrom: Array<{ type: "seeds" } | { type: "round_places"; round: string; places: number[] }>;
-  seeding: "snake" | "sequential" | "manual";
-  uneven: "byes_top_seeds" | "smaller_heats_for_top_seeds";            // what to do when N is not a multiple of heatSize
+  seeding: "snake" | "sequential" | "manual" | "random";               // random = shuffle the entry list, then treat that order as seeds
+  uneven: "smaller_heats_for_top_seeds" | "one_larger_heat" | "byes_top_seeds"; // what to do when N is not a multiple of heatSize (default smaller_heats_for_top_seeds)
+  heatCountOverride?: number;                                           // organiser-set number of heats; wins over `uneven`
   reseed: "by_original_seed" | "by_heat_score" | "by_place_then_score"; // how riders arriving from earlier rounds are ordered before seeding
   advance: Array<{ places: number[] | "rest"; to: string | "eliminated" | "final_placing" }>;
   minRidersToRun: number;                                               // default 1 (walkover allowed)
@@ -45,7 +46,7 @@ type RoundSpec = {
 ### Generators (expand to concrete rounds for any N)
 - **`single_elimination`** — params `heatSize` (default 4), `advancePerHeat` (default 2), `finalSize` (default 4), `finalMin`, `earlyMin`. Rounds are created until one heat of `finalSize` remains. Byes go to top seeds when `uneven = byes_top_seeds`; otherwise heats are sized as evenly as possible with top seeds in the smaller heats.
 - **`dingle_elimination`** (Red Bull King of the Air 2026 structure) — params `r1HeatSize = 3`, `finalSize = 3`, `r1Min = 13`, `repMin = 10`, `koMin = 10`, `finalMin = 15`. Round 1 heats of 3: 1st → Round 3; 2nd & 3rd → Round 2 (repechage, heats of 2, winner → Round 3, loser eliminated with shared place). From Round 3: man-on-man single elimination until a `finalSize` final. Optional flag-out in R1 at minute 8, count 1.
-- **`pools_to_final`** (expression-session style) — params `heatSize ≤ 10`, `finalists`, `poolMin`, `finalMin`. Every rider rides once in a pool heat; all pool riders are ranked by heat total across pools (same scoring model) and the top `finalists` go to one final. Used for beginner/amateur divisions.
+- **`pools_to_final`** (expression-session style) — params `heatSize ≤ 10`, `finalists`, `poolMin`, `finalMin`, `poolRounds` (1 or 2, default 1), `poolCombine` (`best` | `sum`, default `best`; used only when `poolRounds = 2`). Every rider rides once (twice with `poolRounds = 2`) in a pool heat; all pool riders are ranked by heat total across pools (same scoring model; with two pool rounds, the best or the sum of their two heat totals per `poolCombine`) and the top `finalists` go to one final. Used for beginner/amateur divisions.
 
 Fixed templates shipped: `megaloop-men-16`, `megaloop-women-6`, `kota-18-dingle` (fixed version for exactly 18), `heats4-top2-single-elim` (generator config), `pools-to-final` (generator config), `club-heats-of-4-top2-8-riders` is just the generator at N=8.
 
@@ -53,7 +54,12 @@ Fixed templates shipped: `megaloop-men-16`, `megaloop-women-6`, `kota-18-dingle`
 
 1. Validate `entrants.length` within `template.entrants`. If below `minRidersToRun` for the first round, return a single "Final" round (everyone in one heat) with a warning — small divisions must still run.
 2. Produce `RoundSpec[]` (fixed or generated).
-3. For each round, compute heats: `H = ceil(N / heatSize)`. Distribute ordered entrants by **snake seeding**: seeds 1..H go to heats 1..H, seeds H+1..2H go to heats H..1, and so on. Uneven N: with `smaller_heats_for_top_seeds` the earlier heats are the smaller ones (e.g. N=7, size 4 → [1,4,5] and [2,3,6,7]; N=10 → [1,6,7], [2,5,8], [3,4,9,10]). With `byes_top_seeds`, top seeds skip the round and enter its target round directly.
+3. For each round, compute heats with the **capacity-aware snake**:
+   - **Seeds** = the entry order: organiser-ranked, imported ranking, or `random` (shuffle, then treat the shuffled order as seeds 1..N).
+   - **Number of heats H**: `uneven = smaller_heats_for_top_seeds` (default) → `H = ceil(N / heatSize)`; `uneven = one_larger_heat` → `H = floor(N / heatSize)`, leftover riders overflow into the last heats (max `heatSize + 1`); `uneven = byes_top_seeds` → top seeds skip the round and enter its target round directly. An explicit `heatCountOverride` from the organiser wins over all of these.
+   - **Capacities**: `base = floor(N / H)`, `extra = N mod H`; the first `H − extra` heats hold `base` riders and the last `extra` heats hold `base + 1`, so top seeds always land in the smaller heats.
+   - **Deal** seeds 1..N in snake order (heats 1→H, then H→1, …), skipping heats that are already full.
+   - Worked results that must hold: N=7 size 4 → [1,4,5] [2,3,6,7]; N=10 size 4 → [1,6,7] [2,5,8] [3,4,9,10]; N=13 size 3 default → [1,10] [2,9] [3,8,11] [4,7,12] [5,6,13]; N=13 size 3 `one_larger_heat` → [1,8,9] [2,7,10] [3,6,11] [4,5,12,13]; N=13 size 4 `one_larger_heat` → [1,6,7,12] [2,5,8,11] [3,4,9,10,13].
 4. Slots in later rounds hold **placeholders** (`{ from: { round: "R1", heat: 2, place: 1 } }`) until results exist; the public bracket shows "Winner H2".
 5. Identification: if the event's scheme assigns vests per heat slot, assign colours by slot index from the palette; otherwise slots carry the rider's fixed identifiers (fixed lycra colour, bib number, kite, rash guard) and the generator returns **warnings** when two riders in the same heat share a primary identifier (same lycra colour, same kite brand+size+colours) so the organiser can swap slots. Heat numbering is division-wide and sequential (Heat 1…Heat n) — matches your Kitemania sheet.
 6. Every heat gets `durationMin` and default breaks from the round → used by the schedule engine.
