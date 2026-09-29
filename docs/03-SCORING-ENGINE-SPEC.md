@@ -81,7 +81,8 @@ type ScoringModel = {
     impression: null | { label: string; help?: string; scale: Scale; weight: number; required: boolean };  // required (default true): publishing waits until EVERY panel judge has an impression/variety mark for EVERY rider in the heat (head judge may override with reason)
     total: { display: "raw" | "percent" | "both"; maxRaw: number | "auto" };  // auto = n×trick.max (+ impression.max)
     landedRatioHint: boolean;                  // show landed/attempted to judges before impression (KOTA/GKA guidance)
-    maxAttemptsPerRider?: number | null;       // cap on attempts per rider per heat (e.g. 7); null/absent = unlimited; UI shows "5 / 7"
+    maxAttemptsPerRider?: number | null;       // cap on non-deleted attempts per rider per heat (e.g. 7); null/absent = unlimited; overridable per division; UI shows "5 / 7"
+    duplicateWindowSec: number;                // attempts for one rider from different spotter seats within this many seconds are flagged possibleDuplicateOf (default 20)
   };
   categories: TrickCategory[];                  // editable per event; used by spotter and best_per_category
   tieBreakers: Array<"highest_counted_trick" | "next_counted_trick" | "impression" | "most_landed" | "highest_any_trick" | "head_judge" | "share_place">;
@@ -123,14 +124,15 @@ Let `S = { s(a,j) }` for judges who scored. `k = |S|`.
 - `trimmed_mean` → if `k ≥ trimMinJudges`: drop exactly one highest and one lowest, average the rest; else average all.
 - `median` → middle value (average of two middles when even).
 - Round to `panel.decimals` (half-up). Keep the unrounded value in the breakdown.
-- If `k < number of judges on the panel` → mark `incomplete = true` and list missing judges.
+- If a panel judge has entered nothing for this attempt → mark `incomplete = true` and list them in `missing`. A judge who pressed **Missed** is listed in `missedBy` instead and does **not** make the score incomplete (doc 08 §1F is authoritative).
 - Outlier flag: if `max(S) − min(S) > outlierWarnPct% × (trick.max − trick.min)` → `outlier = true` (head-judge console highlights).
 
 ### 4.3 Counted tricks for a rider
 Eligible = panel scores of the rider's attempts with status `landed` (plus `crashed` as 0 if `crash = "zero"`), each tagged with its category.
 
 - `best_n` → top `n` by score (stable: earlier `seq` first on equal scores). If `distinctTrickNames`, first keep only the best attempt per normalised trick name (case/whitespace-insensitive), then take the top `n`.
-- `maxAttemptsPerRider` (if set) is enforced by the server when attempts are logged; the engine additionally ignores attempts with `seq` beyond the cap and sets `flags.extraAttemptsIgnored`.
+- `maxAttemptsPerRider` (if set) is enforced by the server when attempts are logged; the engine additionally ignores every non-deleted attempt after the cap, counted in `seq` order (not by `seq` number, because deleted attempts keep their numbers), and sets `flags.extraAttemptsIgnored`.
+- Every attempt carries `repeatIndex` = number of earlier non-deleted **landed** attempts by the same rider in the heat with the same normalised trick name (0 = first landing), and `priorCrashesSameTrick` = number of earlier non-deleted **crashed** attempts with that name. Display only ("repeated trick" badge, "crashed once before" note); no penalty unless `distinctTrickNames` is on.
 - `best_per_category` → for each category take the top `maxPerCategory`; keep the top `categoriesCounted` categories by their best score (default = all categories); if `requireDistinctCategories` and a category has no landed attempt it simply contributes nothing.
 - `single_best` → top 1. `all` → everything. `none` → nothing.
 - Fewer eligible tricks than `n` → count what exists (missing slots contribute 0).
@@ -140,7 +142,7 @@ Eligible = panel scores of the rider's attempts with status `landed` (plus `cras
 - `impression = weight × panelAggregate(impression marks)` (same aggregation & rounding as tricks; 0 if not configured or not yet entered).
 - `bonus` (height sensor `use = "bonus"`): `min(capPoints, perMetreAbove × max(0, maxHeightM − thresholdM))`.
 - `penalty` (interference): `drop_best_trick` removes the top counted trick and recounts; `percent` → `−value% × subtotal`; `points` → `−value`.
-- `total = tricks + impression + bonus − penalty`, rounded to `decimals`. `percent = total / maxRaw × 100` when requested. `maxRaw = "auto"` → `n × trick.max × trickWeight + impression.max × impression.weight` (+ bonus cap).
+- `total = tricks + impression + bonus − penalty`, rounded to `decimals`, never below 0. `tricks` is the sum of the **rounded** panel scores of the counted tricks. `percent = total / maxRaw × 100` when requested. `maxRaw = "auto"` → `n × trick.max × trickWeight + impression.max × impression.weight` (+ bonus cap).
 
 ### 4.5 Ranking
 Sort by `total` desc. Riders with DNS/DSQ rank last (DSQ below DNS), total shown as `—`. DNF riders keep or lose scores per `dnf.keepScores` and rank by total. Ties (equal rounded totals) resolved in `tieBreakers` order:
@@ -217,3 +219,26 @@ Best 3 = 8.25 + 8.08 + 7.71 = **24.04**. Impression marks 7.5 / 7.0 / 8.0 → **
 - New models = new JSON, no code. Organiser UI: "Duplicate preset → edit → save as event-specific".
 - Per-division overrides: a division stores `scoring_model_id` + `overrides` (JSON patch) — e.g. Women's division with `n = 2`.
 - Future: video timestamp per attempt (for replay), per-judge calibration reports (agreement %), season points.
+
+## 10. Decisions log
+
+All decisions below were agreed with the owner on 29 Sep 2026 (Phase 1). The code and tests follow them; where they refine the text above, this section wins.
+
+| # | Topic | Decision |
+|---|---|---|
+| 1 | Rounding | Each panel trick score is rounded (half-up, `panel.decimals`). The tricks component is the sum of the **rounded** counted scores; the heat total is then rounded again. Unrounded panel values stay in the breakdown. |
+| 2 | Attempt cap | `heat.maxAttemptsPerRider` (null = unlimited) is configurable per division. It counts **non-deleted attempts in order**, not seq numbers: the attempt after the cap is ignored and flagged (`ignored = "over_cap"`, `flags.extraAttemptsIgnored`). Crashes count toward the cap. |
+| 3 | `next_counted_trick` | Compares the 2nd, 3rd… counted tricks; when the counted list runs out it falls through to the rider's next-best landed but uncounted tricks, in every model (so Megaloop ties compare the second-best jump). |
+| 4 | Duplicates / parser | New field `heat.duplicateWindowSec` (default 20). Only attempts from **different** seats are flagged. The speech/text trick parser is Phase 5 (`src/lib/engine/tricks/`). |
+| 5 | Floor | Every heat total is clamped at 0 (interference by points, percent or drop-best can never make it negative). |
+| 6 | Auto max | `best_n`: n × trick max × trickWeight; `single_best`: 1 × trick max; `best_per_category`: maxPerCategory × categoriesCounted × trick max (GKA = 40 with impression); `all`: attempt cap × trick max when a cap is set, otherwise no percentage; `none`: 0. Plus impression max × weight and the height-bonus cap. |
+| 7 | DNS / DSQ | All DNS riders share the place after the scored riders; DSQ riders share the place after DNS. Total shown "—". |
+| 8 | Missing sensor reading | When the sensor fills Height but an attempt has no reading, the judge's own Height mark is used and the attempt is flagged `sensorMissing`. |
+| 9 | Missed vs missing | A judge's **Missed** is not "incomplete" and never blocks publishing (§4.2 wording fixed). Only a panel judge with no entry at all is `missing`. |
+| 10 | Legacy preset step | Stays 0.5; its description says the step is editable per event. |
+| 11 | `repeatIndex` | Every attempt returns `repeatIndex` = earlier non-deleted **landed** attempts with the same case/whitespace-normalised name (unnamed = 0), for a "repeated trick" badge. A crash followed by a landing of the same trick is **not** a repeat; earlier crashed tries are reported separately as `priorCrashesSameTrick` so the judge card can mention them. No automatic penalty unless `distinctTrickNames` is on. |
+| 12 | Uncategorised tricks | Under `best_per_category` a landed trick with no category cannot count; it is listed in `flags.uncategorised` so the head judge can fix the category. `categoriesCounted` absent = every category present. |
+| 13 | Tie results | A tie the list cannot separate gets `tieUnresolved = true` on both riders, the same place, and a `tie_unresolved` publish blocker until a `head_judge` decision (`headJudgeDecisions`) is supplied. |
+| 14 | Marks from off-panel judges | Marks from a judge who is not on the heat's panel are excluded from every calculation but never silently: `computeHeat` returns them in `ignoredMarksFrom` (`{ judgeId, riderId, attemptSeq }`, `attemptSeq = null` for an impression mark; deleted attempts not reported) so the head-judge console can warn. |
+| 15 | Missed disallowed | If a preset sets `allowNoScore = false` and a Missed mark arrives, the engine throws a readable error rather than skipping it. |
+
