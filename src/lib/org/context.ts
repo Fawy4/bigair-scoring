@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { parseOrgSettings, type OrgSettings } from "@/lib/schemas/org-settings";
 
 export const ORG_COOKIE = "bigair_org";
 
@@ -9,6 +10,8 @@ export interface OrgSummary {
   name: string;
   slug: string;
   role: "owner" | "admin" | "staff";
+  settings: OrgSettings;
+  logoUrl: string | null;
 }
 
 /** Signed-in organiser, all their organisations, and the one they are working in (cookie, else the first). */
@@ -21,7 +24,7 @@ export async function getOrgContext() {
 
   const { data } = await supabase
     .from("memberships")
-    .select("role, organisations(id, name, slug)")
+    .select("role, organisations(id, name, slug, settings, branding)")
     .order("created_at", { ascending: true });
   const orgs: OrgSummary[] = (data ?? []).flatMap((m) =>
     m.organisations
@@ -31,6 +34,8 @@ export async function getOrgContext() {
             name: m.organisations.name,
             slug: m.organisations.slug,
             role: m.role as OrgSummary["role"],
+            settings: parseOrgSettings(m.organisations.settings),
+            logoUrl: ((m.organisations.branding ?? {}) as { logoUrl?: string }).logoUrl ?? null,
           },
         ]
       : [],
