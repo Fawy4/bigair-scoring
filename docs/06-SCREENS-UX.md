@@ -95,3 +95,28 @@ No riders yet · division with fewer riders than heat size (single final) · TBD
 
 ## 11. Copy style
 Short, calm, rider-facing English; times as `15:23`; "est." suffix for projections; never show raw IDs.
+
+## 12. Decisions log (Phase 4 planning)
+
+All decisions below were agreed with the owner on 29 Sep 2026 (Phase 4 planning). Where they refine the text above, this section wins. Plan: `docs/PLAN-phase-4.md`.
+
+| # | Topic | Decision |
+|---|---|---|
+| 1 | Product vs organisation | **Sendbook** is the product (and the owner's company); organisations are its **customers**. The product name comes only from `NEXT_PUBLIC_PRODUCT_NAME` (headers, footers, page titles) and stays a setting (a Vercel change needs a redeploy). Arrow is a customer: the organisation "Arrow Big Air" is renamed **"Arrow"**, slug **`arrow`**, by the owner in the new organisation settings screen (that is its acceptance test). The owner stays its owner for now. Arrow's logo and sponsors are **event-level** branding. `bootstrap:organiser` keeps creating a customer organisation by name (`--org-name` / `--org-slug` become required, so re-running it after the rename can never create a duplicate "Arrow Big Air"). |
+| 2 | Pull requests | Phase 4 ships as three PRs: **4a-1** (engine dials, groundwork, organisation settings, wizard steps Event + Divisions), **4a-2** (Riders + Officials, public registration page, officials' self-add on the join page), **4b** (Draw, Run order & timetable, dashboard). |
+| 3 | Generic presets table | Built in 4a-1 (doc 05 decision 13): identification schemes, schedule templates and other saved variants. Org scoring models and format templates stay in `scoring_models` / `format_templates`. |
+| 4 | Dependencies | `qrcode` and `@dnd-kit` approved. **Every drag has a tap alternative** (↑ / ↓ buttons, "Move to…", tap a rider then tap a slot to swap), so a tablet on the beach never needs drag. PDF = browser print layout (Print → Save as PDF); PNG = drawn on a canvas; no extra package. |
+| 5 | Dial: automatic maximum | With `perCategoryMax`: Σ over counted categories of (`perCategoryMax[c]` ?? `maxPerCategory`) × trick max. With `countedWeights`: Σ weights (missing = 1) × trick max. Plus impression and height-bonus as before (doc 03 decision 6). |
+| 6 | Dial: interference "drop best trick" | The best counted trick is dropped first, then `countedWeights` are re-applied to the remaining counted tricks in rank order. |
+| 7 | Dial: tie-breakers | `highest_counted_trick` / `next_counted_trick` compare **raw** panel scores, never weighted ones. Weights change only the total. |
+| 8 | Division scoring edits | Simple-level changes are saved on the division (`scoring_overrides`); "Duplicate & edit" creates a new organisation preset. Editing a saved preset creates a **new version**, never an in-place change. A division's scoring model and format **lock once any of its heats has started**; unlocking needs a written reason and is audited. |
+| 9 | Seats, PINs and QR | Creating a seat shows its PIN and a QR code **on screen immediately** (for on-the-spot joining). **"Print cards"** and **"Regenerate PIN"** are separate, explicit actions; each asks for one confirmation that says "the old PIN will stop working". Printing issues fresh PINs for the chosen seats (PINs are stored hashed and can only be shown once). Connected phones stay connected. QR links expire **one day after the event's end date**. |
+| 10 | Head judge also scores | Default: added to **every** panel; a checkbox per panel lets the organiser narrow it (doc 05 decision 15: a `panel_members` row per panel). |
+| 11 | Public registration | One rider record per person per organisation, matched by email (case-insensitive). Registration is **closed by default**, with an open/close switch and a closing date in event settings. Photos upload through a short-lived signed upload link: images only, max 5 MB. Rate-limited per address. |
+| 12 | Links to pages not built yet | A minimal public event page `/e/[slug]` (name, dates, location, logo, links to Join and Register) ships with the dashboard; the big-screen link and QR appear only once `/screen/[slug]` exists. The landing page lists published events linking to `/e/[slug]`. |
+| 13 | Stored draw | The engine's full `DivisionDraw` is kept on the division (JSON) and projected to `rounds` / `heats` / `heat_slots` in one transaction, so a draw is never half-saved. A new column records when the draw was locked (`lockDraw` on confirm). |
+| 14 | Regenerate a draw | Allowed only while no heat in that division has started; typed confirmation; audited; a locked draw goes back to draft. Timetable items are re-matched by division + round + heat number; items whose heat no longer exists are removed with a warning. |
+| 15 | Dashboard scope | Phase 4 dashboard: today's timetable, publish-status counts, QR links (join, public page). Hold / Shift / wind call / live timer stay with the head-judge controls in Phase 5. |
+| 16 | Toasts | The Toaster is mounted for organiser screens only, for small confirmations. Errors and anything that must be read stay on screen until dismissed (beach rule 00.6). |
+| 17 | Beach standard on desktop | Organiser screens use rules 00.1 (contrast, weight), 00.3 (one confirmation for data-changing actions), 00.5 (never colour alone) and ≥48 px tap targets; the 56 px pad sizes apply to official phone screens only. |
+| 18 | Time zones | Organisation default time zone (`organisations.settings.defaultTimezone`, default `Africa/Cairo`) pre-fills new events; the list comes from the browser's built-in `Intl.supportedValuesOf('timeZone')`. |
