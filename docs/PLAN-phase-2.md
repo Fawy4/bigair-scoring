@@ -65,6 +65,3 @@ Tests (all from `kitemania-day2.json`, heats linked by `heatRef`; no draw genera
 4. `docs: STATUS phase 2`: typecheck + test summary lines, files changed, how to test.
 
 Done = `npm run typecheck && npm test` green (Phase 1's 100 tests still pass) and STATUS updated.
-
-## 5. Open point (flagged, not decided)
-Decision 2 (`one_larger_heat`) minimises the number of heats rather than making exactly one heat larger. For N=25 with heat size 4 it gives **5 heats of 5** (every heat oversized); the former `floor(N / heatSize)` rule would give 6 heats (4/4/4/4/4/5). Same for N=30 → 6 heats of 5 instead of 7 heats. A rule that matches all five agreed checks *and* keeps "one larger heat" for these cases: `H = floor(N / heatSize)` when every heat then stays ≤ `heatSize + 1`, otherwise `ceil(N / (heatSize + 1))`. Implementation follows Decision 2 as written unless the owner changes it before coding starts.
