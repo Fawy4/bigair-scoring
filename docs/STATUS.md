@@ -74,5 +74,34 @@
 - On a laptop: `npm install && npm test` → "Test Files 22 passed, Tests 282 passed"; `npm run typecheck` and `npm run lint` clean.
 - To see a ladder: `npx vitest run src/lib/engine/ladder/2c-dingle.test.ts` (the KOTA 18-rider bracket, 22 heats).
 
+## Phase 3 – database, security and logins
+
+### Done
+- **Database**: 7 migrations in `supabase/migrations` create all 24 tables (docs/05 §5 + approved additions), indexes on every foreign key, `updated_at` triggers, the audit trigger, Realtime publication and the functions below. Applied to the hosted **development** project (`npm run db:status` lists them). `supabase/combined.sql` holds the same SQL for the SQL Editor.
+- **Security**: Row Level Security on every table, least-privilege grants (nothing is readable or writable unless granted), safe view `v_entries` (names and identifiers, never email/phone), PIN/QR hashes unreadable by anyone but the server, published results and the audit log are append-only.
+- **Server-time heat state machine**: start/pause/resume/end timestamps come from the database clock; only the server can publish.
+- **Attempt cap**: `add_attempt` rejects the extra attempt with `ATTEMPT_CAP_REACHED` (two racing phones: exactly one wins); head judge (or organiser) overrides with a written reason, audited. `delete_attempt`, `attempt_counts` for the "5 / 7" counters.
+- **Marks**: `submit_trick_score` / `submit_impression` are safe to retry and ignore stale (older) queued edits; judges see only their own marks.
+- **Public live view**: `get_public_live_heat` (polled every 5–10 s, configurable) shows panel positions, never judge names.
+- **Logins**: organiser magic link (`/org/login`, invite-only, `/auth/confirm`, `/org`); officials join at `/join` or `/e/<slug>/join` (PIN or single-use QR link), phone stays bound; `/seat` shows the connected seat. PIN/QR generation and rebinding are server functions with rate limiting.
+- **Scripts**: `db:apply` (HTTPS migration runner), `db:status`, `db:combine`, `seed:presets` (versioned, idempotent, Zod-validated), `seed:demo` (draw via `expandFormat`), `bootstrap:organiser`, `scripts/configure-auth.mjs`. `tsx` added as a dev dependency (approved).
+- **Demo data** ("Demo Cup", fictional riders): 3 divisions (Pro Men 10 / Pro Women 6 / Youth U16 4), 20 riders, 3 judges + head judge + spotter, one 3-judge panel, and the full draw (Pro Men 12 heats, Women 4, U16 1).
+- **Live auth settings changed** on the hosted project: anonymous sign-ins on; redirect allow-list `http://localhost:3000/**` and `https://*.vercel.app/**`.
+
+### Not done / needs the owner
+- **Organiser login not created yet**: needs the owner's email. Run `ORGANISER_EMAIL=<email> npm run bootstrap:organiser` (creates "Arrow Big Air" with you as owner and adds you to the Demo organisation).
+- **Production URL not in the allow-list yet**: run `node scripts/configure-auth.mjs --site-url https://<production-site>`.
+- Custom email template (token-hash magic link) is blocked by Supabase's free plan until custom SMTP exists (decision 17): open the sign-in link in the **same browser** that asked for it.
+- Vercel needs `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` as environment variables for the pages to work there (values never go in the repository).
+- "Not on the list? Add your name" self-add from the join page, PIN/QR card printing UI, head-judge mark edits and publish (Phase 4/5).
+- Generic `presets` table for identification schemes/schedules (Phase 4). Engine dials `perCategoryMax` and `countedWeights` (Phase 4).
+
+### How to test
+- Laptop: `npm install && npm run typecheck && npm test && npm run lint`; with keys set, `npm run test:rls` (52 tests, about 45 s, creates and deletes its own throwaway data) and `npm run test:e2e` (5 browser tests).
+- Phone (same Wi-Fi as the laptop, `npm run dev`, keys in `.env.local`): open `http://<laptop-IP>:3000/join`, event code `demo-cup`, PIN `100001` → "Connected · Judge 1". Close and reopen the page: still connected. Head judge PIN `200001`, spotter `300001`, judges `100002`, `100003`.
+- Try the phone swap: join with PIN `100001` on a second phone; the first phone's `/seat` now says "Not connected".
+- iPhone: add the page to the Home Screen first, then join inside the home-screen app (Safari and the home-screen app keep separate logins).
+- Organiser sign-in (after the bootstrap step): `http://localhost:3000/org/login`, enter your email, open the email link in the same browser.
+
 ## Phase 5 requirements
 - **Out of attempts (hard stop)** (docs/06 §5): when a rider has used the division's attempt cap, their chip turns grey with 'Out of attempts · 7 / 7' on the spotter AND judge screens and Log is disabled for that rider; if the head judge deletes one of that rider's attempts the chip re-enables live ('6 / 7'); the server refuses any attempt beyond the cap (ATTEMPT_CAP_REACHED) even from a stale phone; only the head judge may add an attempt beyond the cap, with a written reason, which is audited.

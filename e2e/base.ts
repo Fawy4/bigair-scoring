@@ -6,14 +6,14 @@ import { test as base, expect } from "@playwright/test";
  * On a normal machine (no HTTPS_PROXY) this does nothing.
  */
 export const test = base.extend({
-  context: async ({ context }, use) => {
+  context: async ({ context }, provide) => {
     if (process.env.HTTPS_PROXY) {
       await context.route(/https:\/\/[a-z0-9]+\.supabase\.co\//, async (route) => {
         const response = await route.fetch();
         await route.fulfill({ response });
       });
     }
-    await use(context);
+    await provide(context);
   },
 });
 export { expect };

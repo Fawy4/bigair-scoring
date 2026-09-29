@@ -58,15 +58,15 @@ Costs: build phase $0. First commercial event: Vercel Pro $20 + Supabase Pro $25
 | `panels` / `panel_members` | event_id, name / panel_id, judge_seat_id, seat_no | which judges score which division |
 | `trick_attempts` | event_id (trigger-filled), client_key uuid unique, heat_id, entry_id, seq int, direction (`left|right` null), category_key, trick_name, trick_parts jsonb (builder keys), status (`landed|crashed`), height_m numeric(5,2), created_by_seat, input_method (`builder|text|speech`), raw_text, created_at, deleted_at null, deleted_by, possible_duplicate_of null, video_ts | logged by spotter or judge; `unique(heat_id, entry_id, seq)`; soft-deleted rows excluded from all views/counters |
 | `trick_vocabularies` | organisation_id null=system, event_id null, key text, json jsonb, content_hash | trick-builder vocabulary (`presets/tricks/`), editable per event |
-| `trick_scores` | attempt_id, judge_seat_id, criteria jsonb, score numeric(5,2) null when missed, missed bool default false, flag text null (`crash|wrong_rider|duplicate|other`), client_key uuid unique, version int, edited_by, edit_reason | `unique(attempt_id, judge_seat_id)`; idempotent via client_key |
-| `impression_scores` | heat_id, entry_id, judge_seat_id, value numeric(5,2), client_key unique | |
+| `trick_scores` | event_id + heat_id (trigger-filled), attempt_id, judge_seat_id, criteria jsonb, score numeric(5,2) null when missed, missed bool default false, flag text null (`crash|wrong_rider|duplicate|other`), client_key uuid unique, client_rev bigint (newer edits win, late retries are ignored), version int, edited_by, edit_reason | `unique(attempt_id, judge_seat_id)`; idempotent via client_key |
+| `impression_scores` | heat_id, entry_id, judge_seat_id, value numeric(5,2), client_key unique, client_rev; `unique(heat_id, entry_id, judge_seat_id)` | |
 | `penalties` | heat_id, entry_id, type (`INT|other`), value jsonb, reason, issued_by | |
 | `heat_results` | heat_id, entry_id, place, total, percent, breakdown jsonb, published_at, version | immutable snapshot per publish (new version on re-publish) |
 | `schedule_plans` | event_id, day date, name, items jsonb, anchors jsonb, actual_starts jsonb, hold jsonb, defaults jsonb, active bool | timetable (doc 04 §7) |
 | `wind_calls` | event_id, status (`red|amber|green`), message, created_at | banner history |
 | `audit_log` | event_id, actor_user_id, actor_seat_id, action, table_name, row_id, before jsonb, after jsonb, reason, at | trigger-populated for scores/results; app-populated for overrides |
 
-Also (all trigger-filled, never client-supplied): `event_id` on `heat_slots`, `trick_scores`, `impression_scores`, `penalties`. **Extra table** `join_attempts` (event_id, ip, seat_id null, ok bool, at) for join-page rate limiting. There is no separate `re-opened` heat status: re-open = `published → under_review`, republish writes `heat_results` version 2. `heat_results` and `audit_log` are append-only (no `updated_at`; triggers reject UPDATE/DELETE).
+Also (all trigger-filled, never client-supplied): `event_id` on `entries`, `rounds`, `panel_members`, `heat_slots`, `trick_scores`, `impression_scores`, `penalties`, `heat_results`. **Extra table** `join_attempts` (event_id, ip, seat_id null, ok bool, at) for join-page rate limiting. There is no separate `re-opened` heat status: re-open = `published → under_review`, republish writes `heat_results` version 2. `heat_results` and `audit_log` are append-only (no `updated_at`; triggers reject UPDATE/DELETE).
 
 Derived/live: a Postgres view `v_live_heat` joins heat, slots, attempts, scores for one query per heat.
 
@@ -78,7 +78,7 @@ Derived/live: a Postgres view `v_live_heat` joins heat, slots, attempts, scores 
 - PINs: per seat, hashed; join page rate-limited; QR encodes a one-time token. Seats can be revoked instantly (`active=false`).
 
 ## 7. Realtime & consistency
-- Publication includes `heats, heat_slots, trick_attempts, trick_scores, impression_scores, heat_results, schedule_plans, wind_calls`.
+- Publication includes `heats, heat_slots, trick_attempts, trick_scores, impression_scores, penalties, heat_results, schedule_plans, wind_calls` (used by official screens; public pages poll `get_public_live_heat`, decision 4).
 - Clients subscribe with `filter: heat_id=eq.<id>` (officials) or `event_id=eq.<id>` (public). On reconnect, refetch the heat snapshot, then resume the stream.
 - **Attempt cap**: attempts are inserted through a server action or Postgres function that counts the rider's non-deleted attempts in the heat and rejects the insert with `ATTEMPT_CAP_REACHED` when the division's cap is reached. A head-judge override passes `overrideReason` and is written to `audit_log`. Phone counters ("5 / 7") come from the same count via Realtime.
 - **Submission queue** (officials): each mark gets a `client_key`; write → on failure keep in IndexedDB → retry with backoff → server upsert on `(attempt_id, judge_seat_id)` so retries never duplicate. UI badge: pending / synced / failed (tap to retry).
@@ -124,3 +124,12 @@ Derived/live: a Postgres view `v_live_heat` joins heat, slots, attempts, scores 
 | 14 | Demo seed | Event "Demo Cup" (Cairo), Pro Men 10 / Pro Women 6 / U16 4 riders, 3 judges + head judge + spotter, and rounds/heats/slots generated with `expandFormat`. |
 | 15 | Head judge scoring | The "also scores" toggle adds/removes a `panel_members` row; RLS reads only that table. |
 | 16 | Judges logging | `events.settings.judgesMayLogAttempts`, default off. |
+| 17 | Magic-link email | Supabase does not allow custom email templates on the free plan with its built-in sender, so the **token-hash** link cannot be installed yet. Sign-in uses the default link (must be opened in the **same browser** that asked for it). `/auth/confirm` already accepts both link styles; `scripts/configure-auth.mjs --with-template` installs the token-hash template once custom SMTP (Phase 7) exists. |
+| 18 | Public live default | `events.settings.publicLiveScores` defaults to `after_publish` (nothing live is public until the organiser opts in). |
+| 19 | Results are permanent | `heat_results` and `audit_log` are append-only. Organisers cannot delete an event that has published results; `purge_organisation` (service role only) is the one exception, used for test clean-up. |
+| 20 | Who may override the cap | Head judge, or an organiser when there is no head judge. Both need a written reason; audited as `attempt_cap_override`. |
+| 21 | Heat state machine in the database | Start / pause / resume / end set `started_at`, `paused_at`, `paused_total_sec`, `ended_at` from the **server clock** in a trigger; clients cannot write those columns. Only the server can set `published`. |
+| 22 | Write paths shipped in Phase 3 | `add_attempt`, `delete_attempt`, `attempt_counts`, `submit_trick_score`, `submit_impression`, `get_public_live_heat`, join functions. Head-judge edits of marks (with reason), merge, and publish arrive with the screens in Phase 5. |
+| 23 | Client code must list columns | `events.join_pin_hash` and the `judge_seats` hash columns cannot be read by any signed-in or anonymous user, so `select *` on `events` or `judge_seats` from the browser fails on purpose. Name the columns. |
+| 24 | Join failures are returned, not raised | `bind_seat_by_pin/token` return `{ok:false,error}` so the failure log (used for rate limiting) is kept. Limit: 10 wrong tries per address per event per 10 minutes, 100 per event. |
+| 25 | Sandbox findings | Direct Postgres (`db push`) is blocked here; migrations go over HTTPS. Supabase limits (free plan): 2 sign-in emails per hour, 30 anonymous sign-ins per hour per IP address, about 200 Realtime connections. |

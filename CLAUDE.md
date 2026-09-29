@@ -14,7 +14,9 @@ Next.js 15 (App Router, TypeScript strict) · Tailwind + shadcn/ui · Supabase (
 - `npm run test:e2e` — Playwright smoke tests (needs `npm run dev` running)
 - `npm run lint` — ESLint
 - `npx supabase db reset` — rebuild local DB from `supabase/migrations` + `supabase/seed.sql`
-- `npx supabase db push` — apply migrations to the linked hosted project
+- `npx supabase db push` — apply migrations to the linked hosted project (blocked in some sandboxes: use `npm run db:apply`, which sends them over HTTPS; `npm run db:combine` writes `supabase/combined.sql` for the SQL Editor)
+- `npm run test:rls` — Row Level Security tests against the hosted dev project (separate from `npm test`; skips without keys)
+- `npm run seed:demo` / `npm run bootstrap:organiser` — demo draw / create the organiser login + organisation
 - `npm run seed:presets` — upsert `presets/**/*.json` into `scoring_models` / `format_templates`
 
 ## Repo layout
@@ -50,6 +52,7 @@ docs/               specs; docs/STATUS.md = running progress log (update at end 
 Event → Divisions → Rounds → Heats → Slots (riders shown as a RiderChip per the identification scheme: vest colour / bib number / kite / rash guard). Attempt = one trick by one rider (logged by spotter/judge; landed | crashed). Judge trick score (from criteria or single mark) → Panel score (mean / trimmed mean / median) → Counted tricks (best N / best per category / single best) + Impression → Heat total → Rank (tie-breakers) → Ladder progression → Timetable (anchors, durations, breaks, wind holds). Modifiers: DNS, DNF, DSQ, INT. Head judge = reviews/overrides/publishes; optional.
 
 ## Gotchas
+- Never `select *` from `events` or `judge_seats` in client code: the PIN/QR hash columns are unreadable by design, so name the columns.
 - Supabase Realtime: tables need `alter publication supabase_realtime add table ...`; filter subscriptions by `heat_id`.
 - Supabase free projects pause after ~7 days idle — don't be surprised locally; the owner wakes it before the event.
 - Use `numeric(5,2)` for scores in SQL; in TS keep full precision and round only for display/ranking as the spec says.
