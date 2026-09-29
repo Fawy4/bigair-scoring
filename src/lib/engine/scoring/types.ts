@@ -116,8 +116,10 @@ export interface AttemptResult {
   score: number | null;
   counted: boolean;
   ignored?: AttemptIgnoredReason;
-  /** Number of earlier non-deleted attempts by this rider with the same normalised trick name (0 = first). */
+  /** Earlier non-deleted LANDED attempts by this rider with the same normalised trick name (0 = first landing). */
   repeatIndex: number;
+  /** Earlier non-deleted CRASHED attempts by this rider with the same normalised trick name. */
+  priorCrashesSameTrick: number;
   possibleDuplicateOf?: number;
   sensorMissing?: boolean;
 }
@@ -177,8 +179,17 @@ export type PublishBlocker =
   | { type: "impression_missing"; judge: string; rider: string }
   | { type: "tie_unresolved"; riders: string[] };
 
+/** A mark from a judge who is not on the heat's panel: excluded from the maths, reported for the head judge. */
+export interface IgnoredMark {
+  judgeId: string;
+  riderId: string;
+  /** null = an impression mark. */
+  attemptSeq: number | null;
+}
+
 export interface HeatResult {
   riders: RiderResult[];
+  ignoredMarksFrom: IgnoredMark[];
   ranking: RankedResult[];
   publishBlockers: PublishBlocker[];
   maxRaw: number | null;

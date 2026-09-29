@@ -132,7 +132,7 @@ Eligible = panel scores of the rider's attempts with status `landed` (plus `cras
 
 - `best_n` → top `n` by score (stable: earlier `seq` first on equal scores). If `distinctTrickNames`, first keep only the best attempt per normalised trick name (case/whitespace-insensitive), then take the top `n`.
 - `maxAttemptsPerRider` (if set) is enforced by the server when attempts are logged; the engine additionally ignores every non-deleted attempt after the cap, counted in `seq` order (not by `seq` number, because deleted attempts keep their numbers), and sets `flags.extraAttemptsIgnored`.
-- Every attempt carries `repeatIndex` = number of earlier non-deleted attempts by the same rider in the heat with the same normalised trick name (0 = first time). Display only ("repeated trick" badge); no penalty unless `distinctTrickNames` is on.
+- Every attempt carries `repeatIndex` = number of earlier non-deleted **landed** attempts by the same rider in the heat with the same normalised trick name (0 = first landing), and `priorCrashesSameTrick` = number of earlier non-deleted **crashed** attempts with that name. Display only ("repeated trick" badge, "crashed once before" note); no penalty unless `distinctTrickNames` is on.
 - `best_per_category` → for each category take the top `maxPerCategory`; keep the top `categoriesCounted` categories by their best score (default = all categories); if `requireDistinctCategories` and a category has no landed attempt it simply contributes nothing.
 - `single_best` → top 1. `all` → everything. `none` → nothing.
 - Fewer eligible tricks than `n` → count what exists (missing slots contribute 0).
@@ -222,7 +222,7 @@ Best 3 = 8.25 + 8.08 + 7.71 = **24.04**. Impression marks 7.5 / 7.0 / 8.0 → **
 
 ## 10. Decisions log
 
-Decisions 1–11 were agreed with the owner on 29 Sep 2026 (Phase 1). Decisions 12–13 are implementation choices for cases the spec did not cover, **pending the owner's confirmation**. The code and tests follow all of them; where they refine the text above, this section wins.
+All decisions below were agreed with the owner on 29 Sep 2026 (Phase 1). The code and tests follow them; where they refine the text above, this section wins.
 
 | # | Topic | Decision |
 |---|---|---|
@@ -236,7 +236,9 @@ Decisions 1–11 were agreed with the owner on 29 Sep 2026 (Phase 1). Decisions 
 | 8 | Missing sensor reading | When the sensor fills Height but an attempt has no reading, the judge's own Height mark is used and the attempt is flagged `sensorMissing`. |
 | 9 | Missed vs missing | A judge's **Missed** is not "incomplete" and never blocks publishing (§4.2 wording fixed). Only a panel judge with no entry at all is `missing`. |
 | 10 | Legacy preset step | Stays 0.5; its description says the step is editable per event. |
-| 11 | `repeatIndex` | Every attempt returns `repeatIndex` (earlier non-deleted attempts with the same case/whitespace-normalised name, crashes included; unnamed = 0) for a "repeated trick" badge. No automatic penalty unless `distinctTrickNames` is on. |
+| 11 | `repeatIndex` | Every attempt returns `repeatIndex` = earlier non-deleted **landed** attempts with the same case/whitespace-normalised name (unnamed = 0), for a "repeated trick" badge. A crash followed by a landing of the same trick is **not** a repeat; earlier crashed tries are reported separately as `priorCrashesSameTrick` so the judge card can mention them. No automatic penalty unless `distinctTrickNames` is on. |
 | 12 | Uncategorised tricks | Under `best_per_category` a landed trick with no category cannot count; it is listed in `flags.uncategorised` so the head judge can fix the category. `categoriesCounted` absent = every category present. |
 | 13 | Tie results | A tie the list cannot separate gets `tieUnresolved = true` on both riders, the same place, and a `tie_unresolved` publish blocker until a `head_judge` decision (`headJudgeDecisions`) is supplied. |
+| 14 | Marks from off-panel judges | Marks from a judge who is not on the heat's panel are excluded from every calculation but never silently: `computeHeat` returns them in `ignoredMarksFrom` (`{ judgeId, riderId, attemptSeq }`, `attemptSeq = null` for an impression mark; deleted attempts not reported) so the head-judge console can warn. |
+| 15 | Missed disallowed | If a preset sets `allowNoScore = false` and a Missed mark arrives, the engine throws a readable error rather than skipping it. |
 

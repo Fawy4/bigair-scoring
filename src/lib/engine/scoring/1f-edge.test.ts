@@ -218,4 +218,44 @@ describe("1F — edge cases", () => {
     expect(at(8).components.bonus).toBe(0);
     expect(maxRawFor(m)).toBe(22);
   });
+  describe("marks from a judge not on the panel", () => {
+    const m = preset("kota-best3-impression");
+    const k = (v: number) => hetx(v, v, v, v);
+    const res = computeHeat(m, {
+      panelJudgeIds: J3,
+      riders: [
+        {
+          riderId: "Red",
+          attempts: [
+            landed(1, [k(8), k(8), k(8), k(2)], {}, [...J3, "J9"]),
+            landed(2, [k(7), k(7), k(7), k(3)], { deleted: true }, [...J3, "J9"]), // deleted: not reported
+          ],
+          impressionMarks: [...impressions([7, 7, 7]), { judgeId: "J9", value: 1 }],
+        },
+      ],
+    });
+
+    it("are excluded from the maths", () => {
+      expect(res.riders[0].allAttempts[0].panel?.score).toBe(8);
+      expect(res.riders[0].components.impression).toBe(7);
+      expect(res.riders[0].total).toBe(15);
+    });
+
+    it("are reported in ignoredMarksFrom for the head judge console", () => {
+      expect(res.ignoredMarksFrom).toEqual([
+        { judgeId: "J9", riderId: "Red", attemptSeq: 1 },
+        { judgeId: "J9", riderId: "Red", attemptSeq: null },
+      ]);
+    });
+
+    it("an off-panel impression mark off the step does not throw", () => {
+      expect(() =>
+        computeHeat(m, { panelJudgeIds: J3, riders: [{ riderId: "R", attempts: [], impressionMarks: [{ judgeId: "J9", value: 7.55 }] }] }),
+      ).not.toThrow();
+    });
+
+    it("empty when every mark comes from the panel", () => {
+      expect(computeHeat(m, { panelJudgeIds: J3, riders: [{ riderId: "R", attempts: [landed(1, [k(8), k(8), k(8)])] }] }).ignoredMarksFrom).toEqual([]);
+    });
+  });
 });

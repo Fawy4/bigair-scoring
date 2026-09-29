@@ -8,22 +8,31 @@ export function normaliseTrickName(name: string | null | undefined): string | nu
   return n === "" ? null : n;
 }
 
+export interface RepeatInfo {
+  /** Earlier non-deleted LANDED attempts with the same normalised trick name (0 = first landing). */
+  repeatIndex: number;
+  /** Earlier non-deleted CRASHED attempts with the same normalised trick name. */
+  priorCrashesSameTrick: number;
+}
+
 /**
- * repeatIndex per attempt: how many earlier non-deleted attempts (by seq) share its normalised
- * trick name. 0 = first time. Unnamed attempts are always 0. Deleted attempts are skipped.
+ * Repeat counters per attempt seq (decision log #11). A crash followed by a landing of the same
+ * trick is not a repeat; the crash is reported in priorCrashesSameTrick instead.
+ * Unnamed attempts are always 0 / 0. Deleted attempts are skipped.
  */
-export function repeatIndexes(attempts: Attempt[]): Map<number, number> {
-  const seen = new Map<string, number>();
-  const out = new Map<number, number>();
+export function repeatIndexes(attempts: Attempt[]): Map<number, RepeatInfo> {
+  const landed = new Map<string, number>();
+  const crashed = new Map<string, number>();
+  const out = new Map<number, RepeatInfo>();
   for (const a of [...attempts].filter((x) => !x.deleted).sort((x, y) => x.seq - y.seq)) {
     const key = normaliseTrickName(a.trickName);
     if (key === null) {
-      out.set(a.seq, 0);
+      out.set(a.seq, { repeatIndex: 0, priorCrashesSameTrick: 0 });
       continue;
     }
-    const n = seen.get(key) ?? 0;
-    out.set(a.seq, n);
-    seen.set(key, n + 1);
+    out.set(a.seq, { repeatIndex: landed.get(key) ?? 0, priorCrashesSameTrick: crashed.get(key) ?? 0 });
+    const tally = a.status === "landed" ? landed : crashed;
+    tally.set(key, (tally.get(key) ?? 0) + 1);
   }
   return out;
 }

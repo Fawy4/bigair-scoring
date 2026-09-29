@@ -9,6 +9,7 @@ import type {
   AttemptResult,
   HeatInput,
   HeatResult,
+  IgnoredMark,
   PanelScore,
   PublishBlocker,
   RiderInput,
@@ -114,7 +115,8 @@ export function computeRider(
       panel: null,
       score: null,
       counted: false,
-      repeatIndex: repeats.get(a.seq) ?? 0,
+      repeatIndex: repeats.get(a.seq)?.repeatIndex ?? 0,
+      priorCrashesSameTrick: repeats.get(a.seq)?.priorCrashesSameTrick ?? 0,
     };
     if (dupes.has(a.seq)) r.possibleDuplicateOf = dupes.get(a.seq);
 
@@ -173,7 +175,8 @@ export function computeRider(
   let impressionPts = 0;
   const imp = model.heat.impression;
   if (imp) {
-    const marks = (rider.impressionMarks ?? []).map((m) => {
+    const onPanel = new Set(panelJudgeIds);
+    const marks = (rider.impressionMarks ?? []).filter((m) => onPanel.has(m.judgeId)).map((m) => {
       assertOnStep(m.value, imp.scale, imp.label);
       return { judgeId: m.judgeId, score: m.value };
     });
@@ -253,6 +256,24 @@ export function computeRider(
   };
 }
 
+/** Marks from judges not on the panel (attempts and impressions, deleted attempts excluded). */
+function marksFromOffPanel(input: HeatInput): IgnoredMark[] {
+  const onPanel = new Set(input.panelJudgeIds);
+  const out: IgnoredMark[] = [];
+  for (const r of input.riders) {
+    for (const a of [...r.attempts].sort((x, y) => x.seq - y.seq)) {
+      if (a.deleted) continue;
+      for (const m of a.marks) {
+        if (!onPanel.has(m.judgeId)) out.push({ judgeId: m.judgeId, riderId: r.riderId, attemptSeq: a.seq });
+      }
+    }
+    for (const m of r.impressionMarks ?? []) {
+      if (!onPanel.has(m.judgeId)) out.push({ judgeId: m.judgeId, riderId: r.riderId, attemptSeq: null });
+    }
+  }
+  return out;
+}
+
 function publishBlockers(model: ScoringModel, riders: RiderResult[]): PublishBlocker[] {
   const out: PublishBlocker[] = [];
   for (const r of riders) {
@@ -274,7 +295,8 @@ function publishBlockers(model: ScoringModel, riders: RiderResult[]): PublishBlo
 
 /**
  * Scores and ranks a whole heat. Totals are always returned (live scores keep flowing);
- * `publishBlockers` lists what must be fixed (or overridden by the head judge) before publishing.
+ * `publishBlockers` lists what must be fixed (or overridden by the head judge) before publishing;
+ * `ignoredMarksFrom` lists marks from judges not on the panel (excluded from the maths).
  */
 export function computeHeat(model: ScoringModel, input: HeatInput): HeatResult {
   const maxRaw = maxRawFor(model);
@@ -288,5 +310,5 @@ export function computeHeat(model: ScoringModel, input: HeatInput): HeatResult {
   }
   for (const ids of tiedPlaces.values()) blockers.push({ type: "tie_unresolved", riders: ids });
 
-  return { riders, ranking, publishBlockers: blockers, maxRaw };
+  return { riders, ignoredMarksFrom: marksFromOffPanel(input), ranking, publishBlockers: blockers, maxRaw };
 }

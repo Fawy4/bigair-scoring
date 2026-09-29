@@ -92,16 +92,44 @@ describe("best N of M — the owner's default path", () => {
       landed(5, same(4)),
     ];
 
-    it("counts earlier non-deleted attempts with the same normalised name (crashes included)", () => {
-      const r = one(rider(attempts()));
-      expect(r.allAttempts.map((a) => a.repeatIndex)).toEqual([0, 1, 0, 2, 0]);
+    const info = (r: ReturnType<typeof one>) => r.allAttempts.map((a) => [a.seq, a.repeatIndex, a.priorCrashesSameTrick]);
+
+    it("counts only earlier LANDED attempts with the same normalised name; crashes reported separately", () => {
+      // #2 is a crash of a trick already landed at #1; #4 is the second landing (1 repeat, 1 prior crash).
+      expect(info(one(rider(attempts())))).toEqual([
+        [1, 0, 0],
+        [2, 1, 0],
+        [3, 0, 0],
+        [4, 1, 1],
+        [5, 0, 0],
+      ]);
     });
 
-    it("deleted attempts do not count as earlier repeats", () => {
+    it("a crash followed by a landing of the same trick is not a repeat", () => {
+      const r = one(rider([crashed(1, { trickName: "Left Backroll" }), landed(2, same(6), { trickName: "left backroll" })]));
+      expect(info(r)).toEqual([
+        [1, 0, 0],
+        [2, 0, 1],
+      ]);
+    });
+
+    it("deleted attempts count neither as repeats nor as prior crashes", () => {
       const a = attempts();
-      a[1].deleted = true;
-      const r = one(rider(a));
-      expect(r.allAttempts.map((x) => [x.seq, x.repeatIndex])).toEqual([[1, 0], [3, 0], [4, 1], [5, 0]]);
+      a[0].deleted = true; // the first landed Left Backroll
+      expect(info(one(rider(a)))).toEqual([
+        [2, 0, 0],
+        [3, 0, 0],
+        [4, 0, 1],
+        [5, 0, 0],
+      ]);
+      const b = attempts();
+      b[1].deleted = true; // the crash
+      expect(info(one(rider(b)))).toEqual([
+        [1, 0, 0],
+        [3, 0, 0],
+        [4, 1, 0],
+        [5, 0, 0],
+      ]);
     });
 
     it("no automatic penalty: a repeat still counts when distinctTrickNames is off", () => {

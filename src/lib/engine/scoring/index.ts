@@ -6,7 +6,7 @@ export { roundHalfUp, assertOnStep, formatScore, ScoringInputError } from "./rou
 export { judgeTrickScore, mapHeight } from "./judge";
 export { panelScore, type PanelInput } from "./panel";
 export { selectCounted, type EligibleTrick } from "./counting";
-export { normaliseTrickName, repeatIndexes, flagPossibleDuplicates, checkCanAddAttempt } from "./attempts";
+export { normaliseTrickName, repeatIndexes, type RepeatInfo, flagPossibleDuplicates, checkCanAddAttempt } from "./attempts";
 export { computeHeat, computeRider, maxRawFor } from "./heat";
 export { rankHeat, compareTied } from "./rank";
 export { explain } from "./explain";
