@@ -24,6 +24,15 @@ export function explain(r: RiderResult, model: ScoringModel): string[] {
     if (r.counted.length > 0) {
       lines.push(`  (attempts ${r.counted.map((c) => `#${c.attemptSeq}`).join(", ")})`);
     }
+    const weights = model.heat.countedWeights;
+    if (weights && r.counted.some((_, i) => (weights[i] ?? 1) !== 1)) {
+      const parts = r.counted.map((c, i) => {
+        const w = weights[i] ?? 1;
+        return `${f(c.score)} × ${w} = ${f(c.score * w)}`;
+      });
+      const weighted = r.counted.reduce((s, c, i) => s + c.score * (weights[i] ?? 1), 0);
+      lines.push(`Weighted: ${parts.join("; ")} → ${f(weighted)}`);
+    }
     if (model.heat.trickWeight !== 1) {
       lines.push(`Tricks × ${model.heat.trickWeight} = ${f(r.components.tricks - (dropped.length > 0 ? r.components.penalty : 0))}`);
     }

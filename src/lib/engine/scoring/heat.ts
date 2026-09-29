@@ -1,6 +1,6 @@
 import type { ScoringModel } from "@/lib/schemas/scoring-model";
 import { flagPossibleDuplicates, repeatIndexes } from "./attempts";
-import { selectCounted, type EligibleTrick } from "./counting";
+import { categoryLimit, selectCounted, type EligibleTrick } from "./counting";
 import { judgeTrickScore } from "./judge";
 import { panelScore, type PanelInput } from "./panel";
 import { rankHeat } from "./rank";
@@ -33,10 +33,13 @@ export function maxRawFor(model: ScoringModel): number | null {
     case "single_best":
       countedSlots = 1;
       break;
-    case "best_per_category":
-      countedSlots =
-        heat.counting.maxPerCategory * (heat.counting.categoriesCounted ?? model.categories.length);
+    case "best_per_category": {
+      // Best possible combination: the largest limits of the categories that may count (decision 5).
+      const c = heat.counting;
+      const limits = model.categories.map((cat) => categoryLimit(c, cat.key)).sort((a, b) => b - a);
+      countedSlots = limits.slice(0, c.categoriesCounted ?? limits.length).reduce((s, n) => s + n, 0);
       break;
+    }
     case "all":
       countedSlots = heat.maxAttemptsPerRider;
       break;
@@ -46,7 +49,11 @@ export function maxRawFor(model: ScoringModel): number | null {
   }
   if (countedSlots === null) return null;
 
-  let max = countedSlots * trick.scale.max * heat.trickWeight;
+  // countedWeights: Σ weights over the slots (missing = 1) instead of the slot count (decision 5).
+  let weightSum = 0;
+  for (let i = 0; i < countedSlots; i++) weightSum += heat.countedWeights?.[i] ?? 1;
+
+  let max = weightSum * trick.scale.max * heat.trickWeight;
   if (heat.impression) max += heat.impression.scale.max * heat.impression.weight;
   const hs = model.heightSensor;
   if (hs.enabled && hs.use === "bonus" && hs.bonus) max += hs.bonus.capPoints;
@@ -155,7 +162,9 @@ export function computeRider(
   const effectiveInt = interference.allowMultiple ? intCount : Math.min(1, intCount);
 
   let counted = keepsScores ? selectCounted(model, eligible) : [];
-  const sumScores = (list: EligibleTrick[]) => roundHalfUp(list.reduce((s, t) => s + t.score, 0), d);
+  // countedWeights apply in rank order (best first); rounding happens on the weighted sum (decision 1).
+  const weights = model.heat.countedWeights;
+  const sumScores = (list: EligibleTrick[]) => roundHalfUp(list.reduce((s, t, i) => s + t.score * (weights?.[i] ?? 1), 0), d);
   const tricks = roundHalfUp(model.heat.trickWeight * sumScores(counted), d);
 
   const dropped: number[] = [];

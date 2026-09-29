@@ -42,6 +42,8 @@ export const CountingSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("best_per_category"),
     maxPerCategory: z.number().int().min(1),
+    /** Per-category limits that override maxPerCategory for the categories named here (keys = category keys). */
+    perCategoryMax: z.record(z.string(), z.number().int().min(1)).optional(),
     /** Default: all categories of the model. */
     categoriesCounted: z.number().int().min(1).optional(),
     requireDistinctCategories: z.boolean().default(true),
@@ -125,6 +127,8 @@ export const ScoringModelSchema = z
     heat: z.object({
       counting: CountingSchema,
       trickWeight: z.number().min(0).default(1),
+      /** Weights on the counted tricks in rank order (best first); missing entries = 1; absent = all 1. */
+      countedWeights: z.array(z.number().min(0)).optional(),
       impression: ImpressionSchema.nullable().default(null),
       total: z.object({
         display: z.enum(["raw", "percent", "both"]).default("raw"),
@@ -186,6 +190,20 @@ export const ScoringModelSchema = z
           path: ["trick", "combine"],
           message: `combine = "sum": the criteria maximums add up to ${sumMax} but trick.scale.max is ${trick.scale.max}`,
         });
+      }
+    }
+
+    const counting = m.heat.counting;
+    if (counting.type === "best_per_category" && counting.perCategoryMax) {
+      const known = new Set(m.categories.map((c) => c.key));
+      for (const key of Object.keys(counting.perCategoryMax)) {
+        if (!known.has(key)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["heat", "counting", "perCategoryMax", key],
+            message: `perCategoryMax names "${key}", which is not a category of this model (${[...known].join(", ") || "none defined"})`,
+          });
+        }
       }
     }
 
