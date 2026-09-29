@@ -78,6 +78,7 @@ Derived/live: a Postgres view `v_live_heat` joins heat, slots, attempts, scores 
 ## 7. Realtime & consistency
 - Publication includes `heats, heat_slots, trick_attempts, trick_scores, impression_scores, heat_results, schedule_plans, wind_calls`.
 - Clients subscribe with `filter: heat_id=eq.<id>` (officials) or `event_id=eq.<id>` (public). On reconnect, refetch the heat snapshot, then resume the stream.
+- **Attempt cap**: attempts are inserted through a server action or Postgres function that counts the rider's non-deleted attempts in the heat and rejects the insert with `ATTEMPT_CAP_REACHED` when the division's cap is reached. A head-judge override passes `overrideReason` and is written to `audit_log`. Phone counters ("5 / 7") come from the same count via Realtime.
 - **Submission queue** (officials): each mark gets a `client_key`; write → on failure keep in IndexedDB → retry with backoff → server upsert on `(attempt_id, judge_seat_id)` so retries never duplicate. UI badge: pending / synced / failed (tap to retry).
 - **Publish** is a single server action in a transaction: lock heat → run `computeHeat` + `rankHeat` with the division's model → insert `heat_results` version → set slots' place/total → `applyHeatResult` progression → update `schedule_plans.actual_starts/ends` → status `published`. Idempotent per version.
 

@@ -73,11 +73,12 @@ type ScoringModel = {
   heat: {
     counting:
       | { type: "best_n"; n: number; distinctTrickNames?: boolean }   // distinctTrickNames: only the best of identically-named tricks may count (default false)
-      | { type: "best_per_category"; maxPerCategory: number; categoriesCounted?: number; requireDistinctCategories: boolean }
+      | { type: "best_per_category"; maxPerCategory: number; perCategoryMax?: Record<string, number>; categoriesCounted?: number; requireDistinctCategories: boolean }
       | { type: "single_best" }
       | { type: "all" }
       | { type: "none" };
     trickWeight: number;                       // multiplier on the sum of counted tricks (default 1)
+    countedWeights?: number[];                 // optional weights on counted tricks in rank order (best first); missing entries = 1; default absent = all 1
     impression: null | { label: string; help?: string; scale: Scale; weight: number; required: boolean };  // required (default true): publishing waits until EVERY panel judge has an impression/variety mark for EVERY rider in the heat (head judge may override with reason)
     total: { display: "raw" | "percent" | "both"; maxRaw: number | "auto" };  // auto = n×trick.max (+ impression.max)
     landedRatioHint: boolean;                  // show landed/attempted to judges before impression (KOTA/GKA guidance)
@@ -241,4 +242,4 @@ All decisions below were agreed with the owner on 29 Sep 2026 (Phase 1). The cod
 | 13 | Tie results | A tie the list cannot separate gets `tieUnresolved = true` on both riders, the same place, and a `tie_unresolved` publish blocker until a `head_judge` decision (`headJudgeDecisions`) is supplied. |
 | 14 | Marks from off-panel judges | Marks from a judge who is not on the heat's panel are excluded from every calculation but never silently: `computeHeat` returns them in `ignoredMarksFrom` (`{ judgeId, riderId, attemptSeq }`, `attemptSeq = null` for an impression mark; deleted attempts not reported) so the head-judge console can warn. |
 | 15 | Missed disallowed | If a preset sets `allowNoScore = false` and a Missed mark arrives, the engine throws a readable error rather than skipping it. |
-
+| 16 | Two optional dials (specified, not yet built) | `counting.perCategoryMax` (per-category map that overrides `maxPerCategory` for the categories it names; others keep `maxPerCategory`) and `heat.countedWeights` (weights on counted tricks in rank order, best first; missing entries = 1). Both default to absent = today's behaviour. **Implemented with the Phase 4 settings UI.** Tests: `perCategoryMax {kiteloop: 2, board_off: 1}` with kiteloops 8.9, 8.4, 7.0 and board-offs 7.2, 6.0 → counted 8.9 + 8.4 + 7.2 = **24.50**; `countedWeights [1, 0.75, 0.5]` on counted 8.0, 7.0, 6.0 → 8.0 + 5.25 + 3.0 = **16.25**. |
