@@ -2,6 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildFixture, ENV_OK, failed, run, service, anonClient, uuid, type Fixture } from "./helpers";
 
 // Plain-language guide: each `it` below is one sentence about who may (or may not) do what.
+// Join failures are returned ({ ok: false, error }) rather than raised, so the failure log survives for rate limiting.
+const codeOf = (r: { error: { message: string } | null; data: unknown }): string => r.error?.message ?? (r.data as { error?: string } | null)?.error ?? "";
+
 describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () => {
   let f: Fixture;
   beforeAll(async () => {
@@ -75,7 +78,7 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
       expect(((await f.clients.orgA.from("riders").select("id").eq("organisation_id", f.ids.orgB)).data ?? []).length).toBe(0);
       expect(((await f.clients.orgB.from("riders").select("id").eq("organisation_id", f.ids.orgA)).data ?? []).length).toBe(0);
       expect(failed(await f.clients.orgA.from("divisions").insert({ event_id: f.ids.evB1, name: "intruder", sort_order: 9 }))).not.toBe("");
-      const upd = await f.clients.orgA.from("events").update({ name: "hijack" }).eq("id", f.ids.evB1).select();
+      const upd = await f.clients.orgA.from("events").update({ name: "hijack" }).eq("id", f.ids.evB1).select("id");
       expect(upd.data ?? []).toEqual([]);
     });
     it("an organiser reads riders' personal details for their own organisation only", async () => {
@@ -295,7 +298,7 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
       const u = await f.s.auth.admin.createUser({ email: `rls-${run}-newphone@example.com`, password: "Pw-newphone-123456", email_confirm: true });
       newUserId = u.data.user!.id;
       f.userIds.newphone = newUserId;
-      expect((await bind("000000", newUserId)).error?.message).toContain("INVALID_PIN");
+      expect(codeOf(await bind("000000", newUserId))).toBe("INVALID_PIN");
       const ok = await bind("482913", newUserId);
       expect(ok.error).toBeNull();
       expect(ok.data).toMatchObject({ role: "spotter", rebound: true });
@@ -311,7 +314,7 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
     });
     it("a locked seat refuses to be rebound", async () => {
       await f.s.from("judge_seats").update({ locked: true }).eq("id", f.ids.seat_spotter);
-      expect((await bind("482913", f.userIds.orgB)).error?.message).toContain("SEAT_LOCKED");
+      expect(codeOf(await bind("482913", f.userIds.orgB))).toBe("SEAT_LOCKED");
       await f.s.from("judge_seats").update({ locked: false }).eq("id", f.ids.seat_spotter);
     });
     it("one login holds one seat per event: joining a second seat frees the first", async () => {
@@ -326,13 +329,13 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
       const first = await f.s.rpc("bind_seat_by_token", { p_event: f.ids.evA1, p_token: "tok-" + run, p_user: newUserId, p_ip: `ip2-${run}` });
       expect(first.error).toBeNull();
       const second = await f.s.rpc("bind_seat_by_token", { p_event: f.ids.evA1, p_token: "tok-" + run, p_user: f.userIds.orgB, p_ip: `ip2-${run}` });
-      expect(second.error?.message).toContain("INVALID_TOKEN");
+      expect(codeOf(second)).toBe("INVALID_TOKEN");
     });
     it("after 10 wrong tries from one address, even the right PIN is refused for a while", async () => {
       const ip = `ip-flood-${run}`;
       for (let i = 0; i < 10; i++) await bind("111111", newUserId, ip);
-      expect((await bind("735190", newUserId, ip)).error?.message).toContain("RATE_LIMITED");
-      expect((await bind("735190", newUserId, `ip-other-${run}`)).error).toBeNull();
+      expect(codeOf(await bind("735190", newUserId, ip))).toBe("RATE_LIMITED");
+      expect(codeOf(await bind("735190", newUserId, `ip-other-${run}`))).toBe("");
     });
     it("a real anonymous phone session can be bound and stays bound", async () => {
       const phone = anonClient();
@@ -392,6 +395,22 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
       expect(((await f.clients.orgA.from("scoring_models").select("id").eq("id", f.ids.modelA2)).data ?? []).length).toBe(1);
       expect(failed(await f.clients.orgA.from("scoring_models").update({ name: "tamper" }).eq("id", sys.data!.id))).toBe("");
       expect((await f.s.from("scoring_models").select("name").eq("id", sys.data!.id).single()).data!.name).toBe("sys");
+    });
+  });
+
+  // ------------------------------------------------------------------ after everything above
+  describe("after all the activity above", () => {
+    it("a visitor and a rival organiser still see none of the private data that now exists", async () => {
+      for (const t of ["riders", "entries", "judge_seats", "trick_attempts", "trick_scores", "impression_scores", "penalties", "audit_log", "join_attempts"]) {
+        const r = await f.clients.anon.from(t).select("*").limit(5);
+        expect(r.error ? "denied" : (r.data ?? []).length, `anon ${t}`).toSatisfy((v: unknown) => v === "denied" || v === 0);
+      }
+      for (const t of ["trick_attempts", "trick_scores", "impression_scores", "audit_log", "judge_seats"]) {
+        const { count } = await f.s.from(t).select("id", { count: "exact", head: true }).eq("event_id", f.ids.evA1);
+        expect(count, `service sees ${t}`).toBeGreaterThan(0); // the data really is there…
+        const r = await f.clients.orgB.from(t).select("id").eq("event_id", f.ids.evA1);
+        expect((r.data ?? []).length, `rival organiser ${t}`).toBe(0); // …and the rival cannot see it
+      }
     });
   });
 });
