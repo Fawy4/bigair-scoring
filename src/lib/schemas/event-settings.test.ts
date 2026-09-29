@@ -81,3 +81,19 @@ describe("organisation settings", () => {
     expect(OrgSlugSchema.safeParse("-x").success).toBe(false);
   });
 });
+
+import { blankEventValues, valuesFromRow } from "./event-values";
+describe("event form starting values", () => {
+  it("a blank event starts with the organisation's time zone, the default scheme and everything closed", () => {
+    const v = blankEventValues("Europe/Berlin");
+    expect(v.timezone).toBe("Europe/Berlin");
+    expect(v.settings.identification?.scheme.id).toBe("vests-per-heat");
+    expect(v.settings.registrationOpen).toBe(false);
+    expect(EventFormSchema.safeParse({ ...v, name: "Arrow", slug: "arrow" }).success).toBe(true);
+  });
+  it("a saved row without an identification scheme gets the default one", () => {
+    const v = valuesFromRow({ name: "Old", slug: "old", location: null, timezone: "Africa/Cairo", start_date: null, end_date: null, settings: { publicLiveScores: "live" }, branding: {} });
+    expect(v.settings.publicLiveScores).toBe("live");
+    expect(v.settings.identification?.basedOn).toBe("vests-per-heat");
+  });
+});
