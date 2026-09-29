@@ -129,7 +129,7 @@
 4. **Published / draft switch** added to the Event step (not in the spec), otherwise a new event can never appear on the home page or accept registrations.
 5. **Public registration and self-add functions are service-only** (the server passes the visitor's address, as the PIN join does) instead of "anon allowed": safer, and rate limiting needs the address. They arrived in this PR's migration as asked; their public pages come in 4a-2.
 6. **Logos**: PNG, JPEG and WebP only; SVG is refused because it can carry scripts.
-7. The per-division identification override switch is saved, but there is no per-division scheme picker yet (needs a column; 4a-2 or later).
+7. The per-division identification override switch is saved; the per-division column and picker are scheduled for 4a-2 (docs/06 decision 26).
 8. First apply of the migration had a bug in the rate-limit function (found by the new tests); it was fixed in the migration file and patched on the hosted project. A fresh database gets the corrected version directly.
 
 ### Not done (next PRs)

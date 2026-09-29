@@ -120,3 +120,12 @@ All decisions below were agreed with the owner on 29 Sep 2026 (Phase 4 planning)
 | 16 | Toasts | The Toaster is mounted for organiser screens only, for small confirmations. Errors and anything that must be read stay on screen until dismissed (beach rule 00.6). |
 | 17 | Beach standard on desktop | Organiser screens use rules 00.1 (contrast, weight), 00.3 (one confirmation for data-changing actions), 00.5 (never colour alone) and ≥48 px tap targets; the 56 px pad sizes apply to official phone screens only. |
 | 18 | Time zones | Organisation default time zone (`organisations.settings.defaultTimezone`, default `Africa/Cairo`) pre-fills new events; the list comes from the browser's built-in `Intl.supportedValuesOf('timeZone')`. |
+| 19 | Interference drop and weights (accepted 29 Sep 2026, Phase 4a-1) | After "drop best trick" the next-best landed trick takes the freed place, then `countedWeights` apply in rank order to the new counted list (also doc 03 decision 17). |
+| 20 | Automatic maximum with fewer counted categories | With `categoriesCounted` smaller than the number of categories, the largest per-category limits are used (best possible score). |
+| 21 | Event code instead of an event PIN | There is no single event PIN: every official has their own PIN. The Event step shows the event code (the slug) and the join link; PINs are made in the Officials step. |
+| 22 | Wind-call banner | An on/off event setting (`windCallBanner`, default on) until the wind calls arrive in Phase 5. |
+| 23 | Draft / Published switch | The Event step has a Draft / Published switch. Published events are listed on the home page and can accept registration; live and complete are set by the heat controls in later phases. |
+| 24 | Public forms are server-only | `register_rider` and `request_seat` are callable only by the server, which passes the visitor's address for rate limiting (5 per address and hour). The public pages that use them come in 4a-2. |
+| 25 | Logo files | PNG, JPEG and WebP up to 2 MB; SVG is refused because it can carry scripts. |
+| 26 | Per-division identification | The event's "allow per-division override" switch is saved. **4a-2 adds the per-division column and scheme picker** so that the switch takes effect. |
+
