@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.18"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       audit_log: {
@@ -84,12 +59,15 @@ export type Database = {
       divisions: {
         Row: {
           created_at: string
+          draw: Json | null
+          draw_locked_at: string | null
           event_id: string
           format_params: Json
           format_template_id: string | null
           id: string
           name: string
           panel_id: string | null
+          rules_unlocked_at: string | null
           scoring_model_id: string | null
           scoring_overrides: Json
           sort_order: number
@@ -98,12 +76,15 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          draw?: Json | null
+          draw_locked_at?: string | null
           event_id: string
           format_params?: Json
           format_template_id?: string | null
           id?: string
           name: string
           panel_id?: string | null
+          rules_unlocked_at?: string | null
           scoring_model_id?: string | null
           scoring_overrides?: Json
           sort_order?: number
@@ -112,12 +93,15 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          draw?: Json | null
+          draw_locked_at?: string | null
           event_id?: string
           format_params?: Json
           format_template_id?: string | null
           id?: string
           name?: string
           panel_id?: string | null
+          rules_unlocked_at?: string | null
           scoring_model_id?: string | null
           scoring_overrides?: Json
           sort_order?: number
@@ -277,6 +261,38 @@ export type Database = {
             columns: ["organisation_id"]
             isOneToOne: false
             referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_attempts: {
+        Row: {
+          at: string
+          event_id: string
+          id: string
+          ip: string
+          kind: string
+        }
+        Insert: {
+          at?: string
+          event_id: string
+          id?: string
+          ip: string
+          kind: string
+        }
+        Update: {
+          at?: string
+          event_id?: string
+          id?: string
+          ip?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_attempts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -781,6 +797,7 @@ export type Database = {
           id: string
           name: string
           plan: string
+          settings: Json
           slug: string
           updated_at: string
         }
@@ -790,6 +807,7 @@ export type Database = {
           id?: string
           name: string
           plan?: string
+          settings?: Json
           slug: string
           updated_at?: string
         }
@@ -799,6 +817,7 @@ export type Database = {
           id?: string
           name?: string
           plan?: string
+          settings?: Json
           slug?: string
           updated_at?: string
         }
@@ -952,6 +971,53 @@ export type Database = {
             columns: ["heat_id"]
             isOneToOne: false
             referencedRelation: "heats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      presets: {
+        Row: {
+          content_hash: string
+          created_at: string
+          id: string
+          json: Json
+          key: string
+          kind: string
+          name: string
+          organisation_id: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          content_hash: string
+          created_at?: string
+          id?: string
+          json: Json
+          key: string
+          kind: string
+          name: string
+          organisation_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          content_hash?: string
+          created_at?: string
+          id?: string
+          json?: Json
+          key?: string
+          kind?: string
+          name?: string
+          organisation_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presets_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
             referencedColumns: ["id"]
           },
         ]
@@ -1574,6 +1640,26 @@ export type Database = {
       }
       get_public_live_heat: { Args: { p_heat: string }; Returns: Json }
       purge_organisation: { Args: { p_org: string }; Returns: undefined }
+      register_rider: {
+        Args: {
+          p_consent: boolean
+          p_division: string
+          p_event_slug: string
+          p_fields: Json
+          p_identifiers: Json
+          p_ip: string
+        }
+        Returns: Json
+      }
+      request_seat: {
+        Args: {
+          p_event_slug: string
+          p_ip: string
+          p_name: string
+          p_role: string
+        }
+        Returns: Json
+      }
       rls_coverage: {
         Args: never
         Returns: {
@@ -1654,6 +1740,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      unlock_division_rules: {
+        Args: { p_division: string; p_reason: string }
+        Returns: undefined
       }
     }
     Enums: {
@@ -1783,9 +1873,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

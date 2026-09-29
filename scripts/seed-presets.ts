@@ -7,6 +7,8 @@ import { loadEnv, need } from "./env.mjs";
 import { createServiceClient } from "../src/lib/supabase/service";
 import { parseScoringModel } from "../src/lib/schemas/scoring-model";
 import { parseFormatTemplate } from "../src/lib/schemas/format-template";
+import { parseScheduleDay } from "../src/lib/schemas/schedule";
+import { parseIdentificationScheme } from "../src/lib/schemas/identification";
 import { canonicalHash, planPreset } from "../src/lib/presets/plan";
 
 loadEnv();
@@ -42,6 +44,29 @@ async function seedTable(table: "scoring_models" | "format_templates", paths: st
   }
 }
 
+/** Generic presets (docs/06 §12 decision 3): identification schemes and schedule templates as system rows in `presets`. */
+async function seedGeneric(kind: string, items: Array<{ key: string; name: string; raw: Record<string, unknown> }>, parse: (j: unknown) => unknown) {
+  for (const { key, name, raw } of items) {
+    try {
+      parse(raw); // throws a readable error if the preset is invalid
+      const hash = canonicalHash(raw);
+      const { data: rows, error } = await db.from("presets").select("version, content_hash").is("organisation_id", null).eq("kind", kind).eq("key", key);
+      if (error) throw new Error(error.message);
+      const plan = planPreset({ key, version: undefined, hash }, (rows ?? []).map((r) => ({ version: r.version, hash: r.content_hash })), false);
+      if (plan.action === "error") throw new Error(plan.message);
+      if (plan.action === "unchanged") { unchanged++; console.log(`  same      presets/${kind}/${key}`); continue; }
+      const { error: insErr } = await db.from("presets").insert({ organisation_id: null, kind, key, name, version: plan.version, json: raw as never, content_hash: hash });
+      if (insErr) throw new Error(insErr.message);
+      inserted++;
+      console.log(`  inserted  presets/${kind}/${key} v${plan.version}`);
+    } catch (e) {
+      failed++;
+      problems.push(`presets/${kind}/${key}: ${(e as Error).message}`);
+      console.log(`  FAILED    presets/${kind}/${key}`);
+    }
+  }
+}
+
 async function seedVocabulary() {
   for (const path of files("tricks")) {
     const raw = readJson(path);
@@ -62,6 +87,11 @@ async function main() {
   await seedTable("scoring_models", files("scoring"), parseScoringModel, true);
   console.log("Format templates");
   await seedTable("format_templates", files("formats"), parseFormatTemplate, false);
+  console.log("Identification schemes");
+  const ident = readJson("presets/identification/schemes.json") as { palette: unknown; schemes: Array<Record<string, unknown> & { id: string; name: string }> };
+  await seedGeneric("identification", ident.schemes.map((sc) => ({ key: sc.id, name: sc.name, raw: { ...sc, palette: ident.palette } as Record<string, unknown> })), parseIdentificationScheme);
+  console.log("Schedule templates");
+  await seedGeneric("schedule", files("schedule").map((path) => ({ key: basename(path, ".json"), name: "Kitemania Day 2 timetable", raw: readJson(path) })), parseScheduleDay);
   console.log("Trick vocabulary");
   await seedVocabulary();
   console.log(`\nDone: ${inserted} written, ${unchanged} unchanged, ${failed} failed.`);
