@@ -40,6 +40,8 @@ export async function buildFixture(): Promise<Fixture> {
   const userIds: Record<string, string> = {};
   const ids: Record<string, string> = {};
   const created: string[] = [];
+  const extraUsers: string[] = [];
+  
 
   const user = async (key: string) => {
     const email = `rls-${run}-${key}@example.com`;
@@ -130,7 +132,9 @@ export async function buildFixture(): Promise<Fixture> {
   const cleanup = async () => {
     await s.from("scoring_models").delete().eq("key", `rls-${run}-system`);
     for (const org of [ids.orgA, ids.orgB]) if (org) await s.rpc("purge_organisation", { p_org: org });
-    for (const id of created) await s.auth.admin.deleteUser(id);
+    if (userIds.newphone) created.push(userIds.newphone);
+    for (const id of [...created, ...extraUsers]) await s.auth.admin.deleteUser(id);
   };
+  Object.defineProperty(userIds, "__track", { value: (id: string) => extraUsers.push(id), enumerable: false });
   return { s, clients: clients as Fixture["clients"], ids, userIds, cleanup };
 }

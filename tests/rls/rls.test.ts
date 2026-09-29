@@ -341,11 +341,11 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
       const phone = anonClient();
       const { data, error } = await phone.auth.signInAnonymously();
       expect(error?.message ?? "", "Anonymous sign-ins must be switched on (see docs/STATUS.md)").toBe("");
+      if (data.user) (f.userIds as unknown as { __track: (id: string) => void }).__track(data.user.id); // removed by cleanup even if an assertion fails
       expect(data.user?.is_anonymous).toBe(true);
       await f.s.rpc("set_seat_pin", { p_seat: f.ids.seat_j3, p_pin: "246810" });
       expect((await bind("246810", data.user!.id, `ip3-${run}`)).error).toBeNull();
       expect(((await phone.from("judge_seats").select("id,role")).data ?? [])[0]).toMatchObject({ id: f.ids.seat_j3, role: "judge" });
-      await f.s.auth.admin.deleteUser(data.user!.id);
     });
   });
 
