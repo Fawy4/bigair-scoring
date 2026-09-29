@@ -1,0 +1,73 @@
+{
+  "_comment": "Rider identification schemes. The event picks one (divisions may override). 'primary' is the big label on every rider chip; 'secondary' items are shown smaller. Palette colour names are always rendered as TEXT as well as colour (colour-blind and white/black vests). See docs/06-SCREENS-UX.md section 0 and docs/05 (entries.identifiers).",
+  "palette": [
+    { "key": "red", "label": "Red", "hex": "#e11d48" },
+    { "key": "yellow", "label": "Yellow", "hex": "#facc15" },
+    { "key": "blue", "label": "Blue", "hex": "#2563eb" },
+    { "key": "green", "label": "Green", "hex": "#16a34a" },
+    { "key": "white", "label": "White", "hex": "#ffffff" },
+    { "key": "black", "label": "Black", "hex": "#111111" },
+    { "key": "orange", "label": "Orange", "hex": "#f97316" },
+    { "key": "pink", "label": "Pink", "hex": "#ec4899" },
+    { "key": "purple", "label": "Purple", "hex": "#9333ea" },
+    { "key": "grey", "label": "Grey", "hex": "#6b7280" }
+  ],
+  "schemes": [
+    {
+      "id": "vests-per-heat",
+      "name": "Coloured vests / lycras assigned per heat (DEFAULT)",
+      "description": "KOTA/GKA style: each slot in a heat has a colour from the palette; the rider wears that vest for that heat only.",
+      "primary": "vest_colour",
+      "secondary": ["name", "nationality"],
+      "vestAssignment": "per_heat_slot",
+      "bibNumbering": "none",
+      "kiteFields": [],
+      "calloutLabel": "colour"
+    },
+    {
+      "id": "fixed-lycra-per-rider",
+      "name": "One coloured lycra per rider for the whole event",
+      "description": "Lycras handed out at registration; the colour stays with the rider. Draw avoids putting two riders with the same colour in one heat when possible and warns otherwise.",
+      "primary": "vest_colour",
+      "secondary": ["name", "bib_number"],
+      "vestAssignment": "fixed_per_rider",
+      "bibNumbering": "per_event",
+      "kiteFields": [],
+      "calloutLabel": "colour"
+    },
+    {
+      "id": "bib-numbers",
+      "name": "Bib / sail numbers",
+      "description": "Numbers printed on vest, board or kite; primary identifier is the number.",
+      "primary": "bib_number",
+      "secondary": ["name", "kite"],
+      "vestAssignment": "none",
+      "bibNumbering": "per_division",
+      "kiteFields": ["brand", "model", "size", "colours"],
+      "calloutLabel": "number"
+    },
+    {
+      "id": "kites-no-vests",
+      "name": "Identify by kite (no vests available)",
+      "description": "Riders on their own gear; the kite brand/model/size/colours plus rash guard colour identify them. Draw warns when two riders in a heat have similar kites.",
+      "primary": "kite",
+      "secondary": ["rashguard_colour", "name"],
+      "vestAssignment": "none",
+      "bibNumbering": "none",
+      "kiteFields": ["brand", "model", "size", "colours"],
+      "calloutLabel": "kite"
+    },
+    {
+      "id": "brand-launch-same-kites",
+      "name": "Brand launch — most riders on the same kite brand",
+      "description": "For events like a brand launch where everyone may fly the same kites: primary is the coloured vest if available, otherwise rash guard colour; secondary shows kite size + colourway + name; rider photo shown to spotter and judges.",
+      "primary": "vest_colour",
+      "fallbackPrimary": "rashguard_colour",
+      "secondary": ["kite_size_colour", "name", "photo"],
+      "vestAssignment": "per_heat_slot",
+      "bibNumbering": "none",
+      "kiteFields": ["size", "colours"],
+      "calloutLabel": "colour"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "heats4-top2-single-elim",
+  "name": "Single elimination — heats of 4, top 2 advance, final of 4",
+  "description": "Generic club/tour format for any number of riders (min 5). Snake seeding; uneven fields use smaller heats for the top seeds. Rounds are generated until one final of 4 remains. Riders eliminated in the same round share a placing.",
+  "basedOn": "Common single-elimination heat format",
+  "entrants": { "min": 5, "max": null },
+  "vestColours": ["red", "yellow", "blue", "green", "white", "black", "orange", "pink", "purple", "grey"],
+  "timing": { "defaultHeatMin": 10, "defaultBreakAfterHeatMin": 3, "defaultBreakAfterRoundMin": 5 },
+  "kind": "generator",
+  "generator": {
+    "type": "single_elimination",
+    "params": {
+      "heatSize": 4,
+      "advancePerHeat": 2,
+      "finalSize": 4,
+      "earlyMin": 10,
+      "semiMin": 12,
+      "finalMin": 15,
+      "seeding": "snake",
+      "uneven": "smaller_heats_for_top_seeds",
+      "reseed": "by_place_then_score"
+    }
+  },
+  "placings": { "eliminated": "shared", "finalHeatIsRanking": true }
+}

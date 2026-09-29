@@ -1,0 +1,62 @@
+{
+  "id": "kota-best3-impression",
+  "name": "KOTA-style: best 3 tricks + impression (DEFAULT)",
+  "description": "Each trick scored 0-10 on Height, Extremity, Technicality, Execution (equal weights, mean). Best 3 tricks + one impression mark per rider per heat. Heat total 0-40 (75% tricks / 25% impression). Based on the Red Bull King of the Air 2026 published format.",
+  "version": 1,
+  "basedOn": "Red Bull King of the Air 2026 format & qualifier judging criteria (redbull.com)",
+  "trick": {
+    "entry": "criteria",
+    "scale": { "min": 0, "max": 10, "step": 0.1 },
+    "criteria": [
+      { "key": "height", "label": "Height", "help": "Altitude of the jump relative to today's wind. Low height + extreme = low score.", "scale": { "min": 0, "max": 10, "step": 0.1 }, "weight": 1, "sensorFill": "height" },
+      { "key": "extremity", "label": "Extremity", "help": "Power, kite angle, horizontal travel ('yank'), speed in and out, commitment.", "scale": { "min": 0, "max": 10, "step": 0.1 }, "weight": 1 },
+      { "key": "technicality", "label": "Technicality", "help": "Difficulty: loop variations, rotations, board-offs, handle passes, grabs.", "scale": { "min": 0, "max": 10, "step": 0.1 }, "weight": 1 },
+      { "key": "execution", "label": "Execution", "help": "Control, stability, style, smoothness and a clean landing.", "scale": { "min": 0, "max": 10, "step": 0.1 }, "weight": 1 }
+    ],
+    "combine": "weighted_mean",
+    "crash": "not_counted",
+    "allowNoScore": true
+  },
+  "panel": {
+    "minJudges": 3,
+    "maxJudges": 7,
+    "aggregate": "trimmed_mean",
+    "trimMinJudges": 5,
+    "decimals": 2,
+    "outlierWarnPct": 15,
+    "requireAllJudges": true
+  },
+  "heat": {
+    "counting": { "type": "best_n", "n": 3 },
+    "trickWeight": 1,
+    "impression": {
+      "label": "Impression",
+      "help": "Whole-heat mark: variety, risk, style, show, innovation, flow, both directions, landed vs crashed ratio.",
+      "scale": { "min": 0, "max": 10, "step": 0.1 },
+      "weight": 1
+    },
+    "total": { "display": "both", "maxRaw": "auto" },
+    "landedRatioHint": true
+  },
+  "categories": [
+    { "key": "kiteloop", "label": "Kiteloop family", "examples": ["Single loop", "Double loop", "Triple loop", "S-loop", "Contra loop", "Late kiteloop"], "colour": "#e11d48" },
+    { "key": "board_off", "label": "Board-off", "examples": ["Board-off", "Board-off kiteloop", "Board spin"], "colour": "#2563eb" },
+    { "key": "rotation", "label": "Rotation", "examples": ["Backroll", "Frontroll", "Late backroll", "Double rotation"], "colour": "#16a34a" },
+    { "key": "handle_pass", "label": "Handle pass", "examples": ["Handle pass kiteloop"], "colour": "#9333ea" },
+    { "key": "other", "label": "Other / straight air", "examples": ["Straight jump", "Grab"], "colour": "#6b7280" }
+  ],
+  "tieBreakers": ["highest_counted_trick", "next_counted_trick", "impression", "most_landed", "head_judge"],
+  "modifiers": {
+    "interference": { "penalty": "drop_best_trick", "allowMultiple": false },
+    "dns": { "placing": "last", "total": 0 },
+    "dnf": { "keepScores": true },
+    "dsq": { "placing": "last", "total": 0 }
+  },
+  "heightSensor": {
+    "enabled": false,
+    "source": "manual",
+    "use": "display",
+    "mapping": { "type": "linear", "fromM": 5, "toM": 25, "toScore": [0, 10] },
+    "award": { "highestJump": true }
+  }
+}

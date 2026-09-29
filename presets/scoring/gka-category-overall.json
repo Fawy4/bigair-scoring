@@ -1,0 +1,60 @@
+{
+  "id": "gka-category-overall",
+  "name": "GKA-style: best trick per category + overall score (approximation)",
+  "description": "Tricks grouped into families; only the highest-scoring trick in each family counts, plus an Overall score for the whole heat (wow factor, variety, smoothness, risk, landed-vs-crashed ratio). Height/extremity weighted ~70/30 over technicality. APPROXIMATION of the GKA Kite World Tour Big Air rules as described on the public discipline page — encode the exact GKA Rulebook 2025 Chapter 5 (sections 41-44, Appendix C2) before using this preset for a sanctioned event.",
+  "version": 1,
+  "basedOn": "GKA Kite World Tour Big Air discipline page + Rulebook 2025 table of contents (gkakiteworldtour.com)",
+  "trick": {
+    "entry": "criteria",
+    "scale": { "min": 0, "max": 10, "step": 0.1 },
+    "criteria": [
+      { "key": "height", "label": "Height & amplitude", "help": "Height and distance travelled; emphasis rises with wind strength.", "scale": { "min": 0, "max": 10, "step": 0.1 }, "weight": 0.35, "sensorFill": "height" },
+      { "key": "extremity", "label": "Extremity", "help": "Big, high and powered, kite in the power zone at a good angle; speed in / speed out; projection.", "scale": { "min": 0, "max": 10, "step": 0.1 }, "weight": 0.35 },
+      { "key": "technicality", "label": "Technicality", "help": "Difficulty of the manoeuvre (loops, rotations, board-offs, grabs).", "scale": { "min": 0, "max": 10, "step": 0.1 }, "weight": 0.20 },
+      { "key": "execution", "label": "Execution", "help": "Control and landing.", "scale": { "min": 0, "max": 10, "step": 0.1 }, "weight": 0.10 }
+    ],
+    "combine": "weighted_mean",
+    "crash": "not_counted",
+    "allowNoScore": true
+  },
+  "panel": {
+    "minJudges": 3,
+    "maxJudges": 7,
+    "aggregate": "trimmed_mean",
+    "trimMinJudges": 5,
+    "decimals": 2,
+    "outlierWarnPct": 15,
+    "requireAllJudges": true
+  },
+  "heat": {
+    "counting": { "type": "best_per_category", "maxPerCategory": 1, "categoriesCounted": 3, "requireDistinctCategories": true },
+    "trickWeight": 1,
+    "impression": {
+      "label": "Overall score",
+      "help": "Wow factor, variety, smoothness, risk, proportion of tricks landed vs crashed.",
+      "scale": { "min": 0, "max": 10, "step": 0.1 },
+      "weight": 1
+    },
+    "total": { "display": "raw", "maxRaw": "auto" },
+    "landedRatioHint": true
+  },
+  "categories": [
+    { "key": "kiteloop", "label": "Kiteloop tricks", "examples": ["Single/double/triple loop", "S-loop", "Contra loop"], "colour": "#e11d48" },
+    { "key": "board_off", "label": "Board-off tricks", "examples": ["Board-off", "Board-off kiteloop", "Board flip"], "colour": "#2563eb" },
+    { "key": "rotation", "label": "Rotation / late tricks", "examples": ["Late backroll kiteloop", "Double rotation"], "colour": "#16a34a" }
+  ],
+  "tieBreakers": ["highest_counted_trick", "next_counted_trick", "impression", "head_judge"],
+  "modifiers": {
+    "interference": { "penalty": "drop_best_trick", "allowMultiple": false },
+    "dns": { "placing": "last", "total": 0 },
+    "dnf": { "keepScores": true },
+    "dsq": { "placing": "last", "total": 0 }
+  },
+  "heightSensor": {
+    "enabled": false,
+    "source": "manual",
+    "use": "display",
+    "mapping": { "type": "linear", "fromM": 5, "toM": 25, "toScore": [0, 10] },
+    "award": { "highestJump": true }
+  }
+}

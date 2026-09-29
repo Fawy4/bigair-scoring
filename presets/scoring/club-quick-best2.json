@@ -1,0 +1,49 @@
+{
+  "id": "club-quick-best2",
+  "name": "Club quick: single mark per trick, best 2 count",
+  "description": "Fast format for amateur / expression-session heats of up to 10 riders: each trick gets one 0-10 mark per judge (step 0.5), best 2 tricks count, no impression. Heat total 0-20. Inspired by PUKL Division 2.5 'expression session style' heats.",
+  "version": 1,
+  "basedOn": "PUKL Division 2.5 description (heats of up to 10, expression-session style)",
+  "trick": {
+    "entry": "single",
+    "scale": { "min": 0, "max": 10, "step": 0.5 },
+    "criteria": [],
+    "combine": "weighted_mean",
+    "crash": "not_counted",
+    "allowNoScore": true
+  },
+  "panel": {
+    "minJudges": 2,
+    "maxJudges": 5,
+    "aggregate": "mean",
+    "trimMinJudges": 5,
+    "decimals": 2,
+    "outlierWarnPct": 20,
+    "requireAllJudges": false
+  },
+  "heat": {
+    "counting": { "type": "best_n", "n": 2 },
+    "trickWeight": 1,
+    "impression": null,
+    "total": { "display": "raw", "maxRaw": "auto" },
+    "landedRatioHint": false
+  },
+  "categories": [
+    { "key": "jump", "label": "Straight jump", "colour": "#6b7280" },
+    { "key": "rotation", "label": "Rotation", "colour": "#16a34a" },
+    { "key": "kiteloop", "label": "Kiteloop", "colour": "#e11d48" }
+  ],
+  "tieBreakers": ["highest_counted_trick", "most_landed", "share_place"],
+  "modifiers": {
+    "interference": { "penalty": "drop_best_trick", "allowMultiple": false },
+    "dns": { "placing": "last", "total": 0 },
+    "dnf": { "keepScores": true },
+    "dsq": { "placing": "last", "total": 0 }
+  },
+  "heightSensor": {
+    "enabled": false,
+    "source": "manual",
+    "use": "display",
+    "award": { "highestJump": true }
+  }
+}

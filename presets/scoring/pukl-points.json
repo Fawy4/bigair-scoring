@@ -1,0 +1,57 @@
+{
+  "id": "pukl-points",
+  "name": "PUKL-style points per trick (3 + 3 + 3 + 1)",
+  "description": "Each trick scored out of 10 as the SUM of Height (0-3), Risk (0-3), Technicality (0-3) and Ingenuity (0-1). Best 3 tricks count (n is editable; PUKL does not publish its count). No impression mark. Based on the PUKL British Kiteboarding National Championships judging description.",
+  "version": 1,
+  "basedOn": "PUKL — British Kiteboarding National Championships (pukl.co.uk)",
+  "trick": {
+    "entry": "criteria",
+    "scale": { "min": 0, "max": 10, "step": 0.5 },
+    "criteria": [
+      { "key": "height", "label": "Height", "help": "How big the trick sends, relative to the wind on the day.", "scale": { "min": 0, "max": 3, "step": 0.5 }, "weight": 1, "sensorFill": "height" },
+      { "key": "risk", "label": "Risk", "help": "What is actually on the line if the trick goes wrong.", "scale": { "min": 0, "max": 3, "step": 0.5 }, "weight": 1 },
+      { "key": "technicality", "label": "Technicality", "help": "Difficulty of execution: rotations, grabs, handle passes.", "scale": { "min": 0, "max": 3, "step": 0.5 }, "weight": 1 },
+      { "key": "ingenuity", "label": "Ingenuity", "help": "Something the judges have not seen before.", "scale": { "min": 0, "max": 1, "step": 0.5 }, "weight": 1 }
+    ],
+    "combine": "sum",
+    "crash": "not_counted",
+    "allowNoScore": true
+  },
+  "panel": {
+    "minJudges": 3,
+    "maxJudges": 5,
+    "aggregate": "mean",
+    "trimMinJudges": 5,
+    "decimals": 2,
+    "outlierWarnPct": 15,
+    "requireAllJudges": true
+  },
+  "heat": {
+    "counting": { "type": "best_n", "n": 3 },
+    "trickWeight": 1,
+    "impression": null,
+    "total": { "display": "raw", "maxRaw": "auto" },
+    "landedRatioHint": false
+  },
+  "categories": [
+    { "key": "kiteloop", "label": "Kiteloop", "colour": "#e11d48" },
+    { "key": "board_off", "label": "Board-off", "colour": "#2563eb" },
+    { "key": "rotation", "label": "Rotation", "colour": "#16a34a" },
+    { "key": "handle_pass", "label": "Handle pass", "colour": "#9333ea" },
+    { "key": "other", "label": "Other", "colour": "#6b7280" }
+  ],
+  "tieBreakers": ["highest_counted_trick", "next_counted_trick", "most_landed", "head_judge"],
+  "modifiers": {
+    "interference": { "penalty": "drop_best_trick", "allowMultiple": false },
+    "dns": { "placing": "last", "total": 0 },
+    "dnf": { "keepScores": true },
+    "dsq": { "placing": "last", "total": 0 }
+  },
+  "heightSensor": {
+    "enabled": false,
+    "source": "manual",
+    "use": "display",
+    "mapping": { "type": "linear", "fromM": 5, "toM": 25, "toScore": [0, 3] },
+    "award": { "highestJump": true }
+  }
+}

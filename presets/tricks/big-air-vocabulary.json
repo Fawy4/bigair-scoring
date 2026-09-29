@@ -1,0 +1,57 @@
+{
+  "_comment": "Spotter trick-builder vocabulary (editable per event). A trick = direction + optional multiplier + base trick + any number of modifiers. The builder composes the display name from namingTemplate and derives the scoring category from categoryPrecedence (highest-precedence category present among base + modifiers). Aliases are used to parse typed text and speech (fuzzy, case-insensitive). STARTER LIST - review with the head judge before the event; add local trick names freely.",
+  "directions": [
+    { "key": "left", "label": "Left", "aliases": ["L", "port", "going left"] },
+    { "key": "right", "label": "Right", "aliases": ["R", "starboard", "going right"] }
+  ],
+  "multipliers": [
+    { "key": "x1", "label": "\u00d71", "aliases": ["single", "one"] },
+    { "key": "x2", "label": "\u00d72", "aliases": ["double", "two", "2x", "720"] },
+    { "key": "x3", "label": "\u00d73", "aliases": ["triple", "three", "3x", "1080"] },
+    { "key": "x4", "label": "\u00d74", "aliases": ["quad", "four", "4x"] }
+  ],
+  "baseTricks": [
+    { "key": "straight_jump", "label": "Straight jump", "category": "other", "aliases": ["simple jump", "boost", "jump", "straight air"] },
+    { "key": "backroll", "label": "Backroll", "category": "rotation", "aliases": ["back roll", "BR", "back"] },
+    { "key": "frontroll", "label": "Frontroll", "category": "rotation", "aliases": ["front roll", "FR", "front"] },
+    { "key": "kiteloop", "label": "Kiteloop", "category": "kiteloop", "aliases": ["kite loop", "KL", "loop"] },
+    { "key": "megaloop", "label": "Megaloop", "category": "kiteloop", "aliases": ["mega loop", "mega"] },
+    { "key": "double_loop", "label": "Double loop", "category": "kiteloop", "aliases": ["double kiteloop", "DL", "double kite loop"] },
+    { "key": "triple_loop", "label": "Triple loop", "category": "kiteloop", "aliases": ["triple kiteloop", "TL"] },
+    { "key": "s_loop", "label": "S-loop", "category": "kiteloop", "aliases": ["S loop", "es loop"] },
+    { "key": "contra_loop", "label": "Contra loop", "category": "kiteloop", "aliases": ["contra", "contra kiteloop"] },
+    { "key": "doobie_loop", "label": "Doobie loop", "category": "kiteloop", "aliases": ["doobie", "dooby"] },
+    { "key": "boogie_loop", "label": "Boogie loop", "category": "kiteloop", "aliases": ["boogie"] },
+    { "key": "late_backroll", "label": "Late backroll", "category": "rotation", "aliases": ["late back", "late BR"] },
+    { "key": "late_frontroll", "label": "Late frontroll", "category": "rotation", "aliases": ["late front", "late FR"] },
+    { "key": "heart_attack", "label": "Heart attack", "category": "other", "aliases": ["heartattack"] },
+    { "key": "tic_tac", "label": "Tic-tac", "category": "other", "aliases": ["tictac", "tic tac"] }
+  ],
+  "modifiers": [
+    { "key": "board_off", "label": "Board-off", "category": "board_off", "aliases": ["BO", "board off", "boardoff"] },
+    { "key": "one_foot", "label": "One-foot", "category": "board_off", "aliases": ["1 foot", "one foot"] },
+    { "key": "board_spin", "label": "Board spin", "category": "board_off", "aliases": ["spin the board", "board flip"] },
+    { "key": "handle_pass", "label": "Handle pass", "category": "handle_pass", "aliases": ["handle", "HP", "pass"] },
+    { "key": "kiteloop_mod", "label": "+ Kiteloop", "category": "kiteloop", "aliases": ["with loop", "with kiteloop", "KL"] },
+    { "key": "late", "label": "Late", "category": null, "aliases": ["late rotation"] },
+    { "key": "grab", "label": "Grab", "category": null, "aliases": ["indy", "tail grab", "nose grab", "melon", "mute", "stalefish", "method"], "variants": ["Indy", "Tail", "Nose", "Melon", "Mute", "Stalefish", "Method"] },
+    { "key": "blind_landing", "label": "Blind landing", "category": null, "aliases": ["to blind", "blind"] },
+    { "key": "toeside", "label": "Toeside", "category": null, "aliases": ["toe side", "toe"] },
+    { "key": "downloop", "label": "Downloop landing", "category": null, "aliases": ["down loop", "downloop"] }
+  ],
+  "categoryPrecedence": ["handle_pass", "board_off", "kiteloop", "rotation", "other"],
+  "namingTemplate": "{direction} {multiplier} {base} {modifiers}",
+  "hideMultiplierWhen": "x1",
+  "examples": [
+    "Left \u00d72 Backroll Board-off Handle pass",
+    "Right Kiteloop Late backroll",
+    "Left Contra loop Board-off",
+    "Right Double loop",
+    "Left Frontroll (crash)"
+  ],
+  "speech": {
+    "_comment": "Speech input uses the browser's speech recognition where available (Chrome/Android; Safari iOS with webkit prefix); otherwise the phone keyboard's dictation key into the text field. Recognised text is tokenised and fuzzy-matched against aliases; unmatched words are kept as free text and flagged for the head judge.",
+    "confirmBeforeLog": true,
+    "minConfidence": 0.6
+  }
+}

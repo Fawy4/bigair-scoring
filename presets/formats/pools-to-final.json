@@ -1,0 +1,23 @@
+{
+  "id": "pools-to-final",
+  "name": "Pools to final — expression-session heats of up to 10, top N to one final",
+  "description": "Every rider rides once in a pool heat (up to 10 riders, 12-15 min). All riders are ranked across pools by heat total using the division's scoring model; the top N go to a single final. Suited to amateur/intermediate divisions and to days with little wind time. Inspired by PUKL Division 2.5.",
+  "basedOn": "PUKL Division 2.5 (heats of up to 10, expression-session style)",
+  "entrants": { "min": 4, "max": 60 },
+  "vestColours": ["red", "yellow", "blue", "green", "white", "black", "orange", "pink", "purple", "grey"],
+  "timing": { "defaultHeatMin": 12, "defaultBreakAfterHeatMin": 3, "defaultBreakAfterRoundMin": 10 },
+  "kind": "generator",
+  "generator": {
+    "type": "pools_to_final",
+    "params": {
+      "heatSize": 10,
+      "finalists": 6,
+      "poolMin": 12,
+      "finalMin": 15,
+      "seeding": "snake",
+      "uneven": "smaller_heats_for_top_seeds",
+      "crossPoolTieBreak": "scoring_model_then_seed"
+    }
+  },
+  "placings": { "eliminated": "by_heat_score", "finalHeatIsRanking": true }
+}

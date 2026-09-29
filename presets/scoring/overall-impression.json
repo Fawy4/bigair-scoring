@@ -1,0 +1,53 @@
+{
+  "id": "overall-impression",
+  "name": "Simple overall heat score (one mark per rider per judge)",
+  "description": "Judges do not score individual tricks. Each judge gives one 0-10 mark per rider for the whole heat; marks are averaged. Ideal for club heats, kids' divisions or when only one or two judges are available. Spotter logging is optional and purely informational.",
+  "version": 1,
+  "basedOn": "Common club-heat practice (single overall mark per rider from each judge)",
+  "trick": {
+    "entry": "none",
+    "scale": { "min": 0, "max": 10, "step": 0.1 },
+    "criteria": [],
+    "combine": "weighted_mean",
+    "crash": "not_counted",
+    "allowNoScore": false
+  },
+  "panel": {
+    "minJudges": 1,
+    "maxJudges": 7,
+    "aggregate": "mean",
+    "trimMinJudges": 5,
+    "decimals": 2,
+    "outlierWarnPct": 20,
+    "requireAllJudges": true
+  },
+  "heat": {
+    "counting": { "type": "none" },
+    "trickWeight": 0,
+    "impression": {
+      "label": "Heat score",
+      "help": "Overall impression of the rider's heat: height, extremity, variety, technicality, execution and landings.",
+      "scale": { "min": 0, "max": 10, "step": 0.1 },
+      "weight": 1
+    },
+    "total": { "display": "raw", "maxRaw": "auto" },
+    "landedRatioHint": true
+  },
+  "categories": [
+    { "key": "jump", "label": "Jump", "colour": "#6b7280" },
+    { "key": "kiteloop", "label": "Kiteloop", "colour": "#e11d48" }
+  ],
+  "tieBreakers": ["most_landed", "head_judge", "share_place"],
+  "modifiers": {
+    "interference": { "penalty": "points", "value": 1, "allowMultiple": true },
+    "dns": { "placing": "last", "total": 0 },
+    "dnf": { "keepScores": true },
+    "dsq": { "placing": "last", "total": 0 }
+  },
+  "heightSensor": {
+    "enabled": false,
+    "source": "manual",
+    "use": "display",
+    "award": { "highestJump": true }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "_comment": "Re-expression of the owner's 'Kitemania Day 2 Timetable' spreadsheet (Sheet1) as three schedule plans. In the app, items reference heatId; here they use heatRef {division, round, heat} so the test fixture can resolve them after generating the draws. Expected computed times are in docs/08-TEST-SCENARIOS.md section 3.",
+  "eventDay": "2026-10-03",
+  "timezone": "Africa/Cairo",
+  "defaults": { "breakAfterHeatMin": 3, "breakAfterRoundMin": 5, "readyCallMin": 15 },
+  "plans": [
+    {
+      "id": "main",
+      "name": "Day 2 – main plan",
+      "active": true,
+      "anchors": { "w-r1-h1": "10:30", "a-r2-h4": "14:00" },
+      "actualStarts": {},
+      "items": [
+        { "id": "w-r1-h1", "kind": "heat", "heatRef": { "division": "Women", "round": "Round 1", "heat": "Heat 1" }, "durationMin": 9, "breakAfterMin": 3 },
+        { "id": "w-r1-h2", "kind": "heat", "heatRef": { "division": "Women", "round": "Round 1", "heat": "Heat 2" }, "durationMin": 9, "breakAfterMin": 5 },
+        { "id": "w-r2-h3", "kind": "heat", "heatRef": { "division": "Women", "round": "Round 2", "heat": "Heat 3" }, "durationMin": 9, "breakAfterMin": 5 },
+        { "id": "w-f", "kind": "heat", "heatRef": { "division": "Women", "round": "Final - Round 3", "heat": "Final" }, "durationMin": 15, "breakAfterMin": 15 },
+        { "id": "a-r2-h4", "kind": "heat", "heatRef": { "division": "Advanced", "round": "Round 2", "heat": "Heat 4" }, "durationMin": 15, "breakAfterMin": 5 },
+        { "id": "a-f", "kind": "heat", "heatRef": { "division": "Advanced", "round": "Final - Round 3", "heat": "Final" }, "durationMin": 18, "breakAfterMin": 15 },
+        { "id": "p-r1-h1", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 1", "heat": "Heat 1" }, "durationMin": 12, "breakAfterMin": 3 },
+        { "id": "p-r1-h2", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 1", "heat": "Heat 2" }, "durationMin": 12, "breakAfterMin": 3 },
+        { "id": "p-r1-h3", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 1", "heat": "Heat 3" }, "durationMin": 12, "breakAfterMin": 3 },
+        { "id": "p-r1-h4", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 1", "heat": "Heat 4" }, "durationMin": 12, "breakAfterMin": 5 },
+        { "id": "p-r2-h5", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 2", "heat": "Heat 5" }, "durationMin": 16, "breakAfterMin": 3 },
+        { "id": "p-r2-h6", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 2", "heat": "Heat 6" }, "durationMin": 16, "breakAfterMin": 5 },
+        { "id": "p-f", "kind": "heat", "heatRef": { "division": "Pros", "round": "Final - Round 3", "heat": "Final" }, "durationMin": 18, "breakAfterMin": 0 }
+      ],
+      "expectedFinish": "16:53"
+    },
+    {
+      "id": "plan-a-bad-wind",
+      "name": "Plan A – Bad wind",
+      "active": false,
+      "anchors": { "a-r2-h4": "09:30" },
+      "actualStarts": {},
+      "items": [
+        { "id": "a-r2-h4", "kind": "heat", "heatRef": { "division": "Advanced", "round": "Round 2", "heat": "Heat 4" }, "durationMin": 15, "breakAfterMin": 5 },
+        { "id": "a-f", "kind": "heat", "heatRef": { "division": "Advanced", "round": "Final - Round 3", "heat": "Final" }, "durationMin": 18, "breakAfterMin": 15 },
+        { "id": "p-r1-h1", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 1", "heat": "Heat 1" }, "durationMin": 12, "breakAfterMin": 3 },
+        { "id": "p-r1-h2", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 1", "heat": "Heat 2" }, "durationMin": 12, "breakAfterMin": 3 },
+        { "id": "p-r1-h3", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 1", "heat": "Heat 3" }, "durationMin": 12, "breakAfterMin": 3 },
+        { "id": "p-r1-h4", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 1", "heat": "Heat 4" }, "durationMin": 12, "breakAfterMin": 5 },
+        { "id": "w-r1-h1", "kind": "heat", "heatRef": { "division": "Women", "round": "Round 1", "heat": "Heat 1" }, "durationMin": 9, "breakAfterMin": 3 },
+        { "id": "w-r1-h2", "kind": "heat", "heatRef": { "division": "Women", "round": "Round 1", "heat": "Heat 2" }, "durationMin": 9, "breakAfterMin": 5 },
+        { "id": "w-r2-h3", "kind": "heat", "heatRef": { "division": "Women", "round": "Round 2", "heat": "Heat 3" }, "durationMin": 9, "breakAfterMin": 5 },
+        { "id": "w-f", "kind": "heat", "heatRef": { "division": "Women", "round": "Final - Round 3", "heat": "Final" }, "durationMin": 15, "breakAfterMin": 0 }
+      ],
+      "expectedFinish": "12:20"
+    },
+    {
+      "id": "plan-a-good-wind",
+      "name": "Plan A – Good wind",
+      "active": false,
+      "anchors": { "a-r2-h4": "09:30" },
+      "actualStarts": {},
+      "items": [
+        { "id": "a-r2-h4", "kind": "heat", "heatRef": { "division": "Advanced", "round": "Round 2", "heat": "Heat 4" }, "durationMin": 15, "breakAfterMin": 5 },
+        { "id": "a-f", "kind": "heat", "heatRef": { "division": "Advanced", "round": "Final - Round 3", "heat": "Final" }, "durationMin": 18, "breakAfterMin": 15 },
+        { "id": "p-r1-h1", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 1", "heat": "Heat 1" }, "durationMin": 12, "breakAfterMin": 3 },
+        { "id": "p-r1-h2", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 1", "heat": "Heat 2" }, "durationMin": 12, "breakAfterMin": 3 },
+        { "id": "p-r1-h3", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 1", "heat": "Heat 3" }, "durationMin": 12, "breakAfterMin": 3 },
+        { "id": "p-r1-h4", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 1", "heat": "Heat 4" }, "durationMin": 12, "breakAfterMin": 5 },
+        { "id": "p-r2-h5", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 2", "heat": "Heat 5" }, "durationMin": 16, "breakAfterMin": 3 },
+        { "id": "p-r2-h6", "kind": "heat", "heatRef": { "division": "Pros", "round": "Round 2", "heat": "Heat 6" }, "durationMin": 16, "breakAfterMin": 5 },
+        { "id": "p-f", "kind": "heat", "heatRef": { "division": "Pros", "round": "Final - Round 3", "heat": "Final" }, "durationMin": 18, "breakAfterMin": 15 },
+        { "id": "w-r1-h1", "kind": "heat", "heatRef": { "division": "Women", "round": "Round 1", "heat": "Heat 1" }, "durationMin": 9, "breakAfterMin": 3 },
+        { "id": "w-r1-h2", "kind": "heat", "heatRef": { "division": "Women", "round": "Round 1", "heat": "Heat 2" }, "durationMin": 9, "breakAfterMin": 5 },
+        { "id": "w-r2-h3", "kind": "heat", "heatRef": { "division": "Women", "round": "Round 2", "heat": "Heat 3" }, "durationMin": 9, "breakAfterMin": 5 },
+        { "id": "w-f", "kind": "heat", "heatRef": { "division": "Women", "round": "Final - Round 3", "heat": "Final" }, "durationMin": 15, "breakAfterMin": 0 }
+      ],
+      "expectedFinish": "13:33"
+    }
+  ]
+}

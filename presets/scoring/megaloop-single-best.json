@@ -1,0 +1,54 @@
+{
+  "id": "megaloop-single-best",
+  "name": "Megaloop-style: single best jump (Extremity 70% / Execution & Flow 30%)",
+  "description": "Only a rider's highest-scoring jump counts. Each jump: Extremity 70% (height, power, distance, kite angle) + Execution & Flow 30% = trick 15% + style 10% + landing 5%. Heat total 0-10. Based on the Red Bull Megaloop 2026 published format (1-vs-1 heats).",
+  "version": 1,
+  "basedOn": "Red Bull Megaloop 2026 format (redbull.com)",
+  "trick": {
+    "entry": "criteria",
+    "scale": { "min": 0, "max": 10, "step": 0.1 },
+    "criteria": [
+      { "key": "extremity", "label": "Extremity", "help": "Height, power, distance covered and kite angle combined.", "scale": { "min": 0, "max": 10, "step": 0.1 }, "weight": 0.70 },
+      { "key": "trick", "label": "Trick", "help": "The manoeuvre itself.", "scale": { "min": 0, "max": 10, "step": 0.1 }, "weight": 0.15 },
+      { "key": "style", "label": "Style", "help": "The rider's style through the move.", "scale": { "min": 0, "max": 10, "step": 0.1 }, "weight": 0.10 },
+      { "key": "landing", "label": "Landing", "help": "Clean, controlled landing.", "scale": { "min": 0, "max": 10, "step": 0.1 }, "weight": 0.05 }
+    ],
+    "combine": "weighted_mean",
+    "crash": "not_counted",
+    "allowNoScore": true
+  },
+  "panel": {
+    "minJudges": 3,
+    "maxJudges": 7,
+    "aggregate": "trimmed_mean",
+    "trimMinJudges": 5,
+    "decimals": 2,
+    "outlierWarnPct": 15,
+    "requireAllJudges": true
+  },
+  "heat": {
+    "counting": { "type": "single_best" },
+    "trickWeight": 1,
+    "impression": null,
+    "total": { "display": "raw", "maxRaw": "auto" },
+    "landedRatioHint": false
+  },
+  "categories": [
+    { "key": "megaloop", "label": "Megaloop", "colour": "#e11d48" },
+    { "key": "megaloop_variation", "label": "Megaloop with variation", "examples": ["Board-off", "Rotation", "Double"], "colour": "#2563eb" }
+  ],
+  "tieBreakers": ["next_counted_trick", "highest_any_trick", "head_judge"],
+  "modifiers": {
+    "interference": { "penalty": "percent", "value": 10, "allowMultiple": false },
+    "dns": { "placing": "last", "total": 0 },
+    "dnf": { "keepScores": true },
+    "dsq": { "placing": "last", "total": 0 }
+  },
+  "heightSensor": {
+    "enabled": false,
+    "source": "manual",
+    "use": "display",
+    "mapping": { "type": "linear", "fromM": 8, "toM": 30, "toScore": [0, 10] },
+    "award": { "highestJump": true }
+  }
+}
