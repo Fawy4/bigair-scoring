@@ -49,22 +49,24 @@ Costs: build phase $0. First commercial event: Vercel Pro $20 + Supabase Pro $25
 | `divisions` | event_id, name, order, scoring_model_id, scoring_overrides jsonb, format_template_id, format_params jsonb, panel_id, status | |
 | `riders` | organisation_id, first_name, last_name, nationality, dob, email, phone, sponsor, woo_id, photo_url | reusable across events |
 | `entries` | division_id, rider_id, seed int, status (`registered|confirmed|withdrawn|no_show`), source (`self|import|manual`), paid bool, consent_at, identifiers jsonb (`bib_number`, `vest_colour` when fixed per rider, `kite {brand, model, size, colours}`, `rashguard_colour`, `helmet_colour`) | one rider in one division; identifiers rendered as the rider chip per the event's identification scheme |
-| `scoring_models` | organisation_id null=system, json jsonb, name, version | presets (validated by Zod on save) |
-| `format_templates` | organisation_id null=system, json jsonb, name | presets |
+| `scoring_models` | organisation_id null=system, key text, json jsonb, content_hash, name, version; `unique nulls not distinct (organisation_id, key, version)` | presets (validated by Zod on save) |
+| `format_templates` | organisation_id null=system, key text, json jsonb, content_hash, name, version; same unique key | presets |
 | `rounds` | division_id, order, spec jsonb (RoundSpec), name, short_name | expanded from template |
-| `heats` | round_id, division_id, event_id, number int, status (`scheduled|running|paused|ended|under_review|published|cancelled`), duration_sec, started_at, paused_at, paused_total_sec, ended_at, published_at, flag_out jsonb, manual_override bool | |
+| `heats` | round_id, division_id, event_id, number int, status (`scheduled|running|paused|ended|under_review|published|cancelled`), duration_sec, started_at, paused_at, paused_total_sec, ended_at, published_at, flag_out jsonb, manual_override bool, number_suffix text null (e.g. "R" for a re-run), live_rev int (bumped by trigger on any attempt/score/impression change: the public live signal) | |
 | `heat_slots` | heat_id, position, entry_id null, vest_colour null (set only when the scheme assigns vests per heat slot), source jsonb ({round, heat, place} placeholder), place int, total numeric(6,2), breakdown jsonb, modifier (`null|DNS|DNF|DSQ`), flagged_out bool | |
-| `judge_seats` | event_id, name, role (`judge|head|spotter|announcer`), pin_code (per-seat, 6 digits), auth_user_id null, device_label, active bool, scores bool (head judge also scores), spotter_assignment jsonb (entry ids / slot positions this spotter calls; null = free), status (`active|pending`) | officials; bound on join; `pending` = self-added from the join page until approved |
+| `judge_seats` | event_id, name, role (`judge|head|spotter|announcer`), pin_hash (per-seat, 6-digit PIN, hashed, shown once), qr_token_hash, qr_token_expires_at, locked bool (blocks rebinding), auth_user_id null, device_label, active bool, scores bool (head judge also scores), spotter_assignment jsonb (entry ids / slot positions this spotter calls; null = free), status (`active|pending`) | officials; bound on join; `pending` = self-added from the join page until approved |
 | `panels` / `panel_members` | event_id, name / panel_id, judge_seat_id, seat_no | which judges score which division |
-| `trick_attempts` | heat_id, entry_id, seq int, direction (`left|right` null), category_key, trick_name, trick_parts jsonb (builder keys), status (`landed|crashed`), height_m numeric(5,2), created_by_seat, input_method (`builder|text|speech`), raw_text, created_at, deleted_at null, deleted_by, possible_duplicate_of null, video_ts | logged by spotter or judge; `unique(heat_id, entry_id, seq)`; soft-deleted rows excluded from all views/counters |
-| `trick_vocabularies` | organisation_id null=system, event_id null, json jsonb | trick-builder vocabulary (`presets/tricks/`), editable per event |
+| `trick_attempts` | event_id (trigger-filled), client_key uuid unique, heat_id, entry_id, seq int, direction (`left|right` null), category_key, trick_name, trick_parts jsonb (builder keys), status (`landed|crashed`), height_m numeric(5,2), created_by_seat, input_method (`builder|text|speech`), raw_text, created_at, deleted_at null, deleted_by, possible_duplicate_of null, video_ts | logged by spotter or judge; `unique(heat_id, entry_id, seq)`; soft-deleted rows excluded from all views/counters |
+| `trick_vocabularies` | organisation_id null=system, event_id null, key text, json jsonb, content_hash | trick-builder vocabulary (`presets/tricks/`), editable per event |
 | `trick_scores` | attempt_id, judge_seat_id, criteria jsonb, score numeric(5,2) null when missed, missed bool default false, flag text null (`crash|wrong_rider|duplicate|other`), client_key uuid unique, version int, edited_by, edit_reason | `unique(attempt_id, judge_seat_id)`; idempotent via client_key |
 | `impression_scores` | heat_id, entry_id, judge_seat_id, value numeric(5,2), client_key unique | |
 | `penalties` | heat_id, entry_id, type (`INT|other`), value jsonb, reason, issued_by | |
 | `heat_results` | heat_id, entry_id, place, total, percent, breakdown jsonb, published_at, version | immutable snapshot per publish (new version on re-publish) |
 | `schedule_plans` | event_id, day date, name, items jsonb, anchors jsonb, actual_starts jsonb, hold jsonb, defaults jsonb, active bool | timetable (doc 04 §7) |
 | `wind_calls` | event_id, status (`red|amber|green`), message, created_at | banner history |
-| `audit_log` | actor_user_id, actor_seat_id, action, table_name, row_id, before jsonb, after jsonb, reason, at | trigger-populated for scores/results; app-populated for overrides |
+| `audit_log` | event_id, actor_user_id, actor_seat_id, action, table_name, row_id, before jsonb, after jsonb, reason, at | trigger-populated for scores/results; app-populated for overrides |
+
+Also (all trigger-filled, never client-supplied): `event_id` on `heat_slots`, `trick_scores`, `impression_scores`, `penalties`. **Extra table** `join_attempts` (event_id, ip, seat_id null, ok bool, at) for join-page rate limiting. There is no separate `re-opened` heat status: re-open = `published → under_review`, republish writes `heat_results` version 2. `heat_results` and `audit_log` are append-only (no `updated_at`; triggers reject UPDATE/DELETE).
 
 Derived/live: a Postgres view `v_live_heat` joins heat, slots, attempts, scores for one query per heat.
 
@@ -101,3 +103,24 @@ Derived/live: a Postgres view `v_live_heat` joins heat, slots, attempts, scores 
 - RLS: Vitest using anon vs service clients against local Supabase.
 - E2E: Playwright happy path (join as judge → score → publish → public result).
 - Manual: the dry run in doc 09 with three phones.
+
+## 12. Decisions log (Phase 3, agreed with the owner)
+
+| # | Topic | Decision |
+|---|---|---|
+| 1 | Environments | The hosted Supabase project is **development only**. The real event gets its own project later, with the same migrations. RLS tests create a throwaway organisation and delete it; they live in `npm run test:rls` and skip when keys are missing. |
+| 2 | Migration route | Try `npx supabase link` + `db push`; if blocked, `scripts/apply-migrations.mjs` sends the SQL over HTTPS to the Management API; `supabase/combined.sql` is always generated for the SQL Editor. The demo seed goes by the same route (`seed.sql` never runs on hosted). |
+| 3 | PINs | Hashes only; PIN shown once on the printable card; QR token single-use; a PIN may rebind a seat to a new phone (old phone cut off, audited); per-seat `locked` toggle; organiser can regenerate a PIN. Bound seats stay bound on the device so re-joins are not needed. |
+| 4 | Public live | Public pages **poll every 5–10 s (configurable)** via `get_public_live_heat`; Realtime is reserved for official screens. `heats.live_rev` lets polls skip unchanged data. |
+| 5 | Write paths | Attempts, scores, impressions and head-judge edits with a reason go through functions that run as the caller (RLS decides who); service role only for join binding, publish and exports. |
+| 6 | Overrides | `divisions.scoring_overrides` is a deep-merge object (e.g. `{"heat":{"maxAttemptsPerRider":5}}`). |
+| 7 | Heat end / lock | "Effectively ended" is derived from `started_at + duration + paused_total_sec`; no pg_cron. `events.settings.judgeGraceSec` default 180. |
+| 8 | Organisers | Invite-only for now (magic link cannot create users); a script creates the organisation "Arrow Big Air" with the owner. |
+| 9 | Auth config | Anonymous sign-ins on; token-hash magic-link flow; redirect URLs = production site, `https://*.vercel.app`, `http://localhost:3000`. |
+| 10 | Email | Supabase built-in sender for now (only organisers get email). Resend is a Phase 7 option for rider emails. |
+| 11 | Dry run | Must test the anonymous sign-in rate limit (per IP) and Realtime capacity. |
+| 12 | Tooling | `tsx` approved as a dev dependency (seed scripts import the TS schemas). |
+| 13 | Presets | `seed:presets` covers scoring models, format templates, trick vocabulary. A generic `presets` table (identification, schedule, saved variants) comes in Phase 4. |
+| 14 | Demo seed | Event "Demo Cup" (Cairo), Pro Men 10 / Pro Women 6 / U16 4 riders, 3 judges + head judge + spotter, and rounds/heats/slots generated with `expandFormat`. |
+| 15 | Head judge scoring | The "also scores" toggle adds/removes a `panel_members` row; RLS reads only that table. |
+| 16 | Judges logging | `events.settings.judgesMayLogAttempts`, default off. |

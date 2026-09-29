@@ -43,7 +43,7 @@ type Scale = { min: number; max: number; step: number };          // e.g. {0,10,
 type Criterion = {
   key: string;            // "height" | "extremity" | ... (snake_case, unique)
   label: string;          // shown to judges
-  help?: string;          // one-line judging hint shown on long-press
+  help?: string;          // one-line judging hint shown behind a tappable "?" button
   scale: Scale;           // per-criterion scale (PUKL uses 0–3, 0–3, 0–3, 0–1)
   weight: number;         // used by combine = "weighted_mean"
   sensorFill?: "height";  // if heightSensor.use === "height_criterion", this criterion is auto-filled
@@ -211,7 +211,7 @@ Best 3 = 8.25 + 8.08 + 7.71 = **24.04**. Impression marks 7.5 / 7.0 / 8.0 → **
 - `maxAttemptsPerRider = 7`: an 8th logged attempt is rejected; if one slips through (offline sync), the engine ignores it and flags it.
 
 ## 8. Judge input rules the UI must enforce (from this spec)
-- Marks snap to `scale.step`; range enforced; per-criterion help text on long-press.
+- Marks snap to `scale.step`; range enforced; per-criterion help text behind a tappable "?" button (no long-press).
 - A judge can edit their own marks until the heat is locked (`under_review`); afterwards only the head judge (audited).
 - Impression is entered at heat end (button appears when the timer hits 0 or the head judge ends the heat); the UI shows landed/attempted per rider when `landedRatioHint`.
 - Quick mode toggle for judges: enter single trick mark instead of criteria (only if the model's `entry = "single"`; never mix within one heat).
