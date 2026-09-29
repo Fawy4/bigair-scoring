@@ -51,6 +51,7 @@ Today's timetable (compact), current heat with timer, publish status counts, qui
 - **Multiple spotters**: each spotter seat can be assigned specific riders/colours (recommended) or work freely; when two spotters log the same rider within 20 s the later attempt is flagged *possible duplicate* for the head judge (never silently dropped).
 - On **Log**, the attempt appears on every judge's phone and on the head judge's matrix within a second. One tap creates the attempt; judges see it instantly.
 - Undo last (within 10 s), edit rider/category, running list with seq numbers. Also serves as the commentary feed ("Red — 3rd attempt — Double loop board-off — landed").
+- **Out of attempts (hard stop):** when a rider has used the division's attempt cap, their chip turns grey with 'Out of attempts · 7 / 7' on the spotter AND judge screens and Log is disabled for that rider; if the head judge deletes one of that rider's attempts the chip re-enables live ('6 / 7'); the server refuses any attempt beyond the cap (ATTEMPT_CAP_REACHED) even from a stale phone; only the head judge may add an attempt beyond the cap, with a written reason, which is audited.
 
 ## 6. Head judge console (tablet/laptop) — `/head/[eventId]`
 - **Left**: today's run order with states; buttons **Start heat** (records actual start), **Pause/Resume**, **End heat**, **Flag-out** (when configured, appears at the minute), **Hold (wind)** / **Resume at…**, **Shift +5/+10**.
