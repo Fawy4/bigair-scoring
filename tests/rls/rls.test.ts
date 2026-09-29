@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { buildFixture, ENV_OK, failed, run, service, anonClient, uuid, type Fixture } from "./helpers";
+import { buildFixture, ENV_OK, failed, run, anonClient, uuid, type Fixture } from "./helpers";
 
 // Plain-language guide: each `it` below is one sentence about who may (or may not) do what.
 // Join failures are returned ({ ok: false, error }) rather than raised, so the failure log survives for rate limiting.
