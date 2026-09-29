@@ -5,7 +5,9 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
     // Optional: use a pre-installed Chromium instead of the one Playwright downloads.
-    launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
+    launchOptions: {
+      ...(process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {}),
+    },
   },
   webServer: process.env.E2E_BASE_URL
     ? undefined
