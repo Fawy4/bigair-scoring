@@ -86,6 +86,8 @@ Capacity-aware snake, N = 13 (docs/04 §3 step 3):
 | 13 | 3 | `one_larger_heat` | [1, 8, 9] · [2, 7, 10] · [3, 6, 11] · [4, 5, 12, 13] |
 | 13 | 4 | `one_larger_heat` | [1, 6, 7, 12] · [2, 5, 8, 11] · [3, 4, 9, 10, 13] |
 
+`one_larger_heat` heat counts (docs/04 Decision 2): N=11 size 4 → 3 heats (3/4/4: [1, 6, 7] · [2, 5, 8, 11] · [3, 4, 9, 10]); N=13 size 3 → 4 heats; N=13 size 4 → 3 heats; N=5 size 4 → one heat of 5; N=20 size 4 → 5 heats of 4.
+
 ### 2B — `single_elimination` generator, heatSize 4, advancePerHeat 2, finalSize 4
 - N = 16 → R1 4 heats → Semi 2 heats (8 riders) → Final 1 heat (4). Round count 3.
 - N = 10 → R1 3 heats (3/3/4) → 6 advance → Semi 2 heats (3/3) → Final of 4. Eliminated in R1 share 7th (4 riders) with `placings.eliminated = shared`.
@@ -109,7 +111,7 @@ Pools: 3 heats sized 7 / 8 / 8 (smaller heat for top seeds first). All 23 ranked
 
 ### 2F — Progression behaviours
 - Publishing R1 Heat 2 (places Red 1st, Blue 2nd, Green 3rd) fills R3 pool with Red and R2 pool with Blue, Green. R2 heats are generated only when all six R1 heats are published, or when the organiser presses "Seed now" (missing places become DNS walkovers).
-- Withdrawal before draw (N 18 → 17): regenerate gives 6 heats of 3/3/3/3/3/2 with the 2-rider heats for the top seeds per the uneven rule.
+- Withdrawal before draw (N 18 → 17): regenerate gives 6 heats of 2/3/3/3/3/3, heat 1 has 2 riders ([1, 12] · [2, 11, 13] · [3, 10, 14] · [4, 9, 15] · [5, 8, 16] · [6, 7, 17]).
 - Withdrawal after draw: slot keeps the rider with modifier DNS; heat still runs (`minRidersToRun 1`).
 - Correction: re-publishing R1 Heat 1 with a different winner when R3 Heat 1 has status `running` → returns `conflict` listing the affected heat; nothing changes.
 - Manual drag of a rider into another slot before start → `manual_override = true`; auto-seeding leaves that heat alone.
