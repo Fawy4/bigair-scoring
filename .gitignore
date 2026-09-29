@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+coverage/
+playwright-report/
+test-results/
+.vercel/
+.DS_Store
+# environment files: never commit secrets (only .env.example is tracked)
+.env*
+!.env.example
