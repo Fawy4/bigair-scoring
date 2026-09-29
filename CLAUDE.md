@@ -37,7 +37,7 @@ docs/               specs; docs/STATUS.md = running progress log (update at end 
 5. **Auditability:** every score create/edit/delete writes `audit_log` (who, before, after, when, reason). Published results are snapshotted in `heat_results`.
 6. **Resilience:** score submissions go through a client queue with retry + idempotency key; UI shows pending/synced state. Publishing is blocked while required scores are missing unless the head judge explicitly overrides (recorded).
 7. **Mobile first:** judge/spotter screens are one-thumb, big tap targets (≥48px), high contrast for sunlight, works in Safari iOS and Chrome Android. Rider identification follows the event's configurable scheme (vest colour per heat, fixed lycra, bib number, kite brand/model/size/colours, rash guard, photo — docs/06 §0, presets/identification): one shared RiderChip component everywhere, colour always shown as text too, never assume vests exist.
-8. **Dependencies:** do not add packages beyond the stack above without asking; prefer standard library.
+8. **Dependencies:** the stack above plus shadcn/ui's helper packages (Radix UI primitives, class-variance-authority, clsx, tailwind-merge, lucide-react, tailwindcss-animate) are pre-approved; anything else, ask first.
 
 ## Workflow rules
 - Start each phase by reading `docs/STATUS.md` and ONLY the docs the prompt references. Use plan mode for multi-file work; keep plans short.

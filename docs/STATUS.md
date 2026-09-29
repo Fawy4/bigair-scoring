@@ -15,7 +15,11 @@
 - Zod schemas for ScoringModel / FormatTemplate / Schedule and loading of `presets/`.
 - Scoring engine, written test-first from `docs/08-TEST-SCENARIOS.md`.
 - Database migrations, RLS, real `seed:presets`.
-- Toast has the component only (no `useToast` / `<Toaster />` wiring yet).
+- `<Toaster />` is not yet mounted (toast component only, no `useToast` wiring); to be wired in Phase 4.
+
+### Pinned choices
+- Zod 4, TypeScript 6, Tailwind 3 (not 4), Next.js 15, React 19. Write Phase 1 schemas for Zod 4.
+- Extra packages beyond the original stack are shadcn/ui helpers only, now pre-approved in CLAUDE.md rule 8.
 
 ### How to test
 - Locally: `npm install && npm run dev`, open http://localhost:3000 — you should see the product name and "Build OK".
