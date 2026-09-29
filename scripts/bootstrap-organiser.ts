@@ -1,6 +1,7 @@
 // Creates an organiser login and their organisation (invite-only sign-in: magic links cannot create users).
 //   ORGANISER_EMAIL=you@example.com npm run bootstrap:organiser
-//   npm run bootstrap:organiser -- --email you@example.com [--org-name "Arrow Big Air"] [--org-slug arrow-big-air]
+//   npm run bootstrap:organiser -- --email you@example.com --org-name "Arrow" --org-slug arrow
+// --org-name and --org-slug are required, so re-running it after an organisation was renamed can never create a duplicate.
 // Idempotent. The user is created already confirmed; they then sign in with a magic link at /org/login.
 // If the "Demo organisation" exists (demo seed) the organiser is added as its owner too.
 import { z } from "zod";
@@ -19,8 +20,13 @@ if (!email.success) {
   console.error("Give the organiser's email: ORGANISER_EMAIL=you@example.com npm run bootstrap:organiser");
   process.exit(1);
 }
-const orgName = arg("org-name") ?? "Arrow Big Air";
-const orgSlug = arg("org-slug") ?? "arrow-big-air";
+const orgName = arg("org-name")?.trim();
+const orgSlug = arg("org-slug")?.trim();
+if (!orgName || !orgSlug || !/^[a-z0-9][a-z0-9-]*$/.test(orgSlug)) {
+  console.error('Give both --org-name "Arrow" and --org-slug arrow (lowercase letters, numbers, hyphens): the organisation is looked up by slug, so a rename can never create a duplicate.');
+  process.exit(1);
+}
+const org$ = { name: orgName, slug: orgSlug };
 const db = createServiceClient();
 
 async function findUser(address: string) {
@@ -44,15 +50,15 @@ async function main() {
     console.log("  created login");
   } else console.log("  login already exists");
 
-  let { data: org } = await db.from("organisations").select("id").eq("slug", orgSlug).maybeSingle();
+  let { data: org } = await db.from("organisations").select("id").eq("slug", org$.slug).maybeSingle();
   if (!org) {
-    const { data, error } = await db.from("organisations").insert({ name: orgName, slug: orgSlug }).select("id").single();
+    const { data, error } = await db.from("organisations").insert({ name: org$.name, slug: org$.slug }).select("id").single();
     if (error) throw new Error(error.message);
     org = data;
-    console.log(`  created organisation "${orgName}"`);
-  } else console.log(`  organisation "${orgName}" already exists`);
+    console.log(`  created organisation "${org$.name}"`);
+  } else console.log(`  organisation "${org$.name}" already exists`);
 
-  const orgs = [{ id: org.id, name: orgName }];
+  const orgs = [{ id: org.id, name: org$.name }];
   const { data: demo } = await db.from("organisations").select("id, name").eq("slug", "demo-org").maybeSingle();
   if (demo && demo.id !== org.id) orgs.push(demo);
   for (const o of orgs) {
