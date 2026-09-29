@@ -5,6 +5,7 @@ import { parseFormatTemplate, type FormatTemplate } from "@/lib/schemas/format-t
 import { applyHeatResult } from "./progress";
 import type { DivisionDraw, DrawHeat, Entrant, HeatResultInput, RankedEntry } from "./types";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- preset JSON is patched loosely in tests
 export function loadFormat(name: string, patch?: (json: any) => void): FormatTemplate {
   const json = JSON.parse(readFileSync(join(process.cwd(), "presets", "formats", `${name}.json`), "utf8"));
   patch?.(json);
