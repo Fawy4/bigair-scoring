@@ -1,5 +1,5 @@
 {
-  "_comment": "Spotter trick-builder vocabulary (editable per event). A trick = direction + optional multiplier + base trick + any number of modifiers. The builder composes the display name from namingTemplate and derives the scoring category from categoryPrecedence (highest-precedence category present among base + modifiers). Aliases are used to parse typed text and speech (fuzzy, case-insensitive). STARTER LIST - review with the head judge before the event; add local trick names freely.",
+  "_comment": "Spotter trick-builder vocabulary (editable per event). A trick = direction + optional multiplier + base trick + any number of modifiers. The builder composes the display name from namingTemplate and derives the scoring category from categoryPrecedence (highest-precedence category present among base + modifiers). Aliases are used to parse typed text and speech (fuzzy, case-insensitive). Each modifier has a family: addon or grab_landing (the two last families of the organiser's Trick base). STARTER LIST - review with the head judge before the event; add local trick names freely.",
   "directions": [
     { "key": "left", "label": "Left", "aliases": ["L", "port", "going left"] },
     { "key": "right", "label": "Right", "aliases": ["R", "starboard", "going right"] }
@@ -28,16 +28,16 @@
     { "key": "tic_tac", "label": "Tic-tac", "category": "other", "aliases": ["tictac", "tic tac"] }
   ],
   "modifiers": [
-    { "key": "board_off", "label": "Board-off", "category": "board_off", "aliases": ["BO", "board off", "boardoff"] },
-    { "key": "one_foot", "label": "One-foot", "category": "board_off", "aliases": ["1 foot", "one foot"] },
-    { "key": "board_spin", "label": "Board spin", "category": "board_off", "aliases": ["spin the board", "board flip"] },
-    { "key": "handle_pass", "label": "Handle pass", "category": "handle_pass", "aliases": ["handle", "HP", "pass"] },
-    { "key": "kiteloop_mod", "label": "+ Kiteloop", "category": "kiteloop", "aliases": ["with loop", "with kiteloop", "KL"] },
-    { "key": "late", "label": "Late", "category": null, "aliases": ["late rotation"] },
-    { "key": "grab", "label": "Grab", "category": null, "aliases": ["indy", "tail grab", "nose grab", "melon", "mute", "stalefish", "method"], "variants": ["Indy", "Tail", "Nose", "Melon", "Mute", "Stalefish", "Method"] },
-    { "key": "blind_landing", "label": "Blind landing", "category": null, "aliases": ["to blind", "blind"] },
-    { "key": "toeside", "label": "Toeside", "category": null, "aliases": ["toe side", "toe"] },
-    { "key": "downloop", "label": "Downloop landing", "category": null, "aliases": ["down loop", "downloop"] }
+    { "key": "board_off", "family": "addon", "label": "Board-off", "category": "board_off", "aliases": ["BO", "board off", "boardoff"] },
+    { "key": "one_foot", "family": "addon", "label": "One-foot", "category": "board_off", "aliases": ["1 foot", "one foot"] },
+    { "key": "board_spin", "family": "addon", "label": "Board spin", "category": "board_off", "aliases": ["spin the board", "board flip"] },
+    { "key": "handle_pass", "family": "addon", "label": "Handle pass", "category": "handle_pass", "aliases": ["handle", "HP", "pass"] },
+    { "key": "kiteloop_mod", "family": "addon", "label": "+ Kiteloop", "category": "kiteloop", "aliases": ["with loop", "with kiteloop", "KL"] },
+    { "key": "late", "family": "addon", "label": "Late", "category": null, "aliases": ["late rotation"] },
+    { "key": "grab", "family": "grab_landing", "label": "Grab", "category": null, "aliases": ["indy", "tail grab", "nose grab", "melon", "mute", "stalefish", "method"], "variants": ["Indy", "Tail", "Nose", "Melon", "Mute", "Stalefish", "Method"] },
+    { "key": "blind_landing", "family": "grab_landing", "label": "Blind landing", "category": null, "aliases": ["to blind", "blind"] },
+    { "key": "toeside", "family": "grab_landing", "label": "Toeside", "category": null, "aliases": ["toe side", "toe"] },
+    { "key": "downloop", "family": "grab_landing", "label": "Downloop landing", "category": null, "aliases": ["down loop", "downloop"] }
   ],
   "categoryPrecedence": ["handle_pass", "board_off", "kiteloop", "rotation", "other"],
   "namingTemplate": "{direction} {multiplier} {base} {modifiers}",
