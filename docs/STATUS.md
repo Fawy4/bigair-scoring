@@ -295,4 +295,4 @@ Things you should know:
 6. **Master presets**: open a scoring model, change a number, **Save as new version** (draft), then **Publish to all customers**. Existing divisions keep their version.
 7. **Health**: database, Realtime, last publish.
 8. Home page: each event reads "Organisation · Location · Date". `/o/arrow` shows the Arrow page. Archive Test Customer and check `/o/test-customer` says not found; restore it.
-9. **Acceptance test: delete the Demo organisation.** Organisations → Demo organisation → Manage → Delete: type `demo-org`, confirm. Then delete Test Customer the same way. Arrow cannot be deleted once it has published results (it says so).
+9. **Acceptance test: delete the Demo organisation.** Organisations → Demo organisation → Manage → Delete: type `demo-org`, confirm. Then delete Test Customer the same way. Leave Arrow alone: it has no published results yet, so the system would let you delete it too (after that, only Archive is possible).
