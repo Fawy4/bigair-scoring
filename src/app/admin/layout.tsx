@@ -3,6 +3,7 @@ import { AdminSwitch } from "@/components/admin-switch";
 import { Toaster } from "@/components/ui/toaster";
 import { getOrgContext } from "@/lib/org/context";
 import { getProductName } from "@/lib/platform/public-settings";
+import { attempt } from "@/lib/platform/safe";
 import { requireAdmin } from "@/lib/platform/session";
 import { copy } from "@/lib/ui-copy";
 import { AdminNav } from "./admin-nav";
@@ -16,8 +17,9 @@ export async function generateMetadata() {
 /** Shell for every /admin screen. requireAdmin() answers 404 to anybody who is not a platform admin. */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, role } = await requireAdmin();
-  const { current } = await getOrgContext();
-  const product = await getProductName();
+  // the header must never take the whole page down: without the organisation name the switch simply says "Organiser view"
+  const { value: current } = await attempt("Organisation for the header switch", async () => (await getOrgContext()).current, null);
+  const product = (await attempt("Product name", getProductName, "")).value || "Admin";
   return (
     <div className="org-console flex min-h-screen flex-col">
       <header className="border-b-2 border-[#111] bg-white">

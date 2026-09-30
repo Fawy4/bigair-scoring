@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatWhen } from "@/lib/platform/event-label";
 import { getPlatformSettings } from "@/lib/platform/public-settings";
+import { attempt } from "@/lib/platform/safe";
 import { requireAdmin } from "@/lib/platform/session";
 import { organisationStatus } from "@/lib/platform/organisation";
 import { copy } from "@/lib/ui-copy";
@@ -15,8 +16,10 @@ const td = "border-2 border-[#111] p-2 align-top";
 export default async function AdminOrganisations({ searchParams }: { searchParams: Promise<{ problem?: string }> }) {
   const { supabase, role } = await requireAdmin();
   const { problem } = await searchParams;
-  const { defaultTimezone } = await getPlatformSettings();
-  const { data, error } = await supabase.rpc("admin_organisation_overview");
+  const { defaultTimezone } = (await attempt("Platform settings", getPlatformSettings, { defaultTimezone: "Africa/Cairo" } as Awaited<ReturnType<typeof getPlatformSettings>>)).value;
+  // a failure here (network, database, unexpected data) shows a message on the page instead of crashing it
+  const loaded = await attempt("Organisations", async () => await supabase.rpc("admin_organisation_overview"), { data: null, error: { message: "not loaded" } } as unknown as Awaited<ReturnType<typeof supabase.rpc<"admin_organisation_overview">>>);
+  const { data, error } = loaded.value;
   const rows = data ?? [];
   const c = copy.admin.org;
   // Only when there is no demo organisation, only for owners, and never where the demo is switched off (a project with a real event).
@@ -32,6 +35,11 @@ export default async function AdminOrganisations({ searchParams }: { searchParam
       </div>
       <p className="text-lg font-semibold">{c.intro}</p>
       {showDemo ? <DemoPanel /> : null}
+      {loaded.problem ? (
+        <p role="alert" className="panel field-error">
+          {copy.common.problem(copy.admin.partProblem(loaded.problem))}
+        </p>
+      ) : null}
       {problem ? (
         <p role="alert" className="panel field-error">
           {copy.common.problem(problem)}

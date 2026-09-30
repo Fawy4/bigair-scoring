@@ -56,12 +56,19 @@ export function formatWhen(iso: string | null | undefined, timeZone: string): st
   if (!iso) return "";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-GB", { timeZone, year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
-      .formatToParts(date)
-      .map((p) => [p.type, p.value]),
-  );
-  return `${Number(parts.day)} ${MONTHS[Number(parts.month) - 1]} ${parts.year}, ${parts.hour}:${parts.minute}`;
+  const parts = (zone: string) =>
+    Object.fromEntries(
+      new Intl.DateTimeFormat("en-GB", { timeZone: zone, year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+        .formatToParts(date)
+        .map((p) => [p.type, p.value]),
+    );
+  let p: Record<string, string>;
+  try {
+    p = parts(timeZone);
+  } catch {
+    p = parts("UTC"); // a time zone this machine does not know must never break a page
+  }
+  return `${Number(p.day)} ${MONTHS[Number(p.month) - 1]} ${p.year}, ${p.hour}:${p.minute}`;
 }
 
 /** Today's date (YYYY-MM-DD) in a time zone, for "is this event upcoming or past" on the organisation page. */

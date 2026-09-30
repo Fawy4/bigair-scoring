@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:prod": "E2E_PRODUCTION=1 playwright test e2e/admin-production.spec.ts",
     "lint": "eslint .",
     "seed:presets": "tsx scripts/seed-presets.ts",
     "db:apply": "node scripts/apply-sql.mjs",

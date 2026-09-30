@@ -820,6 +820,17 @@ export const copy = {
       movedDetail: (copied: number, reused: number, removed: number, presets: number) =>
         `Riders copied: ${copied}, matched by email: ${reused}, removed from the old organisation: ${removed}. Presets copied: ${presets}.`,
     },
+    crash: {
+      heading: "This admin page could not be shown",
+      text: "Something failed while loading it. Nothing was changed.",
+      reference: (digest: string) => `Error reference: ${digest}`,
+      noReference: "No error reference was given.",
+      hint: "Search the hosting logs for the reference to see the exact cause, or open Health to check the server configuration.",
+      retry: "Try again",
+      health: "Open Health",
+      back: "Back to organisations",
+    },
+    partProblem: (what: string) => `Part of this page could not be loaded (${what}). The rest still works; the details are in the server logs.`,
     demo: {
       heading: "Demo data",
       text: "There is no demo organisation. This builds “Demo Cup” with fictional riders, judges, a head judge, a spotter and a full draw, so you can try the screens. Nothing existing is touched.",
@@ -955,6 +966,15 @@ export const copy = {
       checkedAt: (when: string) => `Checked at ${when}`,
       refresh: "Check again",
       loadError: "The health check could not run.",
+      configHeading: "Server configuration",
+      configIntro: "Which settings this server has. Only names are shown, never values.",
+      configSet: "set",
+      configMissing: "MISSING",
+      configRequired: "required",
+      configOptional: "optional",
+      configRow: (name: string, state: string, kind: string, needed: string) => `${name}: ${state} (${kind}). Used for ${needed}.`,
+      settingsRead: "Platform settings: readable",
+      settingsUnreadable: "Platform settings: could not be read, so the built-in values are in use",
     },
   },
 
