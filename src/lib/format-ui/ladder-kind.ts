@@ -17,7 +17,29 @@ export function ladderKindOf(working: unknown): LadderKind {
 
 /** Switches the ladder type: the generator is replaced by the new type's defaults; timing and everything else stays. */
 export function withLadderKind(working: Record<string, unknown>, kind: Exclude<LadderKind, "custom">): Record<string, unknown> {
-  const { rounds: _rounds, ...rest } = working;
+  // rounds belong to the old type, and so do per-round lengths (round ids differ between ladder types)
+  const { rounds: _rounds, roundDurationMin: _lengths, ...rest } = working;
   void _rounds;
+  void _lengths;
   return { ...rest, kind: "generator", generator: GeneratorSchema.parse({ type: GENERATOR[kind] }) };
+}
+
+/**
+ * Sets (or clears) one round's own heat length. A value equal to the single-setting default clears the override, so the
+ * table stays "pre-filled from the single setting" and only real differences are stored. An empty map disappears.
+ */
+export function withRoundLength(working: Record<string, unknown>, roundId: string, minutes: number | "", defaultMin: number): Record<string, unknown> {
+  const current = { ...((working.roundDurationMin as Record<string, number> | undefined) ?? {}) };
+  if (minutes === "" || minutes === defaultMin) delete current[roundId];
+  else current[roundId] = minutes;
+  const { roundDurationMin: _old, ...rest } = working;
+  void _old;
+  return Object.keys(current).length > 0 ? { ...rest, roundDurationMin: current } : rest;
+}
+
+/** Forget every per-round length: all rounds use the single settings again. */
+export function withoutRoundLengths(working: Record<string, unknown>): Record<string, unknown> {
+  const { roundDurationMin: _old, ...rest } = working;
+  void _old;
+  return rest;
 }

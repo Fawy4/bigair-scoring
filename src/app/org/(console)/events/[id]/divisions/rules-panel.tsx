@@ -89,6 +89,13 @@ export function RulesPanel({
   const template = check?.success && !scoring ? (check.data as FormatTemplate) : null;
   const preview = useMemo(() => (template ? previewFormat(template, riders) : null), [template, riders]);
   const isFixed = !scoring && ladderKindOf(working) === "custom";
+  // the single settings' heat length of every round of the preview (without the per-round overrides)
+  const defaultLengths = useMemo(() => {
+    if (!template || isFixed) return new Map<string, number>();
+    const plain = previewFormat({ ...template, roundDurationMin: undefined }, riders);
+    return new Map(plain.rounds.map((r) => [r.id, Number(r.heatMin.split("–")[0])]));
+  }, [template, isFixed, riders]);
+  const perRound = (preview?.rounds ?? []).filter((r) => r.heats > 0).map((r) => ({ id: r.id, shortName: r.shortName, name: r.name, defaultMin: defaultLengths.get(r.id) ?? Number(r.heatMin.split("–")[0]) }));
 
   function choose(id: string) {
     const row = presets.find((p) => p.id === id);
@@ -263,7 +270,7 @@ export function RulesPanel({
 
       {working && !scoring ? (
         <>
-          <FormatSimple working={working as Record<string, unknown>} onChange={setValue} errors={errors} readOnly={locked} compact={showAll} />
+          <FormatSimple working={working as Record<string, unknown>} onChange={setValue} errors={errors} readOnly={locked} compact={showAll} rounds={perRound} />
           {isFixed && !showAll ? <p className="panel font-semibold">{R.fixedRoundsNote}</p> : null}
           {showAll ? (
             <SchemaForm
@@ -272,7 +279,7 @@ export function RulesPanel({
               onChange={setValue}
               errors={errors}
               readOnly={locked}
-              hidden={(working as { kind?: string }).kind === "fixed" ? ["generator"] : ["rounds"]}
+              hidden={(working as { kind?: string }).kind === "fixed" ? ["generator", "roundDurationMin"] : ["rounds", "roundDurationMin"]}
               selectOptions={selectOptions}
               newItem={newItem}
             />

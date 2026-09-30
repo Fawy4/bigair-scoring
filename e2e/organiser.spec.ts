@@ -255,9 +255,28 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(page.getByText("Flag-out", { exact: true })).toHaveCount(0); // flag-out lives under Show all settings
   await field("Riders per heat").fill("3");
   await expect(page.getByTestId("format-preview")).toContainText("R1 8 heats of 3");
+
+  // heat length per round: pre-filled from the single setting, optional override, diagram in sync, breaks untouched
+  await expect(page.getByTestId("per-round-lengths")).toContainText("Heat length per round");
+  await expect(field("Heat length: R1 (minutes)")).toHaveValue("10");
+  await expect(field("Heat length: F (minutes)")).toHaveValue("15");
+  await expect(page.getByTestId("ladder-round").first()).toContainText("10 min");
+  await field("Heat length: R1 (minutes)").fill("9");
+  await field("Heat length: F (minutes)").fill("20");
+  await expect(page.getByTestId("ladder-round").first()).toContainText("9 min");
+  await expect(page.getByTestId("ladder-round").last()).toContainText("20 min");
+  await expect(page.getByTestId("ladder-round").nth(1)).toContainText("10 min"); // R2 (another early round) untouched
+  await expect(page.getByTestId("per-round-lengths").getByText("own length", { exact: true })).toHaveCount(2);
+  await expect(page.getByTestId("format-preview")).toContainText("R1 8 heats of 3"); // same shape
   await page.getByRole("button", { name: "Save format for Pro Men" }).click();
   await expect(page.getByText("Format saved for Pro Men").first()).toBeVisible();
   await expect(page.getByLabel("What is missing in 2. Divisions")).toHaveCount(0); // nothing missing any more
+  const { data: fmt } = await org.db.from("divisions").select("format_params").eq("event_id", eventId).single();
+  expect(fmt!.format_params).toMatchObject({ roundDurationMin: { R1: 9, F: 20 } });
+  expect(JSON.stringify(fmt!.format_params)).not.toContain("SF");
+  await page.getByRole("button", { name: "Use the single settings for every round" }).click();
+  await expect(page.getByTestId("ladder-round").first()).toContainText("10 min");
+  await expect(page.getByTestId("per-round-lengths").getByText("own length", { exact: true })).toHaveCount(0);
 
   // pools: heats of everybody, the best N of all go to the final
   await page.getByRole("radio", { name: "Pools to a final" }).check();

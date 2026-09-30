@@ -127,6 +127,8 @@ export const FormatTemplateSchema = z
         finalHeatIsRanking: z.literal(true).default(true),
       })
       .prefault({}),
+    /** Generated ladders only: heat length per round id (e.g. { R1: 10, F: 15 }); other rounds keep the generator's length. Breaks stay global. */
+    roundDurationMin: z.record(z.string().min(1), z.number().positive()).optional(),
     flagOut: z
       .object({ rounds: z.array(z.string()).min(1), atMin: z.number().positive(), count: z.number().int().min(1) })
       .optional(),
@@ -134,6 +136,9 @@ export const FormatTemplateSchema = z
   .superRefine((t, ctx) => {
     if (t.entrants.max !== null && t.entrants.max < t.entrants.min) {
       ctx.addIssue({ code: "custom", message: "entrants.max must not be smaller than entrants.min", path: ["entrants", "max"] });
+    }
+    if (t.roundDurationMin && t.kind !== "generator") {
+      ctx.addIssue({ code: "custom", message: "a heat length per round only applies to a generated ladder (a custom ladder sets it on each round)", path: ["roundDurationMin"] });
     }
     if (t.kind === "fixed") {
       if (!t.rounds) ctx.addIssue({ code: "custom", message: "a fixed template needs `rounds`", path: ["rounds"] });

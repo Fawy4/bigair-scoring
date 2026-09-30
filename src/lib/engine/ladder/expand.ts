@@ -25,6 +25,16 @@ function roundSpecsFor(template: FormatTemplate, n: number, warnings: LadderWarn
   }
   if (template.kind === "fixed") return template.rounds!;
   const g = template.generator!;
+  return withRoundDurations(generateRounds(g, n), template.roundDurationMin);
+}
+
+/** The organiser's optional heat length per round replaces the generator's; unknown round ids are ignored. */
+function withRoundDurations(specs: RoundSpec[], overrides: FormatTemplate["roundDurationMin"]): RoundSpec[] {
+  if (!overrides) return specs;
+  return specs.map((r) => (overrides[r.id] !== undefined ? { ...r, durationMin: overrides[r.id] } : r));
+}
+
+function generateRounds(g: NonNullable<FormatTemplate["generator"]>, n: number): RoundSpec[] {
   switch (g.type) {
     case "single_elimination":
       return generateSingleElimination(n, g.params);

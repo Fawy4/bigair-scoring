@@ -14,6 +14,8 @@ export interface RoundPreview {
   minSize: number;
   maxSize: number;
   minutes: number;
+  /** Heat length in minutes (a range when the heats of a round differ). */
+  heatMin: string;
 }
 
 /** One column of the ladder diagram. */
@@ -94,6 +96,7 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
       minSize: sizes.length ? Math.min(...sizes) : 0,
       maxSize: sizes.length ? Math.max(...sizes) : 0,
       minutes: riding.reduce((s, h) => s + h.durationMin, 0),
+      heatMin: riding.length ? range(Math.min(...riding.map((h) => h.durationMin)), Math.max(...riding.map((h) => h.durationMin))) : "0",
     };
   });
 
@@ -105,7 +108,7 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
     id: r.id,
     shortName: r.shortName,
     name: r.name,
-    summary: t.heatSizes(rounds[i].heats, range(rounds[i].minSize, rounds[i].maxSize)),
+    summary: t.heatSizes(rounds[i].heats, range(rounds[i].minSize, rounds[i].maxSize), rounds[i].heatMin),
     heats: r.heats.map((h) => ({ id: h.id, number: h.number, size: h.slots.length, bye: h.bye })),
     routes: routesOf(draw, i),
   }));

@@ -83,7 +83,7 @@ describe("ladder diagram model", () => {
   it("14 riders, heats of 4, top 2: three rounds with their heats and where places go", () => {
     const p = previewFormat(parseFormatTemplate(single), 14);
     expect(p.ladder.map((c) => c.shortName)).toEqual(["R1", "SF", "F"]);
-    expect(p.ladder.map((c) => c.summary)).toEqual(["4 heats · 3–4 riders", "2 heats · 4 riders", "1 heat · 4 riders"]);
+    expect(p.ladder.map((c) => c.summary)).toEqual(["4 heats · 3–4 riders · 10 min", "2 heats · 4 riders · 12 min", "1 heat · 4 riders · 15 min"]);
     expect(p.ladder[0].heats.map((h) => h.size)).toEqual([3, 3, 4, 4]); // smaller heats for the top seeds
     expect(p.ladder[0].routes).toEqual(["1st–2nd → SF", "the rest → out"]);
     expect(p.ladder[2].routes).toEqual(["the rest → final placing"]);

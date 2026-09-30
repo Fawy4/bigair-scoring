@@ -170,3 +170,8 @@ Things you should know:
 1. **Events → + New event**: read the sentence and the three unticked boxes under "What riders and spectators see". Under "Rider identification" the label shows "Sam Sample"; choose "Yes: … lycra colour" and see "RED"; tap the "?" next to any field.
 2. **Divisions → Pro Men → Scoring**: choose the "Legacy…" preset; change "Number of judges" and the combine setting and read the sentence under it; tick "Show all settings" for everything.
 3. **Format tab**: pick a format; choose between the three ladder types; change "Preview with … riders" and watch the ladder diagram; "Show all settings" for flag-out and default timing.
+
+### Phase 4a-1 – heat length per round (generated ladders)
+- New optional template field `roundDurationMin` (round id → minutes) for the three generated ladder types; the draw engine applies it after the generator (tests `2h-round-durations.test.ts`: knockout, second chance, pools, breaks unchanged, unknown rounds ignored, only generated ladders, positive numbers). A custom ladder keeps its own per-round heat length.
+- The Format step shows a "Heat length per round" table under the ladder choice: one row per round of the preview, pre-filled from the single setting, "own length" marker on changed rows, and a reset button. Only real differences are stored on the division. The ladder diagram now shows each round's heat length ("4 heats · 3–4 riders · 10 min") and follows the table.
+- Test on the preview: Divisions → Format → pick "Single elimination" → change "Heat length: R1" to 9 and "Heat length: F" to 20 → watch the diagram → Save.
