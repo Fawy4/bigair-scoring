@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FieldLabel, HelpButton } from "@/components/help-button";
 import { LogoField } from "@/components/org/logo-field";
+import { SlugLink } from "@/components/slug-link";
 import { toast } from "@/hooks/use-toast";
 import { issuesToMap, moveIn, removeIn, setIn } from "@/lib/form/path";
 import { EventFormSchema, slugify, type EventForm as EventFormValues } from "@/lib/schemas/event-settings";
@@ -122,6 +123,11 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
             />
           </div>
           {showError("slug")}
+          {savedSlug ? (
+            <p className="flex flex-wrap items-center gap-2 font-semibold">
+              {T.slugPublicPage} <SlugLink slug={savedSlug} />
+            </p>
+          ) : null}
           {slugChangedOnPublished ? (
             <div className="panel mt-1" role="note">
               <p className="font-bold">{T.slugPublishedTitle}</p>

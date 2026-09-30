@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ConfirmButton } from "@/components/confirm-button";
+import { SlugLink } from "@/components/slug-link";
 import { FieldLabel } from "@/components/help-button";
 import { toast } from "@/hooks/use-toast";
 import { copy } from "@/lib/ui-copy";
@@ -51,7 +52,9 @@ export function EventsPanel({ orgName, events, others, isOwner }: { orgName: str
               {events.map((e) => (
                 <tr key={e.id}>
                   <td className={`${td} font-bold`}>{e.name}</td>
-                  <td className={td}>/{e.slug}</td>
+                  <td className={td}>
+                    <SlugLink slug={e.slug} />
+                  </td>
                   <td className={td}>
                     {e.status}
                     {e.archived ? ` · ${copy.eventLifecycle.archivedTag}` : ""}

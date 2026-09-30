@@ -49,6 +49,7 @@ export function LoginForm({ next }: { next?: string }) {
       setState({ kind: "error", message: /rate limit|too many/i.test(error.message) ? copy.login.tooMany : copy.login.wrongPassword });
       return;
     }
+    await supabase.auth.updateUser({ data: { has_password: true } }); // a password that just worked: the header says "Change password" from now on
     const { count } = await supabase.from("memberships").select("id", { count: "exact", head: true });
     const { data: platform } = await supabase.rpc("platform_session");
     const isPlatformAdmin = Boolean((platform as { role?: string | null } | null)?.role);

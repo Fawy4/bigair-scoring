@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 
 /** Shell for every organiser screen: header (product name, organisation switcher), footer, beach contrast, Toaster. */
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
-  const { user, orgs, current, platformRole, impersonating } = await getOrgContext();
+  const { supabase, user, orgs, current, platformRole, impersonating } = await getOrgContext();
+  const { data: passwordIsSet } = await supabase.rpc("has_password");
   const productName = await getProductName();
   return (
     <div className="org-console flex min-h-screen flex-col">
@@ -34,7 +35,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
             <OrgSwitcher orgs={orgs.map((o) => ({ id: o.id, name: o.name, logoUrl: o.logoUrl }))} currentId={current?.id ?? null} />
             <span className="hidden text-sm font-semibold sm:inline">{user.email}</span>
             <Link href="/org/set-password" className="btn">
-              {copy.layout.setPassword}
+              {passwordIsSet ? copy.layout.changePassword : copy.layout.setPassword}
             </Link>
             <form action="/auth/signout" method="post">
               <button type="submit" className="btn">

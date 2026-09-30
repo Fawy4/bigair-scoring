@@ -89,6 +89,9 @@ export const copy = {
   },
 
   setPassword: {
+    changeTitle: "Change password",
+    changeIntro: "Choose a new password. The old one stops working as soon as you save.",
+    changed: "✔ Password changed. Use the new one next time you sign in.",
     title: "Set a password",
     intro: "Set a password once, then you can sign in with your email and password instead of waiting for a link.",
     newPassword: "New password",
@@ -115,6 +118,7 @@ export const copy = {
 
   layout: {
     setPassword: "Set a password",
+    changePassword: "Change password",
     events: "Events",
     settings: "Organisation settings",
     signOut: "Sign out",
@@ -203,7 +207,7 @@ export const copy = {
     noDate: "No date yet",
     openSetup: "Open setup",
     empty: "No events yet. Press “New event” to start.",
-    line: (date: string, status: string, slug: string) => `${date} · status: ${status} · /${slug}`,
+    line: (date: string, status: string) => `${date} · status: ${status} ·`,
   },
 
   orgSettings: {
@@ -281,6 +285,7 @@ export const copy = {
     lastDay: "Last day",
     timeZone: "Time zone",
     timeZoneHint: "All times are shown in this zone.",
+    slugPublicPage: "Public page:",
     slugPublishedTitle: "⚠ This event is published. Changing the address breaks links and QR codes that are already out.",
     understand: "I understand, change the address",
     branding: "Branding",

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SlugLink } from "@/components/slug-link";
 import { getOrgContext } from "@/lib/org/context";
 import { copy } from "@/lib/ui-copy";
 
@@ -33,9 +34,10 @@ export default async function OrganiserHome({ searchParams }: { searchParams: Pr
           <li key={e.id} className="panel flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xl font-bold">{e.name}</p>
-              <p className="font-semibold">
-                {copy.orgHome.line(e.start_date ?? copy.orgHome.noDate, e.status, e.slug)}
-                {e.archived_at ? ` · ${copy.eventLifecycle.archivedTag}` : ""}
+              <p className="flex flex-wrap items-center gap-x-2 font-semibold">
+                <span>{copy.orgHome.line(e.start_date ?? copy.orgHome.noDate, e.status)}</span>
+                <SlugLink slug={e.slug} />
+                {e.archived_at ? <span>· {copy.eventLifecycle.archivedTag}</span> : null}
               </p>
             </div>
             <Link href={`/org/events/${e.id}/event`} className="btn">

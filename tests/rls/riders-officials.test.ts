@@ -66,7 +66,7 @@ describe.skipIf(!ENV_OK)("Riders, officials, registration, trick base and feedba
       const linkOnly = await user("linkonly", false);
       const { data } = await f.s.auth.admin.generateLink({ type: "magiclink", email: linkOnly.email });
       const c = anonClient();
-      const v = await c.auth.verifyOtp({ token_hash: data!.properties.hashed_token, type: "magiclink" });
+      const v = await c.auth.verifyOtp({ token_hash: data!.properties!.hashed_token, type: "magiclink" });
       expect(v.error).toBeNull();
       expect((await c.rpc("has_password")).data).toBe(false);
       expect(failed(await c.auth.updateUser({ password, data: { has_password: true } }))).toBe("");
