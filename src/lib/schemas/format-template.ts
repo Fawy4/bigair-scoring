@@ -2,6 +2,7 @@ import { z } from "zod";
 import { copy } from "@/lib/ui-copy";
 
 const MIN_ABOVE_TARGET = copy.formatSimple.minAboveTarget;
+const MAX_BELOW_TARGET = copy.formatSimple.maxBelowTarget;
 
 /**
  * FormatTemplate — how a division's riders are split into heats and how they progress.
@@ -45,6 +46,8 @@ export const RoundSpecSchema = z.object({
   heatSize: z.number().int().min(1).max(10),
   /** With uneven = "minimum_riders": no heat is smaller than this (default: heatSize − 1, never below 2). */
   minHeatSize: z.number().int().min(1).max(10).optional(),
+  /** With uneven = "minimum_riders": no heat is bigger than this (default: heatSize + 1, at most 10). */
+  maxHeatSize: z.number().int().min(1).max(10).optional(),
   /** Falls back to the template's `timing.defaultHeatMin`. */
   durationMin: z.number().positive().optional(),
   breakAfterHeatMin: z.number().min(0).optional(),
@@ -65,6 +68,8 @@ const SEEDING_DEFAULTS = {
   uneven: UnevenSchema.optional(),
   /** Minimum riders per heat (default: the target − 1, never below 2). */
   minHeatSize: z.number().int().min(1).max(10).optional(),
+  /** Maximum riders per heat (default: the target + 1, at most 10). */
+  maxHeatSize: z.number().int().min(1).max(10).optional(),
 };
 
 export const SingleEliminationParamsSchema = z
@@ -82,11 +87,15 @@ export const SingleEliminationParamsSchema = z
     message: "advancePerHeat must be smaller than heatSize (the ladder has to shrink)",
     path: ["advancePerHeat"],
   })
-  .refine((p) => p.minHeatSize === undefined || p.minHeatSize <= p.heatSize, { message: MIN_ABOVE_TARGET, path: ["minHeatSize"] });
+  .refine((p) => p.minHeatSize === undefined || p.minHeatSize <= p.heatSize, { message: MIN_ABOVE_TARGET, path: ["minHeatSize"] })
+  .refine((p) => p.maxHeatSize === undefined || p.maxHeatSize >= p.heatSize, { message: MAX_BELOW_TARGET, path: ["maxHeatSize"] });
 
 export const DingleEliminationParamsSchema = z
   .object({
     r1HeatSize: z.number().int().min(2).max(10).default(3),
+    /** How many riders per heat, after the winner, get a second chance. Absent = everyone who did not win (so nobody is out after one heat). */
+    secondChancePlaces: z.number().int().min(1).max(9).optional(),
+    /** The Final size the ladder aims for (it may end with a final of a different size that fits between the minimum and maximum). */
     finalSize: z.number().int().min(2).max(10).default(3),
     r1Min: z.number().positive().default(13),
     repMin: z.number().positive().default(10),
@@ -95,7 +104,8 @@ export const DingleEliminationParamsSchema = z
     ...SEEDING_DEFAULTS,
     reseed: ReseedSchema.default("by_place_then_score"),
   })
-  .refine((p) => p.minHeatSize === undefined || p.minHeatSize <= p.r1HeatSize, { message: MIN_ABOVE_TARGET, path: ["minHeatSize"] });
+  .refine((p) => p.minHeatSize === undefined || p.minHeatSize <= p.r1HeatSize, { message: MIN_ABOVE_TARGET, path: ["minHeatSize"] })
+  .refine((p) => p.maxHeatSize === undefined || p.maxHeatSize >= p.r1HeatSize, { message: MAX_BELOW_TARGET, path: ["maxHeatSize"] });
 
 export const PoolsToFinalParamsSchema = z
   .object({
@@ -109,7 +119,8 @@ export const PoolsToFinalParamsSchema = z
     crossPoolTieBreak: z.literal("scoring_model_then_seed").default("scoring_model_then_seed"),
   })
   .refine((p) => p.finalists <= 10, { message: "finalists must fit in one heat (max 10)", path: ["finalists"] })
-  .refine((p) => p.minHeatSize === undefined || p.minHeatSize <= p.heatSize, { message: MIN_ABOVE_TARGET, path: ["minHeatSize"] });
+  .refine((p) => p.minHeatSize === undefined || p.minHeatSize <= p.heatSize, { message: MIN_ABOVE_TARGET, path: ["minHeatSize"] })
+  .refine((p) => p.maxHeatSize === undefined || p.maxHeatSize >= p.heatSize, { message: MAX_BELOW_TARGET, path: ["maxHeatSize"] });
 
 export const GeneratorSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("single_elimination"), params: SingleEliminationParamsSchema.prefault({}) }),
@@ -186,6 +197,9 @@ export function checkRounds(rounds: RoundSpec[], ctx: z.RefinementCtx): void {
     }
     if (r.minHeatSize !== undefined && r.minHeatSize > r.heatSize) {
       ctx.addIssue({ code: "custom", message: `round ${r.id}: ${MIN_ABOVE_TARGET}`, path: ["rounds", i, "minHeatSize"] });
+    }
+    if (r.maxHeatSize !== undefined && r.maxHeatSize < r.heatSize) {
+      ctx.addIssue({ code: "custom", message: `round ${r.id}: ${MAX_BELOW_TARGET}`, path: ["rounds", i, "maxHeatSize"] });
     }
     if (r.crossHeat && !ids.has(r.crossHeat.to)) {
       ctx.addIssue({ code: "custom", message: `round ${r.id}: crossHeat.to names unknown round "${r.crossHeat.to}"`, path: ["rounds", i, "crossHeat"] });

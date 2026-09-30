@@ -2,7 +2,7 @@ import { RoundSpecSchema, type FormatTemplate, type RoundSpec } from "@/lib/sche
 import { makeSlot, outcomeOf, refreshIdentifierWarnings, sourceSlots } from "./build";
 import { generateDingleElimination, generatePoolsToFinal, generateSingleElimination } from "./generators";
 import { recompute } from "./recompute";
-import { dealByRule, defaultRngSeed, roundLayout, shuffleSeeds } from "./seeding";
+import { dealByRule, defaultRngSeed, heatLimits, roundLayout, shuffleSeeds } from "./seeding";
 import type { DivisionDraw, DrawHeat, DrawOverrides, DrawRound, Entrant, LadderWarning } from "./types";
 
 /** Concrete rounds for `n` riders: the fixed list, or whatever the generator produces. */
@@ -63,6 +63,32 @@ function eliminatesNobodyWarnings(round: DrawRound): LadderWarning[] {
           ? `Set heatCountOverride for ${round.shortName} to ${suggested} so every heat eliminates somebody.`
           : `Set heatCountOverride for ${round.shortName} to change the number of heats.`,
     }));
+}
+
+/**
+ * A heat above the maximum, or below the minimum in a round with several heats, means the three sizing numbers cannot be kept
+ * for this many riders (the minimum wins). Only rounds that follow the sizing rule are checked.
+ */
+function heatSizeWarnings(round: DrawRound): LadderWarning[] {
+  const spec = round.spec;
+  if (spec.uneven !== "minimum_riders") return [];
+  const { min, max } = heatLimits(spec.heatSize, spec.minHeatSize, spec.maxHeatSize);
+  const riding = round.heats.filter((h) => !h.bye);
+  return riding.flatMap((h) => {
+    const size = h.slots.length;
+    const why = size > max ? `is more than the maximum of ${max} per heat` : size < min && riding.length > 1 ? `is fewer than the minimum of ${min} per heat` : null;
+    return why
+      ? [
+          {
+            type: "heat_size_limits" as const,
+            round: round.id,
+            heatId: h.id,
+            message: `Heat ${h.number ?? h.id} has ${size} riders, which ${why}: with ${round.expectedEntrants} riders in ${round.shortName} the target, minimum and maximum cannot all be kept.`,
+            suggestion: "Change the target, minimum or maximum riders per heat.",
+          },
+        ]
+      : [];
+  });
 }
 
 /**
@@ -144,7 +170,7 @@ export function expandFormat(template: FormatTemplate, entrants: Entrant[], over
     for (const h of r.heats) h.number = h.bye ? null : number++;
     const riding = r.heats.filter((h) => !h.bye);
     if (riding.length) riding[riding.length - 1].roundLast = true;
-    warnings.push(...eliminatesNobodyWarnings(r));
+    warnings.push(...eliminatesNobodyWarnings(r), ...heatSizeWarnings(r));
   }
 
   recompute(draw); // byes advance, rounds whose sources are all byes get seeded, placeholders, identifier warnings

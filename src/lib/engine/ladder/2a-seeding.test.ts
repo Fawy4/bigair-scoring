@@ -152,10 +152,12 @@ describe("2A 'eliminates nobody' (Decision 3)", () => {
 
 describe("2A heat numbering (Decision 5)", () => {
   it("is division-wide and sequential; byes carry no number", () => {
-    const draw = expandFormat(loadFormat("kota-dingle"), makeEntrants(12));
+    // Only a hand-chosen rule can still give a bye ("Advances without riding"); the generated second-chance ladders never do.
+    const draw = expandFormat(single({ uneven: "byes_top_seeds" }), makeEntrants(10));
     const numbers = draw.rounds.flatMap((r) => r.heats.map((h) => h.number)).filter((n) => n !== null);
     expect(numbers).toEqual(Array.from({ length: numbers.length }, (_, i) => i + 1));
-    expect(draw.rounds.flatMap((r) => r.heats).filter((h) => h.bye)).toHaveLength(2);
+    expect(draw.rounds[0].heats.filter((h) => h.bye)).toHaveLength(2);
+    expect(draw.rounds.flatMap((r) => r.heats).filter((h) => h.bye).every((h) => h.number === null)).toBe(true);
   });
 });
 

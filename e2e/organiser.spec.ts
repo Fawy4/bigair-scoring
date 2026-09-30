@@ -235,7 +235,7 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   for (const text of [
     "Top riders from each heat advance to the next round; the rest are out.",
     "Example: heats of 4, top 2 go through.",
-    "Heat winners advance directly; 2nd and 3rd get one more heat to qualify.",
+    "Heat winners advance directly; the other riders get one more heat to qualify.",
     "Example: King of the Air Round 1 → Round 2.",
     "Everyone rides once; all heat scores are ranked together and the top N ride the final.",
     "Example: 23 riders in 3 pools, best 6 to the final.",
@@ -250,40 +250,67 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(page.getByTestId("tag-pools")).toHaveText("Riders can be out after 1 heat");
   await expect(page.getByTestId("min-heats")).toHaveText("Minimum heats per rider: 1");
 
-  // two plain numbers: 14 riders, target 3, minimum 3 → heats of 3, 3, 4, 4 (smaller heats first)
+  // three plain numbers: 14 riders, target 3, minimum 3 (maximum 4 by default) → heats of 3, 3, 4, 4 (smaller heats first)
   await field("Riders per heat (target)").fill("3");
-  await expect(field("Minimum riders per heat")).toHaveValue("2"); // the default follows the target
-  await field("Minimum riders per heat").fill("3");
+  await expect(field("Minimum per heat")).toHaveValue("2"); // the default follows the target
+  await expect(field("Maximum per heat")).toHaveValue("4"); // target + 1
+  await field("Minimum per heat").fill("3");
   await expect(page.getByTestId("format-preview")).toContainText("With 14 riders: R1 4 heats of 3–4");
   await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat")).toHaveText([/R1 H1: 3 riders/, /R1 H2: 3 riders/, /R1 H3: 4 riders/, /R1 H4: 4 riders/]);
   // placeholders read "1st H1"; heats are named by round
   await expect(page.getByTestId("ladder-round").nth(1).getByTestId("ladder-from").first()).toContainText("1st H1");
-  await page.getByRole("button", { name: "Help: Minimum riders per heat" }).click();
-  await expect(page.getByRole("note").filter({ hasText: "Minimum riders per heat — the system will never make a heat smaller than this; extra riders make some heats one bigger" })).toBeVisible();
+  await page.getByRole("button", { name: "Help: Minimum per heat" }).click();
+  await expect(page.getByRole("note").filter({ hasText: "Minimum per heat — the system will never make a heat smaller than this" })).toBeVisible();
+  await page.getByRole("button", { name: "Help: Maximum per heat" }).click();
+  await expect(page.getByRole("note").filter({ hasText: "Maximum per heat — the system will never make a heat bigger than this" })).toBeVisible();
+  // target 3, minimum 2, maximum 3: 14 riders → 2/3/3/3/3
+  await field("Minimum per heat").fill("2");
+  await field("Maximum per heat").fill("3");
+  await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat")).toHaveText([/2 riders/, /3 riders/, /3 riders/, /3 riders/, /3 riders/]);
+  await expect(page.getByTestId("limits-note")).toHaveText("Every heat holds 2 to 3 riders.");
   // target 4, minimum 4: 13 riders → 4/4/5 and 5 riders → one heat of 5
   await field("Riders per heat (target)").fill("4");
-  await field("Minimum riders per heat").fill("4");
+  await field("Minimum per heat").fill("4");
+  await field("Maximum per heat").fill("5");
   await field("Preview with").fill("13");
   await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat")).toHaveText([/4 riders/, /4 riders/, /5 riders/]);
   await field("Preview with").fill("5");
   await expect(page.getByTestId("ladder-round")).toHaveCount(1);
   await expect(page.getByTestId("ladder-heat")).toHaveText([/5 riders/]);
-  await field("Minimum riders per heat").fill("3"); // back to the default
+  // minimum = maximum = target: 24 riders → 6 heats of 4
+  await field("Maximum per heat").fill("4");
+  await field("Preview with").fill("24");
+  await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat")).toHaveCount(6);
+  await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat").first()).toContainText("4 riders");
+  await field("Minimum per heat").fill("3"); // back to the defaults
+  await field("Maximum per heat").fill("5");
   await field("Preview with").fill("14");
 
-  // second chance: plain words for the second-chance round and for riders who advance without riding; no bracket jargon anywhere
+  // second chance: every round follows the same three numbers; nobody advances without riding; plain words, no bracket jargon
   await page.getByRole("radio", { name: "Knockout with a second chance" }).check();
   await expect(page.getByTestId("min-heats")).toHaveText("Minimum heats per rider: 2");
   await expect(page.getByTestId("ladder-diagram")).toContainText("Second chance H1");
-  await expect(page.getByTestId("ladder-diagram")).toContainText("Advances without riding");
+  await expect(page.getByTestId("ladder-diagram")).not.toContainText("Advances without riding");
   await expect(page.getByTestId("ladder-diagram")).toContainText("1st R1 H1");
-  await expect(page.getByTestId("format-preview")).toContainText("Second chance 4 heats of 2 + 1 advancing without riding");
+  await expect(page.getByTestId("format-preview")).toContainText("Second chance 3 heats of 3");
+  // 14 riders, target 3, minimum 3, maximum 4: R1 3/3/4/4, then 3/3/4, then a semi-final of 3 and 4, then a final of 4
+  await field("Minimum per heat").fill("3");
+  await expect(page.getByTestId("format-preview")).toHaveText("With 14 riders: R1 4 heats of 3–4 → Second chance 3 heats of 3–4 → SF 2 heats of 3–4 → F 1 heat of 4 (10 heats)");
+  await expect(page.getByTestId("ladder-diagram")).not.toContainText("Advances without riding");
+  // only 2nd and 3rd get a second chance: the diagram names who is out ("4th → out") and the tag changes
+  await field("Riders per heat who get a second chance").selectOption({ label: "2nd and 3rd only; the others are out" });
+  await expect(page.getByTestId("ladder-round").first()).toContainText("4th → out");
+  await expect(page.getByTestId("min-heats")).toHaveText("Minimum heats per rider: 1");
+  await expect(page.getByTestId("tag-second_chance")).toHaveText("Riders can be out after 1 heat");
+  await expect(page.getByTestId("format-preview")).toContainText("Second chance 2 heats of 4");
+  await field("Riders per heat who get a second chance").selectOption({ label: "Everyone who did not win" });
+  await expect(page.getByTestId("min-heats")).toHaveText("Minimum heats per rider: 2");
   await page.getByRole("checkbox", { name: "Show all settings" }).check();
   const screenText = await page.locator("body").innerText();
   expect(screenText).not.toMatch(/\b(byes?|repechage|dingle|man-on-man)\b/i);
   expect(screenText).not.toMatch(/\b(winners?|losers?)['’]?\s+bracket\b/i);
   // Show all settings keeps every Simple setting on screen, with the advanced ones added below
-  for (const label of ["Riders per heat (target)", "Minimum riders per heat", "Final size", "Heat length: R1 (minutes)", "Break after each heat (minutes)", "Break after the round (minutes)"]) {
+  for (const label of ["Riders per heat (target)", "Minimum per heat", "Maximum per heat", "Riders per heat who get a second chance", "Final size", "Heat length: R1 (minutes)", "Break after each heat (minutes)", "Break after the round (minutes)"]) {
     await expect(field(label), `Simple format field still visible: ${label}`).toBeVisible();
   }
   await expect(page.getByRole("radio", { name: "Knockout", exact: true })).toBeVisible();
@@ -305,7 +332,8 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
 
   // only the simple numbers are shown under the choice; changing one updates the ladder
   await expect(field("Riders per heat (target)")).toBeVisible();
-  await expect(field("Minimum riders per heat")).toHaveValue("3"); // default: target − 1
+  await expect(field("Minimum per heat")).toHaveValue("3"); // default: target − 1
+  await expect(field("Maximum per heat")).toHaveValue("5"); // default: target + 1
   await expect(field("How many advance per heat")).toBeVisible();
   await expect(field("Final size")).toBeVisible();
   await expect(page.getByText("Flag-out", { exact: true })).toHaveCount(0); // flag-out lives under Show all settings

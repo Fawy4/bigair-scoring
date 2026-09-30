@@ -1,4 +1,4 @@
-import { effectiveMinHeatSize } from "@/lib/engine/ladder/seeding";
+import { effectiveMaxHeatSize, effectiveMinHeatSize } from "@/lib/engine/ladder/seeding";
 import { GeneratorSchema } from "@/lib/schemas/format-template";
 
 /** The three ladder types the organiser chooses from; "custom" is a format with its own rounds. */
@@ -48,14 +48,20 @@ export function withoutRoundLengths(working: Record<string, unknown>): Record<st
 /** The parameter that holds "Riders per heat (target)" for each ladder type (second chance: the first round). */
 export const TARGET_KEY: Record<Exclude<LadderKind, "custom">, "heatSize" | "r1HeatSize"> = { knockout: "heatSize", second_chance: "r1HeatSize", pools: "heatSize" };
 
-/** Target and (effective) minimum riders per heat of a generated ladder; `explicit` = the organiser named the minimum. */
-export function heatSizes(working: Record<string, unknown>): { target: number; min: number; explicit: boolean } | null {
+/** Target and (effective) minimum and maximum riders per heat of a generated ladder; `explicit` = the organiser named the minimum. */
+export function heatSizes(working: Record<string, unknown>): { target: number; min: number; max: number; explicit: boolean; explicitMax: boolean } | null {
   const kind = ladderKindOf(working);
   if (kind === "custom") return null;
   const params = ((working.generator as { params?: Record<string, unknown> } | undefined)?.params ?? {}) as Record<string, number | undefined>;
   const target = params[TARGET_KEY[kind]];
   if (typeof target !== "number") return null;
-  return { target, min: effectiveMinHeatSize(target, params.minHeatSize), explicit: params.minHeatSize !== undefined };
+  return {
+    target,
+    min: effectiveMinHeatSize(target, params.minHeatSize),
+    max: effectiveMaxHeatSize(target, params.maxHeatSize),
+    explicit: params.minHeatSize !== undefined,
+    explicitMax: params.maxHeatSize !== undefined,
+  };
 }
 
 function withParams(working: Record<string, unknown>, change: (p: Record<string, number | undefined>) => Record<string, number | undefined>): Record<string, unknown> {
@@ -64,8 +70,8 @@ function withParams(working: Record<string, unknown>, change: (p: Record<string,
 }
 
 /**
- * Sets "Riders per heat (target)". A stored minimum that would now be above the target is lowered to it; a minimum that was
- * only ever the default keeps following the target (it is not stored).
+ * Sets "Riders per heat (target)". A stored minimum that would now be above the target is lowered to it and a stored maximum
+ * below it is raised to it; a minimum or maximum that was only ever the default keeps following the target (it is not stored).
  */
 export function withHeatTarget(working: Record<string, unknown>, target: number | ""): Record<string, unknown> {
   const kind = ladderKindOf(working);
@@ -73,16 +79,36 @@ export function withHeatTarget(working: Record<string, unknown>, target: number 
   return withParams(working, (p) => {
     p[TARGET_KEY[kind]] = target === "" ? undefined : target;
     if (typeof target === "number" && p.minHeatSize !== undefined && p.minHeatSize > target) p.minHeatSize = target;
+    if (typeof target === "number" && p.maxHeatSize !== undefined && p.maxHeatSize < target) p.maxHeatSize = target;
     return p;
   });
 }
 
-/** Sets "Minimum riders per heat". A value equal to the default (target − 1, at least 2) is not stored; "" clears it. */
+/** Sets "Minimum per heat". A value equal to the default (target − 1, at least 2) is not stored; "" clears it. */
 export function withMinRiders(working: Record<string, unknown>, min: number | ""): Record<string, unknown> {
   const sizes = heatSizes(working);
   if (!sizes) return working;
   return withParams(working, (p) => {
     p.minHeatSize = min === "" || min === effectiveMinHeatSize(sizes.target) ? undefined : min;
+    return p;
+  });
+}
+
+/** Sets "Maximum per heat". A value equal to the default (target + 1, at most 10) is not stored; "" clears it. */
+export function withMaxRiders(working: Record<string, unknown>, max: number | ""): Record<string, unknown> {
+  const sizes = heatSizes(working);
+  if (!sizes) return working;
+  return withParams(working, (p) => {
+    p.maxHeatSize = max === "" || max === effectiveMaxHeatSize(sizes.target) ? undefined : max;
+    return p;
+  });
+}
+
+/** Second-chance ladders only: how many riders per heat, after the winner, get a second chance. "" = everyone who did not win. */
+export function withSecondChancePlaces(working: Record<string, unknown>, places: number | ""): Record<string, unknown> {
+  if (ladderKindOf(working) !== "second_chance") return working;
+  return withParams(working, (p) => {
+    p.secondChancePlaces = places === "" ? undefined : places;
     return p;
   });
 }

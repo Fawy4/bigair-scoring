@@ -79,8 +79,15 @@ function routesOf(draw: DivisionDraw, roundIndex: number): string[] {
     routes.push(`${t.rest} ${t.arrow} ${t.out}`);
     return routes;
   }
+  // Name the actual places ("4th → out"), not just "the rest": only places that exist in this round's heats are listed.
+  const biggest = Math.max(1, ...round.heats.map((h) => h.slots.length));
+  const named = new Set(round.spec.advance.flatMap((r) => (r.places === "rest" ? [] : r.places)));
+  const others = Array.from({ length: biggest }, (_, i) => i + 1).filter((p) => !named.has(p));
   for (const rule of round.spec.advance) {
-    routes.push(`${rule.places === "rest" ? t.rest : placesLabel(rule.places)} ${t.arrow} ${nameOf(rule.to)}`);
+    const places = rule.places === "rest" ? others : rule.places.filter((p) => p <= biggest);
+    if (places.length === 0) continue;
+    const label = rule.places === "rest" && named.size === 0 ? t.rest : placesLabel(places); // "the rest" only when nothing else is named
+    routes.push(`${label} ${t.arrow} ${nameOf(rule.to)}`);
   }
   return routes;
 }

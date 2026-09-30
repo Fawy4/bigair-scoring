@@ -86,7 +86,7 @@ describe("ladder diagram model", () => {
     expect(p.ladder.map((c) => c.shortName)).toEqual(["R1", "SF", "F"]);
     expect(p.ladder.map((c) => c.summary)).toEqual(["4 heats · 3–4 riders · 10 min", "2 heats · 4 riders · 12 min", "1 heat · 4 riders · 15 min"]);
     expect(p.ladder[0].heats.map((h) => h.size)).toEqual([3, 3, 4, 4]); // smaller heats for the top seeds
-    expect(p.ladder[0].routes).toEqual(["1st–2nd → SF", "the rest → out"]);
+    expect(p.ladder[0].routes).toEqual(["1st–2nd → SF", "3rd–4th → out"]); // the actual places, not "the rest"
     expect(p.ladder[2].routes).toEqual(["the rest → final placing"]);
   });
 
@@ -106,6 +106,19 @@ describe("ladder diagram model", () => {
   it("second chance: winners go on, 2nd and 3rd get another heat", () => {
     const p = previewFormat(parseFormatTemplate(dingle), 18);
     expect(p.ladder[0].routes.join(" | ")).toMatch(/1st → R3.*2nd–3rd → Second chance/);
+  });
+
+  it("names the places that are out: 14 riders, 3 / 3 / 4, only 2nd and 3rd get a second chance → '4th → out'", () => {
+    const limited = { ...parseFormatTemplate(dingle) } as unknown as { generator: { params: Record<string, unknown> } };
+    limited.generator = { ...limited.generator, params: { ...limited.generator.params, r1HeatSize: 3, minHeatSize: 3, maxHeatSize: 4, secondChancePlaces: 2 } };
+    const p = previewFormat(parseFormatTemplate(limited), 14);
+    expect(p.ladder[0].heats.map((h) => h.size)).toEqual([3, 3, 4, 4]);
+    expect(p.ladder[0].routes).toEqual(["1st → SF", "2nd–3rd → Second chance", "4th → out"]);
+    expect(p.ladder[1].routes.join(" | ")).toMatch(/2nd–4th → out/);
+    expect(p.minHeatsPerRider).toBe(1); // the 4th of a 4-rider heat is out after one heat, and the preview says so
+    const everyone = previewFormat(parseFormatTemplate({ ...limited, generator: { ...limited.generator, params: { ...limited.generator.params, secondChancePlaces: undefined } } }), 14);
+    expect(everyone.ladder[0].routes).toEqual(["1st → SF", "2nd–4th → Second chance"]);
+    expect(everyone.minHeatsPerRider).toBe(2);
   });
 
   it("place lists read naturally", () => {
@@ -145,12 +158,15 @@ describe("plain words in the ladder: heat names, placeholders, advancing without
   });
 
   it("a rider who advances without riding is labelled so, and the word 'bye' never appears", () => {
-    const advancing = second.ladder.flatMap((c) => c.heats).filter((h) => h.advancing);
-    expect(advancing.length).toBeGreaterThan(0);
+    // Only a hand-chosen rule gives a rider who advances without riding; the generated ladders never do.
+    expect(second.ladder.flatMap((c) => c.heats).filter((h) => h.advancing)).toHaveLength(0);
+    const skipping = parseFormatTemplate({ ...single, generator: { ...single.generator, params: { ...single.generator.params, uneven: "byes_top_seeds" } } });
+    const withSkips = previewFormat(skipping, 10);
+    expect(withSkips.ladder.flatMap((c) => c.heats).filter((h) => h.advancing).length).toBeGreaterThan(0);
     expect(copy.ladder.advancesWithoutRiding).toBe("Advances without riding");
-    expect(second.sentence).toMatch(/advancing without riding/);
+    expect(withSkips.sentence).toMatch(/advancing without riding/);
     const words = (p: typeof knock) => [p.sentence, ...p.warnings, ...p.ladder.flatMap((c) => [c.name, c.summary, ...c.routes, ...c.heats.flatMap((h) => [h.name, ...h.from])])];
-    const everything = [knock, second, pool].flatMap(words).join(" | ");
+    const everything = [knock, second, pool, withSkips].flatMap(words).join(" | ");
     expect(everything).not.toMatch(/\bbyes?\b/i);
     expect(everything).not.toMatch(/repechage|man-on-man|dingle/i);
   });

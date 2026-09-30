@@ -94,13 +94,13 @@ Capacity-aware snake, N = 13 (docs/04 §3 step 3):
 - N = 4 → single Final.
 - N = 2 → single Final of 2 (warning: below template minimum if min = 3).
 
-### 2C — `dingle_elimination` (KOTA), N = 18, r1HeatSize 3, finalSize 3
-- R1: 6 heats of 3 (13 min). Advance: place 1 → R3; places 2–3 → R2.
-- R2: 12 riders → 6 heats of 2 (10 min), reseeded `by_place_then_score`; winners → R3; losers eliminated **13=**.
-- R3: 12 riders (6 R1 winners + 6 R2 winners) → 6 heats of 2; winners → SF (losers 7=).
-- SF: 3 heats of 2; winners → Final (losers 4=).
-- Final: 1 heat of 3 (15 min) → places 1–3. Flag-out available only in R1 at minute 8, count 1.
-- Sanity: total heats = 6 + 6 + 6 + 3 + 1 = 22.
+### 2C — `dingle_elimination` ("Knockout with a second chance"), N = 18, preset `kota-dingle` (target 3, default minimum 2 and maximum 4) — `2c-dingle.test.ts`
+- R1: 6 heats of 3 (13 min). Advance: place 1 → R3; places 2–3 → R2 (second chance). Seeds: [1,12,13] [2,11,14] [3,10,15] [4,9,16] [5,8,17] [6,7,18].
+- R2 (Second-chance round): 12 riders → 4 heats of 3 (10 min), reseeded `by_place_then_score`: [7,14,15] [8,13,16] [9,12,17] [10,11,18]; winners → R3; the others are eliminated **11=** (8 riders).
+- R3: 10 riders (6 R1 winners + 4 second-chance winners) → 4 heats of 2/2/3/3 (10 min), top seeds in the smaller heats: [1,8] [2,7] [3,6,9] [4,5,10]; winners → Final; the others **5=** (6 riders).
+- Final: 1 heat of 4 (15 min) → places 1–4. Flag-out available only in R1 at minute 8, count 1.
+- Sanity: total heats = 6 + 4 + 4 + 1 = 15; nobody advances without riding; every rider rides at least 2 heats.
+- N = 12 (same preset): R1 4×3 · Second chance 2/3/3 · R3 2/2/3 · Final of 3. N = 6 … 36 always end in one final heat and place every rider once. (The earlier 22-heat structure with 1 v 1 heats was replaced by Decision 27; set the target to 2 for 1 v 1 heats.)
 
 ### 2D — Fixed templates
 - `megaloop-men-16`: R1 8 heats of 2 → winners to R3, losers to R2; R2 4 heats of 2 → winners to R3; R3 6 heats of 2 → winners to SF; SF 3 heats of 2 → Final of 3. Total heats 22. Placings: R2 losers 13=, R3 losers 7=, SF losers 4=.
@@ -116,23 +116,35 @@ Pools: 3 heats sized 7 / 8 / 8 (smaller heat for top seeds first). All 23 ranked
 - Correction: re-publishing R1 Heat 1 with a different winner when R3 Heat 1 has status `running` → returns `conflict` listing the affected heat; nothing changes.
 - Manual drag of a rider into another slot before start → `manual_override = true`; auto-seeding leaves that heat alone.
 
-### 2G0 — Riders per heat (target) and Minimum riders per heat (docs/04 decision 23; `2g0-minimum-riders.test.ts`)
-Rule: heats between the minimum and target + 1; ceil(N / target) heats if every heat can meet the minimum, otherwise fewer heats; N below the minimum → one heat with everyone; smaller heats first (top seeds).
-| Riders | Target | Minimum | Heats | Seeds per heat (snake) |
-|---|---|---|---|---|
-| 14 | 3 | 3 | 3/3/4/4 | [1,8,9] · [2,7,10] · [3,6,11,14] · [4,5,12,13] |
-| 14 | 4 | 3 | 3/3/4/4 | |
-| 13 | 4 | 3 | 3/3/3/4 | |
-| 13 | 4 | 4 | 4/4/5 | |
-| 5 | 4 | 4 | one heat of 5 | |
-| 24 | 4 | 4 | 6 heats of 4 | |
-| 11 | 4 | 4 | 5/6 (no split within both limits: the minimum wins) | |
-| 7 | 4 | 4 | one heat of 7 (only one heat can meet the minimum) | |
-- Default minimum: target 4 → 3, target 3 → 2, target 2 → 2; equal to the target when the organiser sets it.
-- Consequence for §2A: 5 riders with the default minimum is one heat of 5 (no "eliminates nobody" split); the old split [1,4] · [2,3,5] needs minimum 2.
-- Second-chance ladders apply the numbers to Round 1 only (14 riders, target 3, minimum 3 → 3/3/4/4); the pools preset (minimum 6) keeps §2E: 23 riders → 7/8/8.
+### 2G0 — Riders per heat (target), Minimum per heat and Maximum per heat (docs/04 decision 23; `2g0-minimum-riders.test.ts`)
+Rule: every heat between the minimum and the maximum (defaults: target − 1, never below 2, and target + 1); the number of heats keeping the sizes closest to the target — heats above the target count far more than heats below it, so ceil(N / target) heats whenever every heat can meet the minimum — and the fewest heats on a tie; N below the minimum → one heat with everyone; smaller heats first (top seeds).
+| Riders | Target | Min | Max | Heats | Seeds per heat (snake) |
+|---|---|---|---|---|---|
+| 14 | 3 | 3 | 4 | 3/3/4/4 | [1,8,9] · [2,7,10] · [3,6,11,14] · [4,5,12,13] |
+| 14 | 3 | 2 | 3 | 2/3/3/3/3 | |
+| 14 | 4 | 3 | 4 | 3/3/4/4 | |
+| 13 | 4 | 4 | 5 | 4/4/5 | |
+| 24 | 4 | 4 | 4 | 6 heats of 4 | |
+| 9 | 3 | 3 | 3 | 3 heats of 3 | |
+| 5 | 4 | 4 | 5 | one heat of 5 | |
+| 7 | 3 | 3 | 4 | 3/4 | |
+| 14 | 4 | 3 | 5 (default) | 3/3/4/4 | |
+| 13 | 4 | 3 | 5 (default) | 3/3/3/4 | |
+| 11 | 4 | 4 | 4 | 5/6 (no split within both limits: the minimum wins, with a warning) | |
+| 7 | 4 | 4 | 4 | one heat of 7 (only one heat can meet the minimum) | |
+- Property test: for target 2–8, every minimum, every maximum from the target up, N up to 120: no heat below the minimum, none above the maximum whenever a split within both exists, sizes differ by at most 1, smaller heats first.
+- Consequence for §2A: 5 riders at target 4 with the default minimum is one heat of 5 (the default maximum is 5); the old split [1,4] · [2,3,5] needs minimum 2.
+- The pools preset (minimum 6) keeps §2E: 23 riders → 7/8/8.
 - `minHeatsPerRider` (`2g1-minimum-heats.test.ts`): knockout 14 → 1, pools 23 → 1, second chance 9–36 riders → at least 2, two pool rounds → 2.
-- Plain words: no "bye", "repechage", "dingle" or "man-on-man" in anything a user reads; placeholders "1st H1", "1st R1 H1", "1st of all heats"; "Advances without riding".
+- Plain words: no "bye", "repechage", "dingle" or "man-on-man" in anything a user reads; placeholders "1st H1", "1st R1 H1", "1st of all heats"; "Advances without riding" only in hand-built ladders.
+
+### 2G2 — Second-chance ladder: every round follows the sizing rule (docs/04 decision 27; `2g2-second-chance.test.ts`)
+- **14 riders, target 3, min 3, max 4:** R1 3/3/4/4 (seeds as in 2G0) → the 4 winners go to the main draw, the 10 others to the Second-chance round (3/3/4) → its 3 winners + the 4 winners = 7 riders → Semi-finals 3/4 (top 2 of each) → Final of 4. Rounds R1, R2, SF, F; 10 heats; no bye; every rider rides at least 2 heats.
+- Same, only 2nd and 3rd get a second chance (4th is out): R1 3/3/4/4 → 8 riders in Second chance 4/4 → 4 + 2 = 6 riders in Semi-finals 3/3 (top 2) → Final of 4; the diagram reads "2nd–3rd → Second chance · 4th → out"; minimum heats per rider 1.
+- **14, 16 and 18 riders** with settings (3 / default / default), (3 / 3 / 4) and (4 / 3 / 4): no heat below the minimum or above the maximum, no advancing without riding, minimum heats per rider ≥ 2, no `heat_size_limits` warning.
+- **N = 8, 10, 12, 14, 16, 18, 24** with the same settings: every non-final round has at least 2 real heats and nobody skips a round; the Final is one heat. A round in which fewer riders ride than skip is invalid (the check is asserted on a hand-built example, and no generated ladder from N = 2 to 40 contains a rider who skips).
+- 6 riders left in the main draw: top 2 of 2 heats of 3 → Final of 4 (changing how many advance per heat, not creating a rider who skips).
+- N = 2 … 40 (all settings): one final heat, every rider placed once. Target 2 gives 1 v 1 style heats. A field that cannot keep all three numbers (8 riders, 4 / 4 / 5) gets a `heat_size_limits` warning.
 
 ## 3. Timetable engine (`presets/schedule/kitemania-day2.json`)
 

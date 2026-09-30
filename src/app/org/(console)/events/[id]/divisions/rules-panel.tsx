@@ -28,6 +28,8 @@ const SCORING_SIMPLE_PATHS = ["heat.maxAttemptsPerRider", "panel.minJudges", "pa
 const FORMAT_SIMPLE_PATHS = [
   "generator.params.heatSize",
   "generator.params.minHeatSize",
+  "generator.params.maxHeatSize",
+  "generator.params.secondChancePlaces",
   "generator.params.uneven",
   "generator.params.advancePerHeat",
   "generator.params.finalSize",

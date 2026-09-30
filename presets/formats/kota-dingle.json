@@ -1,7 +1,7 @@
 {
   "id": "kota-dingle",
-  "name": "KOTA-style knockout with a second chance (heats of 3, second-chance round, 1 v 1 heats, final of 3)",
-  "description": "Round 1 heats of 3: winners go straight to Round 3, 2nd and 3rd are reseeded into the second-chance round (heats of 2). Second-chance winners join Round 3; the others share 13th (or the equivalent for the field size). From Round 3: 1 v 1 heats, knockout, to a 3-rider final. Every rider rides at least 2 heats. Optional flag-out in Round 1 at minute 8 (lowest-scoring rider out; others continue). Based on the Red Bull King of the Air 2026 published format (18 riders); the generator scales to other field sizes.",
+  "name": "Knockout with a second chance (heats of 3, second-chance round, main-draw rounds, final)",
+  "description": "Round 1 heats of about 3 (2 to 4 riders per heat): the winner of each heat goes to the main draw and everyone else rides the second-chance round. Second-chance winners join the main draw, which runs as many rounds as it needs to reach the final; every round uses the same target, minimum and maximum riders per heat. Every rider rides at least 2 heats. Optional flag-out in Round 1 at minute 8 (lowest-scoring rider out; others continue). Inspired by the Red Bull King of the Air 2026 format (18 riders); set the target to 2 for 1 v 1 heats.",
   "basedOn": "Red Bull King of the Air 2026 format (redbull.com)",
   "entrants": { "min": 6, "max": 36 },
   "vestColours": ["red", "yellow", "blue", "green", "white", "black"],

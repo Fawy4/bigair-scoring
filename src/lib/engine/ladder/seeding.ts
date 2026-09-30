@@ -1,6 +1,6 @@
 import type { RoundSpec } from "@/lib/schemas/format-template";
 
-type LayoutSpec = Pick<RoundSpec, "heatSize" | "uneven" | "heatCountOverride" | "seeding"> & { minHeatSize?: number };
+type LayoutSpec = Pick<RoundSpec, "heatSize" | "uneven" | "heatCountOverride" | "seeding"> & { minHeatSize?: number; maxHeatSize?: number };
 
 export interface RoundLayout {
   /** Riders per heat, smallest heats first (top seeds land in the smaller heats). */
@@ -22,22 +22,74 @@ export function capacities(n: number, heats: number): number[] {
   return Array.from({ length: heats }, (_, i) => (i < heats - extra ? base : base + 1));
 }
 
+/** The largest heat size the app allows (the palette and the water both run out somewhere). */
+export const MAX_HEAT_SIZE = 10;
+
 /** The minimum riders per heat: what the organiser set, else the target − 1 (never below 2, never above the target). */
 export function effectiveMinHeatSize(target: number, min?: number): number {
   return Math.min(target, Math.max(1, min ?? Math.max(2, target - 1)));
 }
 
+/** The maximum riders per heat: what the organiser set, else the target + 1 (never below the target, never above 10). */
+export function effectiveMaxHeatSize(target: number, max?: number): number {
+  return Math.max(target, Math.min(MAX_HEAT_SIZE, max ?? target + 1));
+}
+
+export interface HeatLimits {
+  target: number;
+  min: number;
+  max: number;
+}
+
+export const heatLimits = (target: number, min?: number, max?: number): HeatLimits => ({
+  target,
+  min: effectiveMinHeatSize(target, min),
+  max: effectiveMaxHeatSize(target, max),
+});
+
 /**
- * "Riders per heat (target)" and "Minimum riders per heat" (docs/04 decision 23). The target number of heats when every heat can
- * meet the minimum, otherwise fewer heats (the last heats one rider bigger); a field smaller than the minimum is one heat with
- * everyone. The minimum is never broken, even when that means one large heat. Smaller heats come first (top seeds).
+ * How far a set of heat sizes is from the target, lower is closer: riders above the target count far more than riders
+ * below it (a heat bigger than the target is worse than a heat smaller than it), so 13 riders at target 4 make 3/3/3/4
+ * rather than 4/4/5 whenever the minimum allows.
  */
-export function minimumRuleCapacities(n: number, target: number, min: number): number[] {
+export const sizeDeviation = (caps: number[], target: number): number =>
+  caps.reduce((s, c) => s + (c > target ? 1000 * (c - target) : target - c), 0);
+
+/**
+ * Every number of heats that lets each heat hold between the minimum and the maximum riders (docs/04 decision 23).
+ * Empty when there is no such number; a field smaller than the minimum is one heat with everyone.
+ */
+export function feasibleHeatCounts(n: number, { min, max }: HeatLimits): number[] {
   if (n <= 0) return [];
-  if (n < min) return [n];
-  let heats = Math.max(1, Math.ceil(n / target));
-  while (heats > 1 && Math.floor(n / heats) < min) heats--;
-  return capacities(n, heats);
+  if (n < min) return [1];
+  const out: number[] = [];
+  for (let h = 1; h <= Math.floor(n / min); h++) if (Math.ceil(n / h) <= max) out.push(h);
+  return out;
+}
+
+/**
+ * The heat count used when no split fits between the minimum and the maximum: the minimum still wins, so the heats are as
+ * small as the minimum allows (11 riders, 4 to 4 → 5 and 6; 7 riders, 4 to 4 → one heat of 7).
+ */
+export const fallbackHeatCount = (n: number, { min }: HeatLimits): number => Math.max(1, Math.floor(n / Math.max(1, min)));
+
+/**
+ * "Riders per heat (target)", "Minimum per heat" and "Maximum per heat" (docs/04 decision 23). Pick the number of heats so
+ * that every heat holds between the minimum and the maximum, with sizes closest to the target (see `sizeDeviation`: not above
+ * the target if it can be helped, then as little below it as possible); with two equally close options, the one with fewer
+ * heats. Smaller heats come first (top seeds).
+ */
+export function heatSizeRule(n: number, limits: HeatLimits): number[] {
+  if (n <= 0) return [];
+  const feasible = feasibleHeatCounts(n, limits);
+  if (feasible.length === 0) return capacities(n, fallbackHeatCount(n, limits));
+  let best = feasible[0];
+  let bestDev = sizeDeviation(capacities(n, best), limits.target);
+  for (const h of feasible.slice(1)) {
+    const dev = sizeDeviation(capacities(n, h), limits.target);
+    if (dev < bestDev) [best, bestDev] = [h, dev]; // strictly closer only: on a tie the earlier (fewer) heat count stays
+  }
+  return capacities(n, best);
 }
 
 /** How many heats and how big — docs/04 §3 step 3 and Decisions 2 and 6. */
@@ -45,7 +97,7 @@ export function roundLayout(n: number, spec: LayoutSpec): RoundLayout {
   if (n <= 0) return { capacities: [], byes: 0 };
   const size = spec.heatSize;
   if (spec.heatCountOverride) return { capacities: capacities(n, Math.min(spec.heatCountOverride, n)), byes: 0 };
-  if (spec.uneven === "minimum_riders") return { capacities: minimumRuleCapacities(n, size, effectiveMinHeatSize(size, spec.minHeatSize)), byes: 0 };
+  if (spec.uneven === "minimum_riders") return { capacities: heatSizeRule(n, heatLimits(size, spec.minHeatSize, spec.maxHeatSize)), byes: 0 };
   if (spec.uneven === "byes_top_seeds") {
     const b = byeCount(n, size);
     if (b === 0) return { capacities: capacities(n, Math.ceil(n / size)), byes: 0 };

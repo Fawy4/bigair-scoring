@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FieldLabel, HelpButton } from "@/components/help-button";
 import { getIn, setIn } from "@/lib/form/path";
-import { GENERATOR, heatSizes, ladderKindOf, TARGET_KEY, withHeatTarget, withLadderKind, withMinRiders, withoutRoundLengths, withRoundLength, type LadderKind } from "@/lib/format-ui/ladder-kind";
+import { GENERATOR, heatSizes, ladderKindOf, TARGET_KEY, withHeatTarget, withLadderKind, withMaxRiders, withMinRiders, withoutRoundLengths, withRoundLength, withSecondChancePlaces, type LadderKind } from "@/lib/format-ui/ladder-kind";
 import { copy, help } from "@/lib/ui-copy";
 
 const T = copy.formatSimple;
@@ -118,7 +118,7 @@ export function FormatSimple({
             <p className="pl-9 font-semibold">{T.types[k].explain}</p>
             <p className="pl-9 text-sm font-semibold">{T.types[k].example}</p>
             <p className="pl-9 text-sm font-extrabold" data-testid={`tag-${k}`}>
-              {TAG[k]}
+              {k === "second_chance" && kind === k && getIn(working, ["generator", "params", "secondChancePlaces"]) !== undefined ? T.tags.canBeOut : TAG[k]}
             </p>
           </div>
         ))}
@@ -131,12 +131,37 @@ export function FormatSimple({
             {numberInput({ path: ["generator", "params", TARGET_KEY[kind]], label: kind === "pools" ? T.ridersPerPool : T.ridersPerHeat, help: "format.heatSize" }, (v) => onChange(withHeatTarget(working, v)))}
             <div className="flex flex-col gap-1">
               <FieldLabel htmlFor="fs-min-riders" text={T.minRiders} help={help["format.minHeat"]} />
-              <MinRidersInput value={sizes.min} invalid={Boolean(errors["generator.params.minHeatSize"])} onCommit={(v) => onChange(withMinRiders(working, v))} />
+              <SizeInput id="fs-min-riders" value={sizes.min} invalid={Boolean(errors["generator.params.minHeatSize"])} onCommit={(v) => onChange(withMinRiders(working, v))} />
               {errors["generator.params.minHeatSize"] ? <p className="field-error">{copy.common.problem(errors["generator.params.minHeatSize"])}</p> : null}
             </div>
+            <div className="flex flex-col gap-1">
+              <FieldLabel htmlFor="fs-max-riders" text={T.maxRiders} help={help["format.maxHeat"]} />
+              <SizeInput id="fs-max-riders" value={sizes.max} invalid={Boolean(errors["generator.params.maxHeatSize"])} onCommit={(v) => onChange(withMaxRiders(working, v))} />
+              {errors["generator.params.maxHeatSize"] ? <p className="field-error">{copy.common.problem(errors["generator.params.maxHeatSize"])}</p> : null}
+            </div>
+            {kind === "second_chance" ? (
+              <div className="flex flex-col gap-1">
+                <FieldLabel htmlFor="fs-second-chance" text={T.secondChancePlaces} help={help["format.secondChancePlaces"]} />
+                <select
+                  id="fs-second-chance"
+                  value={String(getIn(working, ["generator", "params", "secondChancePlaces"]) ?? "")}
+                  onChange={(ev) => onChange(withSecondChancePlaces(working, ev.target.value === "" ? "" : Number(ev.target.value)))}
+                >
+                  <option value="">{T.secondChanceAll}</option>
+                  {[1, 2, 3, 4].map((n) => (
+                    <option key={n} value={n}>
+                      {T.secondChanceDepth(n)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             {shown.main.map((f) => numberInput(f))}
           </div>
           {kind === "second_chance" ? <p className="font-semibold">{T.secondChanceFixed}</p> : null}
+          <p className="text-sm font-semibold" data-testid="limits-note">
+            {T.limitsNote(sizes.min, sizes.max)}
+          </p>
           <fieldset className="flex flex-col gap-2">
             <legend className="text-base font-extrabold">{T.heatLengths}</legend>
             <div className="flex flex-wrap gap-4">{shown.lengths.map((f) => numberInput(f))}</div>
@@ -205,10 +230,10 @@ function PerRound({ working, rounds, onChange }: { working: Record<string, unkno
 export { ladderKindOf };
 
 /**
- * "Minimum riders per heat". It shows the effective value (the default follows the target), but keeps what you type while you
- * type: clearing the box to enter a new number must not snap back to the default under your fingers.
+ * "Minimum per heat" / "Maximum per heat". It shows the effective value (the default follows the target), but keeps what you
+ * type while you type: clearing the box to enter a new number must not snap back to the default under your fingers.
  */
-function MinRidersInput({ value, invalid, onCommit }: { value: number; invalid: boolean; onCommit: (v: number) => void }) {
+function SizeInput({ id, value, invalid, onCommit }: { id: string; value: number; invalid: boolean; onCommit: (v: number) => void }) {
   const [text, setText] = useState(String(value));
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -217,7 +242,7 @@ function MinRidersInput({ value, invalid, onCommit }: { value: number; invalid: 
   return (
     <input
       ref={ref}
-      id="fs-min-riders"
+      id={id}
       type="number"
       min={1}
       step={1}

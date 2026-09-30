@@ -124,6 +124,7 @@ export interface HeatResultInput {
 export type LadderWarningType =
   | "duplicate_identifier"
   | "eliminates_nobody"
+  | "heat_size_limits"
   | "below_template_min"
   | "above_template_max"
   | "small_division_single_final"

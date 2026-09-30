@@ -4,7 +4,7 @@ import megaloop from "../../../presets/formats/megaloop-men-16.json";
 import single from "../../../presets/formats/heats4-top2-single-elim.json";
 import { FormatTemplateSchema, parseFormatTemplate } from "@/lib/schemas/format-template";
 import { copy } from "@/lib/ui-copy";
-import { heatSizes, ladderKindOf, withHeatTarget, withLadderKind, withMinRiders, withoutRoundLengths, withRoundLength } from "./ladder-kind";
+import { heatSizes, ladderKindOf, withHeatTarget, withLadderKind, withMaxRiders, withMinRiders, withoutRoundLengths, withRoundLength, withSecondChancePlaces } from "./ladder-kind";
 import { previewFormat } from "./preview";
 
 describe("ladder type choice", () => {
@@ -38,7 +38,7 @@ describe("ladder type choice", () => {
     expect(t.knockout.explain).toBe("Top riders from each heat advance to the next round; the rest are out.");
     expect(t.knockout.example).toBe("Example: heats of 4, top 2 go through.");
     expect(t.second_chance.title).toBe("Knockout with a second chance");
-    expect(t.second_chance.explain).toBe("Heat winners advance directly; 2nd and 3rd get one more heat to qualify.");
+    expect(t.second_chance.explain).toBe("Heat winners advance directly; the other riders get one more heat to qualify.");
     expect(t.second_chance.example).toBe("Example: King of the Air Round 1 → Round 2.");
     expect(t.pools.explain).toBe("Everyone rides once; all heat scores are ranked together and the top N ride the final.");
     expect(t.pools.example).toBe("Example: 23 riders in 3 pools, best 6 to the final.");
@@ -77,28 +77,50 @@ describe("ladder type choice", () => {
     });
   });
 
-  describe("riders per heat (target) and minimum riders per heat", () => {
+  describe("riders per heat (target), minimum and maximum per heat", () => {
     const knock = () => parseFormatTemplate(single) as unknown as Record<string, unknown>;
     const second = () => parseFormatTemplate(dingle) as unknown as Record<string, unknown>;
 
     it("reads the target and the effective minimum (default: target − 1, never below 2)", () => {
-      expect(heatSizes(knock())).toEqual({ target: 4, min: 3, explicit: false });
-      expect(heatSizes(second())).toEqual({ target: 3, min: 2, explicit: false });
+      expect(heatSizes(knock())).toEqual({ target: 4, min: 3, max: 5, explicit: false, explicitMax: false });
+      expect(heatSizes(second())).toEqual({ target: 3, min: 2, max: 4, explicit: false, explicitMax: false });
       expect(heatSizes(parseFormatTemplate(megaloop) as unknown as Record<string, unknown>)).toBeNull();
     });
 
     it("the minimum can be set equal to the target; the default is not stored", () => {
       const four = withMinRiders(knock(), 4);
-      expect(heatSizes(four)).toEqual({ target: 4, min: 4, explicit: true });
-      expect(heatSizes(withMinRiders(four, 3))).toEqual({ target: 4, min: 3, explicit: false }); // back to the default
+      expect(heatSizes(four)).toEqual({ target: 4, min: 4, max: 5, explicit: true, explicitMax: false });
+      expect(heatSizes(withMinRiders(four, 3))).toEqual({ target: 4, min: 3, max: 5, explicit: false, explicitMax: false }); // back to the default
       expect(heatSizes(withMinRiders(four, ""))).toMatchObject({ explicit: false });
     });
 
     it("a default minimum follows the target; a stored minimum is lowered when the target drops below it", () => {
-      expect(heatSizes(withHeatTarget(knock(), 6))).toEqual({ target: 6, min: 5, explicit: false });
+      expect(heatSizes(withHeatTarget(knock(), 6))).toEqual({ target: 6, min: 5, max: 7, explicit: false, explicitMax: false });
       const four = withMinRiders(knock(), 4);
-      expect(heatSizes(withHeatTarget(four, 3))).toEqual({ target: 3, min: 3, explicit: true });
+      expect(heatSizes(withHeatTarget(four, 3))).toEqual({ target: 3, min: 3, max: 4, explicit: true, explicitMax: false });
       expect(FormatTemplateSchema.safeParse(withHeatTarget(four, 3)).success).toBe(true);
+    });
+
+    it("the maximum can be set equal to the target (min = max = target); the default (target + 1) is not stored", () => {
+      const exact = withMaxRiders(withMinRiders(knock(), 4), 4);
+      expect(heatSizes(exact)).toEqual({ target: 4, min: 4, max: 4, explicit: true, explicitMax: true });
+      expect(FormatTemplateSchema.safeParse(exact).success).toBe(true);
+      expect(heatSizes(withMaxRiders(exact, 5))).toMatchObject({ max: 5, explicitMax: false });
+      expect(heatSizes(withMaxRiders(exact, ""))).toMatchObject({ explicitMax: false });
+    });
+
+    it("a stored maximum is raised when the target goes above it", () => {
+      const three = withMaxRiders(withHeatTarget(knock(), 3), 3);
+      expect(heatSizes(withHeatTarget(three, 5))).toMatchObject({ target: 5, max: 5, explicitMax: true });
+      expect(FormatTemplateSchema.safeParse(withHeatTarget(three, 5)).success).toBe(true);
+    });
+
+    it("who gets a second chance is a setting of the second-chance ladder only", () => {
+      expect(withSecondChancePlaces(knock(), 2)).toEqual(knock()); // knockout: nothing changes
+      const two = withSecondChancePlaces(second(), 2);
+      expect((two.generator as { params: Record<string, unknown> }).params.secondChancePlaces).toBe(2);
+      expect((withSecondChancePlaces(two, "").generator as { params: Record<string, unknown> }).params.secondChancePlaces).toBeUndefined();
+      expect(FormatTemplateSchema.safeParse(two).success).toBe(true);
     });
 
     it("the preview follows: 14 riders, target 3, minimum 3 → 3/3/4/4; 13 riders, target 4, minimum 4 → 4/4/5", () => {
