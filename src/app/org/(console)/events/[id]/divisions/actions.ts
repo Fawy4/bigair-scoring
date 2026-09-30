@@ -7,6 +7,9 @@ import { canonicalHash } from "@/lib/presets/plan";
 import { asNewPreset, importFormatTemplate, importScoringModel, type PresetKind } from "@/lib/presets/io";
 import type { PresetRow } from "@/lib/presets/options";
 import { FormatTemplateSchema } from "@/lib/schemas/format-template";
+import { IdentificationSchemeSchema } from "@/lib/schemas/identification";
+import { EVENT_VOCABULARY_KEY, loadEventBlocks, loadMasterVocabulary } from "@/lib/org/trick-vocabulary";
+import { addLocalBlock, FAMILIES, type FamilyKey, type LocalBlock } from "@/lib/trick-base";
 import { ScoringModelSchema } from "@/lib/schemas/scoring-model";
 import { FORMAT_NULLABLE, mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { issuesToMap } from "@/lib/form/path";
@@ -49,6 +52,7 @@ export async function addDivision(eventId: string, name: string): Promise<Ok<{ i
   const sortOrder = (last?.[0]?.sort_order ?? 0) + 1;
   const { data, error } = await supabase.from("divisions").insert({ event_id: eventId, name: parsed.data, sort_order: sortOrder }).select("id").single();
   if (error) return { ok: false, error: explain(error.message) };
+  await supabase.rpc("ensure_division_panel", { p_division: data.id }); // the scoring head judge is on every panel
   refresh(eventId);
   return { ok: true, id: data.id, sortOrder };
 }
@@ -88,7 +92,7 @@ export async function duplicateDivision(divisionId: string): Promise<Ok<{ id: st
   const { supabase } = await getOrgContext();
   const { data: src } = await supabase
     .from("divisions")
-    .select("event_id, name, scoring_model_id, scoring_overrides, format_template_id, format_params, panel_id")
+    .select("event_id, name, scoring_model_id, scoring_overrides, format_template_id, format_params, description, identification, trick_base")
     .eq("id", divisionId)
     .maybeSingle();
   if (!src) return { ok: false, error: E.notFound };
@@ -104,11 +108,14 @@ export async function duplicateDivision(divisionId: string): Promise<Ok<{ id: st
       scoring_overrides: src.scoring_overrides,
       format_template_id: src.format_template_id,
       format_params: src.format_params,
-      panel_id: src.panel_id,
-    })
+      description: src.description,
+      identification: src.identification,
+      trick_base: src.trick_base,
+    }) // the judges (panel) are not copied: each division has its own panel, chosen in the Officials step
     .select("id")
     .single();
   if (error) return { ok: false, error: explain(error.message) };
+  await supabase.rpc("ensure_division_panel", { p_division: data.id });
   refresh(src.event_id);
   return { ok: true, id: data.id, name };
 }
@@ -208,3 +215,77 @@ export async function unlockRules(divisionId: string, reason: string): Promise<O
   return { ok: true };
 }
 
+
+/** A division's own Rider label scheme, or null to go back to the event's. */
+export async function saveDivisionIdentification(input: { divisionId: string; scheme: unknown | null; basedOn?: string }): Promise<Ok<object> | Fail> {
+  const I = copy.divisions.identification.errors;
+  if (!uuid.safeParse(input.divisionId).success) return { ok: false, error: E.notFound };
+  let stored: { scheme: unknown; basedOn?: string } | null = null;
+  if (input.scheme !== null) {
+    const parsed = IdentificationSchemeSchema.safeParse(input.scheme);
+    if (!parsed.success) return { ok: false, error: I.invalid };
+    stored = { scheme: parsed.data, ...(input.basedOn ? { basedOn: input.basedOn } : {}) };
+  }
+  const { supabase } = await getOrgContext();
+  const d = await eventOf(supabase, input.divisionId);
+  if (!d) return { ok: false, error: E.notFound };
+  const { data, error } = await supabase.from("divisions").update({ identification: stored as never }).eq("id", input.divisionId).select("id");
+  if (error || !data?.length) return { ok: false, error: I.failed };
+  refresh(d.event_id);
+  return { ok: true };
+}
+
+/** The level description riders see on the registration page. */
+export async function saveDivisionDescription(divisionId: string, text: string): Promise<Ok<object> | Fail> {
+  if (!uuid.safeParse(divisionId).success) return { ok: false, error: E.notFound };
+  const value = text.trim().slice(0, 300);
+  const { supabase } = await getOrgContext();
+  const d = await eventOf(supabase, divisionId);
+  if (!d) return { ok: false, error: E.notFound };
+  const { data, error } = await supabase.from("divisions").update({ description: value || null }).eq("id", divisionId).select("id");
+  if (error || !data?.length) return { ok: false, error: E.failed };
+  refresh(d.event_id);
+  return { ok: true };
+}
+
+const BlockId = z.string().regex(/^(direction|multiplier|base|addon|grab_landing):[a-z0-9_]{1,80}$/);
+
+/** The blocks the organiser unticked for one division. Once a heat has started a block can be ticked again but never unticked. */
+export async function saveTrickBase(divisionId: string, disabled: string[]): Promise<Ok<object> | Fail> {
+  const T = copy.trickBase.errors;
+  if (!uuid.safeParse(divisionId).success) return { ok: false, error: E.notFound };
+  const ids = z.array(BlockId).max(500).safeParse(disabled);
+  if (!ids.success) return { ok: false, error: T.failed };
+  const { supabase } = await getOrgContext();
+  const d = await eventOf(supabase, divisionId);
+  if (!d) return { ok: false, error: E.notFound };
+  const { data, error } = await supabase.from("divisions").update({ trick_base: { disabled: [...new Set(ids.data)].sort() } as never }).eq("id", divisionId).select("id");
+  if (error) return { ok: false, error: error.message.includes("TRICK_BASE_LOCKED") ? T.locked : T.failed };
+  if (!data?.length) return { ok: false, error: T.failed };
+  refresh(d.event_id);
+  return { ok: true };
+}
+
+/** "+ Add block": a local name in the event's own vocabulary, proposed to the master base. Allowed at any time (adding never removes anything). */
+export async function addTrickBlock(eventId: string, input: { family: FamilyKey; label: string; category?: string | null }): Promise<Ok<{ block: LocalBlock }> | Fail> {
+  const T = copy.trickBase.errors;
+  if (!uuid.safeParse(eventId).success || !FAMILIES.some((f) => f.key === input.family)) return { ok: false, error: T.family };
+  const { supabase } = await getOrgContext();
+  const { data: event } = await supabase.from("events").select("id, organisation_id").eq("id", eventId).maybeSingle();
+  if (!event) return { ok: false, error: E.notFound };
+  const master = await loadMasterVocabulary(supabase);
+  if (!master) return { ok: false, error: T.noVocabulary };
+  const existing = await loadEventBlocks(supabase, eventId);
+  const category = typeof input.category === "string" && /^[a-z0-9_]{1,40}$/.test(input.category) ? input.category : null;
+  const made = addLocalBlock(master.vocabulary, existing, { family: input.family, label: input.label, category });
+  if (!made.ok) return { ok: false, error: made.error };
+  const json = { blocks: [...existing, made.block] };
+  const hash = canonicalHash(json);
+  const { data: row } = await supabase.from("trick_vocabularies").select("id").eq("event_id", eventId).eq("key", EVENT_VOCABULARY_KEY).limit(1);
+  const { error } = row?.length
+    ? await supabase.from("trick_vocabularies").update({ json: json as never, content_hash: hash }).eq("id", row[0].id)
+    : await supabase.from("trick_vocabularies").insert({ organisation_id: event.organisation_id, event_id: eventId, key: EVENT_VOCABULARY_KEY, json: json as never, content_hash: hash });
+  if (error) return { ok: false, error: T.failed };
+  refresh(eventId);
+  return { ok: true, block: made.block };
+}

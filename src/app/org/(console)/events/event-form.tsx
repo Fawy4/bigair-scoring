@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FieldLabel, HelpButton } from "@/components/help-button";
 import { LogoField } from "@/components/org/logo-field";
+import { SlugLink } from "@/components/slug-link";
 import { toast } from "@/hooks/use-toast";
 import { issuesToMap, moveIn, removeIn, setIn } from "@/lib/form/path";
 import { EventFormSchema, slugify, type EventForm as EventFormValues } from "@/lib/schemas/event-settings";
@@ -122,6 +123,11 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
             />
           </div>
           {showError("slug")}
+          {savedSlug ? (
+            <p className="flex flex-wrap items-center gap-2 font-semibold">
+              {T.slugPublicPage} <SlugLink slug={savedSlug} />
+            </p>
+          ) : null}
           {slugChangedOnPublished ? (
             <div className="panel mt-1" role="note">
               <p className="font-bold">{T.slugPublishedTitle}</p>
@@ -278,21 +284,51 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
         </span>
       </section>
 
-      <section className="panel flex flex-col gap-4">
+      <section className="panel flex flex-col gap-4" data-testid="registration-settings">
         <h2 className="text-xl font-extrabold">{T.registration}</h2>
-        <span className="flex items-start gap-2">
+        <fieldset className="flex flex-col gap-2">
+          <legend>
+            <FieldLabel as="span" text={T.registrationStatus} help={help["event.registrationOpen"]} />
+          </legend>
           <label className="flex items-center gap-3 font-bold">
-            <input type="checkbox" checked={form.settings.registrationOpen} onChange={(e) => set(["settings", "registrationOpen"], e.target.checked)} />
-            {T.registrationOpen}
+            <input type="radio" name="registration" checked={form.settings.registrationOpen} onChange={() => set(["settings", "registrationOpen"], true)} />
+            {T.registrationOptionOpen}
           </label>
-          <HelpButton what={T.registrationOpen} help={help["event.registrationOpen"]} />
-        </span>
+          <label className="flex items-center gap-3 font-bold">
+            <input type="radio" name="registration" checked={!form.settings.registrationOpen} onChange={() => set(["settings", "registrationOpen"], false)} />
+            {T.registrationOptionClosed}
+          </label>
+        </fieldset>
         <p className="font-semibold">{T.registrationNote}</p>
+        {savedSlug ? (
+          <p className="flex flex-wrap items-center gap-2 font-semibold">
+            {T.registrationLink} <SlugLink slug={`${savedSlug}/register`} />
+          </p>
+        ) : null}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className={field}>
+            <FieldLabel htmlFor="ev-closes" text={T.registrationCloses} help={help["event.registrationCloses"]} />
+            <input id="ev-closes" type="date" value={form.settings.registrationClosesOn ?? ""} onChange={(e) => set(["settings", "registrationClosesOn"], e.target.value || null)} />
+            {showError("settings.registrationClosesOn")}
+          </div>
+          <div className={field}>
+            <FieldLabel htmlFor="ev-closes-time" text={T.registrationClosesTime} help={help["event.registrationClosesTime"]} />
+            <input id="ev-closes-time" type="time" value={form.settings.registrationClosesTime ?? ""} onChange={(e) => set(["settings", "registrationClosesTime"], e.target.value || null)} />
+            {showError("settings.registrationClosesTime")}
+          </div>
+          <div className={field}>
+            <FieldLabel htmlFor="ev-max" text={T.registrationMax} help={help["event.registrationMax"]} />
+            <input id="ev-max" type="number" min={1} max={500} value={form.settings.registrationMaxPerDivision ?? ""} onChange={(e) => set(["settings", "registrationMaxPerDivision"], e.target.value === "" ? null : Number(e.target.value))} />
+            {showError("settings.registrationMaxPerDivision")}
+          </div>
+        </div>
+        <p className="text-sm font-semibold">{T.registrationClosesHint}</p>
+        <p className="text-sm font-semibold">{T.registrationMaxHint}</p>
         <div className={field}>
-          <FieldLabel htmlFor="ev-closes" text={T.registrationCloses} help={help["event.registrationCloses"]} />
-          <input id="ev-closes" type="date" value={form.settings.registrationClosesOn ?? ""} onChange={(e) => set(["settings", "registrationClosesOn"], e.target.value || null)} />
-          <p className="text-sm font-semibold">{T.registrationClosesHint}</p>
-          {showError("settings.registrationClosesOn")}
+          <FieldLabel htmlFor="ev-closed-message" text={T.registrationClosedMessage} help={help["event.registrationClosedMessage"]} />
+          <textarea id="ev-closed-message" rows={3} maxLength={300} value={form.settings.registrationClosedMessage ?? ""} onChange={(e) => set(["settings", "registrationClosedMessage"], e.target.value)} />
+          <p className="text-sm font-semibold">{T.registrationClosedMessageHint}</p>
+          {showError("settings.registrationClosedMessage")}
         </div>
       </section>
 

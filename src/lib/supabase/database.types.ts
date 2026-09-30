@@ -62,53 +62,65 @@ export type Database = {
       divisions: {
         Row: {
           created_at: string
+          description: string | null
           draw: Json | null
           draw_locked_at: string | null
           event_id: string
           format_params: Json
           format_template_id: string | null
           id: string
+          identification: Json | null
           name: string
           panel_id: string | null
           rules_unlocked_at: string | null
           scoring_model_id: string | null
           scoring_overrides: Json
+          seed_shuffle_seed: number | null
           sort_order: number
           status: string
+          trick_base: Json
           updated_at: string
         }
         Insert: {
           created_at?: string
+          description?: string | null
           draw?: Json | null
           draw_locked_at?: string | null
           event_id: string
           format_params?: Json
           format_template_id?: string | null
           id?: string
+          identification?: Json | null
           name: string
           panel_id?: string | null
           rules_unlocked_at?: string | null
           scoring_model_id?: string | null
           scoring_overrides?: Json
+          seed_shuffle_seed?: number | null
           sort_order?: number
           status?: string
+          trick_base?: Json
           updated_at?: string
         }
         Update: {
           created_at?: string
+          description?: string | null
           draw?: Json | null
           draw_locked_at?: string | null
           event_id?: string
           format_params?: Json
           format_template_id?: string | null
           id?: string
+          identification?: Json | null
           name?: string
           panel_id?: string | null
           rules_unlocked_at?: string | null
           scoring_model_id?: string | null
           scoring_overrides?: Json
+          seed_shuffle_seed?: number | null
           sort_order?: number
           status?: string
+          trick_base?: Json
           updated_at?: string
         }
         Relationships: [
@@ -146,6 +158,7 @@ export type Database = {
         Row: {
           consent_at: string | null
           created_at: string
+          decline_reason: string | null
           division_id: string
           event_id: string
           id: string
@@ -160,6 +173,7 @@ export type Database = {
         Insert: {
           consent_at?: string | null
           created_at?: string
+          decline_reason?: string | null
           division_id: string
           event_id: string
           id?: string
@@ -174,6 +188,7 @@ export type Database = {
         Update: {
           consent_at?: string | null
           created_at?: string
+          decline_reason?: string | null
           division_id?: string
           event_id?: string
           id?: string
@@ -264,6 +279,107 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "events_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_notes: {
+        Row: {
+          author_role: string
+          author_user_id: string | null
+          body: string
+          created_at: string
+          division_id: string | null
+          division_name: string | null
+          done_at: string | null
+          event_id: string | null
+          event_name: string | null
+          exported_at: string | null
+          heat_id: string | null
+          heat_label: string | null
+          id: string
+          organisation_id: string | null
+          organisation_name: string | null
+          page: string
+          page_label: string
+          screenshot_path: string | null
+          status: string
+          tag: string
+          updated_at: string
+        }
+        Insert: {
+          author_role: string
+          author_user_id?: string | null
+          body: string
+          created_at?: string
+          division_id?: string | null
+          division_name?: string | null
+          done_at?: string | null
+          event_id?: string | null
+          event_name?: string | null
+          exported_at?: string | null
+          heat_id?: string | null
+          heat_label?: string | null
+          id?: string
+          organisation_id?: string | null
+          organisation_name?: string | null
+          page: string
+          page_label: string
+          screenshot_path?: string | null
+          status?: string
+          tag?: string
+          updated_at?: string
+        }
+        Update: {
+          author_role?: string
+          author_user_id?: string | null
+          body?: string
+          created_at?: string
+          division_id?: string | null
+          division_name?: string | null
+          done_at?: string | null
+          event_id?: string | null
+          event_name?: string | null
+          exported_at?: string | null
+          heat_id?: string | null
+          heat_label?: string | null
+          id?: string
+          organisation_id?: string | null
+          organisation_name?: string | null
+          page?: string
+          page_label?: string
+          screenshot_path?: string | null
+          status?: string
+          tag?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_notes_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "divisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_notes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_notes_heat_id_fkey"
+            columns: ["heat_id"]
+            isOneToOne: false
+            referencedRelation: "heats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_notes_organisation_id_fkey"
             columns: ["organisation_id"]
             isOneToOne: false
             referencedRelation: "organisations"
@@ -708,8 +824,11 @@ export type Database = {
           device_label: string | null
           event_id: string
           id: string
+          last_seen_at: string | null
           locked: boolean
           name: string
+          phone: string | null
+          pin_enc: string | null
           pin_hash: string | null
           qr_token_expires_at: string | null
           qr_token_hash: string | null
@@ -727,8 +846,11 @@ export type Database = {
           device_label?: string | null
           event_id: string
           id?: string
+          last_seen_at?: string | null
           locked?: boolean
           name: string
+          phone?: string | null
+          pin_enc?: string | null
           pin_hash?: string | null
           qr_token_expires_at?: string | null
           qr_token_hash?: string | null
@@ -746,8 +868,11 @@ export type Database = {
           device_label?: string | null
           event_id?: string
           id?: string
+          last_seen_at?: string | null
           locked?: boolean
           name?: string
+          phone?: string | null
+          pin_enc?: string | null
           pin_hash?: string | null
           qr_token_expires_at?: string | null
           qr_token_hash?: string | null
@@ -1807,11 +1932,37 @@ export type Database = {
         Args: { p_logo_url: string; p_org: string }
         Returns: undefined
       }
+      admin_set_proposal_status: {
+        Args: {
+          p_event: string
+          p_family: string
+          p_key: string
+          p_status: string
+        }
+        Returns: undefined
+      }
       admin_start_impersonation: {
         Args: { p_org: string; p_reason?: string }
         Returns: undefined
       }
       admin_stop_impersonation: { Args: never; Returns: undefined }
+      admin_trick_proposals: {
+        Args: never
+        Returns: {
+          category: string
+          event_id: string
+          event_name: string
+          family: string
+          key: string
+          label: string
+          organisation_id: string
+          organisation_name: string
+        }[]
+      }
+      approve_seat: {
+        Args: { p_actor?: string; p_enc: string; p_pin: string; p_seat: string }
+        Returns: Json
+      }
       attempt_counts: {
         Args: { p_heat: string }
         Returns: {
@@ -1864,6 +2015,7 @@ export type Database = {
         Args: { p_event: string; p_slug_confirm: string }
         Returns: Json
       }
+      ensure_division_panel: { Args: { p_division: string }; Returns: string }
       get_public_event: {
         Args: { p_slug: string }
         Returns: {
@@ -1896,9 +2048,26 @@ export type Database = {
       }
       get_public_live_heat: { Args: { p_heat: string }; Returns: Json }
       get_public_organisation: { Args: { p_slug: string }; Returns: Json }
+      get_seat_contacts: {
+        Args: { p_event: string }
+        Returns: {
+          phone: string
+          seat_id: string
+        }[]
+      }
+      has_password: { Args: never; Returns: boolean }
+      import_riders: {
+        Args: { p_division: string; p_rows: Json }
+        Returns: Json
+      }
       platform_session: { Args: never; Returns: Json }
       public_platform_settings: { Args: never; Returns: Json }
+      public_registration_info: { Args: { p_slug: string }; Returns: Json }
       purge_organisation: { Args: { p_org: string }; Returns: undefined }
+      regenerate_seat_pin: {
+        Args: { p_actor?: string; p_enc: string; p_pin: string; p_seat: string }
+        Returns: Json
+      }
       register_rider: {
         Args: {
           p_consent: boolean
@@ -1907,7 +2076,12 @@ export type Database = {
           p_fields: Json
           p_identifiers: Json
           p_ip: string
+          p_photo_path?: string
         }
+        Returns: Json
+      }
+      request_photo_upload: {
+        Args: { p_event_slug: string; p_ext: string; p_ip: string }
         Returns: Json
       }
       request_seat: {
@@ -1915,6 +2089,7 @@ export type Database = {
           p_event_slug: string
           p_ip: string
           p_name: string
+          p_phone?: string
           p_role: string
         }
         Returns: Json
@@ -1930,6 +2105,18 @@ export type Database = {
           table_name: string
         }[]
       }
+      set_division_panel: {
+        Args: { p_division: string; p_seat_ids: string[] }
+        Returns: undefined
+      }
+      set_entry_order: {
+        Args: {
+          p_division: string
+          p_entry_ids: string[]
+          p_shuffle_seed?: number
+        }
+        Returns: undefined
+      }
       set_event_archived: {
         Args: { p_archived: boolean; p_event: string }
         Returns: undefined
@@ -1939,11 +2126,15 @@ export type Database = {
         Returns: undefined
       }
       set_seat_pin: {
-        Args: { p_pin: string; p_seat: string }
+        Args: { p_enc?: string; p_pin: string; p_seat: string }
         Returns: undefined
       }
       set_seat_qr: {
         Args: { p_expires: string; p_seat: string; p_token: string }
+        Returns: undefined
+      }
+      set_seat_scores: {
+        Args: { p_scores: boolean; p_seat: string }
         Returns: undefined
       }
       submit_impression: {
@@ -2008,6 +2199,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      touch_seat: { Args: never; Returns: undefined }
       unlock_division_rules: {
         Args: { p_division: string; p_reason: string }
         Returns: undefined

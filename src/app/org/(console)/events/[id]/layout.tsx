@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getOrgContext } from "@/lib/org/context";
+import { loadSetupCounts } from "@/lib/org/setup-counts";
 import { wizardSteps } from "@/lib/wizard/status";
 import { WizardRail } from "./wizard-rail";
 
@@ -11,7 +12,8 @@ export default async function EventWizardLayout({ children, params }: { children
   const { data: event } = await supabase.from("events").select("id, name, slug, status, location, start_date, end_date").eq("id", id).maybeSingle();
   if (!event) notFound();
   const { data: divisions } = await supabase.from("divisions").select("id, name, scoring_model_id, format_template_id").eq("event_id", id).order("sort_order");
-  const steps = wizardSteps(event, divisions ?? []);
+  const counts = await loadSetupCounts(supabase, id);
+  const steps = wizardSteps(event, divisions ?? [], counts);
 
   return (
     <div className="flex flex-col gap-6 md:flex-row md:items-start">

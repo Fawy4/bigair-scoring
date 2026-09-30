@@ -9,7 +9,7 @@ import { copy } from "@/lib/ui-copy";
 const T = copy.setPassword;
 
 /** Sets (or replaces) the password of the organiser who is signed in, for example after signing in with the emailed link. */
-export function SetPasswordForm() {
+export function SetPasswordForm({ changing = false }: { changing?: boolean }) {
   const [password, setPassword] = useState("");
   const [again, setAgain] = useState("");
   const [state, setState] = useState<{ kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string }>({ kind: "idle" });
@@ -19,14 +19,14 @@ export function SetPasswordForm() {
     const problem = passwordProblem(password, again);
     if (problem) return setState({ kind: "error", message: problem === "short" ? T.tooShort(MIN_PASSWORD_LENGTH) : T.mismatch });
     setState({ kind: "saving" });
-    const { error } = await createClient().auth.updateUser({ password });
+    const { error } = await createClient().auth.updateUser({ password, data: { has_password: true } }); // the flag only drives the header button label
     setState(error ? { kind: "error", message: T.couldNotSave } : { kind: "saved" });
   }
 
   if (state.kind === "saved") {
     return (
       <div role="status" className="panel flex flex-col gap-3">
-        <p className="text-lg font-bold">{T.saved}</p>
+        <p className="text-lg font-bold">{changing ? T.changed : T.saved}</p>
         <Link href="/org" className="btn btn-primary">
           {T.continue}
         </Link>

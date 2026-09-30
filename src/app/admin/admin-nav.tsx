@@ -8,6 +8,8 @@ const ITEMS = [
   { href: "/admin", label: copy.admin.nav.organisations, match: (p: string) => p === "/admin" || p.startsWith("/admin/organisations") },
   { href: "/admin/settings", label: copy.admin.nav.settings, match: (p: string) => p.startsWith("/admin/settings") },
   { href: "/admin/presets", label: copy.admin.nav.presets, match: (p: string) => p.startsWith("/admin/presets") },
+  { href: "/admin/tricks", label: copy.admin.nav.tricks, match: (p: string) => p.startsWith("/admin/tricks") },
+  { href: "/admin/feedback", label: copy.admin.nav.feedback, match: (p: string) => p.startsWith("/admin/feedback") },
   { href: "/admin/audit", label: copy.admin.nav.audit, match: (p: string) => p.startsWith("/admin/audit") },
   { href: "/admin/health", label: copy.admin.nav.health, match: (p: string) => p.startsWith("/admin/health") },
 ];

@@ -69,18 +69,23 @@ async function seedGeneric(kind: string, items: Array<{ key: string; name: strin
   }
 }
 
+/** The master trick vocabulary: a changed file becomes the next version, published at once (existing divisions keep what they ticked: a division stores only its unticked blocks). */
 async function seedVocabulary() {
   for (const path of files("tricks")) {
     const raw = readJson(path);
-    for (const k of ["baseTricks", "modifiers", "categoryPrecedence", "namingTemplate"]) if (!(k in raw)) { failed++; problems.push(`${path}: missing "${k}"`); }
     const key = basename(path, ".json");
+    const missing = ["baseTricks", "modifiers", "categoryPrecedence", "namingTemplate"].filter((k) => !(k in raw));
+    if (missing.length) { failed++; problems.push(`${path}: missing "${missing.join('", "')}"`); continue; }
+    const badFamily = ((raw.modifiers as Array<{ key: string; family?: string }>) ?? []).filter((m) => m.family !== "addon" && m.family !== "grab_landing");
+    if (badFamily.length) { failed++; problems.push(`${path}: every modifier needs a "family" of addon or grab_landing (${badFamily.map((m) => m.key).join(", ")})`); continue; }
     const hash = canonicalHash(raw);
-    const { data: row } = await db.from("trick_vocabularies").select("id, content_hash").is("organisation_id", null).is("event_id", null).eq("key", key).maybeSingle();
-    if (row?.content_hash === hash) { unchanged++; console.log(`  same      trick_vocabularies/${key}`); continue; }
-    const { error } = row
-      ? await db.from("trick_vocabularies").update({ json: raw as never, content_hash: hash }).eq("id", row.id) // vocabularies are copied per event, so updating the system copy is safe
-      : await db.from("trick_vocabularies").insert({ organisation_id: null, event_id: null, key, json: raw as never, content_hash: hash, published_at: PUBLISHED_NOW });
-    if (error) { failed++; problems.push(`${path}: ${error.message}`); } else { inserted++; console.log(`  ${row ? "updated " : "inserted"}  trick_vocabularies/${key}`); }
+    const { data: rows, error } = await db.from("trick_vocabularies").select("version, content_hash").is("organisation_id", null).is("event_id", null).eq("key", key);
+    if (error) { failed++; problems.push(`${path}: ${error.message}`); continue; }
+    const plan = planPreset({ key, version: undefined, hash }, (rows ?? []).map((r) => ({ version: r.version, hash: r.content_hash })), false);
+    if (plan.action === "error") { failed++; problems.push(plan.message); continue; }
+    if (plan.action === "unchanged") { unchanged++; console.log(`  same      trick_vocabularies/${key}`); continue; }
+    const { error: insErr } = await db.from("trick_vocabularies").insert({ organisation_id: null, event_id: null, key, version: plan.version, json: raw as never, content_hash: hash, published_at: PUBLISHED_NOW });
+    if (insErr) { failed++; problems.push(`${path}: ${insErr.message}`); } else { inserted++; console.log(`  inserted  trick_vocabularies/${key} v${plan.version}`); }
   }
 }
 

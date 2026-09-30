@@ -43,12 +43,33 @@ export interface StepInfo {
   missing: string[];
 }
 
-export function wizardSteps(event: EventStepInput | null, divisions: DivisionStepInput[]): StepInfo[] {
+/** Counts the later steps report on (read once by the wizard layout). */
+export interface SetupCounts {
+  /** Riders taking part (not withdrawn, declined or waiting) per division id. */
+  ridersByDivision: Record<string, number>;
+  judgeSeats: number;
+  pendingSeats: number;
+  /** "Pro Men needs 3 judges, 2 assigned" lines. */
+  panelShortfalls: string[];
+}
+
+export function ridersStepMissing(divisions: DivisionStepInput[], counts: SetupCounts): string[] {
+  return divisions.filter((d) => (counts.ridersByDivision[d.id] ?? 0) === 0).map((d) => copy.wizard.missing.noRiders(d.name));
+}
+
+export function officialsStepMissing(counts: SetupCounts): string[] {
+  const out: string[] = [];
+  if (counts.judgeSeats === 0) out.push(copy.wizard.missing.noJudges);
+  if (counts.pendingSeats > 0) out.push(copy.wizard.missing.seatsWaiting(counts.pendingSeats));
+  return [...out, ...counts.panelShortfalls];
+}
+
+export function wizardSteps(event: EventStepInput | null, divisions: DivisionStepInput[], counts?: SetupCounts): StepInfo[] {
   return [
     { key: "event", label: copy.wizard.steps.event, available: true, missing: event ? eventStepMissing(event) : [] },
     { key: "divisions", label: copy.wizard.steps.divisions, available: true, missing: divisionsStepMissing(divisions) },
-    { key: "riders", label: copy.wizard.steps.riders, available: false, missing: [] },
-    { key: "officials", label: copy.wizard.steps.officials, available: false, missing: [] },
+    { key: "riders", label: copy.wizard.steps.riders, available: true, missing: counts ? ridersStepMissing(divisions, counts) : [] },
+    { key: "officials", label: copy.wizard.steps.officials, available: true, missing: counts ? officialsStepMissing(counts) : [] },
     { key: "draw", label: copy.wizard.steps.draw, available: false, missing: [] },
     { key: "schedule", label: copy.wizard.steps.schedule, available: false, missing: [] },
   ];

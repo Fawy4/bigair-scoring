@@ -1,4 +1,4 @@
-import { riderLabelModel, type LabelRider } from "@/lib/identification/rider-label";
+import { riderLabelModel, type LabelModel, type LabelRider } from "@/lib/identification/rider-label";
 import { copy } from "@/lib/ui-copy";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
 import { cn } from "@/lib/utils";
@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
  * THE rider label: the same component on every screen (judge, spotter, head judge, public, exports; CLAUDE.md rule 7).
  * Colours are always written out as text; white and black get an outline (docs/06 §00.5).
  */
-export function RiderLabel({ scheme, rider, size = "md", className }: { scheme: IdentificationScheme; rider: LabelRider; size?: "sm" | "md" | "lg"; className?: string }) {
-  const label = riderLabelModel(scheme, rider);
+export function RiderLabel({ scheme, rider, size = "md", className, model }: { scheme: IdentificationScheme; rider: LabelRider; size?: "sm" | "md" | "lg"; className?: string; model?: LabelModel }) {
+  const label = model ?? riderLabelModel(scheme, rider);
   const p = label.primary;
   return (
     <div data-testid="rider-label" className={cn("inline-flex max-w-full items-stretch overflow-hidden rounded-lg border-2 border-[#111] bg-white text-[#111]", className)}>

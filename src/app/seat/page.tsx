@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { copy } from "@/lib/ui-copy";
+import { SeatHeartbeat } from "./heartbeat";
 
 export const metadata = { title: copy.seat.title };
 export const dynamic = "force-dynamic";
@@ -20,6 +21,7 @@ export default async function SeatPage() {
             {!seat.active ? <p className="mt-2 text-lg font-bold">{copy.seat.switchedOff}</p> : null}
           </div>
           <p className="text-lg font-semibold">{copy.seat.later}</p>
+          <SeatHeartbeat />
         </>
       ) : (
         <>

@@ -9,7 +9,7 @@ import { createClient } from "@supabase/supabase-js";
  */
 const DIR = "test-results";
 const STALE_MIN = 30;
-const service = () =>
+export const service = () =>
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
     ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
     : null;
@@ -27,6 +27,27 @@ export function record(entry: LedgerEntry): void {
   appendFileSync(ledgerFile(), `${JSON.stringify(entry)}\n`);
 }
 
+/** Removes every file under "<prefix>/" (also in sub-folders such as reg/) of the private buckets the app fills: rider photos, feedback screenshots, logos. */
+export async function removeOrganisationFiles(db: NonNullable<ReturnType<typeof service>>, orgId: string): Promise<void> {
+  for (const bucket of ["rider-photos", "feedback", "branding"]) {
+    const walk = async (prefix: string): Promise<string[]> => {
+      const { data } = await db.storage.from(bucket).list(prefix, { limit: 1000 });
+      const paths: string[] = [];
+      for (const o of data ?? []) {
+        if (o.id) paths.push(`${prefix}/${o.name}`);
+        else paths.push(...(await walk(`${prefix}/${o.name}`)));
+      }
+      return paths;
+    };
+    try {
+      const paths = await walk(orgId);
+      if (paths.length) await db.storage.from(bucket).remove(paths);
+    } catch {
+      // clean-up is best effort
+    }
+  }
+}
+
 async function purge(entries: LedgerEntry[]): Promise<void> {
   const db = service();
   if (!db) return;
@@ -34,7 +55,10 @@ async function purge(entries: LedgerEntry[]): Promise<void> {
     try {
       if (e.orgSlug) {
         const { data: org } = await db.from("organisations").select("id").eq("slug", e.orgSlug).maybeSingle();
-        if (org) await db.rpc("purge_organisation", { p_org: org.id });
+        if (org) {
+          await removeOrganisationFiles(db, org.id);
+          await db.rpc("purge_organisation", { p_org: org.id });
+        }
       }
       if (e.userId) await db.auth.admin.deleteUser(e.userId);
     } catch {

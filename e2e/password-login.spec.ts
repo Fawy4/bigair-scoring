@@ -42,6 +42,8 @@ test("password sign-in: the right password opens the console, a wrong one gets o
   await expect(page).toHaveURL(/\/org$/);
   await expect(page.getByRole("navigation", { name: "Organiser" })).toBeVisible();
   await expect(page.getByText(org.email)).toBeVisible();
+  // a password that just worked counts as "set": the header button is Change password
+  await expect(page.getByRole("link", { name: "Change password" })).toBeVisible();
 });
 
 test("password sign-in keeps the page you were going to", async ({ page }) => {
@@ -82,10 +84,13 @@ test("forgot password: needs the email first; an unregistered address is refused
 });
 
 test("set a password after signing in with the link, then sign in with it", async ({ page }) => {
+  test.setTimeout(90_000);
   const fresh = await createOrganiser(); // an existing invite-only account with no password yet
   try {
     await fresh.signIn(page, "/org/set-password");
     await expect(page.getByRole("heading", { name: "Set a password" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Set a password" })).toBeVisible(); // the header button, while no password is set
+    await expect(page.getByRole("link", { name: "Change password" })).toHaveCount(0);
     await page.getByLabel("New password").fill("short");
     await page.getByLabel("Type it again").fill("short");
     await page.getByRole("button", { name: "Save password" }).click();
@@ -98,6 +103,13 @@ test("set a password after signing in with the link, then sign in with it", asyn
     await page.getByRole("button", { name: "Save password" }).click();
     await expect(page.getByText("Password saved")).toBeVisible();
 
+    // once a password is set the header button becomes "Change password" and "Set a password" is gone
+    await page.goto("/org");
+    await expect(page.getByRole("link", { name: "Change password" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Set a password" })).toHaveCount(0);
+    await page.getByRole("link", { name: "Change password" }).click();
+    await expect(page.getByRole("heading", { name: "Change password" })).toBeVisible();
+
     // sign out, then in again with the new password
     await page.goto("/org");
     await page.getByRole("button", { name: "Sign out" }).click();
@@ -106,6 +118,7 @@ test("set a password after signing in with the link, then sign in with it", asyn
     await page.getByLabel("Password", { exact: true }).fill("First-password-1");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page).toHaveURL(/\/org$/);
+    await expect(page.getByRole("link", { name: "Change password" })).toBeVisible();
   } finally {
     await fresh.cleanup();
   }

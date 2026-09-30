@@ -27,6 +27,12 @@ export const EventSettingsSchema = z.looseObject({
   registrationOpen: z.boolean().default(false),
   /** Last day riders can register (the whole day counts, in the event's time zone). */
   registrationClosesOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, v.useDate).nullable().optional(),
+  /** Hour and minute of the closing day (event time zone). Empty = the whole day counts. */
+  registrationClosesTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, v.useTime).nullable().optional(),
+  /** Riders per division that can register; the next one sees "Full — ask the organiser". Empty = no limit. */
+  registrationMaxPerDivision: z.number().int(v.wholeNumber).min(1, v.maxPerDivision).max(500, v.maxPerDivision).nullable().optional(),
+  /** Shown on the registration page while registration is closed. */
+  registrationClosedMessage: z.string().trim().max(300, v.closedMessageMax).optional(),
   identification: z
     .object({
       scheme: IdentificationSchemeSchema,
@@ -77,6 +83,9 @@ export const EventFormSchema = z
       ctx.addIssue({ code: "custom", path: ["end_date"], message: v.endBeforeStart });
     }
     const closes = f.settings.registrationClosesOn;
+    if (f.settings.registrationClosesTime && !closes) {
+      ctx.addIssue({ code: "custom", path: ["settings", "registrationClosesOn"], message: v.timeNeedsDate });
+    }
     if (f.settings.registrationOpen && closes && closes > f.end_date) {
       ctx.addIssue({ code: "custom", path: ["settings", "registrationClosesOn"], message: v.closesAfterEnd });
     }
