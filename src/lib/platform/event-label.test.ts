@@ -48,3 +48,22 @@ describe("organisation page: upcoming, live and past", () => {
     expect(g.upcoming.map((e) => e.id)).toEqual(["today-only", "soon", "later", "undated"]));
   it("past: newest first, including published events whose last day has gone", () => expect(g.past.map((e) => e.id)).toEqual(["ended-not-marked", "past-complete", "older"]));
 });
+
+describe("date and time in a time zone", () => {
+  it("writes the time in the requested zone, not the machine's", async () => {
+    const { formatWhen } = await import("./event-label");
+    expect(formatWhen("2026-10-10T12:30:00Z", "Africa/Cairo")).toBe("10 Oct 2026, 15:30"); // Cairo is UTC+3 in October 2026
+    expect(formatWhen("2026-01-10T23:30:00Z", "Europe/Berlin")).toBe("11 Jan 2026, 00:30");
+    expect(formatWhen(null, "UTC")).toBe("");
+    expect(formatWhen("garbage", "UTC")).toBe("");
+  });
+});
+
+describe("today in a time zone", () => {
+  it("is the calendar date where the organisation is, not where the server is", async () => {
+    const { todayInZone } = await import("./event-label");
+    const late = new Date("2026-10-10T22:30:00Z");
+    expect(todayInZone("Africa/Cairo", late)).toBe("2026-10-11"); // already after midnight in Cairo (UTC+3)
+    expect(todayInZone("America/Los_Angeles", late)).toBe("2026-10-10");
+  });
+});

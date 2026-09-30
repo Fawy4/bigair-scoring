@@ -6,4 +6,4 @@ export function middleware(request: NextRequest) {
 }
 
 // Only the pages that depend on a login. Public pages never pay for a session check.
-export const config = { matcher: ["/org/:path*", "/seat", "/join", "/e/:slug/join", "/judge/:path*", "/spot/:path*", "/head/:path*"] };
+export const config = { matcher: ["/org/:path*", "/admin/:path*", "/seat", "/join", "/e/:slug/join", "/judge/:path*", "/spot/:path*", "/head/:path*"] };

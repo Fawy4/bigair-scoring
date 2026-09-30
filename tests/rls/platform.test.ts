@@ -84,8 +84,8 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
     if (!w.s) return;
     for (const [k, v] of Object.entries(original)) await w.s.from("platform_settings").upsert({ key: k, value: v as never });
     await w.s.from("platform_settings").delete().not("key", "in", `(${Object.keys(original).map((k) => `"${k}"`).join(",")})`);
+    for (const o of orgs) await w.s.rpc("purge_organisation", { p_org: o }); // first: a division of these organisations points at the test preset
     await w.s.from("scoring_models").delete().eq("key", `plat-${run}`);
-    for (const o of orgs) await w.s.rpc("purge_organisation", { p_org: o });
     for (const id of users) await w.s.auth.admin.deleteUser(id);
   });
 
@@ -146,6 +146,18 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
       expect((await w.staff.from("platform_settings").select("key, value")).data?.length).toBeGreaterThan(0);
       const r = await w.staff.from("platform_settings").upsert({ key: "tagline", value: "staff wrote this" });
       expect(r.error).not.toBeNull();
+    });
+    it("saving through the settings function is owner-only, all-or-nothing and audited", async () => {
+      const values = { product_name: `Prod ${run}`, tagline: `Saved ${run}`, logo_url: null, default_timezone: "Europe/Berlin", legal_texts: { terms: "T", privacy: "P" } };
+      expect(codeOf(await w.staff.rpc("admin_save_platform_settings", { p_values: values }))).toMatch(/NOT_ALLOWED/);
+      expect(codeOf(await w.orgA.rpc("admin_save_platform_settings", { p_values: values }))).toMatch(/NOT_ALLOWED/);
+      expect(codeOf(await w.owner.rpc("admin_save_platform_settings", { p_values: { ...values, made_up: "x" } }))).toMatch(/INVALID_KEY/);
+      expect((await anonClient().rpc("public_platform_settings")).data).not.toMatchObject({ product_name: `Prod ${run}` }); // the failed call changed nothing
+      expect((await w.owner.rpc("admin_save_platform_settings", { p_values: values })).error).toBeNull();
+      expect((await anonClient().rpc("public_platform_settings")).data).toMatchObject({ product_name: `Prod ${run}`, tagline: `Saved ${run}`, default_timezone: "Europe/Berlin", legal_texts: { terms: "T", privacy: "P" } });
+      const { data } = await w.s.from("audit_log").select("actor_user_id, after").eq("action", "settings_changed").eq("actor_user_id", w.userIds.owner);
+      expect(data?.length).toBe(1);
+      expect(data![0].after).toMatchObject({ product_name: `Prod ${run}` });
     });
     it("only the five known keys can exist", async () => {
       expect((await w.owner.from("platform_settings").upsert({ key: "made_up", value: "x" })).error).not.toBeNull();
@@ -245,6 +257,14 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
       const a1 = rows.find((r) => r.slug === `plat-a1-${run}`);
       expect(a1).toMatchObject({ organisation_name: `Plat A ${run}`, organisation_slug: `plat-a-${run}` });
       expect(rows.some((r) => r.slug === `plat-a2-${run}`)).toBe(false); // draft
+    });
+    it("one event's public page data names its organisation; drafts and archived organisations return nothing", async () => {
+      const anon = anonClient();
+      const ok = await anon.rpc("get_public_event", { p_slug: `plat-a1-${run}` });
+      expect(ok.error).toBeNull();
+      expect(ok.data).toEqual([expect.objectContaining({ name: "A1 published", organisation_name: `Plat A ${run}`, organisation_slug: `plat-a-${run}` })]);
+      expect((await anon.rpc("get_public_event", { p_slug: `plat-a2-${run}` })).data).toEqual([]);
+      expect((await anon.rpc("get_public_event", { p_slug: "no-such-event" })).data).toEqual([]);
     });
     it("deleting is refused when the wrong slug is typed, when results were published, and for staff", async () => {
       expect(codeOf(await w.owner.rpc("admin_delete_organisation", { p_org: w.ids.orgB, p_slug_confirm: "wrong" }))).toMatch(/SLUG_MISMATCH/);

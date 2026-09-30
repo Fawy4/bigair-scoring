@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { test, expect } from "./base";
 import { createOrganiser } from "./organiser";
 
@@ -14,7 +15,11 @@ test.beforeAll(async () => {
   for (const r of data ?? []) saved[r.key] = r.value;
 });
 test.afterAll(async () => {
+  // put the platform settings back exactly as they were: restore the old rows and remove the ones the tests added
   for (const [k, v] of Object.entries(saved)) await admin?.db.from("platform_settings").upsert({ key: k, value: v as never });
+  const keep = Object.keys(saved);
+  const { data: now } = await admin.db.from("platform_settings").select("key");
+  for (const r of now ?? []) if (!keep.includes(r.key)) await admin.db.from("platform_settings").delete().eq("key", r.key);
   await admin?.cleanup();
   await plain?.cleanup();
 });
@@ -89,7 +94,7 @@ test("the owner runs the platform: create, invite, rename, open as organiser, ar
   // rename
   await field("Organisation name").fill(`E2E Renamed ${admin.run}`);
   await page.getByRole("button", { name: "Save name" }).click();
-  await expect(page.getByText("Organisation renamed")).toBeVisible();
+  await expect(page.getByText("Organisation renamed").first()).toBeVisible();
 
   // open as this organiser: banner, working organiser screens, back to admin
   await page.goto("/admin");
@@ -181,17 +186,46 @@ test("master presets, audit log and health pages open", async ({ page }) => {
 });
 
 test("master presets: edit makes a new draft version, and publishing makes it the default", async ({ page }) => {
-  test.setTimeout(120_000);
-  await admin.signIn(page, "/admin/presets");
-  await page.getByRole("link", { name: /Edit/ }).first().click();
-  await expect(page.getByText(/Default for new divisions: version \d+/)).toBeVisible();
-  const before = Number((await page.getByText(/Default for new divisions: version \d+/).innerText()).match(/version (\d+)/)![1]);
-  await page.getByLabel("Preset JSON", { exact: true }).fill("{ not json");
-  await page.getByRole("button", { name: "Save as new version" }).click();
-  await expect(page.getByRole("alert")).toContainText("not valid");
-  const { data: rows } = await admin.db.from("scoring_models").select("id").is("organisation_id", null);
-  expect(rows!.length).toBeGreaterThan(0);
-  expect(before).toBeGreaterThan(0);
+  test.setTimeout(180_000);
+  // a throwaway system preset (copied from a real one), so the real presets are never touched
+  const key = `e2e-${admin.run}`;
+  const base = JSON.parse(readFileSync("presets/scoring/club-quick-best2.json", "utf8"));
+  const v1 = { ...base, id: key, name: "E2E model", version: 1 };
+  const { error } = await admin.db.from("scoring_models").insert({ organisation_id: null, key, name: "E2E model", version: 1, json: v1, content_hash: "e2e", published_at: new Date().toISOString() });
+  expect(error).toBeNull();
+  try {
+    await admin.signIn(page, `/admin/presets/scoring-models/${key}`);
+    await expect(page.getByText("Default for new divisions: version 1")).toBeVisible({ timeout: 90_000 }); // the first visit compiles the page in dev mode
+
+    // not JSON: refused in words, nothing saved
+    await page.getByLabel("Preset JSON", { exact: true }).fill("{ not json");
+    await page.getByRole("button", { name: "Save as new version" }).click();
+    await expect(page.locator("p[role=alert]")).toContainText("not valid JSON");
+    // valid JSON that breaks the scoring model rules: refused with the reason
+    await page.getByLabel("Preset JSON", { exact: true }).fill(JSON.stringify({ id: key, name: "Broken" }));
+    await page.getByRole("button", { name: "Save as new version" }).click();
+    await expect(page.locator("p[role=alert]")).toContainText("That preset is not valid");
+
+    // a real edit: becomes version 2, a draft; the default is still version 1
+    await page.getByLabel("Preset JSON", { exact: true }).fill(JSON.stringify({ ...v1, name: "E2E model changed" }, null, 2));
+    await page.getByRole("button", { name: "Save as new version" }).click();
+    await expect(page.getByText("Saved as draft version 2").first()).toBeVisible();
+    const row2 = page.getByRole("row").filter({ hasText: "v2" });
+    await expect(row2).toContainText("Draft");
+    await expect(page.getByText("Default for new divisions: version 1")).toBeVisible();
+
+    // publish to all customers (one confirmation): version 2 becomes the default
+    await row2.getByRole("button", { name: "Publish to all customers" }).click();
+    await page.getByRole("button", { name: "Yes, publish" }).click();
+    await expect(page.getByText("Default for new divisions: version 2")).toBeVisible();
+    await expect(page.getByRole("row").filter({ hasText: "v1" })).toContainText("Published");
+    // the stored version 2 carries its own number and the pinned key
+    const { data } = await admin.db.from("scoring_models").select("version, json, published_at").eq("key", key).eq("version", 2).single();
+    expect(data?.published_at).toBeTruthy();
+    expect(data?.json).toMatchObject({ id: key, version: 2, name: "E2E model changed" });
+  } finally {
+    await admin.db.from("scoring_models").delete().eq("key", key);
+  }
 });
 
 test("the public home page and the organisation page show published events only, labelled Organisation · Location · Date", async ({ page }) => {
