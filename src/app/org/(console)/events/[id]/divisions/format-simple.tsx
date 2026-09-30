@@ -123,7 +123,7 @@ export function FormatSimple({
       <legend className="sr-only">{T.typeLegend}</legend>
       <div className="flex flex-col gap-2">
         <span className="sr-only">{T.typeHeading}</span>
-        <div className="flex flex-col gap-1" role="radiogroup" aria-label={T.typeHeading}>
+        <div className="grid grid-cols-1 gap-1 md:grid-cols-2" role="radiogroup" aria-label={T.typeHeading}>
           {KINDS.map((k) => (
             <div key={k} className="flex flex-col rounded-lg border-2 border-[#111] px-3" data-selected={kind === k}>
               <div className="flex items-center gap-x-3">
