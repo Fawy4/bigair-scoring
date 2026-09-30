@@ -171,6 +171,15 @@ test("platform settings: the product name replaces the built-in name on the publ
   await expect(page.getByRole("heading", { name: `Sendbook ${admin.run}`, level: 1 })).toBeVisible();
   await expect(page.getByText(`Tagline ${admin.run}`)).toBeVisible();
   await expect(page).toHaveTitle(`Sendbook ${admin.run}`);
+
+  // put it back through the screen (which also refreshes the site's cached copy), so later tests see the built-in name at once
+  await page.goto("/admin/settings");
+  await field("Product name").fill(typeof saved.product_name === "string" ? saved.product_name : "");
+  await field("Tagline").fill(typeof saved.tagline === "string" ? saved.tagline : "");
+  await page.getByRole("button", { name: "Save platform settings" }).click();
+  await expect(page.getByText("Platform settings saved").first()).toBeVisible();
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(process.env.NEXT_PUBLIC_PRODUCT_NAME || "[PRODUCT_NAME]");
 });
 
 test("master presets, audit log and health pages open", async ({ page }) => {
