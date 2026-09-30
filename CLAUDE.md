@@ -19,6 +19,7 @@ Next.js 15 (App Router, TypeScript strict) · Tailwind + shadcn/ui · Supabase (
 - `npm run seed:demo` / `npm run bootstrap:organiser -- --email … --org-name … --org-slug …` — demo draw / create the organiser login + organisation (name and slug are required)
 - `npm run auth:password` — enables email + password sign-in for organisers in the hosted auth settings (Management API; idempotent)
 - `npm run bootstrap:platform-admin -- --email …` — make an existing login the platform owner (`--role staff` for staff); with no `--email` it uses the only owner of organisation `arrow`
+- `npm run db:types` — rewrite `src/lib/supabase/database.types.ts` from the hosted schema (run after every migration)
 - `npm run seed:presets` — upsert `presets/**/*.json` into `scoring_models` / `format_templates` / `presets` (identification schemes, schedule templates)
 
 ## Repo layout
