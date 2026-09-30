@@ -6,7 +6,7 @@ import type { Page } from "@playwright/test";
  * A throwaway organiser (login + organisation) created with the service key, signed in through a magic-link token
  * so the test never depends on an inbox. Everything it creates is removed by `cleanup()`.
  */
-export async function createOrganiser(options: { password?: string } = {}) {
+export async function createOrganiser(options: { password?: string; platformAdmin?: "owner" | "staff" } = {}) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const db = createClient(url, key, { auth: { persistSession: false } });
@@ -17,6 +17,13 @@ export async function createOrganiser(options: { password?: string } = {}) {
   const { data: org, error: orgError } = await db.from("organisations").insert({ name: `E2E Big Air ${run}`, slug: `e2e-${run}` }).select("id").single();
   if (orgError) throw new Error(orgError.message);
   await db.from("memberships").insert({ organisation_id: org.id, user_id: created.user.id, role: "owner" });
+  if (options.platformAdmin) {
+    const { error: adminError } = await db.from("platform_admins").insert({ user_id: created.user.id, role: options.platformAdmin });
+    if (adminError) throw new Error(adminError.message);
+  }
+  /** Organisations made through the screens during a test; removed with the rest in cleanup(). */
+  const extraOrgSlugs: string[] = [];
+  const extraUsers: string[] = [];
 
   return {
     run,
@@ -27,7 +34,14 @@ export async function createOrganiser(options: { password?: string } = {}) {
       if (linkError) throw new Error(linkError.message);
       await page.goto(`/auth/confirm?token_hash=${data.properties.hashed_token}&type=magiclink&next=${encodeURIComponent(next)}`);
     },
+    trackOrganisation: (slug: string) => void extraOrgSlugs.push(slug),
+    trackUser: (id: string) => void extraUsers.push(id),
     async cleanup() {
+      for (const slug of extraOrgSlugs) {
+        const { data: o } = await db.from("organisations").select("id").eq("slug", slug).maybeSingle();
+        if (o) await db.rpc("purge_organisation", { p_org: o.id });
+      }
+      for (const id of extraUsers) await db.auth.admin.deleteUser(id);
       await db.storage.from("branding").remove((await db.storage.from("branding").list(org.id)).data?.map((o) => `${org.id}/${o.name}`) ?? []);
       await db.rpc("purge_organisation", { p_org: org.id });
       await db.auth.admin.deleteUser(created.user.id);
