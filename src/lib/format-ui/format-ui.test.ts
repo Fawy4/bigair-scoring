@@ -30,6 +30,19 @@ describe("knockout preview with target 3 / minimum 3 / maximum 3 (docs/04 decisi
     expect(p.ladder[0].routes).toEqual(["1st → R2", "2nd–3rd → out"]);
     expect(p.ladder[1].routes).toEqual(["1st → SF", "2nd → out"]);
   });
+  it("says the final size plainly: 'Final of 2 — 2 riders remain after Semi-finals'", () => {
+    expect(p.finalNote).toBe("Final of 2 — 2 riders remain after Semi-finals");
+  });
+  it("says so when the Final is bigger than its target (21 riders: the 3 winners of Round 2 ride it)", () => {
+    const json = JSON.parse(JSON.stringify(single));
+    Object.assign(json.generator.params, { heatSize: 3, minHeatSize: 3, maxHeatSize: 3, advancePerHeat: 1, finalSize: 2 });
+    const q = previewFormat(parseFormatTemplate(json), 21);
+    expect(q.finalNote).toBe("Final of 3 — 3 riders remain after Round 2");
+  });
+  it("a single heat with everybody says so", () => {
+    const json = JSON.parse(JSON.stringify(single));
+    expect(previewFormat(parseFormatTemplate(json), 4).finalNote).toBe("Final of 4 — all 4 riders ride it");
+  });
   it("no warning: the 1 v 1 rounds are the rule, not a problem", () => {
     expect(p.warnings).toEqual([]);
   });

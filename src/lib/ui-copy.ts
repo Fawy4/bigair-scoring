@@ -719,6 +719,7 @@ export const copy = {
     restKeepRank: "the rest keep their rank",
     arrow: "→",
     cannotRun: (n: number, why: string) => `With ${n} ${plural(n, "rider", "riders")}: this format cannot run (${why})`,
+    finalNote: (size: number, after: string | null) => (after ? `Final of ${size} — ${size} riders remain after ${after}` : `Final of ${size} — all ${size} riders ride it`),
     sentence: (n: number, parts: string, total: number) => `With ${n} ${plural(n, "rider", "riders")}: ${parts} (${total} ${plural(total, "heat", "heats")})`,
     partHeats: (short: string, heats: number, range: string, advancing: number) => `${short} ${heats} ${plural(heats, "heat", "heats")} of ${range}${advancing > 0 ? ` + ${advancing} advancing without riding` : ""}`,
     partAdvancing: (short: string, advancing: number) => `${short} ${advancing} advancing without riding`,

@@ -399,6 +399,11 @@ export function RulesPanel({
                     <p className="text-lg font-bold" data-testid="format-preview" aria-live="polite">
                       {preview.sentence}
                     </p>
+                    {preview.ok && preview.finalNote ? (
+                      <p className="font-bold" data-testid="final-note">
+                        {preview.finalNote}
+                      </p>
+                    ) : null}
                     {preview.ok ? (
                       <p className="font-bold" data-testid="min-heats">
                         {copy.formatSimple.minHeats(preview.minHeatsPerRider)}
