@@ -74,3 +74,15 @@ describe("last seen", () => {
     expect(heartbeatState("2026-09-29T12:00:00Z", now)).toMatchObject({ kind: "earlier" });
   });
 });
+
+import { minJudgesFor } from "./panels";
+
+describe("how many judges a division needs", () => {
+  it("reads the scoring model's minimum", () => expect(minJudgesFor({ panel: { minJudges: 3, maxJudges: 7 } }, {})).toBe(3));
+  it("a division's own change wins", () => expect(minJudgesFor({ panel: { minJudges: 3, maxJudges: 7 } }, { panel: { minJudges: 5 } })).toBe(5));
+  it("never less than one, and copes with nothing", () => {
+    expect(minJudgesFor({}, {})).toBe(1);
+    expect(minJudgesFor(null, null)).toBe(1);
+    expect(minJudgesFor({ panel: { minJudges: 0 } }, {})).toBe(1);
+  });
+});

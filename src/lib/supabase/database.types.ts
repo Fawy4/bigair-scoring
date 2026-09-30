@@ -2043,6 +2043,10 @@ export type Database = {
         }[]
       }
       has_password: { Args: never; Returns: boolean }
+      import_riders: {
+        Args: { p_division: string; p_rows: Json }
+        Returns: Json
+      }
       platform_session: { Args: never; Returns: Json }
       public_platform_settings: { Args: never; Returns: Json }
       public_registration_info: { Args: { p_slug: string }; Returns: Json }

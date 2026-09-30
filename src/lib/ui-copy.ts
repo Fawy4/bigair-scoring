@@ -16,6 +16,7 @@ export interface Help {
 
 export const copy = {
   common: {
+    dismiss: "Dismiss",
     save: "Save",
     saving: "Saving…",
     remove: "Remove",
@@ -268,6 +269,9 @@ export const copy = {
       noDivisions: "Add at least one division (for example Pro Men).",
       scoring: (d: string) => `${d}: choose how it is scored.`,
       format: (d: string) => `${d}: choose its format.`,
+      noRiders: (d: string) => `${d}: add riders.`,
+      noJudges: "Add judge seats.",
+      seatsWaiting: (n: number) => `${n} ${plural(n, "official is", "officials are")} waiting for approval.`,
     },
   },
 
@@ -1063,6 +1067,11 @@ export const copy = {
     pickDivision: "Division",
     noDivisions: "Add a division first (Step 2), then come back to add riders.",
     noRiders: "No riders in this division yet. Add a row, paste or upload a CSV, or add riders you already know.",
+    showAllColumns: "Show every identifier column",
+    seedRepeated: (seed: number, names: string) => `Seed ${seed} is given to more than one rider: ${names}. Press “Sort by seed number” to renumber.`,
+    importProblemsLabel: "Problems found in the file",
+    importSkipNote: (n: number) => `The ${n} ${plural(n, "row", "rows")} with a problem will not be imported. Fix them in the file and preview again, or add them by hand.`,
+    declinedHeading: (n: number) => `Declined registrations (${n})`,
     count: (n: number, active: number) => `${n} ${plural(n, "rider", "riders")} in this division (${active} taking part)`,
     schemeLine: (scheme: string, own: boolean) => `Rider label: ${scheme}${own ? " (this division’s own)" : " (the event’s)"}`,
     lycraAtDraw: "Lycra colour is given at the draw",
@@ -1103,7 +1112,7 @@ export const copy = {
     dragHint: "Drag a row by its handle, or use the ↑ ↓ buttons. The seeds are renumbered 1, 2, 3… after every move.",
     shuffle: "Shuffle randomly",
     shuffleAgain: "Repeat this shuffle",
-    shuffleCode: (code: number) => `Shuffle code ${code}: the same code on the same riders always gives this order.`,
+    shuffleCode: (code: number) => `Last shuffle code: ${code}. “Repeat this shuffle” puts everybody back in exactly that order, even after you have moved riders by hand.`,
     shuffleTyped: "Shuffle code",
     shuffled: (code: number) => `Shuffled with code ${code}`,
     sortBySeed: "Sort by seed number",
@@ -1494,6 +1503,7 @@ export { ordinal };
 /** "?" texts of the hand-built forms (the generated forms carry theirs in the label maps below). */
 export const help: Record<string, Help> = {
   "event.name": { text: "The name people see on the home page and the event page.", example: "Arrow Big Air 2026" },
+  "riders.showAllColumns": { text: "The table shows only the identifier columns the division’s Rider label uses. Tick this to see and fill every one.", example: "Bib numbers are not used by Name call-out, but you can still type them." },
   "event.slug": { text: "The last part of the event’s web address. Lowercase letters, numbers and hyphens.", example: "arrow-big-air-2026 gives …/e/arrow-big-air-2026" },
   "event.location": { text: "Where the event takes place.", example: "El Gouna, Egypt" },
   "event.dates": { text: "First and last day of the event. Days between them are the days you can schedule heats on.", example: "2 Oct to 4 Oct" },

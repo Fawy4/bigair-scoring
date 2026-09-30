@@ -13,7 +13,7 @@ export function WizardRail({ eventId, eventName, status, steps }: { eventId: str
   const current = steps.find((s) => s.key === active);
 
   return (
-    <aside className="md:sticky md:top-4 md:w-64 md:shrink-0" aria-label={copy.wizard.railLabel}>
+    <aside className="no-print md:sticky md:top-4 md:w-64 md:shrink-0" aria-label={copy.wizard.railLabel}>
       <p className="text-xl font-extrabold">{eventName}</p>
       <p className="mb-3 font-semibold">{copy.wizard.status(status)}</p>
 

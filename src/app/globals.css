@@ -146,3 +146,27 @@
     max-width: 44rem;
   }
 }
+
+/* Printing (start lists, official cards): only the page's own content, no header, footer, rail or buttons. */
+@media print {
+  .org-console > header,
+  .org-console > footer,
+  .org-console .no-print,
+  .no-print {
+    display: none !important;
+  }
+  .org-console {
+    background: #fff !important;
+  }
+  .org-console > div {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .print-page {
+    max-width: none !important;
+  }
+  .print-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

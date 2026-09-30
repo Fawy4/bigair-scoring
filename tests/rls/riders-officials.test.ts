@@ -115,6 +115,44 @@ describe.skipIf(!ENV_OK)("Riders, officials, registration, trick base and feedba
     });
   });
 
+  // ------------------------------------------------------------------ CSV import in one transaction
+  describe("import_riders", () => {
+    const row = (first: string, extra: Record<string, unknown> = {}) => ({ first, last: "Imported", ...extra });
+    const count = async () => (await f.s.from("entries").select("id", { count: "exact", head: true }).eq("division_id", f.ids.divA2)).count!;
+    it("saves every row in one step, matching riders by email and not creating them twice", async () => {
+      const before = await count();
+      const r = await f.clients.orgA.rpc("import_riders", {
+        p_division: f.ids.divA2,
+        p_rows: [row("Ivy", { email: `ivy-${run}@example.com`, seed: 2, identifiers: { vest_colour: "red", bib: "7", hacker: 1 } }), row("Jay", { seed: 1 }), row("Ana", { email: "ANA@private.example.com" })],
+      });
+      expect(failed(r)).toBe("");
+      expect(r.data).toEqual({ created: 2, matched: 1, already: 0 }); // Ana already exists in this organisation
+      expect(await count()).toBe(before + 3);
+      const ivy = (await f.s.from("entries").select("seed, status, source, identifiers, riders(email)").eq("division_id", f.ids.divA2).eq("seed", 2).single()).data!;
+      expect(ivy).toMatchObject({ status: "confirmed", source: "import", identifiers: { vest_colour: "red", bib: "7" } });
+      expect(ivy.identifiers).not.toHaveProperty("hacker");
+      expect(((await f.s.from("riders").select("id").eq("organisation_id", f.ids.orgA).ilike("email", "ana@private.example.com")).data ?? []).length).toBe(1);
+    });
+    it("a second import of the same people adds nobody and says so", async () => {
+      const before = await count();
+      const r = await f.clients.orgA.rpc("import_riders", { p_division: f.ids.divA2, p_rows: [row("Ivy", { email: `ivy-${run}@example.com` }), row("Ana", { email: "ana@private.example.com" })] });
+      expect(r.data).toEqual({ created: 0, matched: 2, already: 2 });
+      expect(await count()).toBe(before);
+    });
+    it("one bad row undoes the whole import", async () => {
+      const before = await count();
+      const riders = (await f.s.from("riders").select("id", { count: "exact", head: true }).eq("organisation_id", f.ids.orgA)).count!;
+      const r = await f.clients.orgA.rpc("import_riders", { p_division: f.ids.divA2, p_rows: [row("Good", { email: `good-${run}@example.com` }), { first: "", last: "Broken" }] });
+      expect(failed(r)).toContain("INVALID_ROWS");
+      expect(await count()).toBe(before);
+      expect((await f.s.from("riders").select("id", { count: "exact", head: true }).eq("organisation_id", f.ids.orgA)).count).toBe(riders);
+    });
+    it("another organisation, officials and visitors cannot import, and the size is limited", async () => {
+      for (const c of [f.clients.orgB, f.clients.head, f.clients.anon]) expect(failed(await c.rpc("import_riders", { p_division: f.ids.divA2, p_rows: [row("Nope")] }))).not.toBe("");
+      expect(failed(await f.clients.orgA.rpc("import_riders", { p_division: f.ids.divA2, p_rows: Array.from({ length: 501 }, (_, i) => row(`R${i}`)) }))).toContain("TOO_MANY_ROWS");
+    });
+  });
+
   // ------------------------------------------------------------------ seed order
   describe("set_entry_order", () => {
     const order = () => f.s.from("entries").select("id, seed").eq("division_id", f.ids.divA1).in("id", [f.ids.e1, f.ids.e2, f.ids.e3, f.ids.e4]).order("seed");
@@ -125,9 +163,11 @@ describe.skipIf(!ENV_OK)("Riders, officials, registration, trick base and feedba
       expect(((await order()).data ?? []).map((x) => x.seed)).toEqual([1, 2, 3, 4]);
       expect((await f.s.from("divisions").select("seed_shuffle_seed").eq("id", f.ids.divA1).single()).data!.seed_shuffle_seed).toBe(48213);
     });
-    it("a manual order clears the stored shuffle code", async () => {
+    it("moving a rider by hand keeps the code of the last shuffle, so it can be repeated; a new shuffle replaces it", async () => {
       await f.clients.orgA.rpc("set_entry_order", { p_division: f.ids.divA1, p_entry_ids: [f.ids.e1, f.ids.e2, f.ids.e3, f.ids.e4] });
-      expect((await f.s.from("divisions").select("seed_shuffle_seed").eq("id", f.ids.divA1).single()).data!.seed_shuffle_seed).toBeNull();
+      expect((await f.s.from("divisions").select("seed_shuffle_seed").eq("id", f.ids.divA1).single()).data!.seed_shuffle_seed).toBe(48213);
+      await f.clients.orgA.rpc("set_entry_order", { p_division: f.ids.divA1, p_entry_ids: [f.ids.e1, f.ids.e2, f.ids.e3, f.ids.e4], p_shuffle_seed: 777 });
+      expect((await f.s.from("divisions").select("seed_shuffle_seed").eq("id", f.ids.divA1).single()).data!.seed_shuffle_seed).toBe(777);
     });
     it("refuses another organisation, an entry of another division and a missing entry", async () => {
       expect(failed(await f.clients.orgB.rpc("set_entry_order", { p_division: f.ids.divA1, p_entry_ids: [f.ids.e1, f.ids.e2, f.ids.e3, f.ids.e4] }))).not.toBe("");
