@@ -1,0 +1,23 @@
+{
+  "id": "double-elimination",
+  "name": "Double elimination (two draws, top 2 of each draw to the final)",
+  "description": "Lose once and you drop to the second-chance draw; lose twice and you are out. In every heat the top half stay in their draw and the bottom half drop (from the Main draw to the Second-chance draw, or out of it). The best 2 of each draw meet in the final. Every rider rides at least 2 heats. The final size is a setting (2 = the two draw winners meet).",
+  "basedOn": "Double elimination, adapted to heats of 3–4 riders",
+  "entrants": { "min": 6, "max": 40 },
+  "vestColours": ["red", "yellow", "blue", "green", "white", "black"],
+  "timing": { "defaultHeatMin": 10, "defaultBreakAfterHeatMin": 3, "defaultBreakAfterRoundMin": 5 },
+  "kind": "generator",
+  "generator": {
+    "type": "double_elimination",
+    "params": {
+      "heatSize": 3,
+      "finalSize": 4,
+      "mainMin": 10,
+      "secondMin": 10,
+      "finalMin": 15,
+      "seeding": "snake",
+      "reseed": "by_place_then_score"
+    }
+  },
+  "placings": { "eliminated": "shared", "finalHeatIsRanking": true }
+}

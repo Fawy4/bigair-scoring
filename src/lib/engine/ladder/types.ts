@@ -20,6 +20,7 @@ export interface Entrant {
 }
 
 export type IdentificationSchemeId =
+  | "name-callout"
   | "vests-per-heat"
   | "fixed-lycra-per-rider"
   | "bib-numbers"
@@ -41,6 +42,9 @@ export interface HistoryEntry {
   heat: number;
   total: number | null;
   tieKeys: number[];
+  /** Place in that heat and the heat's size: round robin points come from these. */
+  place?: number;
+  size?: number;
 }
 
 export interface Slot {
@@ -67,6 +71,8 @@ export interface DrawHeat {
   /** Division-wide heat number ("Heat 7"). Byes have none (Decision 5). */
   number: number | null;
   bye: boolean;
+  /** The organiser's own name for this heat ("Semi 1"); absent = the default "R1 H2". */
+  name?: string;
   slots: Slot[];
   durationMin: number;
   breakAfterHeatMin: number;
@@ -123,6 +129,7 @@ export interface HeatResultInput {
 export type LadderWarningType =
   | "duplicate_identifier"
   | "eliminates_nobody"
+  | "heat_size_limits"
   | "below_template_min"
   | "above_template_max"
   | "small_division_single_final"

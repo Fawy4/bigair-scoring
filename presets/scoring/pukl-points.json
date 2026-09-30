@@ -1,8 +1,8 @@
 {
   "id": "pukl-points",
   "name": "PUKL-style points per trick (3 + 3 + 3 + 1)",
-  "description": "Each trick scored out of 10 as the SUM of Height (0-3), Risk (0-3), Technicality (0-3) and Ingenuity (0-1). Best 3 tricks count (n is editable; PUKL does not publish its count). No impression mark. Based on the PUKL British Kiteboarding National Championships judging description.",
-  "version": 1,
+  "description": "Each trick scored out of 10 as the SUM of Height (0-3), Risk (0-3), Technicality (0-3) and Ingenuity (0-1). Best 3 tricks count (n is editable; PUKL does not publish its count). No impression score. Based on the PUKL British Kiteboarding National Championships judging description.",
+  "version": 2,
   "basedOn": "PUKL — British Kiteboarding National Championships (pukl.co.uk)",
   "trick": {
     "entry": "criteria",

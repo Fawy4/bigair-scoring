@@ -22,12 +22,14 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
       const rows = data as Array<{ table_name: string; rls_enabled: boolean; policy_count: number; anon_can_write: boolean; anon_can_select: boolean; authenticated_can_write: boolean }>;
       console.log("\nRLS COVERAGE (table | rls | policies | anon read | anon write | signed-in write)\n" +
         rows.map((r) => `${r.table_name.padEnd(20)} ${String(r.rls_enabled).padEnd(6)} ${String(r.policy_count).padEnd(3)} ${String(r.anon_can_select).padEnd(6)} ${String(r.anon_can_write).padEnd(6)} ${r.authenticated_can_write}`).join("\n"));
-      expect(rows.length).toBeGreaterThanOrEqual(24);
+      expect(rows.length).toBeGreaterThanOrEqual(26);
       expect(rows.filter((r) => !r.rls_enabled)).toEqual([]);
-      const serviceOnly = ["join_attempts"];
+      const serviceOnly = ["join_attempts", "form_attempts"];
       expect(rows.filter((r) => r.policy_count === 0 && !serviceOnly.includes(r.table_name))).toEqual([]);
       expect(rows.filter((r) => r.anon_can_write)).toEqual([]);
       expect(rows.find((r) => r.table_name === "join_attempts")).toMatchObject({ anon_can_select: false, authenticated_can_write: false });
+      expect(rows.find((r) => r.table_name === "form_attempts")).toMatchObject({ anon_can_select: false, authenticated_can_write: false });
+      expect(rows.find((r) => r.table_name === "presets")).toMatchObject({ rls_enabled: true, anon_can_select: false, anon_can_write: false });
     });
   });
 
@@ -395,6 +397,340 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
       expect(((await f.clients.orgA.from("scoring_models").select("id").eq("id", f.ids.modelA2)).data ?? []).length).toBe(1);
       expect(failed(await f.clients.orgA.from("scoring_models").update({ name: "tamper" }).eq("id", sys.data!.id))).toBe("");
       expect((await f.s.from("scoring_models").select("name").eq("id", sys.data!.id).single()).data!.name).toBe("sys");
+    });
+  });
+
+  // ------------------------------------------------------------------ Phase 4a-1: organisation settings
+  describe("organisation settings", () => {
+    it("an owner renames their organisation and changes the slug and default time zone; the other organisation cannot", async () => {
+      const mine = await f.clients.orgA.from("organisations").update({ name: `Renamed ${run}`, slug: `renamed-${run}`, settings: { defaultTimezone: "Europe/Berlin" } }).eq("id", f.ids.orgA);
+      expect(failed(mine)).toBe("");
+      const row = (await f.s.from("organisations").select("name, slug, settings").eq("id", f.ids.orgA).single()).data!;
+      expect(row).toMatchObject({ name: `Renamed ${run}`, slug: `renamed-${run}`, settings: { defaultTimezone: "Europe/Berlin" } });
+
+      await f.clients.orgB.from("organisations").update({ name: "hijacked", slug: `hijack-${run}` }).eq("id", f.ids.orgA);
+      expect((await f.s.from("organisations").select("name").eq("id", f.ids.orgA).single()).data!.name).toBe(`Renamed ${run}`);
+    });
+
+    it("a time zone that does not exist and a slug that would break links are refused", async () => {
+      expect(failed(await f.clients.orgA.from("organisations").update({ settings: { defaultTimezone: "Mars/Olympus" } }).eq("id", f.ids.orgA))).toContain("INVALID_TIMEZONE");
+      expect(failed(await f.clients.orgA.from("organisations").update({ slug: "Not A Slug!" }).eq("id", f.ids.orgA))).not.toBe("");
+      expect(failed(await f.clients.orgA.from("organisations").update({ slug: "rls-b-" + run }).eq("id", f.ids.orgA))).not.toBe(""); // already taken by the other organisation
+    });
+
+    it("a visitor cannot change or even read organisations", async () => {
+      expect((await f.clients.anon.from("organisations").select("id")).data ?? []).toEqual([]);
+      await f.clients.anon.from("organisations").update({ name: "anon" }).eq("id", f.ids.orgA);
+      expect((await f.s.from("organisations").select("name").eq("id", f.ids.orgA).single()).data!.name).not.toBe("anon");
+    });
+  });
+
+  // ------------------------------------------------------------------ Phase 4a-1: presets table
+  describe("generic presets table", () => {
+    const own = () => ({ organisation_id: f.ids.orgA, kind: "identification", key: `rls-${run}`, name: "Mine", version: 1, json: { hello: 1 }, content_hash: "h" });
+
+    it("system rows are readable by signed-in organisers, not by visitors; nobody but the server writes them", async () => {
+      const sys = await f.s.from("presets").insert({ organisation_id: null, kind: "identification", key: `rls-${run}-sys`, name: "System", version: 1, json: {}, content_hash: "s" }).select().single();
+      expect(sys.error).toBeNull();
+      expect(((await f.clients.orgB.from("presets").select("id").eq("id", sys.data!.id)).data ?? []).length).toBe(1);
+      expect(failed(await f.clients.anon.from("presets").select("id"))).not.toBe("");
+      expect(failed(await f.clients.orgA.from("presets").insert({ ...own(), organisation_id: null, key: `rls-${run}-x` }))).not.toBe("");
+      await f.clients.orgA.from("presets").update({ name: "tamper" }).eq("id", sys.data!.id);
+      await f.clients.orgA.from("presets").delete().eq("id", sys.data!.id);
+      expect((await f.s.from("presets").select("name").eq("id", sys.data!.id).single()).data!.name).toBe("System");
+      await f.s.from("presets").delete().eq("id", sys.data!.id);
+    });
+
+    it("an organisation's presets are visible and writable to its members only", async () => {
+      const ins = await f.clients.orgA.from("presets").insert(own()).select().single();
+      expect(failed(ins)).toBe("");
+      const id = ins.data!.id;
+      expect(((await f.clients.orgA.from("presets").select("id").eq("id", id)).data ?? []).length).toBe(1);
+      expect(((await f.clients.orgB.from("presets").select("id").eq("id", id)).data ?? []).length).toBe(0);
+      await f.clients.orgB.from("presets").update({ name: "tamper" }).eq("id", id);
+      await f.clients.orgB.from("presets").delete().eq("id", id);
+      expect((await f.s.from("presets").select("name").eq("id", id).single()).data!.name).toBe("Mine");
+      expect(failed(await f.clients.orgB.from("presets").insert({ ...own(), key: `rls-${run}-b` }))).not.toBe(""); // B cannot write into A's organisation
+      expect(failed(await f.clients.orgA.from("presets").insert(own()))).not.toBe(""); // same key + version twice
+      expect(failed(await f.clients.orgA.from("presets").insert({ ...own(), version: 2 }))).toBe(""); // a new version is a new row
+    });
+  });
+
+  // ------------------------------------------------------------------ Phase 4a-1: branding bucket
+  describe("branding bucket (logos)", () => {
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+    const upload = (c: Fixture["clients"]["orgA"], path: string, body: Buffer | Uint8Array = png, contentType = "image/png") =>
+      c.storage.from("branding").upload(path, body, { contentType, upsert: true });
+    const uploaded: string[] = [];
+
+    it("a member uploads under their own organisation folder and the file is publicly readable", async () => {
+      const path = `${f.ids.orgA}/logo-${run}.png`;
+      expect(failed(await upload(f.clients.orgA, path))).toBe("");
+      uploaded.push(path);
+      const url = f.clients.anon.storage.from("branding").getPublicUrl(path).data.publicUrl;
+      const res = await fetch(url);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toContain("image/png");
+    });
+
+    it("nobody can write into another organisation's folder, and visitors cannot upload at all", async () => {
+      expect(failed(await upload(f.clients.orgB, `${f.ids.orgA}/steal-${run}.png`))).not.toBe("");
+      expect(failed(await upload(f.clients.orgA, `${f.ids.orgB}/steal-${run}.png`))).not.toBe("");
+      expect(failed(await upload(f.clients.anon, `${f.ids.orgA}/anon-${run}.png`))).not.toBe("");
+      expect(failed(await upload(f.clients.j1, `${f.ids.orgA}/judge-${run}.png`))).not.toBe(""); // an official is not a member
+      expect(failed(await upload(f.clients.orgA, `loose-${run}.png`))).not.toBe(""); // no organisation folder
+      expect(failed(await upload(f.clients.orgA, `not-a-uuid/loose-${run}.png`))).not.toBe("");
+    });
+
+    it("only images up to 2 MB are accepted", async () => {
+      expect(failed(await upload(f.clients.orgA, `${f.ids.orgA}/page-${run}.html`, Buffer.from("<script>alert(1)</script>"), "text/html"))).not.toBe("");
+      expect(failed(await upload(f.clients.orgA, `${f.ids.orgA}/vector-${run}.svg`, Buffer.from("<svg xmlns='http://www.w3.org/2000/svg'/>"), "image/svg+xml"))).not.toBe("");
+      expect(failed(await upload(f.clients.orgA, `${f.ids.orgA}/huge-${run}.png`, new Uint8Array(2 * 1024 * 1024 + 1)))).not.toBe("");
+    });
+
+    it("another organisation cannot replace or delete a file", async () => {
+      const path = `${f.ids.orgA}/logo-${run}.png`;
+      expect(failed(await upload(f.clients.orgB, path))).not.toBe("");
+      await f.clients.orgB.storage.from("branding").remove([path]);
+      expect((await f.s.storage.from("branding").list(f.ids.orgA)).data?.map((o) => o.name)).toContain(`logo-${run}.png`);
+      expect(failed(await f.clients.orgA.storage.from("branding").remove([path]))).toBe("");
+      expect((await f.s.storage.from("branding").list(f.ids.orgA)).data?.map((o) => o.name)).not.toContain(`logo-${run}.png`);
+    });
+
+    it("cleanup", async () => {
+      if (uploaded.length) await f.s.storage.from("branding").remove(uploaded);
+    });
+  });
+
+  // ------------------------------------------------------------------ Phase 4a-1: divisions (draw columns, rules lock, delete guard)
+  describe("divisions: draw, rules lock, delete guard", () => {
+    it("an organiser stores a draw and locks it on their own division; another organiser cannot", async () => {
+      const draw = { status: "locked", rounds: [] };
+      expect(failed(await f.clients.orgA.from("divisions").update({ draw, draw_locked_at: new Date().toISOString() }).eq("id", f.ids.divA2))).toBe("");
+      const row = (await f.s.from("divisions").select("draw, draw_locked_at").eq("id", f.ids.divA2).single()).data!;
+      expect(row.draw).toEqual(draw);
+      expect(row.draw_locked_at).not.toBeNull();
+      await f.clients.orgB.from("divisions").update({ draw: { hacked: true } }).eq("id", f.ids.divA2);
+      expect((await f.s.from("divisions").select("draw").eq("id", f.ids.divA2).single()).data!.draw).toEqual(draw);
+    });
+
+    it("scoring and format can be edited freely until a heat has started", async () => {
+      expect(failed(await f.clients.orgA.from("divisions").update({ scoring_overrides: { heat: { maxAttemptsPerRider: 5 } } }).eq("id", f.ids.divA2))).toBe("");
+    });
+
+    it("once a heat has started, scoring and format are read-only (RULES_LOCKED), also for the server", async () => {
+      const r = await f.clients.orgA.from("divisions").update({ scoring_overrides: { heat: { maxAttemptsPerRider: 9 } } }).eq("id", f.ids.divA1);
+      expect(failed(r)).toContain("RULES_LOCKED");
+      expect(failed(await f.s.from("divisions").update({ format_params: { x: 1 } }).eq("id", f.ids.divA1))).toContain("RULES_LOCKED");
+      expect(failed(await f.clients.orgA.from("divisions").update({ name: "Pro (renamed)" }).eq("id", f.ids.divA1))).toBe(""); // other fields stay editable
+    });
+
+    it("unlocking needs an organiser of that event and a written reason, opens the lock, and is audited", async () => {
+      expect(failed(await f.clients.anon.rpc("unlock_division_rules", { p_division: f.ids.divA1, p_reason: "please let me" }))).not.toBe("");
+      expect(failed(await f.clients.orgB.rpc("unlock_division_rules", { p_division: f.ids.divA1, p_reason: "not my division" }))).toContain("NOT_ALLOWED");
+      expect(failed(await f.clients.head.rpc("unlock_division_rules", { p_division: f.ids.divA1, p_reason: "head judge is not an organiser" }))).toContain("NOT_ALLOWED");
+      expect(failed(await f.clients.orgA.rpc("unlock_division_rules", { p_division: f.ids.divA1, p_reason: "  ok " }))).toContain("REASON_REQUIRED");
+      expect(failed(await f.clients.orgA.rpc("unlock_division_rules", { p_division: f.ids.divA1, p_reason: "Wrong cap entered before the heat" }))).toBe("");
+
+      expect(failed(await f.clients.orgA.from("divisions").update({ scoring_overrides: { heat: { maxAttemptsPerRider: 3, note: "edited after unlock" } } }).eq("id", f.ids.divA1))).toBe("");
+      const log = (await f.s.from("audit_log").select("action, reason, table_name").eq("event_id", f.ids.evA1).eq("table_name", "divisions")).data ?? [];
+      expect(log.find((l) => l.action === "rules_unlocked")?.reason).toBe("Wrong cap entered before the heat");
+      expect(log.filter((l) => l.action === "update").length).toBeGreaterThanOrEqual(1); // the edit after the unlock
+    });
+
+    it("a division with heats cannot be deleted directly; one without heats can (own organisation only)", async () => {
+      expect(failed(await f.clients.orgA.from("divisions").delete().eq("id", f.ids.divA1))).toContain("DIVISION_HAS_HEATS");
+      await f.clients.orgB.from("divisions").delete().eq("id", f.ids.divA2);
+      expect(((await f.s.from("divisions").select("id").eq("id", f.ids.divA2)).data ?? []).length).toBe(1);
+      const extra = await f.s.from("divisions").insert({ event_id: f.ids.evA2, name: "Scratch", sort_order: 9 }).select().single();
+      expect(failed(await f.clients.orgA.from("divisions").delete().eq("id", extra.data!.id))).toBe("");
+    });
+  });
+
+  // ------------------------------------------------------------------ Phase 4a-1: public registration
+  describe("public rider registration (register_rider)", () => {
+    const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    const fields = (email: string, extra: object = {}) => ({ first_name: "Zed", last_name: "Rider", email, ...extra });
+    const reg = (slug: string, division: string, flds: object, ident: object = {}, consent = true, ip = `ip-${run}-reg`) =>
+      f.s.rpc("register_rider", { p_event_slug: slug, p_division: division, p_fields: flds, p_identifiers: ident, p_consent: consent, p_ip: ip });
+    const setSettings = (patch: object, eventId = f.ids.evA1) =>
+      f.s.from("events").select("settings").eq("id", eventId).single().then(({ data }) => f.s.from("events").update({ settings: { ...(data!.settings as object), ...patch } }).eq("id", eventId));
+    const slugA1 = () => `rls-a1-${run}`;
+
+    it("nobody but the server can call it (not visitors, not signed-in users, not organisers)", async () => {
+      const args = { p_event_slug: slugA1(), p_division: f.ids.divA1, p_fields: fields("x@example.com"), p_identifiers: {}, p_consent: true, p_ip: "1.1.1.1" };
+      for (const c of [f.clients.anon, f.clients.orgA, f.clients.j1]) expect(failed(await c.rpc("register_rider", args))).not.toBe("");
+    });
+
+    it("registration is closed by default and stays closed for a draft event", async () => {
+      expect(codeOf(await reg(slugA1(), f.ids.divA1, fields("closed@example.com")))).toBe("REGISTRATION_CLOSED");
+      await setSettings({ registrationOpen: true }, f.ids.evA2);
+      expect(codeOf(await reg(`rls-a2-${run}`, f.ids.divA2, fields("draft@example.com")))).toBe("REGISTRATION_CLOSED");
+      expect(codeOf(await reg("no-such-event-" + run, f.ids.divA1, fields("nobody@example.com")))).toBe("EVENT_NOT_FOUND");
+    });
+
+    it("when open it creates a rider and a self-registered entry that visitors cannot read", async () => {
+      await setSettings({ registrationOpen: true });
+      const ok = await reg(slugA1(), f.ids.divA1, fields("Zed@Example.com", { phone: "+201111", nationality: "EG" }), { vest_colour: "blue", admin: true, kite: { brand: "North" } });
+      expect(ok.data).toEqual({ ok: true });
+      const rider = (await f.s.from("riders").select("id, first_name, email, phone").eq("organisation_id", f.ids.orgA).ilike("email", "zed@example.com")).data!;
+      expect(rider).toHaveLength(1);
+      const entry = (await f.s.from("entries").select("status, source, consent_at, identifiers").eq("rider_id", rider[0].id)).data!;
+      expect(entry).toHaveLength(1);
+      expect(entry[0]).toMatchObject({ status: "registered", source: "self", identifiers: { vest_colour: "blue", kite: { brand: "North" } } });
+      expect(entry[0].identifiers).not.toHaveProperty("admin"); // unknown keys are dropped
+      expect(entry[0].consent_at).not.toBeNull();
+      expect((await f.clients.anon.from("riders").select("id")).data ?? []).toEqual([]);
+      expect((await f.clients.anon.from("entries").select("id")).data ?? []).toEqual([]);
+      expect(((await f.clients.anon.from("v_entries").select("first_name").eq("first_name", "Zed")).data ?? []).length).toBe(0); // not public until confirmed
+      expect(((await f.clients.orgB.from("riders").select("id").eq("id", rider[0].id)).data ?? []).length).toBe(0);
+    });
+
+    it("the same email again re-uses the rider, adds nothing twice, and never overwrites what is already known", async () => {
+      const before = (await f.s.from("riders").select("id, phone").eq("organisation_id", f.ids.orgA).ilike("email", "ana@private.example.com")).data!;
+      const entriesBefore = (await f.s.from("entries").select("id").eq("rider_id", before[0].id)).data!.length;
+      expect(before).toHaveLength(1);
+      const again = await reg(slugA1(), f.ids.divA1, fields("ANA@private.example.com", { phone: "+9999999" }), {}, true, `ip-${run}-again`);
+      expect(again.data).toEqual({ ok: true }); // looks exactly like a new registration: no way to probe who is registered
+      const after = (await f.s.from("riders").select("id, phone").eq("organisation_id", f.ids.orgA).ilike("email", "ana@private.example.com")).data!;
+      expect(after).toHaveLength(1);
+      expect(after[0].phone).toBe(before[0].phone);
+      expect((await f.s.from("entries").select("id").eq("rider_id", before[0].id)).data!.length).toBe(entriesBefore);
+    });
+
+    it("the same email in another organisation is a different rider (one record per person per organisation)", async () => {
+      await setSettings({ registrationOpen: true }, f.ids.evB1);
+      expect((await reg(`rls-b1-${run}`, f.ids.divB1, fields("zed@example.com"), {}, true, `ip-${run}-b`)).data).toEqual({ ok: true });
+      const riders = (await f.s.from("riders").select("organisation_id").ilike("email", "zed@example.com").in("organisation_id", [f.ids.orgA, f.ids.orgB])).data!;
+      expect(riders.map((r) => r.organisation_id).sort()).toEqual([f.ids.orgA, f.ids.orgB].sort());
+    });
+
+    it("the closing date counts the whole closing day, in the event's time zone", async () => {
+      await setSettings({ registrationOpen: true, registrationClosesOn: "2000-01-01" });
+      expect(codeOf(await reg(slugA1(), f.ids.divA1, fields("late@example.com"), {}, true, `ip-${run}-late`))).toBe("REGISTRATION_CLOSED");
+      await setSettings({ registrationOpen: true, registrationClosesOn: today() });
+      expect((await reg(slugA1(), f.ids.divA1, fields("lastday@example.com"), {}, true, `ip-${run}-late2`)).data).toEqual({ ok: true });
+      await setSettings({ registrationOpen: true, registrationClosesOn: null });
+    });
+
+    it("refuses missing consent, a bad email, a division of another event, and over-long text", async () => {
+      expect(codeOf(await reg(slugA1(), f.ids.divA1, fields("c@example.com"), {}, false, `ip-${run}-v`))).toBe("CONSENT_REQUIRED");
+      const bad = await reg(slugA1(), f.ids.divA1, fields("not-an-email"), {}, true, `ip-${run}-v`);
+      expect(bad.data).toMatchObject({ ok: false, error: "INVALID_FIELDS", field: "email" });
+      expect(codeOf(await reg(slugA1(), f.ids.divB1, fields("d@example.com"), {}, true, `ip-${run}-v`))).toBe("DIVISION_NOT_FOUND");
+      expect((await reg(slugA1(), f.ids.divA1, fields("e@example.com", { sponsor: "x".repeat(101) }), {}, true, `ip-${run}-v2`)).data).toMatchObject({ ok: false, error: "INVALID_FIELDS" });
+    });
+
+    it("is rate limited per address: the sixth try within the hour is refused, another address is unaffected", async () => {
+      const ip = `ip-${run}-flood`;
+      for (let i = 0; i < 5; i++) expect(codeOf(await reg(slugA1(), f.ids.divA1, fields(`flood${i}@example.com`), {}, true, ip))).toBe("");
+      expect(codeOf(await reg(slugA1(), f.ids.divA1, fields("flood5@example.com"), {}, true, ip))).toBe("RATE_LIMITED");
+      expect(codeOf(await reg(slugA1(), f.ids.divA1, fields("other@example.com"), {}, true, `ip-${run}-calm`))).toBe("");
+    });
+  });
+
+  // ------------------------------------------------------------------ Phase 4a-1: official self-add
+  describe("official self-add (request_seat)", () => {
+    const ask = (slug: string, name: string, role: string, ip = `ip-${run}-seat`) => f.s.rpc("request_seat", { p_event_slug: slug, p_name: name, p_role: role, p_ip: ip });
+
+    it("nobody but the server can call it", async () => {
+      for (const c of [f.clients.anon, f.clients.orgA, f.clients.j1]) {
+        expect(failed(await c.rpc("request_seat", { p_event_slug: `rls-a1-${run}`, p_name: "Sneaky", p_role: "judge", p_ip: "1.1.1.1" }))).not.toBe("");
+      }
+    });
+
+    it("creates a pending seat with no PIN and no access; organisers of that event see it, others do not", async () => {
+      expect((await ask(`rls-a1-${run}`, "Pat Pending", "judge")).data).toEqual({ ok: true });
+      const seat = (await f.s.from("judge_seats").select("id, status, role, active, scores, pin_hash, auth_user_id").eq("event_id", f.ids.evA1).eq("name", "Pat Pending")).data!;
+      expect(seat).toHaveLength(1);
+      expect(seat[0]).toMatchObject({ status: "pending", role: "judge", scores: false, pin_hash: null, auth_user_id: null });
+      expect(((await f.clients.orgA.from("judge_seats").select("id").eq("id", seat[0].id)).data ?? []).length).toBe(1);
+      expect(((await f.clients.orgB.from("judge_seats").select("id").eq("id", seat[0].id)).data ?? []).length).toBe(0);
+      expect(((await f.clients.anon.from("judge_seats").select("id")).data ?? []).length).toBe(0);
+      const join = await f.s.rpc("bind_seat_by_pin", { p_event: f.ids.evA1, p_pin: "123456", p_user: f.userIds.orgA, p_ip: `ip-${run}-pin` });
+      expect(codeOf(join)).toBe("INVALID_PIN"); // a pending seat has no PIN to join with
+    });
+
+    it("pressing the button twice adds one seat; the head judge role cannot be requested; names are checked", async () => {
+      await ask(`rls-a1-${run}`, "Dana Double", "spotter");
+      await ask(`rls-a1-${run}`, "dana double", "spotter");
+      expect(((await f.s.from("judge_seats").select("id").eq("event_id", f.ids.evA1).ilike("name", "dana double")).data ?? []).length).toBe(1);
+      expect(codeOf(await ask(`rls-a1-${run}`, "Hank Head", "head"))).toBe("INVALID_ROLE");
+      expect(codeOf(await ask(`rls-a1-${run}`, "X", "judge"))).toBe("INVALID_NAME");
+      expect(codeOf(await ask("no-such-event-" + run, "Nora Nobody", "judge"))).toBe("EVENT_NOT_FOUND");
+    });
+
+    it("is rate limited per address and capped at 50 pending seats per event", async () => {
+      const ip = `ip-${run}-seatflood`;
+      for (let i = 0; i < 5; i++) expect(codeOf(await ask(`rls-b1-${run}`, `Flood ${i}`, "judge", ip))).toBe("");
+      expect(codeOf(await ask(`rls-b1-${run}`, "Flood 5", "judge", ip))).toBe("RATE_LIMITED");
+      const rows = Array.from({ length: 50 }, (_, i) => ({ event_id: f.ids.evB1, name: `Bulk ${i}`, role: "judge", status: "pending", active: true }));
+      await f.s.from("judge_seats").insert(rows);
+      expect(codeOf(await ask(`rls-b1-${run}`, "One too many", "judge", `ip-${run}-seatcap`))).toBe("TOO_MANY_PENDING");
+    });
+
+    it("the attempt log is unreadable to everyone but the server", async () => {
+      for (const c of [f.clients.anon, f.clients.orgA, f.clients.j1]) {
+        const r = await c.from("form_attempts").select("id").limit(1);
+        expect(r.error ? "denied" : (r.data ?? []).length).toSatisfy((v: unknown) => v === "denied" || v === 0);
+      }
+      expect((await f.s.from("form_attempts").select("id", { count: "exact", head: true })).count).toBeGreaterThan(0);
+    });
+  });
+
+  // ------------------------------------------------------------------ regression: users with no seat in the event
+  describe("a signed-in user with no seat or membership in an event cannot touch its attempts", () => {
+    it("neither a judge of another event nor another organisation's organiser can add or delete attempts", async () => {
+      const before = (await f.s.from("trick_attempts").select("id", { count: "exact", head: true }).eq("heat_id", f.ids.H1)).count;
+      for (const [who, c] of [["judge of another event", f.clients.bJudge], ["other organiser", f.clients.orgB]] as const) {
+        expect(failed(await c.rpc("add_attempt", { p_heat: f.ids.H1, p_entry: f.ids.e1, p_client_key: uuid(), p_status: "landed" })), `add: ${who}`).toContain("NOT_ALLOWED");
+        expect(failed(await c.rpc("delete_attempt", { p_attempt: f.ids.attH1, p_reason: "not mine to delete" })), `delete: ${who}`).toContain("NOT_ALLOWED");
+      }
+      const after = (await f.s.from("trick_attempts").select("id", { count: "exact", head: true }).eq("heat_id", f.ids.H1)).count;
+      expect(after).toBe(before);
+      expect((await f.s.from("trick_attempts").select("deleted_at").eq("id", f.ids.attH1).single()).data!.deleted_at).toBeNull();
+    });
+  });
+
+  // ------------------------------------------------------------------ publish hold (UX round)
+  describe("publish hold: a published result can be held back from the public site and released later", () => {
+    const hold = (c: Fixture["clients"]["orgA"], hold: boolean, reason: string | null = "Podium ceremony first") =>
+      c.rpc("set_publish_hold", { p_heat: f.ids.H3, p_hold: hold, p_reason: reason });
+    const publicRows = async () => ((await f.clients.anon.from("heat_results").select("id").eq("heat_id", f.ids.H3)).data ?? []).length;
+
+    it("starts released: the public sees the published result", async () => {
+      expect(await publicRows()).toBe(1);
+    });
+
+    it("visitors, judges, spotters and other organisations cannot hold or release", async () => {
+      for (const [who, c] of [["anon", f.clients.anon], ["judge", f.clients.j1], ["spotter", f.clients.spotter], ["other organiser", f.clients.orgB]] as const) {
+        expect(failed(await hold(c, true)), who).not.toBe("");
+      }
+      expect(await publicRows()).toBe(1);
+    });
+
+    it("editing the column directly does nothing, even for the organiser", async () => {
+      await f.clients.orgA.from("heats").update({ publish_hold: true }).eq("id", f.ids.H3);
+      expect((await f.s.from("heats").select("publish_hold").eq("id", f.ids.H3).single()).data!.publish_hold).toBe(false);
+    });
+
+    it("holding needs a reason; the organiser holds; the public no longer sees the result but organisers and officials do", async () => {
+      expect(failed(await hold(f.clients.orgA, true, " "))).toContain("REASON_REQUIRED");
+      expect(failed(await hold(f.clients.orgA, true))).toBe("");
+      expect(await publicRows()).toBe(0);
+      expect(((await f.clients.orgA.from("heat_results").select("id").eq("heat_id", f.ids.H3)).data ?? []).length).toBe(1);
+      expect(((await f.clients.head.from("heat_results").select("id").eq("heat_id", f.ids.H3)).data ?? []).length).toBe(1);
+    });
+
+    it("the head judge releases it and the public sees it again; both steps are audited", async () => {
+      expect(failed(await hold(f.clients.head, false, null))).toBe("");
+      expect(await publicRows()).toBe(1);
+      expect(failed(await hold(f.clients.head, true, "Hold for the podium"))).toBe("");
+      expect(await publicRows()).toBe(0);
+      expect(failed(await hold(f.clients.orgA, false, null))).toBe("");
+      const log = (await f.s.from("audit_log").select("action, reason").eq("event_id", f.ids.evA1).eq("row_id", f.ids.H3).in("action", ["publish_hold", "publish_release"])).data ?? [];
+      expect(log.map((l) => l.action).sort()).toEqual(["publish_hold", "publish_hold", "publish_release", "publish_release"]);
+      expect(log.find((l) => l.reason === "Hold for the podium")).toBeTruthy();
     });
   });
 

@@ -1,0 +1,105 @@
+import { z } from "zod";
+import { TimeZoneSchema } from "./org-settings";
+import { IdentificationSchemeSchema } from "./identification";
+import { copy } from "@/lib/ui-copy";
+
+const v = copy.event.validation;
+
+const SLUG = /^[a-z0-9][a-z0-9-]*$/;
+
+/** Everything on `events.settings` that the Event step edits. Unknown keys written by later phases are kept. */
+export const EventSettingsSchema = z.looseObject({
+  /** "live" = the public may follow scores during a heat; anything else = nothing before the head judge publishes. */
+  publicLiveScores: z.enum(["live", "after_publish", "off"]).default("after_publish"),
+  /** Publishing a heat shows its result to the public at once (otherwise a result is released by hand). */
+  publicResultsOnPublish: z.boolean().default(false),
+  /** The final's result stays hidden until the organiser releases it (podium). Uses heats.publish_hold. */
+  holdFinalResult: z.boolean().default(false),
+  /** Minutes before a heat that riders are called to the ready area. */
+  readyCallMin: z.number().int().min(0).max(120).default(10),
+  /** How often public pages ask for new scores. */
+  livePollSec: z.number().int().min(3).max(60).default(7),
+  /** How long judges may still enter marks after a heat ends. */
+  judgeGraceSec: z.number().int().min(0).max(3600).default(180),
+  judgesMayLogAttempts: z.boolean().default(false),
+  /** Show the wind-call banner on public pages and the big screen (Phase 5 adds the calls themselves). */
+  windCallBanner: z.boolean().default(true),
+  registrationOpen: z.boolean().default(false),
+  /** Last day riders can register (the whole day counts, in the event's time zone). */
+  registrationClosesOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, v.useDate).nullable().optional(),
+  identification: z
+    .object({
+      scheme: IdentificationSchemeSchema,
+      /** The preset the scheme started from (for display only). */
+      basedOn: z.string().optional(),
+      allowDivisionOverride: z.boolean().default(false),
+    })
+    .optional(),
+});
+export type EventSettings = z.infer<typeof EventSettingsSchema>;
+
+export const SponsorSchema = z.object({
+  name: z.string().trim().min(1, v.sponsorName).max(80),
+  logoUrl: z.string().url().optional(),
+  url: z.union([z.literal(""), z.string().url(v.sponsorUrl)]).optional(),
+});
+
+export const EventBrandingSchema = z.looseObject({
+  logoUrl: z.string().url().optional(),
+  sponsors: z.array(SponsorSchema).max(20, v.sponsorsMax).default([]),
+});
+export type EventBranding = z.infer<typeof EventBrandingSchema>;
+
+export const SlugSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(2, v.slugMin)
+  .max(60, v.slugMax)
+  .regex(SLUG, v.slugChars);
+
+const DateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, v.pickDate);
+
+/** The whole Event step as one form. */
+export const EventFormSchema = z
+  .object({
+    name: z.string().trim().min(2, v.nameMin).max(100, v.nameMax),
+    slug: SlugSchema,
+    location: z.string().trim().max(120, v.locationMax).default(""),
+    start_date: DateOnly,
+    end_date: DateOnly,
+    timezone: TimeZoneSchema,
+    settings: EventSettingsSchema,
+    branding: EventBrandingSchema,
+  })
+  .superRefine((f, ctx) => {
+    if (f.end_date < f.start_date) {
+      ctx.addIssue({ code: "custom", path: ["end_date"], message: v.endBeforeStart });
+    }
+    const closes = f.settings.registrationClosesOn;
+    if (f.settings.registrationOpen && closes && closes > f.end_date) {
+      ctx.addIssue({ code: "custom", path: ["settings", "registrationClosesOn"], message: v.closesAfterEnd });
+    }
+  });
+export type EventForm = z.infer<typeof EventFormSchema>;
+
+export function parseEventSettings(json: unknown): EventSettings {
+  const r = EventSettingsSchema.safeParse(json ?? {});
+  return r.success ? r.data : EventSettingsSchema.parse({});
+}
+
+export function parseEventBranding(json: unknown): EventBranding {
+  const r = EventBrandingSchema.safeParse(json ?? {});
+  return r.success ? r.data : EventBrandingSchema.parse({});
+}
+
+/** "Arrow Big Air 2026" → "arrow-big-air-2026" */
+export function slugify(text: string): string {
+  return text
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}

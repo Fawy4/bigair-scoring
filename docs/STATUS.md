@@ -103,3 +103,154 @@
 
 ## Phase 5 requirements
 - **Out of attempts (hard stop)** (docs/06 §5): when a rider has used the division's attempt cap, their chip turns grey with 'Out of attempts · 7 / 7' on the spotter AND judge screens and Log is disabled for that rider; if the head judge deletes one of that rider's attempts the chip re-enables live ('6 / 7'); the server refuses any attempt beyond the cap (ATTEMPT_CAP_REACHED) even from a stale phone; only the head judge may add an attempt beyond the cap, with a written reason, which is audited.
+
+## Phase 4a-1 – organiser settings, Event and Divisions (branch `phase-4a-organiser-console`)
+
+### Done
+- **Engine dials** (tests first, `src/lib/engine/scoring/dials.test.ts`, 25 tests): `counting.perCategoryMax` (kiteloops 8.9 / 8.4 / 7.0 + board-offs 7.2 / 6.0 → **24.50**) and `heat.countedWeights` (`[1, 0.75, 0.5]` on 8.0 / 7.0 / 6.0 → **16.25**), automatic maximum (decision 5), interference then re-weighting (decision 6), tie-breaks on raw scores (decision 7), "8.00 × 1 = 8.00; 7.00 × 0.75 = 5.25 …" in `explain()`. Absent dials change nothing: all earlier engine tests still pass.
+- **Groundwork**: Toaster (organiser screens only, small confirmations), new landing page (product name from `NEXT_PUBLIC_PRODUCT_NAME`, "Officials: join with a PIN", "Organiser sign in", list of published events linking to `/e/<slug>/join` until the event page arrives in 4b), organiser shell with organisation switcher and beach-contrast styling (near-black on white, weight ≥ 600, targets ≥ 48 px, no colour-only states). `bootstrap:organiser` now requires `--org-name` and `--org-slug`.
+- **Database** (`supabase/migrations/20260930100000_phase4a_organiser.sql`, applied to the hosted development project over HTTPS): organisation settings (default time zone, editable slug), `branding` storage bucket (public read, images only, 2 MB, writable only under `<organisation id>/` by that organisation's members), generic `presets` table, `divisions.draw` / `draw_locked_at` / `rules_unlocked_at`, the **rules lock** (scoring and format cannot change once a heat has started, `unlock_division_rules` needs a written reason and is audited), a guard against deleting a division that has heats, and two service-only, rate-limited functions: `register_rider` (public registration) and `request_seat` (official self-add, creates a *pending* seat only). `seed:presets` now also loads identification schemes and the schedule template into `presets` (6 rows). Types regenerated.
+- **Access-rule tests**: `npm run test:rls` grew from 52 to **80** tests (organisation settings, presets, bucket, draw/lock/delete guard, registration, self-add, rate limits).
+- **Organisation settings** `/org/settings`: name, slug (warning + confirmation because public links change), logo upload, default time zone.
+- **Event wizard** `/org/events/new` and `/org/events/<id>/{event,divisions}`; left rail (a step picker on tablets), each step saves on its own, unfinished steps say what is missing.
+  - **Event step**: every field of docs/06 §1 step 1, plus live update seconds, judge grace seconds, judges may log attempts, registration open + closing date, event logo, sponsor logos, the **identification scheme picker and editor** (palette, primary, fallback, secondary, call-out, vests, bibs, kite fields, per-division override switch, save as preset) with a live **rider chip** (the one shared `RiderChip` component).
+  - **Divisions step**: add / rename / reorder (↑ ↓) / duplicate / delete; scoring preset dropdown (built-in + organisation); **Simple** level with the live sentence (e.g. "Best 3 of 7 attempts + Variety 0–10, 3 judges averaged"); **Advanced** level generated from the Zod schema (every field, including both new dials; a test fails if a schema field has no plain-language label); simple/advanced edits stored as small `scoring_overrides`; "Save as new preset" and "Save as new version" (never an in-place change); JSON export and import with readable errors; format picker with generator parameters, per-round durations and breaks, flag-out, **custom format builder**, and a live preview from the real draw engine ("With 14 riders: R1 4 heats of 3–4 → SF 2 heats of 4 → F 1 heat of 4 (7 heats)"); rules lock banner and "Unlock" with a reason.
+
+### Test evidence (this branch)
+- `npm run typecheck` clean · `npm run lint` clean · `npm run build` passes.
+- `npm test` → **Test Files 38 passed, Tests 412 passed** (282 at the end of Phase 2).
+- `npm run test:rls` → **Test Files 1 passed, Tests 80 passed**.
+- `npm run test:e2e` → **7 passed**, including two new organiser tests: settings → Event step → publish → listed on the home page; and Divisions (Simple, Advanced, presets, versions, export, import errors, format preview, custom builder, duplicate/reorder/delete, lock and unlock).
+
+### Choices I made where the docs were silent (please confirm or change)
+1. **Decision 6 wording**: "drop the best trick, then re-weight the remaining counted tricks". The engine already pulls the next-best trick into the freed slot after a drop, so I kept that and applied the weights in rank order to the new counted list (best 8, 7, 6, next 5 with `[1, 0.75, 0.5]`: 8 dropped → 7 + 4.5 + 2.5 = 14.00). If you meant "only the tricks that were counted, without a replacement", it is one line to change.
+2. **Automatic maximum with `categoriesCounted` smaller than the number of categories**: the largest limits are used (best possible score).
+3. **"Join PIN (auto)"** (docs/06 §1): officials already have their own PIN each, so the Event step shows the event code and join link and says PINs are made in the Officials step. **Wind-call banner** is a simple on/off setting for now (the calls arrive in Phase 5).
+4. **Published / draft switch** added to the Event step (not in the spec), otherwise a new event can never appear on the home page or accept registrations.
+5. **Public registration and self-add functions are service-only** (the server passes the visitor's address, as the PIN join does) instead of "anon allowed": safer, and rate limiting needs the address. They arrived in this PR's migration as asked; their public pages come in 4a-2.
+6. **Logos**: PNG, JPEG and WebP only; SVG is refused because it can carry scripts.
+7. The per-division identification override switch is saved; the per-division column and picker are scheduled for 4a-2 (docs/06 decision 26).
+8. First apply of the migration had a bug in the rate-limit function (found by the new tests); it was fixed in the migration file and patched on the hosted project. A fresh database gets the corrected version directly.
+
+### Not done (next PRs)
+- 4a-2: Riders, Officials, public registration page, officials' self-add form, `qrcode`, `@dnd-kit`. 4b: Draw, Run order & timetable, dashboard, `/e/<slug>` page.
+- The owner's real organisation is still called "Arrow Big Air": the rename to **Arrow / `arrow`** is the acceptance test and is yours to do in `/org/settings` (the browser test proves the screen works on a throwaway organisation).
+
+### How to test
+- **Vercel preview** (link in the pull request): open it → home page shows the product name, the two buttons and (once you publish an event) the event list. Organiser sign in → open the emailed link **in the same browser**.
+  1. *Organisation settings* (header button): rename "Arrow Big Air" to "Arrow", slug `arrow`, tick "I understand", upload a logo, pick a time zone, Save. Reload: values stay. Try a `.txt` file as a logo: a plain-language refusal.
+  2. *Events → + New event*: type a name (the web address fills itself), location, dates; pick a time zone (pre-filled from step 1); upload a logo; add a sponsor; in *Rider identification* switch the preset to "Bib / sail numbers" and watch the chip change; change a colour name; Save as preset; tick Published; Create event. Open the home page: your event is listed and links to its join page.
+  3. *Divisions* (left rail or "Next: Divisions →"): add "Pro Men"; choose the "Legacy…" scoring preset and read the sentence; change N, the attempt limit, the judges (Simple); switch to Advanced, open "Counting and heat total" and type weights `1, 0.75, 0.5`; Save as new preset; then edit it and use "Save as new version". Export JSON; paste broken JSON to see the readable errors. *Format* tab: pick a format, change "Preview with … riders", change riders per heat under "Format generator", or press "+ Start a custom format". Duplicate, reorder and delete a division.
+- **Phone**: same links; on a phone the left rail becomes a "Setup step" dropdown. Landscape tablet is the intended size for organiser screens.
+- **Laptop**: `npm install && npm run typecheck && npm test && npm run lint`; with keys in `.env.local`: `npm run test:rls` (about 70 s) and `npm run test:e2e` (about 1 minute; needs the Phase 3 demo seed for the join tests).
+
+### Phase 4a-1 – owner's UX feedback (second round on the same branch)
+**Security fix first.** While testing the new publish hold I found a real hole from Phase 3: any signed-in user with no seat and no membership in an event (for example a judge of another event, or another organisation's organiser) could add and delete attempts in any event if they knew a heat or attempt id. The permission check compared a possibly empty seat role, and in SQL an empty value makes the whole check "unknown", which lets the call through. Fixed in `20260930120100_fix_seatless_permission_checks.sql` (applied to the hosted dev project) with a regression test. It could not be triggered from the app screens (ids are random), and no real data was involved.
+
+Done, in the order of your list:
+1. **Wording**: "Rider label", "Lycra", "score", "Impression / Variety score" everywhere, including scheme names, presets and the Phase 3 join and sign-in screens. All text is in `src/lib/ui-copy.ts`; `src/lib/ui-copy.test.ts` fails if any component, source file, the copy file or a built-in preset contains "chip", "vest" or "mark(s)". Scoring presets that said "mark" are now version 2 (text only; divisions using version 1 are untouched).
+2. **Name call-out** scheme added and made the default for new events, with the question "Will riders wear coloured lycras?" (Yes picks "Lycra colour per heat").
+3. **Visibility**: one sentence and three tick boxes, all off by default, stored in `publicLiveScores`, `publicResultsOnPublish`, `holdFinalResult`. Database: `heats.publish_hold` and `set_publish_hold` (organiser or head judge, needs a reason to hold, audited); held results disappear from the public site. Phase 5 will set the hold at publish time from these settings.
+4. **Judges sentence** in Simple ("3 judges — plain average"), with the trimming rule stated.
+5. **Rules-lock banner** on the Divisions step. The unlock flow is covered by the browser test (start a heat, see the lock, unlock with a reason, audit line). I could not open your Vercel preview from here, so please try it there once heats exist (Phase 5) or by asking me to start a test heat.
+6. **Timing**: "Default timing" and "Field size this format suits" moved under Show all settings with the helper text.
+7. **Ladder type choice** (Knockout / Knockout with a second chance / Pools to a final) with the explanations you wrote; rounds are generated. "How riders are seeded into the next round" renamed with the two options.
+8. **Ladder diagram** next to the text preview ("With 14 riders: …").
+9. **Flag-out** under Show all settings with its helper text, off by default.
+10. **Simple mode** trimmed to the owner's default; "Show all settings" toggle for the rest.
+11. **"?" help** (tap) with a sentence and an example on every setting; a test fails when a schema field has no help or example.
+
+Things you should know:
+- For generated ladders the **breaks apply to every round** (the draw engine has no per-round break for them); per-round heat length, breaks and riders per heat exist in "Custom ladder (advanced)".
+- In "Knockout with a second chance" the advance count is **fixed** by the structure (winners straight through, 2nd and 3rd get one more heat), so there is no "how many advance" box for it.
+- The starting point of "Custom ladder" is only a scaffold (heats of 4, top 2, one final heat); with many riders that final gets big: the diagram shows it, adjust the rounds.
+- Old events whose live-scores setting was "off" become "after publish" when saved (the two behave the same until Phase 5).
+
+### How to test the second round (Vercel preview)
+1. **Events → + New event**: read the sentence and the three unticked boxes under "What riders and spectators see". Under "Rider identification" the label shows "Sam Sample"; choose "Yes: … lycra colour" and see "RED"; tap the "?" next to any field.
+2. **Divisions → Pro Men → Scoring**: choose the "Legacy…" preset; change "Number of judges" and the combine setting and read the sentence under it; tick "Show all settings" for everything.
+3. **Format tab**: pick a format; choose between the three ladder types; change "Preview with … riders" and watch the ladder diagram; "Show all settings" for flag-out and default timing.
+
+### Phase 4a-1 – heat length per round (generated ladders)
+- New optional template field `roundDurationMin` (round id → minutes) for the three generated ladder types; the draw engine applies it after the generator (tests `2h-round-durations.test.ts`: knockout, second chance, pools, breaks unchanged, unknown rounds ignored, only generated ladders, positive numbers). A custom ladder keeps its own per-round heat length.
+- The Format step shows a "Heat length per round" table under the ladder choice: one row per round of the preview, pre-filled from the single setting, "own length" marker on changed rows, and a reset button. Only real differences are stored on the division. The ladder diagram now shows each round's heat length ("4 heats · 3–4 riders · 10 min") and follows the table.
+- Test on the preview: Divisions → Format → pick "Single elimination" → change "Heat length: R1" to 9 and "Heat length: F" to 20 → watch the diagram → Save.
+
+### Phase 4a-1 – three fixes and plain ladder words (round 4)
+1. **Show all settings no longer hides Simple settings.** Simple (scoring and format) always stays; the advanced settings appear below it, and settings that Simple already shows are left out of the advanced part so nothing appears twice. A Playwright check confirms every Simple field is still there with Show all settings on.
+2. **Two plain numbers replace the "uneven rule"** under every generated format: "Riders per heat (target)" and "Minimum riders per heat" (default target − 1, at least 2; can equal the target), each with a "?". Rule (docs/04 decision 23, docs/08 §2G0): ceil(N / target) heats when every heat can meet the minimum, otherwise fewer heats; a field smaller than the minimum is one heat with everyone; top seeds in the smaller heats. All your examples are tests (14/3/3 → [1,8,9] [2,7,10] [3,6,11,14] [4,5,12,13]; 14/4/3; 13/4/3; 13/4/4 → 4/4/5; 5/4/4 → one heat of 5; 24/4/4). The old options stay only inside the custom ladder.
+3. **Plain words**: no "bye" (a rider who advances without riding is labelled "Advances without riding"), "Second-chance round" (heats "Second chance H1…"), "1 v 1 heats"; placeholders "1st H1", "2nd H3", "1st R2 H5", "1st of all heats". Preset names and descriptions were reworded (format presets are now version 2 on the hosted project). The banned-words test covers all of it.
+4. **Tags and minimum heats**: "Every rider gets at least 2 heats" under Knockout with a second chance; "Riders can be out after 1 heat" under Knockout and Pools to a final; the preview shows "Minimum heats per rider: N" (computed from the real draw).
+
+Things you should know:
+- **The minimum wins over the maximum.** Your rule cannot always hold both limits (11 riders, target 4, minimum 4 has no split of only 4s and 5s), so the heats are 5/6; when only one heat can meet the minimum (7 riders, target 4, minimum 4) everyone rides one heat.
+- **5 riders with the default minimum is now one heat of 5** (it used to be two heats, which eliminated nobody). Doc 08 §2A's old "N = 5" test now says minimum 2 to get the old split.
+- **The pools preset carries a minimum of 6** so 23 riders still make three pools of 7/8/8 (doc 08 §2E). With the default minimum (target − 1 = 9) 23 riders would make two pools of 11/12; if you want that instead, remove the 6.
+- **Knockout with a second chance**: the two numbers apply to Round 1; the two-rider rounds after it keep their structure (that is where riders advance without riding).
+- Only three ladder types exist today, so only their tags are shown. "Double elimination", "Qualifying heats + finals", "Round robin" ("Every rider gets at least 2 heats") and "Single final" ("Riders can be out after 1 heat") get their tag when those types are built.
+- "Main draw" / "Second-chance draw" are in the wording rules for the bracket view in 4b (there is no bracket screen yet).
+
+### How to test round 4 (Vercel preview)
+1. Divisions → Pro Men → **Format** → pick "Single elimination". Under the three choices read the tags. Change **Riders per heat (target)** to 3 and **Minimum riders per heat** to 3: with 14 riders the diagram shows heats of 3, 3, 4, 4.
+2. Set target 4, minimum 4, "Preview with" 13 → 4/4/5; 5 → one heat.
+3. Choose **Knockout with a second chance**: the tag, "Minimum heats per rider: 2", "Second chance H1", "Advances without riding", placeholders like "1st R1 H1".
+4. Tick **Show all settings** (Scoring and Format): everything you saw before is still there, with more below.
+
+### Phase 4a-1 – three numbers per heat, and every round of the second-chance ladder follows them (round 5)
+1. **Heat sizing is now three numbers** on every generated format: "Riders per heat (target)", "Minimum per heat" (default target − 1, at least 2) and "Maximum per heat" (default target + 1, at most 10); min = max = target is allowed. Every heat holds between the minimum and the maximum; the number of heats keeps the sizes closest to the target (fewer heats on a tie); top seeds get the smaller heats; capacity-aware snake dealing as before (docs/04 decision 23, docs/08 §2G0). All eight of your examples and the earlier ones are tests.
+2. **Every round of "Knockout with a second chance" follows the same rule** (docs/04 decision 27, docs/08 §2C and §2G2). Round 1 winners go to the main draw; the others get a second chance; second-chance winners join the main draw; the main draw runs as many rounds as it needs; the final follows. No generated ladder contains a heat below the minimum or a rider who advances without riding, and every round before the final has at least two heats (asserted for N = 8, 10, 12, 14, 16, 18, 24 and three settings; N = 2–40 place every rider once). Your 14-rider example (3 / 3 / 4) gives R1 3/3/4/4 → Second chance 3/3/4 → Semi-finals 3/4 → Final of 4.
+3. **The diagram names who is out**: "1st–2nd → SF · 3rd–4th → out" (actual places, not "the rest").
+4. New warning when a field is too small to keep all three numbers ("Heat 5 has 6 riders, which is more than the maximum of 5").
+
+Things you should know (please confirm or change):
+- **Two of your requests contradict each other, so I kept the promise and added a switch.** You wrote that the 4th place of a 4-rider heat is out, and also that every rider must have at least 2 heats before being out; both cannot be true. Default: everyone who does not win gets a second chance (so the tag "Every rider gets at least 2 heats" stays true, and the old build had silently thrown the 4th of a 4-rider heat out while the tag still said 2 heats). New setting "Riders per heat who get a second chance": "Everyone who did not win" or "2nd and 3rd only; the others are out" (also 2nd only, or up to 5th). With that choice the diagram shows "4th → out", the preview says "Minimum heats per rider: 1" and the menu tag changes to "Riders can be out after 1 heat". The doc 08 tests assert ≥ 2 heats for the default and the 14-rider trace from your message for the "2nd and 3rd only" choice.
+- **One earlier example cannot hold with a literal reading of your new rule.** "Closest to the target, fewest heats on a tie" would make 13 riders at 4 / 3 / 5 → 4/4/5 and 14 at 4 / 3 / 5 → 4/5/5, but you asked that 13/4/3 → 3/3/3/4 and 14/4/3 → 3/3/4/4 still hold with the default maximum. I kept your examples: heats above the target count far more than heats below it, so the number of heats is ceil(N / target) whenever every heat can meet the minimum. All your new examples hold as well.
+- **The 1 v 1 structure of the second-chance ladder is gone.** Doc 08 §2C used to pin the King-of-the-Air structure (N = 18: 22 heats, heats of 2 after Round 2, top seeds advancing without riding at N = 12). Your rule "every round follows the sizing rule, nobody advances without riding" cannot produce that, so N = 18 is now 6 + 4 + 4 + 1 = 15 heats (Round 1 6×3, Second chance 4×3, Round 3 2/2/3/3, Final of 4). Set the target to 2 for 1 v 1 style heats. If you need the exact King-of-the-Air 18-rider ladder, it has to be a fixed (custom) preset. I renamed the preset ("Knockout with a second chance (heats of 3, second-chance round, main-draw rounds, final)").
+- **The Final can be bigger or smaller than "Final size".** "Final size" is the size aimed for; the ladder may end in a final of 4 (top 2 of 2 heats of 3) rather than make someone skip. A final of fewer than the aimed size is used only when nothing else fits (8 riders at the defaults end in a final of 2).
+- **Small fields:** with the defaults 4 or 5 riders still make a second-chance ladder (heats 2/2 or 2/3, one second-chance heat); with a minimum of 3 they are one heat.
+- The explanation under "Knockout with a second chance" changed from "…2nd and 3rd get one more heat to qualify" to "…the other riders get one more heat to qualify", because 4th place also gets one by default. The banned-word test and the wording test were adapted.
+- The second-chance advance count is chosen by the planner (1st goes on, sometimes 1st–2nd or 1st–3rd when the final would otherwise be too small or too big); it is not a setting.
+
+### How to test round 5 (Vercel preview)
+1. Divisions → Pro Men → **Format** → "Single elimination": set **Riders per heat (target)** 3, **Minimum per heat** 3, **Maximum per heat** 4, "Preview with" 14 → heats of 3, 3, 4, 4. Change minimum to 2 and maximum to 3 → 2/3/3/3/3. Target 4, minimum 4, maximum 5 with 13 riders → 4/4/5; with 5 riders → one heat of 5; maximum 4 with 24 riders → six heats of 4.
+2. Pick **Knockout with a second chance**, target 3, minimum 3 (maximum 4), 14 riders: "R1 4 heats of 3–4 → Second chance 3 heats of 3–4 → SF 2 heats of 3–4 → F 1 heat of 4 (10 heats)", no "Advances without riding" anywhere. Try 16 and 18 riders.
+3. Set **Riders per heat who get a second chance** to "2nd and 3rd only; the others are out": the diagram shows "4th → out" and the tag/minimum-heats change; set it back to "Everyone who did not win".
+4. Tick **Show all settings**: all Simple fields (including Minimum, Maximum and second chance) are still visible.
+
+### Phase 4a-1 – the Format tab as one card, four new formats, visual custom builder (round 6)
+Done:
+- **One picker.** Seven ladder cards (Knockout · Knockout with a second chance · Double elimination · Qualifying heats + finals · Pools to a final · Round robin · Single final) with your one-line explanations and tags; "Start from a format" is gone, "Load a saved format…" and "Build my own ladder…" sit at the top. Order: cards, one row of the numbers that format uses (labels above inputs), "Preview with … riders" + 8 / 14 / 24, the diagram with the text preview under it, "Heat length per round", "Show all settings" (single heat lengths, breaks, flag-out and timing moved there).
+- **Round and heat names** are editable by clicking them on the diagram, on every format; they are stored as overrides keyed by round id (`roundNames`) and heat id (`heatNames`), survive regeneration, sit on `DrawRound.name` / `DrawHeat.name` for the timetable and public pages (those pages do not exist yet), and a blank name restores the default.
+- **Four new generators**, tests first (docs/04 decisions 28–31, docs/08 §2G00): double elimination, qualifying heats + finals, round robin, single final. Every generated round obeys target / minimum / maximum; none has a rider who advances without riding. Four new system presets (seeded to the hosted project).
+- **Megaloop men and women** are hidden from the menus (`hidden: true`; files and tests kept).
+- **Custom ladder** is a visual builder: round cards with target / minimum / maximum and a dropdown for every place, "+ Add round" on the diagram and below, live checks that name the round and the counts, "Save as my format", offered again by "Load a saved format…". Where riders come from is worked out from the dropdowns.
+
+Things you should know (please confirm or change):
+- **Your Decisions log references do not match the docs.** docs/04 items 13 and 16–18 are draft/locked draws, "Seed now", pool ranking, cross-pool tie-break and manual seeding; docs/08 has no §2G or §2G00 for these formats. So the three rules that were missing were put to you and answered: bottom half drops in double elimination, top 2 of each draw to the final for now (a setting, 2 = the two draw winners), place points editable for round robin. The docs now have decisions 28–32 and §2G00.
+- **"Everything visible without scrolling on a laptop" is not possible.** Measured at 1440 × 900, page scrolled to the top: the Format tab itself starts at y ≈ 480 (event header, step rail and division card above it), the seven cards fill y ≈ 770–1520, the numbers row starts at y ≈ 1540, "Preview with" at ≈ 1800 and the diagram spans ≈ 1860–2390. Everything is on the page without toggling anything (a Playwright test asserts that), but it takes scrolling. Making it fit would mean dropping the explanations from the cards or moving the diagram beside them; tell me if you want either.
+- **The double-elimination card text** says "The best riders of each draw meet in the final" instead of "The two draw winners meet in the final", because the default is now the top 2 of each draw (final of 4).
+- **Qualifying: "at least 2 heats"** is true because the default is 2 qualifying heats per rider ("Heats per rider"); set it to 1 and the tag changes to "Riders can be out after 1 heat" (the tag follows the real minimum).
+- **Round robin** repeats opponents when the field cannot avoid it (8 riders in 2 heats of 4: 4 repeated pairs; 12 riders: about 3 per round); with 16, 20, 24 or 30 riders none.
+- **Double elimination cannot keep all three numbers for a few field sizes** (3 / 3 / 4 with 13 riders; 7–8 riders); the draw warns. With the default numbers (3, minimum 2, maximum 4) every field from 10 to 40 riders works.
+- **The Final size in double elimination is even** (top N / 2 of each draw).
+- Heat lengths and breaks are no longer on the Simple screen (your (e) and (f)): the per-round table is pre-filled from the ladder's own lengths; the single lengths are under Show all settings.
+- No database change this round (only preset rows), so `test:rls` was not re-run.
+
+### How to test round 6 (Vercel preview)
+1. Events → your event → Divisions → Pro Men → **Format**. Seven cards, no "Start from a format" list. Click each card: its numbers, "Preview with", the diagram and "Heat length per round" are all on the page.
+2. Click a round name in the diagram (e.g. "Semi-finals"), type a name, press Enter; change "Preview with" to 24: the name stays. Blank it: the default comes back. Click a heat name too.
+3. **Double elimination**, 14 riders: "Main draw 1", "Second-chance draw 1", the final of 4; set Final size 2. **Qualifying heats + finals**: Small final; Heats per rider 1 changes the tag. **Round robin**: Heats per rider 4, Points table "10, 6, 3, 1". **Single final**: one heat.
+4. "Load a saved format…": Megaloop is not in the list. "Build my own ladder…": press "+ Add round after Round 1", send 1st and 2nd of Round 2 to the Final with the dropdowns, read the checks, "Save as my format", then load it again from "Load a saved format…".
+
+### Phase 4a-1 – compact format cards and organiser password sign-in (round 7)
+Done:
+- **Compact cards**: one line each (name, tag and a "?"), the one-line explanation under the selected card only. With the Format tab at the top of a 1440 × 900 window the cards, the numbers row, "Preview with" and the top of the diagram are all in view (Playwright asserts it). To get there I also removed the "Ladder type" heading row, the preset description under the load buttons and the "Every heat holds N to M riders" note, and tightened the spacing.
+- **Email + password for organisers**: /org/login has email and password, "Sign in", "Sign in with a link instead" and "Forgot password?" (sends the existing link, which opens /org/set-password). "Set a password" (also in the header) lets an existing account set its first password after a link sign-in. Wrong password and unknown address give the same message. Officials' PIN flow unchanged. Playwright: `e2e/password-login.spec.ts` (right/wrong password, unknown address, non-organiser refused, forgot-password checks, set password then sign in, PIN page unchanged).
+- Hosted auth settings applied by `npm run auth:password`: email provider on (it already was), minimum password length 8.
+
+Things you should know:
+- **I did not switch public sign-up off**, although "keep invite-only" suggests it: I tried, and Supabase's switch also blocks the anonymous sessions the officials' PIN flow uses (the join tests failed), so I put it back. Invite-only is kept by the app: no sign-up form, an unconfirmed self-made account cannot sign in (Supabase's standard behaviour with confirmation on; not tested here because a sign-up sends a real email), and a password sign-in without an organiser membership is refused and signed out. A stranger can still create an unconfirmed auth user through the public API (it sends them a confirmation email) but cannot get in; closing that fully needs a custom SMTP + hook, which I did not add.
+- Password sign-in was already technically enabled on the project; "enable the provider" changed only the minimum length.
+- The existing invite-only e2e test now first clicks "Sign in with a link instead" (the page opens in password mode).
+- "Forgot password?" is not tested with a real address (each one sends a real email and the project allows 2 per hour); it is tested with an empty and an unregistered address.
+- Removed the "Every heat holds N to M riders" note under the numbers to save height.

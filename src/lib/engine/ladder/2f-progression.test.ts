@@ -19,15 +19,15 @@ describe("2F publish → pools", () => {
     expect(d.results["R1-H2"].ranked.map((r) => r.entrantId)).toEqual(["r2", "r11", "r14"]);
   });
 
-  it("R2 heats are generated only when all six R1 heats are published", () => {
+  it("the second-chance round is dealt only when all six R1 heats are published", () => {
     let d = draw18();
     for (const id of ["R1-H1", "R1-H2", "R1-H3", "R1-H4", "R1-H5"]) d = publish(d, id);
     expect(round(d, "R2").seeded).toBe(false);
     expect(shape(d, "R2").flat().every((s) => /^H\dp[23]$/.test(s))).toBe(true);
     d = publish(d, "R1-H6");
     expect(round(d, "R2").seeded).toBe(true);
-    // 2nd places first by total (7..12), then 3rd places (13..18), snaked over 6 heats of 2.
-    expect(seeds(d, "R2")).toEqual([[7, 18], [8, 17], [9, 16], [10, 15], [11, 14], [12, 13]]);
+    // 2nd places first by total (7..12), then 3rd places (13..18), snaked over 4 heats of 3.
+    expect(seeds(d, "R2")).toEqual([[7, 14, 15], [8, 13, 16], [9, 12, 17], [10, 11, 18]]);
   });
 
   it("'Seed now' proceeds with the missing places as DNS walkovers", () => {
@@ -37,11 +37,13 @@ describe("2F publish → pools", () => {
     expect(round(d, "R2").seeded).toBe(true);
     expect(round(d, "R2").seededNow).toBe(true);
     // Real riders 8..17 in score order, then the two walkovers at the bottom → they meet the top seeds.
-    expect(shape(d, "R2")).toEqual([["8", "WO"], ["9", "WO"], ["10", "17"], ["11", "16"], ["12", "15"], ["13", "14"]]);
-    expect(heatCanRun(d, "R2-H1")).toBe(true);
-    const wo = heat(d, "R2-H1").slots[1];
-    expect(wo.modifier).toBe("DNS");
-    expect(wo.from).toEqual({ round: "R1", heat: 6, place: 3 });
+    expect(shape(d, "R2")).toEqual([["8", "15", "16"], ["9", "14", "17"], ["10", "13", "WO"], ["11", "12", "WO"]]);
+    expect(heatCanRun(d, "R2-H3")).toBe(true);
+    for (const id of ["R2-H3", "R2-H4"]) {
+      const wo = heat(d, id).slots[2];
+      expect(wo.modifier).toBe("DNS");
+      expect(wo.from).toMatchObject({ round: "R1", heat: 6 });
+    }
   });
 
   it("a late result after 'Seed now' re-deals the round while its heats have not started", () => {
@@ -49,7 +51,7 @@ describe("2F publish → pools", () => {
     for (const id of ["R1-H1", "R1-H2", "R1-H3", "R1-H4", "R1-H5"]) d = publish(d, id);
     d = seedNow(d, "R2");
     d = publish(d, "R1-H6");
-    expect(seeds(d, "R2")).toEqual([[7, 18], [8, 17], [9, 16], [10, 15], [11, 14], [12, 13]]);
+    expect(seeds(d, "R2")).toEqual([[7, 14, 15], [8, 13, 16], [9, 12, 17], [10, 11, 18]]);
   });
 
   it("does not mutate its input", () => {
@@ -155,10 +157,10 @@ describe("2F correction conflict", () => {
   it("a correction whose downstream has not started recomputes the pools", () => {
     let d = draw18();
     d = publishRound(d, "R1");
-    expect(seeds(d, "R2")[0]).toEqual([7, 18]);
+    expect(seeds(d, "R2")[0]).toEqual([7, 14, 15]);
     const res = applyHeatResult(d, "R1-H1", swapWinner(d, "R1-H1"));
     expect(res.conflict).toBeUndefined();
-    // Seed 12 now wins R1-H1 (→ R3) and seed 1 drops into the repechage with the best 2nd-place total.
+    // Seed 12 now wins R1-H1 (→ R3) and seed 1 drops into the second-chance round with the best 2nd-place total.
     expect(round(res.draw, "R3").arrivals.map((a) => a.originalSeed)).toContain(12);
     expect(round(res.draw, "R2").arrivals.map((a) => a.originalSeed)).toContain(1);
     expect(seeds(res.draw, "R2").flat()).toContain(1);
@@ -198,7 +200,7 @@ describe("2F manual override", () => {
   it("auto-seeding leaves a hand-arranged heat alone", () => {
     let d = draw18();
     for (const id of ["R1-H1", "R1-H2", "R1-H3", "R1-H4", "R1-H5", "R1-H6"]) d = publish(d, id);
-    d = manualMove(d, { from: { heatId: "R2-H1", slot: 0 }, to: { heatId: "R2-H6", slot: 1 } });
+    d = manualMove(d, { from: { heatId: "R2-H1", slot: 0 }, to: { heatId: "R2-H4", slot: 1 } });
     const arranged = structuredClone(heat(d, "R2-H1").slots);
     // A harmless re-publish of R1-H6 makes the engine re-deal R2 — the arranged heats stay as they are.
     const res = applyHeatResult(d, "R1-H6", resultBy(heat(d, "R1-H6"), (s) => 100 - s));
@@ -272,12 +274,12 @@ describe("2F rider identification warnings (doc 08 §5)", () => {
   });
 
   it("warnings appear again when a later round is seeded with riders whose identifiers clash", () => {
-    // Seeds 1 and 6 never share a heat until the semi-final (SF-H1); both wear green.
-    const make = (s: number) => (s === 1 || s === 6 ? { identifiers: { vest_colour: "green" } } : {});
+    // Seeds 3 and 6 never share a heat until Round 3 (R3-H3); both wear green.
+    const make = (s: number) => (s === 3 || s === 6 ? { identifiers: { vest_colour: "green" } } : {});
     let d = expandFormat(kota(), makeEntrants(18, make), { identification: "fixed-lycra-per-rider" });
     expect(d.warnings.filter((x) => x.type === "duplicate_identifier")).toEqual([]);
     for (const r of ["R1", "R2", "R3"]) d = publishRound(d, r);
     const w = d.warnings.filter((x) => x.type === "duplicate_identifier");
-    expect(w.map((x) => x.heatId)).toEqual(["SF-H1"]);
+    expect(w.map((x) => x.heatId)).toEqual(["R3-H3"]);
   });
 });

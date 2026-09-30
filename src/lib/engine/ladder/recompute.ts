@@ -2,6 +2,8 @@
 // Internal: expandFormat, applyHeatResult, seedNow, withdrawEntrant and manualMove all go through here.
 import type { RoundSpec } from "@/lib/schemas/format-template";
 import {
+  crossComplete,
+  crossTier,
   isSeedFed,
   makeSlot,
   orderArrivals,
@@ -38,7 +40,7 @@ function arrivalFrom(draw: DivisionDraw, from: DrawRound, h: DrawHeat, e: { entr
   const slot = h.slots.find((s) => s.entrantId === e.entrantId);
   const tieKeys = e.tieKeys ?? [];
   const prior = slot?.history ?? [];
-  const history: HistoryEntry[] = implicit ? prior : [...prior, { round: from.id, heat: h.index, total: e.total, tieKeys }];
+  const history: HistoryEntry[] = implicit ? prior : [...prior, { round: from.id, heat: h.index, total: e.total, tieKeys, place: e.place, size: h.slots.length }];
   return {
     entrantId: e.entrantId,
     originalSeed: seedNumber(draw, e.entrantId),
@@ -67,15 +69,16 @@ export function collectArrivals(draw: DivisionDraw, round: DrawRound): Arrival[]
     const from = draw.rounds.find((r) => r.id === src.round)!;
     const cross = from.spec.crossHeat;
     if (cross) {
-      if (cross.to !== round.id || !roundComplete(draw, from)) continue;
+      const tier = crossTier(cross, round.id);
+      if (!tier || !crossComplete(draw, from)) continue;
       rankAcross(draw, from)
-        .slice(0, cross.advanceTop)
+        .slice(tier.start, tier.start + tier.count)
         .forEach((r, i) =>
           push({
             entrantId: r.entrantId,
             originalSeed: r.seed,
-            from: { round: from.id, heat: 0, place: i + 1 },
-            place: i + 1,
+            from: { round: from.id, heat: 0, place: tier.start + i + 1 },
+            place: tier.start + i + 1,
             total: r.combined,
             tieKeys: r.tieKeys,
             ...(r.modifier ? { modifier: r.modifier } : {}),

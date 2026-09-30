@@ -7,6 +7,7 @@
   "vestColours": ["red", "blue", "yellow"],
   "timing": { "defaultHeatMin": 8, "defaultBreakAfterHeatMin": 3, "defaultBreakAfterRoundMin": 5 },
   "kind": "fixed",
+  "hidden": true,
   "rounds": [
     { "id": "R1", "name": "Round 1", "shortName": "R1", "heatSize": 3, "durationMin": 8, "entrantsFrom": [{ "type": "seeds" }], "seeding": "snake", "uneven": "smaller_heats_for_top_seeds", "reseed": "by_original_seed", "advance": [{ "places": [1], "to": "F" }, { "places": [2], "to": "SF" }, { "places": "rest", "to": "eliminated" }], "minRidersToRun": 1 },
     { "id": "SF", "name": "Semi-final", "shortName": "SF", "heatSize": 2, "durationMin": 8, "entrantsFrom": [{ "type": "round_places", "round": "R1", "places": [2] }], "seeding": "sequential", "uneven": "smaller_heats_for_top_seeds", "reseed": "by_place_then_score", "advance": [{ "places": [1], "to": "F" }, { "places": "rest", "to": "eliminated" }], "minRidersToRun": 1 },

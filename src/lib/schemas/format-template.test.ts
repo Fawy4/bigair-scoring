@@ -14,8 +14,8 @@ const gen = (params: Record<string, unknown>, type = "single_elimination") => ({
 });
 
 describe("FormatTemplate schema — presets", () => {
-  it("finds all five presets", () => {
-    expect(files).toHaveLength(5);
+  it("finds all nine presets (five earlier ones and the four new generators)", () => {
+    expect(files).toHaveLength(9);
   });
 
   it.each(files)("parses %s", (file) => {

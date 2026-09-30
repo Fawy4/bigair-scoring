@@ -15,6 +15,14 @@ export function compareTricks(a: EligibleTrick, b: EligibleTrick): number {
   return b.score - a.score || Number(b.landed) - Number(a.landed) || a.seq - b.seq;
 }
 
+/** How many tricks of one category may count: the per-category dial, else maxPerCategory. */
+export function categoryLimit(
+  counting: { maxPerCategory: number; perCategoryMax?: Record<string, number> },
+  categoryKey: string,
+): number {
+  return counting.perCategoryMax?.[categoryKey] ?? counting.maxPerCategory;
+}
+
 /**
  * Picks the counted tricks (doc 03 §4.3), best first. Uncategorised tricks cannot count under
  * best_per_category (they are reported by the caller).
@@ -47,7 +55,7 @@ export function selectCounted(model: ScoringModel, eligible: EligibleTrick[]): E
       for (const t of sorted) {
         if (t.categoryKey === null) continue;
         const g = groups.get(t.categoryKey) ?? [];
-        if (g.length < counting.maxPerCategory) g.push(t);
+        if (g.length < categoryLimit(counting, t.categoryKey)) g.push(t);
         groups.set(t.categoryKey, g);
       }
       const limit = counting.categoriesCounted ?? Infinity; // default: every category

@@ -1,12 +1,13 @@
 {
   "id": "megaloop-men-16",
-  "name": "Megaloop Men (16 riders, 1-vs-1 heats, final of 3)",
+  "name": "Megaloop Men (16 riders, 1 v 1 heats, final of 3)",
   "description": "Fixed ladder from the Red Bull Megaloop 2026 Men's Division: R1 8 heats of 2 (winners to R3, runners-up to R2); R2 4 heats of 2 (winners to R3); R3 6 heats of 2 (winners to SF); SF 3 heats of 2 (winners to Final); Final of 3. Pair with the megaloop-single-best scoring preset.",
   "basedOn": "Red Bull Megaloop 2026 format (redbull.com)",
   "entrants": { "min": 16, "max": 16 },
   "vestColours": ["red", "blue", "yellow"],
   "timing": { "defaultHeatMin": 8, "defaultBreakAfterHeatMin": 2, "defaultBreakAfterRoundMin": 5 },
   "kind": "fixed",
+  "hidden": true,
   "rounds": [
     { "id": "R1", "name": "Round 1", "shortName": "R1", "heatSize": 2, "durationMin": 8, "entrantsFrom": [{ "type": "seeds" }], "seeding": "snake", "uneven": "smaller_heats_for_top_seeds", "reseed": "by_original_seed", "advance": [{ "places": [1], "to": "R3" }, { "places": [2], "to": "R2" }], "minRidersToRun": 1 },
     { "id": "R2", "name": "Round 2 (second chance)", "shortName": "R2", "heatSize": 2, "durationMin": 8, "entrantsFrom": [{ "type": "round_places", "round": "R1", "places": [2] }], "seeding": "snake", "uneven": "smaller_heats_for_top_seeds", "reseed": "by_place_then_score", "advance": [{ "places": [1], "to": "R3" }, { "places": "rest", "to": "eliminated" }], "minRidersToRun": 1 },

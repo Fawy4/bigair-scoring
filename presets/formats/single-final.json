@@ -1,0 +1,12 @@
+{
+  "id": "single-final",
+  "name": "Single final (one heat, that is the result)",
+  "description": "Everyone rides one heat; the heat result is the result. Best for small divisions (up to 10 riders).",
+  "basedOn": "One heat",
+  "entrants": { "min": 1, "max": 10 },
+  "vestColours": ["red", "yellow", "blue", "green", "white", "black", "orange", "pink", "purple", "grey"],
+  "timing": { "defaultHeatMin": 15, "defaultBreakAfterHeatMin": 3, "defaultBreakAfterRoundMin": 5 },
+  "kind": "generator",
+  "generator": { "type": "single_final", "params": { "finalMin": 15 } },
+  "placings": { "eliminated": "shared", "finalHeatIsRanking": true }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "qualifying-to-finals",
+  "name": "Qualifying heats + finals (best to the Final, next best to a Small final)",
+  "description": "Everyone rides qualifying heats (2 each by default; the best heat counts). The best-scoring riders go to the Final, the next best to a Small Final, the rest are placed by their qualifying result. Every rider rides at least 2 heats.",
+  "basedOn": "Qualifying heats seeding a Final and a Small final",
+  "entrants": { "min": 6, "max": 60 },
+  "vestColours": ["red", "yellow", "blue", "green", "white", "black", "orange", "pink", "purple", "grey"],
+  "timing": { "defaultHeatMin": 10, "defaultBreakAfterHeatMin": 3, "defaultBreakAfterRoundMin": 5 },
+  "kind": "generator",
+  "generator": {
+    "type": "qualifying_to_finals",
+    "params": {
+      "heatSize": 4,
+      "finalSize": 4,
+      "smallFinalSize": 4,
+      "qualifyingRounds": 2,
+      "qualifyingCombine": "best",
+      "qualifyingMin": 10,
+      "smallFinalMin": 12,
+      "finalMin": 15,
+      "seeding": "snake"
+    }
+  },
+  "placings": { "eliminated": "by_heat_score", "finalHeatIsRanking": true }
+}

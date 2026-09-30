@@ -16,8 +16,9 @@ Next.js 15 (App Router, TypeScript strict) · Tailwind + shadcn/ui · Supabase (
 - `npx supabase db reset` — rebuild local DB from `supabase/migrations` + `supabase/seed.sql`
 - `npx supabase db push` — apply migrations to the linked hosted project (blocked in some sandboxes: use `npm run db:apply`, which sends them over HTTPS; `npm run db:combine` writes `supabase/combined.sql` for the SQL Editor)
 - `npm run test:rls` — Row Level Security tests against the hosted dev project (separate from `npm test`; skips without keys)
-- `npm run seed:demo` / `npm run bootstrap:organiser` — demo draw / create the organiser login + organisation
-- `npm run seed:presets` — upsert `presets/**/*.json` into `scoring_models` / `format_templates`
+- `npm run seed:demo` / `npm run bootstrap:organiser -- --email … --org-name … --org-slug …` — demo draw / create the organiser login + organisation (name and slug are required)
+- `npm run auth:password` — enables email + password sign-in for organisers in the hosted auth settings (Management API; idempotent)
+- `npm run seed:presets` — upsert `presets/**/*.json` into `scoring_models` / `format_templates` / `presets` (identification schemes, schedule templates)
 
 ## Repo layout
 ```
@@ -38,8 +39,9 @@ docs/               specs; docs/STATUS.md = running progress log (update at end 
 4. **Security:** RLS on every table. Judges/spotters/head judge authenticate by per-event PIN/QR (anonymous Supabase session bound to a `judge_seats` row); organisers by magic link. Service-role key only in server code. Never commit `.env*`.
 5. **Auditability:** every score create/edit/delete writes `audit_log` (who, before, after, when, reason). Published results are snapshotted in `heat_results`.
 6. **Resilience:** score submissions go through a client queue with retry + idempotency key; UI shows pending/synced state. Publishing is blocked while required scores are missing unless the head judge explicitly overrides (recorded).
-7. **Mobile first:** judge/spotter screens are one-thumb, high contrast for sunlight, sizes and rules per docs/06 §00 (beach readability standard: pad buttons ≥56px, taps only), works in Safari iOS and Chrome Android. Rider identification follows the event's configurable scheme (vest colour per heat, fixed lycra, bib number, kite brand/model/size/colours, rash guard, photo — docs/06 §0, presets/identification): one shared RiderChip component everywhere, colour always shown as text too, never assume vests exist.
-8. **Dependencies:** the stack above plus shadcn/ui's helper packages (Radix UI primitives, class-variance-authority, clsx, tailwind-merge, lucide-react, tailwindcss-animate) are pre-approved; anything else, ask first.
+7. **Mobile first:** judge/spotter screens are one-thumb, high contrast for sunlight, sizes and rules per docs/06 §00 (beach readability standard: pad buttons ≥56px, taps only), works in Safari iOS and Chrome Android. Rider identification follows the event's configurable scheme (lycra colour per heat, fixed lycra, bib number, kite brand/model/size/colours, rash guard, photo, name call-out — docs/06 §0, presets/identification): one shared RiderLabel component everywhere, colour always shown as text too, never assume vests exist.
+8. **Wording:** every user-facing string lives in `src/lib/ui-copy.ts`, never inline in a component. House words (a test enforces them): "Rider label", "Lycra", "score", "Impression / Variety score"; never the old words for them. Every setting has a "?" (tap) with one sentence and an example.
+9. **Dependencies:** the stack above plus shadcn/ui's helper packages (Radix UI primitives, class-variance-authority, clsx, tailwind-merge, lucide-react, tailwindcss-animate) are pre-approved; anything else, ask first.
 
 ## Workflow rules
 - Start each phase by reading `docs/STATUS.md` and ONLY the docs the prompt references. Use plan mode for multi-file work; keep plans short.
@@ -49,7 +51,7 @@ docs/               specs; docs/STATUS.md = running progress log (update at end 
 - Explain in plain language; the owner is a competition judge, not an engineer.
 
 ## Domain glossary
-Event → Divisions → Rounds → Heats → Slots (riders shown as a RiderChip per the identification scheme: vest colour / bib number / kite / rash guard). Attempt = one trick by one rider (logged by spotter/judge; landed | crashed). Judge trick score (from criteria or single mark) → Panel score (mean / trimmed mean / median) → Counted tricks (best N / best per category / single best) + Impression → Heat total → Rank (tie-breakers) → Ladder progression → Timetable (anchors, durations, breaks, wind holds). Modifiers: DNS, DNF, DSQ, INT. Head judge = reviews/overrides/publishes; optional.
+Event → Divisions → Rounds → Heats → Slots (riders shown as a RiderLabel per the identification scheme: vest colour / bib number / kite / rash guard). Attempt = one trick by one rider (logged by spotter/judge; landed | crashed). Judge trick score (from criteria or single mark) → Panel score (mean / trimmed mean / median) → Counted tricks (best N / best per category / single best) + Impression → Heat total → Rank (tie-breakers) → Ladder progression → Timetable (anchors, durations, breaks, wind holds). Modifiers: DNS, DNF, DSQ, INT. Head judge = reviews/overrides/publishes; optional.
 
 ## Gotchas
 - Never `select *` from `events` or `judge_seats` in client code: the PIN/QR hash columns are unreadable by design, so name the columns.

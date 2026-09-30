@@ -13,7 +13,12 @@ const site = arg > -1 ? process.argv[arg + 1].replace(/\/$/, "") : null;
 const allow = ["http://localhost:3000/**", "https://*.vercel.app/**"];
 if (site) allow.push(`${site}/**`);
 
-const body = {
+// --password-only: just the sign-in settings for organisers' email + password (touches nothing else).
+//   email provider on and passwords of at least 8 characters. Public sign-up is NOT switched off: Supabase's switch also blocks the
+//   anonymous sessions that judges, spotters and the head judge use. Invite-only is kept by the app instead: no sign-up form,
+//   unconfirmed sign-ups cannot sign in, and a password sign-in without an organiser membership is refused and signed out.
+const passwordOnly = process.argv.includes("--password-only");
+const body = passwordOnly ? { external_email_enabled: true, disable_signup: false, password_min_length: 8 } : {
   external_anonymous_users_enabled: true,
   uri_allow_list: allow.join(","),
   ...(process.argv.includes("--with-template")
@@ -33,5 +38,8 @@ console.log({
   anonymous_sign_ins: cfg.external_anonymous_users_enabled,
   redirect_allow_list: cfg.uri_allow_list,
   site_url: cfg.site_url,
+  email_provider_enabled: cfg.external_email_enabled,
+  public_signup_disabled: cfg.disable_signup, // stays false on purpose (see above)
+  password_min_length: cfg.password_min_length,
   magic_link_template_uses_token_hash: String(cfg.mailer_templates_magic_link_content).includes("TokenHash"),
 });

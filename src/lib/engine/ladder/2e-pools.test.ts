@@ -92,7 +92,7 @@ describe("2E pools_to_final, poolRounds = 2", () => {
 
   it("pool round 2 is a fresh draw: riders meet different opponents than in round 1", () => {
     // N = 8: round-1 score order is 1, 4, 2, 3, 5, 8, 6, 7 → round-2 heats [1,3,5,7] · [4,2,8,6] (round 1 was [1,4,5,8] · [2,3,6,7]).
-    const t = expandFormat(pools({ heatSize: 4, finalists: 2, poolRounds: 2 }), makeEntrants(8));
+    const t = expandFormat(pools({ heatSize: 4, minHeatSize: 3, finalists: 2, poolRounds: 2 }), makeEntrants(8));
     const totals: Record<number, number> = { 1: 90, 4: 80, 2: 70, 3: 60, 5: 50, 8: 40, 6: 30, 7: 20 };
     const d = publishRound(t, "P1", (s) => totals[s]);
     expect(seeds(d, "P1")).toEqual([[1, 4, 5, 8], [2, 3, 6, 7]]);
@@ -110,7 +110,7 @@ describe("2E pools_to_final, poolRounds = 2", () => {
   });
 
   it("for `sum`, a tie is decided by the tie-break keys of the better single heat, then by seed (Decision 7)", () => {
-    const t = expandFormat(pools({ heatSize: 4, finalists: 2, poolRounds: 2, poolCombine: "sum" }), makeEntrants(8));
+    const t = expandFormat(pools({ heatSize: 4, minHeatSize: 3, finalists: 2, poolRounds: 2, poolCombine: "sum" }), makeEntrants(8));
     // seed1 dominates. Seed 2: 60 + 40 = 100 (better heat 60, keys [7]). Seed 3: 50 + 50 = 100 (better heat keys [9]).
     const s1 = (s: number) => (s === 1 ? { total: 100, tieKeys: [5] } : s === 2 ? { total: 60, tieKeys: [7] } : s === 3 ? { total: 50, tieKeys: [9] } : { total: 10 - s, tieKeys: [] });
     const s2 = (s: number) => (s === 1 ? { total: 100, tieKeys: [5] } : s === 2 ? { total: 40, tieKeys: [1] } : s === 3 ? { total: 50, tieKeys: [9] } : { total: 10 - s, tieKeys: [] });

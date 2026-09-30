@@ -35,7 +35,7 @@ function settle(original: DivisionDraw, next: DivisionDraw, heatId: string): App
  */
 export function applyHeatResult(draw: DivisionDraw, heatId: string, result: HeatResultInput): ApplyResult {
   const target = findHeat(draw, heatId);
-  if (target.bye) throw new Error(`${label(target)} is a bye: the rider goes on automatically.`);
+  if (target.bye) throw new Error(`${label(target)} advances without riding: the rider goes on automatically.`);
   const riders = new Set(target.slots.flatMap((s) => (s.entrantId ? [s.entrantId] : [])));
   if (riders.size === 0) throw new Error(`${label(target)} has not been seeded yet.`);
   for (const r of result.ranked) if (!riders.has(r.entrantId)) throw new Error(`Rider ${r.entrantId} is not in heat ${heatId}.`);
