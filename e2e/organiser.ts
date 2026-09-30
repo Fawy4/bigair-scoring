@@ -6,13 +6,13 @@ import type { Page } from "@playwright/test";
  * A throwaway organiser (login + organisation) created with the service key, signed in through a magic-link token
  * so the test never depends on an inbox. Everything it creates is removed by `cleanup()`.
  */
-export async function createOrganiser() {
+export async function createOrganiser(options: { password?: string } = {}) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const db = createClient(url, key, { auth: { persistSession: false } });
   const run = randomBytes(4).toString("hex");
   const email = `e2e-${run}@example.com`;
-  const { data: created, error } = await db.auth.admin.createUser({ email, email_confirm: true });
+  const { data: created, error } = await db.auth.admin.createUser({ email, email_confirm: true, ...(options.password ? { password: options.password } : {}) });
   if (error) throw new Error(`could not create the test organiser: ${error.message}`);
   const { data: org, error: orgError } = await db.from("organisations").insert({ name: `E2E Big Air ${run}`, slug: `e2e-${run}` }).select("id").single();
   if (orgError) throw new Error(orgError.message);

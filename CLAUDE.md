@@ -17,6 +17,7 @@ Next.js 15 (App Router, TypeScript strict) · Tailwind + shadcn/ui · Supabase (
 - `npx supabase db push` — apply migrations to the linked hosted project (blocked in some sandboxes: use `npm run db:apply`, which sends them over HTTPS; `npm run db:combine` writes `supabase/combined.sql` for the SQL Editor)
 - `npm run test:rls` — Row Level Security tests against the hosted dev project (separate from `npm test`; skips without keys)
 - `npm run seed:demo` / `npm run bootstrap:organiser -- --email … --org-name … --org-slug …` — demo draw / create the organiser login + organisation (name and slug are required)
+- `npm run auth:password` — enables email + password sign-in for organisers in the hosted auth settings (Management API; idempotent)
 - `npm run seed:presets` — upsert `presets/**/*.json` into `scoring_models` / `format_templates` / `presets` (identification schemes, schedule templates)
 
 ## Repo layout

@@ -235,16 +235,21 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(page.getByRole("button", { name: "Load a saved format…", exact: true })).toBeVisible();
   const kinds = ["Knockout", "Knockout with a second chance", "Double elimination", "Qualifying heats + finals", "Pools to a final", "Round robin", "Single final"];
   for (const k of kinds) await expect(page.getByRole("radio", { name: k, exact: true }), `card: ${k}`).toBeVisible();
-  for (const text of [
-    "Top riders from each heat advance; the rest are out.",
-    "Heat winners go straight through; the other riders get one more heat to qualify.",
-    "Lose once and you drop to a second draw; lose twice and you're out. The best riders of each draw meet in the final.",
-    "Qualifying heats seed the finals directly: the best-scoring riders go to the Final, the next best to a Small Final, the rest are placed by their qualifying result.",
-    "Everyone rides once; all heat scores are ranked together and the top N ride the final.",
-    "Everyone rides several heats against different riders; heat points add up to a ranking, no knockout.",
-    "One heat, that's the result.",
-  ]) {
-    await expect(page.getByText(text, { exact: true })).toBeVisible();
+  const explanations: Record<string, string> = {
+    "Knockout": "Top riders from each heat advance; the rest are out.",
+    "Knockout with a second chance": "Heat winners go straight through; the other riders get one more heat to qualify.",
+    "Double elimination": "Lose once and you drop to a second draw; lose twice and you're out. The best riders of each draw meet in the final.",
+    "Qualifying heats + finals": "Qualifying heats seed the finals directly: the best-scoring riders go to the Final, the next best to a Small Final, the rest are placed by their qualifying result.",
+    "Pools to a final": "Everyone rides once; all heat scores are ranked together and the top N ride the final.",
+    "Round robin": "Everyone rides several heats against different riders; heat points add up to a ranking, no knockout.",
+    "Single final": "One heat, that's the result.",
+  };
+  // compact cards: one line each (name + tag); nothing is chosen yet, so no explanation is printed; every card has a "?" with it
+  await expect(page.getByTestId("kind-explain")).toHaveCount(0);
+  for (const [name, text] of Object.entries(explanations)) {
+    await page.getByRole("button", { name: `Help: ${name}`, exact: true }).click();
+    await expect(page.getByRole("note").filter({ hasText: text })).toBeVisible();
+    await page.getByRole("button", { name: `Help: ${name}`, exact: true }).click(); // close it again
   }
 
   // a tag under each card says how many heats a rider is guaranteed
@@ -263,6 +268,8 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   // choosing a card is the only step: its numbers, the preview field, the diagram and the per-round lengths are all there at the
   // Simple level, with nothing to toggle
   await page.getByRole("radio", { name: "Knockout", exact: true }).check();
+  await expect(page.getByTestId("kind-explain")).toHaveCount(1); // under the selected card only
+  await expect(page.getByTestId("kind-explain")).toHaveText(explanations["Knockout"]);
   await expect(page.getByRole("checkbox", { name: "Show all settings" })).not.toBeChecked();
   for (const label of ["Riders per heat (target)", "Minimum per heat", "Maximum per heat", "How many advance", "Final size", "Preview with"]) {
     await expect(field(label), `Simple: ${label}`).toBeVisible();
@@ -271,6 +278,13 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(page.getByTestId("ladder-diagram")).toBeVisible();
   await expect(page.getByTestId("format-preview")).toBeVisible();
   await expect(page.getByTestId("per-round-lengths")).toBeVisible();
+  // one laptop screen: with the Format tab at the top of a 1440 × 900 window, the cards, the numbers row, the preview field and the top of the diagram are all in view
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("tab", { name: "Format" }).evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 8));
+  await expect(page.getByRole("radiogroup")).toBeInViewport({ ratio: 1 });
+  await expect(page.getByTestId("format-numbers")).toBeInViewport({ ratio: 1 });
+  await expect(field("Preview with")).toBeInViewport({ ratio: 1 });
+  await expect(page.getByTestId("ladder-diagram").locator("figcaption")).toBeInViewport({ ratio: 1 }); // the top of the diagram
   await expect(page.getByTestId("min-heats")).toHaveText("Minimum heats per rider: 1");
   await expect(field("Break after each heat")).toHaveCount(0); // lengths and breaks live under Show all settings
 
@@ -311,7 +325,6 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await field("Minimum per heat").fill("2");
   await field("Maximum per heat").fill("3");
   await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat")).toHaveText([/2 riders/, /3 riders/, /3 riders/, /3 riders/, /3 riders/]);
-  await expect(page.getByTestId("limits-note")).toHaveText("Every heat holds 2 to 3 riders.");
   await field("Riders per heat (target)").fill("4");
   await field("Minimum per heat").fill("4");
   await field("Maximum per heat").fill("5");

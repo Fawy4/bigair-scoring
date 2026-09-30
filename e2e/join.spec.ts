@@ -31,6 +31,7 @@ test("organiser pages send signed-out visitors to the sign-in page", async ({ pa
 
 test("sign-in is invite-only: an unknown email is refused politely and no email is sent", async ({ page }) => {
   await page.goto("/org/login");
+  await page.getByRole("button", { name: "Sign in with a link instead" }).click();
   await page.getByLabel("Your email address").fill("nobody-registered@example.com");
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
   await expect(page.locator("p[role=alert]")).toContainText("not registered as an organiser");

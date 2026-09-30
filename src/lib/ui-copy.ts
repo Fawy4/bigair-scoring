@@ -75,6 +75,31 @@ export const copy = {
     sameBrowserBefore: "Open the email on ",
     sameBrowserBold: "this same phone or computer, in this same browser",
     sameBrowserAfter: ", and tap the link. It works once.",
+    password: "Password",
+    signIn: "Sign in",
+    signingIn: "Signing in…",
+    wrongPassword: "That email address and password do not match. Check them and try again, or sign in with a link.",
+    linkInstead: "Sign in with a link instead",
+    passwordInstead: "Sign in with a password instead",
+    forgot: "Forgot password?",
+    forgotNeedsEmail: "Type your email address above first, then press “Forgot password?” again.",
+    forgotSentTo: (to: string) => `✔ Link sent to ${to}. It signs you in and takes you to a page where you can set a new password.`,
+    notAnOrganiser: "That account is not an organiser. Ask the owner to add you.",
+    setPasswordLink: "First time here? Sign in with a link, then set a password from the menu.",
+  },
+
+  setPassword: {
+    title: "Set a password",
+    intro: "Set a password once, then you can sign in with your email and password instead of waiting for a link.",
+    newPassword: "New password",
+    again: "Type it again",
+    save: "Save password",
+    saving: "Saving…",
+    saved: "✔ Password saved. Next time you can sign in with your email address and this password.",
+    tooShort: (n: number) => `Use at least ${n} characters.`,
+    mismatch: "The two passwords are not the same.",
+    couldNotSave: "The password could not be saved. Sign in with a link again, then try once more.",
+    continue: "Continue to my events",
   },
 
   seat: {
@@ -89,6 +114,7 @@ export const copy = {
   },
 
   layout: {
+    setPassword: "Set a password",
     events: "Events",
     settings: "Organisation settings",
     signOut: "Sign out",
@@ -579,7 +605,6 @@ export const copy = {
     minAboveTarget: "the minimum per heat cannot be more than the target",
     maxBelowTarget: "the maximum per heat cannot be less than the target",
     finalEven: "the final takes the same number of riders from each draw, so its size must be even",
-    limitsNote: (min: number, max: number) => `Every heat holds ${min} to ${max} riders.`,
     warning: (w: string) => `⚠ ${w}`,
   },
 

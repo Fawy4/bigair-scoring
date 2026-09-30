@@ -116,24 +116,28 @@ export function FormatSimple({
   const target = kind && kind !== "custom" ? TARGET_KEY[kind] : null;
 
   return (
-    <fieldset disabled={readOnly} className="flex flex-col gap-4">
+    <fieldset disabled={readOnly} className="flex flex-col gap-2">
       <legend className="sr-only">{T.typeLegend}</legend>
       <div className="flex flex-col gap-2">
-        <FieldLabel as="span" text={T.typeHeading} help={help["format.type"]} />
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4" role="radiogroup" aria-label={T.typeHeading}>
+        <span className="sr-only">{T.typeHeading}</span>
+        <div className="flex flex-col gap-1" role="radiogroup" aria-label={T.typeHeading}>
           {KINDS.map((k) => (
-            <div key={k} className="flex flex-col gap-1 rounded-lg border-2 border-[#111] p-3" data-selected={kind === k}>
-              <span className="flex items-start gap-2">
-                <label className="flex items-center gap-3 text-lg font-bold">
+            <div key={k} className="flex flex-col rounded-lg border-2 border-[#111] px-3" data-selected={kind === k}>
+              <div className="flex items-center gap-x-3">
+                <label className="flex min-h-[48px] items-center gap-3 text-base font-bold">
                   <input type="radio" name="ladder-kind" checked={kind === k} onChange={() => onPickKind(k)} />
                   {T.types[k].title}
                 </label>
+                <span className="text-sm font-extrabold" data-testid={`tag-${k}`}>
+                  {tagFor(k)}
+                </span>
                 <HelpButton what={T.types[k].title} help={{ text: T.types[k].explain, example: T.types[k].example }} />
-              </span>
-              <p className="pl-9 text-sm font-semibold">{T.types[k].explain}</p>
-              <p className="pl-9 text-sm font-extrabold" data-testid={`tag-${k}`}>
-                {tagFor(k)}
-              </p>
+              </div>
+              {kind === k ? (
+                <p className="-mt-1 pb-1 pl-9 text-sm font-semibold" data-testid="kind-explain">
+                  {T.types[k].explain}
+                </p>
+              ) : null}
             </div>
           ))}
         </div>
@@ -145,7 +149,7 @@ export function FormatSimple({
           {kind === "single_final" || !sizes ? (
             <p className="font-semibold">{T.noNumbers}</p>
           ) : (
-            <div className="flex flex-wrap items-end gap-4" data-testid="format-numbers">
+            <div className="flex flex-wrap items-end gap-x-4 gap-y-2" data-testid="format-numbers">
               {target ? (
                 <div className="flex flex-col gap-1">
                   <FieldLabel htmlFor={`fs-${target}`} text={kind === "pools" ? T.ridersPerPool : T.ridersPerHeat} help={help["format.heatSize"]} />
@@ -184,11 +188,6 @@ export function FormatSimple({
               {kind === "round_robin" ? <PointsTable working={working} onChange={onChange} invalid={Boolean(err("pointsTable"))} /> : null}
             </div>
           )}
-          {kind !== "single_final" && sizes ? (
-            <p className="text-sm font-semibold" data-testid="limits-note">
-              {T.limitsNote(sizes.min, sizes.max)}
-            </p>
-          ) : null}
         </div>
       ) : null}
     </fieldset>

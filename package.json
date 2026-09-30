@@ -16,7 +16,8 @@
     "db:combine": "node scripts/combine-sql.mjs",
     "test:rls": "vitest run --config vitest.rls.config.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
-    "bootstrap:organiser": "tsx scripts/bootstrap-organiser.ts"
+    "bootstrap:organiser": "tsx scripts/bootstrap-organiser.ts",
+    "auth:password": "node scripts/configure-auth.mjs --password-only"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",

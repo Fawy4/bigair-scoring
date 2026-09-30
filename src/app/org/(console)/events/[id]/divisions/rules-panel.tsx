@@ -244,7 +244,7 @@ export function RulesPanel({
   const idSuffix = `${kind}-${division.id}`;
 
   return (
-    <section className="flex flex-col gap-5" aria-label={`${scoring ? copy.divisions.tabScoring : copy.divisions.tabFormat}: ${division.name}`}>
+    <section className="flex flex-col gap-3" aria-label={`${scoring ? copy.divisions.tabScoring : copy.divisions.tabFormat}: ${division.name}`}>
       {locked ? (
         <div className="panel flex flex-col gap-3" role="note">
           <p className="text-lg font-bold">{R.lockedTitle}</p>
@@ -334,7 +334,6 @@ export function RulesPanel({
               <p className="text-sm font-semibold">{copy.formatSimple.loadSavedHint}</p>
             </div>
           ) : null}
-          {baseRow && baseParsed && typeof baseParsed.description === "string" ? <p className="text-sm font-semibold">{baseParsed.description}</p> : null}
         </div>
       )}
 
@@ -365,7 +364,7 @@ export function RulesPanel({
       ) : null}
 
       {!scoring ? (
-        <section className="panel flex flex-col gap-5" aria-label={R.formatWord} data-testid="format-card">
+        <section className="panel flex flex-col gap-3" aria-label={R.formatWord} data-testid="format-card">
           <FormatSimple
             working={(working as Record<string, unknown> | null) ?? null}
             onChange={setValue}

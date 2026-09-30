@@ -241,3 +241,16 @@ Things you should know (please confirm or change):
 2. Click a round name in the diagram (e.g. "Semi-finals"), type a name, press Enter; change "Preview with" to 24: the name stays. Blank it: the default comes back. Click a heat name too.
 3. **Double elimination**, 14 riders: "Main draw 1", "Second-chance draw 1", the final of 4; set Final size 2. **Qualifying heats + finals**: Small final; Heats per rider 1 changes the tag. **Round robin**: Heats per rider 4, Points table "10, 6, 3, 1". **Single final**: one heat.
 4. "Load a saved format…": Megaloop is not in the list. "Build my own ladder…": press "+ Add round after Round 1", send 1st and 2nd of Round 2 to the Final with the dropdowns, read the checks, "Save as my format", then load it again from "Load a saved format…".
+
+### Phase 4a-1 – compact format cards and organiser password sign-in (round 7)
+Done:
+- **Compact cards**: one line each (name, tag and a "?"), the one-line explanation under the selected card only. With the Format tab at the top of a 1440 × 900 window the cards, the numbers row, "Preview with" and the top of the diagram are all in view (Playwright asserts it). To get there I also removed the "Ladder type" heading row, the preset description under the load buttons and the "Every heat holds N to M riders" note, and tightened the spacing.
+- **Email + password for organisers**: /org/login has email and password, "Sign in", "Sign in with a link instead" and "Forgot password?" (sends the existing link, which opens /org/set-password). "Set a password" (also in the header) lets an existing account set its first password after a link sign-in. Wrong password and unknown address give the same message. Officials' PIN flow unchanged. Playwright: `e2e/password-login.spec.ts` (right/wrong password, unknown address, non-organiser refused, forgot-password checks, set password then sign in, PIN page unchanged).
+- Hosted auth settings applied by `npm run auth:password`: email provider on (it already was), minimum password length 8.
+
+Things you should know:
+- **I did not switch public sign-up off**, although "keep invite-only" suggests it: I tried, and Supabase's switch also blocks the anonymous sessions the officials' PIN flow uses (the join tests failed), so I put it back. Invite-only is kept by the app: no sign-up form, an unconfirmed self-made account cannot sign in (Supabase's standard behaviour with confirmation on; not tested here because a sign-up sends a real email), and a password sign-in without an organiser membership is refused and signed out. A stranger can still create an unconfirmed auth user through the public API (it sends them a confirmation email) but cannot get in; closing that fully needs a custom SMTP + hook, which I did not add.
+- Password sign-in was already technically enabled on the project; "enable the provider" changed only the minimum length.
+- The existing invite-only e2e test now first clicks "Sign in with a link instead" (the page opens in password mode).
+- "Forgot password?" is not tested with a real address (each one sends a real email and the project allows 2 per hour); it is tested with an empty and an unregistered address.
+- Removed the "Every heat holds N to M riders" note under the numbers to save height.

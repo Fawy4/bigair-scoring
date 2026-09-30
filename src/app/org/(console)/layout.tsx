@@ -28,6 +28,9 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           <div className="ml-auto flex flex-wrap items-center gap-3">
             <OrgSwitcher orgs={orgs.map((o) => ({ id: o.id, name: o.name }))} currentId={current?.id ?? null} />
             <span className="hidden text-sm font-semibold sm:inline">{user.email}</span>
+            <Link href="/org/set-password" className="btn">
+              {copy.layout.setPassword}
+            </Link>
             <form action="/auth/signout" method="post">
               <button type="submit" className="btn">
                 {copy.layout.signOut}
