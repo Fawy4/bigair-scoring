@@ -6,6 +6,8 @@ const baseURL = process.env.E2E_BASE_URL ?? (production ? "http://localhost:3200
 
 export default defineConfig({
   testDir: "./e2e",
+  globalSetup: "./e2e/global-setup.ts",
+  globalTeardown: "./e2e/global-teardown.ts",
   // a first visit to a page compiles it in dev mode, which can take longer than the 5 s default
   expect: { timeout: 15_000 },
   use: {

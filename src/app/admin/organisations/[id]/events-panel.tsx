@@ -6,6 +6,7 @@ import { ConfirmButton } from "@/components/confirm-button";
 import { FieldLabel } from "@/components/help-button";
 import { toast } from "@/hooks/use-toast";
 import { copy } from "@/lib/ui-copy";
+import { EventLifecycle } from "@/components/event-lifecycle";
 import { moveEvent } from "../../actions";
 
 const c = copy.admin.org;
@@ -20,6 +21,8 @@ interface EventRow {
   dates: string;
   divisions: number;
   running: boolean;
+  published: number;
+  archived: boolean;
 }
 
 /** The organisation's events, each with the owner-only "Move event to another organisation" action. */
@@ -49,11 +52,21 @@ export function EventsPanel({ orgName, events, others, isOwner }: { orgName: str
                 <tr key={e.id}>
                   <td className={`${td} font-bold`}>{e.name}</td>
                   <td className={td}>/{e.slug}</td>
-                  <td className={td}>{e.status}</td>
+                  <td className={td}>
+                    {e.status}
+                    {e.archived ? ` · ${copy.eventLifecycle.archivedTag}` : ""}
+                  </td>
                   <td className={td}>{e.dates}</td>
                   <td className={td}>{e.divisions}</td>
                   <td className={td}>
-                    {isOwner ? <MoveEvent event={e} orgName={orgName} others={others} /> : <span className="text-sm font-semibold">{c.moveOwnerOnly}</span>}
+                    {isOwner ? (
+                      <div className="flex flex-col gap-4">
+                        <MoveEvent event={e} orgName={orgName} others={others} />
+                        <EventLifecycle compact eventId={e.id} eventName={e.name} slug={e.slug} publishedResults={e.published} archived={e.archived} afterDelete={null} />
+                      </div>
+                    ) : (
+                      <span className="text-sm font-semibold">{c.moveOwnerOnly}</span>
+                    )}
                   </td>
                 </tr>
               ))}

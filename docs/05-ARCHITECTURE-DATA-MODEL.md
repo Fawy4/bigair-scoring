@@ -65,6 +65,7 @@ Costs: build phase $0. First commercial event: Vercel Pro $20 + Supabase Pro $25
 | `schedule_plans` | event_id, day date, name, items jsonb, anchors jsonb, actual_starts jsonb, hold jsonb, defaults jsonb, active bool | timetable (doc 04 §7) |
 | `wind_calls` | event_id, status (`red|amber|green`), message, created_at | banner history |
 | `audit_log` | event_id, actor_user_id, actor_seat_id, action, table_name, row_id, before jsonb, after jsonb, reason, at | trigger-populated for scores/results; app-populated for overrides. Phase 4a-1c adds `organisation_id` (platform actions such as organisation created, impersonation started; no foreign key) |
+| `events` (Phase 4a-1c) | `archived_at timestamptz` | set by `set_event_archived`; an archived event is not public and not offered to officials; `delete_event` removes an event with no published results in one transaction |
 | `platform_admins` | user_id pk, role (`owner|staff`) | the people who run the platform; readable by admins only, written by owners only |
 | `platform_settings` | key (`product_name|logo_url|tagline|legal_texts|default_timezone`), value jsonb, updated_by | admins read, owners write; visitors get the public subset through `public_platform_settings()` |
 | `platform_impersonations` | admin_user_id, organisation_id, started_at, expires_at (8 h), ended_at | "Open as this organiser"; at most one open session per admin; written only by `admin_start_impersonation` / `admin_stop_impersonation` |

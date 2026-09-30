@@ -1,0 +1,90 @@
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync } from "node:fs";
+import { join } from "node:path";
+import { createClient } from "@supabase/supabase-js";
+
+/**
+ * Test data never outlives a run. Every organisation and login a test creates is written to a ledger file for this run
+ * (`test-results/.e2e-ledger-<run>.jsonl`). The global teardown empties it even when tests fail or time out; the next run's setup also
+ * sweeps any ledger older than STALE_MIN minutes (a run that was killed) and any `e2e-` organisation or login older than that.
+ */
+const DIR = "test-results";
+const STALE_MIN = 30;
+const service = () =>
+  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+    : null;
+
+export interface LedgerEntry {
+  orgSlug?: string;
+  userId?: string;
+}
+
+const ledgerFile = (runId = process.env.E2E_RUN_ID ?? "local") => join(DIR, `.e2e-ledger-${runId}.jsonl`);
+
+/** Remember something a test created, before anything else can fail. */
+export function record(entry: LedgerEntry): void {
+  mkdirSync(DIR, { recursive: true });
+  appendFileSync(ledgerFile(), `${JSON.stringify(entry)}\n`);
+}
+
+async function purge(entries: LedgerEntry[]): Promise<void> {
+  const db = service();
+  if (!db) return;
+  for (const e of entries) {
+    try {
+      if (e.orgSlug) {
+        const { data: org } = await db.from("organisations").select("id").eq("slug", e.orgSlug).maybeSingle();
+        if (org) await db.rpc("purge_organisation", { p_org: org.id });
+      }
+      if (e.userId) await db.auth.admin.deleteUser(e.userId);
+    } catch {
+      // one failure must never stop the rest of the clean-up
+    }
+  }
+}
+
+function readLedger(file: string): LedgerEntry[] {
+  return readFileSync(file, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .flatMap((line) => {
+      try {
+        return [JSON.parse(line) as LedgerEntry];
+      } catch {
+        return [];
+      }
+    });
+}
+
+/** Remove everything this run created (global teardown: runs after the last test, pass or fail). */
+export async function purgeThisRun(): Promise<void> {
+  const file = ledgerFile();
+  if (!existsSync(file)) return;
+  await purge(readLedger(file));
+  unlinkSync(file);
+}
+
+/** Remove what killed runs left behind: old ledgers, and `e2e-` organisations and logins older than STALE_MIN minutes. */
+export async function sweepStale(): Promise<void> {
+  const cutoff = Date.now() - STALE_MIN * 60_000;
+  if (existsSync(DIR)) {
+    for (const name of readdirSync(DIR).filter((n) => n.startsWith(".e2e-ledger-"))) {
+      const file = join(DIR, name);
+      if (statSync(file).mtimeMs < cutoff) {
+        await purge(readLedger(file));
+        unlinkSync(file);
+      }
+    }
+  }
+  const db = service();
+  if (!db) return;
+  try {
+    const { data: orgs } = await db.from("organisations").select("slug").like("slug", "e2e-%").lt("created_at", new Date(cutoff).toISOString());
+    await purge((orgs ?? []).map((o) => ({ orgSlug: o.slug })));
+    const { data: users } = await db.auth.admin.listUsers({ perPage: 200 });
+    const stale = (users?.users ?? []).filter((u) => /^e2e-.*@example\.com$/.test(u.email ?? "") && new Date(u.created_at).getTime() < cutoff);
+    await purge(stale.map((u) => ({ userId: u.id })));
+  } catch {
+    // sweeping is best effort
+  }
+}

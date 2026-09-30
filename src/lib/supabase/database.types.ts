@@ -211,6 +211,7 @@ export type Database = {
       }
       events: {
         Row: {
+          archived_at: string | null
           branding: Json
           created_at: string
           end_date: string | null
@@ -227,6 +228,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           branding?: Json
           created_at?: string
           end_date?: string | null
@@ -243,6 +245,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           branding?: Json
           created_at?: string
           end_date?: string | null
@@ -1745,10 +1748,12 @@ export type Database = {
       admin_organisation_events: {
         Args: { p_org: string }
         Returns: {
+          archived_at: string
           divisions_count: number
           end_date: string
           id: string
           name: string
+          published_results: number
           running_heats: number
           slug: string
           start_date: string
@@ -1855,6 +1860,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      delete_event: {
+        Args: { p_event: string; p_slug_confirm: string }
+        Returns: Json
+      }
       get_public_event: {
         Args: { p_slug: string }
         Returns: {
@@ -1920,6 +1929,10 @@ export type Database = {
           rls_enabled: boolean
           table_name: string
         }[]
+      }
+      set_event_archived: {
+        Args: { p_archived: boolean; p_event: string }
+        Returns: undefined
       }
       set_publish_hold: {
         Args: { p_heat: string; p_hold: boolean; p_reason?: string }

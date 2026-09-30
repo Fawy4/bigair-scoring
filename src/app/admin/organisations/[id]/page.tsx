@@ -78,7 +78,7 @@ export default async function OrganisationPage({ params }: { params: Promise<{ i
         orgName={org.name}
         isOwner={role === "owner"}
         others={(all ?? []).filter((o) => o.id !== org.id).map((o) => ({ id: o.id, name: o.name }))}
-        events={(events ?? []).map((e) => ({ id: e.id, name: e.name, slug: e.slug, status: e.status, dates: formatEventDates(e.start_date, e.end_date), divisions: e.divisions_count, running: e.running_heats > 0 }))}
+        events={(events ?? []).map((e) => ({ id: e.id, name: e.name, slug: e.slug, status: e.status, dates: formatEventDates(e.start_date, e.end_date), divisions: e.divisions_count, running: e.running_heats > 0, published: e.published_results, archived: Boolean(e.archived_at) }))}
       />
       <InvitePanel orgId={org.id} />
       <RenamePanel orgId={org.id} name={org.name} />

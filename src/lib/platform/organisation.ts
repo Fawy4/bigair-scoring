@@ -22,3 +22,13 @@ export function inviteConfirmLink(siteUrl: string, hashedToken: string): string 
   url.searchParams.set("next", "/org");
   return url.toString();
 }
+
+/** Web addresses that start with e2e- (browser tests) or rls-, plat-, evdel- (database tests) are automated test data; the admin list flags them. */
+export function isTestData(slug: string): boolean {
+  return /^(e2e|rls|plat|evdel)-/.test(slug);
+}
+
+/** Why an event cannot be deleted (published results are permanent), or null when it can. */
+export function eventDeleteBlockedReason(publishedResults: number): string | null {
+  return publishedResults > 0 ? copy.eventLifecycle.deleteBlocked(publishedResults) : null;
+}

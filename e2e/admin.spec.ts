@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { test, expect } from "./base";
-import { createOrganiser } from "./organiser";
+import { createOrganiser, effectiveProductName } from "./organiser";
 
 // Platform owner layer (/admin). Needs Supabase keys and the 4a-1c migration. Creates and removes its own logins and organisations.
 type Organiser = Awaited<ReturnType<typeof createOrganiser>>;
@@ -179,7 +179,7 @@ test("platform settings: the product name replaces the built-in name on the publ
   await page.getByRole("button", { name: "Save platform settings" }).click();
   await expect(page.getByText("Platform settings saved").first()).toBeVisible();
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(process.env.NEXT_PUBLIC_PRODUCT_NAME || "[PRODUCT_NAME]");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(await effectiveProductName());
 });
 
 test("master presets, audit log and health pages open", async ({ page }) => {
@@ -320,4 +320,91 @@ test("Move event to another organisation: the owner sees the action and can use 
   // and it shows in the audit log
   await page.goto("/admin/audit");
   await expect(page.getByRole("row").filter({ hasText: "Event moved to another organisation" }).filter({ hasText: name }).first()).toBeVisible();
+});
+
+test("Organisations list: test data is flagged, and every row has a ⋯ menu with Rename, Archive, Delete (owner) and Invite organiser", async ({ page }) => {
+  test.setTimeout(240_000);
+  const slug = `e2e-menu-${admin.run}`;
+  const name = `E2E Menu ${admin.run}`;
+  admin.trackOrganisation(slug);
+  await admin.db.from("organisations").insert({ name, slug });
+
+  await admin.signIn(page, "/admin");
+  const row = () => page.getByRole("row").filter({ hasText: slug });
+  await expect(row()).toBeVisible({ timeout: 90_000 });
+  await expect(row()).toContainText("Test data"); // web address starts with e2e-
+  await expect(page.getByRole("row").filter({ hasText: "arrow" }).filter({ hasNotText: "e2e-" }).getByText("Test data")).toHaveCount(0);
+
+  const openMenu = async () => {
+    await row().getByRole("button", { name: `More actions for ${name}` }).click();
+    await expect(row().getByRole("menu")).toBeVisible();
+  };
+
+  // the menu lists the four actions
+  await openMenu();
+  for (const item of ["Rename", "Archive", "Delete", "Invite organiser"]) await expect(row().getByRole("menuitem", { name: item, exact: true })).toBeVisible();
+
+  // Rename: one tap, one dialog
+  await row().getByRole("menuitem", { name: "Rename", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText(`Name: ${name}`);
+  await dialog.getByLabel("Organisation name").fill(`${name} renamed`);
+  await dialog.getByRole("button", { name: "Save name" }).click();
+  await expect(page.getByText("Organisation renamed").first()).toBeVisible();
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("row").filter({ hasText: `${name} renamed` })).toBeVisible();
+
+  // Invite organiser: link only (no email), from the list
+  const renamed = `${name} renamed`;
+  const menuFor = () => row().getByRole("button", { name: `More actions for ${renamed}` });
+  await menuFor().click();
+  await row().getByRole("menuitem", { name: "Invite organiser", exact: true }).click();
+  const invitee = `e2e-menu-invitee-${admin.run}@example.com`;
+  await dialog.getByLabel("Organiser's email").fill(invitee);
+  await dialog.getByLabel("Send the sign-in email now").uncheck();
+  await dialog.getByRole("button", { name: "Invite organiser" }).click();
+  await expect(dialog.getByText("Copy this sign-in link")).toBeVisible();
+  const { data: made } = await admin.db.auth.admin.listUsers({ perPage: 200 });
+  const created = made.users.find((u) => u.email === invitee);
+  if (created) admin.trackUser(created.id);
+  await dialog.getByRole("button", { name: "Close" }).click();
+
+  // Archive and restore from the list
+  await menuFor().click();
+  await row().getByRole("menuitem", { name: "Archive", exact: true }).click();
+  await dialog.getByRole("button", { name: "Archive organisation" }).click();
+  await dialog.getByRole("button", { name: "Yes, archive" }).click();
+  await expect(page.getByText("Organisation archived").first()).toBeVisible();
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await expect(row()).toContainText("Archived");
+  await menuFor().click();
+  await row().getByRole("menuitem", { name: "Restore", exact: true }).click();
+  await dialog.getByRole("button", { name: "Restore organisation" }).click();
+  await dialog.getByRole("button", { name: "Yes, restore" }).click();
+  await expect(page.getByText("Organisation restored").first()).toBeVisible();
+  await dialog.getByRole("button", { name: "Close" }).click();
+
+  // Delete (owner): typed web address, from the list
+  await menuFor().click();
+  await row().getByRole("menuitem", { name: "Delete", exact: true }).click();
+  await dialog.getByLabel("Type the web address to confirm").fill(slug);
+  await dialog.getByRole("button", { name: "Delete organisation permanently" }).click();
+  await dialog.getByRole("button", { name: "Yes, delete for good" }).click();
+  await expect(page.getByRole("row").filter({ hasText: slug })).toHaveCount(0, { timeout: 60_000 });
+});
+
+test("Organisations list: the ⋯ menu of platform staff has no Delete", async ({ page }) => {
+  test.setTimeout(120_000);
+  const staff = await createOrganiser({ platformAdmin: "staff" });
+  try {
+    await staff.signIn(page, "/admin");
+    const row = page.getByRole("row").filter({ hasText: `e2e-${staff.run}` });
+    await expect(row).toBeVisible({ timeout: 90_000 });
+    await row.getByRole("button", { name: `More actions for E2E Big Air ${staff.run}` }).click();
+    await expect(row.getByRole("menuitem", { name: "Rename", exact: true })).toBeVisible();
+    await expect(row.getByRole("menuitem", { name: "Invite organiser", exact: true })).toBeVisible();
+    await expect(row.getByRole("menuitem", { name: "Delete", exact: true })).toHaveCount(0);
+  } finally {
+    await staff.cleanup();
+  }
 });

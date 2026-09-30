@@ -20,9 +20,9 @@ async function context(slugInput: string) {
   const slug = Slug.safeParse(slugInput);
   if (!slug.success) return { ok: false as const, error: "INVALID_PIN" };
   const service = createServiceClient();
-  const { data: event } = await service.from("events").select("id").eq("slug", slug.data).maybeSingle();
+  const { data: event } = await service.from("events").select("id, archived_at").eq("slug", slug.data).maybeSingle();
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  return { ok: true as const, user, service, eventId: event?.id ?? null, ip };
+  return { ok: true as const, user, service, eventId: event && !event.archived_at ? event.id : null, ip }; // an archived event answers exactly like an unknown one
 }
 
 function toResult(data: unknown, error: { message: string } | null): JoinResult {

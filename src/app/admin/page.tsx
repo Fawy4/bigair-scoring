@@ -3,10 +3,11 @@ import { formatWhen } from "@/lib/platform/event-label";
 import { getPlatformSettings } from "@/lib/platform/public-settings";
 import { attempt } from "@/lib/platform/safe";
 import { requireAdmin } from "@/lib/platform/session";
-import { organisationStatus } from "@/lib/platform/organisation";
+import { isTestData, organisationStatus } from "@/lib/platform/organisation";
 import { copy } from "@/lib/ui-copy";
 import { startImpersonation } from "./actions";
 import { DemoPanel } from "./demo-panel";
+import { RowMenu } from "./row-menu";
 
 export const metadata = { title: copy.admin.org.heading };
 
@@ -68,7 +69,15 @@ export default async function AdminOrganisations({ searchParams }: { searchParam
             <tbody>
               {rows.map((o) => (
                 <tr key={o.id}>
-                  <td className={`${td} font-bold`}>{o.name}</td>
+                  <td className={`${td} font-bold`}>
+                    {o.name}
+                    {isTestData(o.slug) ? (
+                      <span className="ml-2 inline-block rounded border-2 border-[#111] px-2 text-sm font-extrabold" title={c.testDataHelp}>
+                        <span aria-hidden="true">⚠ </span>
+                        {c.testData}
+                      </span>
+                    ) : null}
+                  </td>
                   <td className={td}>/{o.slug}</td>
                   <td className={td}>{o.archived_at ? `⏸ ${c.status[organisationStatus(o.archived_at)]}` : `● ${c.status.active}`}</td>
                   <td className={td}>{o.plan}</td>
@@ -85,6 +94,7 @@ export default async function AdminOrganisations({ searchParams }: { searchParam
                           {c.openAs}
                         </button>
                       </form>
+                      <RowMenu org={{ id: o.id, name: o.name, slug: o.slug, archived: Boolean(o.archived_at), publishedResults: o.published_results_count }} isOwner={role === "owner"} />
                     </div>
                   </td>
                 </tr>
