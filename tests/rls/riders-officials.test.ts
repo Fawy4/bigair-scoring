@@ -244,6 +244,27 @@ describe.skipIf(!ENV_OK)("Riders, officials, registration, trick base and feedba
       const rider = (await f.s.from("riders").select("photo_url").eq("organisation_id", f.ids.orgA).ilike("email", "photo2@example.com").single()).data!;
       expect(rider.photo_url).toBe(ids.pendingPhoto);
     });
+    it("a photo upload slot is only given while registration is open, to the server only, and is limited per address", async () => {
+      const slot = (slug: string, ext = "jpg", ip = `ip-${run}-ph-${randomBytes(3).toString("hex")}`) => f.s.rpc("request_photo_upload", { p_event_slug: slug, p_ext: ext, p_ip: ip });
+      await settings({ registrationOpen: true });
+      for (const c of [f.clients.anon, f.clients.orgA]) expect(failed(await c.rpc("request_photo_upload", { p_event_slug: `rls-a1-${run}`, p_ext: "jpg", p_ip: "1.1.1.1" }))).not.toBe("");
+      const ok = (await slot(`rls-a1-${run}`)).data as { ok: boolean; path: string };
+      expect(ok.ok).toBe(true);
+      expect(ok.path).toMatch(new RegExp(`^${f.ids.orgA}/reg/[0-9a-f-]{36}\\.jpg$`));
+      expect(codeOf(await slot(`rls-a1-${run}`, "svg"))).toBe("INVALID_PHOTO");
+      expect(codeOf(await slot(`rls-a1-${run}`, "exe"))).toBe("INVALID_PHOTO");
+      expect(codeOf(await slot("no-such-event-" + run))).toBe("EVENT_NOT_FOUND");
+      await settings({ registrationOpen: false });
+      expect(codeOf(await slot(`rls-a1-${run}`))).toBe("REGISTRATION_CLOSED");
+      await settings({ registrationOpen: true });
+      await f.s.from("events").update({ archived_at: new Date().toISOString() }).eq("id", f.ids.evA1);
+      expect(codeOf(await slot(`rls-a1-${run}`))).toBe("EVENT_NOT_FOUND");
+      await f.s.from("events").update({ archived_at: null }).eq("id", f.ids.evA1);
+      const ip = `ip-${run}-phflood`;
+      for (let i = 0; i < 10; i++) expect(codeOf(await slot(`rls-a1-${run}`, "png", ip))).toBe("");
+      expect(codeOf(await slot(`rls-a1-${run}`, "png", ip))).toBe("RATE_LIMITED");
+      expect(codeOf(await slot(`rls-a1-${run}`, "png", `ip-${run}-phcalm`))).toBe("");
+    });
     it("the information function is for the server only, and hides archived events", async () => {
       await settings({ registrationOpen: true });
       for (const c of [f.clients.anon, f.clients.orgA]) expect(failed(await c.rpc("public_registration_info", { p_slug: `rls-a1-${run}` }))).not.toBe("");

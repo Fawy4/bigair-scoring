@@ -15,6 +15,7 @@
     "db:apply": "node scripts/apply-sql.mjs",
     "db:status": "node scripts/apply-sql.mjs --status",
     "db:combine": "node scripts/combine-sql.mjs",
+    "db:types": "node scripts/gen-types.mjs",
     "test:rls": "vitest run --config vitest.rls.config.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "bootstrap:organiser": "tsx scripts/bootstrap-organiser.ts",

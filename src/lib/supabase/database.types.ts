@@ -2067,6 +2067,10 @@ export type Database = {
         }
         Returns: Json
       }
+      request_photo_upload: {
+        Args: { p_event_slug: string; p_ext: string; p_ip: string }
+        Returns: Json
+      }
       request_seat: {
         Args: {
           p_event_slug: string

@@ -107,3 +107,30 @@ describe("event form starting values", () => {
     expect(v.settings.identification?.basedOn).toBe("name-callout");
   });
 });
+
+describe("registration settings", () => {
+  const form = (settings: object) => EventFormSchema.safeParse({ ...base, settings });
+  it("has sensible defaults: closed, no time, no maximum, no message", () => {
+    const s = parseEventSettings({});
+    expect(s.registrationOpen).toBe(false);
+    expect(s.registrationClosesOn ?? null).toBeNull();
+    expect(s.registrationClosesTime ?? null).toBeNull();
+    expect(s.registrationMaxPerDivision ?? null).toBeNull();
+    expect(s.registrationClosedMessage ?? "").toBe("");
+  });
+  it("accepts a closing date with a time, a maximum per division and a message", () => {
+    const r = form({ registrationOpen: true, registrationClosesOn: "2026-10-01", registrationClosesTime: "18:30", registrationMaxPerDivision: 24, registrationClosedMessage: "Registration is closed: email us." });
+    expect(r.success).toBe(true);
+  });
+  it("a closing time needs a closing date", () => {
+    const r = form({ registrationOpen: true, registrationClosesTime: "18:30" });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.issues.some((i) => i.path.join(".") === "settings.registrationClosesOn")).toBe(true);
+  });
+  it("the time is HH:MM, the maximum a whole number of 1 or more, the message short", () => {
+    expect(form({ registrationClosesOn: "2026-10-01", registrationClosesTime: "6pm" }).success).toBe(false);
+    expect(form({ registrationMaxPerDivision: 0 }).success).toBe(false);
+    expect(form({ registrationMaxPerDivision: 2.5 }).success).toBe(false);
+    expect(form({ registrationClosedMessage: "x".repeat(301) }).success).toBe(false);
+  });
+});

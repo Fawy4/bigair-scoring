@@ -48,6 +48,9 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
           </div>
         ) : null}
       </dl>
+      <Link href={`/e/${event.slug}/register`} className="flex h-14 items-center justify-center rounded-md bg-[#111] px-8 text-lg font-bold text-white">
+        {copy.registration.join.link}
+      </Link>
       <Link href={`/e/${event.slug}/join`} className="flex h-14 items-center justify-center rounded-md border-2 border-[#111] px-8 text-lg font-bold hover:bg-[#eee]">
         {copy.publicSite.joinAsOfficial}
       </Link>
