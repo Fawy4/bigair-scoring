@@ -9,6 +9,7 @@ import {
   generateSingleElimination,
   generateSingleFinal,
 } from "./generators";
+import { ladderToDraw } from "./custom-ladder-draw";
 import { recompute } from "./recompute";
 import { dealByRule, dealRotate, defaultRngSeed, heatLimits, roundLayout, shuffleSeeds } from "./seeding";
 import type { DivisionDraw, DrawHeat, DrawOverrides, DrawRound, Entrant, LadderWarning } from "./types";
@@ -33,13 +34,19 @@ function roundSpecsFor(template: FormatTemplate, n: number, warnings: LadderWarn
   }
   if (template.kind === "fixed") return template.rounds!;
   const g = template.generator!;
-  return withRoundDurations(generateRounds(g, n), template.roundDurationMin);
+  return withRoundWarmUps(withRoundDurations(generateRounds(g, n), template.roundDurationMin), template.roundWarmUpMin);
 }
 
 /** The organiser's optional heat length per round replaces the generator's; unknown round ids are ignored. */
 function withRoundDurations(specs: RoundSpec[], overrides: FormatTemplate["roundDurationMin"]): RoundSpec[] {
   if (!overrides) return specs;
   return specs.map((r) => (overrides[r.id] !== undefined ? { ...r, durationMin: overrides[r.id] } : r));
+}
+
+/** The organiser's optional warm-up per round replaces the division's; unknown round ids are ignored. */
+function withRoundWarmUps(specs: RoundSpec[], overrides: FormatTemplate["roundWarmUpMin"]): RoundSpec[] {
+  if (!overrides) return specs;
+  return specs.map((r) => (overrides[r.id] !== undefined ? { ...r, warmUpMin: overrides[r.id] } : r));
 }
 
 function generateRounds(g: NonNullable<FormatTemplate["generator"]>, n: number): RoundSpec[] {
@@ -112,6 +119,7 @@ function heatSizeWarnings(round: DrawRound): LadderWarning[] {
  * placeholders), division-wide heat numbers, vest colours, warnings. docs/04 §3.
  */
 export function expandFormat(template: FormatTemplate, entrants: Entrant[], overrides: DrawOverrides = {}): DivisionDraw {
+  if (template.kind === "ladder") return ladderToDraw(template, entrants, overrides);
   const active = entrants.filter((e) => !e.withdrawn);
   if (active.length === 0) throw new Error("A division needs at least one rider.");
   const warnings: LadderWarning[] = [];
@@ -155,6 +163,7 @@ export function expandFormat(template: FormatTemplate, entrants: Entrant[], over
     const isLastRound = ri === specs.length - 1;
     const heats: DrawHeat[] = layout.capacities.map((cap, i) => ({
       id: `${spec.id}-H${i + 1}`,
+      uid: `${spec.id}-H${i + 1}`,
       round: spec.id,
       index: i + 1,
       number: null,
@@ -162,6 +171,7 @@ export function expandFormat(template: FormatTemplate, entrants: Entrant[], over
       ...(template.heatNames?.[`${spec.id}-H${i + 1}`] ? { name: template.heatNames[`${spec.id}-H${i + 1}`] } : {}),
       slots: Array.from({ length: cap }, (_, k) => makeSlot(draw, k, {})),
       durationMin: spec.durationMin ?? template.timing.defaultHeatMin,
+      warmUpMin: spec.warmUpMin ?? template.timing.warmUpBeforeHeatMin ?? 0,
       breakAfterHeatMin: spec.breakAfterHeatMin ?? template.timing.defaultBreakAfterHeatMin,
       breakAfterRoundMin: spec.breakAfterRoundMin ?? template.timing.defaultBreakAfterRoundMin,
       roundLast: false,
@@ -190,6 +200,12 @@ export function expandFormat(template: FormatTemplate, entrants: Entrant[], over
     const riding = r.heats.filter((h) => !h.bye);
     if (riding.length) riding[riding.length - 1].roundLast = true;
     warnings.push(...eliminatesNobodyWarnings(r), ...heatSizeWarnings(r));
+    // the smallest and largest heat the generator made for this round: the whole-ladder check (hand editing) warns outside them
+    const sizes = riding.map((h) => h.slots.length);
+    if (sizes.length) {
+      const lim = heatLimits(r.spec.heatSize, r.spec.minHeatSize, r.spec.maxHeatSize);
+      r.limits = { min: Math.min(lim.min, ...sizes), max: Math.max(lim.max, ...sizes) };
+    }
   }
 
   recompute(draw); // byes advance, rounds whose sources are all byes get seeded, placeholders, identifier warnings

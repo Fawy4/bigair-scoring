@@ -71,6 +71,7 @@ export function FormatSimple({
   working,
   onChange,
   onPickKind,
+  onPickLadder,
   errors,
   readOnly,
   minHeats,
@@ -79,6 +80,8 @@ export function FormatSimple({
   working: Record<string, unknown> | null;
   onChange: (v: unknown) => void;
   onPickKind: (kind: GeneratedKind) => void;
+  /** The "Custom ladder" card: start a ladder drawn seat by seat. */
+  onPickLadder: () => void;
   errors: Record<string, string>;
   readOnly?: boolean;
   /** From the preview: the fewest heats any rider rides with the current numbers. The chosen card's tag follows it. */
@@ -113,7 +116,7 @@ export function FormatSimple({
     );
   };
 
-  const target = kind && kind !== "custom" ? TARGET_KEY[kind] : null;
+  const target = kind && kind !== "custom" && kind !== "ladder" ? TARGET_KEY[kind] : null;
 
   return (
     <fieldset disabled={readOnly} className="flex flex-col gap-2">
@@ -140,11 +143,28 @@ export function FormatSimple({
               ) : null}
             </div>
           ))}
+          <div className="flex flex-col rounded-lg border-2 border-[#111] px-3" data-selected={kind === "ladder"}>
+            <div className="flex items-center gap-x-3">
+              <label className="flex min-h-[48px] items-center gap-3 text-base font-bold">
+                <input type="radio" name="ladder-kind" checked={kind === "ladder"} onChange={() => onPickLadder()} />
+                {T.customLadder.title}
+              </label>
+              <span className="text-sm font-extrabold" data-testid="tag-ladder">
+                {T.customLadder.tag}
+              </span>
+              <HelpButton what={T.customLadder.title} help={{ text: T.customLadder.explain, example: T.customLadder.example }} />
+            </div>
+            {kind === "ladder" ? (
+              <p className="-mt-1 pb-1 pl-9 text-sm font-semibold" data-testid="kind-explain">
+                {T.customLadder.explain}
+              </p>
+            ) : null}
+          </div>
         </div>
         {kind === "custom" ? <p className="panel font-semibold">{T.customActive}</p> : null}
       </div>
 
-      {working && kind && kind !== "custom" ? (
+      {working && kind && kind !== "custom" && kind !== "ladder" ? (
         <div className="flex flex-col gap-2" aria-label={T.numbersLabel} role="group">
           {kind === "single_final" || !sizes ? (
             <p className="font-semibold">{T.noNumbers}</p>

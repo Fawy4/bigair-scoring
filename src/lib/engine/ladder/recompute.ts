@@ -154,6 +154,41 @@ function walkoversFor(draw: DivisionDraw, round: DrawRound, arrivals: Arrival[])
 }
 
 /**
+ * A round whose seats name their own sources (custom ladders and hand-arranged rounds): the seat that names "1st of Heat 3" takes
+ * whoever won Heat 3 once that heat is published, and goes back to the placeholder if the result is taken back. Seats put there by
+ * hand (`manual`) and seats that name no source are never touched. A heat that has started and would change is reported as a conflict.
+ */
+function recomputeExplicit(draw: DivisionDraw, round: DrawRound): RoundConflict[] {
+  const conflicts: DrawHeat[] = [];
+  for (const heat of round.heats) {
+    const next = heat.slots.map((slot): Slot => {
+      if (slot.manual || !slot.from || slot.from.heat === 0) return slot;
+      const source = draw.rounds.find((r) => r.id === slot.from!.round)?.heats.find((h) => h.index === slot.from!.heat);
+      const res = source ? resultOf(draw, source) : undefined;
+      const won = res?.ranked.find((e) => e.place === slot.from!.place);
+      if (!won) {
+        if (!slot.entrantId) return slot;
+        const { entrantId: _e, seed: _s, history: _h, modifier: _m, ...rest } = slot;
+        void _e; void _s; void _h; void _m;
+        return { ...rest };
+      }
+      const entrant = draw.entrants.find((e) => e.id === won.entrantId);
+      const prior = source!.slots.find((s) => s.entrantId === won.entrantId)?.history ?? [];
+      const history = draw.results[source!.id] ? [...prior, { round: source!.round, heat: source!.index, total: won.total, tieKeys: won.tieKeys ?? [], place: won.place, size: source!.slots.length }] : prior;
+      const dns = won.modifier === "DNS" || entrant?.withdrawn;
+      const { modifier: _old, ...rest } = slot;
+      void _old;
+      return makeSlot(draw, slot.index, { ...rest, entrantId: won.entrantId, seed: seedNumber(draw, won.entrantId), history, ...(dns ? { modifier: "DNS" as const } : {}) });
+    });
+    if (heatSignature(next) === heatSignature(heat.slots)) continue;
+    if (heat.status !== "pending") conflicts.push(heat);
+    else heat.slots = next;
+  }
+  round.seeded = round.heats.every((h) => h.slots.every((s) => s.entrantId));
+  return conflicts.length ? [{ round: round.id, heats: conflicts }] : [];
+}
+
+/**
  * Brings every non-seed-fed round in line with the published results. Mutates `draw` (callers pass a clone).
  * A round is (re)dealt when all its source heats are published or "Seed now" was pressed; otherwise it shows
  * placeholders. A round with started heats is never changed: the difference is returned as a conflict.
@@ -161,6 +196,10 @@ function walkoversFor(draw: DivisionDraw, round: DrawRound, arrivals: Arrival[])
 export function recompute(draw: DivisionDraw): RoundConflict[] {
   const conflicts: RoundConflict[] = [];
   for (const round of draw.rounds) {
+    if (round.explicit) {
+      conflicts.push(...recomputeExplicit(draw, round));
+      continue;
+    }
     if (isSeedFed(round.spec)) continue;
     const arrivals = collectArrivals(draw, round);
     round.arrivals = arrivals;

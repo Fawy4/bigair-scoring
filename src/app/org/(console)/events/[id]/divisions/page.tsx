@@ -17,10 +17,10 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
   const { data: event } = await supabase.from("events").select("id, organisation_id, settings").eq("id", id).maybeSingle();
   if (!event) notFound();
 
-  const [{ data: divisions }, { data: started }, { data: withHeats }, { data: models }, { data: formats }] = await Promise.all([
+  const [{ data: divisions }, { data: started }, { data: withHeats }, { data: models }, { data: formats }, { data: entryRows }] = await Promise.all([
     supabase
       .from("divisions")
-      .select("id, name, sort_order, scoring_model_id, scoring_overrides, format_template_id, format_params, rules_unlocked_at, description, identification, trick_base")
+      .select("id, name, sort_order, scoring_model_id, scoring_overrides, format_template_id, format_params, rules_unlocked_at, description, identification, trick_base, draw_locked_at")
       .eq("event_id", id)
       .order("sort_order")
       .order("created_at"),
@@ -28,6 +28,7 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
     supabase.from("heats").select("division_id").eq("event_id", id),
     supabase.from("scoring_models").select("id, key, name, version, organisation_id, json"),
     supabase.from("format_templates").select("id, key, name, version, organisation_id, json"),
+    supabase.from("entries").select("id, division_id, seed, created_at, riders(first_name, last_name)").eq("event_id", id).eq("status", "confirmed"),
   ]);
   const startedIds = new Set((started ?? []).map((h) => h.division_id));
   const heatIds = new Set((withHeats ?? []).map((h) => h.division_id));
@@ -46,6 +47,11 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
     started: startedIds.has(d.id),
     hasHeats: heatIds.has(d.id),
     locked: startedIds.has(d.id) && d.rules_unlocked_at === null,
+    drawLocked: Boolean(d.draw_locked_at),
+    riders: (entryRows ?? [])
+      .filter((e) => e.division_id === d.id)
+      .sort((a, b) => (a.seed ?? Number.MAX_SAFE_INTEGER) - (b.seed ?? Number.MAX_SAFE_INTEGER) || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
+      .map((e) => ({ id: e.id, name: `${e.riders?.first_name ?? ""} ${e.riders?.last_name ?? ""}`.trim() || "Rider" })),
   }));
 
   const settings = parseEventSettings(event.settings);

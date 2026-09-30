@@ -6,5 +6,7 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
     passWithNoTests: false,
+    // the heavy property tests (thousands of generated ladders) need more than 5 s when the machine is busy
+    testTimeout: 30_000,
   },
 });

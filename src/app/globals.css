@@ -170,3 +170,14 @@
     page-break-inside: avoid;
   }
 }
+
+/* small labels on seats and heats ("changed by hand", "started"): text, never colour alone */
+.badge-note {
+  display: inline-block;
+  border: 2px solid #111;
+  border-radius: 9999px;
+  padding: 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: #fff;
+}

@@ -1,14 +1,16 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
+import { ConfirmButton } from "@/components/confirm-button";
 import { FieldLabel, HelpButton } from "@/components/help-button";
 import { LadderDiagram } from "@/components/ladder-diagram";
 import { SchemaForm, type NewItem, type SelectOptions } from "@/components/schema-form/schema-form";
 import { toast } from "@/hooks/use-toast";
 import { issuesToMap } from "@/lib/form/path";
-import { advanceTargets, newCustomFormat, newRound } from "@/lib/format-ui/custom";
+import { advanceTargets, newRound } from "@/lib/format-ui/custom";
 import { addRoundAfter } from "@/lib/format-ui/custom-ladder";
-import { GENERATOR, KIND_PRESET_KEY, withHeatName, withLadderKind, withRoundName, type GeneratedKind } from "@/lib/format-ui/ladder-kind";
+import { GENERATOR, KIND_PRESET_KEY, KINDS, withHeatName, withLadderKind, withRoundName, type GeneratedKind } from "@/lib/format-ui/ladder-kind";
 import { previewFormat } from "@/lib/format-ui/preview";
 import { exportPreset, type PresetKind } from "@/lib/presets/io";
 import { presetGroups, type PresetRow } from "@/lib/presets/options";
@@ -18,11 +20,14 @@ import { friendlyMessage, schemaToNodes } from "@/lib/schema-form/nodes";
 import { describeScoringModel } from "@/lib/scoring-ui/describe";
 import { diffOverrides, FORMAT_NULLABLE, mergeOverrides, sameOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { copy, FORMAT_HIDDEN, FORMAT_LABELS, help, SCORING_HIDDEN, SCORING_LABELS } from "@/lib/ui-copy";
+import { expandFormat, drawToLadder, ladderTemplate, LadderConvertError, newLadder, type CustomLadder, type Entrant } from "@/lib/engine/ladder";
+import { generateDraw } from "../draw/actions";
 import { importPreset, savePreset, saveDivisionRules, unlockRules } from "./actions";
 import type { DivisionRow } from "./divisions-manager";
 import { CustomBuilder } from "./custom-builder";
+import { LadderBuilder } from "./ladder-builder";
 import { FormatSimple, ladderKindOf } from "./format-simple";
-import { PerRoundLengths } from "./per-round-lengths";
+import { PerRoundLengths, WarmUpField } from "./per-round-lengths";
 import { ScoringSimple } from "./scoring-simple";
 
 const R = copy.rules;
@@ -56,6 +61,7 @@ function parseWith(kind: PresetKind, json: unknown) {
 /** One rules editor for either the scoring model or the format of a division (docs/06 §1 step 2). */
 export function RulesPanel({
   kind,
+  eventId,
   division,
   presets,
   organisationId,
@@ -63,6 +69,7 @@ export function RulesPanel({
   onDivisionChange,
 }: {
   kind: PresetKind;
+  eventId: string;
   division: DivisionRow;
   presets: PresetRow[];
   organisationId: string;
@@ -86,6 +93,8 @@ export function RulesPanel({
   const [showPaste, setShowPaste] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const [pending, start] = useTransition();
+  const router = useRouter();
+  const [startFromError, setStartFromError] = useState<string | null>(null);
 
   const baseRow = presets.find((p) => p.id === presetId) ?? null;
   const baseParsed = useMemo(() => {
@@ -112,6 +121,9 @@ export function RulesPanel({
   const template = check?.success && !scoring ? (check.data as FormatTemplate) : null;
   const preview = useMemo(() => (template ? previewFormat(template, riders) : null), [template, riders]);
   const isFixed = !scoring && ladderKindOf(working) === "custom";
+  const isLadder = !scoring && ladderKindOf(working) === "ladder";
+  // the riders the ladder is built for: the division's confirmed riders, or placeholders while none are entered
+  const builderRiders = useMemo(() => (division.riders.length > 0 ? division.riders : Array.from({ length: riders }, (_, i) => ({ id: `p${i + 1}`, name: `Rider ${i + 1}` }))), [division.riders, riders]);
   // the single settings' heat length of every round of the preview (without the per-round overrides)
   const defaultLengths = useMemo(() => {
     if (!template || isFixed) return new Map<string, number>();
@@ -139,12 +151,60 @@ export function RulesPanel({
     if (working) setValue(withLadderKind(working as Record<string, unknown>, k));
   }
 
-  function startCustom() {
+  /** The "Custom ladder" card: an empty whiteboard for this division (nothing is saved until you save or apply). */
+  function pickLadder() {
+    if (ladderKindOf(working) === "ladder") return;
     setPresetId(null);
     setCustom(true);
-    setWorking(FormatTemplateSchema.parse(newCustomFormat()));
+    setWorking(FormatTemplateSchema.parse(ladderTemplate(newLadder(3, 2, 4), { name: R.ladderDefaultName })));
     setMessage(null);
     setShowLoad(false);
+  }
+
+  /** "Start from Knockout and edit": any generated format becomes a ladder you can change seat by seat. */
+  function startFrom(kindKey: string) {
+    setStartFromError(null);
+    const k = kindKey as GeneratedKind;
+    const type = GENERATOR[k];
+    const matches = presets.filter((p) => !p.organisation_id && (p.json as { generator?: { type?: string } } | null)?.generator?.type === type);
+    const row = [...matches].sort((a, b) => Number(b.key === KIND_PRESET_KEY[k]) - Number(a.key === KIND_PRESET_KEY[k]) || b.version - a.version)[0];
+    const parsed = row ? FormatTemplateSchema.safeParse(row.json) : null;
+    if (!parsed?.success) return setStartFromError(R.startFromMissing);
+    try {
+      const entrants: Entrant[] = builderRiders.map((r) => ({ id: r.id, name: r.name }));
+      const draw = expandFormat(parsed.data, entrants, { identification: "name-callout" });
+      const ladder = drawToLadder(draw);
+      const t = ladderTemplate(ladder, { name: R.ladderFrom(parsed.data.name), basedOn: parsed.data.id, timing: parsed.data.timing });
+      setWorking(FormatTemplateSchema.parse(t));
+      setMessage(null);
+    } catch (e) {
+      setStartFromError(e instanceof LadderConvertError ? e.message : (e as Error).message);
+    }
+  }
+
+  /** "Apply to draw": saves the ladder as your format (a new version when it is one of yours), makes it the division's format and draws. */
+  function applyToDraw() {
+    if (!working) return;
+    setMessage(null);
+    start(async () => {
+      const name = (presetName.trim() || (owned && baseRow ? baseRow.name : `${division.name} ladder`)).slice(0, 80);
+      let id = presetId;
+      if (!id || unsaved || custom) {
+        const res = await savePreset({ kind, organisationId, name, json: working, newVersionOfKey: owned && !custom && baseRow ? baseRow.key : undefined });
+        if (!res.ok) return report(res, "");
+        onPresetAdded(res.row);
+        id = res.row.id;
+        setPresetId(id);
+        setCustom(false);
+      }
+      const applied = await saveDivisionRules({ divisionId: division.id, kind, presetId: id, overrides: {} });
+      if (!applied.ok) return report(applied, "");
+      onDivisionChange({ format_template_id: id, format_params: {} });
+      const drawn = await generateDraw(division.id, false);
+      if (!drawn.ok) return setMessage({ kind: "error", text: drawn.error });
+      toast({ title: copy.builder.applied(division.name) });
+      router.push(`/org/events/${eventId}/draw?division=${division.id}`);
+    });
   }
 
   function report(res: { ok: boolean; error?: string; problems?: string[] }, okText: string) {
@@ -293,11 +353,6 @@ export function RulesPanel({
               {copy.formatSimple.loadSaved}
             </button>
             <HelpButton what={copy.formatSimple.loadSaved} help={help["format.load"]} />
-            {!locked ? (
-              <button type="button" className="btn" onClick={startCustom}>
-                {copy.formatSimple.buildOwn}
-              </button>
-            ) : null}
             {custom ? <span className="font-bold">{R.customUnsaved}</span> : null}
           </div>
           {showLoad ? (
@@ -369,13 +424,58 @@ export function RulesPanel({
             working={(working as Record<string, unknown> | null) ?? null}
             onChange={setValue}
             onPickKind={pickKind}
+            onPickLadder={pickLadder}
             errors={errors}
             readOnly={locked}
             minHeats={preview?.ok ? preview.minHeatsPerRider : null}
           />
           {working && isFixed ? <CustomBuilder working={working as Record<string, unknown>} onChange={setValue} riders={riders} readOnly={locked} /> : null}
 
-          {working ? (
+          {working && isLadder ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <FieldLabel htmlFor={`riders-${division.id}`} text={copy.formatSimple.previewWith} help={help["format.preview"]} />
+                <input id={`riders-${division.id}`} type="number" min={1} max={200} value={riders} disabled={division.riders.length > 0} onChange={(e) => setRiders(Math.max(1, Math.min(200, Number(e.target.value) || 1)))} className="w-24" />
+                <span className="font-bold">{copy.formatSimple.riders}</span>
+              </div>
+              <WarmUpField working={working as Record<string, unknown>} onChange={setValue} readOnly={locked} />
+              <LadderBuilder
+                ladder={(working as { ladder: CustomLadder }).ladder}
+                onChange={(l) => setValue({ ...(working as Record<string, unknown>), ladder: l })}
+                riders={builderRiders}
+                planning={division.riders.length === 0}
+                readOnly={locked}
+                startFromOptions={KINDS.map((k) => ({ kind: k, label: copy.formatSimple.types[k].title }))}
+                onStartFrom={startFrom}
+                startFromError={startFromError}
+              >
+                {({ complete }) => (
+                  <div className="panel flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label htmlFor={`lname-${division.id}`} className="font-bold">
+                        {copy.builder.nameLabel}
+                      </label>
+                      <input id={`lname-${division.id}`} value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder={copy.builder.namePlaceholder} />
+                    </div>
+                    <button type="button" className="btn" disabled={pending || !valid || presetName.trim().length < 2 || locked} onClick={() => saveAsPreset(false)}>
+                      {copy.builder.saveDraft}
+                    </button>
+                    {division.drawLocked ? <p className="font-semibold">{copy.builder.drawLocked}</p> : division.started ? <p className="font-semibold">{copy.builder.drawStarted}</p> : null}
+                    {division.hasHeats && !division.drawLocked && !division.started ? (
+                      <ConfirmButton label={copy.builder.applyToDraw} question={copy.builder.applyQuestion} confirmLabel={copy.builder.applyYes} cancelLabel={copy.common.cancel} disabled={!complete || division.riders.length === 0} pending={pending} onConfirm={applyToDraw} />
+                    ) : (
+                      <button type="button" className="btn btn-primary" disabled={pending || !complete || division.riders.length === 0 || division.drawLocked || division.started || locked} onClick={applyToDraw}>
+                        {copy.builder.applyToDraw}
+                      </button>
+                    )}
+                    {!complete ? <p className="text-sm font-semibold">{copy.builder.applyBlocked}</p> : division.riders.length === 0 ? <p className="text-sm font-semibold">{copy.builder.applyNoRiders}</p> : null}
+                  </div>
+                )}
+              </LadderBuilder>
+            </div>
+          ) : null}
+
+          {working && !isLadder ? (
             <div className="flex flex-col gap-3" aria-label={copy.formatSimple.previewLabel}>
               <div className="flex flex-wrap items-center gap-3">
                 <FieldLabel htmlFor={`riders-${division.id}`} text={copy.formatSimple.previewWith} help={help["format.preview"]} />
@@ -409,6 +509,11 @@ export function RulesPanel({
                         {copy.formatSimple.minHeats(preview.minHeatsPerRider)}
                       </p>
                     ) : null}
+                    {preview.ok && preview.timeSentence ? (
+                      <p className="font-bold" data-testid="time-sentence">
+                        {preview.timeSentence}
+                      </p>
+                    ) : null}
                     {preview.ok ? <p className="font-semibold">{copy.formatSimple.ridingTime(preview.ridingMinutes)}</p> : null}
                     {preview.warnings.map((w) => (
                       <p key={w} className="font-bold">
@@ -423,7 +528,7 @@ export function RulesPanel({
             </div>
           ) : null}
 
-          {working && !isFixed ? <PerRoundLengths working={working as Record<string, unknown>} rounds={perRound} onChange={setValue} readOnly={locked} /> : null}
+          {working && !isFixed && !isLadder ? <PerRoundLengths working={working as Record<string, unknown>} rounds={perRound} onChange={setValue} readOnly={locked} /> : null}
 
           {working ? (
             <div className="flex flex-col gap-1">
@@ -445,7 +550,13 @@ export function RulesPanel({
               onChange={setValue}
               errors={errors}
               readOnly={locked}
-              hidden={(working as { kind?: string }).kind === "fixed" ? ["generator", "roundDurationMin", "roundNames", "heatNames"] : ["rounds", "roundDurationMin", "roundNames", "heatNames"]}
+              hidden={
+                (working as { kind?: string }).kind === "fixed"
+                  ? ["generator", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"]
+                  : (working as { kind?: string }).kind === "ladder"
+                    ? ["generator", "rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"]
+                    : ["rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"]
+              }
               selectOptions={selectOptions}
               newItem={newItem}
               hiddenPaths={isFixed ? [] : FORMAT_SIMPLE_PATHS}

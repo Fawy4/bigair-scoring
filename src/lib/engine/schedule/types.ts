@@ -17,6 +17,8 @@ export interface HeatLive {
   roundLast?: boolean;
   /** Round defaults used when the run item does not override them. */
   durationMin?: number;
+  /** Warm-up before the heat in minutes (default 0). The heat's competition timer is only `durationMin`. */
+  warmUpMin?: number;
   breakAfterHeatMin?: number;
   breakAfterRoundMin?: number;
 }
@@ -37,6 +39,10 @@ export interface TimetableRow {
   start: string | null;
   end: string | null;
   durationMin: number;
+  /** Warm-up before a heat: its own segment of the row ("warm-up 10:00 · start 10:05 · end 10:15"). 0 for breaks and notes. */
+  warmUpMin: number;
+  warmUpStartUtc: string | null;
+  warmUpStart: string | null;
   /** Minutes of break after this row; null on the last row of the day ("—"). */
   breakAfterMin: number | null;
   status: RowStatus;
@@ -63,5 +69,7 @@ export interface Timetable {
   /** End of the last heat or break; null while any row has no time (hold, missing anchor). */
   finishUtc: string | null;
   finish: string | null;
+  /** Heats that have not finished yet (running heats count): "heats left" in the header. */
+  heatsLeft: number;
   warnings: string[];
 }

@@ -621,6 +621,7 @@ export type Database = {
         Row: {
           created_at: string
           division_id: string
+          draw_uid: string | null
           duration_sec: number
           ended_at: string | null
           event_id: string
@@ -628,6 +629,7 @@ export type Database = {
           id: string
           live_rev: number
           manual_override: boolean
+          name: string | null
           number: number
           number_suffix: string | null
           paused_at: string | null
@@ -638,10 +640,12 @@ export type Database = {
           started_at: string | null
           status: string
           updated_at: string
+          warm_up_sec: number
         }
         Insert: {
           created_at?: string
           division_id: string
+          draw_uid?: string | null
           duration_sec?: number
           ended_at?: string | null
           event_id: string
@@ -649,6 +653,7 @@ export type Database = {
           id?: string
           live_rev?: number
           manual_override?: boolean
+          name?: string | null
           number: number
           number_suffix?: string | null
           paused_at?: string | null
@@ -659,10 +664,12 @@ export type Database = {
           started_at?: string | null
           status?: string
           updated_at?: string
+          warm_up_sec?: number
         }
         Update: {
           created_at?: string
           division_id?: string
+          draw_uid?: string | null
           duration_sec?: number
           ended_at?: string | null
           event_id?: string
@@ -670,6 +677,7 @@ export type Database = {
           id?: string
           live_rev?: number
           manual_override?: boolean
+          name?: string | null
           number?: number
           number_suffix?: string | null
           paused_at?: string | null
@@ -680,6 +688,7 @@ export type Database = {
           started_at?: string | null
           status?: string
           updated_at?: string
+          warm_up_sec?: number
         }
         Relationships: [
           {
@@ -1774,6 +1783,7 @@ export type Database = {
       }
     }
     Functions: {
+      activate_schedule_plan: { Args: { p_plan: string }; Returns: undefined }
       add_attempt: {
         Args: {
           p_category_key?: string
@@ -2060,6 +2070,7 @@ export type Database = {
         Args: { p_division: string; p_rows: Json }
         Returns: Json
       }
+      lock_division_draw: { Args: { p_division: string }; Returns: undefined }
       platform_session: { Args: never; Returns: Json }
       public_platform_settings: { Args: never; Returns: Json }
       public_registration_info: { Args: { p_slug: string }; Returns: Json }
@@ -2105,8 +2116,22 @@ export type Database = {
           table_name: string
         }[]
       }
+      save_division_draw: {
+        Args: {
+          p_action: string
+          p_audit?: Json
+          p_division: string
+          p_draw: Json
+          p_projection: Json
+        }
+        Returns: undefined
+      }
       set_division_panel: {
         Args: { p_division: string; p_seat_ids: string[] }
+        Returns: undefined
+      }
+      set_draw_walkover: {
+        Args: { p_division: string; p_draw: Json; p_entry: string }
         Returns: undefined
       }
       set_entry_order: {
@@ -2200,6 +2225,10 @@ export type Database = {
         }
       }
       touch_seat: { Args: never; Returns: undefined }
+      unlock_division_draw: {
+        Args: { p_division: string; p_reason: string }
+        Returns: undefined
+      }
       unlock_division_rules: {
         Args: { p_division: string; p_reason: string }
         Returns: undefined

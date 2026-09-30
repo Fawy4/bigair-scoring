@@ -51,6 +51,10 @@ export interface SetupCounts {
   pendingSeats: number;
   /** "Pro Men needs 3 judges, 2 assigned" lines. */
   panelShortfalls: string[];
+  /** Division ids that have a draw / a locked draw, and whether any plan is active (Draw and Run order steps). */
+  drawn?: string[];
+  locked?: string[];
+  activePlan?: boolean;
 }
 
 export function ridersStepMissing(divisions: DivisionStepInput[], counts: SetupCounts): string[] {
@@ -64,13 +68,27 @@ export function officialsStepMissing(counts: SetupCounts): string[] {
   return [...out, ...counts.panelShortfalls];
 }
 
+export function drawStepMissing(divisions: DivisionStepInput[], counts: SetupCounts): string[] {
+  const out: string[] = [];
+  for (const d of divisions) {
+    if ((counts.ridersByDivision[d.id] ?? 0) === 0) continue;
+    if (!(counts.drawn ?? []).includes(d.id)) out.push(copy.wizard.missing.noDraw(d.name));
+    else if (!(counts.locked ?? []).includes(d.id)) out.push(copy.wizard.missing.drawNotLocked(d.name));
+  }
+  return out;
+}
+
+export function scheduleStepMissing(counts: SetupCounts): string[] {
+  return counts.activePlan ? [] : [copy.wizard.missing.noPlan];
+}
+
 export function wizardSteps(event: EventStepInput | null, divisions: DivisionStepInput[], counts?: SetupCounts): StepInfo[] {
   return [
     { key: "event", label: copy.wizard.steps.event, available: true, missing: event ? eventStepMissing(event) : [] },
     { key: "divisions", label: copy.wizard.steps.divisions, available: true, missing: divisionsStepMissing(divisions) },
     { key: "riders", label: copy.wizard.steps.riders, available: true, missing: counts ? ridersStepMissing(divisions, counts) : [] },
     { key: "officials", label: copy.wizard.steps.officials, available: true, missing: counts ? officialsStepMissing(counts) : [] },
-    { key: "draw", label: copy.wizard.steps.draw, available: false, missing: [] },
-    { key: "schedule", label: copy.wizard.steps.schedule, available: false, missing: [] },
+    { key: "draw", label: copy.wizard.steps.draw, available: true, missing: counts ? drawStepMissing(divisions, counts) : [] },
+    { key: "schedule", label: copy.wizard.steps.schedule, available: true, missing: counts ? scheduleStepMissing(counts) : [] },
   ];
 }

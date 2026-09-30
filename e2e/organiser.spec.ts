@@ -478,41 +478,14 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await page.getByLabel("Saved formats").selectOption({ label: offered.find((o) => /Single final/.test(o))! });
   await expect(page.getByRole("radio", { name: "Single final" })).toBeChecked();
 
-  // custom ladder: a visual builder. "+ Add round" on the diagram, a dropdown for every place, live checks, save as my format
-  await page.getByRole("button", { name: "Build my own ladder…" }).click();
-  await expect(page.getByTestId("custom-builder")).toBeVisible();
-  await field("Preview with").fill("14");
-  await expect(page.getByTestId("custom-round")).toHaveCount(2);
-  await expect(page.getByTestId("ladder-problems")).toContainText("No problems found for 14 riders");
-  await page.getByRole("button", { name: "+ Add round after Round 1" }).click();
-  await expect(page.getByTestId("custom-round")).toHaveCount(3);
-  await expect(page.getByTestId("ladder-round")).toHaveCount(3);
-  await expect(page.getByTestId("ladder-problems")).toContainText("Final gets no riders: send at least one place to it.");
-  await page.getByLabel("Round 2: where 1st place goes").selectOption({ label: "→ Final" });
-  await page.getByLabel("Round 2: where 2nd place goes").selectOption({ label: "→ Final" });
-  await expect(page.getByTestId("ladder-problems")).toContainText("No problems found for 14 riders");
-  await page.getByLabel("Round 1: where 3rd place goes").selectOption({ label: "→ Round 2" });
-  await expect(page.getByTestId("ladder-diagram")).toContainText("3rd → R2");
-  // per-round numbers with a message that names the round and the counts
-  await page.locator("#cb-target-R1").fill("3");
-  await page.locator("#cb-min-R1").fill("3");
-  await page.locator("#cb-max-R1").fill("3");
-  await expect(page.getByTestId("ladder-problems")).toContainText("Round 1 receives 14 riders in 4 heats of 3–4, but the limits are 3 to 3 per heat");
-  await page.locator("#cb-max-R1").fill("4");
-  // heats of 3 where the top 3 go on eliminate nobody: the check names the round
-  await expect(page.getByTestId("ladder-problems")).toContainText("Round 1: Heat 1 eliminates nobody (3 riders, top 3 advance)");
-  await page.getByLabel("Round 1: where 3rd place goes").selectOption({ label: "out" });
-  await expect(page.getByTestId("ladder-problems")).toContainText("No problems found for 14 riders");
-  await expect(page.getByTestId("advance-count").first()).toContainText("places go on to a later round");
-  await field("Save these settings as my format").fill("Arrow custom");
-  await page.getByRole("button", { name: "Save as my format" }).click();
-  await expect(page.getByText("Preset “Arrow custom” saved").first()).toBeVisible();
-  // ... and the "Load a saved format…" button offers it
-  await page.getByRole("radio", { name: "Pools to a final" }).check();
-  await page.getByRole("button", { name: "Load a saved format…", exact: true }).click();
-  await page.getByLabel("Saved formats").selectOption({ label: "Arrow custom" });
-  await expect(page.getByTestId("custom-builder")).toBeVisible();
-  await expect(page.getByTestId("custom-round")).toHaveCount(3);
+  // custom ladder: the whiteboard builder (the full walk-through is in draw-timetable.spec.ts)
+  await page.getByRole("radio", { name: "Custom ladder" }).check();
+  await expect(page.getByTestId("ladder-builder")).toBeVisible();
+  await page.getByRole("button", { name: "+ Add round" }).click();
+  await expect(page.getByTestId("builder-round")).toHaveCount(1);
+  await expect(page.getByTestId("ladder-status")).toContainText("Not complete yet");
+  await page.getByRole("radio", { name: "Single final" }).check();
+  await expect(page.getByTestId("ladder-builder")).toHaveCount(0);
 
   // duplicate, reorder, delete
   await page.getByRole("button", { name: "Duplicate" }).click();
