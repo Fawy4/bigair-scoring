@@ -1,12 +1,13 @@
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import type { Page } from "@playwright/test";
+import { record } from "./cleanup";
 
 /**
  * A throwaway organiser (login + organisation) created with the service key, signed in through a magic-link token
  * so the test never depends on an inbox. Everything it creates is removed by `cleanup()`.
  */
-export async function createOrganiser(options: { password?: string } = {}) {
+export async function createOrganiser(options: { password?: string; platformAdmin?: "owner" | "staff" } = {}) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const db = createClient(url, key, { auth: { persistSession: false } });
@@ -14,9 +15,22 @@ export async function createOrganiser(options: { password?: string } = {}) {
   const email = `e2e-${run}@example.com`;
   const { data: created, error } = await db.auth.admin.createUser({ email, email_confirm: true, ...(options.password ? { password: options.password } : {}) });
   if (error) throw new Error(`could not create the test organiser: ${error.message}`);
+  // written down before anything else can fail, so the global teardown removes it whatever happens next
+  record({ userId: created.user.id });
+  record({ orgSlug: `e2e-${run}` });
   const { data: org, error: orgError } = await db.from("organisations").insert({ name: `E2E Big Air ${run}`, slug: `e2e-${run}` }).select("id").single();
-  if (orgError) throw new Error(orgError.message);
+  if (orgError) {
+    await db.auth.admin.deleteUser(created.user.id);
+    throw new Error(orgError.message);
+  }
   await db.from("memberships").insert({ organisation_id: org.id, user_id: created.user.id, role: "owner" });
+  if (options.platformAdmin) {
+    const { error: adminError } = await db.from("platform_admins").insert({ user_id: created.user.id, role: options.platformAdmin });
+    if (adminError) throw new Error(adminError.message);
+  }
+  /** Organisations made through the screens during a test; removed with the rest in cleanup(). */
+  const extraOrgSlugs: string[] = [];
+  const extraUsers: string[] = [];
 
   return {
     run,
@@ -27,10 +41,33 @@ export async function createOrganiser(options: { password?: string } = {}) {
       if (linkError) throw new Error(linkError.message);
       await page.goto(`/auth/confirm?token_hash=${data.properties.hashed_token}&type=magiclink&next=${encodeURIComponent(next)}`);
     },
+    trackOrganisation: (slug: string) => {
+      extraOrgSlugs.push(slug);
+      record({ orgSlug: slug });
+    },
+    trackUser: (id: string) => {
+      extraUsers.push(id);
+      record({ userId: id });
+    },
+    /** Every step is attempted even if an earlier one fails; the global teardown is the backstop. */
     async cleanup() {
-      await db.storage.from("branding").remove((await db.storage.from("branding").list(org.id)).data?.map((o) => `${org.id}/${o.name}`) ?? []);
-      await db.rpc("purge_organisation", { p_org: org.id });
-      await db.auth.admin.deleteUser(created.user.id);
+      const step = async (fn: () => PromiseLike<unknown>) => {
+        try {
+          await fn();
+        } catch {
+          // keep going: one failed step must not leave the rest behind
+        }
+      };
+      for (const slug of extraOrgSlugs) {
+        await step(async () => {
+          const { data: o } = await db.from("organisations").select("id").eq("slug", slug).maybeSingle();
+          if (o) await db.rpc("purge_organisation", { p_org: o.id });
+        });
+      }
+      for (const id of extraUsers) await step(() => db.auth.admin.deleteUser(id));
+      await step(async () => db.storage.from("branding").remove((await db.storage.from("branding").list(org.id)).data?.map((o) => `${org.id}/${o.name}`) ?? []));
+      await step(() => db.rpc("purge_organisation", { p_org: org.id }));
+      await step(() => db.auth.admin.deleteUser(created.user.id));
     },
     db,
   };
@@ -38,3 +75,11 @@ export async function createOrganiser(options: { password?: string } = {}) {
 
 /** 1×1 PNG used as a logo. */
 export const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+
+/** The product name the site really shows: the platform setting when the owner has set one, else NEXT_PUBLIC_PRODUCT_NAME. */
+export async function effectiveProductName(): Promise<string> {
+  const builtIn = process.env.NEXT_PUBLIC_PRODUCT_NAME || "[PRODUCT_NAME]";
+  const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+  const { data } = await db.from("platform_settings").select("value").eq("key", "product_name").maybeSingle();
+  return typeof data?.value === "string" && data.value.trim() ? data.value.trim() : builtIn;
+}

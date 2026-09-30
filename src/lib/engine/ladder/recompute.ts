@@ -130,8 +130,19 @@ function dealArrivals(draw: DivisionDraw, round: DrawRound, list: Arrival[]): Sl
 function provisionalSlots(draw: DivisionDraw, round: DrawRound): Slot[][] {
   const spec = effectiveSpec(draw, round);
   const layout = roundLayout(round.expectedEntrants, spec);
-  const sources = sourceSlots(draw.rounds, round.spec).slice(0, round.expectedEntrants);
+  const found = sourceSlots(draw.rounds, round.spec).slice(0, round.expectedEntrants);
+  const sources = spec.seeding === "adjacent" ? orderAdjacent(draw, found, (x) => x) : found;
   return dealByRule(sources, layout, spec.seeding).map((heat) => heat.map((from, i) => makeSlot(draw, i, { from })));
+}
+
+/** Riders (or placeholder sources) in the order they left their heats: source round, then heat, then place (for "adjacent" pairing). */
+function orderAdjacent<T>(draw: DivisionDraw, list: T[], source: (item: T) => { round: string; heat: number; place: number }): T[] {
+  const order = (id: string) => draw.rounds.findIndex((r) => r.id === id);
+  return [...list].sort((a, b) => {
+    const x = source(a);
+    const y = source(b);
+    return order(x.round) - order(y.round) || x.heat - y.heat || x.place - y.place;
+  });
 }
 
 function walkoversFor(draw: DivisionDraw, round: DrawRound, arrivals: Arrival[]): Arrival[] {
@@ -158,7 +169,8 @@ export function recompute(draw: DivisionDraw): RoundConflict[] {
 
     let next: Slot[][] | null;
     if (wantSeeded) {
-      const ordered = [...orderArrivals(arrivals, round.spec.reseed), ...walkoversFor(draw, round, arrivals)].slice(0, round.expectedEntrants);
+      const walkovers = walkoversFor(draw, round, arrivals);
+      const ordered = (effectiveSpec(draw, round).seeding === "adjacent" ? orderAdjacent(draw, [...arrivals, ...walkovers], (a) => a.from) : [...orderArrivals(arrivals, round.spec.reseed), ...walkovers]).slice(0, round.expectedEntrants);
       next = dealArrivals(draw, round, ordered);
     } else {
       next = provisionalSlots(draw, round);

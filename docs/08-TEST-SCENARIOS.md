@@ -155,6 +155,16 @@ Rule: every heat between the minimum and the maximum (defaults: target − 1, ne
 - **Single final:** 1–10 riders: one heat, places 1…N; 12 riders: one heat of 12 and warnings.
 - Format tab (Playwright): the seven cards, their tags and the numbers each uses are visible at the Simple level without toggling; clicking a round or heat name in the diagram renames it (blank restores); the custom-ladder builder adds rounds, links places with dropdowns and names the round and counts in its checks.
 
+### 2G7 — Knockout: the three numbers apply to every round (docs/04 decision 33; `2g7-knockout-sizing.test.ts`)
+The expected values below are the owner's own examples. Every heat count and size is asserted from the real draw.
+- **24 riders, target 3 / minimum 3 / maximum 3, 1 advances, final of 2:** R1 8 heats of 3 → R2 4 heats of 2 → SF 2 heats of 2 → F 1 heat of 2 = **15 heats**. R2 pairs adjacent heats: H1 = 1st H1 + 1st H2, H2 = 1st H3 + 1st H4, and so on; SF pairs R2's H1 + H2 and H3 + H4. With results, the winner of R1 H1 rides R2 H1 with the winner of R1 H2. No heat is above 3 and there is no "below the minimum" warning.
+- **16 riders, target 4 / minimum 3 / maximum 4, 2 advance, final of 4:** R1 4 heats of 4 → SF 2 heats of 4 (H1's top two with H2's top two, H3 with H4) → F 1 heat of 4.
+- **21 riders, 3 / 3 / 3, 1 advances, final of 2:** R1 7 heats of 3 → the 7 winners cannot make heats of 3, so R2 is heats of 2, 2 and 3 → the 3 winners ride the Final (3 riders, the maximum): the final size is a target that is exceeded only because R2 cannot produce 2.
+- **By result:** the same ladder shape, but the next round is a snake over the survivors: R2 H1 = 1st H1 + 1st H8. The preset "Single elimination" now defaults to "By original seeding".
+- **Property test:** target 2–6, minimum 2 to the target, maximum the target to target + 2, advance 1 to target − 1, final size 2, 3, 4 or 6, for N = 4…40 (the plan for every combination, and the real draw for a spread of them): no heat above the maximum (when the maximum is 3 or more); at least the minimum whenever a split exists, otherwise the 1 v 1 fallback; every round before the Final has at least 2 heats; nobody advances without riding; somebody is out of every heat; every rider gets a placing.
+- **Older tests changed because of the new rules:** a heat of two now advances one rider (so the "eliminates nobody" warning is tested with the older "smaller heats" rule); 6 riders left with 4 / 4 / 4 make three heats of 2, not a heat of 6; the Semi-finals pair neighbouring heats.
+- Diagram and text preview (unit tests and Playwright, 24 riders): "With 24 riders: R1 8 heats of 3 → R2 4 heats of 2 → SF 2 heats of 2 → F 1 heat of 2 (15 heats)"; the 1 v 1 rounds are labelled "(1 v 1)"; the R2 heats read "1st H1, 1st H2"; routes "1st → R2 · 2nd–3rd → out" and "1st → SF · 2nd → out".
+
 ## 3. Timetable engine (`presets/schedule/kitemania-day2.json`)
 
 ### 3A — Main plan, anchors Women H1 = 10:30 and Advanced R2 H4 = 14:00 (Africa/Cairo)

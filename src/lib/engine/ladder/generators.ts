@@ -11,6 +11,7 @@ import {
   type SingleEliminationParams,
 } from "@/lib/schemas/format-template";
 import { planDoubleElimination } from "./double-elimination-plan";
+import { planKnockout } from "./knockout-plan";
 import { planSecondChance } from "./second-chance-plan";
 import { heatLimits, roundLayout } from "./seeding";
 
@@ -37,8 +38,55 @@ function finalRound(entrantsFrom: RoundSpec["entrantsFrom"], size: number, durat
 /** A final (or Small final) heat that is checked against the three sizing numbers: too big or too small → a warning in the draw. */
 const limitedFinal = (extra: Partial<RoundSpecInput>, limits: { min?: number; max?: number }): Partial<RoundSpecInput> => ({ uneven: "minimum_riders", minHeatSize: limits.min, maxHeatSize: limits.max, ...extra });
 
-/** Rounds until one heat of `finalSize` remains. The round before the Final is the "Semi-final" when it has exactly 2 heats. */
+/**
+ * Knockout (docs/04 decision 33). Every round follows the sizing rule (target, minimum, maximum riders per heat, see `planKnockout`):
+ * never above the maximum, heats of 2 (1 v 1) when the minimum cannot be kept, rounds until one heat remains. The round before the Final is
+ * the "Semi-final" when it has exactly 2 heats. With "By original seeding" (the default) the next round pairs neighbouring heats: the winners of
+ * H1 and H2 meet, H3 and H4 meet, …; with "by result" the survivors are re-seeded and dealt in a snake.
+ */
 export function generateSingleElimination(n: number, p: SingleEliminationParams): RoundSpec[] {
+  if (p.uneven !== undefined && p.uneven !== "minimum_riders") return generateLegacySingleElimination(n, p);
+  const limits = heatLimits(p.heatSize, p.minHeatSize, p.maxHeatSize);
+  const plan = planKnockout(n, { limits, advance: p.advancePerHeat, finalSize: p.finalSize });
+  const ids = plan.rounds.map((r, i) => (i >= 1 && i === plan.rounds.length - 1 && r.heats.length === 2 ? "SF" : `R${i + 1}`));
+  const adjacent = p.reseed === "by_original_seed";
+  const rounds: RoundSpec[] = plan.rounds.map((r, i) => {
+    const isSemi = ids[i] === "SF";
+    const to = i === plan.rounds.length - 1 ? "F" : ids[i + 1];
+    return spec({
+      id: ids[i],
+      name: isSemi ? "Semi-finals" : `Round ${i + 1}`,
+      shortName: ids[i],
+      heatSize: p.heatSize,
+      minHeatSize: p.minHeatSize,
+      maxHeatSize: p.maxHeatSize,
+      heatCountOverride: r.heats.length,
+      durationMin: isSemi ? p.semiMin : p.earlyMin,
+      entrantsFrom: i === 0 ? [{ type: "seeds" }] : [{ type: "round_places", round: ids[i - 1], places: range(1, plan.rounds[i - 1].advance) }],
+      seeding: i === 0 ? p.seeding : adjacent ? "adjacent" : "snake",
+      // heats of 2 are the rule here, not a problem: they are not checked against the minimum
+      uneven: r.oneVOne ? "smaller_heats_for_top_seeds" : "minimum_riders",
+      reseed: i === 0 ? "by_original_seed" : p.reseed,
+      advance: [{ places: range(1, r.advance), to }, { places: "rest", to: "eliminated" }],
+    });
+  });
+  const last = ids.at(-1);
+  rounds.push(
+    finalRound(
+      last ? [{ type: "round_places", round: last, places: range(1, plan.rounds.at(-1)!.advance) }] : [{ type: "seeds" }],
+      Math.max(p.finalSize, plan.finalSize),
+      p.finalMin,
+      p.reseed,
+    ),
+  );
+  return rounds;
+}
+
+/**
+ * The older knockout, kept for formats that name a legacy `uneven` rule (byes for the top seeds, one larger heat, …): rounds until one heat of
+ * `finalSize` remains, heat counts from that rule. Formats that use the three sizing numbers (the default) go through `planKnockout`.
+ */
+function generateLegacySingleElimination(n: number, p: SingleEliminationParams): RoundSpec[] {
   const plan: Array<{ heats: number }> = [];
   let riders = n;
   while (riders > p.finalSize && plan.length < 40) {

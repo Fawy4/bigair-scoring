@@ -18,11 +18,12 @@ Next.js 15 (App Router, TypeScript strict) · Tailwind + shadcn/ui · Supabase (
 - `npm run test:rls` — Row Level Security tests against the hosted dev project (separate from `npm test`; skips without keys)
 - `npm run seed:demo` / `npm run bootstrap:organiser -- --email … --org-name … --org-slug …` — demo draw / create the organiser login + organisation (name and slug are required)
 - `npm run auth:password` — enables email + password sign-in for organisers in the hosted auth settings (Management API; idempotent)
+- `npm run bootstrap:platform-admin -- --email …` — make an existing login the platform owner (`--role staff` for staff); with no `--email` it uses the only owner of organisation `arrow`
 - `npm run seed:presets` — upsert `presets/**/*.json` into `scoring_models` / `format_templates` / `presets` (identification schemes, schedule templates)
 
 ## Repo layout
 ```
-src/app/            routes (App Router). Public: /e/[eventSlug]/... ; organiser: /org/... ; judge: /judge/... ; head: /head/... ; spotter: /spot/... ; screen: /screen/...
+src/app/            routes (App Router). Public: / , /e/[eventSlug]/... , /o/[orgSlug] ; organiser: /org/... ; platform owner: /admin/... (404 for everybody else) ; judge: /judge/... ; head: /head/... ; spotter: /spot/... ; screen: /screen/...
 src/lib/engine/     PURE logic, no I/O: scoring/, ladder/, schedule/ (+ tests). Import nothing from Supabase or React here.
 src/lib/schemas/    Zod schemas for ScoringModel, FormatTemplate, Schedule (single source of truth for types)
 src/lib/supabase/   clients (server, browser, service), typed helpers

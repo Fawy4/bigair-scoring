@@ -136,10 +136,16 @@ describe("2G0 the rule", () => {
 });
 
 describe("2G0 in generated formats", () => {
-  it("every round of a knockout follows the same three numbers", () => {
+  it("every round of a knockout follows the same three numbers: heats of 4 while the minimum can be kept, 1 v 1 heats when it cannot", () => {
     const draw = expandFormat(knock({ heatSize: 4, minHeatSize: 4, maxHeatSize: 4 }), makeEntrants(24));
     expect(draw.rounds[0].heats.map((h) => h.slots.length)).toEqual([4, 4, 4, 4, 4, 4]);
-    for (const r of draw.rounds.slice(0, -1)) expect(Math.min(...r.heats.map((h) => h.slots.length)), r.id).toBeGreaterThanOrEqual(4);
+    expect(draw.rounds[1].heats.map((h) => h.slots.length)).toEqual([4, 4, 4]);
+    for (const r of draw.rounds.slice(0, -1)) {
+      expect(Math.max(...r.heats.map((h) => h.slots.length)), `${r.id} is never above the maximum`).toBeLessThanOrEqual(4);
+      expect(Math.min(...r.heats.map((h) => h.slots.length)), `${r.id}: nobody advances without riding`).toBeGreaterThanOrEqual(2);
+    }
+    // 6 riders cannot make heats of 4: three heats of 2 (docs/04 decision 33), not a heat of 6
+    expect(draw.rounds[2].heats.map((h) => h.slots.length)).toEqual([2, 2, 2]);
   });
 
   it("the minimum defaults to target − 1 when the format does not name it", () => {

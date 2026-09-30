@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { getProductName } from "@/lib/platform/public-settings";
 import "./globals.css";
 
-const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? "[PRODUCT_NAME]";
-
-export const metadata: Metadata = { title: productName };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: await getProductName() };
+}
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

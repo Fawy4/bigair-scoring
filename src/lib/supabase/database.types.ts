@@ -24,6 +24,7 @@ export type Database = {
           before: Json | null
           event_id: string | null
           id: string
+          organisation_id: string | null
           reason: string | null
           row_id: string | null
           table_name: string
@@ -37,6 +38,7 @@ export type Database = {
           before?: Json | null
           event_id?: string | null
           id?: string
+          organisation_id?: string | null
           reason?: string | null
           row_id?: string | null
           table_name: string
@@ -50,6 +52,7 @@ export type Database = {
           before?: Json | null
           event_id?: string | null
           id?: string
+          organisation_id?: string | null
           reason?: string | null
           row_id?: string | null
           table_name?: string
@@ -208,6 +211,7 @@ export type Database = {
       }
       events: {
         Row: {
+          archived_at: string | null
           branding: Json
           created_at: string
           end_date: string | null
@@ -224,6 +228,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           branding?: Json
           created_at?: string
           end_date?: string | null
@@ -240,6 +245,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           branding?: Json
           created_at?: string
           end_date?: string | null
@@ -306,6 +312,7 @@ export type Database = {
           key: string
           name: string
           organisation_id: string | null
+          published_at: string | null
           updated_at: string
           version: number
         }
@@ -317,6 +324,7 @@ export type Database = {
           key: string
           name: string
           organisation_id?: string | null
+          published_at?: string | null
           updated_at?: string
           version?: number
         }
@@ -328,6 +336,7 @@ export type Database = {
           key?: string
           name?: string
           organisation_id?: string | null
+          published_at?: string | null
           updated_at?: string
           version?: number
         }
@@ -795,6 +804,7 @@ export type Database = {
       }
       organisations: {
         Row: {
+          archived_at: string | null
           branding: Json
           created_at: string
           id: string
@@ -805,6 +815,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           branding?: Json
           created_at?: string
           id?: string
@@ -815,6 +826,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           branding?: Json
           created_at?: string
           id?: string
@@ -978,6 +990,83 @@ export type Database = {
           },
         ]
       }
+      platform_admins: {
+        Row: {
+          created_at: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      platform_impersonations: {
+        Row: {
+          admin_user_id: string
+          ended_at: string | null
+          expires_at: string
+          id: string
+          organisation_id: string
+          started_at: string
+        }
+        Insert: {
+          admin_user_id: string
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          organisation_id: string
+          started_at?: string
+        }
+        Update: {
+          admin_user_id?: string
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          organisation_id?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_impersonations_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json | null
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json | null
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json | null
+        }
+        Relationships: []
+      }
       presets: {
         Row: {
           content_hash: string
@@ -988,6 +1077,7 @@ export type Database = {
           kind: string
           name: string
           organisation_id: string | null
+          published_at: string | null
           updated_at: string
           version: number
         }
@@ -1000,6 +1090,7 @@ export type Database = {
           kind: string
           name: string
           organisation_id?: string | null
+          published_at?: string | null
           updated_at?: string
           version?: number
         }
@@ -1012,6 +1103,7 @@ export type Database = {
           kind?: string
           name?: string
           organisation_id?: string | null
+          published_at?: string | null
           updated_at?: string
           version?: number
         }
@@ -1194,6 +1286,7 @@ export type Database = {
           key: string
           name: string
           organisation_id: string | null
+          published_at: string | null
           updated_at: string
           version: number
         }
@@ -1205,6 +1298,7 @@ export type Database = {
           key: string
           name: string
           organisation_id?: string | null
+          published_at?: string | null
           updated_at?: string
           version?: number
         }
@@ -1216,6 +1310,7 @@ export type Database = {
           key?: string
           name?: string
           organisation_id?: string | null
+          published_at?: string | null
           updated_at?: string
           version?: number
         }
@@ -1439,7 +1534,9 @@ export type Database = {
           json: Json
           key: string
           organisation_id: string | null
+          published_at: string | null
           updated_at: string
+          version: number
         }
         Insert: {
           content_hash: string
@@ -1449,7 +1546,9 @@ export type Database = {
           json: Json
           key: string
           organisation_id?: string | null
+          published_at?: string | null
           updated_at?: string
+          version?: number
         }
         Update: {
           content_hash?: string
@@ -1459,7 +1558,9 @@ export type Database = {
           json?: Json
           key?: string
           organisation_id?: string | null
+          published_at?: string | null
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
@@ -1593,6 +1694,124 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_add_organiser: {
+        Args: { p_org: string; p_role?: string; p_user: string }
+        Returns: undefined
+      }
+      admin_audit_log: {
+        Args: { p_limit?: number; p_only_platform?: boolean; p_org?: string }
+        Returns: {
+          action: string
+          actor_email: string
+          actor_user_id: string
+          after: Json
+          at: string
+          before: Json
+          event_id: string
+          event_name: string
+          id: string
+          organisation_id: string
+          organisation_name: string
+          reason: string
+          table_name: string
+        }[]
+      }
+      admin_create_demo_organisation: { Args: never; Returns: string }
+      admin_create_organisation: {
+        Args: {
+          p_logo_url?: string
+          p_name: string
+          p_slug: string
+          p_timezone: string
+        }
+        Returns: string
+      }
+      admin_create_preset_version: {
+        Args: {
+          p_hash: string
+          p_json: Json
+          p_key: string
+          p_kind: string
+          p_name: string
+        }
+        Returns: string
+      }
+      admin_delete_organisation: {
+        Args: { p_org: string; p_slug_confirm: string }
+        Returns: undefined
+      }
+      admin_health: { Args: never; Returns: Json }
+      admin_move_event: {
+        Args: { p_event: string; p_target_org: string }
+        Returns: Json
+      }
+      admin_organisation_events: {
+        Args: { p_org: string }
+        Returns: {
+          archived_at: string
+          divisions_count: number
+          end_date: string
+          id: string
+          name: string
+          published_results: number
+          running_heats: number
+          slug: string
+          start_date: string
+          status: string
+        }[]
+      }
+      admin_organisation_members: {
+        Args: { p_org: string }
+        Returns: {
+          created_at: string
+          email: string
+          role: string
+          user_id: string
+        }[]
+      }
+      admin_organisation_overview: {
+        Args: never
+        Returns: {
+          archived_at: string
+          created_at: string
+          events_count: number
+          id: string
+          last_activity: string
+          logo_url: string
+          members_count: number
+          name: string
+          plan: string
+          published_events_count: number
+          published_results_count: number
+          slug: string
+          timezone: string
+        }[]
+      }
+      admin_publish_preset: {
+        Args: { p_id: string; p_kind: string }
+        Returns: undefined
+      }
+      admin_rename_organisation: {
+        Args: { p_name: string; p_org: string }
+        Returns: undefined
+      }
+      admin_save_platform_settings: {
+        Args: { p_values: Json }
+        Returns: undefined
+      }
+      admin_set_organisation_archived: {
+        Args: { p_archived: boolean; p_org: string }
+        Returns: undefined
+      }
+      admin_set_organisation_logo: {
+        Args: { p_logo_url: string; p_org: string }
+        Returns: undefined
+      }
+      admin_start_impersonation: {
+        Args: { p_org: string; p_reason?: string }
+        Returns: undefined
+      }
+      admin_stop_impersonation: { Args: never; Returns: undefined }
       attempt_counts: {
         Args: { p_heat: string }
         Returns: {
@@ -1641,7 +1860,44 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      delete_event: {
+        Args: { p_event: string; p_slug_confirm: string }
+        Returns: Json
+      }
+      get_public_event: {
+        Args: { p_slug: string }
+        Returns: {
+          end_date: string
+          id: string
+          location: string
+          name: string
+          organisation_logo_url: string
+          organisation_name: string
+          organisation_slug: string
+          slug: string
+          start_date: string
+          status: string
+          timezone: string
+        }[]
+      }
+      get_public_events: {
+        Args: { p_limit?: number }
+        Returns: {
+          end_date: string
+          id: string
+          location: string
+          name: string
+          organisation_name: string
+          organisation_slug: string
+          slug: string
+          start_date: string
+          status: string
+        }[]
+      }
       get_public_live_heat: { Args: { p_heat: string }; Returns: Json }
+      get_public_organisation: { Args: { p_slug: string }; Returns: Json }
+      platform_session: { Args: never; Returns: Json }
+      public_platform_settings: { Args: never; Returns: Json }
       purge_organisation: { Args: { p_org: string }; Returns: undefined }
       register_rider: {
         Args: {
@@ -1673,6 +1929,10 @@ export type Database = {
           rls_enabled: boolean
           table_name: string
         }[]
+      }
+      set_event_archived: {
+        Args: { p_archived: boolean; p_event: string }
+        Returns: undefined
       }
       set_publish_hold: {
         Args: { p_heat: string; p_hold: boolean; p_reason?: string }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
-import { safeNext } from "@/lib/auth/safe-next";
+import { hasExplicitNext, landingPath } from "@/lib/auth/landing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/ui-copy";
@@ -26,14 +26,15 @@ export function LoginForm({ next }: { next?: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
-  const target = safeNext(next ?? null);
+  const target = landingPath({ next, isPlatformAdmin: false }); // organisers' page; platform admins are sent to /admin below unless a page was asked for
+  const asked = hasExplicitNext(next);
 
-  async function sendLink(landing: string, sentText: (to: string) => string) {
+  async function sendLink(landing: string | null, sentText: (to: string) => string) {
     setState({ kind: "working" });
     const to = email.trim();
     const { error } = await createClient().auth.signInWithOtp({
       email: to,
-      options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(landing)}` },
+      options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/auth/confirm${landing ? `?next=${encodeURIComponent(landing)}` : ""}` }, // no page asked for: the confirm route decides (/admin for platform admins)
     });
     setState(error ? { kind: "error", message: plainMessage(error.message) } : { kind: "sent", message: sentText(to) });
   }
@@ -49,12 +50,14 @@ export function LoginForm({ next }: { next?: string }) {
       return;
     }
     const { count } = await supabase.from("memberships").select("id", { count: "exact", head: true });
-    if (!count) {
+    const { data: platform } = await supabase.rpc("platform_session");
+    const isPlatformAdmin = Boolean((platform as { role?: string | null } | null)?.role);
+    if (!count && !isPlatformAdmin) {
       await supabase.auth.signOut(); // invite-only: an account that is not an organiser gets no further
       setState({ kind: "error", message: copy.login.notAnOrganiser });
       return;
     }
-    router.push(target);
+    router.push(landingPath({ next, isPlatformAdmin }));
     router.refresh();
   }
 
@@ -92,7 +95,7 @@ export function LoginForm({ next }: { next?: string }) {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void sendLink(target, copy.login.sentTo);
+          void sendLink(asked ? target : null, copy.login.sentTo);
         }}
         className="flex flex-col gap-4"
       >

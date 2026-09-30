@@ -387,8 +387,8 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
 
   // ------------------------------------------------------------------ presets
   describe("presets", () => {
-    it("system presets are readable by everyone; organisation presets by their members, the public only when a published event uses them", async () => {
-      const sys = await f.s.from("scoring_models").insert({ organisation_id: null, key: `rls-${run}-system`, name: "sys", version: 1, json: {}, content_hash: "z" }).select().single();
+    it("published system presets are readable by everyone; organisation presets by their members, the public only when a published event uses them", async () => {
+      const sys = await f.s.from("scoring_models").insert({ organisation_id: null, key: `rls-${run}-system`, name: "sys", version: 1, json: {}, content_hash: "z", published_at: new Date().toISOString() }).select().single();
       expect(sys.error).toBeNull();
       expect(((await f.clients.anon.from("scoring_models").select("id").eq("id", sys.data!.id)).data ?? []).length).toBe(1);
       expect(((await f.clients.anon.from("scoring_models").select("id").eq("id", f.ids.modelA1)).data ?? []).length).toBe(1); // used by published A1
@@ -429,8 +429,8 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
   describe("generic presets table", () => {
     const own = () => ({ organisation_id: f.ids.orgA, kind: "identification", key: `rls-${run}`, name: "Mine", version: 1, json: { hello: 1 }, content_hash: "h" });
 
-    it("system rows are readable by signed-in organisers, not by visitors; nobody but the server writes them", async () => {
-      const sys = await f.s.from("presets").insert({ organisation_id: null, kind: "identification", key: `rls-${run}-sys`, name: "System", version: 1, json: {}, content_hash: "s" }).select().single();
+    it("published system rows are readable by signed-in organisers, not by visitors; nobody but the server writes them", async () => {
+      const sys = await f.s.from("presets").insert({ organisation_id: null, kind: "identification", key: `rls-${run}-sys`, name: "System", version: 1, json: {}, content_hash: "s", published_at: new Date().toISOString() }).select().single();
       expect(sys.error).toBeNull();
       expect(((await f.clients.orgB.from("presets").select("id").eq("id", sys.data!.id)).data ?? []).length).toBe(1);
       expect(failed(await f.clients.anon.from("presets").select("id"))).not.toBe("");

@@ -48,6 +48,8 @@ export interface FormatPreview {
   ok: boolean;
   /** "With 14 riders: R1 4 heats of 3–4 → SF 2 heats of 4 → F 1 heat of 4 (7 heats)" */
   sentence: string;
+  /** "Final of 3 — 3 riders remain after Round 2": the size the Final really has (its setting is only a target). Empty when the draw cannot run. */
+  finalNote: string;
   rounds: RoundPreview[];
   ladder: LadderColumn[];
   totalHeats: number;
@@ -101,6 +103,13 @@ function routesOf(draw: DivisionDraw, roundIndex: number): string[] {
   return routes;
 }
 
+function finalNoteOf(draw: DivisionDraw): string {
+  const last = draw.rounds.at(-1);
+  if (!last) return "";
+  const before = draw.rounds.length > 1 ? draw.rounds[draw.rounds.length - 2] : null;
+  return t.finalNote(last.expectedEntrants, before ? before.name : null);
+}
+
 /** Deals `riderCount` placeholder riders through the format (the same engine the real draw uses) and describes the result. */
 export function previewFormat(template: FormatTemplate, riderCount: number): FormatPreview {
   const entrants: Entrant[] = Array.from({ length: riderCount }, (_, i) => ({ id: `p${i + 1}`, name: `Rider ${i + 1}` }));
@@ -108,7 +117,7 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
   try {
     draw = expandFormat(template, entrants);
   } catch (e) {
-    return { riders: riderCount, ok: false, sentence: t.cannotRun(riderCount, (e as Error).message), rounds: [], ladder: [], totalHeats: 0, minHeatsPerRider: 0, ridingMinutes: 0, warnings: [] };
+    return { riders: riderCount, ok: false, sentence: t.cannotRun(riderCount, (e as Error).message), finalNote: "", rounds: [], ladder: [], totalHeats: 0, minHeatsPerRider: 0, ridingMinutes: 0, warnings: [] };
   }
 
   const rounds: RoundPreview[] = draw.rounds.map((r) => {
@@ -136,7 +145,7 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
     shortName: r.shortName,
     name: r.name,
     defaultName: r.spec.name,
-    summary: t.heatSizes(rounds[i].heats, range(rounds[i].minSize, rounds[i].maxSize), rounds[i].heatMin),
+    summary: t.heatSizes(rounds[i].heats, range(rounds[i].minSize, rounds[i].maxSize), rounds[i].heatMin, rounds[i].heats > 1 && rounds[i].maxSize === 2),
     heats: r.heats.map((h) => ({
       id: h.id,
       name: h.name ?? t.heatName(r.shortName, h.index),
@@ -152,6 +161,7 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
     riders: riderCount,
     ok: true,
     sentence: t.sentence(riderCount, parts.join(t.arrowText), totalHeats),
+    finalNote: finalNoteOf(draw),
     rounds,
     ladder,
     totalHeats,

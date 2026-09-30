@@ -20,7 +20,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isOrganiserArea = path.startsWith("/org") && path !== "/org/login";
+  const isOrganiserArea = (path.startsWith("/org") && path !== "/org/login") || path === "/admin" || path.startsWith("/admin/");
   if (isOrganiserArea && (!user || user.is_anonymous)) {
     const url = request.nextUrl.clone();
     url.pathname = "/org/login";
