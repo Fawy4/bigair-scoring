@@ -72,6 +72,13 @@ export function resultOf(draw: DivisionDraw, heat: DrawHeat): HeatResultInput | 
 
 export const roundComplete = (draw: DivisionDraw, round: DrawRound) => round.heats.every((h) => resultOf(draw, h) !== undefined);
 
+/** Which cross-heat ranks go to `roundId`: the Final's tier (best first) or the Small final's tier (the next best). */
+export function crossTier(cross: NonNullable<RoundSpec["crossHeat"]>, roundId: string): { start: number; count: number } | null {
+  if (cross.to === roundId) return { start: 0, count: cross.advanceTop };
+  if (cross.alsoTo?.to === roundId) return { start: cross.advanceTop, count: cross.alsoTo.count };
+  return null;
+}
+
 /** All places that will arrive in `round`, in provisional order (place, then source round, then heat). */
 export function sourceSlots(rounds: DrawRound[], spec: RoundSpec): SlotSource[] {
   const out: SlotSource[] = [];
@@ -81,9 +88,10 @@ export function sourceSlots(rounds: DrawRound[], spec: RoundSpec): SlotSource[] 
     const from = rounds.find((r) => r.id === src.round);
     if (!from) throw new Error(`Round ${spec.id} is fed by ${src.round}, which comes later or does not exist`);
     if (from.spec.crossHeat) {
-      if (from.spec.crossHeat.to !== spec.id) continue;
-      const k = Math.min(from.spec.crossHeat.advanceTop, from.expectedEntrants);
-      for (let p = 1; p <= k; p++) out.push({ round: from.id, heat: 0, place: p });
+      const tier = crossTier(from.spec.crossHeat, spec.id);
+      if (!tier) continue;
+      const k = Math.max(0, Math.min(tier.count, from.expectedEntrants - tier.start));
+      for (let p = 1; p <= k; p++) out.push({ round: from.id, heat: 0, place: tier.start + p });
       continue;
     }
     for (const h of from.heats) for (const p of src.places) if (p <= h.slots.length) out.push({ round: from.id, heat: h.index, place: p });
@@ -141,36 +149,58 @@ export interface CrossRanking {
   modifier?: LadderModifier;
 }
 
-/** Pool ranking across heats: best or sum of the rider's heat totals; ties by the deciding heat's keys, then seed (Decision 7). */
+/** Points of one heat: the table's entry for the place, else heat size + 1 − place. */
+export function heatPoints(entry: HistoryEntry, table?: number[]): number {
+  if (entry.place === undefined) return 0;
+  return table ? (table[entry.place - 1] ?? 0) : Math.max(0, (entry.size ?? entry.place) + 1 - entry.place);
+}
+
+/** Every round whose heats count towards a cross-heat ranking (its own and the `over` rounds) has been published. */
+export function crossComplete(draw: DivisionDraw, round: DrawRound): boolean {
+  const over = (round.spec.crossHeat?.over ?? []).map((id) => draw.rounds.find((r) => r.id === id)).filter((r): r is DrawRound => Boolean(r));
+  return [...over, round].every((r) => roundComplete(draw, r));
+}
+
+/**
+ * Ranking across all heats (pools, qualifying, round robin): best or sum of the rider's heat totals, or the sum of place points.
+ * Ties: the tie-break keys of the deciding heat (the best single heat), then the original seed (Decision 7).
+ */
 export function rankAcross(draw: DivisionDraw, round: DrawRound): CrossRanking[] {
-  const combine = round.spec.crossHeat?.combine ?? "best";
-  const rows: CrossRanking[] = [];
-  for (const h of round.heats) {
-    const res = resultOf(draw, h);
-    if (!res) continue;
-    for (const e of res.ranked) {
-      const slot = h.slots.find((s) => s.entrantId === e.entrantId);
-      const history = [...(slot?.history ?? []), { round: round.id, heat: h.index, total: e.total, tieKeys: e.tieKeys ?? [] }];
-      const totals = history.filter((x) => x.total !== null) as Array<HistoryEntry & { total: number }>;
-      const combined = totals.length === 0 ? null : combine === "sum" ? totals.reduce((s, x) => s + x.total, 0) : Math.max(...totals.map((x) => x.total));
-      const deciding = totals.reduce<(HistoryEntry & { total: number }) | undefined>((best, x) => (!best || x.total > best.total ? x : best), undefined);
-      rows.push({
-        entrantId: e.entrantId,
-        seed: seedNumber(draw, e.entrantId),
-        combined,
-        tieKeys: deciding?.tieKeys ?? [],
-        history,
-        ...(e.modifier === "DNS" || slot?.modifier === "DNS" ? { modifier: "DNS" as LadderModifier } : {}),
-      });
+  const cross = round.spec.crossHeat;
+  const combine = cross?.combine ?? "best";
+  const over = (cross?.over ?? []).map((id) => draw.rounds.find((r) => r.id === id)).filter((r): r is DrawRound => Boolean(r));
+  const rows = new Map<string, { history: HistoryEntry[]; modifier?: LadderModifier }>();
+  for (const r of [...over, round]) {
+    for (const h of r.heats) {
+      const res = resultOf(draw, h);
+      if (!res) continue;
+      for (const e of res.ranked) {
+        const slot = h.slots.find((s) => s.entrantId === e.entrantId);
+        const entry: HistoryEntry = { round: r.id, heat: h.index, total: e.total, tieKeys: e.tieKeys ?? [], place: e.place, size: h.slots.length };
+        const row = rows.get(e.entrantId) ?? { history: over.length > 0 ? [] : [...(slot?.history ?? [])] };
+        row.history.push(entry);
+        if (e.modifier === "DNS" || slot?.modifier === "DNS") row.modifier = "DNS";
+        rows.set(e.entrantId, row);
+      }
     }
   }
-  return rows.sort((a, b) => compareScore({ ...a, total: a.combined }, { ...b, total: b.combined }));
+  const out: CrossRanking[] = [...rows.entries()].map(([entrantId, row]) => {
+    const totals = row.history.filter((x) => x.total !== null) as Array<HistoryEntry & { total: number }>;
+    const combined =
+      combine === "points" ? (row.modifier === "DNS" ? 0 : row.history.reduce((s, x) => s + heatPoints(x, cross?.points), 0))
+      : totals.length === 0 ? null
+      : combine === "sum" ? totals.reduce((s, x) => s + x.total, 0)
+      : Math.max(...totals.map((x) => x.total));
+    const deciding = totals.reduce<(HistoryEntry & { total: number }) | undefined>((best, x) => (!best || x.total > best.total ? x : best), undefined);
+    return { entrantId, seed: seedNumber(draw, entrantId), combined, tieKeys: deciding?.tieKeys ?? [], history: row.history, ...(row.modifier ? { modifier: row.modifier } : {}) };
+  });
+  return out.sort((a, b) => compareScore({ ...a, total: a.combined }, { ...b, total: b.combined }));
 }
 
 /** Riders that will be eliminated by a round, structurally (from heat sizes; independent of what has been published). */
 export function eliminatedCount(round: DrawRound): number {
   const cross = round.spec.crossHeat;
-  if (cross) return Math.max(0, round.expectedEntrants - Math.min(cross.advanceTop, round.expectedEntrants));
+  if (cross) return cross.to === "final_placing" ? 0 : Math.max(0, round.expectedEntrants - Math.min(cross.advanceTop + (cross.alsoTo?.count ?? 0), round.expectedEntrants));
   let n = 0;
   for (const h of round.heats) for (let p = 1; p <= h.slots.length; p++) if (outcomeOf(round.spec, p) === "eliminated") n++;
   return n;

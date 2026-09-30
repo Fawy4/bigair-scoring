@@ -1,8 +1,16 @@
 import { RoundSpecSchema, type FormatTemplate, type RoundSpec } from "@/lib/schemas/format-template";
 import { makeSlot, outcomeOf, refreshIdentifierWarnings, sourceSlots } from "./build";
-import { generateDingleElimination, generatePoolsToFinal, generateSingleElimination } from "./generators";
+import {
+  generateDingleElimination,
+  generateDoubleElimination,
+  generatePoolsToFinal,
+  generateQualifyingToFinals,
+  generateRoundRobin,
+  generateSingleElimination,
+  generateSingleFinal,
+} from "./generators";
 import { recompute } from "./recompute";
-import { dealByRule, defaultRngSeed, heatLimits, roundLayout, shuffleSeeds } from "./seeding";
+import { dealByRule, dealRotate, defaultRngSeed, heatLimits, roundLayout, shuffleSeeds } from "./seeding";
 import type { DivisionDraw, DrawHeat, DrawOverrides, DrawRound, Entrant, LadderWarning } from "./types";
 
 /** Concrete rounds for `n` riders: the fixed list, or whatever the generator produces. */
@@ -42,6 +50,14 @@ function generateRounds(g: NonNullable<FormatTemplate["generator"]>, n: number):
       return generateDingleElimination(n, g.params);
     case "pools_to_final":
       return generatePoolsToFinal(n, g.params);
+    case "double_elimination":
+      return generateDoubleElimination(n, g.params);
+    case "qualifying_to_finals":
+      return generateQualifyingToFinals(n, g.params);
+    case "round_robin":
+      return generateRoundRobin(n, g.params);
+    case "single_final":
+      return generateSingleFinal(n, g.params);
   }
 }
 
@@ -143,6 +159,7 @@ export function expandFormat(template: FormatTemplate, entrants: Entrant[], over
       index: i + 1,
       number: null,
       bye: cap === 1 && !isLastRound,
+      ...(template.heatNames?.[`${spec.id}-H${i + 1}`] ? { name: template.heatNames[`${spec.id}-H${i + 1}`] } : {}),
       slots: Array.from({ length: cap }, (_, k) => makeSlot(draw, k, {})),
       durationMin: spec.durationMin ?? template.timing.defaultHeatMin,
       breakAfterHeatMin: spec.breakAfterHeatMin ?? template.timing.defaultBreakAfterHeatMin,
@@ -151,11 +168,13 @@ export function expandFormat(template: FormatTemplate, entrants: Entrant[], over
       status: "pending",
       manualOverride: false,
     }));
-    const round: DrawRound = { id: spec.id, name: spec.name, shortName: spec.shortName, spec, expectedEntrants, heats, seeded: false, seededNow: false, arrivals: [] };
+    const round: DrawRound = { id: spec.id, name: template.roundNames?.[spec.id] ?? spec.name, shortName: spec.shortName, spec, expectedEntrants, heats, seeded: false, seededNow: false, arrivals: [] };
     draw.rounds.push(round);
 
     if (seedFed) {
-      const dealt = dealByRule(ordered, layout, spec.seeding);
+      // "rotate" (round robin): meet riders you have not yet ridden against; the first round is dealt like "snake"
+      const prior = draw.rounds.filter((r) => r.seeded).flatMap((r) => r.heats.map((h) => h.slots.flatMap((sl) => (sl.entrantId ? [sl.entrantId] : []))));
+      const dealt = spec.seeding === "rotate" && prior.length > 0 ? dealRotate(ordered, layout.capacities, prior) : dealByRule(ordered, layout, spec.seeding);
       round.heats.forEach((h, i) => {
         h.slots = dealt[i].map((e, k) => makeSlot(draw, k, { entrantId: e.id, seed: ordered.indexOf(e) + 1 }));
         h.manualOverride = spec.seeding === "manual";

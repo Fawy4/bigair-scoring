@@ -4,7 +4,9 @@ import megaloop from "../../../presets/formats/megaloop-men-16.json";
 import single from "../../../presets/formats/heats4-top2-single-elim.json";
 import { FormatTemplateSchema, parseFormatTemplate } from "@/lib/schemas/format-template";
 import { copy } from "@/lib/ui-copy";
-import { heatSizes, ladderKindOf, withHeatTarget, withLadderKind, withMaxRiders, withMinRiders, withoutRoundLengths, withRoundLength, withSecondChancePlaces } from "./ladder-kind";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { AT_LEAST_TWO, GENERATOR, KIND_PRESET_KEY, KINDS, heatSizes, ladderKindOf, withHeatTarget, withLadderKind, withMaxRiders, withMinRiders, withoutRoundLengths, withRoundLength, withSecondChancePlaces } from "./ladder-kind";
 import { previewFormat } from "./preview";
 
 describe("ladder type choice", () => {
@@ -33,15 +35,53 @@ describe("ladder type choice", () => {
     expect(next.timing).toEqual(fixed.timing);
   });
 
-  it("the three explanations are the ones the owner asked for", () => {
+  it("the seven explanations are the ones the owner asked for", () => {
     const t = copy.formatSimple.types;
-    expect(t.knockout.explain).toBe("Top riders from each heat advance to the next round; the rest are out.");
-    expect(t.knockout.example).toBe("Example: heats of 4, top 2 go through.");
+    expect(KINDS).toEqual(["knockout", "second_chance", "double_elimination", "qualifying", "pools", "round_robin", "single_final"]);
+    expect(t.knockout.explain).toBe("Top riders from each heat advance; the rest are out.");
     expect(t.second_chance.title).toBe("Knockout with a second chance");
-    expect(t.second_chance.explain).toBe("Heat winners advance directly; the other riders get one more heat to qualify.");
-    expect(t.second_chance.example).toBe("Example: King of the Air Round 1 → Round 2.");
+    expect(t.second_chance.explain).toBe("Heat winners go straight through; the other riders get one more heat to qualify.");
+    expect(t.double_elimination.title).toBe("Double elimination");
+    expect(t.double_elimination.explain).toMatch(/^Lose once and you drop to a second draw; lose twice and you're out\./);
+    expect(t.qualifying.title).toBe("Qualifying heats + finals");
+    expect(t.qualifying.explain).toBe("Qualifying heats seed the finals directly: the best-scoring riders go to the Final, the next best to a Small Final, the rest are placed by their qualifying result.");
     expect(t.pools.explain).toBe("Everyone rides once; all heat scores are ranked together and the top N ride the final.");
-    expect(t.pools.example).toBe("Example: 23 riders in 3 pools, best 6 to the final.");
+    expect(t.round_robin.title).toBe("Round robin");
+    expect(t.round_robin.explain).toBe("Everyone rides several heats against different riders; heat points add up to a ranking, no knockout.");
+    expect(t.single_final.title).toBe("Single final");
+    expect(t.single_final.explain).toBe("One heat, that's the result.");
+  });
+
+  it("every card loads a real built-in format of its type", () => {
+    for (const kind of KINDS) {
+      const file = JSON.parse(readFileSync(join(process.cwd(), "presets", "formats", `${KIND_PRESET_KEY[kind]}.json`), "utf8"));
+      expect(file.generator.type, kind).toBe(GENERATOR[kind]);
+      expect(ladderKindOf(parseFormatTemplate(file)), kind).toBe(kind);
+      expect(file.hidden, kind).toBeUndefined();
+    }
+  });
+
+  it("the tags: at least 2 heats for second chance, double elimination, qualifying and round robin; can be out after 1 for the rest", () => {
+    expect(KINDS.filter((k) => AT_LEAST_TWO[k])).toEqual(["second_chance", "double_elimination", "qualifying", "round_robin"]);
+    // and the promise is true: the built-in format of each type really gives every rider that many heats
+    for (const kind of KINDS) {
+      const file = JSON.parse(readFileSync(join(process.cwd(), "presets", "formats", `${KIND_PRESET_KEY[kind]}.json`), "utf8"));
+      const p = previewFormat(parseFormatTemplate(file), 14);
+      expect(p.minHeatsPerRider >= 2, kind).toBe(AT_LEAST_TWO[kind]);
+    }
+  });
+
+  it("the hidden fixed templates are not offered, and every card's format works with the preview", () => {
+    expect(JSON.parse(readFileSync(join(process.cwd(), "presets", "formats", "megaloop-men-16.json"), "utf8")).hidden).toBe(true);
+    expect(JSON.parse(readFileSync(join(process.cwd(), "presets", "formats", "megaloop-women-6.json"), "utf8")).hidden).toBe(true);
+    for (const kind of KINDS) {
+      for (const n of [8, 14, 24]) {
+        const file = JSON.parse(readFileSync(join(process.cwd(), "presets", "formats", `${KIND_PRESET_KEY[kind]}.json`), "utf8"));
+        const p = previewFormat(parseFormatTemplate(file), n);
+        expect(p.ok, `${kind} N=${n}`).toBe(true);
+        expect(p.ladder.length, `${kind} N=${n}`).toBeGreaterThan(0);
+      }
+    }
   });
 
   describe("heat length per round", () => {

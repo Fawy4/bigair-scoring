@@ -7,6 +7,7 @@
   "vestColours": ["red", "blue", "yellow"],
   "timing": { "defaultHeatMin": 8, "defaultBreakAfterHeatMin": 2, "defaultBreakAfterRoundMin": 5 },
   "kind": "fixed",
+  "hidden": true,
   "rounds": [
     { "id": "R1", "name": "Round 1", "shortName": "R1", "heatSize": 2, "durationMin": 8, "entrantsFrom": [{ "type": "seeds" }], "seeding": "snake", "uneven": "smaller_heats_for_top_seeds", "reseed": "by_original_seed", "advance": [{ "places": [1], "to": "R3" }, { "places": [2], "to": "R2" }], "minRidersToRun": 1 },
     { "id": "R2", "name": "Round 2 (second chance)", "shortName": "R2", "heatSize": 2, "durationMin": 8, "entrantsFrom": [{ "type": "round_places", "round": "R1", "places": [2] }], "seeding": "snake", "uneven": "smaller_heats_for_top_seeds", "reseed": "by_place_then_score", "advance": [{ "places": [1], "to": "R3" }, { "places": "rest", "to": "eliminated" }], "minRidersToRun": 1 },

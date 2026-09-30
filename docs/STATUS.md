@@ -216,3 +216,28 @@ Things you should know (please confirm or change):
 2. Pick **Knockout with a second chance**, target 3, minimum 3 (maximum 4), 14 riders: "R1 4 heats of 3–4 → Second chance 3 heats of 3–4 → SF 2 heats of 3–4 → F 1 heat of 4 (10 heats)", no "Advances without riding" anywhere. Try 16 and 18 riders.
 3. Set **Riders per heat who get a second chance** to "2nd and 3rd only; the others are out": the diagram shows "4th → out" and the tag/minimum-heats change; set it back to "Everyone who did not win".
 4. Tick **Show all settings**: all Simple fields (including Minimum, Maximum and second chance) are still visible.
+
+### Phase 4a-1 – the Format tab as one card, four new formats, visual custom builder (round 6)
+Done:
+- **One picker.** Seven ladder cards (Knockout · Knockout with a second chance · Double elimination · Qualifying heats + finals · Pools to a final · Round robin · Single final) with your one-line explanations and tags; "Start from a format" is gone, "Load a saved format…" and "Build my own ladder…" sit at the top. Order: cards, one row of the numbers that format uses (labels above inputs), "Preview with … riders" + 8 / 14 / 24, the diagram with the text preview under it, "Heat length per round", "Show all settings" (single heat lengths, breaks, flag-out and timing moved there).
+- **Round and heat names** are editable by clicking them on the diagram, on every format; they are stored as overrides keyed by round id (`roundNames`) and heat id (`heatNames`), survive regeneration, sit on `DrawRound.name` / `DrawHeat.name` for the timetable and public pages (those pages do not exist yet), and a blank name restores the default.
+- **Four new generators**, tests first (docs/04 decisions 28–31, docs/08 §2G00): double elimination, qualifying heats + finals, round robin, single final. Every generated round obeys target / minimum / maximum; none has a rider who advances without riding. Four new system presets (seeded to the hosted project).
+- **Megaloop men and women** are hidden from the menus (`hidden: true`; files and tests kept).
+- **Custom ladder** is a visual builder: round cards with target / minimum / maximum and a dropdown for every place, "+ Add round" on the diagram and below, live checks that name the round and the counts, "Save as my format", offered again by "Load a saved format…". Where riders come from is worked out from the dropdowns.
+
+Things you should know (please confirm or change):
+- **Your Decisions log references do not match the docs.** docs/04 items 13 and 16–18 are draft/locked draws, "Seed now", pool ranking, cross-pool tie-break and manual seeding; docs/08 has no §2G or §2G00 for these formats. So the three rules that were missing were put to you and answered: bottom half drops in double elimination, top 2 of each draw to the final for now (a setting, 2 = the two draw winners), place points editable for round robin. The docs now have decisions 28–32 and §2G00.
+- **"Everything visible without scrolling on a laptop" is not possible.** Measured at 1440 × 900, page scrolled to the top: the Format tab itself starts at y ≈ 480 (event header, step rail and division card above it), the seven cards fill y ≈ 770–1520, the numbers row starts at y ≈ 1540, "Preview with" at ≈ 1800 and the diagram spans ≈ 1860–2390. Everything is on the page without toggling anything (a Playwright test asserts that), but it takes scrolling. Making it fit would mean dropping the explanations from the cards or moving the diagram beside them; tell me if you want either.
+- **The double-elimination card text** says "The best riders of each draw meet in the final" instead of "The two draw winners meet in the final", because the default is now the top 2 of each draw (final of 4).
+- **Qualifying: "at least 2 heats"** is true because the default is 2 qualifying heats per rider ("Heats per rider"); set it to 1 and the tag changes to "Riders can be out after 1 heat" (the tag follows the real minimum).
+- **Round robin** repeats opponents when the field cannot avoid it (8 riders in 2 heats of 4: 4 repeated pairs; 12 riders: about 3 per round); with 16, 20, 24 or 30 riders none.
+- **Double elimination cannot keep all three numbers for a few field sizes** (3 / 3 / 4 with 13 riders; 7–8 riders); the draw warns. With the default numbers (3, minimum 2, maximum 4) every field from 10 to 40 riders works.
+- **The Final size in double elimination is even** (top N / 2 of each draw).
+- Heat lengths and breaks are no longer on the Simple screen (your (e) and (f)): the per-round table is pre-filled from the ladder's own lengths; the single lengths are under Show all settings.
+- No database change this round (only preset rows), so `test:rls` was not re-run.
+
+### How to test round 6 (Vercel preview)
+1. Events → your event → Divisions → Pro Men → **Format**. Seven cards, no "Start from a format" list. Click each card: its numbers, "Preview with", the diagram and "Heat length per round" are all on the page.
+2. Click a round name in the diagram (e.g. "Semi-finals"), type a name, press Enter; change "Preview with" to 24: the name stays. Blank it: the default comes back. Click a heat name too.
+3. **Double elimination**, 14 riders: "Main draw 1", "Second-chance draw 1", the final of 4; set Final size 2. **Qualifying heats + finals**: Small final; Heats per rider 1 changes the tag. **Round robin**: Heats per rider 4, Points table "10, 6, 3, 1". **Single final**: one heat.
+4. "Load a saved format…": Megaloop is not in the list. "Build my own ladder…": press "+ Add round after Round 1", send 1st and 2nd of Round 2 to the Final with the dropdowns, read the checks, "Save as my format", then load it again from "Load a saved format…".

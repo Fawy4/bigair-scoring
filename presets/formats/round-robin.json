@@ -1,0 +1,20 @@
+{
+  "id": "round-robin",
+  "name": "Round robin (several heats against different riders, points decide)",
+  "description": "Everyone rides several heats (3 by default) against different riders. Heat points (by default heat size + 1 − place, editable) add up to the ranking; there is no knockout. Every rider rides the same number of heats.",
+  "basedOn": "Round robin heats with place points",
+  "entrants": { "min": 4, "max": 40 },
+  "vestColours": ["red", "yellow", "blue", "green", "white", "black", "orange", "pink", "purple", "grey"],
+  "timing": { "defaultHeatMin": 10, "defaultBreakAfterHeatMin": 3, "defaultBreakAfterRoundMin": 5 },
+  "kind": "generator",
+  "generator": {
+    "type": "round_robin",
+    "params": {
+      "heatSize": 4,
+      "heatsPerRider": 3,
+      "heatMin": 10,
+      "seeding": "snake"
+    }
+  },
+  "placings": { "eliminated": "by_heat_score", "finalHeatIsRanking": true }
+}

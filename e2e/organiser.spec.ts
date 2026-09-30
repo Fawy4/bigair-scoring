@@ -229,26 +229,72 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await page.getByRole("button", { name: "Import pasted JSON" }).click();
   await expect(page.getByText("Imported “Imported OK” as a new preset").first()).toBeVisible();
 
-  // Format tab: three ladder types, each with its one-line explanation printed under it
+  // Format tab: ONE picker. No separate "Start from a format" list; a small "Load a saved format…" button instead.
   await page.getByRole("tab", { name: "Format" }).click();
-  await field("Start from a format").selectOption({ label: "Single elimination — heats of 4, top 2 advance, final of 4" });
+  await expect(page.getByLabel("Start from a format")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Load a saved format…", exact: true })).toBeVisible();
+  const kinds = ["Knockout", "Knockout with a second chance", "Double elimination", "Qualifying heats + finals", "Pools to a final", "Round robin", "Single final"];
+  for (const k of kinds) await expect(page.getByRole("radio", { name: k, exact: true }), `card: ${k}`).toBeVisible();
   for (const text of [
-    "Top riders from each heat advance to the next round; the rest are out.",
-    "Example: heats of 4, top 2 go through.",
-    "Heat winners advance directly; the other riders get one more heat to qualify.",
-    "Example: King of the Air Round 1 → Round 2.",
+    "Top riders from each heat advance; the rest are out.",
+    "Heat winners go straight through; the other riders get one more heat to qualify.",
+    "Lose once and you drop to a second draw; lose twice and you're out. The best riders of each draw meet in the final.",
+    "Qualifying heats seed the finals directly: the best-scoring riders go to the Final, the next best to a Small Final, the rest are placed by their qualifying result.",
     "Everyone rides once; all heat scores are ranked together and the top N ride the final.",
-    "Example: 23 riders in 3 pools, best 6 to the final.",
+    "Everyone rides several heats against different riders; heat points add up to a ranking, no knockout.",
+    "One heat, that's the result.",
   ]) {
     await expect(page.getByText(text, { exact: true })).toBeVisible();
   }
-  await expect(page.getByRole("radio", { name: "Knockout", exact: true })).toBeChecked();
 
-  // a tag under each choice says how many heats a rider is guaranteed
-  await expect(page.getByTestId("tag-knockout")).toHaveText("Riders can be out after 1 heat");
-  await expect(page.getByTestId("tag-second_chance")).toHaveText("Every rider gets at least 2 heats");
-  await expect(page.getByTestId("tag-pools")).toHaveText("Riders can be out after 1 heat");
+  // a tag under each card says how many heats a rider is guaranteed
+  for (const [kind, tag] of [
+    ["knockout", "Riders can be out after 1 heat"],
+    ["second_chance", "Every rider gets at least 2 heats"],
+    ["double_elimination", "Every rider gets at least 2 heats"],
+    ["qualifying", "Every rider gets at least 2 heats"],
+    ["pools", "Riders can be out after 1 heat"],
+    ["round_robin", "Every rider gets at least 2 heats"],
+    ["single_final", "Riders can be out after 1 heat"],
+  ] as const) {
+    await expect(page.getByTestId(`tag-${kind}`), `tag: ${kind}`).toHaveText(tag);
+  }
+
+  // choosing a card is the only step: its numbers, the preview field, the diagram and the per-round lengths are all there at the
+  // Simple level, with nothing to toggle
+  await page.getByRole("radio", { name: "Knockout", exact: true }).check();
+  await expect(page.getByRole("checkbox", { name: "Show all settings" })).not.toBeChecked();
+  for (const label of ["Riders per heat (target)", "Minimum per heat", "Maximum per heat", "How many advance", "Final size", "Preview with"]) {
+    await expect(field(label), `Simple: ${label}`).toBeVisible();
+  }
+  for (const n of ["8", "14", "24"]) await expect(page.getByRole("button", { name: n, exact: true })).toBeVisible();
+  await expect(page.getByTestId("ladder-diagram")).toBeVisible();
+  await expect(page.getByTestId("format-preview")).toBeVisible();
+  await expect(page.getByTestId("per-round-lengths")).toBeVisible();
   await expect(page.getByTestId("min-heats")).toHaveText("Minimum heats per rider: 1");
+  await expect(field("Break after each heat")).toHaveCount(0); // lengths and breaks live under Show all settings
+
+  // clicking a round name in the diagram renames it; blank restores the default; heats too; kept when the ladder is regenerated
+  await field("Preview with").fill("14");
+  await page.getByRole("button", { name: "Rename round Semi-finals" }).click();
+  await page.getByLabel("New name for Semi-finals").fill("Semi-finals (women)");
+  await page.getByLabel("New name for Semi-finals").press("Enter");
+  await expect(page.getByTestId("ladder-diagram")).toContainText("Semi-finals (women)");
+  await page.getByRole("button", { name: "Rename heat R1 H2" }).click();
+  await page.getByLabel("New name for R1 H2").fill("Youth heat");
+  await page.getByLabel("New name for R1 H2").press("Enter");
+  await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat").nth(1)).toContainText("Youth heat: 3 riders");
+  await field("Preview with").fill("24");
+  await expect(page.getByTestId("ladder-diagram")).toContainText("Semi-finals (women)");
+  await expect(page.getByTestId("ladder-diagram")).toContainText("Youth heat");
+  await page.getByRole("button", { name: "Rename round Semi-finals (women)" }).click();
+  await page.getByLabel("New name for Semi-finals (women)").fill("");
+  await page.getByLabel("New name for Semi-finals (women)").press("Enter");
+  await expect(page.getByTestId("ladder-diagram")).not.toContainText("Semi-finals (women)");
+  await page.getByRole("button", { name: "Rename round Semi-finals" }).click();
+  await page.getByLabel("New name for Semi-finals").fill("Semi-finals (women)");
+  await page.getByLabel("New name for Semi-finals").press("Enter");
+  await field("Preview with").fill("14");
 
   // three plain numbers: 14 riders, target 3, minimum 3 (maximum 4 by default) → heats of 3, 3, 4, 4 (smaller heats first)
   await field("Riders per heat (target)").fill("3");
@@ -256,19 +302,16 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(field("Maximum per heat")).toHaveValue("4"); // target + 1
   await field("Minimum per heat").fill("3");
   await expect(page.getByTestId("format-preview")).toContainText("With 14 riders: R1 4 heats of 3–4");
-  await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat")).toHaveText([/R1 H1: 3 riders/, /R1 H2: 3 riders/, /R1 H3: 4 riders/, /R1 H4: 4 riders/]);
-  // placeholders read "1st H1"; heats are named by round
+  await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat")).toHaveText([/R1 H1: 3 riders/, /Youth heat: 3 riders/, /R1 H3: 4 riders/, /R1 H4: 4 riders/]);
   await expect(page.getByTestId("ladder-round").nth(1).getByTestId("ladder-from").first()).toContainText("1st H1");
   await page.getByRole("button", { name: "Help: Minimum per heat" }).click();
   await expect(page.getByRole("note").filter({ hasText: "Minimum per heat — the system will never make a heat smaller than this" })).toBeVisible();
   await page.getByRole("button", { name: "Help: Maximum per heat" }).click();
   await expect(page.getByRole("note").filter({ hasText: "Maximum per heat — the system will never make a heat bigger than this" })).toBeVisible();
-  // target 3, minimum 2, maximum 3: 14 riders → 2/3/3/3/3
   await field("Minimum per heat").fill("2");
   await field("Maximum per heat").fill("3");
   await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat")).toHaveText([/2 riders/, /3 riders/, /3 riders/, /3 riders/, /3 riders/]);
   await expect(page.getByTestId("limits-note")).toHaveText("Every heat holds 2 to 3 riders.");
-  // target 4, minimum 4: 13 riders → 4/4/5 and 5 riders → one heat of 5
   await field("Riders per heat (target)").fill("4");
   await field("Minimum per heat").fill("4");
   await field("Maximum per heat").fill("5");
@@ -276,71 +319,91 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat")).toHaveText([/4 riders/, /4 riders/, /5 riders/]);
   await field("Preview with").fill("5");
   await expect(page.getByTestId("ladder-round")).toHaveCount(1);
-  await expect(page.getByTestId("ladder-heat")).toHaveText([/5 riders/]);
-  // minimum = maximum = target: 24 riders → 6 heats of 4
   await field("Maximum per heat").fill("4");
   await field("Preview with").fill("24");
   await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat")).toHaveCount(6);
-  await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat").first()).toContainText("4 riders");
-  await field("Minimum per heat").fill("3"); // back to the defaults
+  await field("Minimum per heat").fill("3");
   await field("Maximum per heat").fill("5");
   await field("Preview with").fill("14");
 
-  // second chance: every round follows the same three numbers; nobody advances without riding; plain words, no bracket jargon
+  // second chance: every round follows the three numbers; nobody advances without riding
   await page.getByRole("radio", { name: "Knockout with a second chance" }).check();
+  await expect(page.getByTestId("tag-second_chance")).toHaveText("Every rider gets at least 2 heats");
   await expect(page.getByTestId("min-heats")).toHaveText("Minimum heats per rider: 2");
   await expect(page.getByTestId("ladder-diagram")).toContainText("Second chance H1");
   await expect(page.getByTestId("ladder-diagram")).not.toContainText("Advances without riding");
   await expect(page.getByTestId("ladder-diagram")).toContainText("1st R1 H1");
-  await expect(page.getByTestId("format-preview")).toContainText("Second chance 3 heats of 3");
-  // 14 riders, target 3, minimum 3, maximum 4: R1 3/3/4/4, then 3/3/4, then a semi-final of 3 and 4, then a final of 4
   await field("Minimum per heat").fill("3");
   await expect(page.getByTestId("format-preview")).toHaveText("With 14 riders: R1 4 heats of 3–4 → Second chance 3 heats of 3–4 → SF 2 heats of 3–4 → F 1 heat of 4 (10 heats)");
-  await expect(page.getByTestId("ladder-diagram")).not.toContainText("Advances without riding");
-  // only 2nd and 3rd get a second chance: the diagram names who is out ("4th → out") and the tag changes
-  await field("Riders per heat who get a second chance").selectOption({ label: "2nd and 3rd only; the others are out" });
+  await field("Riders who get a second chance").selectOption({ label: "2nd and 3rd only; the others are out" });
   await expect(page.getByTestId("ladder-round").first()).toContainText("4th → out");
   await expect(page.getByTestId("min-heats")).toHaveText("Minimum heats per rider: 1");
   await expect(page.getByTestId("tag-second_chance")).toHaveText("Riders can be out after 1 heat");
-  await expect(page.getByTestId("format-preview")).toContainText("Second chance 2 heats of 4");
-  await field("Riders per heat who get a second chance").selectOption({ label: "Everyone who did not win" });
+  await field("Riders who get a second chance").selectOption({ label: "Everyone who did not win" });
   await expect(page.getByTestId("min-heats")).toHaveText("Minimum heats per rider: 2");
+
+  // double elimination, qualifying, round robin, single final: each card shows the numbers that format uses
+  await page.getByRole("radio", { name: "Double elimination" }).check();
+  for (const label of ["Riders per heat (target)", "Minimum per heat", "Maximum per heat", "How many advance", "Final size"]) await expect(field(label), `DE: ${label}`).toBeVisible();
+  await expect(page.getByTestId("format-preview")).toContainText("M1");
+  await expect(page.getByTestId("ladder-diagram")).toContainText("Main draw 1");
+  await expect(page.getByTestId("ladder-diagram")).toContainText("Second-chance draw 1");
+  await expect(page.getByTestId("ladder-diagram")).not.toContainText("Advances without riding");
+  await expect(page.getByTestId("min-heats")).toHaveText("Minimum heats per rider: 2");
+  await field("Final size").fill("2");
+  await expect(page.getByTestId("ladder-round").last()).toContainText("2 riders");
+  await field("Final size").fill("4");
+
+  await page.getByRole("radio", { name: "Qualifying heats + finals" }).check();
+  for (const label of ["Riders per heat (target)", "Minimum per heat", "Maximum per heat", "Final size", "Small final size", "Heats per rider"]) await expect(field(label), `QF: ${label}`).toBeVisible();
+  await expect(page.getByTestId("ladder-diagram")).toContainText("Small final");
+  await expect(page.getByTestId("ladder-diagram")).toContainText("next best 4 of all heats");
+  await field("Heats per rider").fill("1");
+  await expect(page.getByTestId("min-heats")).toHaveText("Minimum heats per rider: 1");
+  await expect(page.getByTestId("tag-qualifying")).toHaveText("Riders can be out after 1 heat");
+  await field("Heats per rider").fill("2");
+
+  await page.getByRole("radio", { name: "Round robin" }).check();
+  for (const label of ["Riders per heat (target)", "Minimum per heat", "Maximum per heat", "Heats per rider", "Points table"]) await expect(field(label), `RR: ${label}`).toBeVisible();
+  await expect(page.getByTestId("ladder-diagram")).toContainText("ranked by heat points");
+  await field("Heats per rider").fill("4");
+  await expect(page.getByTestId("ladder-round")).toHaveCount(4);
+  await field("Points table").fill("10, 6, 3, 1");
+  await expect(page.getByTestId("ladder-round")).toHaveCount(4);
+  await page.getByRole("button", { name: "Help: Points table" }).click();
+  await expect(page.getByRole("note").filter({ hasText: "Points for 1st, 2nd, 3rd … place in a heat" })).toBeVisible();
+
+  await page.getByRole("radio", { name: "Single final" }).check();
+  await expect(page.getByText("Everyone rides one heat: there is nothing to set.")).toBeVisible();
+  await expect(page.getByTestId("ladder-round")).toHaveCount(1);
+  await field("Preview with").fill("8");
+  await expect(page.getByTestId("format-preview")).toContainText("F 1 heat of 8");
+  await field("Preview with").fill("14");
+
+  // Show all settings keeps every Simple field on screen, with the advanced ones (heat lengths, breaks, flag-out) added below
+  await page.getByRole("radio", { name: "Knockout with a second chance" }).check();
   await page.getByRole("checkbox", { name: "Show all settings" }).check();
   const screenText = await page.locator("body").innerText();
   expect(screenText).not.toMatch(/\b(byes?|repechage|dingle|man-on-man)\b/i);
   expect(screenText).not.toMatch(/\b(winners?|losers?)['’]?\s+bracket\b/i);
-  // Show all settings keeps every Simple setting on screen, with the advanced ones added below
-  for (const label of ["Riders per heat (target)", "Minimum per heat", "Maximum per heat", "Riders per heat who get a second chance", "Final size", "Heat length: R1 (minutes)", "Break after each heat (minutes)", "Break after the round (minutes)"]) {
+  for (const label of ["Riders per heat (target)", "Minimum per heat", "Maximum per heat", "Riders who get a second chance", "Final size", "Preview with", "Heat length: R1 (minutes)"]) {
     await expect(field(label), `Simple format field still visible: ${label}`).toBeVisible();
   }
-  await expect(page.getByRole("radio", { name: "Knockout", exact: true })).toBeVisible();
+  for (const k of kinds) await expect(page.getByRole("radio", { name: k, exact: true })).toBeVisible();
   await expect(page.getByTestId("per-round-lengths")).toBeVisible();
-  await expect(page.getByText("Flag-out", { exact: true })).toBeVisible(); // advanced part
+  await expect(page.getByTestId("ladder-diagram")).toBeVisible();
+  await page.getByText("Default timing (minutes)", { exact: true }).click(); // the advanced part: breaks and the single heat lengths
+  await expect(field("Break after each heat")).toBeVisible();
+  await expect(page.getByText("Flag-out", { exact: true })).toBeVisible();
   await page.getByRole("checkbox", { name: "Show all settings" }).uncheck();
+  await expect(page.getByText("Flag-out", { exact: true })).toHaveCount(0);
+
+  // heat length per round: pre-filled from the ladder's own lengths, optional override, diagram in sync, breaks untouched
   await page.getByRole("radio", { name: "Knockout", exact: true }).check();
-  await field("Riders per heat (target)").fill("4");
-
-  // the text preview and the ladder diagram follow the rider count
-  await expect(page.getByTestId("format-preview")).toHaveText("With 14 riders: R1 4 heats of 3–4 → SF 2 heats of 4 → F 1 heat of 4 (7 heats)");
-  await expect(page.getByTestId("ladder-round")).toHaveCount(3);
-  await expect(page.getByTestId("ladder-heat")).toHaveCount(7);
-  await expect(page.getByTestId("ladder-diagram")).toContainText("3 rounds, 7 heats");
-  await expect(page.getByTestId("ladder-diagram")).toContainText("1st–2nd → SF");
-  await field("Preview with").fill("24");
-  await expect(page.getByTestId("format-preview")).toContainText("With 24 riders: R1 6 heats of 4");
-  await expect(page.getByTestId("ladder-heat").first()).toContainText("4 riders");
-
-  // only the simple numbers are shown under the choice; changing one updates the ladder
-  await expect(field("Riders per heat (target)")).toBeVisible();
-  await expect(field("Minimum per heat")).toHaveValue("3"); // default: target − 1
-  await expect(field("Maximum per heat")).toHaveValue("5"); // default: target + 1
-  await expect(field("How many advance per heat")).toBeVisible();
-  await expect(field("Final size")).toBeVisible();
-  await expect(page.getByText("Flag-out", { exact: true })).toHaveCount(0); // flag-out lives under Show all settings
   await field("Riders per heat (target)").fill("3");
+  await expect(page.getByTestId("format-preview")).toContainText("R1 5 heats of 2–3");
+  await field("Preview with").fill("24");
   await expect(page.getByTestId("format-preview")).toContainText("R1 8 heats of 3");
-
-  // heat length per round: pre-filled from the single setting, optional override, diagram in sync, breaks untouched
   await expect(page.getByTestId("per-round-lengths")).toContainText("Heat length per round");
   await expect(field("Heat length: R1 (minutes)")).toHaveValue("10");
   await expect(field("Heat length: F (minutes)")).toHaveValue("15");
@@ -349,18 +412,19 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await field("Heat length: F (minutes)").fill("20");
   await expect(page.getByTestId("ladder-round").first()).toContainText("9 min");
   await expect(page.getByTestId("ladder-round").last()).toContainText("20 min");
-  await expect(page.getByTestId("ladder-round").nth(1)).toContainText("10 min"); // R2 (another early round) untouched
   await expect(page.getByTestId("per-round-lengths").getByText("own length", { exact: true })).toHaveCount(2);
-  await expect(page.getByTestId("format-preview")).toContainText("R1 8 heats of 3"); // same shape
+  // names: a fresh card load starts from the built-in format; put the names back before saving
+  await page.getByRole("button", { name: "Rename round Final" }).click();
+  await page.getByLabel("New name for Final").fill("Grand final");
+  await page.getByLabel("New name for Final").press("Enter");
   await page.getByRole("button", { name: "Save format for Pro Men" }).click();
   await expect(page.getByText("Format saved for Pro Men").first()).toBeVisible();
   await expect(page.getByLabel("What is missing in 2. Divisions")).toHaveCount(0); // nothing missing any more
   const { data: fmt } = await org.db.from("divisions").select("format_params").eq("event_id", eventId).single();
-  expect(fmt!.format_params).toMatchObject({ roundDurationMin: { R1: 9, F: 20 } });
+  expect(fmt!.format_params).toMatchObject({ roundDurationMin: { R1: 9, F: 20 }, roundNames: { F: "Grand final" } });
   expect(JSON.stringify(fmt!.format_params)).not.toContain("SF");
   await page.getByRole("button", { name: "Use the single settings for every round" }).click();
   await expect(page.getByTestId("ladder-round").first()).toContainText("10 min");
-  await expect(page.getByTestId("per-round-lengths").getByText("own length", { exact: true })).toHaveCount(0);
 
   // pools: heats of everybody, the best N of all go to the final
   await page.getByRole("radio", { name: "Pools to a final" }).check();
@@ -369,35 +433,51 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await field("Preview with").fill("23");
   await expect(page.getByTestId("format-preview")).toContainText("With 23 riders: P1 3 heats");
   await expect(page.getByTestId("ladder-diagram")).toContainText("best 6 of all heats → F");
-  // second chance: the fixed structure is explained
-  await page.getByRole("radio", { name: "Knockout with a second chance" }).check();
-  await expect(page.getByText("Heat winners go straight through; the other riders get one more heat (the second-chance round)")).toBeVisible();
-  await page.getByRole("radio", { name: "Knockout", exact: true }).check();
 
-  // Show all settings: flag-out and the default timing sit here, with their helper text
-  await page.getByRole("checkbox", { name: "Show all settings" }).check();
-  await page.getByText("Flag-out", { exact: true }).click();
-  await page.getByRole("button", { name: "Help: Flag-out" }).click();
-  await expect(page.getByRole("note").filter({ hasText: "KOTA-style: in 3-rider heats the lowest-scoring rider is flagged out at minute X and the other two ride on. Off by default." })).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: "Flag-out: No flag-out" })).not.toBeChecked(); // off by default
-  await page.getByText("Default timing (minutes)", { exact: true }).click();
-  await page.getByRole("button", { name: "Help: Default timing (minutes)" }).click();
-  await expect(page.getByRole("note").filter({ hasText: "Defaults used to pre-fill new rounds. The per-round values decide." })).toBeVisible();
-  await page.getByText("Field size this format suits", { exact: true }).click();
-  await page.getByRole("button", { name: "Help: Field size this format suits" }).click();
-  await expect(page.getByRole("note").filter({ hasText: "The field sizes this template was designed for. The per-round values decide." })).toBeVisible();
-  await page.getByRole("checkbox", { name: "Show all settings" }).uncheck();
+  // the hidden fixed templates are not offered anywhere in the menus
+  await page.getByRole("button", { name: "Load a saved format…", exact: true }).click();
+  const offered = await page.getByLabel("Saved formats").locator("option").allTextContents();
+  expect(offered.join(" | ")).not.toMatch(/megaloop/i);
+  expect(offered.join(" | ")).toMatch(/Double elimination/);
+  expect(offered.join(" | ")).toMatch(/Round robin/);
+  await page.getByLabel("Saved formats").selectOption({ label: offered.find((o) => /Single final/.test(o))! });
+  await expect(page.getByRole("radio", { name: "Single final" })).toBeChecked();
 
-  // custom ladder (advanced) keeps the full per-round editor
-  await page.getByRole("button", { name: "+ Start a custom ladder" }).click();
-  await expect(page.getByTestId("format-preview")).toContainText("With 23 riders: R1 6 heats of 3–4");
-  await page.getByText("Custom ladder (advanced)", { exact: true }).click();
-  await page.getByRole("button", { name: "+ Add round" }).click();
-  await expect(page.getByTestId("format-preview")).toContainText("R3");
+  // custom ladder: a visual builder. "+ Add round" on the diagram, a dropdown for every place, live checks, save as my format
+  await page.getByRole("button", { name: "Build my own ladder…" }).click();
+  await expect(page.getByTestId("custom-builder")).toBeVisible();
+  await field("Preview with").fill("14");
+  await expect(page.getByTestId("custom-round")).toHaveCount(2);
+  await expect(page.getByTestId("ladder-problems")).toContainText("No problems found for 14 riders");
+  await page.getByRole("button", { name: "+ Add round after Round 1" }).click();
+  await expect(page.getByTestId("custom-round")).toHaveCount(3);
   await expect(page.getByTestId("ladder-round")).toHaveCount(3);
-  await field("Save these settings as a new preset").fill("Arrow custom");
-  await page.getByRole("button", { name: "Save as new preset" }).click();
+  await expect(page.getByTestId("ladder-problems")).toContainText("Final gets no riders: send at least one place to it.");
+  await page.getByLabel("Round 2: where 1st place goes").selectOption({ label: "→ Final" });
+  await page.getByLabel("Round 2: where 2nd place goes").selectOption({ label: "→ Final" });
+  await expect(page.getByTestId("ladder-problems")).toContainText("No problems found for 14 riders");
+  await page.getByLabel("Round 1: where 3rd place goes").selectOption({ label: "→ Round 2" });
+  await expect(page.getByTestId("ladder-diagram")).toContainText("3rd → R2");
+  // per-round numbers with a message that names the round and the counts
+  await page.locator("#cb-target-R1").fill("3");
+  await page.locator("#cb-min-R1").fill("3");
+  await page.locator("#cb-max-R1").fill("3");
+  await expect(page.getByTestId("ladder-problems")).toContainText("Round 1 receives 14 riders in 4 heats of 3–4, but the limits are 3 to 3 per heat");
+  await page.locator("#cb-max-R1").fill("4");
+  // heats of 3 where the top 3 go on eliminate nobody: the check names the round
+  await expect(page.getByTestId("ladder-problems")).toContainText("Round 1: Heat 1 eliminates nobody (3 riders, top 3 advance)");
+  await page.getByLabel("Round 1: where 3rd place goes").selectOption({ label: "out" });
+  await expect(page.getByTestId("ladder-problems")).toContainText("No problems found for 14 riders");
+  await expect(page.getByTestId("advance-count").first()).toContainText("places go on to a later round");
+  await field("Save these settings as my format").fill("Arrow custom");
+  await page.getByRole("button", { name: "Save as my format" }).click();
   await expect(page.getByText("Preset “Arrow custom” saved").first()).toBeVisible();
+  // ... and the "Load a saved format…" button offers it
+  await page.getByRole("radio", { name: "Pools to a final" }).check();
+  await page.getByRole("button", { name: "Load a saved format…", exact: true }).click();
+  await page.getByLabel("Saved formats").selectOption({ label: "Arrow custom" });
+  await expect(page.getByTestId("custom-builder")).toBeVisible();
+  await expect(page.getByTestId("custom-round")).toHaveCount(3);
 
   // duplicate, reorder, delete
   await page.getByRole("button", { name: "Duplicate" }).click();

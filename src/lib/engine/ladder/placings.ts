@@ -1,4 +1,4 @@
-import { eliminatedCount, outcomeOf, rankAcross, resultOf, roundComplete, seedNumber, compareScore } from "./build";
+import { crossComplete, eliminatedCount, outcomeOf, rankAcross, resultOf, seedNumber, compareScore } from "./build";
 import type { DivisionDraw, Placing } from "./types";
 
 const labelFor = (place: number, shared: boolean) => (shared ? `${place}=` : String(place));
@@ -14,6 +14,14 @@ export function divisionPlacings(draw: DivisionDraw): Placing[] {
   let knockedOut = 0;
 
   for (const round of draw.rounds) {
+    const ranking = round.spec.crossHeat;
+    if (ranking?.to === "final_placing") {
+      // round robin: the points ranking is the result; every rider has a place of their own
+      if (crossComplete(draw, round)) {
+        rankAcross(draw, round).forEach((r, i) => out.push({ entrantId: r.entrantId, place: i + 1, shared: false, label: String(i + 1), round: round.id, reason: `Ranked ${i + 1} on ${ranking.combine === "points" ? "heat points" : "heat scores"} over ${[...(ranking.over ?? []), round.id].length} rounds` }));
+      }
+      continue;
+    }
     const count = eliminatedCount(round);
     knockedOut += count;
     const start = total - knockedOut + 1;
@@ -22,9 +30,9 @@ export function divisionPlacings(draw: DivisionDraw): Placing[] {
       const eliminated: Array<{ entrantId: string; seed: number; total: number | null; tieKeys: number[]; reason: string }> = [];
       const cross = round.spec.crossHeat;
       if (cross) {
-        if (roundComplete(draw, round)) {
-          for (const r of rankAcross(draw, round).slice(cross.advanceTop)) {
-            eliminated.push({ entrantId: r.entrantId, seed: r.seed, total: r.combined, tieKeys: r.tieKeys, reason: `Ranked ${cross.combine === "sum" ? "by the sum of" : "by the best of"} their pool heats in ${round.name}` });
+        if (crossComplete(draw, round)) {
+          for (const r of rankAcross(draw, round).slice(cross.advanceTop + (cross.alsoTo?.count ?? 0))) {
+            eliminated.push({ entrantId: r.entrantId, seed: r.seed, total: r.combined, tieKeys: r.tieKeys, reason: `Ranked ${cross.combine === "sum" ? "by the sum of" : "by the best of"} their heats in ${round.name}` });
           }
         }
       } else {
@@ -50,7 +58,8 @@ export function divisionPlacings(draw: DivisionDraw): Placing[] {
       for (const e of res.ranked) {
         if (outcomeOf(round.spec, e.place) !== "final_placing") continue;
         const shared = res.ranked.filter((x) => x.place === e.place).length > 1;
-        out.push({ entrantId: e.entrantId, place: e.place, shared, label: labelFor(e.place, shared), round: round.id, reason: `Finished ${e.place} in the ${round.name}` });
+        const place = e.place + round.spec.placeOffset;
+        out.push({ entrantId: e.entrantId, place, shared, label: labelFor(place, shared), round: round.id, reason: `Finished ${e.place} in the ${round.name}` });
       }
     }
   }

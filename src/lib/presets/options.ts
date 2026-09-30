@@ -27,7 +27,9 @@ export function presetGroups(rows: readonly PresetRow[], selectedId: string | nu
   }
   const chosen = new Set([...latest.values()].map((r) => r.id));
   const selected = selectedId ? rows.find((r) => r.id === selectedId) : undefined;
-  const list = [...latest.values(), ...(selected && !chosen.has(selected.id) ? [selected] : [])];
+  const hidden = (r: PresetRow) => (r.json as { hidden?: boolean } | null)?.hidden === true;
+  // hidden presets (fixed templates the menus no longer offer) stay usable by a division that already has one selected
+  const list = [...latest.values(), ...(selected && !chosen.has(selected.id) ? [selected] : [])].filter((r) => !hidden(r) || r.id === selectedId);
   const label = (r: PresetRow) => (r.organisation_id && (r.version > 1 || !chosen.has(r.id)) ? `${r.name} (v${r.version})` : r.name);
   const byName = (a: PresetRow, b: PresetRow) => a.name.localeCompare(b.name) || b.version - a.version;
   return {

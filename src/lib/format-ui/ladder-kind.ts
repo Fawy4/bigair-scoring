@@ -1,13 +1,43 @@
 import { effectiveMaxHeatSize, effectiveMinHeatSize } from "@/lib/engine/ladder/seeding";
 import { GeneratorSchema } from "@/lib/schemas/format-template";
 
-/** The three ladder types the organiser chooses from; "custom" is a format with its own rounds. */
-export type LadderKind = "knockout" | "second_chance" | "pools" | "custom";
+/** The seven ladder types the organiser chooses from; "custom" is a format with its own rounds. */
+export type LadderKind = "knockout" | "second_chance" | "double_elimination" | "qualifying" | "pools" | "round_robin" | "single_final" | "custom";
+export type GeneratedKind = Exclude<LadderKind, "custom">;
 
-export const GENERATOR: Record<Exclude<LadderKind, "custom">, "single_elimination" | "dingle_elimination" | "pools_to_final"> = {
+/** The order of the cards on the Format tab. */
+export const KINDS: GeneratedKind[] = ["knockout", "second_chance", "double_elimination", "qualifying", "pools", "round_robin", "single_final"];
+
+export const GENERATOR: Record<GeneratedKind, "single_elimination" | "dingle_elimination" | "double_elimination" | "qualifying_to_finals" | "pools_to_final" | "round_robin" | "single_final"> = {
   knockout: "single_elimination",
   second_chance: "dingle_elimination",
+  double_elimination: "double_elimination",
+  qualifying: "qualifying_to_finals",
   pools: "pools_to_final",
+  round_robin: "round_robin",
+  single_final: "single_final",
+};
+
+/** The built-in preset each card loads (its `id`/key), so choosing a card is choosing that preset. */
+export const KIND_PRESET_KEY: Record<GeneratedKind, string> = {
+  knockout: "heats4-top2-single-elim",
+  second_chance: "kota-dingle",
+  double_elimination: "double-elimination",
+  qualifying: "qualifying-to-finals",
+  pools: "pools-to-final",
+  round_robin: "round-robin",
+  single_final: "single-final",
+};
+
+/** Riders are guaranteed at least 2 heats in these ladder types (with their default settings); the others can drop riders after 1 heat. */
+export const AT_LEAST_TWO: Record<GeneratedKind, boolean> = {
+  knockout: false,
+  second_chance: true,
+  double_elimination: true,
+  qualifying: true,
+  pools: false,
+  round_robin: true,
+  single_final: false,
 };
 
 export function ladderKindOf(working: unknown): LadderKind {
@@ -17,7 +47,7 @@ export function ladderKindOf(working: unknown): LadderKind {
 }
 
 /** Switches the ladder type: the generator is replaced by the new type's defaults; timing and everything else stays. */
-export function withLadderKind(working: Record<string, unknown>, kind: Exclude<LadderKind, "custom">): Record<string, unknown> {
+export function withLadderKind(working: Record<string, unknown>, kind: GeneratedKind): Record<string, unknown> {
   // rounds belong to the old type, and so do per-round lengths (round ids differ between ladder types)
   const { rounds: _rounds, roundDurationMin: _lengths, ...rest } = working;
   void _rounds;
@@ -46,14 +76,23 @@ export function withoutRoundLengths(working: Record<string, unknown>): Record<st
 }
 
 /** The parameter that holds "Riders per heat (target)" for each ladder type (second chance: the first round). */
-export const TARGET_KEY: Record<Exclude<LadderKind, "custom">, "heatSize" | "r1HeatSize"> = { knockout: "heatSize", second_chance: "r1HeatSize", pools: "heatSize" };
+export const TARGET_KEY: Record<GeneratedKind, "heatSize" | "r1HeatSize" | null> = {
+  knockout: "heatSize",
+  second_chance: "r1HeatSize",
+  double_elimination: "heatSize",
+  qualifying: "heatSize",
+  pools: "heatSize",
+  round_robin: "heatSize",
+  single_final: null,
+};
 
 /** Target and (effective) minimum and maximum riders per heat of a generated ladder; `explicit` = the organiser named the minimum. */
 export function heatSizes(working: Record<string, unknown>): { target: number; min: number; max: number; explicit: boolean; explicitMax: boolean } | null {
   const kind = ladderKindOf(working);
   if (kind === "custom") return null;
   const params = ((working.generator as { params?: Record<string, unknown> } | undefined)?.params ?? {}) as Record<string, number | undefined>;
-  const target = params[TARGET_KEY[kind]];
+  const key = TARGET_KEY[kind];
+  const target = key ? params[key] : undefined;
   if (typeof target !== "number") return null;
   return {
     target,
@@ -77,7 +116,8 @@ export function withHeatTarget(working: Record<string, unknown>, target: number 
   const kind = ladderKindOf(working);
   if (kind === "custom") return working;
   return withParams(working, (p) => {
-    p[TARGET_KEY[kind]] = target === "" ? undefined : target;
+    const key = TARGET_KEY[kind];
+    if (key) p[key] = target === "" ? undefined : target;
     if (typeof target === "number" && p.minHeatSize !== undefined && p.minHeatSize > target) p.minHeatSize = target;
     if (typeof target === "number" && p.maxHeatSize !== undefined && p.maxHeatSize < target) p.maxHeatSize = target;
     return p;
@@ -112,3 +152,34 @@ export function withSecondChancePlaces(working: Record<string, unknown>, places:
     return p;
   });
 }
+
+/** Sets one generator number; "" removes it (an optional number goes back to its automatic value). */
+export function withParam(working: Record<string, unknown>, key: string, value: number | number[] | "" | undefined): Record<string, unknown> {
+  if (ladderKindOf(working) === "custom") return working;
+  const gen = working.generator as { type: string; params?: Record<string, unknown> };
+  const params = { ...(gen.params ?? {}) };
+  if (value === "" || value === undefined) delete params[key];
+  else params[key] = value;
+  return { ...working, generator: { ...gen, params } };
+}
+
+/** Reads one generator number (undefined when the format leaves it automatic). */
+export function paramOf(working: Record<string, unknown>, key: string): number | number[] | undefined {
+  const gen = working.generator as { params?: Record<string, unknown> } | undefined;
+  const v = gen?.params?.[key];
+  return typeof v === "number" || Array.isArray(v) ? (v as number | number[]) : undefined;
+}
+
+/** Gives a round (or heat) your own name; blank restores the default. An empty list of names disappears. Keyed by round or heat id. */
+function withName(working: Record<string, unknown>, field: "roundNames" | "heatNames", id: string, name: string): Record<string, unknown> {
+  const current = { ...((working[field] as Record<string, string> | undefined) ?? {}) };
+  const clean = name.trim();
+  if (clean === "") delete current[id];
+  else current[id] = clean.slice(0, 40);
+  const { [field]: _old, ...rest } = working;
+  void _old;
+  return Object.keys(current).length > 0 ? { ...rest, [field]: current } : rest;
+}
+
+export const withRoundName = (working: Record<string, unknown>, roundId: string, name: string) => withName(working, "roundNames", roundId, name);
+export const withHeatName = (working: Record<string, unknown>, heatId: string, name: string) => withName(working, "heatNames", heatId, name);

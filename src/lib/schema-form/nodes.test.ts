@@ -80,7 +80,7 @@ describe("the Advanced form is generated from the schemas and covers every field
 
   it("format generators are offered as a choice with their parameters", () => {
     const gen = allNodes(format).find((n) => key(n) === "generator");
-    expect(gen?.kind === "choice" && gen.variants.map((v) => v.value)).toEqual(["single_elimination", "dingle_elimination", "pools_to_final"]);
+    expect(gen?.kind === "choice" && gen.variants.map((v) => v.value)).toEqual(["single_elimination", "dingle_elimination", "pools_to_final", "double_elimination", "qualifying_to_finals", "round_robin", "single_final"]);
     expect(allNodes(format).map(key)).toContain("generator.params.advancePerHeat");
   });
 

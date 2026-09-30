@@ -146,6 +146,15 @@ Rule: every heat between the minimum and the maximum (defaults: target − 1, ne
 - 6 riders left in the main draw: top 2 of 2 heats of 3 → Final of 4 (changing how many advance per heat, not creating a rider who skips).
 - N = 2 … 40 (all settings): one final heat, every rider placed once. Target 2 gives 1 v 1 style heats. A field that cannot keep all three numbers (8 riders, 4 / 4 / 5) gets a `heat_size_limits` warning.
 
+### 2G00 — The four newer generators (docs/04 decisions 28–31; `2g3-double-elimination.test.ts`, `2g4-qualifying-finals.test.ts`, `2g5-round-robin.test.ts`, `2g6-single-final.test.ts`)
+(There is no §2G in this document: §2G0 is the sizing rule and §2G2 the second-chance ladder. The tests below were written before the generators.)
+- **Every generated round** obeys the target / minimum / maximum rule and **no rider advances without riding** (asserted for every field size the tests cover). Field sizes that cannot keep all three numbers are announced with a `heat_size_limits` warning, never silent (double elimination at 3 / 3 / 4 with 13 riders; 7–8 riders).
+- **Double elimination, 14 riders, 3 / 3 / 4:** Main draw 1 3/3/4/4 → top 2 of each heat stay (8) · Second-chance draw 1 (6 dropped) 3/3 → Main draw 2 4/4 → Second-chance draw 2 (4 dropped + 2 survivors) 3/3 → Main draw 3 (4) → Second-chance draw 3 (2 dropped + 2 survivors = 4) → Final of 4 (top 2 of each draw). Places: Final 1–4, Second-chance draw 3 losers 5=, Second-chance draw 2 losers 7=, Second-chance draw 1 losers 11=. Every rider rides at least 2 heats. Final size 2 = the two draw winners; an odd final size is refused. Advance counts obey "the top half stay".
+- **Qualifying heats + finals, 14 riders (target 4, min 3, max 5, 2 qualifying heats each, Final 4, Small final 4):** Q1 3/3/4/4 (seeds [1,8,9] [2,7,10] [3,6,11,14] [4,5,12,13]) · Q2 3/3/4/4 · Small final of 4 (ranks 5–8) · Final of 4 (ranks 1–4) = 10 heats; ranks 9–14 are placed one by one by their qualifying rank. 6 riders: Final of 4 and no Small final (2 left, minimum 3); 7 riders: Small final of 3. One qualifying heat each: the tag becomes "Riders can be out after 1 heat".
+- **Round robin, 12 riders, 3 heats each (target 4):** 3 rounds of 3 heats of 4 (9 heats); round 1 is the snake deal [1,6,7,12] [2,5,8,11] [3,4,9,10]; later rounds rotate (16, 20, 24, 30 riders: no repeated pairs; 8 riders in 2 heats of 4: 4 repeated pairs, the fewest possible). Points default to heat size + 1 − place; a table such as 10, 6, 3, 1 replaces it. The ranking is undecided until every round is published; every rider gets one place.
+- **Single final:** 1–10 riders: one heat, places 1…N; 12 riders: one heat of 12 and warnings.
+- Format tab (Playwright): the seven cards, their tags and the numbers each uses are visible at the Simple level without toggling; clicking a round or heat name in the diagram renames it (blank restores); the custom-ladder builder adds rounds, links places with dropdowns and names the round and counts in its checks.
+
 ## 3. Timetable engine (`presets/schedule/kitemania-day2.json`)
 
 ### 3A — Main plan, anchors Women H1 = 10:30 and Advanced R2 H4 = 14:00 (Africa/Cairo)

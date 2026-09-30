@@ -1,11 +1,16 @@
 import {
   RoundSpecSchema,
   type DingleEliminationParams,
+  type DoubleEliminationParams,
   type PoolsToFinalParams,
+  type QualifyingToFinalsParams,
+  type RoundRobinParams,
+  type SingleFinalParams,
   type RoundSpec,
   type RoundSpecInput,
   type SingleEliminationParams,
 } from "@/lib/schemas/format-template";
+import { planDoubleElimination } from "./double-elimination-plan";
 import { planSecondChance } from "./second-chance-plan";
 import { heatLimits, roundLayout } from "./seeding";
 
@@ -13,7 +18,7 @@ const range = (from: number, to: number) => Array.from({ length: Math.max(0, to 
 const ALL_PLACES = range(1, 10);
 const spec = (input: RoundSpecInput): RoundSpec => RoundSpecSchema.parse(input);
 
-function finalRound(entrantsFrom: RoundSpec["entrantsFrom"], size: number, durationMin: number, reseed: RoundSpec["reseed"]): RoundSpec {
+function finalRound(entrantsFrom: RoundSpec["entrantsFrom"], size: number, durationMin: number, reseed: RoundSpec["reseed"], extra: Partial<RoundSpecInput> = {}): RoundSpec {
   return spec({
     id: "F",
     name: "Final",
@@ -25,8 +30,12 @@ function finalRound(entrantsFrom: RoundSpec["entrantsFrom"], size: number, durat
     seeding: "sequential",
     reseed,
     advance: [{ places: "rest", to: "final_placing" }],
+    ...extra,
   });
 }
+
+/** A final (or Small final) heat that is checked against the three sizing numbers: too big or too small → a warning in the draw. */
+const limitedFinal = (extra: Partial<RoundSpecInput>, limits: { min?: number; max?: number }): Partial<RoundSpecInput> => ({ uneven: "minimum_riders", minHeatSize: limits.min, maxHeatSize: limits.max, ...extra });
 
 /** Rounds until one heat of `finalSize` remains. The round before the Final is the "Semi-final" when it has exactly 2 heats. */
 export function generateSingleElimination(n: number, p: SingleEliminationParams): RoundSpec[] {
@@ -179,5 +188,141 @@ export function generatePoolsToFinal(n: number, p: PoolsToFinalParams): RoundSpe
     }),
   );
   rounds.push(finalRound([{ type: "round_places", round: ids[ids.length - 1], places: ALL_PLACES }], finalists, p.finalMin, "by_heat_score"));
+  return rounds;
+}
+
+/** One heat with everybody: that heat is the result. Above 10 riders the draw carries a warning (use pools instead). */
+export function generateSingleFinal(n: number, p: SingleFinalParams): RoundSpec[] {
+  return [finalRound([{ type: "seeds" }], n, p.finalMin, "by_original_seed", { uneven: "minimum_riders", minHeatSize: 1, maxHeatSize: 10 })];
+}
+
+/**
+ * Qualifying heats rank everybody (the best or the sum of their heats); the best `finalSize` ride the Final, the next best
+ * `smallFinalSize` a Small final (only when at least the minimum riders are left for it), the rest are placed by their qualifying rank.
+ */
+export function generateQualifyingToFinals(n: number, p: QualifyingToFinalsParams): RoundSpec[] {
+  const limits = heatLimits(p.heatSize, p.minHeatSize, p.maxHeatSize);
+  const final = Math.min(p.finalSize, n);
+  if (n <= p.finalSize) return [finalRound([{ type: "seeds" }], n, p.finalMin, "by_original_seed", limitedFinal({}, limits))];
+  const left = Math.min(p.smallFinalSize, n - final);
+  const small = p.smallFinalSize > 0 && left >= limits.min ? left : 0;
+  const ids = Array.from({ length: p.qualifyingRounds }, (_, i) => `Q${i + 1}`);
+  const sizing = { heatSize: p.heatSize, minHeatSize: p.minHeatSize, maxHeatSize: p.maxHeatSize, uneven: "minimum_riders" as const };
+  const rounds: RoundSpec[] = ids.map((id, i) =>
+    spec({
+      id,
+      name: `Qualifying heat ${i + 1}`,
+      shortName: id,
+      ...sizing,
+      durationMin: p.qualifyingMin,
+      entrantsFrom: i === 0 ? [{ type: "seeds" }] : [{ type: "round_places", round: ids[i - 1], places: ALL_PLACES }],
+      seeding: i === 0 ? p.seeding : "snake",
+      reseed: i === 0 ? "by_original_seed" : "by_heat_score",
+      advance: i < ids.length - 1 ? [{ places: "rest", to: ids[i + 1] }] : [],
+      crossHeat:
+        i === ids.length - 1
+          ? { advanceTop: final, to: "F", combine: p.qualifyingCombine, ...(small > 0 ? { alsoTo: { count: small, to: "SF" } } : {}), tieBreak: "scoring_model_then_seed" }
+          : undefined,
+    }),
+  );
+  const from = (): RoundSpec["entrantsFrom"] => [{ type: "round_places", round: ids[ids.length - 1], places: ALL_PLACES }];
+  if (small > 0) {
+    rounds.push(
+      finalRound(from(), small, p.smallFinalMin, "by_heat_score", limitedFinal({ id: "SF", name: "Small final", shortName: "SF", placeOffset: final }, limits)),
+    );
+  }
+  rounds.push(finalRound(from(), final, p.finalMin, "by_heat_score", limitedFinal({}, limits)));
+  return rounds;
+}
+
+/**
+ * Round robin: `heatsPerRider` rounds, each with everybody in heats of the sizing rule. Round 1 is dealt like a snake; later rounds are
+ * dealt so that riders meet riders they have not ridden against (`rotate`). Heat points add up to the ranking (the last round ranks).
+ */
+export function generateRoundRobin(n: number, p: RoundRobinParams): RoundSpec[] {
+  const ids = Array.from({ length: p.heatsPerRider }, (_, i) => `RR${i + 1}`);
+  const sizing = { heatSize: p.heatSize, minHeatSize: p.minHeatSize, maxHeatSize: p.maxHeatSize, uneven: "minimum_riders" as const };
+  return ids.map((id, i) =>
+    spec({
+      id,
+      name: `Round ${i + 1}`,
+      shortName: id,
+      ...sizing,
+      durationMin: p.heatMin,
+      entrantsFrom: [{ type: "seeds" }],
+      seeding: i === 0 ? p.seeding : "rotate",
+      reseed: "by_original_seed",
+      advance: i < ids.length - 1 ? [{ places: "rest", to: ids[i + 1] }] : [],
+      crossHeat:
+        i === ids.length - 1
+          ? { advanceTop: Math.max(1, n), to: "final_placing", combine: "points", ...(p.pointsTable ? { points: p.pointsTable } : {}), over: ids.slice(0, -1), tieBreak: "scoring_model_then_seed" }
+          : undefined,
+    }),
+  );
+}
+
+/**
+ * Double elimination (docs/04 decision 28): Main draw and Second-chance draw rounds in turn, then a Final of the top `finalSize / 2` of each
+ * draw. In every heat the top half stay in their draw and the bottom half drop; every round follows the sizing rule (`planDoubleElimination`).
+ */
+export function generateDoubleElimination(n: number, p: DoubleEliminationParams): RoundSpec[] {
+  const limits = heatLimits(p.heatSize, p.minHeatSize, p.maxHeatSize);
+  const plan = planDoubleElimination(n, { limits, finalSize: p.finalSize, advancePerHeat: p.advancePerHeat });
+  if (!plan) return [finalRound([{ type: "seeds" }], n, p.finalMin, "by_original_seed", limitedFinal({}, limits))];
+  const sizing = { heatSize: p.heatSize, minHeatSize: p.minHeatSize, maxHeatSize: p.maxHeatSize, uneven: "minimum_riders" as const };
+  const last = plan.stages.length - 1;
+  const perDraw = plan.perDraw;
+  const rounds: RoundSpec[] = [];
+  plan.stages.forEach((st, t) => {
+    const n1 = t + 1;
+    const mId = `M${n1}`;
+    const sId = `S${n1}`;
+    const stay = t === last ? perDraw : st.main.advance;
+    const staySecond = t === last ? perDraw : st.second.advance;
+    const prev = plan.stages[t - 1];
+    rounds.push(
+      spec({
+        id: mId,
+        name: `Main draw ${n1}`,
+        shortName: mId,
+        ...sizing,
+        heatCountOverride: st.main.heats,
+        durationMin: p.mainMin,
+        entrantsFrom: t === 0 ? [{ type: "seeds" }] : [{ type: "round_places", round: `M${t}`, places: range(1, prev.main.advance) }],
+        seeding: t === 0 ? p.seeding : "snake",
+        reseed: t === 0 ? "by_original_seed" : p.reseed,
+        advance: [{ places: range(1, stay), to: t === last ? "F" : `M${n1 + 1}` }, { places: "rest", to: sId }],
+      }),
+    );
+    rounds.push(
+      spec({
+        id: sId,
+        name: `Second-chance draw ${n1}`,
+        shortName: sId,
+        ...sizing,
+        heatCountOverride: st.second.heats,
+        durationMin: p.secondMin,
+        entrantsFrom: [
+          { type: "round_places", round: mId, places: range(stay + 1, 10) },
+          ...(t === 0 ? [] : [{ type: "round_places" as const, round: `S${t}`, places: range(1, prev.second.advance) }]),
+        ],
+        seeding: "snake",
+        reseed: p.reseed,
+        advance: [{ places: range(1, staySecond), to: t === last ? "F" : `S${n1 + 1}` }, { places: "rest", to: "eliminated" }],
+      }),
+    );
+  });
+  rounds.push(
+    finalRound(
+      [
+        { type: "round_places", round: `M${last + 1}`, places: range(1, perDraw) },
+        { type: "round_places", round: `S${last + 1}`, places: range(1, perDraw) },
+      ],
+      perDraw * 2,
+      p.finalMin,
+      p.reseed,
+      limitedFinal({}, limits),
+    ),
+  );
   return rounds;
 }

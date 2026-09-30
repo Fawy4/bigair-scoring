@@ -23,12 +23,16 @@ export interface LadderColumn {
   id: string;
   shortName: string;
   name: string;
+  /** The name the app gives the round when the organiser has not renamed it. */
+  defaultName: string;
   /** "4 heats · 3–4 riders" */
   summary: string;
   heats: Array<{
     id: string;
-    /** "R1 H1", "Second chance H2": the round and the heat's place inside it. */
+    /** The organiser's own name, else "R1 H1", "Second chance H2": the round and the heat's place inside it. */
     name: string;
+    /** "R1 H1": what a blank name goes back to. */
+    defaultName: string;
     size: number;
     /** The rider advances without riding. */
     advancing: boolean;
@@ -75,8 +79,13 @@ function routesOf(draw: DivisionDraw, roundIndex: number): string[] {
   const routes: string[] = [];
   const cross = round.spec.crossHeat;
   if (cross) {
+    if (cross.to === "final_placing") {
+      routes.push(`${cross.combine === "points" ? t.rankedByPoints : t.rankedByScores} ${t.arrow} ${t.finalPlacing}`);
+      return routes;
+    }
     routes.push(`${t.bestOfAll(cross.advanceTop)} ${t.arrow} ${nameOf(cross.to)}`);
-    routes.push(`${t.rest} ${t.arrow} ${t.out}`);
+    if (cross.alsoTo) routes.push(`${t.nextBest(cross.alsoTo.count)} ${t.arrow} ${nameOf(cross.alsoTo.to)}`);
+    routes.push(draw.template.placings.eliminated === "by_heat_score" ? t.restKeepRank : `${t.rest} ${t.arrow} ${t.out}`);
     return routes;
   }
   // Name the actual places ("4th → out"), not just "the rest": only places that exist in this round's heats are listed.
@@ -126,10 +135,12 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
     id: r.id,
     shortName: r.shortName,
     name: r.name,
+    defaultName: r.spec.name,
     summary: t.heatSizes(rounds[i].heats, range(rounds[i].minSize, rounds[i].maxSize), rounds[i].heatMin),
     heats: r.heats.map((h) => ({
       id: h.id,
-      name: t.heatName(r.shortName, h.index),
+      name: h.name ?? t.heatName(r.shortName, h.index),
+      defaultName: t.heatName(r.shortName, h.index),
       size: h.slots.length,
       advancing: h.bye,
       from: h.slots.flatMap((sl) => (sl.from ? [t.slotFrom(sl.from.place, sl.from.round === draw.rounds[i - 1]?.id ? null : (draw.rounds.find((x) => x.id === sl.from!.round)?.shortName ?? sl.from.round), sl.from.heat)] : [])),

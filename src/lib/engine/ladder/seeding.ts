@@ -131,6 +131,57 @@ export function dealSnake<T>(items: T[], caps: number[]): T[][] {
   return heats;
 }
 
+/**
+ * "Rotate" deal for round robin: riders (best seed first) go to the heat where they meet the fewest riders they have already
+ * ridden against, then pairs of riders are swapped between heats while that lowers the number of repeated meetings. Heat sizes
+ * stay as given. Deterministic: no clock, no randomness.
+ */
+export function dealRotate<T extends { id: string }>(items: T[], caps: number[], prior: string[][]): T[][] {
+  if (items.length > caps.reduce((a, b) => a + b, 0)) throw new Error("More riders than places in the heats");
+  const met = new Map<string, number>();
+  const key = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+  for (const heat of prior) for (let i = 0; i < heat.length; i++) for (let j = i + 1; j < heat.length; j++) met.set(key(heat[i], heat[j]), (met.get(key(heat[i], heat[j])) ?? 0) + 1);
+  const meetings = (id: string, heat: T[]) => heat.reduce((s, o) => s + (met.get(key(id, o.id)) ?? 0), 0);
+
+  const heats: T[][] = caps.map(() => []);
+  for (const item of items) {
+    let best = -1;
+    let bestCost = Infinity;
+    heats.forEach((h, i) => {
+      if (h.length >= caps[i]) return;
+      const cost = meetings(item.id, h);
+      if (cost < bestCost) [best, bestCost] = [i, cost];
+    });
+    heats[best].push(item);
+  }
+
+  // swap riders between heats while it lowers the repeats (at most a few hundred passes; every swap strictly improves)
+  for (let pass = 0; pass < 500; pass++) {
+    let improved = false;
+    for (let a = 0; a < heats.length; a++) {
+      for (let b = a + 1; b < heats.length; b++) {
+        for (let i = 0; i < heats[a].length; i++) {
+          for (let j = 0; j < heats[b].length; j++) {
+            const x = heats[a][i];
+            const y = heats[b][j];
+            const restA = heats[a].filter((_, k) => k !== i);
+            const restB = heats[b].filter((_, k) => k !== j);
+            const before = meetings(x.id, restA) + meetings(y.id, restB);
+            const after = meetings(y.id, restA) + meetings(x.id, restB);
+            if (after < before) {
+              [heats[a][i], heats[b][j]] = [y, x];
+              improved = true;
+            }
+          }
+        }
+      }
+    }
+    if (!improved) break;
+  }
+  const order = new Map(items.map((it, i) => [it.id, i]));
+  return heats.map((h) => [...h].sort((p, q) => order.get(p.id)! - order.get(q.id)!));
+}
+
 /** Fill heat 1, then heat 2, … in item order. */
 export function dealSequential<T>(items: T[], caps: number[]): T[][] {
   if (items.length > caps.reduce((a, b) => a + b, 0)) throw new Error("More riders than places in the heats");

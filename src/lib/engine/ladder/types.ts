@@ -42,6 +42,9 @@ export interface HistoryEntry {
   heat: number;
   total: number | null;
   tieKeys: number[];
+  /** Place in that heat and the heat's size: round robin points come from these. */
+  place?: number;
+  size?: number;
 }
 
 export interface Slot {
@@ -68,6 +71,8 @@ export interface DrawHeat {
   /** Division-wide heat number ("Heat 7"). Byes have none (Decision 5). */
   number: number | null;
   bye: boolean;
+  /** The organiser's own name for this heat ("Semi 1"); absent = the default "R1 H2". */
+  name?: string;
   slots: Slot[];
   durationMin: number;
   breakAfterHeatMin: number;

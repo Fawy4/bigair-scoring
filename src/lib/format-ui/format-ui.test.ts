@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import dingle from "../../../presets/formats/kota-dingle.json";
 import single from "../../../presets/formats/heats4-top2-single-elim.json";
@@ -100,7 +102,7 @@ describe("ladder diagram model", () => {
 
   it("pools: everyone rides once, then the best N of all heats go to the final", () => {
     const p = previewFormat(parseFormatTemplate(pools), 23);
-    expect(p.ladder[0].routes).toEqual(["best 6 of all heats → F", "the rest → out"]);
+    expect(p.ladder[0].routes).toEqual(["best 6 of all heats → F", "the rest keep their rank"]);
   });
 
   it("second chance: winners go on, 2nd and 3rd get another heat", () => {
@@ -119,6 +121,23 @@ describe("ladder diagram model", () => {
     const everyone = previewFormat(parseFormatTemplate({ ...limited, generator: { ...limited.generator, params: { ...limited.generator.params, secondChancePlaces: undefined } } }), 14);
     expect(everyone.ladder[0].routes).toEqual(["1st → SF", "2nd–4th → Second chance"]);
     expect(everyone.minHeatsPerRider).toBe(2);
+  });
+
+  it("the four newer formats read plainly in the diagram", () => {
+    const load = (name: string) => JSON.parse(readFileSync(join(process.cwd(), "presets", "formats", `${name}.json`), "utf8"));
+    const qf = previewFormat(parseFormatTemplate(load("qualifying-to-finals")), 14);
+    expect(qf.ladder.map((c) => c.shortName)).toEqual(["Q1", "Q2", "SF", "F"]);
+    expect(qf.ladder[1].routes).toEqual(["best 4 of all heats → F", "next best 4 of all heats → SF", "the rest keep their rank"]);
+    const rr = previewFormat(parseFormatTemplate(load("round-robin")), 12);
+    expect(rr.ladder.map((c) => c.shortName)).toEqual(["RR1", "RR2", "RR3"]);
+    expect(rr.ladder[2].routes).toEqual(["ranked by heat points → final placing"]);
+    const de = previewFormat(parseFormatTemplate(load("double-elimination")), 14);
+    expect(de.ladder[0].routes.join(" | ")).toMatch(/→ M2 \| .*→ S1/);
+    expect(de.ladder.find((c) => c.id === "S1")!.routes.join(" | ")).toMatch(/→ out/);
+    const sf = previewFormat(parseFormatTemplate(load("single-final")), 8);
+    expect(sf.ladder).toHaveLength(1);
+    expect(sf.ladder[0].routes).toEqual(["the rest → final placing"]);
+    for (const p of [qf, rr, de, sf]) expect(JSON.stringify(p)).not.toMatch(/\bbye\b/i);
   });
 
   it("place lists read naturally", () => {
