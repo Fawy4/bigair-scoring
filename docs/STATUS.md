@@ -254,3 +254,45 @@ Things you should know:
 - The existing invite-only e2e test now first clicks "Sign in with a link instead" (the page opens in password mode).
 - "Forgot password?" is not tested with a real address (each one sends a real email and the project allows 2 per hour); it is tested with an empty and an unregistered address.
 - Removed the "Every heat holds N to M riders" note under the numbers to save height.
+
+## Phase 4a-1c – platform owner layer (branch `phase-4a-1c-owner-admin`)
+
+### Done
+- **Database** (3 migrations, applied to the hosted development project over HTTPS): `platform_admins` (owner | staff), `platform_settings` (product name, logo, tagline, legal texts, default time zone), `platform_impersonations`, `organisations.archived_at`, `audit_log.organisation_id`, version and `published_at` on system presets (existing ones count as published), and the admin and public functions. RLS: only platform admins read or write the platform tables; they read every organisation; organisers are unchanged.
+- **Your account is now platform owner** (`npm run bootstrap:platform-admin`, run against the hosted project: "f***@outlook.com is now platform owner", still owner of Arrow).
+- **/admin** (404 for organisers and officials, sign-in page for visitors): Organisations list (events, status, plan, last activity), Create organisation (name, slug, logo, time zone), Invite first organiser (email, or a link to copy), Rename, Archive / Restore, Delete (owner only, type the slug, refused with published results), "Open as this organiser" with an audited session and the banner "Viewing as … — back to … admin", Platform settings, Master presets (edit = new draft version, "Publish to all customers"), Audit log, Health.
+- **Header switch** "Sendbook admin ↔ Organiser view (Arrow)" for admins only. The organisation drop-down is a switcher with the logo only for people in more than one organisation.
+- **Public**: the home page lists published, live and finished events of active organisations as "Organisation · Location · Date" and links to the event; new small event page `/e/[slug]`; new organisation page `/o/[orgSlug]` (logo, live / upcoming / past); tagline and product name from the platform settings; `/legal`.
+- Every string is in `src/lib/ui-copy.ts`; labels above inputs; "?" help on the settings; one confirmation for each data-changing button.
+
+### Test evidence
+- `npm run typecheck`: clean. `npm run lint`: clean. `npm run build`: passes.
+- `npm test`: **Test Files 56 passed, Tests 613 passed** (32 new, in `src/lib/platform`).
+- `npm run test:rls`: **Test Files 2 passed, Tests 127 passed** (41 new in `tests/rls/platform.test.ts`; two older tests now publish their system preset first, because unpublished system presets are hidden on purpose). New tests: an organiser cannot read `/admin` data or other organisations, an admin can; impersonation is audited, expires, and ends when the admin role is removed; deleting is refused with published results, with a wrong slug and for staff; archive hides events from visitors; drafts are invisible to customers and publishing is owner-only.
+- `npm run test:e2e`: **21 passed** (8 new in `e2e/admin.spec.ts`, including an invited organiser signing in through the copied link, the 404s, and create → invite → rename → open as organiser → archive → delete).
+- Dry run of the Demo organisation deletion inside a rolled-back transaction: succeeds (1 event, 0 published results); the Demo organisation still exists.
+
+### Choices I made where the docs were silent (please confirm or change)
+1. **What staff may do.** Owner and staff can look, create, rename, archive, invite, open as organiser and save draft presets; only an owner deletes an organisation, publishes a preset, changes platform settings or manages admins.
+2. **Archive is not read-only.** Organisers of an archived organisation can still sign in and work; only the public site hides it. The 4a-2 registration page must also refuse archived organisations.
+3. **"Published events only"** on the home page means published, live and finished (as before); drafts never show.
+4. **Organisation page appears with its first published event**, so a new customer's name does not leak before that.
+5. **Open as this organiser lasts at most 8 hours** and gives full organiser rights in that one organisation.
+6. **Small extras** so the links do not lead nowhere: a minimal public event page `/e/[slug]` (planned for 4b) and `/legal` for the legal texts.
+7. **Invite** tries the email first, then falls back to a link, because generating a link replaces an older one.
+
+### Not done / not verified here
+- The invite **email** itself was not sent (the plan allows 2 per hour); the link path is tested end to end. The **logo upload** screens (create form, organisation page, platform settings) are not covered by Playwright. **Realtime "Connected"** was not observed in this sandbox (the test accepts Checking / Connected / Not connected); check it on the preview.
+- Deleting the Demo organisation (your acceptance test) also removes Demo Cup, so `e2e/join.spec.ts` and the phone test below need `npm run seed:demo` again.
+- Platform logo replacement leaves the old file in storage (harmless).
+
+### How to test on the Vercel preview
+1. Sign in at `/org/login`. The header now has **Sendbook admin ↔ Organiser view (Arrow)**; you belong to two organisations, so the organisation switcher shows too.
+2. **Sendbook admin** → Organisations: Arrow and Demo organisation with events, Active, free, last activity.
+3. **Create organisation** "Test Customer", slug `test-customer`. On its page, **Invite first organiser** with an address of yours (untick "Send the sign-in email now" to get a link to copy). Open the link in a private window: you land in that organisation only, and `/admin` shows "This page could not be found".
+4. Back as owner: **Open as this organiser** → the yellow banner "Viewing as Test Customer — back to … admin" stays on every screen; press it. **Audit log** shows the start and end.
+5. **Platform settings**: set a product name and tagline, save, open the home page (new name and tagline; clear the name to go back).
+6. **Master presets**: open a scoring model, change a number, **Save as new version** (draft), then **Publish to all customers**. Existing divisions keep their version.
+7. **Health**: database, Realtime, last publish.
+8. Home page: each event reads "Organisation · Location · Date". `/o/arrow` shows the Arrow page. Archive Test Customer and check `/o/test-customer` says not found; restore it.
+9. **Acceptance test: delete the Demo organisation.** Organisations → Demo organisation → Manage → Delete: type `demo-org`, confirm. Then delete Test Customer the same way. Arrow cannot be deleted once it has published results (it says so).

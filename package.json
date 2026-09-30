@@ -17,6 +17,7 @@
     "test:rls": "vitest run --config vitest.rls.config.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "bootstrap:organiser": "tsx scripts/bootstrap-organiser.ts",
+    "bootstrap:platform-admin": "tsx scripts/bootstrap-platform-admin.ts",
     "auth:password": "node scripts/configure-auth.mjs --password-only"
   },
   "dependencies": {

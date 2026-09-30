@@ -104,10 +104,11 @@ test("organiser: settings, then the Event step", async ({ page }) => {
   const { data: saved } = await org.db.from("events").select("settings").eq("slug", `arrow-big-air-${org.run}`).single();
   expect(saved!.settings).toMatchObject({ publicLiveScores: "live", publicResultsOnPublish: false, holdFinalResult: true });
 
-  // the published event appears on the public home page and links to its join page
+  // the published event appears on the public home page, labelled with its organisation, and links to the event's own page
   await page.goto("/");
   const link = page.getByRole("link", { name: new RegExp(`Arrow Big Air ${org.run}`) });
-  await expect(link).toHaveAttribute("href", `/e/arrow-big-air-${org.run}/join`);
+  await expect(link).toHaveAttribute("href", `/e/arrow-big-air-${org.run}`);
+  await expect(link).toContainText(`Arrow ${org.run} · El Gouna, Egypt · `); // "Organisation · Location · Date": the organisation comes first
 });
 
 test("organiser: Divisions step (Simple, Show all settings, presets, ladder choice and diagram, import/export, lock)", async ({ page }) => {
