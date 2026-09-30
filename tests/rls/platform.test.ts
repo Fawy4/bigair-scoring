@@ -170,6 +170,8 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
         ["admin_start_impersonation", { p_org: w.ids.orgB }],
         ["admin_health", {}],
         ["admin_audit_log", {}],
+        ["admin_organisation_members", { p_org: w.ids.orgA }],
+        ["admin_set_organisation_logo", { p_org: w.ids.orgA, p_logo_url: "https://example.com/x.png" }],
         ["admin_create_preset_version", { p_kind: "scoring_model", p_key: `plat-${run}`, p_name: "x", p_json: {}, p_hash: "h" }],
       ];
       for (const [fn, args] of calls) expect(codeOf(await w.orgA.rpc(fn, args)), fn).toMatch(/NOT_ALLOWED/);
@@ -213,11 +215,12 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
       const anon = anonClient();
       const visible = async () => ({
         events: ((await anon.from("events").select("id").eq("id", w.ids.evC1)).data ?? []).length,
-        org: ((await anon.from("organisations").select("id").eq("id", w.ids.orgC)).data ?? []).length,
+        org: (await anon.rpc("get_public_organisation", { p_slug: `plat-c-${run}` })).data ? 1 : 0,
       });
       expect(await visible()).toEqual({ events: 1, org: 1 });
       expect((await w.staff.rpc("admin_set_organisation_archived", { p_org: w.ids.orgC, p_archived: true })).error).toBeNull();
       expect(await visible()).toEqual({ events: 0, org: 0 });
+      expect(((await anon.rpc("get_public_events", { p_limit: 100 })).data as Array<{ slug: string }>).some((r) => r.slug === `plat-c1-${run}`)).toBe(false);
       expect(((await w.s.from("events").select("id").eq("id", w.ids.evC1)).data ?? []).length).toBe(1); // data is kept
       expect(((await anon.from("divisions").select("id").eq("event_id", w.ids.evC1)).data ?? []).length).toBe(0);
       expect((await w.staff.rpc("admin_set_organisation_archived", { p_org: w.ids.orgC, p_archived: false })).error).toBeNull();
@@ -225,11 +228,23 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
       const { data } = await w.s.from("audit_log").select("action").eq("organisation_id", w.ids.orgC).in("action", ["organisation_archived", "organisation_unarchived"]).order("at");
       expect((data ?? []).map((r) => r.action)).toEqual(["organisation_archived", "organisation_unarchived"]);
     });
-    it("a visitor sees an organisation only while it is active and has a published event", async () => {
+    it("a visitor gets an organisation's public page data only while it is active and has a published event, and never its private columns", async () => {
       const anon = anonClient();
-      expect(((await anon.from("organisations").select("id").eq("id", w.ids.orgB)).data ?? []).length).toBe(0); // only a draft event
-      expect(((await anon.from("organisations").select("id, name, slug").eq("id", w.ids.orgA)).data ?? []).length).toBe(1);
-      expect(failed(await anon.from("organisations").select("plan"))).toMatch(/permission denied/i); // plan and settings stay private
+      expect((await anon.rpc("get_public_organisation", { p_slug: `plat-b-${run}` })).data).toBeNull(); // only a draft event
+      const a = (await anon.rpc("get_public_organisation", { p_slug: `plat-a-${run}` })).data as { name: string; events: Array<{ slug: string }> };
+      expect(a.name).toBe(`Plat A ${run}`);
+      expect(a.events.map((e) => e.slug)).toEqual([`plat-a1-${run}`]); // the draft event is not listed
+      expect(Object.keys(a).sort()).toEqual(["events", "logo_url", "name", "slug", "timezone"]);
+      // the table itself stays closed to visitors, and organisers still see only their own organisation
+      expect(failed(await anon.from("organisations").select("id"))).toMatch(/permission denied/i);
+    });
+    it("the public event list names each event's organisation, lists published events only and skips archived organisations", async () => {
+      const { data, error } = await anonClient().rpc("get_public_events", { p_limit: 100 });
+      expect(error).toBeNull();
+      const rows = data as Array<{ slug: string; organisation_name: string; organisation_slug: string }>;
+      const a1 = rows.find((r) => r.slug === `plat-a1-${run}`);
+      expect(a1).toMatchObject({ organisation_name: `Plat A ${run}`, organisation_slug: `plat-a-${run}` });
+      expect(rows.some((r) => r.slug === `plat-a2-${run}`)).toBe(false); // draft
     });
     it("deleting is refused when the wrong slug is typed, when results were published, and for staff", async () => {
       expect(codeOf(await w.owner.rpc("admin_delete_organisation", { p_org: w.ids.orgB, p_slug_confirm: "wrong" }))).toMatch(/SLUG_MISMATCH/);
@@ -278,9 +293,10 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
       const { data: log } = await w.s.from("audit_log").select("actor_user_id, reason, after").eq("organisation_id", w.ids.orgA).eq("action", "impersonation_started");
       expect(log).toHaveLength(1);
       expect(log![0]).toMatchObject({ actor_user_id: w.userIds.staff, reason: "support call" });
-      const cur = await w.staff.rpc("admin_current_impersonation");
+      const cur = await w.staff.rpc("platform_session");
       expect(cur.error).toBeNull();
-      expect((cur.data as Array<{ organisation_id: string; slug: string }>)[0]).toMatchObject({ organisation_id: w.ids.orgA, slug: `plat-a-${run}` });
+      expect(cur.data).toMatchObject({ role: "staff", impersonating: { organisation_id: w.ids.orgA, slug: `plat-a-${run}` } });
+      expect(await w.orgA.rpc("platform_session")).toMatchObject({ data: { role: null, impersonating: null } });
     });
     it("while it lasts the admin can change that organisation's data as the organiser would", async () => {
       expect((await w.staff.from("events").update({ location: "Support edit" }).eq("id", w.ids.evA2).select("id")).data).toHaveLength(1);
@@ -290,7 +306,7 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
       expect(await seesDraftEvent(w.staff)).toBe(0);
       expect(await seesRider(w.staff)).toBe(0);
       expect(((await w.s.from("audit_log").select("id").eq("organisation_id", w.ids.orgA).eq("action", "impersonation_ended")).data ?? []).length).toBe(1);
-      expect(((await w.staff.rpc("admin_current_impersonation")).data as unknown[]).length).toBe(0);
+      expect((await w.staff.rpc("platform_session")).data).toMatchObject({ role: "staff", impersonating: null });
     });
     it("it expires by itself", async () => {
       expect((await w.staff.rpc("admin_start_impersonation", { p_org: w.ids.orgA })).error).toBeNull();
