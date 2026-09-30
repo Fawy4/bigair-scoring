@@ -312,3 +312,22 @@ export async function dismissTrickProposal(input: { eventId: string; family: str
   revalidatePath("/admin/tricks");
   return { ok: true };
 }
+
+// ------------------------------------------------------------------ feedback notes
+
+/** "Export for Claude" (owner only): every open note as one Markdown text; each note gets today's export date. Nothing leaves the site by itself. */
+export async function exportFeedbackNotes(): Promise<{ ok: true; markdown: string; count: number } | Failure> {
+  const { supabase, role } = await requireAdmin();
+  if (role !== "owner") return { ok: false, error: copy.feedback.exportOwnerOnly };
+  const { loadNotes } = await import("@/lib/feedback/load");
+  const { formatFeedbackMarkdown } = await import("@/lib/feedback/format");
+  const { notes } = await loadNotes(supabase, { status: "open" }, { signLinks: 60 * 60 * 24 * 30 });
+  const now = new Date();
+  const markdown = formatFeedbackMarkdown(notes, now);
+  if (notes.length) {
+    const { error } = await supabase.from("feedback_notes").update({ exported_at: now.toISOString() }).in("id", notes.map((n) => n.id));
+    if (error) return { ok: false, error: copy.feedback.failed };
+  }
+  revalidatePath("/admin/feedback");
+  return { ok: true, markdown, count: notes.length };
+}

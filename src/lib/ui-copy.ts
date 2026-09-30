@@ -144,6 +144,7 @@ export const copy = {
     changePassword: "Change password",
     events: "Events",
     settings: "Organisation settings",
+    feedback: "Feedback",
     signOut: "Sign out",
     organisation: "Organisation",
     navLabel: "Organiser",

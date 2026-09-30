@@ -293,12 +293,16 @@ export type Database = {
           body: string
           created_at: string
           division_id: string | null
+          division_name: string | null
           done_at: string | null
           event_id: string | null
+          event_name: string | null
           exported_at: string | null
           heat_id: string | null
+          heat_label: string | null
           id: string
           organisation_id: string | null
+          organisation_name: string | null
           page: string
           page_label: string
           screenshot_path: string | null
@@ -312,12 +316,16 @@ export type Database = {
           body: string
           created_at?: string
           division_id?: string | null
+          division_name?: string | null
           done_at?: string | null
           event_id?: string | null
+          event_name?: string | null
           exported_at?: string | null
           heat_id?: string | null
+          heat_label?: string | null
           id?: string
           organisation_id?: string | null
+          organisation_name?: string | null
           page: string
           page_label: string
           screenshot_path?: string | null
@@ -331,12 +339,16 @@ export type Database = {
           body?: string
           created_at?: string
           division_id?: string | null
+          division_name?: string | null
           done_at?: string | null
           event_id?: string | null
+          event_name?: string | null
           exported_at?: string | null
           heat_id?: string | null
+          heat_label?: string | null
           id?: string
           organisation_id?: string | null
+          organisation_name?: string | null
           page?: string
           page_label?: string
           screenshot_path?: string | null

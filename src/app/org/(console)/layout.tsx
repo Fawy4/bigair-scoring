@@ -29,6 +29,9 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
             <Link href="/org/settings" className="btn">
               {copy.layout.settings}
             </Link>
+            <Link href="/org/feedback" className="btn">
+              {copy.layout.feedback}
+            </Link>
           </nav>
           <div className="ml-auto flex flex-wrap items-center gap-3">
             {platformRole ? <AdminSwitch product={productName} orgName={current?.name ?? null} active="organiser" /> : null}

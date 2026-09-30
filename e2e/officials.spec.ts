@@ -72,6 +72,10 @@ test("a seat: the PIN is shown in full once, afterwards behind Show PIN; regener
     await joinWithPin(a, slug, pin);
     await expect(a).toHaveURL(/\/seat$/);
     await expect(a.getByText("Judge One")).toBeVisible();
+    // officials never get the Note button
+    await a.waitForLoadState("networkidle");
+    await a.waitForTimeout(1500);
+    await expect(a.getByTestId("note-button")).toHaveCount(0);
     await page.reload();
     await expect(seatCard(page, "Judge One").getByTestId("seat-seen")).toContainText("Connected");
 

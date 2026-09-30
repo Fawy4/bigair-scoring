@@ -54,6 +54,8 @@ describe.skipIf(!ENV_OK)("Riders, officials, registration, trick base and feedba
     staff = await signedIn(s.email, password);
   });
   afterAll(async () => {
+    // the owner's note has no organisation, so deleting an organisation would not remove it
+    if (ownerId) await f?.s.from("feedback_notes").delete().eq("author_user_id", ownerId);
     if (ids.pendingPhoto) await f?.s.storage.from("rider-photos").remove([ids.pendingPhoto]);
     await f?.s.from("platform_admins").delete().in("user_id", extraUsers);
     await f?.cleanup();
