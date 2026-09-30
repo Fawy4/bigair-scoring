@@ -31,7 +31,8 @@ export function generateSingleElimination(n: number, p: SingleEliminationParams)
   const plan: Array<{ heats: number }> = [];
   let riders = n;
   while (riders > p.finalSize && plan.length < 40) {
-    const layout = roundLayout(riders, { heatSize: p.heatSize, uneven: p.uneven, seeding: p.seeding });
+    const layout = roundLayout(riders, { heatSize: p.heatSize, uneven: p.uneven ?? "minimum_riders", minHeatSize: p.minHeatSize, seeding: p.seeding });
+    if (layout.capacities.length === 1) break; // one heat with everyone is already the final
     const next = layout.capacities.reduce((sum, c) => sum + Math.min(p.advancePerHeat, c), 0);
     if (next >= riders) break; // cannot shrink any more (e.g. only tiny heats): everybody goes to the final
     plan.push({ heats: layout.capacities.length });
@@ -46,10 +47,11 @@ export function generateSingleElimination(n: number, p: SingleEliminationParams)
       name: isSemi ? "Semi-finals" : `Round ${i + 1}`,
       shortName: ids[i],
       heatSize: p.heatSize,
+      minHeatSize: p.minHeatSize,
       durationMin: isSemi ? p.semiMin : p.earlyMin,
       entrantsFrom: i === 0 ? [{ type: "seeds" }] : [{ type: "round_places", round: ids[i - 1], places: range(1, p.advancePerHeat) }],
       seeding: i === 0 ? p.seeding : "snake",
-      uneven: p.uneven,
+      uneven: p.uneven ?? "minimum_riders",
       reseed: i === 0 ? "by_original_seed" : p.reseed,
       advance: [{ places: range(1, p.advancePerHeat), to }, { places: "rest", to: "eliminated" }],
     });
@@ -67,18 +69,20 @@ export function generateSingleElimination(n: number, p: SingleEliminationParams)
 }
 
 /**
- * KOTA-style dingle elimination (Decision 4): R1 heats → 1st to the next round, the rest to a repechage
- * (heats of 2, winner goes on). Then man-on-man rounds while more than 2 × finalSize riders remain, one semi
- * round with exactly `finalSize` heats, and the final. Heats with one rider are byes (top seeds).
+ * KOTA-style knockout with a second chance (Decision 4): R1 heats → 1st to the next round, the rest to a second-chance round
+ * (heats of 2, winner goes on). Then 1 v 1 rounds while more than 2 × finalSize riders remain, one semi
+ * round with exactly `finalSize` heats, and the final. Heats with one rider advance without riding (top seeds).
  */
 export function generateDingleElimination(n: number, p: DingleEliminationParams): RoundSpec[] {
-  const base = { uneven: p.uneven };
-  const r1Layout = roundLayout(n, { heatSize: p.r1HeatSize, seeding: p.seeding, ...base });
+  // Round 1 follows the two plain numbers (target and minimum riders per heat); the two-rider rounds after it keep the
+  // structure that gives the top seeds a rider-free pass when the number of riders is odd.
+  const base = { uneven: p.uneven ?? ("smaller_heats_for_top_seeds" as const) };
+  const r1Layout = roundLayout(n, { heatSize: p.r1HeatSize, seeding: p.seeding, uneven: p.uneven ?? "minimum_riders", minHeatSize: p.minHeatSize });
   const r1Heats = r1Layout.capacities.length;
   const repRiders = n - r1Heats;
   const repHeats = repRiders > 0 ? roundLayout(repRiders, { heatSize: 2, seeding: "snake", ...base }).capacities.length : 0;
 
-  // Rounds after the repechage: KO rounds, optional SF, Final.
+  // Rounds after the second-chance round: KO rounds, optional SF, Final.
   type Later = { id: string; name: string; short: string; heatSize: number; heatCountOverride?: number; min: number };
   const later: Later[] = [];
   let pool = r1Heats + repHeats;
@@ -100,10 +104,11 @@ export function generateDingleElimination(n: number, p: DingleEliminationParams)
       name: "Round 1",
       shortName: "R1",
       heatSize: p.r1HeatSize,
+      minHeatSize: p.minHeatSize,
       durationMin: p.r1Min,
       entrantsFrom: [{ type: "seeds" }],
       seeding: p.seeding,
-      uneven: p.uneven,
+      uneven: p.uneven ?? "minimum_riders",
       reseed: "by_original_seed",
       advance: [
         { places: [1], to: firstLater },
@@ -115,13 +120,13 @@ export function generateDingleElimination(n: number, p: DingleEliminationParams)
     rounds.push(
       spec({
         id: "R2",
-        name: "Round 2 (repechage)",
-        shortName: "R2",
+        name: "Second-chance round",
+        shortName: "Second chance",
         heatSize: 2,
         durationMin: p.repMin,
         entrantsFrom: [{ type: "round_places", round: "R1", places: range(2, p.r1HeatSize) }],
         seeding: "snake",
-        uneven: p.uneven,
+        uneven: base.uneven,
         reseed: p.reseed,
         advance: [{ places: [1], to: firstLater }, { places: "rest", to: "eliminated" }],
       }),
@@ -141,7 +146,7 @@ export function generateDingleElimination(n: number, p: DingleEliminationParams)
         durationMin: r.min,
         entrantsFrom: i === 0 ? feeders : [{ type: "round_places", round: later[i - 1].id, places: [1] }],
         seeding: "snake",
-        uneven: p.uneven,
+        uneven: base.uneven,
         heatCountOverride: r.heatCountOverride,
         reseed: p.reseed,
         advance: [{ places: [1], to: later[i + 1]?.id ?? "F" }, { places: "rest", to: "eliminated" }],
@@ -173,7 +178,8 @@ export function generatePoolsToFinal(n: number, p: PoolsToFinalParams): RoundSpe
       durationMin: p.poolMin,
       entrantsFrom: i === 0 ? [{ type: "seeds" }] : [{ type: "round_places", round: ids[i - 1], places: ALL_PLACES }],
       seeding: i === 0 ? p.seeding : "snake",
-      uneven: p.uneven,
+      uneven: p.uneven ?? "minimum_riders",
+      minHeatSize: p.minHeatSize,
       reseed: i === 0 ? "by_original_seed" : "by_heat_score",
       advance: i < ids.length - 1 ? [{ places: "rest", to: ids[i + 1] }] : [],
       crossHeat: i === ids.length - 1 ? { advanceTop: finalists, to: "F", combine: p.poolCombine, tieBreak: p.crossPoolTieBreak } : undefined,

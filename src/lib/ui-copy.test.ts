@@ -4,8 +4,10 @@ import { describe, expect, it } from "vitest";
 import identification from "../../presets/identification/schemes.json";
 import { copy, FORMAT_LABELS, help, SCORING_LABELS } from "./ui-copy";
 
-// House words (owner's wording rules): never "chip", never "vest", never "mark(s)". Use "Rider label", "Lycra", "score".
-const BANNED = /\b(chips?|vests?|marks?|marked|marking)\b/i;
+// House words (owner's wording rules): never "chip", "vest" or "mark(s)" (use "Rider label", "Lycra", "score") and no bracket jargon:
+// "bye" (use "Advances without riding"), "repechage" (use "Second-chance round"), "dingle elimination", "man-on-man" (use "1 v 1 heats"),
+// "winners/losers bracket" (use "Main draw" / "Second-chance draw").
+const BANNED = /\b(chips?|vests?|marks?|marked|marking|byes?|repechage|dingle|man-on-man|(winners?|losers?)['’]?\s+bracket)\b/i;
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {

@@ -1,11 +1,15 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { FieldLabel, HelpButton } from "@/components/help-button";
 import { getIn, setIn } from "@/lib/form/path";
-import { ladderKindOf, withLadderKind, withoutRoundLengths, withRoundLength, GENERATOR, type LadderKind } from "@/lib/format-ui/ladder-kind";
+import { GENERATOR, heatSizes, ladderKindOf, TARGET_KEY, withHeatTarget, withLadderKind, withMinRiders, withoutRoundLengths, withRoundLength, type LadderKind } from "@/lib/format-ui/ladder-kind";
 import { copy, help } from "@/lib/ui-copy";
 
 const T = copy.formatSimple;
+
+/** The tag printed under each ladder type: how many heats a rider is guaranteed. */
+const TAG: Record<Exclude<LadderKind, "custom">, string> = { knockout: T.tags.canBeOut, second_chance: T.tags.atLeastTwo, pools: T.tags.canBeOut };
 
 interface NumberField {
   path: string[];
@@ -19,7 +23,6 @@ function fieldsFor(kind: LadderKind): { main: NumberField[]; lengths: NumberFiel
     case "knockout":
       return {
         main: [
-          { path: p("heatSize"), label: T.ridersPerHeat, help: "format.heatSize" },
           { path: p("advancePerHeat"), label: T.advancePerHeat, help: "format.advance" },
           { path: p("finalSize"), label: T.finalSize, help: "format.finalSize" },
         ],
@@ -31,10 +34,7 @@ function fieldsFor(kind: LadderKind): { main: NumberField[]; lengths: NumberFiel
       };
     case "second_chance":
       return {
-        main: [
-          { path: p("r1HeatSize"), label: T.ridersPerHeat, help: "format.heatSize" },
-          { path: p("finalSize"), label: T.finalSize, help: "format.finalSize" },
-        ],
+        main: [{ path: p("finalSize"), label: T.finalSize, help: "format.finalSize" }],
         lengths: [
           { path: p("r1Min"), label: T.lengthR1, help: "format.length" },
           { path: p("repMin"), label: T.lengthRep, help: "format.length" },
@@ -44,10 +44,7 @@ function fieldsFor(kind: LadderKind): { main: NumberField[]; lengths: NumberFiel
       };
     case "pools":
       return {
-        main: [
-          { path: p("heatSize"), label: T.ridersPerPool, help: "format.heatSize" },
-          { path: p("finalists"), label: T.finalists, help: "format.finalists" },
-        ],
+        main: [{ path: p("finalists"), label: T.finalists, help: "format.finalists" }],
         lengths: [
           { path: p("poolMin"), label: T.lengthPool, help: "format.length" },
           { path: p("finalMin"), label: T.lengthFinal, help: "format.length" },
@@ -58,13 +55,15 @@ function fieldsFor(kind: LadderKind): { main: NumberField[]; lengths: NumberFiel
   }
 }
 
-/** The three-way ladder choice with its numbers. `compact` (Show all settings) keeps only the choice; the rest is in the full form. */
+/**
+ * The ladder type choice and its plain numbers. These are the Simple settings: they stay on screen when "Show all settings"
+ * is on, and the full form appears below them.
+ */
 export function FormatSimple({
   working,
   onChange,
   errors,
   readOnly,
-  compact,
   rounds = [],
 }: {
   /** Rounds of the preview below, with the length the single settings give them. */
@@ -73,21 +72,30 @@ export function FormatSimple({
   onChange: (v: unknown) => void;
   errors: Record<string, string>;
   readOnly?: boolean;
-  compact?: boolean;
 }) {
   const kind = ladderKindOf(working);
   const num = (v: string): number | "" => (v === "" ? "" : Number(v));
   const set = (path: string[], v: unknown) => onChange(setIn(working, path, v));
   const shown = fieldsFor(kind);
+  const sizes = heatSizes(working);
 
-  const numberInput = (f: NumberField) => {
+  const numberInput = (f: NumberField, onValue?: (v: number | "") => void) => {
     const id = `fs-${f.path.join("-")}`;
     const value = getIn(working, f.path);
     const e = errors[f.path.join(".")];
     return (
       <div key={id} className="flex flex-col gap-1">
         <FieldLabel htmlFor={id} text={f.label} help={help[f.help]} />
-        <input id={id} type="number" min={1} step="any" value={typeof value === "number" ? value : ""} onChange={(ev) => set(f.path, num(ev.target.value))} className="w-28" aria-invalid={Boolean(e)} />
+        <input
+          id={id}
+          type="number"
+          min={1}
+          step="any"
+          value={typeof value === "number" ? value : ""}
+          onChange={(ev) => (onValue ? onValue(num(ev.target.value)) : set(f.path, num(ev.target.value)))}
+          className="w-28"
+          aria-invalid={Boolean(e)}
+        />
         {e ? <p className="field-error">{copy.common.problem(e)}</p> : null}
       </div>
     );
@@ -109,18 +117,29 @@ export function FormatSimple({
             </span>
             <p className="pl-9 font-semibold">{T.types[k].explain}</p>
             <p className="pl-9 text-sm font-semibold">{T.types[k].example}</p>
+            <p className="pl-9 text-sm font-extrabold" data-testid={`tag-${k}`}>
+              {TAG[k]}
+            </p>
           </div>
         ))}
         {kind === "custom" ? <p className="panel font-semibold">{T.customActive}</p> : null}
       </div>
 
-      {!compact && kind !== "custom" ? (
+      {kind !== "custom" && sizes ? (
         <>
-          <div className="flex flex-wrap gap-4">{shown.main.map(numberInput)}</div>
+          <div className="flex flex-wrap gap-4">
+            {numberInput({ path: ["generator", "params", TARGET_KEY[kind]], label: kind === "pools" ? T.ridersPerPool : T.ridersPerHeat, help: "format.heatSize" }, (v) => onChange(withHeatTarget(working, v)))}
+            <div className="flex flex-col gap-1">
+              <FieldLabel htmlFor="fs-min-riders" text={T.minRiders} help={help["format.minHeat"]} />
+              <MinRidersInput value={sizes.min} invalid={Boolean(errors["generator.params.minHeatSize"])} onCommit={(v) => onChange(withMinRiders(working, v))} />
+              {errors["generator.params.minHeatSize"] ? <p className="field-error">{copy.common.problem(errors["generator.params.minHeatSize"])}</p> : null}
+            </div>
+            {shown.main.map((f) => numberInput(f))}
+          </div>
           {kind === "second_chance" ? <p className="font-semibold">{T.secondChanceFixed}</p> : null}
           <fieldset className="flex flex-col gap-2">
             <legend className="text-base font-extrabold">{T.heatLengths}</legend>
-            <div className="flex flex-wrap gap-4">{shown.lengths.map(numberInput)}</div>
+            <div className="flex flex-wrap gap-4">{shown.lengths.map((f) => numberInput(f))}</div>
           </fieldset>
           <div className="flex flex-wrap gap-4">
             {numberInput({ path: ["timing", "defaultBreakAfterHeatMin"], label: T.breakHeat, help: "format.breakHeat" })}
@@ -184,3 +203,32 @@ function PerRound({ working, rounds, onChange }: { working: Record<string, unkno
 }
 
 export { ladderKindOf };
+
+/**
+ * "Minimum riders per heat". It shows the effective value (the default follows the target), but keeps what you type while you
+ * type: clearing the box to enter a new number must not snap back to the default under your fingers.
+ */
+function MinRidersInput({ value, invalid, onCommit }: { value: number; invalid: boolean; onCommit: (v: number) => void }) {
+  const [text, setText] = useState(String(value));
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (document.activeElement !== ref.current) setText(String(value));
+  }, [value]);
+  return (
+    <input
+      ref={ref}
+      id="fs-min-riders"
+      type="number"
+      min={1}
+      step={1}
+      value={text}
+      onChange={(e) => {
+        setText(e.target.value);
+        if (e.target.value !== "") onCommit(Number(e.target.value));
+      }}
+      onBlur={() => setText(String(value))}
+      className="w-28"
+      aria-invalid={invalid}
+    />
+  );
+}

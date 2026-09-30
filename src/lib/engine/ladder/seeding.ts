@@ -1,6 +1,6 @@
 import type { RoundSpec } from "@/lib/schemas/format-template";
 
-type LayoutSpec = Pick<RoundSpec, "heatSize" | "uneven" | "heatCountOverride" | "seeding">;
+type LayoutSpec = Pick<RoundSpec, "heatSize" | "uneven" | "heatCountOverride" | "seeding"> & { minHeatSize?: number };
 
 export interface RoundLayout {
   /** Riders per heat, smallest heats first (top seeds land in the smaller heats). */
@@ -22,11 +22,30 @@ export function capacities(n: number, heats: number): number[] {
   return Array.from({ length: heats }, (_, i) => (i < heats - extra ? base : base + 1));
 }
 
+/** The minimum riders per heat: what the organiser set, else the target − 1 (never below 2, never above the target). */
+export function effectiveMinHeatSize(target: number, min?: number): number {
+  return Math.min(target, Math.max(1, min ?? Math.max(2, target - 1)));
+}
+
+/**
+ * "Riders per heat (target)" and "Minimum riders per heat" (docs/04 decision 23). The target number of heats when every heat can
+ * meet the minimum, otherwise fewer heats (the last heats one rider bigger); a field smaller than the minimum is one heat with
+ * everyone. The minimum is never broken, even when that means one large heat. Smaller heats come first (top seeds).
+ */
+export function minimumRuleCapacities(n: number, target: number, min: number): number[] {
+  if (n <= 0) return [];
+  if (n < min) return [n];
+  let heats = Math.max(1, Math.ceil(n / target));
+  while (heats > 1 && Math.floor(n / heats) < min) heats--;
+  return capacities(n, heats);
+}
+
 /** How many heats and how big — docs/04 §3 step 3 and Decisions 2 and 6. */
 export function roundLayout(n: number, spec: LayoutSpec): RoundLayout {
   if (n <= 0) return { capacities: [], byes: 0 };
   const size = spec.heatSize;
   if (spec.heatCountOverride) return { capacities: capacities(n, Math.min(spec.heatCountOverride, n)), byes: 0 };
+  if (spec.uneven === "minimum_riders") return { capacities: minimumRuleCapacities(n, size, effectiveMinHeatSize(size, spec.minHeatSize)), byes: 0 };
   if (spec.uneven === "byes_top_seeds") {
     const b = byeCount(n, size);
     if (b === 0) return { capacities: capacities(n, Math.ceil(n / size)), byes: 0 };

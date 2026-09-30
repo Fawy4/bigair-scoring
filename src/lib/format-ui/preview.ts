@@ -1,4 +1,4 @@
-import { expandFormat, type DivisionDraw, type Entrant } from "@/lib/engine/ladder";
+import { expandFormat, minHeatsPerRider, type DivisionDraw, type Entrant } from "@/lib/engine/ladder";
 import type { FormatTemplate } from "@/lib/schemas/format-template";
 import { copy } from "@/lib/ui-copy";
 
@@ -25,7 +25,16 @@ export interface LadderColumn {
   name: string;
   /** "4 heats · 3–4 riders" */
   summary: string;
-  heats: Array<{ id: string; number: number | null; size: number; bye: boolean }>;
+  heats: Array<{
+    id: string;
+    /** "R1 H1", "Second chance H2": the round and the heat's place inside it. */
+    name: string;
+    size: number;
+    /** The rider advances without riding. */
+    advancing: boolean;
+    /** Where riders come from, for heats fed by earlier rounds: ["1st H1", "1st R2 H5"]. Empty for the first round. */
+    from: string[];
+  }>;
   /** Where riders go from here, e.g. "1st–2nd → SF", "the rest → out". */
   routes: string[];
 }
@@ -38,6 +47,8 @@ export interface FormatPreview {
   rounds: RoundPreview[];
   ladder: LadderColumn[];
   totalHeats: number;
+  /** The fewest heats any rider is guaranteed to ride, whatever the results. */
+  minHeatsPerRider: number;
   /** Riding time only, without breaks. */
   ridingMinutes: number;
   warnings: string[];
@@ -81,7 +92,7 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
   try {
     draw = expandFormat(template, entrants);
   } catch (e) {
-    return { riders: riderCount, ok: false, sentence: t.cannotRun(riderCount, (e as Error).message), rounds: [], ladder: [], totalHeats: 0, ridingMinutes: 0, warnings: [] };
+    return { riders: riderCount, ok: false, sentence: t.cannotRun(riderCount, (e as Error).message), rounds: [], ladder: [], totalHeats: 0, minHeatsPerRider: 0, ridingMinutes: 0, warnings: [] };
   }
 
   const rounds: RoundPreview[] = draw.rounds.map((r) => {
@@ -100,7 +111,7 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
     };
   });
 
-  const parts = rounds.map((r) => (r.heats === 0 ? t.partByes(r.shortName, r.byes) : t.partHeats(r.shortName, r.heats, range(r.minSize, r.maxSize), r.byes)));
+  const parts = rounds.map((r) => (r.heats === 0 ? t.partAdvancing(r.shortName, r.byes) : t.partHeats(r.shortName, r.heats, range(r.minSize, r.maxSize), r.byes)));
   const totalHeats = rounds.reduce((s, r) => s + r.heats, 0);
   const ridingMinutes = rounds.reduce((s, r) => s + r.minutes, 0);
 
@@ -109,7 +120,13 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
     shortName: r.shortName,
     name: r.name,
     summary: t.heatSizes(rounds[i].heats, range(rounds[i].minSize, rounds[i].maxSize), rounds[i].heatMin),
-    heats: r.heats.map((h) => ({ id: h.id, number: h.number, size: h.slots.length, bye: h.bye })),
+    heats: r.heats.map((h) => ({
+      id: h.id,
+      name: t.heatName(r.shortName, h.index),
+      size: h.slots.length,
+      advancing: h.bye,
+      from: h.slots.flatMap((sl) => (sl.from ? [t.slotFrom(sl.from.place, sl.from.round === draw.rounds[i - 1]?.id ? null : (draw.rounds.find((x) => x.id === sl.from!.round)?.shortName ?? sl.from.round), sl.from.heat)] : [])),
+    })),
     routes: routesOf(draw, i),
   }));
 
@@ -120,6 +137,7 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
     rounds,
     ladder,
     totalHeats,
+    minHeatsPerRider: minHeatsPerRider(draw),
     ridingMinutes,
     warnings: draw.warnings.map((w) => w.message + (w.suggestion ? ` ${w.suggestion}` : "")),
   };

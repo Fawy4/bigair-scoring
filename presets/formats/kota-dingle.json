@@ -1,7 +1,7 @@
 {
   "id": "kota-dingle",
-  "name": "KOTA-style dingle elimination (heats of 3, repechage, man-on-man, final of 3)",
-  "description": "Round 1 heats of 3: winners go straight to Round 3, 2nd and 3rd are reseeded into Round 2 (repechage, heats of 2). Round 2 winners join Round 3; losers share 13th (or the equivalent for the field size). From Round 3: man-on-man single elimination to a 3-rider final. Optional flag-out in Round 1 at minute 8 (lowest-scoring rider out; others continue). Based on the Red Bull King of the Air 2026 published format (18 riders); the generator scales to other field sizes.",
+  "name": "KOTA-style knockout with a second chance (heats of 3, second-chance round, 1 v 1 heats, final of 3)",
+  "description": "Round 1 heats of 3: winners go straight to Round 3, 2nd and 3rd are reseeded into the second-chance round (heats of 2). Second-chance winners join Round 3; the others share 13th (or the equivalent for the field size). From Round 3: 1 v 1 heats, knockout, to a 3-rider final. Every rider rides at least 2 heats. Optional flag-out in Round 1 at minute 8 (lowest-scoring rider out; others continue). Based on the Red Bull King of the Air 2026 published format (18 riders); the generator scales to other field sizes.",
   "basedOn": "Red Bull King of the Air 2026 format (redbull.com)",
   "entrants": { "min": 6, "max": 36 },
   "vestColours": ["red", "yellow", "blue", "green", "white", "black"],
@@ -17,7 +17,6 @@
       "koMin": 10,
       "finalMin": 15,
       "seeding": "snake",
-      "uneven": "smaller_heats_for_top_seeds",
       "reseed": "by_place_then_score"
     }
   },

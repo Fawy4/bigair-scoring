@@ -20,6 +20,8 @@ interface Ctx {
   errors: Record<string, string>;
   selectOptions?: SelectOptions;
   newItem?: NewItem;
+  /** Dotted pattern paths that another part of the screen already shows (kept out so no setting appears twice). */
+  hiddenPaths?: string[];
 }
 
 const idOf = (path: Path) => `sf-${path.join("-")}`;
@@ -49,6 +51,7 @@ export function SchemaForm({
   hidden = [],
   selectOptions,
   newItem,
+  hiddenPaths = [],
 }: {
   node: FieldNode;
   value: unknown;
@@ -58,6 +61,7 @@ export function SchemaForm({
   hidden?: string[];
   selectOptions?: SelectOptions;
   newItem?: NewItem;
+  hiddenPaths?: string[];
 }) {
   if (node.kind !== "object") return null;
   const ctx: Ctx = {
@@ -68,11 +72,12 @@ export function SchemaForm({
     errors,
     selectOptions,
     newItem,
+    hiddenPaths,
   };
   return (
     <fieldset disabled={readOnly} className="flex flex-col gap-4">
       {node.fields
-        .filter((f) => !hidden.includes(f.key))
+        .filter((f) => !hidden.includes(f.key) && !hiddenPaths.includes(f.pattern.join(".")))
         .map((f) => {
           const anyError = Object.keys(errors).some((k) => k === f.key || k.startsWith(`${f.key}.`));
           return isSection(f) ? (
@@ -105,7 +110,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
       return (
         <div className={bare ? "flex flex-col gap-4" : "flex flex-col gap-3 rounded-lg border-2 border-[#111] p-3"}>
           {bare ? null : <FieldLabel as="span" text={node.label} help={node.help ? { text: node.help, example: node.example } : undefined} />}
-          {node.fields.map((f) => (
+          {node.fields.filter((f) => !ctx.hiddenPaths?.includes(f.pattern.join("."))).map((f) => (
             <div key={f.key} className="flex flex-col gap-1">
               <FieldView node={f} path={[...path, f.key]} ctx={ctx} />
             </div>
@@ -272,7 +277,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
             ))}
           </select>
           <div className="flex flex-col gap-3 rounded-lg border-2 border-[#111] p-3">
-            {variant.node.fields.map((f) => (
+            {variant.node.fields.filter((f) => !ctx.hiddenPaths?.includes(f.pattern.join("."))).map((f) => (
               <div key={f.key} className="flex flex-col gap-1">
                 <FieldView node={f} path={[...path, f.key]} ctx={ctx} />
               </div>

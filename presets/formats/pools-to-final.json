@@ -15,7 +15,7 @@
       "poolMin": 12,
       "finalMin": 15,
       "seeding": "snake",
-      "uneven": "smaller_heats_for_top_seeds",
+      "minHeatSize": 6,
       "crossPoolTieBreak": "scoring_model_then_seed"
     }
   },

@@ -22,6 +22,27 @@ import { FormatSimple, ladderKindOf } from "./format-simple";
 import { ScoringSimple } from "./scoring-simple";
 
 const R = copy.rules;
+
+/** Settings the Simple part of the screen already shows; "Show all settings" adds everything else below them. */
+const SCORING_SIMPLE_PATHS = ["heat.maxAttemptsPerRider", "panel.minJudges", "panel.aggregate"];
+const FORMAT_SIMPLE_PATHS = [
+  "generator.params.heatSize",
+  "generator.params.minHeatSize",
+  "generator.params.uneven",
+  "generator.params.advancePerHeat",
+  "generator.params.finalSize",
+  "generator.params.finalists",
+  "generator.params.r1HeatSize",
+  "generator.params.earlyMin",
+  "generator.params.semiMin",
+  "generator.params.finalMin",
+  "generator.params.r1Min",
+  "generator.params.repMin",
+  "generator.params.koMin",
+  "generator.params.poolMin",
+  "timing.defaultBreakAfterHeatMin",
+  "timing.defaultBreakAfterRoundMin",
+];
 const scoringNodes = schemaToNodes(ScoringModelSchema, SCORING_LABELS, SCORING_HIDDEN);
 const formatNodes = schemaToNodes(FormatTemplateSchema, FORMAT_LABELS, FORMAT_HIDDEN);
 
@@ -265,12 +286,14 @@ export function RulesPanel({
 
       {!working && !custom ? <p className="font-semibold">{R.chooseFirst(scoring ? R.scoringWord : R.formatWord)}</p> : null}
 
-      {working && scoring && !showAll ? <ScoringSimple working={working} onChange={setValue} errors={errors} readOnly={locked} /> : null}
-      {working && scoring && showAll ? <SchemaForm node={scoringNodes} value={working} onChange={setValue} errors={errors} readOnly={locked} selectOptions={selectOptions} /> : null}
+      {working && scoring ? <ScoringSimple working={working} onChange={setValue} errors={errors} readOnly={locked} /> : null}
+      {working && scoring && showAll ? (
+        <SchemaForm node={scoringNodes} value={working} onChange={setValue} errors={errors} readOnly={locked} selectOptions={selectOptions} hiddenPaths={SCORING_SIMPLE_PATHS} />
+      ) : null}
 
       {working && !scoring ? (
         <>
-          <FormatSimple working={working as Record<string, unknown>} onChange={setValue} errors={errors} readOnly={locked} compact={showAll} rounds={perRound} />
+          <FormatSimple working={working as Record<string, unknown>} onChange={setValue} errors={errors} readOnly={locked} rounds={perRound} />
           {isFixed && !showAll ? <p className="panel font-semibold">{R.fixedRoundsNote}</p> : null}
           {showAll ? (
             <SchemaForm
@@ -282,6 +305,7 @@ export function RulesPanel({
               hidden={(working as { kind?: string }).kind === "fixed" ? ["generator", "roundDurationMin"] : ["rounds", "roundDurationMin"]}
               selectOptions={selectOptions}
               newItem={newItem}
+              hiddenPaths={isFixed ? [] : FORMAT_SIMPLE_PATHS}
             />
           ) : null}
           <div className="panel flex flex-col gap-3" aria-label={copy.formatSimple.previewLabel}>
@@ -301,6 +325,11 @@ export function RulesPanel({
                   <p className="text-lg font-bold" data-testid="format-preview" aria-live="polite">
                     {preview.sentence}
                   </p>
+                  {preview.ok ? (
+                    <p className="font-bold" data-testid="min-heats">
+                      {copy.formatSimple.minHeats(preview.minHeatsPerRider)}
+                    </p>
+                  ) : null}
                   {preview.ok ? <p className="font-semibold">{copy.formatSimple.ridingTime(preview.ridingMinutes)}</p> : null}
                   {preview.warnings.map((w) => (
                     <p key={w} className="font-bold">

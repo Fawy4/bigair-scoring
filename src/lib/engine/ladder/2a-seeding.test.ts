@@ -129,8 +129,9 @@ describe("2A byes_top_seeds (Decision 6)", () => {
 });
 
 describe("2A 'eliminates nobody' (Decision 3)", () => {
-  it("N = 5, size 4, top 2 advance → [1,4] · [2,3,5] and a warning for Heat 1", () => {
-    const draw = expandFormat(single(), makeEntrants(5));
+  // With the default minimum (target − 1 = 3) five riders are one heat (docs/04 decision 23). A minimum of 2 gives the earlier split.
+  it("N = 5, size 4, minimum 2, top 2 advance → [1,4] · [2,3,5] and a warning for Heat 1", () => {
+    const draw = expandFormat(single({ minHeatSize: 2 }), makeEntrants(5));
     expect(seeds(draw, "R1")).toEqual([[1, 4], [2, 3, 5]]);
     const w = draw.warnings.filter((x) => x.type === "eliminates_nobody");
     expect(w).toHaveLength(1);
@@ -143,7 +144,7 @@ describe("2A 'eliminates nobody' (Decision 3)", () => {
     expect(expandFormat(loadFormat("kota-dingle"), makeEntrants(18)).warnings).toEqual([]);
   });
   it("the heatCountOverride suggestion clears the warning", () => {
-    const draw = expandFormat(single(), makeEntrants(5), { heatCountOverride: { R1: 1 } });
+    const draw = expandFormat(single({ minHeatSize: 2 }), makeEntrants(5), { heatCountOverride: { R1: 1 } });
     expect(seeds(draw, "R1")).toEqual([[1, 2, 3, 4, 5]]);
     expect(draw.warnings.filter((x) => x.type === "eliminates_nobody")).toEqual([]);
   });

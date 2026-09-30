@@ -175,3 +175,23 @@ Things you should know:
 - New optional template field `roundDurationMin` (round id → minutes) for the three generated ladder types; the draw engine applies it after the generator (tests `2h-round-durations.test.ts`: knockout, second chance, pools, breaks unchanged, unknown rounds ignored, only generated ladders, positive numbers). A custom ladder keeps its own per-round heat length.
 - The Format step shows a "Heat length per round" table under the ladder choice: one row per round of the preview, pre-filled from the single setting, "own length" marker on changed rows, and a reset button. Only real differences are stored on the division. The ladder diagram now shows each round's heat length ("4 heats · 3–4 riders · 10 min") and follows the table.
 - Test on the preview: Divisions → Format → pick "Single elimination" → change "Heat length: R1" to 9 and "Heat length: F" to 20 → watch the diagram → Save.
+
+### Phase 4a-1 – three fixes and plain ladder words (round 4)
+1. **Show all settings no longer hides Simple settings.** Simple (scoring and format) always stays; the advanced settings appear below it, and settings that Simple already shows are left out of the advanced part so nothing appears twice. A Playwright check confirms every Simple field is still there with Show all settings on.
+2. **Two plain numbers replace the "uneven rule"** under every generated format: "Riders per heat (target)" and "Minimum riders per heat" (default target − 1, at least 2; can equal the target), each with a "?". Rule (docs/04 decision 23, docs/08 §2G0): ceil(N / target) heats when every heat can meet the minimum, otherwise fewer heats; a field smaller than the minimum is one heat with everyone; top seeds in the smaller heats. All your examples are tests (14/3/3 → [1,8,9] [2,7,10] [3,6,11,14] [4,5,12,13]; 14/4/3; 13/4/3; 13/4/4 → 4/4/5; 5/4/4 → one heat of 5; 24/4/4). The old options stay only inside the custom ladder.
+3. **Plain words**: no "bye" (a rider who advances without riding is labelled "Advances without riding"), "Second-chance round" (heats "Second chance H1…"), "1 v 1 heats"; placeholders "1st H1", "2nd H3", "1st R2 H5", "1st of all heats". Preset names and descriptions were reworded (format presets are now version 2 on the hosted project). The banned-words test covers all of it.
+4. **Tags and minimum heats**: "Every rider gets at least 2 heats" under Knockout with a second chance; "Riders can be out after 1 heat" under Knockout and Pools to a final; the preview shows "Minimum heats per rider: N" (computed from the real draw).
+
+Things you should know:
+- **The minimum wins over the maximum.** Your rule cannot always hold both limits (11 riders, target 4, minimum 4 has no split of only 4s and 5s), so the heats are 5/6; when only one heat can meet the minimum (7 riders, target 4, minimum 4) everyone rides one heat.
+- **5 riders with the default minimum is now one heat of 5** (it used to be two heats, which eliminated nobody). Doc 08 §2A's old "N = 5" test now says minimum 2 to get the old split.
+- **The pools preset carries a minimum of 6** so 23 riders still make three pools of 7/8/8 (doc 08 §2E). With the default minimum (target − 1 = 9) 23 riders would make two pools of 11/12; if you want that instead, remove the 6.
+- **Knockout with a second chance**: the two numbers apply to Round 1; the two-rider rounds after it keep their structure (that is where riders advance without riding).
+- Only three ladder types exist today, so only their tags are shown. "Double elimination", "Qualifying heats + finals", "Round robin" ("Every rider gets at least 2 heats") and "Single final" ("Riders can be out after 1 heat") get their tag when those types are built.
+- "Main draw" / "Second-chance draw" are in the wording rules for the bracket view in 4b (there is no bracket screen yet).
+
+### How to test round 4 (Vercel preview)
+1. Divisions → Pro Men → **Format** → pick "Single elimination". Under the three choices read the tags. Change **Riders per heat (target)** to 3 and **Minimum riders per heat** to 3: with 14 riders the diagram shows heats of 3, 3, 4, 4.
+2. Set target 4, minimum 4, "Preview with" 13 → 4/4/5; 5 → one heat.
+3. Choose **Knockout with a second chance**: the tag, "Minimum heats per rider: 2", "Second chance H1", "Advances without riding", placeholders like "1st R1 H1".
+4. Tick **Show all settings** (Scoring and Format): everything you saw before is still there, with more below.

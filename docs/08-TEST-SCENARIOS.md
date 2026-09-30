@@ -116,6 +116,24 @@ Pools: 3 heats sized 7 / 8 / 8 (smaller heat for top seeds first). All 23 ranked
 - Correction: re-publishing R1 Heat 1 with a different winner when R3 Heat 1 has status `running` → returns `conflict` listing the affected heat; nothing changes.
 - Manual drag of a rider into another slot before start → `manual_override = true`; auto-seeding leaves that heat alone.
 
+### 2G0 — Riders per heat (target) and Minimum riders per heat (docs/04 decision 23; `2g0-minimum-riders.test.ts`)
+Rule: heats between the minimum and target + 1; ceil(N / target) heats if every heat can meet the minimum, otherwise fewer heats; N below the minimum → one heat with everyone; smaller heats first (top seeds).
+| Riders | Target | Minimum | Heats | Seeds per heat (snake) |
+|---|---|---|---|---|
+| 14 | 3 | 3 | 3/3/4/4 | [1,8,9] · [2,7,10] · [3,6,11,14] · [4,5,12,13] |
+| 14 | 4 | 3 | 3/3/4/4 | |
+| 13 | 4 | 3 | 3/3/3/4 | |
+| 13 | 4 | 4 | 4/4/5 | |
+| 5 | 4 | 4 | one heat of 5 | |
+| 24 | 4 | 4 | 6 heats of 4 | |
+| 11 | 4 | 4 | 5/6 (no split within both limits: the minimum wins) | |
+| 7 | 4 | 4 | one heat of 7 (only one heat can meet the minimum) | |
+- Default minimum: target 4 → 3, target 3 → 2, target 2 → 2; equal to the target when the organiser sets it.
+- Consequence for §2A: 5 riders with the default minimum is one heat of 5 (no "eliminates nobody" split); the old split [1,4] · [2,3,5] needs minimum 2.
+- Second-chance ladders apply the numbers to Round 1 only (14 riders, target 3, minimum 3 → 3/3/4/4); the pools preset (minimum 6) keeps §2E: 23 riders → 7/8/8.
+- `minHeatsPerRider` (`2g1-minimum-heats.test.ts`): knockout 14 → 1, pools 23 → 1, second chance 9–36 riders → at least 2, two pool rounds → 2.
+- Plain words: no "bye", "repechage", "dingle" or "man-on-man" in anything a user reads; placeholders "1st H1", "1st R1 H1", "1st of all heats"; "Advances without riding".
+
 ## 3. Timetable engine (`presets/schedule/kitemania-day2.json`)
 
 ### 3A — Main plan, anchors Women H1 = 10:30 and Advanced R2 H4 = 14:00 (Africa/Cairo)

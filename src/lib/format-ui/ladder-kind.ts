@@ -1,3 +1,4 @@
+import { effectiveMinHeatSize } from "@/lib/engine/ladder/seeding";
 import { GeneratorSchema } from "@/lib/schemas/format-template";
 
 /** The three ladder types the organiser chooses from; "custom" is a format with its own rounds. */
@@ -42,4 +43,46 @@ export function withoutRoundLengths(working: Record<string, unknown>): Record<st
   const { roundDurationMin: _old, ...rest } = working;
   void _old;
   return rest;
+}
+
+/** The parameter that holds "Riders per heat (target)" for each ladder type (second chance: the first round). */
+export const TARGET_KEY: Record<Exclude<LadderKind, "custom">, "heatSize" | "r1HeatSize"> = { knockout: "heatSize", second_chance: "r1HeatSize", pools: "heatSize" };
+
+/** Target and (effective) minimum riders per heat of a generated ladder; `explicit` = the organiser named the minimum. */
+export function heatSizes(working: Record<string, unknown>): { target: number; min: number; explicit: boolean } | null {
+  const kind = ladderKindOf(working);
+  if (kind === "custom") return null;
+  const params = ((working.generator as { params?: Record<string, unknown> } | undefined)?.params ?? {}) as Record<string, number | undefined>;
+  const target = params[TARGET_KEY[kind]];
+  if (typeof target !== "number") return null;
+  return { target, min: effectiveMinHeatSize(target, params.minHeatSize), explicit: params.minHeatSize !== undefined };
+}
+
+function withParams(working: Record<string, unknown>, change: (p: Record<string, number | undefined>) => Record<string, number | undefined>): Record<string, unknown> {
+  const gen = working.generator as { type: string; params?: Record<string, number | undefined> };
+  return { ...working, generator: { ...gen, params: change({ ...(gen.params ?? {}) }) } };
+}
+
+/**
+ * Sets "Riders per heat (target)". A stored minimum that would now be above the target is lowered to it; a minimum that was
+ * only ever the default keeps following the target (it is not stored).
+ */
+export function withHeatTarget(working: Record<string, unknown>, target: number | ""): Record<string, unknown> {
+  const kind = ladderKindOf(working);
+  if (kind === "custom") return working;
+  return withParams(working, (p) => {
+    p[TARGET_KEY[kind]] = target === "" ? undefined : target;
+    if (typeof target === "number" && p.minHeatSize !== undefined && p.minHeatSize > target) p.minHeatSize = target;
+    return p;
+  });
+}
+
+/** Sets "Minimum riders per heat". A value equal to the default (target − 1, at least 2) is not stored; "" clears it. */
+export function withMinRiders(working: Record<string, unknown>, min: number | ""): Record<string, unknown> {
+  const sizes = heatSizes(working);
+  if (!sizes) return working;
+  return withParams(working, (p) => {
+    p.minHeatSize = min === "" || min === effectiveMinHeatSize(sizes.target) ? undefined : min;
+    return p;
+  });
 }

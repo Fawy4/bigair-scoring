@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { copy } from "@/lib/ui-copy";
+
+const MIN_ABOVE_TARGET = copy.formatSimple.minAboveTarget;
 
 /**
  * FormatTemplate — how a division's riders are split into heats and how they progress.
@@ -9,7 +12,7 @@ import { z } from "zod";
 export const DEFAULT_VEST_COLOURS = ["red", "yellow", "blue", "green", "white", "black", "orange", "pink", "purple", "grey"];
 
 export const SeedingSchema = z.enum(["snake", "sequential", "manual", "random"]);
-export const UnevenSchema = z.enum(["smaller_heats_for_top_seeds", "one_larger_heat", "byes_top_seeds"]);
+export const UnevenSchema = z.enum(["minimum_riders", "smaller_heats_for_top_seeds", "one_larger_heat", "byes_top_seeds"]);
 export const ReseedSchema = z.enum(["by_original_seed", "by_heat_score", "by_place_then_score"]);
 
 export const EntrantSourceSchema = z.discriminatedUnion("type", [
@@ -40,6 +43,8 @@ export const RoundSpecSchema = z.object({
   name: z.string().min(1),
   shortName: z.string().min(1),
   heatSize: z.number().int().min(1).max(10),
+  /** With uneven = "minimum_riders": no heat is smaller than this (default: heatSize − 1, never below 2). */
+  minHeatSize: z.number().int().min(1).max(10).optional(),
   /** Falls back to the template's `timing.defaultHeatMin`. */
   durationMin: z.number().positive().optional(),
   breakAfterHeatMin: z.number().min(0).optional(),
@@ -56,7 +61,10 @@ export const RoundSpecSchema = z.object({
 
 const SEEDING_DEFAULTS = {
   seeding: SeedingSchema.default("snake"),
-  uneven: UnevenSchema.default("smaller_heats_for_top_seeds"),
+  /** Older formats may still name a rule here; absent = the two plain numbers (target and minimum riders per heat). */
+  uneven: UnevenSchema.optional(),
+  /** Minimum riders per heat (default: the target − 1, never below 2). */
+  minHeatSize: z.number().int().min(1).max(10).optional(),
 };
 
 export const SingleEliminationParamsSchema = z
@@ -73,18 +81,21 @@ export const SingleEliminationParamsSchema = z
   .refine((p) => p.advancePerHeat < p.heatSize, {
     message: "advancePerHeat must be smaller than heatSize (the ladder has to shrink)",
     path: ["advancePerHeat"],
-  });
+  })
+  .refine((p) => p.minHeatSize === undefined || p.minHeatSize <= p.heatSize, { message: MIN_ABOVE_TARGET, path: ["minHeatSize"] });
 
-export const DingleEliminationParamsSchema = z.object({
-  r1HeatSize: z.number().int().min(2).max(10).default(3),
-  finalSize: z.number().int().min(2).max(10).default(3),
-  r1Min: z.number().positive().default(13),
-  repMin: z.number().positive().default(10),
-  koMin: z.number().positive().default(10),
-  finalMin: z.number().positive().default(15),
-  ...SEEDING_DEFAULTS,
-  reseed: ReseedSchema.default("by_place_then_score"),
-});
+export const DingleEliminationParamsSchema = z
+  .object({
+    r1HeatSize: z.number().int().min(2).max(10).default(3),
+    finalSize: z.number().int().min(2).max(10).default(3),
+    r1Min: z.number().positive().default(13),
+    repMin: z.number().positive().default(10),
+    koMin: z.number().positive().default(10),
+    finalMin: z.number().positive().default(15),
+    ...SEEDING_DEFAULTS,
+    reseed: ReseedSchema.default("by_place_then_score"),
+  })
+  .refine((p) => p.minHeatSize === undefined || p.minHeatSize <= p.r1HeatSize, { message: MIN_ABOVE_TARGET, path: ["minHeatSize"] });
 
 export const PoolsToFinalParamsSchema = z
   .object({
@@ -97,7 +108,8 @@ export const PoolsToFinalParamsSchema = z
     ...SEEDING_DEFAULTS,
     crossPoolTieBreak: z.literal("scoring_model_then_seed").default("scoring_model_then_seed"),
   })
-  .refine((p) => p.finalists <= 10, { message: "finalists must fit in one heat (max 10)", path: ["finalists"] });
+  .refine((p) => p.finalists <= 10, { message: "finalists must fit in one heat (max 10)", path: ["finalists"] })
+  .refine((p) => p.minHeatSize === undefined || p.minHeatSize <= p.heatSize, { message: MIN_ABOVE_TARGET, path: ["minHeatSize"] });
 
 export const GeneratorSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("single_elimination"), params: SingleEliminationParamsSchema.prefault({}) }),
@@ -171,6 +183,9 @@ export function checkRounds(rounds: RoundSpec[], ctx: z.RefinementCtx): void {
       if (a.to !== "eliminated" && a.to !== "final_placing" && !ids.has(a.to)) {
         ctx.addIssue({ code: "custom", message: `round ${r.id}: advance.to names unknown round "${a.to}"`, path: ["rounds", i, "advance"] });
       }
+    }
+    if (r.minHeatSize !== undefined && r.minHeatSize > r.heatSize) {
+      ctx.addIssue({ code: "custom", message: `round ${r.id}: ${MIN_ABOVE_TARGET}`, path: ["rounds", i, "minHeatSize"] });
     }
     if (r.crossHeat && !ids.has(r.crossHeat.to)) {
       ctx.addIssue({ code: "custom", message: `round ${r.id}: crossHeat.to names unknown round "${r.crossHeat.to}"`, path: ["rounds", i, "crossHeat"] });

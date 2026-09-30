@@ -4,7 +4,7 @@ import megaloop from "../../../presets/formats/megaloop-men-16.json";
 import single from "../../../presets/formats/heats4-top2-single-elim.json";
 import { FormatTemplateSchema, parseFormatTemplate } from "@/lib/schemas/format-template";
 import { copy } from "@/lib/ui-copy";
-import { ladderKindOf, withLadderKind, withoutRoundLengths, withRoundLength } from "./ladder-kind";
+import { heatSizes, ladderKindOf, withHeatTarget, withLadderKind, withMinRiders, withoutRoundLengths, withRoundLength } from "./ladder-kind";
 import { previewFormat } from "./preview";
 
 describe("ladder type choice", () => {
@@ -74,6 +74,45 @@ describe("ladder type choice", () => {
       const pools = withLadderKind(withRoundLength(knock(), "SF", 30, 12), "pools");
       expect(pools.roundDurationMin).toBeUndefined();
       expect(previewFormat(parseFormatTemplate(pools), 23).ok).toBe(true);
+    });
+  });
+
+  describe("riders per heat (target) and minimum riders per heat", () => {
+    const knock = () => parseFormatTemplate(single) as unknown as Record<string, unknown>;
+    const second = () => parseFormatTemplate(dingle) as unknown as Record<string, unknown>;
+
+    it("reads the target and the effective minimum (default: target − 1, never below 2)", () => {
+      expect(heatSizes(knock())).toEqual({ target: 4, min: 3, explicit: false });
+      expect(heatSizes(second())).toEqual({ target: 3, min: 2, explicit: false });
+      expect(heatSizes(parseFormatTemplate(megaloop) as unknown as Record<string, unknown>)).toBeNull();
+    });
+
+    it("the minimum can be set equal to the target; the default is not stored", () => {
+      const four = withMinRiders(knock(), 4);
+      expect(heatSizes(four)).toEqual({ target: 4, min: 4, explicit: true });
+      expect(heatSizes(withMinRiders(four, 3))).toEqual({ target: 4, min: 3, explicit: false }); // back to the default
+      expect(heatSizes(withMinRiders(four, ""))).toMatchObject({ explicit: false });
+    });
+
+    it("a default minimum follows the target; a stored minimum is lowered when the target drops below it", () => {
+      expect(heatSizes(withHeatTarget(knock(), 6))).toEqual({ target: 6, min: 5, explicit: false });
+      const four = withMinRiders(knock(), 4);
+      expect(heatSizes(withHeatTarget(four, 3))).toEqual({ target: 3, min: 3, explicit: true });
+      expect(FormatTemplateSchema.safeParse(withHeatTarget(four, 3)).success).toBe(true);
+    });
+
+    it("the preview follows: 14 riders, target 3, minimum 3 → 3/3/4/4; 13 riders, target 4, minimum 4 → 4/4/5", () => {
+      const a = previewFormat(parseFormatTemplate(withMinRiders(withHeatTarget(knock(), 3), 3)), 14);
+      expect(a.ladder[0].heats.map((h) => h.size)).toEqual([3, 3, 4, 4]);
+      const b = previewFormat(parseFormatTemplate(withMinRiders(knock(), 4)), 13);
+      expect(b.ladder[0].heats.map((h) => h.size)).toEqual([4, 4, 5]);
+    });
+
+    it("works for second-chance and pools (first round)", () => {
+      const s = previewFormat(parseFormatTemplate(withMinRiders(withHeatTarget(withLadderKind(knock(), "second_chance"), 3), 3)), 14);
+      expect(s.ladder[0].heats.map((h) => h.size)).toEqual([3, 3, 4, 4]);
+      const p = previewFormat(parseFormatTemplate(withMinRiders(withHeatTarget(withLadderKind(knock(), "pools"), 8), 6)), 23);
+      expect(p.ladder[0].heats.map((h) => h.size)).toEqual([7, 8, 8]);
     });
   });
 });
