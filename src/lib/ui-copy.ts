@@ -806,7 +806,7 @@ export const copy = {
   admin: {
     metaTitle: (product: string) => `${product} admin`,
     navLabel: "Platform admin",
-    nav: { organisations: "Organisations", settings: "Platform settings", presets: "Master presets", audit: "Audit log", health: "Health" },
+    nav: { organisations: "Organisations", settings: "Platform settings", presets: "Master presets", tricks: "Trick proposals", feedback: "Feedback", audit: "Audit log", health: "Health" },
     roles: { owner: "Platform owner", staff: "Platform staff" } as Record<string, string>,
     ownerOnly: "Only platform owners can do this. You can look, but not change it.",
     errors: {
@@ -1272,9 +1272,11 @@ export const copy = {
     heading: "Trick base",
     intro: "Tick the building blocks the spotter may use in this division. Everything is on to begin with, so you never type trick names. The scoring categories follow from what is ticked.",
     families: { direction: "Direction", multiplier: "Multiplier", base: "Base trick", addon: "Add-ons", grab_landing: "Grabs & landings" },
+    categoryLabels: { handle_pass: "Handle pass", board_off: "Board-off", kiteloop: "Kiteloop", rotation: "Rotation", other: "Other" } as Record<string, string>,
     categoriesHeading: "Scoring categories from these blocks",
     categoriesNone: "No categories yet: tick at least one base trick.",
-    categoriesNote: "Shown from the highest precedence to the lowest: handle pass, board-off, kiteloop, rotation, other. Per-category counting rules are under Show all settings.",
+    categoriesNote: "Shown from the highest precedence to the lowest: handle pass, board-off, kiteloop, rotation, other. Per-category counting rules are under Scoring → Show all settings → Trick categories.",
+    notInScoring: (names: string) => `These categories are not in this division’s scoring rules yet: ${names}. Add them under Scoring → Show all settings → Trick categories if you count per category.`,
     addBlock: "+ Add block",
     addFamily: "Family",
     addName: "Name of the block",
@@ -1719,7 +1721,7 @@ export const SCORING_LABELS: LabelMap = {
   "heat.maxAttemptsPerRider": { label: "Attempts allowed per rider per heat", off: "No limit", help: "The most attempts a rider may log. Extra attempts are refused.", example: "7" },
   "heat.duplicateWindowSec": { label: "Flag possible duplicate attempts within (seconds)", help: "Two spotters logging the same rider within this time are flagged for the head judge.", example: "20" },
 
-  categories: { label: "Trick categories", help: "Groups of tricks, used by the spotter and by “best per category”.", example: "Kiteloop, Board-off, Rotation" },
+  categories: { label: "Trick categories (advanced)", help: "The categories follow the Trick base tab of the division. Change them here only to set counting rules per category, for example “best per category”.", example: "At most 2 kiteloops and 2 board-offs count" },
   "categories.*": { label: "Category", help: "One group of tricks.", example: "Kiteloop tricks" },
   "categories.*.key": { label: "Short code", help: "Lowercase letters, numbers and _.", example: "kiteloop" },
   "categories.*.label": { label: "Name", help: "What the spotter sees.", example: "Kiteloop tricks" },

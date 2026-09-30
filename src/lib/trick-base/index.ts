@@ -57,7 +57,8 @@ export function blocksFromVocabulary(vocab: VocabularyJson, local: LocalBlock[])
     ...fromList(vocab.baseTricks, () => "base"),
     ...fromList(vocab.modifiers, (i) => (i.family === "grab_landing" ? "grab_landing" : "addon")),
   ];
-  const own: Block[] = local.map((l) => ({ family: l.family, key: l.key, label: l.label, category: l.category ?? null, local: true, proposed: l.status === "proposed" }));
+  const masterIds = new Set(master.map(blockId));
+  const own: Block[] = local.filter((l) => !masterIds.has(blockId(l))).map((l) => ({ family: l.family, key: l.key, label: l.label, category: l.category ?? null, local: true, proposed: l.status === "proposed" }));
   const all = [...master, ...own];
   return FAMILIES.flatMap((f) => all.filter((b) => b.family === f.key));
 }
@@ -88,7 +89,7 @@ export interface DerivedCategory {
   [k: string]: unknown;
 }
 
-const humanise = (key: string) => key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+const humanise = (key: string) => copy.trickBase.categoryLabels[key] ?? key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 
 /**
  * The scoring categories a division needs, worked out from its ticked blocks: every category named by a ticked base trick or
@@ -130,4 +131,32 @@ export function addLocalBlock(vocab: VocabularyJson, existing: LocalBlock[], inp
 export function changeAllowedAfterStart(before: TrickBase, after: TrickBase): boolean {
   const was = new Set(before.disabled);
   return after.disabled.every((d) => was.has(d));
+}
+
+/** The master vocabulary with one proposed block added (the owner accepted it). Returns a new object; the master copy wins from then on. */
+export function addBlockToVocabulary(vocab: VocabularyJson, block: LocalBlock): { ok: true; vocabulary: VocabularyJson } | { ok: false; error: string } {
+  const existing = blocksFromVocabulary(vocab, []);
+  if (existing.some((b) => b.family === block.family && (b.key === block.key || b.label.toLowerCase() === block.label.toLowerCase()))) {
+    return { ok: false, error: copy.trickBase.admin.clash };
+  }
+  const item = { key: block.key, label: block.label, aliases: [] as string[] };
+  const next = structuredClone(vocab);
+  switch (block.family) {
+    case "direction":
+      next.directions.push(item);
+      break;
+    case "multiplier":
+      next.multipliers.push(item);
+      break;
+    case "base":
+      next.baseTricks.push({ ...item, category: block.category ?? "other" });
+      break;
+    case "addon":
+      next.modifiers.push({ ...item, family: "addon", category: block.category ?? null });
+      break;
+    case "grab_landing":
+      next.modifiers.push({ ...item, family: "grab_landing", category: block.category ?? null });
+      break;
+  }
+  return { ok: true, vocabulary: next };
 }

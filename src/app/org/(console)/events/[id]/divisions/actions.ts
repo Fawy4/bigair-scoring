@@ -8,6 +8,8 @@ import { asNewPreset, importFormatTemplate, importScoringModel, type PresetKind 
 import type { PresetRow } from "@/lib/presets/options";
 import { FormatTemplateSchema } from "@/lib/schemas/format-template";
 import { IdentificationSchemeSchema } from "@/lib/schemas/identification";
+import { EVENT_VOCABULARY_KEY, loadEventBlocks, loadMasterVocabulary } from "@/lib/org/trick-vocabulary";
+import { addLocalBlock, FAMILIES, type FamilyKey, type LocalBlock } from "@/lib/trick-base";
 import { ScoringModelSchema } from "@/lib/schemas/scoring-model";
 import { FORMAT_NULLABLE, mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { issuesToMap } from "@/lib/form/path";
@@ -242,4 +244,46 @@ export async function saveDivisionDescription(divisionId: string, text: string):
   if (error || !data?.length) return { ok: false, error: E.failed };
   refresh(d.event_id);
   return { ok: true };
+}
+
+const BlockId = z.string().regex(/^(direction|multiplier|base|addon|grab_landing):[a-z0-9_]{1,80}$/);
+
+/** The blocks the organiser unticked for one division. Once a heat has started a block can be ticked again but never unticked. */
+export async function saveTrickBase(divisionId: string, disabled: string[]): Promise<Ok<object> | Fail> {
+  const T = copy.trickBase.errors;
+  if (!uuid.safeParse(divisionId).success) return { ok: false, error: E.notFound };
+  const ids = z.array(BlockId).max(500).safeParse(disabled);
+  if (!ids.success) return { ok: false, error: T.failed };
+  const { supabase } = await getOrgContext();
+  const d = await eventOf(supabase, divisionId);
+  if (!d) return { ok: false, error: E.notFound };
+  const { data, error } = await supabase.from("divisions").update({ trick_base: { disabled: [...new Set(ids.data)].sort() } as never }).eq("id", divisionId).select("id");
+  if (error) return { ok: false, error: error.message.includes("TRICK_BASE_LOCKED") ? T.locked : T.failed };
+  if (!data?.length) return { ok: false, error: T.failed };
+  refresh(d.event_id);
+  return { ok: true };
+}
+
+/** "+ Add block": a local name in the event's own vocabulary, proposed to the master base. Allowed at any time (adding never removes anything). */
+export async function addTrickBlock(eventId: string, input: { family: FamilyKey; label: string; category?: string | null }): Promise<Ok<{ block: LocalBlock }> | Fail> {
+  const T = copy.trickBase.errors;
+  if (!uuid.safeParse(eventId).success || !FAMILIES.some((f) => f.key === input.family)) return { ok: false, error: T.family };
+  const { supabase } = await getOrgContext();
+  const { data: event } = await supabase.from("events").select("id, organisation_id").eq("id", eventId).maybeSingle();
+  if (!event) return { ok: false, error: E.notFound };
+  const master = await loadMasterVocabulary(supabase);
+  if (!master) return { ok: false, error: T.noVocabulary };
+  const existing = await loadEventBlocks(supabase, eventId);
+  const category = typeof input.category === "string" && /^[a-z0-9_]{1,40}$/.test(input.category) ? input.category : null;
+  const made = addLocalBlock(master.vocabulary, existing, { family: input.family, label: input.label, category });
+  if (!made.ok) return { ok: false, error: made.error };
+  const json = { blocks: [...existing, made.block] };
+  const hash = canonicalHash(json);
+  const { data: row } = await supabase.from("trick_vocabularies").select("id").eq("event_id", eventId).eq("key", EVENT_VOCABULARY_KEY).limit(1);
+  const { error } = row?.length
+    ? await supabase.from("trick_vocabularies").update({ json: json as never, content_hash: hash }).eq("id", row[0].id)
+    : await supabase.from("trick_vocabularies").insert({ organisation_id: event.organisation_id, event_id: eventId, key: EVENT_VOCABULARY_KEY, json: json as never, content_hash: hash });
+  if (error) return { ok: false, error: T.failed };
+  refresh(eventId);
+  return { ok: true, block: made.block };
 }

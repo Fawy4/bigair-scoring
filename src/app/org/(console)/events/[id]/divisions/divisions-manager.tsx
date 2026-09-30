@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import type { PresetRow } from "@/lib/presets/options";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
+import type { LocalBlock, VocabularyJson } from "@/lib/trick-base";
 import { copy } from "@/lib/ui-copy";
 import { addDivision, deleteDivision, duplicateDivision, moveDivision, renameDivision, saveDivisionDescription } from "./actions";
 import { DivisionIdentification } from "./division-identification";
+import { TrickBasePanel } from "./trick-base-panel";
 import { RulesPanel } from "./rules-panel";
 
 export interface DivisionRow {
@@ -23,13 +25,21 @@ export interface DivisionRow {
   /** The division's own Rider label scheme; null = the event's. */
   identification: { scheme: IdentificationScheme; basedOn?: string } | null;
   trickBase: unknown;
+  /** A heat of this division has started (trick base blocks can then be added but not removed). */
+  started: boolean;
   /** Any heat exists (a division with heats cannot be deleted). */
   hasHeats: boolean;
   /** A heat has started and nobody unlocked the rules. */
   locked: boolean;
 }
 
-type Tab = "scoring" | "format" | "identification";
+/** The categories the division's scoring model names (for the Trick base panel). */
+function categoriesOf(model: PresetRow | undefined): Array<{ key: string; label: string }> {
+  const list = (model?.json as { categories?: Array<{ key?: unknown; label?: unknown }> } | undefined)?.categories;
+  return Array.isArray(list) ? list.flatMap((c) => (typeof c.key === "string" ? [{ key: c.key, label: typeof c.label === "string" ? c.label : c.key }] : [])) : [];
+}
+
+type Tab = "scoring" | "format" | "identification" | "trickbase";
 
 export function DivisionsManager({
   eventId,
@@ -37,6 +47,8 @@ export function DivisionsManager({
   eventScheme,
   allowOverride,
   schemes,
+  vocabulary,
+  localBlocks: initialLocalBlocks,
   initialDivisions,
   initialScoring,
   initialFormats,
@@ -46,6 +58,8 @@ export function DivisionsManager({
   eventScheme: IdentificationScheme;
   allowOverride: boolean;
   schemes: IdentificationScheme[];
+  vocabulary: VocabularyJson | null;
+  localBlocks: LocalBlock[];
   initialDivisions: DivisionRow[];
   initialScoring: PresetRow[];
   initialFormats: PresetRow[];
@@ -53,6 +67,7 @@ export function DivisionsManager({
   const router = useRouter();
   const [divisions, setDivisions] = useState(initialDivisions);
   const [scoring, setScoring] = useState(initialScoring);
+  const [localBlocks, setLocalBlocks] = useState(initialLocalBlocks);
   const [formats, setFormats] = useState(initialFormats);
   const [openId, setOpenId] = useState<string | null>(initialDivisions[0]?.id ?? null);
   const [tab, setTab] = useState<Tab>("scoring");
@@ -74,7 +89,7 @@ export function DivisionsManager({
     start(async () => {
       const res = await addDivision(eventId, newName);
       if (!res.ok) return fail(res.error);
-      setDivisions((ds) => [...ds, { id: res.id, name: newName.trim(), sort_order: res.sortOrder, scoring_model_id: null, scoring_overrides: {}, format_template_id: null, format_params: {}, description: null, identification: null, trickBase: {}, hasHeats: false, locked: false }]);
+      setDivisions((ds) => [...ds, { id: res.id, name: newName.trim(), sort_order: res.sortOrder, scoring_model_id: null, scoring_overrides: {}, format_template_id: null, format_params: {}, description: null, identification: null, trickBase: {}, started: false, hasHeats: false, locked: false }]);
       setOpenId(res.id);
       setNewName("");
       toast({ title: copy.divisions.added });
@@ -97,7 +112,7 @@ export function DivisionsManager({
       const res = await duplicateDivision(id);
       if (!res.ok) return fail(res.error);
       const src = divisions.find((d) => d.id === id)!;
-      setDivisions((ds) => [...ds, { ...src, id: res.id, name: res.name, sort_order: Math.max(...ds.map((d) => d.sort_order)) + 1, hasHeats: false, locked: false }]);
+      setDivisions((ds) => [...ds, { ...src, id: res.id, name: res.name, sort_order: Math.max(...ds.map((d) => d.sort_order)) + 1, started: false, hasHeats: false, locked: false }]);
       setOpenId(res.id);
       toast({ title: copy.divisions.duplicated(res.name) });
       router.refresh();
@@ -219,9 +234,9 @@ export function DivisionsManager({
               {open ? (
                 <div className="flex flex-col gap-4 border-t-2 border-[#111] pt-4">
                   <div role="tablist" aria-label={copy.divisions.tabsLabel(d.name)} className="flex gap-2">
-                    {(["scoring", "format", "identification"] as const).map((t) => (
+                    {(["scoring", "format", "identification", "trickbase"] as const).map((t) => (
                       <button key={t} type="button" role="tab" aria-selected={tab === t} className={`btn ${tab === t ? "btn-primary" : ""}`} onClick={() => setTab(t)}>
-                        {t === "scoring" ? copy.divisions.tabScoring : t === "format" ? copy.divisions.tabFormat : copy.divisions.tabIdentification}
+                        {t === "scoring" ? copy.divisions.tabScoring : t === "format" ? copy.divisions.tabFormat : t === "identification" ? copy.divisions.tabIdentification : copy.divisions.tabTrickBase}
                       </button>
                     ))}
                   </div>
@@ -235,6 +250,22 @@ export function DivisionsManager({
                       onPresetAdded={(row) => setScoring((s) => [...s, row])}
                       onDivisionChange={(p) => patch(d.id, p)}
                     />
+                  ) : tab === "trickbase" ? (
+                    vocabulary ? (
+                      <TrickBasePanel
+                        key={`t-${d.id}`}
+                        eventId={eventId}
+                        divisionId={d.id}
+                        vocabulary={vocabulary}
+                        localBlocks={localBlocks}
+                        onBlockAdded={(b) => setLocalBlocks((l) => [...l, b])}
+                        trickBase={d.trickBase}
+                        started={d.started}
+                        modelCategories={categoriesOf(sModel)}
+                      />
+                    ) : (
+                      <p className="panel font-semibold">{copy.trickBase.errors.noVocabulary}</p>
+                    )
                   ) : tab === "identification" ? (
                     <DivisionIdentification
                       key={`i-${d.id}`}

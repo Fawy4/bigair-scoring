@@ -129,3 +129,55 @@ describe("once a heat has started: blocks can still be added but never removed",
     expect(changeAllowedAfterStart({ disabled: ["base:backroll"] }, { disabled: ["base:backroll", "addon:late"] })).toBe(false);
   });
 });
+
+import { addBlockToVocabulary } from "./index";
+import { validateMasterPreset } from "@/lib/platform/master-presets";
+
+describe("accepting a proposal into the master base", () => {
+  const local = (over: Partial<import("./index").LocalBlock> = {}): import("./index").LocalBlock => ({ family: "base", key: "local_sloth_roll", label: "Sloth roll", category: "rotation", status: "proposed", ...over });
+
+  it("a base trick goes into baseTricks with its category", () => {
+    const r = addBlockToVocabulary(vocab, local());
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.vocabulary.baseTricks.at(-1)).toMatchObject({ key: "local_sloth_roll", label: "Sloth roll", category: "rotation", aliases: [] });
+    expect(r.vocabulary.baseTricks).toHaveLength(vocab.baseTricks.length + 1);
+  });
+  it("an add-on and a grab or landing go into modifiers with their family", () => {
+    const a = addBlockToVocabulary(vocab, local({ family: "addon", key: "local_shark", label: "Shark", category: "board_off" }));
+    const g = addBlockToVocabulary(vocab, local({ family: "grab_landing", key: "local_sad", label: "Sad grab", category: null }));
+    if (!a.ok || !g.ok) throw new Error("expected ok");
+    expect(a.vocabulary.modifiers.at(-1)).toMatchObject({ key: "local_shark", family: "addon", category: "board_off" });
+    expect(g.vocabulary.modifiers.at(-1)).toMatchObject({ key: "local_sad", family: "grab_landing", category: null });
+  });
+  it("a direction and a multiplier go into their own lists", () => {
+    const d = addBlockToVocabulary(vocab, local({ family: "direction", key: "local_up", label: "Up", category: null }));
+    const m = addBlockToVocabulary(vocab, local({ family: "multiplier", key: "local_x5", label: "×5", category: null }));
+    if (!d.ok || !m.ok) throw new Error("expected ok");
+    expect(d.vocabulary.directions.at(-1)?.key).toBe("local_up");
+    expect(m.vocabulary.multipliers.at(-1)?.key).toBe("local_x5");
+  });
+  it("does not change the vocabulary it was given, and the result is still a valid master vocabulary", () => {
+    const copyBefore = JSON.stringify(vocab);
+    const r = addBlockToVocabulary(vocab, local());
+    expect(JSON.stringify(vocab)).toBe(copyBefore);
+    if (!r.ok) throw new Error("expected ok");
+    expect(validateMasterPreset("trick_vocabulary", r.vocabulary).ok).toBe(true);
+  });
+  it("refuses a block the master base already has (same key, or same name in that family)", () => {
+    expect(addBlockToVocabulary(vocab, local({ key: "backroll", label: "Backroll" })).ok).toBe(false);
+    expect(addBlockToVocabulary(vocab, local({ key: "local_other", label: "backroll" })).ok).toBe(false);
+  });
+  it("adding twice is refused the second time", () => {
+    const r = addBlockToVocabulary(vocab, local());
+    if (!r.ok) throw new Error("expected ok");
+    expect(addBlockToVocabulary(r.vocabulary, local()).ok).toBe(false);
+  });
+  it("an accepted block is not shown twice: the master copy wins over the event's own", () => {
+    const r = addBlockToVocabulary(vocab, local());
+    if (!r.ok) throw new Error("expected ok");
+    const blocks = blocksFromVocabulary(r.vocabulary, [local({ status: "accepted" })]);
+    expect(blocks.filter((b) => b.key === "local_sloth_roll")).toHaveLength(1);
+    expect(blocks.find((b) => b.key === "local_sloth_roll")?.local).toBeUndefined();
+  });
+});

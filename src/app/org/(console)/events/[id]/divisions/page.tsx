@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getOrgContext } from "@/lib/org/context";
+import { loadEventBlocks, loadMasterVocabulary } from "@/lib/org/trick-vocabulary";
 import { loadIdentificationSchemes } from "@/lib/org/presets";
 import { divisionScheme } from "@/lib/identification/division-scheme";
 import { parseEventSettings } from "@/lib/schemas/event-settings";
@@ -42,12 +43,14 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
     description: d.description,
     identification: divisionScheme(d.identification) ? { scheme: divisionScheme(d.identification)!, basedOn: (d.identification as { basedOn?: string } | null)?.basedOn } : null,
     trickBase: d.trick_base,
+    started: startedIds.has(d.id),
     hasHeats: heatIds.has(d.id),
     locked: startedIds.has(d.id) && d.rules_unlocked_at === null,
   }));
 
   const settings = parseEventSettings(event.settings);
   const schemes = await loadIdentificationSchemes(supabase, event.organisation_id);
+  const [master, localBlocks] = await Promise.all([loadMasterVocabulary(supabase), loadEventBlocks(supabase, id)]);
   return (
     <main className="flex max-w-4xl flex-col gap-6">
       <h1 className="text-3xl font-extrabold">{copy.divisions.stepHeading}</h1>
@@ -61,6 +64,8 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
         eventScheme={settings.identification?.scheme ?? defaultScheme()}
         allowOverride={settings.identification?.allowDivisionOverride ?? false}
         schemes={schemes}
+        vocabulary={master?.vocabulary ?? null}
+        localBlocks={localBlocks}
         initialDivisions={rows}
         initialScoring={(models ?? []) as PresetRow[]}
         initialFormats={(formats ?? []) as PresetRow[]}
