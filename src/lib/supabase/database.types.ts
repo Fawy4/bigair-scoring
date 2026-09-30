@@ -1713,6 +1713,7 @@ export type Database = {
           table_name: string
         }[]
       }
+      admin_create_demo_organisation: { Args: never; Returns: string }
       admin_create_organisation: {
         Args: {
           p_logo_url?: string

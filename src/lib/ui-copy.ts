@@ -719,6 +719,8 @@ export const copy = {
       USER_NOT_FOUND: "That login does not exist.",
       INVALID_ROLE: "That role is not known.",
       INVALID_URL: "That address does not look right.",
+      DEMO_EXISTS: "A demo organisation already exists, so nothing was created.",
+      PRESETS_MISSING: "The system presets are not published yet, so the demo cannot be built. Run “npm run seed:presets” first.",
       generic: "That did not work. Nothing was changed; try again.",
     } as Record<string, string>,
     org: {
@@ -797,6 +799,18 @@ export const copy = {
       deleted: "Organisation deleted",
       cancel: "No, keep it",
       ownerOnlyDelete: "Only platform owners can delete an organisation.",
+    },
+    demo: {
+      heading: "Demo data",
+      text: "There is no demo organisation. This builds “Demo Cup” with fictional riders, judges, a head judge, a spotter and a full draw, so you can try the screens. Nothing existing is touched.",
+      button: "Create demo organisation",
+      question: "Create the demo organisation with its demo event, riders and draw?",
+      yes: "Yes, create it",
+      cancel: "Cancel",
+      creating: "Creating…",
+      created: "Demo organisation created",
+      pins: "Event code demo-cup. PINs: judges 100001, 100002, 100003 · head judge 200001 · spotter 300001. These PINs are public: use the demo on a development project only.",
+      drawFailed: "The demo organisation was created, but its draw could not be built. Run “npm run seed:demo” to finish it.",
     },
     settings: {
       heading: "Platform settings",

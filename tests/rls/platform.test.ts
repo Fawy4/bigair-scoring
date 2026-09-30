@@ -444,6 +444,36 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
     });
   });
 
+  // ------------------------------------------------------------------ demo organisation
+  describe("Create demo organisation", () => {
+    it("is refused for organisers and staff; only an owner may run it", async () => {
+      expect(codeOf(await w.orgA.rpc("admin_create_demo_organisation"))).toMatch(/NOT_ALLOWED/);
+      expect(codeOf(await w.staff.rpc("admin_create_demo_organisation"))).toMatch(/NOT_ALLOWED/);
+      expect(codeOf(await anonClient().rpc("admin_create_demo_organisation"))).not.toBe("");
+    });
+    it("refuses to run while a demo organisation exists, and otherwise builds the whole demo once (fixed ids, so it never duplicates)", async () => {
+      const { data: existing } = await w.s.from("organisations").select("id").in("slug", ["demo", "demo-org"]);
+      if ((existing ?? []).length > 0) {
+        // the real demo data is present on this project: prove the guard and leave it alone
+        expect(codeOf(await w.owner.rpc("admin_create_demo_organisation"))).toMatch(/DEMO_EXISTS/);
+        return;
+      }
+      const r = await w.owner.rpc("admin_create_demo_organisation");
+      expect(r.error).toBeNull();
+      const id = r.data as string;
+      orgs.push(id);
+      expect(((await w.s.from("organisations").select("slug").eq("id", id).single()).data as { slug: string }).slug).toBe("demo-org");
+      const count = async (t: string, col: string, v: string) => ((await w.s.from(t).select("id").eq(col, v)).data ?? []).length;
+      const { data: ev } = await w.s.from("events").select("id").eq("organisation_id", id);
+      expect(ev).toHaveLength(1);
+      expect(await count("riders", "organisation_id", id)).toBe(20);
+      expect(await count("judge_seats", "event_id", ev![0].id)).toBe(5);
+      expect(await count("divisions", "event_id", ev![0].id)).toBe(3);
+      expect(codeOf(await w.owner.rpc("admin_create_demo_organisation"))).toMatch(/DEMO_EXISTS/);
+      expect(((await w.s.from("audit_log").select("action").eq("organisation_id", id).eq("action", "demo_organisation_created")).data ?? []).length).toBe(1);
+    });
+  });
+
   // ------------------------------------------------------------------ coverage
   describe("coverage", () => {
     it("the three new tables have RLS on and policies, and no visitor can read or write them", async () => {

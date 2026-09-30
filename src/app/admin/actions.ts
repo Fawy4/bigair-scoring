@@ -14,6 +14,7 @@ import { inviteConfirmLink } from "@/lib/platform/organisation";
 import { requestOrigin } from "@/lib/platform/origin";
 import { MASTER_KINDS, nextVersion, prepareNewVersion, validateMasterPreset, type MasterKind } from "@/lib/platform/master-presets";
 import { canonicalHash } from "@/lib/presets/plan";
+import { drawDemoEvent } from "@/lib/demo/draw";
 import { OrgNameSchema, OrgSlugSchema, TimeZoneSchema } from "@/lib/schemas/org-settings";
 import { findUserByEmail } from "@/lib/supabase/admin-users";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -223,5 +224,27 @@ export async function publishPreset(kind: string, id: string): Promise<{ ok: tru
   const { error } = await supabase.rpc("admin_publish_preset", { p_kind: parsed.data, p_id: id });
   if (error) return { ok: false, error: errorText(error.message, presetErrors) };
   revalidatePath("/admin/presets", "layout");
+  return { ok: true };
+}
+
+// ------------------------------------------------------------------ demo data
+
+/**
+ * Owner only. Builds the same demo as `npm run seed:demo` (the database function creates the organisation, event, riders and officials;
+ * then the ladder engine draws every division). Refuses while a demo organisation exists. Switched off by DEMO_SEED_DISABLED=1
+ * (set that on any project that hosts a real event: the demo PINs are public).
+ */
+export async function createDemoOrganisation(): Promise<{ ok: true } | Failure> {
+  if (process.env.DEMO_SEED_DISABLED === "1") return fail("NOT_ALLOWED");
+  const { supabase, role } = await requireAdmin();
+  if (role !== "owner") return fail("NOT_ALLOWED");
+  const { error } = await supabase.rpc("admin_create_demo_organisation");
+  if (error) return fail(error.message);
+  revalidatePath("/", "layout");
+  try {
+    await drawDemoEvent(createServiceClient());
+  } catch {
+    return { ok: false, error: copy.admin.demo.drawFailed };
+  }
   return { ok: true };
 }

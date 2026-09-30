@@ -256,3 +256,20 @@ test("the public home page and the organisation page show published events only,
   await expect(page.getByText(`E2E Public ${admin.run}`)).toHaveCount(0);
   await db.from("organisations").update({ archived_at: null }).eq("id", admin.orgId);
 });
+
+test("Create demo organisation: hidden while a demo exists, and builds the demo when there is none", async ({ page }) => {
+  test.setTimeout(180_000);
+  const { data: existing } = await admin.db.from("organisations").select("slug").in("slug", ["demo", "demo-org"]);
+  await admin.signIn(page, "/admin");
+  await expect(page.getByRole("heading", { name: "Organisations", exact: true })).toBeVisible();
+  const button = page.getByRole("button", { name: "Create demo organisation" });
+  if ((existing ?? []).length > 0) {
+    await expect(button).toHaveCount(0); // a demo already exists: nothing to offer
+    return;
+  }
+  await button.click();
+  await page.getByRole("button", { name: "Yes, create it" }).click();
+  await expect(page.getByRole("row").filter({ hasText: "/demo-org" })).toBeVisible({ timeout: 90_000 });
+  await expect(button).toHaveCount(0);
+  admin.trackOrganisation("demo-org"); // only reached on a project that had no demo: leave the project as it was
+});
