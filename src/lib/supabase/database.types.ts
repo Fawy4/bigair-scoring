@@ -507,6 +507,7 @@ export type Database = {
           number_suffix: string | null
           paused_at: string | null
           paused_total_sec: number
+          publish_hold: boolean
           published_at: string | null
           round_id: string
           started_at: string | null
@@ -527,6 +528,7 @@ export type Database = {
           number_suffix?: string | null
           paused_at?: string | null
           paused_total_sec?: number
+          publish_hold?: boolean
           published_at?: string | null
           round_id: string
           started_at?: string | null
@@ -547,6 +549,7 @@ export type Database = {
           number_suffix?: string | null
           paused_at?: string | null
           paused_total_sec?: number
+          publish_hold?: boolean
           published_at?: string | null
           round_id?: string
           started_at?: string | null
@@ -1670,6 +1673,10 @@ export type Database = {
           rls_enabled: boolean
           table_name: string
         }[]
+      }
+      set_publish_hold: {
+        Args: { p_heat: string; p_hold: boolean; p_reason?: string }
+        Returns: undefined
       }
       set_seat_pin: {
         Args: { p_pin: string; p_seat: string }

@@ -678,6 +678,62 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
     });
   });
 
+  // ------------------------------------------------------------------ regression: users with no seat in the event
+  describe("a signed-in user with no seat or membership in an event cannot touch its attempts", () => {
+    it("neither a judge of another event nor another organisation's organiser can add or delete attempts", async () => {
+      const before = (await f.s.from("trick_attempts").select("id", { count: "exact", head: true }).eq("heat_id", f.ids.H1)).count;
+      for (const [who, c] of [["judge of another event", f.clients.bJudge], ["other organiser", f.clients.orgB]] as const) {
+        expect(failed(await c.rpc("add_attempt", { p_heat: f.ids.H1, p_entry: f.ids.e1, p_client_key: uuid(), p_status: "landed" })), `add: ${who}`).toContain("NOT_ALLOWED");
+        expect(failed(await c.rpc("delete_attempt", { p_attempt: f.ids.attH1, p_reason: "not mine to delete" })), `delete: ${who}`).toContain("NOT_ALLOWED");
+      }
+      const after = (await f.s.from("trick_attempts").select("id", { count: "exact", head: true }).eq("heat_id", f.ids.H1)).count;
+      expect(after).toBe(before);
+      expect((await f.s.from("trick_attempts").select("deleted_at").eq("id", f.ids.attH1).single()).data!.deleted_at).toBeNull();
+    });
+  });
+
+  // ------------------------------------------------------------------ publish hold (UX round)
+  describe("publish hold: a published result can be held back from the public site and released later", () => {
+    const hold = (c: Fixture["clients"]["orgA"], hold: boolean, reason: string | null = "Podium ceremony first") =>
+      c.rpc("set_publish_hold", { p_heat: f.ids.H3, p_hold: hold, p_reason: reason });
+    const publicRows = async () => ((await f.clients.anon.from("heat_results").select("id").eq("heat_id", f.ids.H3)).data ?? []).length;
+
+    it("starts released: the public sees the published result", async () => {
+      expect(await publicRows()).toBe(1);
+    });
+
+    it("visitors, judges, spotters and other organisations cannot hold or release", async () => {
+      for (const [who, c] of [["anon", f.clients.anon], ["judge", f.clients.j1], ["spotter", f.clients.spotter], ["other organiser", f.clients.orgB]] as const) {
+        expect(failed(await hold(c, true)), who).not.toBe("");
+      }
+      expect(await publicRows()).toBe(1);
+    });
+
+    it("editing the column directly does nothing, even for the organiser", async () => {
+      await f.clients.orgA.from("heats").update({ publish_hold: true }).eq("id", f.ids.H3);
+      expect((await f.s.from("heats").select("publish_hold").eq("id", f.ids.H3).single()).data!.publish_hold).toBe(false);
+    });
+
+    it("holding needs a reason; the organiser holds; the public no longer sees the result but organisers and officials do", async () => {
+      expect(failed(await hold(f.clients.orgA, true, " "))).toContain("REASON_REQUIRED");
+      expect(failed(await hold(f.clients.orgA, true))).toBe("");
+      expect(await publicRows()).toBe(0);
+      expect(((await f.clients.orgA.from("heat_results").select("id").eq("heat_id", f.ids.H3)).data ?? []).length).toBe(1);
+      expect(((await f.clients.head.from("heat_results").select("id").eq("heat_id", f.ids.H3)).data ?? []).length).toBe(1);
+    });
+
+    it("the head judge releases it and the public sees it again; both steps are audited", async () => {
+      expect(failed(await hold(f.clients.head, false, null))).toBe("");
+      expect(await publicRows()).toBe(1);
+      expect(failed(await hold(f.clients.head, true, "Hold for the podium"))).toBe("");
+      expect(await publicRows()).toBe(0);
+      expect(failed(await hold(f.clients.orgA, false, null))).toBe("");
+      const log = (await f.s.from("audit_log").select("action, reason").eq("event_id", f.ids.evA1).eq("row_id", f.ids.H3).in("action", ["publish_hold", "publish_release"])).data ?? [];
+      expect(log.map((l) => l.action).sort()).toEqual(["publish_hold", "publish_hold", "publish_release", "publish_release"]);
+      expect(log.find((l) => l.reason === "Hold for the podium")).toBeTruthy();
+    });
+  });
+
   // ------------------------------------------------------------------ after everything above
   describe("after all the activity above", () => {
     it("a visitor and a rival organiser still see none of the private data that now exists", async () => {
