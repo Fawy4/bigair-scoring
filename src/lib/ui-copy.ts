@@ -658,7 +658,7 @@ export const copy = {
     },
     breaksNote: "For these ladder types the breaks apply to every round. To set them round by round, use Custom ladder (advanced).",
     seeding: "How riders are seeded into the next round",
-    seedingOptions: { by_original_seed: "By original seeding", by_place_then_score: "By their result in the previous round (recommended)", by_heat_score: "By heat score" },
+    seedingOptions: { by_original_seed: "By original seeding (winners of neighbouring heats meet)", by_place_then_score: "By their result in the previous round", by_heat_score: "By heat score" },
     seedingHelp: "Decides who meets whom in the next round.",
     previewWith: "Preview with",
     riders: "riders",
@@ -701,7 +701,8 @@ export const copy = {
   ladder: {
     label: "Ladder diagram",
     title: (rounds: number, heats: number) => `${rounds} ${plural(rounds, "round", "rounds")}, ${heats} ${plural(heats, "heat", "heats")}`,
-    heatSizes: (heats: number, range: string, minutes: string) => `${heats} ${plural(heats, "heat", "heats")} · ${range} riders · ${minutes} min`,
+    heatSizes: (heats: number, range: string, minutes: string, oneVOne = false) =>
+      `${heats} ${plural(heats, "heat", "heats")} · ${range} riders${oneVOne ? " (1 v 1)" : ""} · ${minutes} min`,
     heatBox: (n: number) => `${n} ${plural(n, "rider", "riders")}`,
     advancesWithoutRiding: "Advances without riding",
     heatName: (round: string, index: number) => `${round} H${index}`,
@@ -1114,7 +1115,7 @@ export const help: Record<string, Help> = {
   "format.breakHeat": { text: "Time between two heats of the same round.", example: "3 minutes" },
   "format.breakRound": { text: "Extra time between rounds.", example: "5 minutes" },
   "format.preview": { text: "Shows the ladder this format would create for a number of riders, using the same rules as the real draw.", example: "With 14 riders: R1 4 heats of 3–4 → SF → F" },
-  "format.seeding": { text: "Decides who meets whom in the next round.", example: "By their result in the previous round (recommended)" },
+  "format.seeding": { text: "Decides who meets whom in the next round. In a knockout, “By original seeding” pairs neighbouring heats (the winners of H1 and H2 meet).", example: "By original seeding" },
   "rules.showAll": { text: "Shows every setting, not only the common ones. Each has its own “?”.", example: "Turn on to change weights, tie-breakers or flag-out." },
 };
 
@@ -1270,15 +1271,15 @@ export const SCORING_LABELS: LabelMap = {
 
 export const FORMAT_HIDDEN = ["id", "basedOn", "kind", "hidden", "roundNames", "heatNames"] as const;
 
-const SEEDING_VALUES = { snake: "Snake (1 to A, 2 to B, …)", sequential: "In order", manual: "By hand", random: "Random draw", rotate: "Meet new riders each round" };
+const SEEDING_VALUES = { snake: "Snake (1 to A, 2 to B, …)", sequential: "In order", manual: "By hand", random: "Random draw", rotate: "Meet new riders each round", adjacent: "Neighbouring heats meet (winners of H1 and H2, H3 and H4, …)" };
 const UNEVEN_VALUES = {
   minimum_riders: "Target, minimum and maximum per heat",
   smaller_heats_for_top_seeds: "Smaller heats for the top seeds",
   one_larger_heat: "One larger heat",
   byes_top_seeds: "Top seeds advance without riding",
 };
-const RESEED_VALUES = { by_original_seed: "By original seeding", by_place_then_score: "By their result in the previous round (recommended)", by_heat_score: "By heat score" };
-const RESEED = { label: "How riders are seeded into the next round", help: "Decides who meets whom in the next round.", example: "By their result in the previous round (recommended)", values: RESEED_VALUES };
+const RESEED_VALUES = { by_original_seed: "By original seeding (in a knockout: the winners of neighbouring heats meet, H1 with H2, H3 with H4, …)", by_place_then_score: "By their result in the previous round", by_heat_score: "By heat score" };
+const RESEED = { label: "How riders are seeded into the next round", help: "Decides who meets whom in the next round. In a knockout, “By original seeding” pairs neighbouring heats (the winners of H1 and H2 meet); “By their result” re-seeds the survivors after every round, best against worst.", example: "By original seeding", values: RESEED_VALUES };
 
 export const FORMAT_LABELS: LabelMap = {
   name: { label: "Name", help: "The name shown in the format list.", example: "Arrow knockout" },

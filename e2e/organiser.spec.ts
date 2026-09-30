@@ -340,6 +340,26 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await field("Maximum per heat").fill("5");
   await field("Preview with").fill("14");
 
+  // the same three numbers apply to EVERY round: target 3 / minimum 3 / maximum 3, 1 advances, final of 2, 24 riders
+  await field("Riders per heat (target)").fill("3");
+  await field("Minimum per heat").fill("3");
+  await field("Maximum per heat").fill("3");
+  await field("How many advance").fill("1");
+  await field("Final size").fill("2");
+  await field("Preview with").fill("24");
+  await expect(page.getByTestId("format-preview")).toHaveText("With 24 riders: R1 8 heats of 3 → R2 4 heats of 2 → SF 2 heats of 2 → F 1 heat of 2 (15 heats)");
+  await expect(page.getByTestId("ladder-round")).toHaveCount(4);
+  await expect(page.getByTestId("ladder-round").nth(1)).toContainText("1 v 1");
+  await expect(page.getByTestId("ladder-round").nth(1).getByTestId("ladder-heat")).toHaveCount(4);
+  await expect(page.getByTestId("ladder-round").nth(1).getByTestId("ladder-from").first()).toContainText("1st H1");
+  await expect(page.getByTestId("ladder-round").nth(1).getByTestId("ladder-from").first()).toContainText("1st H2"); // adjacent heats meet
+  await field("Riders per heat (target)").fill("4");
+  await field("Minimum per heat").fill("4");
+  await field("Maximum per heat").fill("5");
+  await field("How many advance").fill("2");
+  await field("Final size").fill("4");
+  await field("Preview with").fill("14");
+
   // second chance: every round follows the three numbers; nobody advances without riding
   await page.getByRole("radio", { name: "Knockout with a second chance" }).check();
   await expect(page.getByTestId("tag-second_chance")).toHaveText("Every rider gets at least 2 heats");

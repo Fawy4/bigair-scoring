@@ -13,7 +13,11 @@ const MAX_BELOW_TARGET = copy.formatSimple.maxBelowTarget;
 export const DEFAULT_VEST_COLOURS = ["red", "yellow", "blue", "green", "white", "black", "orange", "pink", "purple", "grey"];
 
 /** "rotate": spread riders so that they meet riders they have not yet ridden against (round robin); the first round is dealt like "snake". */
-export const SeedingSchema = z.enum(["snake", "sequential", "manual", "random", "rotate"]);
+/**
+ * How riders are dealt into a round. "adjacent" is the knockout bracket: riders who advanced from neighbouring heats meet
+ * (the winners of H1 and H2 in one heat, H3 and H4 in the next), whatever their scores were.
+ */
+export const SeedingSchema = z.enum(["snake", "sequential", "manual", "random", "rotate", "adjacent"]);
 export const UnevenSchema = z.enum(["minimum_riders", "smaller_heats_for_top_seeds", "one_larger_heat", "byes_top_seeds"]);
 export const ReseedSchema = z.enum(["by_original_seed", "by_heat_score", "by_place_then_score"]);
 
@@ -92,7 +96,8 @@ export const SingleEliminationParamsSchema = z
     semiMin: z.number().positive().default(12),
     finalMin: z.number().positive().default(15),
     ...SEEDING_DEFAULTS,
-    reseed: ReseedSchema.default("by_place_then_score"),
+    /** "By original seeding" pairs neighbouring heats (winners of H1 and H2 meet); "by their result" re-seeds the survivors after every round. */
+    reseed: ReseedSchema.default("by_original_seed"),
   })
   .refine((p) => p.advancePerHeat < p.heatSize, {
     message: "advancePerHeat must be smaller than heatSize (the ladder has to shrink)",

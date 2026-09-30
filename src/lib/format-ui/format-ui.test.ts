@@ -9,6 +9,32 @@ import { advanceTargets, newCustomFormat, newRound, validateFormat } from "./cus
 import { placesLabel, previewFormat } from "./preview";
 import { copy } from "@/lib/ui-copy";
 
+describe("knockout preview with target 3 / minimum 3 / maximum 3 (docs/04 decision 33)", () => {
+  const template = () => {
+    const json = JSON.parse(JSON.stringify(single));
+    Object.assign(json.generator.params, { heatSize: 3, minHeatSize: 3, maxHeatSize: 3, advancePerHeat: 1, finalSize: 2 });
+    return parseFormatTemplate(json);
+  };
+  const p = previewFormat(template(), 24);
+  it("the sentence lists every round: R1 8 heats of 3 → R2 4 heats of 2 → SF 2 heats of 2 → F 1 heat of 2 (15 heats)", () => {
+    expect(p.sentence).toBe("With 24 riders: R1 8 heats of 3 → R2 4 heats of 2 → SF 2 heats of 2 → F 1 heat of 2 (15 heats)");
+    expect(p.totalHeats).toBe(15);
+  });
+  it("the diagram names the 1 v 1 rounds, shows who meets whom, and says where each place goes", () => {
+    expect(p.ladder.map((c) => c.id)).toEqual(["R1", "R2", "SF", "F"]);
+    expect(p.ladder[0].summary).not.toContain("1 v 1");
+    expect(p.ladder[1].summary).toContain("1 v 1");
+    expect(p.ladder[2].summary).toContain("1 v 1");
+    expect(p.ladder[1].heats.map((h) => h.from)).toEqual([["1st H1", "1st H2"], ["1st H3", "1st H4"], ["1st H5", "1st H6"], ["1st H7", "1st H8"]]);
+    expect(p.ladder[2].heats.map((h) => h.from)).toEqual([["1st H1", "1st H2"], ["1st H3", "1st H4"]]);
+    expect(p.ladder[0].routes).toEqual(["1st → R2", "2nd–3rd → out"]);
+    expect(p.ladder[1].routes).toEqual(["1st → SF", "2nd → out"]);
+  });
+  it("no warning: the 1 v 1 rounds are the rule, not a problem", () => {
+    expect(p.warnings).toEqual([]);
+  });
+});
+
 describe("format preview", () => {
   it("describes the real draw the engine deals", () => {
     const p = previewFormat(parseFormatTemplate(single), 14);
@@ -161,8 +187,10 @@ describe("plain words in the ladder: heat names, placeholders, advancing without
 
   it("the first round has no placeholders; a later round reads '1st H1' when it comes from the previous round", () => {
     expect(knock.ladder[0].heats.every((h) => h.from.length === 0)).toBe(true);
-    expect(knock.ladder[1].heats[0].from).toEqual(["1st H1", "1st H4", "2nd H1", "2nd H4"]);
-    expect(knock.ladder[2].heats[0].from).toEqual(["1st H1", "1st H2", "2nd H1", "2nd H2"]);
+    // "By original seeding" pairs neighbouring heats: the top two of H1 and H2 meet in the next round's first heat (docs/04 decision 33)
+    expect(knock.ladder[1].heats[0].from).toEqual(["1st H1", "2nd H1", "1st H2", "2nd H2"]);
+    expect(knock.ladder[1].heats[1].from).toEqual(["1st H3", "2nd H3", "1st H4", "2nd H4"]);
+    expect(knock.ladder[2].heats[0].from).toEqual(["1st H1", "1st H2", "2nd H1", "2nd H2"]); // the Final is one heat: everybody from the Semi-finals
   });
 
   it("a source in another round names the round: '1st R1 H1'", () => {

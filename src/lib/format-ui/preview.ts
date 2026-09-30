@@ -136,7 +136,7 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
     shortName: r.shortName,
     name: r.name,
     defaultName: r.spec.name,
-    summary: t.heatSizes(rounds[i].heats, range(rounds[i].minSize, rounds[i].maxSize), rounds[i].heatMin),
+    summary: t.heatSizes(rounds[i].heats, range(rounds[i].minSize, rounds[i].maxSize), rounds[i].heatMin, rounds[i].heats > 1 && rounds[i].maxSize === 2),
     heats: r.heats.map((h) => ({
       id: h.id,
       name: h.name ?? t.heatName(r.shortName, h.index),

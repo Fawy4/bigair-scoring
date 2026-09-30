@@ -14,6 +14,8 @@ import { canonicalHash, planPreset } from "../src/lib/presets/plan";
 loadEnv();
 need(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
 const db = createServiceClient();
+/** Presets in the repository are reviewed code, so what the seed writes is published at once (customers see it; existing divisions keep their version). */
+const PUBLISHED_NOW = new Date().toISOString();
 
 const readJson = (path: string): Record<string, unknown> => JSON.parse(readFileSync(path, "utf8"));
 const files = (dir: string) => readdirSync(`presets/${dir}`).filter((f) => f.endsWith(".json")).sort().map((f) => `presets/${dir}/${f}`);
@@ -32,7 +34,7 @@ async function seedTable(table: "scoring_models" | "format_templates", paths: st
       const plan = planPreset({ key: parsed.id, version: versioned ? parsed.version : undefined, hash }, (rows ?? []).map((r) => ({ version: r.version, hash: r.content_hash })), versioned);
       if (plan.action === "error") throw new Error(plan.message);
       if (plan.action === "unchanged") { unchanged++; console.log(`  same      ${table}/${parsed.id}`); continue; }
-      const { error: insErr } = await db.from(table).insert({ organisation_id: null, key: parsed.id, name: parsed.name, version: plan.version, json: raw as never, content_hash: hash });
+      const { error: insErr } = await db.from(table).insert({ organisation_id: null, key: parsed.id, name: parsed.name, version: plan.version, json: raw as never, content_hash: hash, published_at: PUBLISHED_NOW });
       if (insErr) throw new Error(insErr.message);
       inserted++;
       console.log(`  inserted  ${table}/${parsed.id} v${plan.version}`);
@@ -55,7 +57,7 @@ async function seedGeneric(kind: string, items: Array<{ key: string; name: strin
       const plan = planPreset({ key, version: undefined, hash }, (rows ?? []).map((r) => ({ version: r.version, hash: r.content_hash })), false);
       if (plan.action === "error") throw new Error(plan.message);
       if (plan.action === "unchanged") { unchanged++; console.log(`  same      presets/${kind}/${key}`); continue; }
-      const { error: insErr } = await db.from("presets").insert({ organisation_id: null, kind, key, name, version: plan.version, json: raw as never, content_hash: hash });
+      const { error: insErr } = await db.from("presets").insert({ organisation_id: null, kind, key, name, version: plan.version, json: raw as never, content_hash: hash, published_at: PUBLISHED_NOW });
       if (insErr) throw new Error(insErr.message);
       inserted++;
       console.log(`  inserted  presets/${kind}/${key} v${plan.version}`);
@@ -77,7 +79,7 @@ async function seedVocabulary() {
     if (row?.content_hash === hash) { unchanged++; console.log(`  same      trick_vocabularies/${key}`); continue; }
     const { error } = row
       ? await db.from("trick_vocabularies").update({ json: raw as never, content_hash: hash }).eq("id", row.id) // vocabularies are copied per event, so updating the system copy is safe
-      : await db.from("trick_vocabularies").insert({ organisation_id: null, event_id: null, key, json: raw as never, content_hash: hash });
+      : await db.from("trick_vocabularies").insert({ organisation_id: null, event_id: null, key, json: raw as never, content_hash: hash, published_at: PUBLISHED_NOW });
     if (error) { failed++; problems.push(`${path}: ${error.message}`); } else { inserted++; console.log(`  ${row ? "updated " : "inserted"}  trick_vocabularies/${key}`); }
   }
 }

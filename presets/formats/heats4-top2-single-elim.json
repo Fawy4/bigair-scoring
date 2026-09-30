@@ -17,7 +17,7 @@
       "semiMin": 12,
       "finalMin": 15,
       "seeding": "snake",
-      "reseed": "by_place_then_score"
+      "reseed": "by_original_seed"
     }
   },
   "placings": { "eliminated": "shared", "finalHeatIsRanking": true }

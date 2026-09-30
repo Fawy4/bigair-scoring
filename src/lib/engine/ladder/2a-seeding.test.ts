@@ -130,8 +130,10 @@ describe("2A byes_top_seeds (Decision 6)", () => {
 
 describe("2A 'eliminates nobody' (Decision 3)", () => {
   // With the default minimum (target − 1 = 3) five riders are one heat (docs/04 decision 23). A minimum of 2 gives the earlier split.
+  // (The default knockout now advances only 1 from a heat of two, so nothing is left to warn about: docs/04 decision 33. The warning still
+  // exists for the older "smaller heats for top seeds" rule, which is what this test uses.)
   it("N = 5, size 4, minimum 2, top 2 advance → [1,4] · [2,3,5] and a warning for Heat 1", () => {
-    const draw = expandFormat(single({ minHeatSize: 2 }), makeEntrants(5));
+    const draw = expandFormat(single({ minHeatSize: 2, uneven: "smaller_heats_for_top_seeds" }), makeEntrants(5));
     expect(seeds(draw, "R1")).toEqual([[1, 4], [2, 3, 5]]);
     const w = draw.warnings.filter((x) => x.type === "eliminates_nobody");
     expect(w).toHaveLength(1);

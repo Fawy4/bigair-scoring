@@ -196,7 +196,8 @@ export function dealSequential<T>(items: T[], caps: number[]): T[][] {
 
 /** Deal items (best first) into the round's heats according to its layout and seeding rule. */
 export function dealByRule<T>(items: T[], layout: RoundLayout, seeding: RoundSpec["seeding"]): T[][] {
-  const deal = seeding === "sequential" || seeding === "manual" ? dealSequential : dealSnake;
+  // "adjacent" fills heat 1, then heat 2, … from a list already ordered by source heat (the winners of H1 and H2 meet)
+  const deal = seeding === "sequential" || seeding === "manual" || seeding === "adjacent" ? dealSequential : dealSnake;
   if (layout.byes > 0) {
     const b = layout.byes;
     return [...items.slice(0, b).map((x) => [x]), ...deal(items.slice(b), layout.capacities.slice(b))];
