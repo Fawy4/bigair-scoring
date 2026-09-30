@@ -32,12 +32,15 @@ export function IdentificationEditor({
   presets,
   organisationId,
   errors,
+  division,
 }: {
   value: IdentificationValue;
   onChange: (v: IdentificationValue) => void;
   presets: IdentificationScheme[];
   organisationId: string;
   errors: string[];
+  /** Used inside one division: no "allow per-division override" switch, and the heading says so. */
+  division?: boolean;
 }) {
   const s = value.scheme;
   const [presetName, setPresetName] = useState("");
@@ -82,8 +85,8 @@ export function IdentificationEditor({
 
   return (
     <fieldset className="panel flex flex-col gap-5">
-      <legend className="px-1 text-xl font-extrabold">{T.heading}</legend>
-      <p className="font-semibold">{T.intro}</p>
+      <legend className="px-1 text-xl font-extrabold">{division ? T.divisionHeading : T.heading}</legend>
+      <p className="font-semibold">{division ? T.divisionIntro : T.intro}</p>
 
       <fieldset className="flex flex-col gap-2">
         <legend>
@@ -229,12 +232,14 @@ export function IdentificationEditor({
         </div>
       </fieldset>
 
-      <span className="flex items-start gap-2">
-        <label className="flex items-center gap-3 font-bold">
-          <input type="checkbox" checked={value.allowDivisionOverride} onChange={(e) => onChange({ ...value, allowDivisionOverride: e.target.checked })} />
-          {T.allowOverride}
-        </label>
-      </span>
+      {division ? null : (
+        <span className="flex items-start gap-2">
+          <label className="flex items-center gap-3 font-bold">
+            <input type="checkbox" checked={value.allowDivisionOverride} onChange={(e) => onChange({ ...value, allowDivisionOverride: e.target.checked })} />
+            {T.allowOverride}
+          </label>
+        </span>
+      )}
 
       <div className="flex flex-wrap items-center gap-4" aria-live="polite">
         <span className="text-base font-bold">{T.preview}</span>

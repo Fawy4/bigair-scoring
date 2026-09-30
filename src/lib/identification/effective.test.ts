@@ -60,3 +60,16 @@ describe("the Riders table shows each rider as judges will see them, under every
     expect(l.primary.text).toBe(copy.riders.lycraAtDraw);
   });
 });
+
+describe("Name call-out is the default", () => {
+  it("exists, is the first built-in scheme, and is what an event gets when the organiser has no lycras", async () => {
+    const { defaultScheme, lycraScheme, usesLycras } = await import("@/lib/schemas/identification");
+    const { blankEventValues } = await import("@/lib/schemas/event-values");
+    expect(defaultScheme().id).toBe("name-callout");
+    expect(builtInSchemes()[0].id).toBe("name-callout");
+    expect(defaultScheme().primary).toBe("name");
+    expect(blankEventValues("Africa/Cairo").settings.identification?.scheme.id).toBe("name-callout");
+    expect(usesLycras(defaultScheme())).toBe(false);
+    expect(lycraScheme().primary).toBe("vest_colour");
+  });
+});

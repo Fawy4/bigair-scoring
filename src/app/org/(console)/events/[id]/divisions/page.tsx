@@ -1,5 +1,9 @@
 import { notFound } from "next/navigation";
 import { getOrgContext } from "@/lib/org/context";
+import { loadIdentificationSchemes } from "@/lib/org/presets";
+import { divisionScheme } from "@/lib/identification/division-scheme";
+import { parseEventSettings } from "@/lib/schemas/event-settings";
+import { defaultScheme } from "@/lib/schemas/identification";
 import type { PresetRow } from "@/lib/presets/options";
 import { copy } from "@/lib/ui-copy";
 import { DivisionsManager, type DivisionRow } from "./divisions-manager";
@@ -9,13 +13,13 @@ export const metadata = { title: copy.wizard.steps.divisions };
 export default async function DivisionsStepPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase } = await getOrgContext();
-  const { data: event } = await supabase.from("events").select("id, organisation_id").eq("id", id).maybeSingle();
+  const { data: event } = await supabase.from("events").select("id, organisation_id, settings").eq("id", id).maybeSingle();
   if (!event) notFound();
 
   const [{ data: divisions }, { data: started }, { data: withHeats }, { data: models }, { data: formats }] = await Promise.all([
     supabase
       .from("divisions")
-      .select("id, name, sort_order, scoring_model_id, scoring_overrides, format_template_id, format_params, rules_unlocked_at")
+      .select("id, name, sort_order, scoring_model_id, scoring_overrides, format_template_id, format_params, rules_unlocked_at, description, identification, trick_base")
       .eq("event_id", id)
       .order("sort_order")
       .order("created_at"),
@@ -35,10 +39,15 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
     scoring_overrides: d.scoring_overrides,
     format_template_id: d.format_template_id,
     format_params: d.format_params,
+    description: d.description,
+    identification: divisionScheme(d.identification) ? { scheme: divisionScheme(d.identification)!, basedOn: (d.identification as { basedOn?: string } | null)?.basedOn } : null,
+    trickBase: d.trick_base,
     hasHeats: heatIds.has(d.id),
     locked: startedIds.has(d.id) && d.rules_unlocked_at === null,
   }));
 
+  const settings = parseEventSettings(event.settings);
+  const schemes = await loadIdentificationSchemes(supabase, event.organisation_id);
   return (
     <main className="flex max-w-4xl flex-col gap-6">
       <h1 className="text-3xl font-extrabold">{copy.divisions.stepHeading}</h1>
@@ -49,6 +58,9 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
       <DivisionsManager
         eventId={id}
         organisationId={event.organisation_id}
+        eventScheme={settings.identification?.scheme ?? defaultScheme()}
+        allowOverride={settings.identification?.allowDivisionOverride ?? false}
+        schemes={schemes}
         initialDivisions={rows}
         initialScoring={(models ?? []) as PresetRow[]}
         initialFormats={(formats ?? []) as PresetRow[]}

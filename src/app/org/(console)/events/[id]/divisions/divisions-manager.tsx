@@ -4,8 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import type { PresetRow } from "@/lib/presets/options";
+import type { IdentificationScheme } from "@/lib/schemas/identification";
 import { copy } from "@/lib/ui-copy";
-import { addDivision, deleteDivision, duplicateDivision, moveDivision, renameDivision } from "./actions";
+import { addDivision, deleteDivision, duplicateDivision, moveDivision, renameDivision, saveDivisionDescription } from "./actions";
+import { DivisionIdentification } from "./division-identification";
 import { RulesPanel } from "./rules-panel";
 
 export interface DivisionRow {
@@ -16,23 +18,34 @@ export interface DivisionRow {
   scoring_overrides: unknown;
   format_template_id: string | null;
   format_params: unknown;
+  /** The level, shown on the registration page. */
+  description: string | null;
+  /** The division's own Rider label scheme; null = the event's. */
+  identification: { scheme: IdentificationScheme; basedOn?: string } | null;
+  trickBase: unknown;
   /** Any heat exists (a division with heats cannot be deleted). */
   hasHeats: boolean;
   /** A heat has started and nobody unlocked the rules. */
   locked: boolean;
 }
 
-type Tab = "scoring" | "format";
+type Tab = "scoring" | "format" | "identification";
 
 export function DivisionsManager({
   eventId,
   organisationId,
+  eventScheme,
+  allowOverride,
+  schemes,
   initialDivisions,
   initialScoring,
   initialFormats,
 }: {
   eventId: string;
   organisationId: string;
+  eventScheme: IdentificationScheme;
+  allowOverride: boolean;
+  schemes: IdentificationScheme[];
   initialDivisions: DivisionRow[];
   initialScoring: PresetRow[];
   initialFormats: PresetRow[];
@@ -61,7 +74,7 @@ export function DivisionsManager({
     start(async () => {
       const res = await addDivision(eventId, newName);
       if (!res.ok) return fail(res.error);
-      setDivisions((ds) => [...ds, { id: res.id, name: newName.trim(), sort_order: res.sortOrder, scoring_model_id: null, scoring_overrides: {}, format_template_id: null, format_params: {}, hasHeats: false, locked: false }]);
+      setDivisions((ds) => [...ds, { id: res.id, name: newName.trim(), sort_order: res.sortOrder, scoring_model_id: null, scoring_overrides: {}, format_template_id: null, format_params: {}, description: null, identification: null, trickBase: {}, hasHeats: false, locked: false }]);
       setOpenId(res.id);
       setNewName("");
       toast({ title: copy.divisions.added });
@@ -176,6 +189,29 @@ export function DivisionsManager({
                 </button>
               </div>
               {d.hasHeats ? <p className="font-semibold">{copy.divisions.hasHeats}</p> : null}
+              <div className="flex flex-col gap-1">
+                <label htmlFor={`desc-${d.id}`} className="font-bold">
+                  {copy.divisions.descriptionLabel}
+                </label>
+                <input
+                  id={`desc-${d.id}`}
+                  key={d.description ?? ""}
+                  defaultValue={d.description ?? ""}
+                  maxLength={300}
+                  placeholder={copy.divisions.descriptionPlaceholder}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v === (d.description ?? "")) return;
+                    start(async () => {
+                      const res = await saveDivisionDescription(d.id, v);
+                      if (!res.ok) return fail(res.error);
+                      setDivisions((ds) => ds.map((x) => (x.id === d.id ? { ...x, description: v || null } : x)));
+                      toast({ title: copy.divisions.descriptionSaved });
+                    });
+                  }}
+                />
+                <p className="text-sm font-semibold">{copy.divisions.descriptionHint}</p>
+              </div>
               <p className="font-semibold">
                 {copy.divisions.summary(sModel ? sModel.name : copy.divisions.notChosen, fTemplate ? fTemplate.name : copy.divisions.notChosen, d.locked)}
               </p>
@@ -183,9 +219,9 @@ export function DivisionsManager({
               {open ? (
                 <div className="flex flex-col gap-4 border-t-2 border-[#111] pt-4">
                   <div role="tablist" aria-label={copy.divisions.tabsLabel(d.name)} className="flex gap-2">
-                    {(["scoring", "format"] as const).map((t) => (
+                    {(["scoring", "format", "identification"] as const).map((t) => (
                       <button key={t} type="button" role="tab" aria-selected={tab === t} className={`btn ${tab === t ? "btn-primary" : ""}`} onClick={() => setTab(t)}>
-                        {t === "scoring" ? copy.divisions.tabScoring : copy.divisions.tabFormat}
+                        {t === "scoring" ? copy.divisions.tabScoring : t === "format" ? copy.divisions.tabFormat : copy.divisions.tabIdentification}
                       </button>
                     ))}
                   </div>
@@ -198,6 +234,18 @@ export function DivisionsManager({
                       organisationId={organisationId}
                       onPresetAdded={(row) => setScoring((s) => [...s, row])}
                       onDivisionChange={(p) => patch(d.id, p)}
+                    />
+                  ) : tab === "identification" ? (
+                    <DivisionIdentification
+                      key={`i-${d.id}`}
+                      eventId={eventId}
+                      divisionId={d.id}
+                      organisationId={organisationId}
+                      eventScheme={eventScheme}
+                      allowOverride={allowOverride}
+                      presets={schemes}
+                      initial={d.identification}
+                      onSaved={(stored) => setDivisions((ds) => ds.map((x) => (x.id === d.id ? { ...x, identification: stored } : x)))}
                     />
                   ) : (
                     <RulesPanel

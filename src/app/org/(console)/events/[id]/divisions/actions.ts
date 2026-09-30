@@ -7,6 +7,7 @@ import { canonicalHash } from "@/lib/presets/plan";
 import { asNewPreset, importFormatTemplate, importScoringModel, type PresetKind } from "@/lib/presets/io";
 import type { PresetRow } from "@/lib/presets/options";
 import { FormatTemplateSchema } from "@/lib/schemas/format-template";
+import { IdentificationSchemeSchema } from "@/lib/schemas/identification";
 import { ScoringModelSchema } from "@/lib/schemas/scoring-model";
 import { FORMAT_NULLABLE, mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { issuesToMap } from "@/lib/form/path";
@@ -88,7 +89,7 @@ export async function duplicateDivision(divisionId: string): Promise<Ok<{ id: st
   const { supabase } = await getOrgContext();
   const { data: src } = await supabase
     .from("divisions")
-    .select("event_id, name, scoring_model_id, scoring_overrides, format_template_id, format_params, panel_id")
+    .select("event_id, name, scoring_model_id, scoring_overrides, format_template_id, format_params, description, identification, trick_base")
     .eq("id", divisionId)
     .maybeSingle();
   if (!src) return { ok: false, error: E.notFound };
@@ -104,8 +105,10 @@ export async function duplicateDivision(divisionId: string): Promise<Ok<{ id: st
       scoring_overrides: src.scoring_overrides,
       format_template_id: src.format_template_id,
       format_params: src.format_params,
-      panel_id: src.panel_id,
-    })
+      description: src.description,
+      identification: src.identification,
+      trick_base: src.trick_base,
+    }) // the judges (panel) are not copied: each division has its own panel, chosen in the Officials step
     .select("id")
     .single();
   if (error) return { ok: false, error: explain(error.message) };
@@ -208,3 +211,35 @@ export async function unlockRules(divisionId: string, reason: string): Promise<O
   return { ok: true };
 }
 
+
+/** A division's own Rider label scheme, or null to go back to the event's. */
+export async function saveDivisionIdentification(input: { divisionId: string; scheme: unknown | null; basedOn?: string }): Promise<Ok<object> | Fail> {
+  const I = copy.divisions.identification.errors;
+  if (!uuid.safeParse(input.divisionId).success) return { ok: false, error: E.notFound };
+  let stored: { scheme: unknown; basedOn?: string } | null = null;
+  if (input.scheme !== null) {
+    const parsed = IdentificationSchemeSchema.safeParse(input.scheme);
+    if (!parsed.success) return { ok: false, error: I.invalid };
+    stored = { scheme: parsed.data, ...(input.basedOn ? { basedOn: input.basedOn } : {}) };
+  }
+  const { supabase } = await getOrgContext();
+  const d = await eventOf(supabase, input.divisionId);
+  if (!d) return { ok: false, error: E.notFound };
+  const { data, error } = await supabase.from("divisions").update({ identification: stored as never }).eq("id", input.divisionId).select("id");
+  if (error || !data?.length) return { ok: false, error: I.failed };
+  refresh(d.event_id);
+  return { ok: true };
+}
+
+/** The level description riders see on the registration page. */
+export async function saveDivisionDescription(divisionId: string, text: string): Promise<Ok<object> | Fail> {
+  if (!uuid.safeParse(divisionId).success) return { ok: false, error: E.notFound };
+  const value = text.trim().slice(0, 300);
+  const { supabase } = await getOrgContext();
+  const d = await eventOf(supabase, divisionId);
+  if (!d) return { ok: false, error: E.notFound };
+  const { data, error } = await supabase.from("divisions").update({ description: value || null }).eq("id", divisionId).select("id");
+  if (error || !data?.length) return { ok: false, error: E.failed };
+  refresh(d.event_id);
+  return { ok: true };
+}
