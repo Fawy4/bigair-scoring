@@ -248,3 +248,23 @@ export async function createDemoOrganisation(): Promise<{ ok: true } | Failure> 
   }
   return { ok: true };
 }
+
+// ------------------------------------------------------------------ move an event
+
+export interface MoveSummary {
+  riders_copied: number;
+  riders_reused: number;
+  riders_removed: number;
+  presets_copied: number;
+}
+
+/** Owner only. One database transaction; refused while a heat of the event is running or paused. The database writes the audit line. */
+export async function moveEvent(eventId: string, targetOrgId: string): Promise<{ ok: true; summary: MoveSummary } | Failure> {
+  if (!z.string().uuid().safeParse(eventId).success || !z.string().uuid().safeParse(targetOrgId).success) return fail();
+  const { supabase, role } = await requireAdmin();
+  if (role !== "owner") return fail("NOT_ALLOWED");
+  const { data, error } = await supabase.rpc("admin_move_event", { p_event: eventId, p_target_org: targetOrgId });
+  if (error) return fail(error.message);
+  revalidatePath("/", "layout");
+  return { ok: true, summary: data as unknown as MoveSummary };
+}

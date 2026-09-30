@@ -474,6 +474,116 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
     });
   });
 
+  // ------------------------------------------------------------------ move an event to another organisation
+  describe("Move event to another organisation", () => {
+    const mv: Record<string, string> = {};
+    let orgCClient: SupabaseClient;
+    const emailShared = `shared-${run}@private.example.com`;
+    const count = async (t: string, col: string, v: string) => ((await w.s.from(t).select("id").eq(col, v)).data ?? []).length;
+
+    beforeAll(async () => {
+      const oc = await makeUser("orgC");
+      await ins("memberships", { organisation_id: w.ids.orgC, user_id: oc.id, role: "owner" });
+      orgCClient = await signedIn(oc.email, password);
+      const base = { timezone: "Africa/Cairo", start_date: "2026-11-01", end_date: "2026-11-02" };
+      // an organisation preset of the source organisation, used by the moving event's division
+      mv.model = (await ins("scoring_models", { organisation_id: w.ids.orgA, key: `mv-${run}`, name: "Moving model", version: 1, json: { heat: { duplicateWindowSec: 20 } }, content_hash: "mv1" })).id;
+      mv.ev = (await ins("events", { ...base, organisation_id: w.ids.orgA, name: "Moving event", slug: `plat-mv-${run}`, status: "published", settings: { publicLiveScores: "live", identification: { scheme: { id: "x" } } } })).id;
+      mv.other = (await ins("events", { ...base, organisation_id: w.ids.orgA, name: "Staying event", slug: `plat-stay-${run}`, status: "draft" })).id;
+      mv.div = (await ins("divisions", { event_id: mv.ev, name: "Moving division", sort_order: 1, scoring_model_id: mv.model })).id;
+      mv.divOther = (await ins("divisions", { event_id: mv.other, name: "Staying division", sort_order: 1 })).id;
+      mv.panel = (await ins("panels", { event_id: mv.ev, name: "Moving panel" })).id;
+      mv.seat = (await ins("judge_seats", { event_id: mv.ev, name: "Moving judge", role: "judge", status: "active", active: true })).id;
+      // riders: one only in the moving event, one also in the staying event, one whose email already exists in the target organisation
+      mv.rOnly = (await ins("riders", { organisation_id: w.ids.orgA, first_name: "Only", last_name: "Moving", email: `only-${run}@private.example.com` })).id;
+      mv.rBoth = (await ins("riders", { organisation_id: w.ids.orgA, first_name: "Both", last_name: "Events" })).id;
+      mv.rShared = (await ins("riders", { organisation_id: w.ids.orgA, first_name: "Shared", last_name: "Person", email: emailShared })).id;
+      mv.rTargetShared = (await ins("riders", { organisation_id: w.ids.orgC, first_name: "Shared", last_name: "Person", email: emailShared })).id;
+      for (const [i, r] of [mv.rOnly, mv.rBoth, mv.rShared].entries()) await ins("entries", { division_id: mv.div, rider_id: r, seed: i + 1, status: "confirmed", source: "manual", identifiers: { bib: i + 1 } });
+      await ins("entries", { division_id: mv.divOther, rider_id: mv.rBoth, seed: 1, status: "confirmed", source: "manual" });
+      mv.round = (await ins("rounds", { division_id: mv.div, sort_order: 1, name: "Round 1", short_name: "R1", spec: {} })).id;
+      mv.heat = (await ins("heats", { round_id: mv.round, division_id: mv.div, event_id: mv.ev, number: 1, duration_sec: 600, status: "running", started_at: new Date().toISOString() })).id;
+    });
+
+    it("is refused for organisers and staff; only an owner may move an event", async () => {
+      const args = { p_event: mv.ev, p_target_org: w.ids.orgC };
+      expect(codeOf(await w.orgA.rpc("admin_move_event", args))).toMatch(/NOT_ALLOWED/);
+      expect(codeOf(await orgCClient.rpc("admin_move_event", args))).toMatch(/NOT_ALLOWED/);
+      expect(codeOf(await w.staff.rpc("admin_move_event", args))).toMatch(/NOT_ALLOWED/);
+      expect(codeOf(await anonClient().rpc("admin_move_event", args))).not.toBe("");
+      expect(((await w.s.from("events").select("organisation_id").eq("id", mv.ev).single()).data as { organisation_id: string }).organisation_id).toBe(w.ids.orgA);
+    });
+    it("is refused while any heat of the event is running, and then nothing at all has moved", async () => {
+      const ridersBefore = await count("riders", "organisation_id", w.ids.orgC);
+      expect(codeOf(await w.owner.rpc("admin_move_event", { p_event: mv.ev, p_target_org: w.ids.orgC }))).toMatch(/HEAT_RUNNING/);
+      expect(((await w.s.from("events").select("organisation_id").eq("id", mv.ev).single()).data as { organisation_id: string }).organisation_id).toBe(w.ids.orgA);
+      expect(await count("riders", "organisation_id", w.ids.orgC)).toBe(ridersBefore); // no rider was copied
+      expect(await count("scoring_models", "organisation_id", w.ids.orgC)).toBe(0);
+      await w.s.from("heats").update({ status: "paused", paused_at: new Date().toISOString() }).eq("id", mv.heat);
+      expect(codeOf(await w.owner.rpc("admin_move_event", { p_event: mv.ev, p_target_org: w.ids.orgC }))).toMatch(/HEAT_RUNNING/); // paused counts too
+      await w.s.from("heats").update({ status: "ended", ended_at: new Date().toISOString() }).eq("id", mv.heat);
+    });
+    it("refuses the same organisation, an unknown organisation and an unknown event", async () => {
+      expect(codeOf(await w.owner.rpc("admin_move_event", { p_event: mv.ev, p_target_org: w.ids.orgA }))).toMatch(/SAME_ORGANISATION/);
+      expect(codeOf(await w.owner.rpc("admin_move_event", { p_event: mv.ev, p_target_org: "00000000-0000-4000-8000-0000000000ff" }))).toMatch(/TARGET_NOT_FOUND/);
+      expect(codeOf(await w.owner.rpc("admin_move_event", { p_event: "00000000-0000-4000-8000-0000000000fe", p_target_org: w.ids.orgC }))).toMatch(/NOT_FOUND/);
+    });
+    it("lists an organisation's events for admins only", async () => {
+      const ok = await w.staff.rpc("admin_organisation_events", { p_org: w.ids.orgA });
+      expect(ok.error).toBeNull();
+      const rows = ok.data as Array<{ id: string; name: string; running_heats: number }>;
+      expect(rows.find((r) => r.id === mv.ev)).toMatchObject({ name: "Moving event", running_heats: 0 });
+      expect(codeOf(await w.orgA.rpc("admin_organisation_events", { p_org: w.ids.orgA }))).toMatch(/NOT_ALLOWED/);
+    });
+    it("moves the event with everything that belongs to it, in one step, and leaves nothing of it behind", async () => {
+      const seatsBefore = await count("judge_seats", "event_id", mv.ev);
+      const r = await w.owner.rpc("admin_move_event", { p_event: mv.ev, p_target_org: w.ids.orgC });
+      expect(r.error?.message ?? null).toBeNull();
+      expect(r.data).toMatchObject({ riders_copied: 2, riders_reused: 1, riders_removed: 2, presets_copied: 1 });
+
+      // the event, its division, panel, officials, heat and settings are the same rows, now in the new organisation
+      const { data: ev } = await w.s.from("events").select("organisation_id, settings, name").eq("id", mv.ev).single();
+      expect(ev).toMatchObject({ organisation_id: w.ids.orgC, name: "Moving event", settings: { publicLiveScores: "live" } });
+      expect(await count("divisions", "event_id", mv.ev)).toBe(1);
+      expect(await count("panels", "event_id", mv.ev)).toBe(1);
+      expect(await count("judge_seats", "event_id", mv.ev)).toBe(seatsBefore);
+      expect(await count("heats", "event_id", mv.ev)).toBe(1);
+
+      // every entry now points at a rider of the NEW organisation (same people, same identifiers)
+      const { data: entries } = await w.s.from("entries").select("identifiers, riders(organisation_id, first_name)").eq("division_id", mv.div).order("seed");
+      expect((entries ?? []).map((e) => (e.riders as unknown as { organisation_id: string }).organisation_id)).toEqual([w.ids.orgC, w.ids.orgC, w.ids.orgC]);
+      expect((entries ?? []).map((e) => (e.riders as unknown as { first_name: string }).first_name)).toEqual(["Only", "Both", "Shared"]);
+      expect((entries ?? []).map((e) => (e.identifiers as { bib: number }).bib)).toEqual([1, 2, 3]);
+      // the person who already existed in the new organisation (same email) was reused, not duplicated
+      expect(await count("riders", "organisation_id", w.ids.orgC)).toBe(3); // Shared (reused), Only and Both (copied)
+      expect((entries ?? [])[2] && ((await w.s.from("entries").select("rider_id").eq("division_id", mv.div).eq("seed", 3).single()).data as { rider_id: string }).rider_id).toBe(mv.rTargetShared);
+
+      // the organisation preset the division used was copied, and the division points at the copy
+      const { data: div } = await w.s.from("divisions").select("scoring_model_id").eq("id", mv.div).single();
+      const { data: model } = await w.s.from("scoring_models").select("organisation_id, key, version, content_hash").eq("id", (div as { scoring_model_id: string }).scoring_model_id).single();
+      expect(model).toMatchObject({ organisation_id: w.ids.orgC, key: `mv-${run}`, version: 1, content_hash: "mv1" });
+
+      // nothing of the event is left in the old organisation: no event, no rider only this event used; the rider shared with the staying event stays
+      expect(await count("events", "organisation_id", w.ids.orgA)).toBeGreaterThan(0); // its other events are untouched
+      expect(((await w.s.from("events").select("id").eq("organisation_id", w.ids.orgA).eq("id", mv.ev)).data ?? []).length).toBe(0);
+      expect(((await w.s.from("riders").select("id").eq("id", mv.rOnly)).data ?? []).length).toBe(0);
+      expect(((await w.s.from("riders").select("id").eq("id", mv.rBoth)).data ?? []).length).toBe(1);
+      expect(((await w.s.from("riders").select("id").eq("id", mv.rShared)).data ?? []).length).toBe(0);
+      expect(((await w.s.from("entries").select("id").eq("division_id", mv.divOther)).data ?? []).length).toBe(1);
+      const { data: oldRiders } = await w.s.from("entries").select("id, riders!inner(organisation_id)").eq("event_id", mv.ev).eq("riders.organisation_id", w.ids.orgA);
+      expect(oldRiders ?? []).toEqual([]);
+    });
+    it("the old organisation's organiser loses sight of the event and the new organisation's organiser gains it; the move is audited", async () => {
+      expect(((await w.orgA.from("events").select("id").eq("id", mv.ev)).data ?? []).length).toBe(1); // published: still public, but not theirs
+      expect(((await w.orgA.from("divisions").select("id").eq("id", mv.div)).data ?? []).length).toBe(1); // public read of a published event
+      expect((await w.orgA.from("events").update({ name: "Hijack" }).eq("id", mv.ev).select("id")).data ?? []).toEqual([]);
+      expect((await orgCClient.from("events").update({ location: "New home" }).eq("id", mv.ev).select("id")).data).toHaveLength(1);
+      const { data } = await w.s.from("audit_log").select("actor_user_id, before, after, row_id, organisation_id").eq("action", "event_moved").eq("row_id", mv.ev);
+      expect(data).toHaveLength(1);
+      expect(data![0]).toMatchObject({ actor_user_id: w.userIds.owner, organisation_id: w.ids.orgC, before: { organisation_slug: `plat-a-${run}` }, after: { organisation_slug: `plat-c-${run}`, event: "Moving event" } });
+    });
+  });
+
   // ------------------------------------------------------------------ coverage
   describe("coverage", () => {
     it("the three new tables have RLS on and policies, and no visitor can read or write them", async () => {

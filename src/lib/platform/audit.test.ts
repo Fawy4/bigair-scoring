@@ -13,6 +13,8 @@ describe("audit log wording", () => {
     expect(auditDetails({ action: "preset_published", before: null, after: { key: "kota", version: 3 }, reason: null })).toBe("kota, version 3");
     expect(auditDetails({ action: "organiser_added", before: null, after: { user_id: "u", role: "owner" }, reason: null })).toBe("role: owner");
     expect(auditDetails({ action: "impersonation_started", before: null, after: { slug: "arrow", name: "Arrow" }, reason: "support call" })).toBe("Reason: support call");
+    expect(auditDetails({ action: "event_moved", before: { organisation: "Arrow", event: "Big Air" }, after: { organisation: "Demo", event: "Big Air" }, reason: null })).toBe("“Big Air”: “Arrow” → “Demo”");
+    expect(auditLabel("event_moved")).toBe("Event moved to another organisation");
     expect(auditDetails({ action: "organisation_created", before: null, after: { name: "Arrow" }, reason: null })).toBe("");
   });
 });

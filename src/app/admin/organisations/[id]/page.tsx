@@ -7,6 +7,8 @@ import { requireAdmin } from "@/lib/platform/session";
 import { copy } from "@/lib/ui-copy";
 import { startImpersonation } from "../../actions";
 import { ArchivePanel, DeletePanel, InvitePanel, LogoPanel, RenamePanel } from "./panels";
+import { EventsPanel } from "./events-panel";
+import { formatEventDates } from "@/lib/platform/event-label";
 
 const th = "border-2 border-[#111] bg-[#eee] p-2 text-left";
 const td = "border-2 border-[#111] p-2";
@@ -19,6 +21,7 @@ export default async function OrganisationPage({ params }: { params: Promise<{ i
   const org = (all ?? []).find((o) => o.id === id);
   if (!org) notFound();
   const { data: members } = await supabase.rpc("admin_organisation_members", { p_org: id });
+  const { data: events } = await supabase.rpc("admin_organisation_events", { p_org: id });
   const { defaultTimezone } = await getPlatformSettings();
   const c = copy.admin.org;
   const status = organisationStatus(org.archived_at);
@@ -71,6 +74,12 @@ export default async function OrganisationPage({ params }: { params: Promise<{ i
         )}
       </section>
 
+      <EventsPanel
+        orgName={org.name}
+        isOwner={role === "owner"}
+        others={(all ?? []).filter((o) => o.id !== org.id).map((o) => ({ id: o.id, name: o.name }))}
+        events={(events ?? []).map((e) => ({ id: e.id, name: e.name, slug: e.slug, status: e.status, dates: formatEventDates(e.start_date, e.end_date), divisions: e.divisions_count, running: e.running_heats > 0 }))}
+      />
       <InvitePanel orgId={org.id} />
       <RenamePanel orgId={org.id} name={org.name} />
       <LogoPanel orgId={org.id} logoUrl={org.logo_url} />

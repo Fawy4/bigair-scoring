@@ -273,3 +273,42 @@ test("Create demo organisation: hidden while a demo exists, and builds the demo 
   await expect(button).toHaveCount(0);
   admin.trackOrganisation("demo-org"); // only reached on a project that had no demo: leave the project as it was
 });
+
+test("Move event to another organisation: the owner sees the action and can use it; staff only see who may", async ({ page, browser, baseURL }) => {
+  test.setTimeout(180_000);
+  const name = `E2E Movable ${admin.run}`;
+  const { data: ev } = await admin.db.from("events").insert({ organisation_id: admin.orgId, name, slug: `e2e-mov-${admin.run}`, status: "draft" }).select("id").single();
+  await admin.db.from("divisions").insert({ event_id: ev!.id, name: "Pro", sort_order: 1 });
+  const from = `E2E Big Air ${admin.run}`;
+  const to = `E2E Big Air ${plain.run}`;
+
+  // staff: the events are listed, but the action is owner-only
+  const staff = await createOrganiser({ platformAdmin: "staff" });
+  try {
+    const staffPage = await (await browser.newContext({ baseURL })).newPage();
+    await staff.signIn(staffPage, `/admin/organisations/${admin.orgId}`);
+    await expect(staffPage.getByRole("row").filter({ hasText: name })).toContainText("Only platform owners can move an event.");
+    await expect(staffPage.getByRole("button", { name: "Move event to another organisation" })).toHaveCount(0);
+  } finally {
+    await staff.cleanup();
+  }
+
+  // owner: dropdown of the OTHER organisations, a confirmation naming both, then the event is gone from this organisation
+  await admin.signIn(page, `/admin/organisations/${admin.orgId}`);
+  const row = page.getByRole("row").filter({ hasText: name });
+  await expect(row).toBeVisible({ timeout: 90_000 });
+  const select = row.getByRole("combobox");
+  await expect(select.locator("option", { hasText: from })).toHaveCount(0); // not offered: it is the current organisation
+  await expect(row.getByRole("button", { name: "Move event to another organisation" })).toBeDisabled(); // nothing chosen yet
+  await select.selectOption({ label: to });
+  await row.getByRole("button", { name: "Move event to another organisation" }).click();
+  await expect(row.getByRole("group")).toContainText(`Move “${name}” from ${from} to ${to}?`);
+  await row.getByRole("button", { name: "Yes, move it" }).click();
+  await expect(page.getByText(`“${name}” moved to ${to}`).first()).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: name })).toHaveCount(0);
+  const { data: moved } = await admin.db.from("events").select("organisation_id").eq("id", ev!.id).single();
+  expect(moved?.organisation_id).toBe(plain.orgId);
+  // and it shows in the audit log
+  await page.goto("/admin/audit");
+  await expect(page.getByRole("row").filter({ hasText: "Event moved to another organisation" }).filter({ hasText: name }).first()).toBeVisible();
+});

@@ -1738,6 +1738,23 @@ export type Database = {
         Returns: undefined
       }
       admin_health: { Args: never; Returns: Json }
+      admin_move_event: {
+        Args: { p_event: string; p_target_org: string }
+        Returns: Json
+      }
+      admin_organisation_events: {
+        Args: { p_org: string }
+        Returns: {
+          divisions_count: number
+          end_date: string
+          id: string
+          name: string
+          running_heats: number
+          slug: string
+          start_date: string
+          status: string
+        }[]
+      }
       admin_organisation_members: {
         Args: { p_org: string }
         Returns: {
