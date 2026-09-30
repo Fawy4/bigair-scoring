@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FieldLabel, HelpButton } from "@/components/help-button";
 import { defaultValueFor, friendlyMessage, type FieldNode } from "@/lib/schema-form/nodes";
+import { copy } from "@/lib/ui-copy";
 import { getIn, moveIn, removeIn, setIn } from "@/lib/form/path";
 
 type Path = (string | number)[];
@@ -27,17 +29,12 @@ const errorOf = (ctx: Ctx, path: Path) => {
 };
 
 function Label({ node, path, text }: { node: FieldNode; path: Path; text?: string }) {
-  return (
-    <>
-      <label htmlFor={idOf(path)}>{text ?? node.label}</label>
-      {node.help ? <p className="text-sm font-semibold">{node.help}</p> : null}
-    </>
-  );
+  return <FieldLabel htmlFor={idOf(path)} text={text ?? node.label} help={node.help ? { text: node.help, example: node.example } : undefined} />;
 }
 
 function Err({ ctx, path }: { ctx: Ctx; path: Path }) {
   const e = errorOf(ctx, path);
-  return e ? <p className="field-error">✖ {e}</p> : null;
+  return e ? <p className="field-error">{copy.common.problem(e)}</p> : null;
 }
 
 const isSection = (n: FieldNode) => n.kind === "object" || n.kind === "list" || n.kind === "choice" || n.kind === "nullable" || n.kind === "record";
@@ -82,10 +79,10 @@ export function SchemaForm({
             <details key={f.key} className="panel" open={anyError || undefined}>
               <summary className="cursor-pointer text-lg font-extrabold">
                 {f.label}
-                {anyError ? <span className="field-error"> ✖ needs attention</span> : null}
+                {anyError ? <span className="field-error"> {copy.common.needsAttention}</span> : null}
               </summary>
               <div className="mt-3 flex flex-col gap-4">
-                {f.help ? <p className="font-semibold">{f.help}</p> : null}
+                {f.help && f.kind !== "nullable" ? <HelpRow what={f.label} help={{ text: f.help, example: f.example }} /> : null}
                 <FieldView node={f} path={[f.key]} ctx={ctx} bare />
               </div>
             </details>
@@ -107,8 +104,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
     case "object":
       return (
         <div className={bare ? "flex flex-col gap-4" : "flex flex-col gap-3 rounded-lg border-2 border-[#111] p-3"}>
-          {bare ? null : <p className="text-base font-extrabold">{node.label}</p>}
-          {bare ? null : node.help ? <p className="text-sm font-semibold">{node.help}</p> : null}
+          {bare ? null : <FieldLabel as="span" text={node.label} help={node.help ? { text: node.help, example: node.example } : undefined} />}
           {node.fields.map((f) => (
             <div key={f.key} className="flex flex-col gap-1">
               <FieldView node={f} path={[...path, f.key]} ctx={ctx} />
@@ -125,8 +121,8 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
           <>
             <Label node={node} path={path} />
             <select id={idOf(path)} value={typeof value === "string" ? value : ""} onChange={(e) => set(e.target.value)}>
-              {typeof value === "string" && value !== "" && !choices.includes(value) ? <option value={value}>{value} (unknown)</option> : null}
-              {value === undefined || value === "" ? <option value="">Choose…</option> : null}
+              {typeof value === "string" && value !== "" && !choices.includes(value) ? <option value={value}>{copy.common.unknownOption(value)}</option> : null}
+              {value === undefined || value === "" ? <option value="">{copy.common.choose}</option> : null}
               {choices.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -172,11 +168,13 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
     case "boolean":
       return (
         <>
-          <label className="flex items-center gap-3">
-            <input id={idOf(path)} type="checkbox" checked={value === true} onChange={(e) => set(e.target.checked)} />
-            {node.label}
-          </label>
-          {node.help ? <p className="text-sm font-semibold">{node.help}</p> : null}
+          <span className="flex items-start gap-2">
+            <label className="flex items-center gap-3">
+              <input id={idOf(path)} type="checkbox" checked={value === true} onChange={(e) => set(e.target.checked)} />
+              {node.label}
+            </label>
+            {node.help ? <HelpButton what={node.label} help={{ text: node.help, example: node.example }} /> : null}
+          </span>
           <Err ctx={ctx} path={path} />
         </>
       );
@@ -191,7 +189,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
             value={value === undefined || value === null ? "" : String(value)}
             onChange={(e) => (e.target.value === "" && !node.required ? ctx.remove(path) : set(numericLike(node, e.target.value)))}
           >
-            {!node.required || value === undefined ? <option value="">{node.required ? "Choose…" : "Not set"}</option> : null}
+            {!node.required || value === undefined ? <option value="">{node.required ? copy.common.choose : copy.common.notSet}</option> : null}
             {(options ? node.options.filter((o) => options.includes(o.value)) : node.options).map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -206,7 +204,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
     case "fixed":
       return (
         <p className="font-semibold">
-          {node.label}: <strong>{String(node.value)}</strong> (fixed)
+          {node.label}: <strong>{String(node.value)}</strong> {copy.common.fixedSuffix}
         </p>
       );
 
@@ -219,8 +217,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
       const free = keys ? keys.filter((k) => !entries.some(([e]) => e === k)) : [];
       return (
         <div className="flex flex-col gap-2">
-          {bare ? null : <span className="text-base font-bold">{node.label}</span>}
-          {bare ? null : node.help ? <p className="text-sm font-semibold">{node.help}</p> : null}
+          {bare ? null : <FieldLabel as="span" text={node.label} help={node.help ? { text: node.help, example: node.example } : undefined} />}
           {entries.map(([k, v]) => (
             <div key={k} className="flex flex-wrap items-center gap-2">
               <span className="min-w-32 font-bold">{k}</span>
@@ -234,7 +231,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
                 className="w-24"
               />
               <button type="button" className="btn btn-danger" onClick={() => ctx.remove([...path, k])}>
-                Remove
+                {copy.common.remove}
               </button>
             </div>
           ))}
@@ -247,7 +244,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
               ))}
             </div>
           ) : null}
-          {keys && keys.length === 0 ? <p className="font-semibold">Add trick categories first; limits are set per category.</p> : null}
+          {keys && keys.length === 0 ? <p className="font-semibold">{copy.friendly.addCategoriesFirst}</p> : null}
           <Err ctx={ctx} path={path} />
         </div>
       );
@@ -258,8 +255,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
       const variant = node.variants.find((v) => v.value === current) ?? node.variants[0];
       return (
         <div className="flex flex-col gap-3">
-          {bare ? null : <label htmlFor={idOf(path)}>{node.label}</label>}
-          {bare ? null : node.help ? <p className="text-sm font-semibold">{node.help}</p> : null}
+          {bare ? null : <Label node={node} path={path} />}
           <select
             id={idOf(path)}
             aria-label={bare ? node.label : undefined}
@@ -281,7 +277,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
                 <FieldView node={f} path={[...path, f.key]} ctx={ctx} />
               </div>
             ))}
-            {variant.node.fields.length === 0 ? <p className="font-semibold">Nothing more to set for this choice.</p> : null}
+            {variant.node.fields.length === 0 ? <p className="font-semibold">{copy.friendly.nothingMore}</p> : null}
           </div>
           <Err ctx={ctx} path={path} />
         </div>
@@ -292,11 +288,13 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
       const on = value !== null && value !== undefined;
       return (
         <div className="flex flex-col gap-3">
-          <label className="flex items-center gap-3 font-bold">
-            <input type="checkbox" checked={on} onChange={(e) => set(e.target.checked ? defaultValueFor(node.inner) : null)} />
-            {on ? `Use: ${node.label}` : `${node.label}: ${node.off}`}
-          </label>
-          {node.help ? <p className="text-sm font-semibold">{node.help}</p> : null}
+          <span className="flex items-start gap-2">
+            <label className="flex items-center gap-3 font-bold">
+              <input type="checkbox" checked={on} onChange={(e) => (e.target.checked ? set(defaultValueFor(node.inner)) : node.absent ? ctx.remove(path) : set(null))} />
+              {on ? copy.friendly.use(node.label) : copy.friendly.offLabel(node.label, node.off)}
+            </label>
+            {node.help ? <HelpButton what={node.label} help={{ text: node.help, example: node.example }} /> : null}
+          </span>
           {on ? <FieldView node={{ ...node.inner, label: node.label, help: undefined }} path={path} ctx={ctx} bare={node.inner.kind === "object"} /> : null}
           <Err ctx={ctx} path={path} />
         </div>
@@ -307,12 +305,14 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
       const isConst = value === node.constValue;
       return (
         <div className="flex flex-col gap-2">
-          <label className="flex items-center gap-3 font-bold">
-            <input type="checkbox" checked={isConst} onChange={(e) => set(e.target.checked ? node.constValue : defaultValueFor(node.inner))} />
-            {node.label}: {node.off}
-          </label>
-          {node.help ? <p className="text-sm font-semibold">{node.help}</p> : null}
-          {isConst ? null : <FieldView node={{ ...node.inner, label: node.inner.kind === "list" ? node.label : "Value", help: undefined }} path={path} ctx={ctx} />}
+          <span className="flex items-start gap-2">
+            <label className="flex items-center gap-3 font-bold">
+              <input type="checkbox" checked={isConst} onChange={(e) => set(e.target.checked ? node.constValue : defaultValueFor(node.inner))} />
+              {copy.friendly.offLabel(node.label, node.off)}
+            </label>
+            {node.help ? <HelpButton what={node.label} help={{ text: node.help, example: node.example }} /> : null}
+          </span>
+          {isConst ? null : <FieldView node={{ ...node.inner, label: node.inner.kind === "list" ? node.label : copy.friendly.value, help: undefined }} path={path} ctx={ctx} />}
           <Err ctx={ctx} path={path} />
         </div>
       );
@@ -321,7 +321,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
     case "tuple":
       return (
         <div className="flex flex-col gap-2">
-          <span className="text-base font-bold">{node.label}</span>
+          <FieldLabel as="span" text={node.label} help={node.help ? { text: node.help, example: node.example } : undefined} />
           <div className="flex flex-wrap gap-3">
             {node.items.map((it, i) => (
               <div key={i} className="flex flex-col gap-1">
@@ -334,7 +334,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
       );
 
     case "json":
-      return <p className="font-semibold">{node.label}: this setting cannot be edited here.</p>;
+      return <p className="font-semibold">{copy.friendly.cannotEdit(node.label)}</p>;
   }
 }
 
@@ -351,12 +351,11 @@ function ListView({ node, path, ctx, value, bare }: { node: Extract<FieldNode, {
   if (item.kind === "number") return <NumberListInput node={node} path={path} ctx={ctx} items={items} />;
 
   const optionsFor = ctx.selectOptions?.(item.pattern.join("."), ctx.root, [...path, "*"]);
-  const singular = node.label.replace(/s$/, "");
+  const singular = item.label;
   return (
     <div className="flex flex-col gap-3">
-      {bare ? null : <span className="text-base font-bold">{node.label}</span>}
-      {bare ? null : node.help ? <p className="text-sm font-semibold">{node.help}</p> : null}
-      {items.length === 0 ? <p className="font-semibold">None yet.</p> : null}
+      {bare ? null : <FieldLabel as="span" text={node.label} help={node.help ? { text: node.help, example: node.example } : undefined} />}
+      {items.length === 0 ? <p className="font-semibold">{copy.common.none}</p> : null}
       {items.map((_, i) => {
         const itemPath = [...path, i];
         const simple = item.kind === "string" || item.kind === "enum";
@@ -366,20 +365,20 @@ function ListView({ node, path, ctx, value, bare }: { node: Extract<FieldNode, {
               <FieldView node={{ ...item, label: `${singular} ${i + 1}`, help: undefined }} path={itemPath} ctx={ctx} bare />
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" className="btn" disabled={i === 0} aria-label={`Move ${singular} ${i + 1} up`} onClick={() => ctx.move(path, i, i - 1)}>
-                ↑
+              <button type="button" className="btn" disabled={i === 0} aria-label={copy.divisions.moveUp(`${singular} ${i + 1}`)} onClick={() => ctx.move(path, i, i - 1)}>
+                {copy.common.up}
               </button>
-              <button type="button" className="btn" disabled={i === items.length - 1} aria-label={`Move ${singular} ${i + 1} down`} onClick={() => ctx.move(path, i, i + 1)}>
-                ↓
+              <button type="button" className="btn" disabled={i === items.length - 1} aria-label={copy.divisions.moveDown(`${singular} ${i + 1}`)} onClick={() => ctx.move(path, i, i + 1)}>
+                {copy.common.down}
               </button>
               <button
                 type="button"
                 className="btn btn-danger"
                 disabled={node.minItems !== undefined && items.length <= node.minItems}
-                aria-label={`Remove ${singular} ${i + 1}`}
+                aria-label={`${copy.common.remove} ${singular} ${i + 1}`}
                 onClick={() => ctx.remove(itemPath)}
               >
-                Remove
+                {copy.common.remove}
               </button>
             </div>
           </div>
@@ -396,7 +395,7 @@ function ListView({ node, path, ctx, value, bare }: { node: Extract<FieldNode, {
             ctx.set([...path, items.length], fresh);
           }}
         >
-          + Add {singular.toLowerCase()}
+          {copy.common.addPrefix} {singular.toLowerCase()}
         </button>
       </div>
       <Err ctx={ctx} path={path} />
@@ -414,8 +413,7 @@ function NumberListInput({ node, path, ctx, items }: { node: Extract<FieldNode, 
   }, [shown]);
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={idOf(path)}>{node.label}</label>
-      {node.help ? <p className="text-sm font-semibold">{node.help}</p> : null}
+      <Label node={node} path={path} />
       <input
         id={idOf(path)}
         value={text}
@@ -428,7 +426,7 @@ function NumberListInput({ node, path, ctx, items }: { node: Extract<FieldNode, 
         }}
         aria-invalid={bad}
       />
-      {bad ? <p className="field-error">✖ Type numbers separated by commas, like 1, 0.75, 0.5</p> : null}
+      {bad ? <p className="field-error">{copy.common.problem(copy.friendly.numbersList)}</p> : null}
       <Err ctx={ctx} path={path} />
     </div>
   );
@@ -438,4 +436,12 @@ function parseNumbers(text: string): number[] | null {
   const parts = text.split(/[,;\s]+/).filter(Boolean);
   const nums = parts.map(Number);
   return nums.some((n) => Number.isNaN(n)) ? null : nums;
+}
+
+function HelpRow({ what, help }: { what: string; help: { text: string; example?: string } }) {
+  return (
+    <div>
+      <HelpButton what={what} help={help} />
+    </div>
+  );
 }

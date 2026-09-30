@@ -143,3 +143,30 @@
   3. *Divisions* (left rail or "Next: Divisions →"): add "Pro Men"; choose the "Legacy…" scoring preset and read the sentence; change N, the attempt limit, the judges (Simple); switch to Advanced, open "Counting and heat total" and type weights `1, 0.75, 0.5`; Save as new preset; then edit it and use "Save as new version". Export JSON; paste broken JSON to see the readable errors. *Format* tab: pick a format, change "Preview with … riders", change riders per heat under "Format generator", or press "+ Start a custom format". Duplicate, reorder and delete a division.
 - **Phone**: same links; on a phone the left rail becomes a "Setup step" dropdown. Landscape tablet is the intended size for organiser screens.
 - **Laptop**: `npm install && npm run typecheck && npm test && npm run lint`; with keys in `.env.local`: `npm run test:rls` (about 70 s) and `npm run test:e2e` (about 1 minute; needs the Phase 3 demo seed for the join tests).
+
+### Phase 4a-1 – owner's UX feedback (second round on the same branch)
+**Security fix first.** While testing the new publish hold I found a real hole from Phase 3: any signed-in user with no seat and no membership in an event (for example a judge of another event, or another organisation's organiser) could add and delete attempts in any event if they knew a heat or attempt id. The permission check compared a possibly empty seat role, and in SQL an empty value makes the whole check "unknown", which lets the call through. Fixed in `20260930120100_fix_seatless_permission_checks.sql` (applied to the hosted dev project) with a regression test. It could not be triggered from the app screens (ids are random), and no real data was involved.
+
+Done, in the order of your list:
+1. **Wording**: "Rider label", "Lycra", "score", "Impression / Variety score" everywhere, including scheme names, presets and the Phase 3 join and sign-in screens. All text is in `src/lib/ui-copy.ts`; `src/lib/ui-copy.test.ts` fails if any component, source file, the copy file or a built-in preset contains "chip", "vest" or "mark(s)". Scoring presets that said "mark" are now version 2 (text only; divisions using version 1 are untouched).
+2. **Name call-out** scheme added and made the default for new events, with the question "Will riders wear coloured lycras?" (Yes picks "Lycra colour per heat").
+3. **Visibility**: one sentence and three tick boxes, all off by default, stored in `publicLiveScores`, `publicResultsOnPublish`, `holdFinalResult`. Database: `heats.publish_hold` and `set_publish_hold` (organiser or head judge, needs a reason to hold, audited); held results disappear from the public site. Phase 5 will set the hold at publish time from these settings.
+4. **Judges sentence** in Simple ("3 judges — plain average"), with the trimming rule stated.
+5. **Rules-lock banner** on the Divisions step. The unlock flow is covered by the browser test (start a heat, see the lock, unlock with a reason, audit line). I could not open your Vercel preview from here, so please try it there once heats exist (Phase 5) or by asking me to start a test heat.
+6. **Timing**: "Default timing" and "Field size this format suits" moved under Show all settings with the helper text.
+7. **Ladder type choice** (Knockout / Knockout with a second chance / Pools to a final) with the explanations you wrote; rounds are generated. "How riders are seeded into the next round" renamed with the two options.
+8. **Ladder diagram** next to the text preview ("With 14 riders: …").
+9. **Flag-out** under Show all settings with its helper text, off by default.
+10. **Simple mode** trimmed to the owner's default; "Show all settings" toggle for the rest.
+11. **"?" help** (tap) with a sentence and an example on every setting; a test fails when a schema field has no help or example.
+
+Things you should know:
+- For generated ladders the **breaks apply to every round** (the draw engine has no per-round break for them); per-round heat length, breaks and riders per heat exist in "Custom ladder (advanced)".
+- In "Knockout with a second chance" the advance count is **fixed** by the structure (winners straight through, 2nd and 3rd get one more heat), so there is no "how many advance" box for it.
+- The starting point of "Custom ladder" is only a scaffold (heats of 4, top 2, one final heat); with many riders that final gets big: the diagram shows it, adjust the rounds.
+- Old events whose live-scores setting was "off" become "after publish" when saved (the two behave the same until Phase 5).
+
+### How to test the second round (Vercel preview)
+1. **Events → + New event**: read the sentence and the three unticked boxes under "What riders and spectators see". Under "Rider identification" the label shows "Sam Sample"; choose "Yes: … lycra colour" and see "RED"; tap the "?" next to any field.
+2. **Divisions → Pro Men → Scoring**: choose the "Legacy…" preset; change "Number of judges" and the combine setting and read the sentence under it; tick "Show all settings" for everything.
+3. **Format tab**: pick a format; choose between the three ladder types; change "Preview with … riders" and watch the ladder diagram; "Show all settings" for flag-out and default timing.

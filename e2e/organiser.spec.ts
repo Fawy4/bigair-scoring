@@ -1,7 +1,7 @@
 import { test, expect } from "./base";
 import { createOrganiser, PNG } from "./organiser";
 
-// Needs Supabase keys in the environment and the Phase 4a-1 migration. Creates and removes its own organiser and organisation.
+// Needs Supabase keys in the environment and the Phase 4a-1 migrations. Creates and removes its own organiser and organisation.
 type Organiser = Awaited<ReturnType<typeof createOrganiser>>;
 let org: Organiser;
 
@@ -14,65 +14,95 @@ test.afterAll(async () => {
 
 test("organiser: settings, then the Event step", async ({ page }) => {
   test.setTimeout(180_000);
+  // exact matching: every setting also has a "Help: …" button whose name contains the same words
+  const field = (label: string) => page.getByLabel(label, { exact: true });
+
   await org.signIn(page, "/org/settings");
   await expect(page.getByRole("heading", { name: "Organisation settings" })).toBeVisible();
 
   // Settings: rename, new slug (with the warning), logo, time zone
-  await page.getByLabel("Organisation name").fill(`Arrow ${org.run}`);
-  await page.getByLabel("Web address (slug)").fill(`arrow-${org.run}`);
+  await field("Organisation name").fill(`Arrow ${org.run}`);
+  await field("Web address (slug)").fill(`arrow-${org.run}`);
   await expect(page.getByText("Changing the web address changes your public links")).toBeVisible();
   await expect(page.getByRole("button", { name: "Save settings" })).toBeDisabled(); // needs the confirmation first
   await page.getByLabel("I understand, change the address").check();
-  await page.getByLabel("Organisation logo: choose an image file").setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: PNG });
+  await field("Organisation logo: choose an image file").setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: PNG });
   await expect(page.getByAltText("Organisation logo (current)")).toBeVisible();
-  await page.getByLabel("Default time zone for new events").selectOption("Europe/Berlin");
+  await field("Default time zone for new events").selectOption("Europe/Berlin");
   await page.getByRole("button", { name: "Save settings" }).click();
   await expect(page.getByText("Organisation settings saved").first()).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel("Organisation name")).toHaveValue(`Arrow ${org.run}`);
-  await expect(page.getByLabel("Web address (slug)")).toHaveValue(`arrow-${org.run}`);
-  await expect(page.getByLabel("Default time zone for new events")).toHaveValue("Europe/Berlin");
+  await expect(field("Organisation name")).toHaveValue(`Arrow ${org.run}`);
+  await expect(field("Web address (slug)")).toHaveValue(`arrow-${org.run}`);
+  await expect(field("Default time zone for new events")).toHaveValue("Europe/Berlin");
   await expect(page.getByAltText("Organisation logo (current)")).toBeVisible();
 
   // a wrong file is refused in plain words and nothing is uploaded
-  await page.getByLabel("Organisation logo: choose an image file").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
+  await field("Organisation logo: choose an image file").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
   await expect(page.getByRole("alert").filter({ hasText: "PNG, JPEG or WebP" })).toBeVisible();
 
   // Event step: the time zone is pre-filled from the organisation
   await page.goto("/org/events/new");
-  await expect(page.getByLabel("Time zone", { exact: true })).toHaveValue("Europe/Berlin");
-  await page.getByLabel("Event name").fill(`Arrow Big Air ${org.run}`);
-  await expect(page.getByLabel("Web address (slug)")).toHaveValue(`arrow-big-air-${org.run}`);
-  await page.getByLabel("Location").fill("El Gouna, Egypt");
-  await page.getByLabel("First day").fill("2026-10-02");
-  await page.getByLabel("Last day").fill("2026-10-04");
-  await page.getByLabel("Time zone", { exact: true }).selectOption("Africa/Cairo");
-  await page.getByLabel("Event logo: choose an image file").setInputFiles({ name: "event.png", mimeType: "image/png", buffer: PNG });
+  await expect(field("Time zone")).toHaveValue("Europe/Berlin");
+  await field("Event name").fill(`Arrow Big Air ${org.run}`);
+  await expect(field("Web address (slug)")).toHaveValue(`arrow-big-air-${org.run}`);
+
+  // "?" help: a tap opens one sentence with an example, another tap closes it
+  await page.getByRole("button", { name: "Help: Event name" }).click();
+  await expect(page.getByRole("note").filter({ hasText: "Example:" }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Help: Event name" }).click();
+  await expect(page.getByRole("note").filter({ hasText: "Arrow Big Air 2026" })).toHaveCount(0);
+
+  await field("Location").fill("El Gouna, Egypt");
+  await field("First day").fill("2026-10-02");
+  await field("Last day").fill("2026-10-04");
+  await field("Time zone").selectOption("Africa/Cairo");
+  await field("Event logo: choose an image file").setInputFiles({ name: "event.png", mimeType: "image/png", buffer: PNG });
   await expect(page.getByAltText("Event logo (current)")).toBeVisible();
   await page.getByRole("button", { name: "+ Add sponsor" }).click();
-  await page.getByLabel("Sponsor 1 name").fill("WOO");
+  await field("Sponsor 1 name").fill("WOO");
 
-  // identification: pick a preset and edit it, live preview of a rider chip
-  await expect(page.getByTestId("rider-chip-primary")).toContainText("RED");
-  await page.getByLabel("Start from a preset").selectOption({ label: "Bib / sail numbers" });
-  await expect(page.getByTestId("rider-chip-primary")).toHaveText("14");
-  await page.getByLabel("Start from a preset").selectOption({ label: "Coloured vests / lycras assigned per heat (DEFAULT)" });
-  await page.getByLabel("Name of colour 1", { exact: true }).fill("Scarlet");
-  await expect(page.getByTestId("rider-chip-primary")).toContainText("SCARLET");
-  await page.getByLabel("Save this scheme as a preset").fill(`Arrow vests ${org.run}`);
+  // visibility: one plain sentence and three tick boxes, all unticked
+  await expect(page.getByText("Nothing is shown to riders or spectators until the head judge publishes it. Optionally:")).toBeVisible();
+  const live = page.getByRole("checkbox", { name: "Show live scores during a heat (the head judge can switch this on per heat)" });
+  const results = page.getByRole("checkbox", { name: "Show results automatically when a heat is published" });
+  const hold = page.getByRole("checkbox", { name: "Hold the final’s result until the organiser releases it (podium)" });
+  for (const box of [live, results, hold]) await expect(box).not.toBeChecked();
+  await live.check();
+  await hold.check();
+
+  // identification: no lycras is the default, so riders are recognised by name
+  await expect(page.getByTestId("rider-label-primary")).toHaveText("Sam Sample");
+  await expect(page.getByLabel("No or not sure: identify riders by name")).toBeChecked();
+  await page.getByLabel("Yes: each rider (or each heat) has a lycra colour").check();
+  await expect(page.getByTestId("rider-label-primary")).toContainText("RED");
+  await expect(field("Start from a preset")).toHaveValue("vests-per-heat");
+  await field("Start from a preset").selectOption({ label: "Bib / sail numbers" });
+  await expect(page.getByTestId("rider-label-primary")).toHaveText("14");
+  await field("Start from a preset").selectOption({ label: "Lycra colour per heat" });
+  await field("Name of colour 1").fill("Scarlet");
+  await expect(page.getByTestId("rider-label-primary")).toContainText("SCARLET");
+  await field("Save this scheme as a preset").fill(`Arrow lycras ${org.run}`);
   await page.getByRole("button", { name: "Save as preset" }).click();
-  await expect(page.getByText(`Preset “Arrow vests ${org.run}” saved`).first()).toBeVisible();
+  await expect(page.getByText(`Preset “Arrow lycras ${org.run}” saved`).first()).toBeVisible();
 
-  await page.getByLabel("Registration is open").check();
-  await page.getByLabel("Published: the event is listed").check();
+  await page.getByRole("checkbox", { name: /^Registration is open/ }).check();
+  await page.getByRole("checkbox", { name: /^Published: the event is listed/ }).check();
   await page.getByRole("button", { name: "Create event" }).click();
   await expect(page).toHaveURL(/\/org\/events\/[0-9a-f-]{36}\/event$/);
-  await expect(page.getByLabel("Event name")).toHaveValue(`Arrow Big Air ${org.run}`);
-  await expect(page.getByLabel("Sponsor 1 name")).toHaveValue("WOO");
-  await expect(page.getByTestId("rider-chip-primary")).toContainText("SCARLET");
-  await expect(page.getByLabel("Registration is open")).toBeChecked();
+  await expect(field("Event name")).toHaveValue(`Arrow Big Air ${org.run}`);
+  await expect(field("Sponsor 1 name")).toHaveValue("WOO");
+  await expect(page.getByTestId("rider-label-primary")).toContainText("SCARLET");
+  await expect(page.getByRole("checkbox", { name: /^Registration is open/ })).toBeChecked();
+  await expect(live).toBeChecked();
+  await expect(results).not.toBeChecked();
+  await expect(hold).toBeChecked();
   await expect(page.getByTestId("event-code")).toHaveText(`arrow-big-air-${org.run}`);
   await expect(page.getByRole("navigation", { name: "Organiser" })).toBeVisible();
+
+  // the choices are stored in the existing settings fields
+  const { data: saved } = await org.db.from("events").select("settings").eq("slug", `arrow-big-air-${org.run}`).single();
+  expect(saved!.settings).toMatchObject({ publicLiveScores: "live", publicResultsOnPublish: false, holdFinalResult: true });
 
   // the published event appears on the public home page and links to its join page
   await page.goto("/");
@@ -80,8 +110,9 @@ test("organiser: settings, then the Event step", async ({ page }) => {
   await expect(link).toHaveAttribute("href", `/e/arrow-big-air-${org.run}/join`);
 });
 
-test("organiser: Divisions step (Simple, Advanced, presets, formats, import/export, lock)", async ({ page }) => {
-  test.setTimeout(240_000);
+test("organiser: Divisions step (Simple, Show all settings, presets, ladder choice and diagram, import/export, lock)", async ({ page }) => {
+  test.setTimeout(300_000);
+  const field = (label: string) => page.getByLabel(label, { exact: true });
   const slug = `divs-${org.run}`;
   const { data: ev, error } = await org.db
     .from("events")
@@ -94,25 +125,41 @@ test("organiser: Divisions step (Simple, Advanced, presets, formats, import/expo
 
   await org.signIn(page, `/org/events/${eventId}/divisions`);
   await expect(page.getByRole("heading", { name: "Step 2: Divisions" })).toBeVisible();
+  await expect(page.getByTestId("lock-banner")).toHaveText("Editable until the first heat of this division starts; after that, unlock with a reason (recorded).");
   await expect(missingInRail().getByText("Add at least one division")).toBeVisible();
 
   // add, and the rail follows
-  await page.getByLabel("New division name").fill("Pro Men");
+  await field("New division name").fill("Pro Men");
   await page.getByRole("button", { name: "+ Add division" }).click();
   await expect(page.getByTestId("division-card")).toHaveCount(1);
   await expect(missingInRail().getByText("Pro Men: choose how it is scored.")).toBeVisible();
 
-  // Scoring: choose the legacy preset → the live sentence from the owner's example
-  const scoringSelect = page.getByLabel("Scoring preset");
-  await scoringSelect.selectOption({ label: "Legacy (previous app): single mark 0-10 per trick, best 3 + Variety 0-10, 7 attempts" });
+  // Scoring: the legacy preset gives the owner's example sentence
+  await field("Scoring preset").selectOption({ label: "Legacy (previous app): single score 0-10 per trick, best 3 + Variety 0-10, 7 attempts" });
   await expect(page.getByTestId("model-sentence")).toHaveText("Best 3 of 7 attempts + Variety 0–10, 3 judges averaged");
 
-  // Simple level edits the sentence live
-  await page.getByLabel("How many tricks count (N)").fill("2");
+  // Simple mode shows only what the default needs
+  await expect(field("Best tricks that count (N)")).toBeVisible();
+  await expect(field("Number of judges")).toBeVisible();
+  await expect(page.getByText("Judges also give an Impression / Variety score for each rider")).toBeVisible();
+  await expect(page.getByText("Tie-breakers, in order")).toHaveCount(0);
+  await expect(page.getByText("Counting and heat total", { exact: true })).toHaveCount(0);
+
+  // Simple level edits the sentence live; the judges sentence explains the setting in words
+  await expect(page.getByTestId("panel-sentence")).toHaveText("3 judges — plain average");
+  await field("Best tricks that count (N)").fill("2");
   await expect(page.getByTestId("model-sentence")).toHaveText("Best 2 of 7 attempts + Variety 0–10, 3 judges averaged");
-  await page.getByLabel("Attempts allowed per rider per heat").fill("5");
-  await page.getByLabel("Judges on the panel (fewest)").fill("4");
+  await field("Attempts allowed per rider per heat (M)").fill("5");
+  await field("Number of judges").fill("4");
   await expect(page.getByTestId("model-sentence")).toHaveText("Best 2 of 5 attempts + Variety 0–10, 4 judges averaged");
+  await expect(page.getByTestId("panel-sentence")).toHaveText("4 judges — plain average");
+  await field("How the judges’ scores are combined").selectOption("trimmed_mean");
+  await expect(page.getByTestId("panel-sentence")).toHaveText("4 judges — plain average; with 5 or more judges the highest and lowest score are dropped and the rest averaged");
+  await field("Number of judges").fill("5");
+  await expect(page.getByTestId("panel-sentence")).toHaveText("5 judges — highest and lowest score dropped, the rest averaged");
+  await expect(page.getByText("Trimming only applies from 5 judges. With fewer judges the plain average is used automatically.")).toBeVisible();
+  await field("How the judges’ scores are combined").selectOption("mean");
+  await field("Number of judges").fill("4");
   await page.getByRole("button", { name: "Save scoring for Pro Men" }).click();
   await expect(page.getByText("Scoring saved for Pro Men").first()).toBeVisible();
 
@@ -122,28 +169,33 @@ test("organiser: Divisions step (Simple, Advanced, presets, formats, import/expo
   expect(saved!.scoring_overrides).toMatchObject({ heat: { maxAttemptsPerRider: 5, counting: { n: 2 } }, panel: { minJudges: 4 } });
   expect(JSON.stringify(saved!.scoring_overrides).length).toBeLessThan(400);
 
-  // Advanced level: every field, including the two new dials
-  await page.getByLabel("Advanced: every setting").check();
+  // "?" help on a Simple setting: tap to open, with an example
+  await page.getByRole("button", { name: "Help: How the judges’ scores are combined" }).click();
+  await expect(page.getByRole("note").filter({ hasText: "Example: Plain average of 3 judges" })).toBeVisible();
+
+  // Show all settings: every field, including the two new dials
+  await page.getByRole("checkbox", { name: "Show all settings" }).check();
   await page.getByText("Counting and heat total", { exact: true }).click();
-  await page.getByLabel("Weights for the counted tricks, best first").fill("1, 0.75, 0.5");
+  // an optional dial is a switch, off by default; turning it on shows its field
+  await page.getByRole("checkbox", { name: "Weights for the counted tricks, best first: All counted tricks count fully" }).check();
+  await field("Weights for the counted tricks, best first").fill("1, 0.75, 0.5");
   await expect(page.getByTestId("model-sentence")).toContainText("counted tricks weighted 1 / 0.75 / 0.5");
   // a mistake is reported next to the field, in plain words
-  await page.getByLabel("Weights for the counted tricks, best first").fill("1, abc");
+  await field("Weights for the counted tricks, best first").fill("1, abc");
   await expect(page.getByText("Type numbers separated by commas")).toBeVisible();
-  await page.getByLabel("Weights for the counted tricks, best first").fill("1, 0.75, 0.5");
+  await field("Weights for the counted tricks, best first").fill("1, 0.75, 0.5");
 
   // save as a preset, division switches to it
-  await page.getByLabel("Save these settings as a new preset").fill("Arrow best 2");
+  await field("Save these settings as a new preset").fill("Arrow best 2");
   await page.getByRole("button", { name: "Save as new preset" }).click();
   await expect(page.getByText("Preset “Arrow best 2” saved; Pro Men now uses it").first()).toBeVisible();
-  await expect(page.getByLabel("Scoring preset")).toContainText("Arrow best 2");
-  const { data: presetRow } = await org.db.from("scoring_models").select("key, version, json").eq("organisation_id", org.orgId).single();
+  await expect(field("Scoring preset")).toContainText("Arrow best 2");
+  const { data: presetRow } = await org.db.from("scoring_models").select("key, version").eq("organisation_id", org.orgId).single();
   expect(presetRow).toMatchObject({ key: "arrow-best-2", version: 1 });
 
   // editing the saved preset creates version 2 and leaves version 1 alone
-  await page.getByLabel("Advanced: every setting").check();
-  await page.getByLabel("Simple: the common settings").check();
-  await page.getByLabel("Attempts allowed per rider per heat").fill("6");
+  await page.getByRole("checkbox", { name: "Show all settings" }).uncheck();
+  await field("Attempts allowed per rider per heat (M)").fill("6");
   await page.getByRole("button", { name: "Save as new version of “Arrow best 2”" }).click();
   await expect(page.getByText("as version 2").first()).toBeVisible();
   const { data: versions } = await org.db.from("scoring_models").select("version, json").eq("organisation_id", org.orgId).order("version");
@@ -159,39 +211,88 @@ test("organiser: Divisions step (Simple, Advanced, presets, formats, import/expo
 
   // import: a broken file gets readable problems, a good one becomes a new preset
   await page.getByRole("button", { name: "Paste JSON instead" }).click();
-  await page.getByLabel("Paste the JSON here").fill('{ "id": "x", "name": "Broken" "oops": 1 }');
+  await field("Paste the JSON here").fill('{ "id": "x", "name": "Broken" "oops": 1 }');
   await page.getByRole("button", { name: "Import pasted JSON" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "not valid JSON" })).toBeVisible();
   const broken = { ...exported, name: "Imported bad" };
   broken.heat = { ...exported.heat, counting: { type: "best_n", n: 0 } };
-  await page.getByLabel("Paste the JSON here").fill(JSON.stringify(broken));
+  await field("Paste the JSON here").fill(JSON.stringify(broken));
   await page.getByRole("button", { name: "Import pasted JSON" }).click();
   await expect(page.getByText("heat › counting › n: Must be at least 1")).toBeVisible();
-  await page.getByLabel("Paste the JSON here").fill(JSON.stringify({ ...exported, name: "Imported OK" }));
+  await field("Paste the JSON here").fill(JSON.stringify({ ...exported, name: "Imported OK" }));
   await page.getByRole("button", { name: "Import pasted JSON" }).click();
   await expect(page.getByText("Imported “Imported OK” as a new preset").first()).toBeVisible();
 
-  // Format tab: preset + live preview from the real draw engine
+  // Format tab: three ladder types, each with its one-line explanation printed under it
   await page.getByRole("tab", { name: "Format" }).click();
-  await page.getByLabel("Format", { exact: true }).selectOption({ label: "Single elimination — heats of 4, top 2 advance, final of 4" });
+  await field("Start from a format").selectOption({ label: "Single elimination — heats of 4, top 2 advance, final of 4" });
+  for (const text of [
+    "Top riders from each heat advance to the next round; the rest are out.",
+    "Example: heats of 4, top 2 go through.",
+    "Heat winners advance directly; 2nd and 3rd get one more heat to qualify.",
+    "Example: King of the Air Round 1 → Round 2.",
+    "Everyone rides once; all heat scores are ranked together and the top N ride the final.",
+    "Example: 23 riders in 3 pools, best 6 to the final.",
+  ]) {
+    await expect(page.getByText(text, { exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole("radio", { name: "Knockout", exact: true })).toBeChecked();
+
+  // the text preview and the ladder diagram follow the rider count
   await expect(page.getByTestId("format-preview")).toHaveText("With 14 riders: R1 4 heats of 3–4 → SF 2 heats of 4 → F 1 heat of 4 (7 heats)");
-  await page.getByLabel("Preview with").fill("24");
+  await expect(page.getByTestId("ladder-round")).toHaveCount(3);
+  await expect(page.getByTestId("ladder-heat")).toHaveCount(7);
+  await expect(page.getByTestId("ladder-diagram")).toContainText("3 rounds, 7 heats");
+  await expect(page.getByTestId("ladder-diagram")).toContainText("1st–2nd → SF");
+  await field("Preview with").fill("24");
   await expect(page.getByTestId("format-preview")).toContainText("With 24 riders: R1 6 heats of 4");
-  await page.getByText("Format generator", { exact: true }).click();
-  await page.getByLabel("Riders per heat").first().fill("3");
+  await expect(page.getByTestId("ladder-heat").first()).toContainText("4 riders");
+
+  // only the simple numbers are shown under the choice; changing one updates the ladder
+  await expect(field("Riders per heat")).toBeVisible();
+  await expect(field("How many advance per heat")).toBeVisible();
+  await expect(field("Final size")).toBeVisible();
+  await expect(page.getByText("Flag-out", { exact: true })).toHaveCount(0); // flag-out lives under Show all settings
+  await field("Riders per heat").fill("3");
   await expect(page.getByTestId("format-preview")).toContainText("R1 8 heats of 3");
   await page.getByRole("button", { name: "Save format for Pro Men" }).click();
   await expect(page.getByText("Format saved for Pro Men").first()).toBeVisible();
-  // the rail no longer lists anything missing for Divisions
-  await expect(page.getByLabel("What is missing in 2. Divisions")).toHaveCount(0);
+  await expect(page.getByLabel("What is missing in 2. Divisions")).toHaveCount(0); // nothing missing any more
 
-  // custom format builder
-  await page.getByRole("button", { name: "+ Start a custom format" }).click();
-  await expect(page.getByTestId("format-preview")).toContainText("With 24 riders: R1 6 heats of 4");
-  await page.getByText("Rounds", { exact: true }).click();
+  // pools: heats of everybody, the best N of all go to the final
+  await page.getByRole("radio", { name: "Pools to a final" }).check();
+  await field("Riders per pool").fill("8");
+  await field("How many make the final").fill("6");
+  await field("Preview with").fill("23");
+  await expect(page.getByTestId("format-preview")).toContainText("With 23 riders: P1 3 heats");
+  await expect(page.getByTestId("ladder-diagram")).toContainText("best 6 of all heats → F");
+  // second chance: the fixed structure is explained
+  await page.getByRole("radio", { name: "Knockout with a second chance" }).check();
+  await expect(page.getByText("Heat winners go straight through; the other riders get one more heat.")).toBeVisible();
+  await page.getByRole("radio", { name: "Knockout", exact: true }).check();
+
+  // Show all settings: flag-out and the default timing sit here, with their helper text
+  await page.getByRole("checkbox", { name: "Show all settings" }).check();
+  await page.getByText("Flag-out", { exact: true }).click();
+  await page.getByRole("button", { name: "Help: Flag-out" }).click();
+  await expect(page.getByRole("note").filter({ hasText: "KOTA-style: in 3-rider heats the lowest-scoring rider is flagged out at minute X and the other two ride on. Off by default." })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Flag-out: No flag-out" })).not.toBeChecked(); // off by default
+  await page.getByText("Default timing (minutes)", { exact: true }).click();
+  await page.getByRole("button", { name: "Help: Default timing (minutes)" }).click();
+  await expect(page.getByRole("note").filter({ hasText: "Defaults used to pre-fill new rounds. The per-round values decide." })).toBeVisible();
+  await page.getByText("Field size this format suits", { exact: true }).click();
+  await page.getByRole("button", { name: "Help: Field size this format suits" }).click();
+  await expect(page.getByRole("note").filter({ hasText: "The field sizes this template was designed for. The per-round values decide." })).toBeVisible();
+  await page.getByRole("checkbox", { name: "Show all settings" }).uncheck();
+
+  // custom ladder (advanced) keeps the full per-round editor
+  await page.getByRole("button", { name: "+ Start a custom ladder" }).click();
+  await expect(page.getByTestId("format-preview")).toContainText("With 23 riders: R1 6 heats of 3–4");
+  await page.getByText("Custom ladder (advanced)", { exact: true }).click();
   await page.getByRole("button", { name: "+ Add round" }).click();
   await expect(page.getByTestId("format-preview")).toContainText("R3");
-  await page.getByLabel("Save these settings as a new preset").fill("Arrow custom");
+  await expect(page.getByTestId("ladder-round")).toHaveCount(3);
+  await field("Save these settings as a new preset").fill("Arrow custom");
   await page.getByRole("button", { name: "Save as new preset" }).click();
   await expect(page.getByText("Preset “Arrow custom” saved").first()).toBeVisible();
 

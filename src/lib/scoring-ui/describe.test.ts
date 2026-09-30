@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { preset } from "@/lib/engine/scoring/fixtures";
-import { describeScoringModel } from "./describe";
+import { describePanel, describeScoringModel, panelRule } from "./describe";
 
 describe("describeScoringModel", () => {
   it("the owner's example: Best 3 of 7 attempts + Variety 0–10, 3 judges averaged", () => {
@@ -31,5 +31,29 @@ describe("describeScoringModel", () => {
       x.panel.aggregate = "median";
     });
     expect(describeScoringModel(m)).toBe("Best 1 of 5 attempts, 2 judges median");
+  });
+});
+
+describe("describePanel: the judges setting in words", () => {
+  const base = { minJudges: 3, maxJudges: 3, aggregate: "mean" as const, trimMinJudges: 5 };
+  it("plain average", () => {
+    expect(describePanel(base)).toBe("3 judges — plain average");
+    expect(describePanel({ ...base, minJudges: 1, maxJudges: 1 })).toBe("1 judge — plain average");
+  });
+  it("trimmed with enough judges: highest and lowest dropped", () => {
+    expect(describePanel({ ...base, minJudges: 5, maxJudges: 7, aggregate: "trimmed_mean" })).toBe("5 judges — highest and lowest score dropped, the rest averaged");
+  });
+  it("trimmed but too few judges: says the plain average is used instead", () => {
+    expect(describePanel({ ...base, aggregate: "trimmed_mean" })).toBe("3 judges — plain average (trimming only starts from 5 judges, so it is not used here)");
+  });
+  it("trimmed with a panel that sometimes reaches the trimming size", () => {
+    expect(describePanel({ ...base, maxJudges: 7, aggregate: "trimmed_mean" })).toBe("3 judges — plain average; with 5 or more judges the highest and lowest score are dropped and the rest averaged");
+  });
+  it("median", () => {
+    expect(describePanel({ ...base, aggregate: "median" })).toBe("3 judges — the middle score (median) counts");
+  });
+  it("uses the preset's own trimming size", () => {
+    expect(describePanel({ ...base, minJudges: 4, maxJudges: 4, aggregate: "trimmed_mean", trimMinJudges: 4 })).toBe("4 judges — highest and lowest score dropped, the rest averaged");
+    expect(panelRule(5)).toBe("Trimming only applies from 5 judges. With fewer judges the plain average is used automatically.");
   });
 });

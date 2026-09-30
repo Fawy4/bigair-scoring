@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { StepInfo } from "@/lib/wizard/status";
+import { copy } from "@/lib/ui-copy";
 
 export function WizardRail({ eventId, eventName, status, steps }: { eventId: string; eventName: string; status: string; steps: StepInfo[] }) {
   const path = usePathname();
@@ -12,20 +13,20 @@ export function WizardRail({ eventId, eventName, status, steps }: { eventId: str
   const current = steps.find((s) => s.key === active);
 
   return (
-    <aside className="md:sticky md:top-4 md:w-64 md:shrink-0" aria-label="Event setup steps">
+    <aside className="md:sticky md:top-4 md:w-64 md:shrink-0" aria-label={copy.wizard.railLabel}>
       <p className="text-xl font-extrabold">{eventName}</p>
-      <p className="mb-3 font-semibold">Status: {status}</p>
+      <p className="mb-3 font-semibold">{copy.wizard.status(status)}</p>
 
       {/* Tablet and phone: one step picker */}
       <div className="md:hidden">
         <label htmlFor="step-picker" className="mb-1 block">
-          Setup step
+          {copy.wizard.stepPicker}
         </label>
         <select id="step-picker" className="w-full" value={active} onChange={(e) => router.push(href(e.target.value))}>
           {steps.map((s) => (
             <option key={s.key} value={s.key} disabled={!s.available}>
               {s.label}
-              {!s.available ? " (coming soon)" : s.missing.length ? " (needs attention)" : " (done)"}
+              {!s.available ? copy.wizard.coming : s.missing.length ? copy.wizard.attention : copy.wizard.done}
             </option>
           ))}
         </select>
@@ -48,11 +49,11 @@ export function WizardRail({ eventId, eventName, status, steps }: { eventId: str
               </Link>
             ) : (
               <span className="btn w-full !cursor-default !justify-start !border-dashed opacity-70" aria-disabled="true">
-                {s.label} <span className="text-xs">soon</span>
+                {s.label} <span className="text-xs">{copy.wizard.soon}</span>
               </span>
             )}
             {s.available && s.missing.length > 0 ? (
-              <ul className="mt-1 list-disc pl-8 text-sm font-semibold" aria-label={`What is missing in ${s.label}`}>
+              <ul className="mt-1 list-disc pl-8 text-sm font-semibold" aria-label={copy.wizard.missingIn(s.label)}>
                 {s.missing.map((m) => (
                   <li key={m}>{m}</li>
                 ))}

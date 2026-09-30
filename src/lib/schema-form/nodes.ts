@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { copy } from "@/lib/ui-copy";
 
 /**
  * Turns a Zod schema into a tree of form-field descriptions (docs/06 §1: "a form generated from the Zod schema").
@@ -12,6 +13,8 @@ export interface LabelEntry {
   off?: string;
   /** Labels for enum values. */
   values?: Record<string, string>;
+  /** One example, shown with the help text. */
+  example?: string;
 }
 export type LabelMap = Record<string, LabelEntry>;
 
@@ -21,6 +24,7 @@ interface Base {
   key: string;
   label: string;
   help?: string;
+  example?: string;
   required: boolean;
 }
 export type FieldNode = Base &
@@ -34,7 +38,7 @@ export type FieldNode = Base &
     | { kind: "list"; item: FieldNode; minItems?: number }
     | { kind: "record"; value: FieldNode }
     | { kind: "choice"; discriminator: string; variants: Array<{ value: string; label: string; node: Extract<FieldNode, { kind: "object" }> }> }
-    | { kind: "nullable"; inner: FieldNode; off: string }
+    | { kind: "nullable"; inner: FieldNode; off: string; /** true: "off" removes the key (an optional field), false: it sets null */ absent: boolean }
     | { kind: "orConst"; inner: FieldNode; constValue: string; off: string }
     | { kind: "tuple"; items: FieldNode[] }
     | { kind: "json" }
@@ -64,24 +68,36 @@ export const humanise = (key: string): string => {
 };
 
 const HUGE = 1e15;
+/** Optional in the schema but chosen by the screen itself (a format has either a generator or its own rounds). */
+const ALWAYS_SHOWN = new Set(["generator", "rounds"]);
 
 export function schemaToNodes(schema: z.ZodType, labels: LabelMap, hidden: readonly string[] = []): FieldNode {
   const json = z.toJSONSchema(schema, { io: "input", unrepresentable: "any" }) as Schema;
-  const root = build(json, "", [], true, labels);
+  const root = build(json, "", [], true, false, labels);
   if (root.kind !== "object") throw new Error("schemaToNodes: the schema must be an object");
   return { ...root, fields: root.fields.filter((f) => !hidden.includes(f.key)) };
 }
 
 function meta(labels: LabelMap, pattern: string[], key: string) {
   const entry = labels[pattern.join(".")];
-  return { label: entry?.label ?? humanise(key), help: entry?.help, entry };
+  return { label: entry?.label ?? humanise(key), help: entry?.help, example: entry?.example, entry };
 }
 
-function build(s: Schema, key: string, parent: string[], required: boolean, labels: LabelMap): FieldNode {
+function build(s: Schema, key: string, parent: string[], required: boolean, optional: boolean, labels: LabelMap): FieldNode {
+  const node = buildInner(s, key, parent, required, labels);
+  // A truly optional section (no default, not required) gets an on/off switch instead of empty fields.
+  if (optional && key !== "" && !ALWAYS_SHOWN.has(node.pattern.join(".")) && (node.kind === "object" || node.kind === "choice" || node.kind === "list" || node.kind === "record")) {
+    const entry = labels[node.pattern.join(".")];
+    return { pattern: node.pattern, key: node.key, label: node.label, help: node.help, example: node.example, required: false, kind: "nullable", absent: true, off: entry?.off ?? copy.friendly.notUsed, inner: node };
+  }
+  return node;
+}
+
+function buildInner(s: Schema, key: string, parent: string[], required: boolean, labels: LabelMap): FieldNode {
   const pattern = key === "" ? [] : [...parent, key];
-  const { label, help, entry } = meta(labels, pattern, key || "root");
-  const base = { pattern, key, label, help, required };
-  const sub = (child: Schema, childKey: string, req: boolean) => build(child, childKey, pattern, req, labels);
+  const { label, help, example, entry } = meta(labels, pattern, key || "root");
+  const base = { pattern, key, label, help, example, required };
+  const sub = (child: Schema, childKey: string, req: boolean, opt = false) => build(child, childKey, pattern, req, opt, labels);
 
   // discriminated union: oneOf [{ properties: { type: { const } } }, ...]
   if (Array.isArray(s.oneOf) && s.oneOf.length > 0 && s.oneOf.every((o) => o.properties && Object.values(o.properties).some((p) => p.const !== undefined))) {
@@ -92,7 +108,7 @@ function build(s: Schema, key: string, parent: string[], required: boolean, labe
       discriminator: disc,
       variants: s.oneOf.map((o) => {
         const value = String(o.properties![disc].const);
-        const node = build(o, key, parent, true, labels) as Extract<FieldNode, { kind: "object" }>;
+        const node = buildInner(o, key, parent, true, labels) as Extract<FieldNode, { kind: "object" }>;
         return {
           value,
           label: labels[`${pattern.join(".")}=${value}`]?.label ?? humanise(value),
@@ -107,11 +123,11 @@ function build(s: Schema, key: string, parent: string[], required: boolean, labe
     const hasNull = nonNull.length !== s.anyOf.length;
     const constOpt = nonNull.find((o) => o.const !== undefined);
     if (hasNull && nonNull.length === 1) {
-      return { ...base, kind: "nullable", off: entry?.off ?? "Not used", inner: build(nonNull[0], key, parent, true, labels) };
+      return { ...base, kind: "nullable", absent: false, off: entry?.off ?? copy.friendly.notUsed, inner: buildInner(nonNull[0], key, parent, true, labels) };
     }
     if (constOpt && nonNull.length === 2) {
       const real = nonNull.find((o) => o !== constOpt)!;
-      return { ...base, kind: "orConst", constValue: String(constOpt.const), off: entry?.off ?? humanise(String(constOpt.const)), inner: build(real, key, parent, true, labels) };
+      return { ...base, kind: "orConst", constValue: String(constOpt.const), off: entry?.off ?? humanise(String(constOpt.const)), inner: buildInner(real, key, parent, true, labels) };
     }
     return { ...base, kind: "json" };
   }
@@ -144,7 +160,7 @@ function build(s: Schema, key: string, parent: string[], required: boolean, labe
     case "object": {
       if (s.properties) {
         const req = new Set(s.required ?? []);
-        return { ...base, kind: "object", fields: Object.entries(s.properties).map(([k, v]) => sub(v, k, req.has(k) && v.default === undefined)) };
+        return { ...base, kind: "object", fields: Object.entries(s.properties).map(([k, v]) => sub(v, k, req.has(k) && v.default === undefined, !req.has(k) && v.default === undefined)) };
       }
       if (s.additionalProperties && typeof s.additionalProperties === "object") return { ...base, kind: "record", value: sub(s.additionalProperties, "*", true) };
       return { ...base, kind: "json" };
@@ -215,21 +231,21 @@ export function allNodes(node: FieldNode): FieldNode[] {
   return out;
 }
 
-const FRIENDLY: Array<[RegExp, string]> = [
-  [/expected number, received (string|undefined|null|nan)/i, "Enter a number"],
-  [/expected string, received (undefined|null)/i, "This is needed"],
-  [/expected (object|array), received undefined/i, "This section is needed"],
-  [/expected int/i, "Enter a whole number"],
-  [/too small: expected number to be >=?\s*(\S+)/i, "Must be at least $1"],
-  [/too big: expected number to be <=?\s*(\S+)/i, "Must be at most $1"],
-  [/invalid option|invalid input: expected one of/i, "Pick one of the options"],
+const FRIENDLY: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+  [/expected number, received (string|undefined|null|nan)/i, () => copy.friendly.enterNumber],
+  [/expected string, received (undefined|null)/i, () => copy.friendly.needed],
+  [/expected (object|array), received undefined/i, () => copy.friendly.sectionNeeded],
+  [/expected int/i, () => copy.friendly.wholeNumber],
+  [/too small: expected number to be >=?\s*(\S+)/i, (m) => copy.friendly.atLeast(m[1] ?? "")],
+  [/too big: expected number to be <=?\s*(\S+)/i, (m) => copy.friendly.atMost(m[1] ?? "")],
+  [/invalid option|invalid input: expected one of/i, () => copy.friendly.pickOne],
 ];
 
 /** Zod's technical messages, in plain words. Our own refinement messages are already plain and pass through. */
 export function friendlyMessage(message: string): string {
   for (const [re, text] of FRIENDLY) {
     const m = message.match(re);
-    if (m) return text.replace("$1", m[1] ?? "");
+    if (m) return text(m);
   }
   return message;
 }

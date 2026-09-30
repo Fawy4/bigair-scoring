@@ -1,12 +1,20 @@
 import { z } from "zod";
 import { TimeZoneSchema } from "./org-settings";
 import { IdentificationSchemeSchema } from "./identification";
+import { copy } from "@/lib/ui-copy";
+
+const v = copy.event.validation;
 
 const SLUG = /^[a-z0-9][a-z0-9-]*$/;
 
 /** Everything on `events.settings` that the Event step edits. Unknown keys written by later phases are kept. */
 export const EventSettingsSchema = z.looseObject({
+  /** "live" = the public may follow scores during a heat; anything else = nothing before the head judge publishes. */
   publicLiveScores: z.enum(["live", "after_publish", "off"]).default("after_publish"),
+  /** Publishing a heat shows its result to the public at once (otherwise a result is released by hand). */
+  publicResultsOnPublish: z.boolean().default(false),
+  /** The final's result stays hidden until the organiser releases it (podium). Uses heats.publish_hold. */
+  holdFinalResult: z.boolean().default(false),
   /** Minutes before a heat that riders are called to the ready area. */
   readyCallMin: z.number().int().min(0).max(120).default(10),
   /** How often public pages ask for new scores. */
@@ -18,7 +26,7 @@ export const EventSettingsSchema = z.looseObject({
   windCallBanner: z.boolean().default(true),
   registrationOpen: z.boolean().default(false),
   /** Last day riders can register (the whole day counts, in the event's time zone). */
-  registrationClosesOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "use a date").nullable().optional(),
+  registrationClosesOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, v.useDate).nullable().optional(),
   identification: z
     .object({
       scheme: IdentificationSchemeSchema,
@@ -31,14 +39,14 @@ export const EventSettingsSchema = z.looseObject({
 export type EventSettings = z.infer<typeof EventSettingsSchema>;
 
 export const SponsorSchema = z.object({
-  name: z.string().trim().min(1, "give the sponsor a name").max(80),
+  name: z.string().trim().min(1, v.sponsorName).max(80),
   logoUrl: z.string().url().optional(),
-  url: z.union([z.literal(""), z.string().url("a full web address, starting with https://")]).optional(),
+  url: z.union([z.literal(""), z.string().url(v.sponsorUrl)]).optional(),
 });
 
 export const EventBrandingSchema = z.looseObject({
   logoUrl: z.string().url().optional(),
-  sponsors: z.array(SponsorSchema).max(20, "at most 20 sponsors").default([]),
+  sponsors: z.array(SponsorSchema).max(20, v.sponsorsMax).default([]),
 });
 export type EventBranding = z.infer<typeof EventBrandingSchema>;
 
@@ -46,18 +54,18 @@ export const SlugSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .min(2, "The web address needs at least 2 characters")
-  .max(60, "The web address can be at most 60 characters")
-  .regex(SLUG, "Use only lowercase letters, numbers and hyphens, starting with a letter or number");
+  .min(2, v.slugMin)
+  .max(60, v.slugMax)
+  .regex(SLUG, v.slugChars);
 
-const DateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date");
+const DateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, v.pickDate);
 
 /** The whole Event step as one form. */
 export const EventFormSchema = z
   .object({
-    name: z.string().trim().min(2, "Give the event a name").max(100, "That name is too long (100 characters at most)"),
+    name: z.string().trim().min(2, v.nameMin).max(100, v.nameMax),
     slug: SlugSchema,
-    location: z.string().trim().max(120, "Location is too long").default(""),
+    location: z.string().trim().max(120, v.locationMax).default(""),
     start_date: DateOnly,
     end_date: DateOnly,
     timezone: TimeZoneSchema,
@@ -66,11 +74,11 @@ export const EventFormSchema = z
   })
   .superRefine((f, ctx) => {
     if (f.end_date < f.start_date) {
-      ctx.addIssue({ code: "custom", path: ["end_date"], message: "The last day cannot be before the first day" });
+      ctx.addIssue({ code: "custom", path: ["end_date"], message: v.endBeforeStart });
     }
     const closes = f.settings.registrationClosesOn;
     if (f.settings.registrationOpen && closes && closes > f.end_date) {
-      ctx.addIssue({ code: "custom", path: ["settings", "registrationClosesOn"], message: "Registration cannot close after the event has ended" });
+      ctx.addIssue({ code: "custom", path: ["settings", "registrationClosesOn"], message: v.closesAfterEnd });
     }
   });
 export type EventForm = z.infer<typeof EventFormSchema>;

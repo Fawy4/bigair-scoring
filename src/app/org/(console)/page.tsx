@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { getOrgContext } from "@/lib/org/context";
+import { copy } from "@/lib/ui-copy";
 
-export const metadata = { title: "Events" };
+export const metadata = { title: copy.layout.events };
 
 export default async function OrganiserHome() {
   const { supabase, current } = await getOrgContext();
   if (!current) {
-    return <p className="panel text-lg font-semibold">You are not a member of any organisation yet. Ask the product owner to add you.</p>;
+    return <p className="panel text-lg font-semibold">{copy.orgHome.noOrg}</p>;
   }
   const { data: events } = await supabase
     .from("events")
@@ -17,9 +18,9 @@ export default async function OrganiserHome() {
   return (
     <main className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-extrabold">{current.name}: events</h1>
+        <h1 className="text-3xl font-extrabold">{copy.orgHome.heading(current.name)}</h1>
         <Link href="/org/events/new" className="btn btn-primary">
-          + New event
+          {copy.orgHome.newEvent}
         </Link>
       </div>
       <ul className="flex flex-col gap-2">
@@ -28,15 +29,15 @@ export default async function OrganiserHome() {
             <div>
               <p className="text-xl font-bold">{e.name}</p>
               <p className="font-semibold">
-                {e.start_date ?? "No date yet"} · status: {e.status} · /{e.slug}
+                {copy.orgHome.line(e.start_date ?? copy.orgHome.noDate, e.status, e.slug)}
               </p>
             </div>
             <Link href={`/org/events/${e.id}/event`} className="btn">
-              Open setup
+              {copy.orgHome.openSetup}
             </Link>
           </li>
         ))}
-        {(events ?? []).length === 0 ? <li className="panel text-lg font-semibold">No events yet. Press “New event” to start.</li> : null}
+        {(events ?? []).length === 0 ? <li className="panel text-lg font-semibold">{copy.orgHome.empty}</li> : null}
       </ul>
     </main>
   );

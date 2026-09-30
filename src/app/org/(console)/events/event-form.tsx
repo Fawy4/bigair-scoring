@@ -3,13 +3,17 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { FieldLabel, HelpButton } from "@/components/help-button";
 import { LogoField } from "@/components/org/logo-field";
 import { toast } from "@/hooks/use-toast";
 import { issuesToMap, moveIn, removeIn, setIn } from "@/lib/form/path";
 import { EventFormSchema, slugify, type EventForm as EventFormValues } from "@/lib/schemas/event-settings";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
+import { copy, help } from "@/lib/ui-copy";
 import { saveEvent } from "./actions";
 import { IdentificationEditor } from "./identification-editor";
+
+const T = copy.event;
 
 export interface EventFormInitial {
   id: string | null;
@@ -18,12 +22,6 @@ export interface EventFormInitial {
   values: EventFormValues;
   savedSlug: string | null;
 }
-
-const LIVE_OPTIONS = {
-  live: "Live: the public sees scores as they come in",
-  after_publish: "After publish: the public sees a heat only once the head judge publishes it",
-  off: "Off: no public scores",
-} as const;
 
 export function EventForm({ initial, timeZones, schemes }: { initial: EventFormInitial; timeZones: string[]; schemes: IdentificationScheme[] }) {
   const router = useRouter();
@@ -45,20 +43,24 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
     return r.success ? {} : issuesToMap(r.error.issues);
   }, [form]);
   const err = (key: string) => (showErrors ? (check[key] ?? serverFields[key]) : serverFields[key]);
-  const identErrors = Object.entries(showErrors ? { ...check, ...serverFields } : serverFields).filter(([k]) => k.startsWith("settings.identification")).map(([, m]) => m);
+  const identErrors = Object.entries(showErrors ? { ...check, ...serverFields } : serverFields)
+    .filter(([k]) => k.startsWith("settings.identification"))
+    .map(([, m]) => m);
 
   const slugChangedOnPublished = initial.status === "published" && savedSlug !== null && form.slug.trim().toLowerCase() !== savedSlug;
   const canPublishToggle = initial.status === "draft" || initial.status === "published";
   const ident = form.settings.identification!;
   const timezones = timeZones.includes(form.timezone) ? timeZones : [form.timezone, ...timeZones];
   const numeric = (v: string) => (v === "" ? NaN : Number(v));
+  const num = (n: number) => (Number.isNaN(n) ? "" : n);
+  const showError = (key: string) => (err(key) ? <p className="field-error">{copy.common.problem(err(key)!)}</p> : null);
 
   function save() {
     setShowErrors(true);
     setServerError(null);
     setServerFields({});
     if (Object.keys(check).length > 0) {
-      setServerError("Some settings need fixing. They are marked below.");
+      setServerError(T.fixThese);
       return;
     }
     start(async () => {
@@ -67,7 +69,7 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
         setSavedSlug(res.slug);
         setUnderstood(false);
         setShowErrors(false);
-        toast({ title: initial.id ? "Event saved" : "Event created" });
+        toast({ title: initial.id ? T.saved : T.created });
         if (!initial.id) router.push(`/org/events/${res.id}/event`);
         else router.refresh();
       } else {
@@ -81,16 +83,16 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
   return (
     <form
       className="flex flex-col gap-6"
-      aria-label="Event details"
+      aria-label={T.formLabel}
       onSubmit={(e) => {
         e.preventDefault();
         save();
       }}
     >
       <section className="panel flex flex-col gap-4">
-        <h2 className="text-xl font-extrabold">Basics</h2>
+        <h2 className="text-xl font-extrabold">{T.basics}</h2>
         <div className={field}>
-          <label htmlFor="ev-name">Event name</label>
+          <FieldLabel htmlFor="ev-name" text={T.name} help={help["event.name"]} />
           <input
             id="ev-name"
             value={form.name}
@@ -100,10 +102,10 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
             }}
             aria-invalid={Boolean(err("name"))}
           />
-          {err("name") ? <p className="field-error">✖ {err("name")}</p> : null}
+          {showError("name")}
         </div>
         <div className={field}>
-          <label htmlFor="ev-slug">Web address (slug)</label>
+          <FieldLabel htmlFor="ev-slug" text={T.slug} help={help["event.slug"]} />
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold">{origin || "https://…"}/e/</span>
             <input
@@ -119,34 +121,35 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
               className="w-64"
             />
           </div>
-          {err("slug") ? <p className="field-error">✖ {err("slug")}</p> : null}
+          {showError("slug")}
           {slugChangedOnPublished ? (
             <div className="panel mt-1" role="note">
-              <p className="font-bold">⚠ This event is published. Changing the address breaks links and QR codes that are already out.</p>
+              <p className="font-bold">{T.slugPublishedTitle}</p>
               <label className="mt-2 flex items-center gap-3 font-bold">
-                <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />I understand, change the address
+                <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />
+                {T.understand}
               </label>
             </div>
           ) : null}
         </div>
         <div className={field}>
-          <label htmlFor="ev-location">Location</label>
-          <input id="ev-location" value={form.location} onChange={(e) => set(["location"], e.target.value)} placeholder="El Gouna, Egypt" />
-          {err("location") ? <p className="field-error">✖ {err("location")}</p> : null}
+          <FieldLabel htmlFor="ev-location" text={T.location} help={help["event.location"]} />
+          <input id="ev-location" value={form.location} onChange={(e) => set(["location"], e.target.value)} placeholder={T.locationPlaceholder} />
+          {showError("location")}
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           <div className={field}>
-            <label htmlFor="ev-start">First day</label>
+            <FieldLabel htmlFor="ev-start" text={T.firstDay} help={help["event.dates"]} />
             <input id="ev-start" type="date" value={form.start_date} onChange={(e) => set(["start_date"], e.target.value)} />
-            {err("start_date") ? <p className="field-error">✖ {err("start_date")}</p> : null}
+            {showError("start_date")}
           </div>
           <div className={field}>
-            <label htmlFor="ev-end">Last day</label>
+            <FieldLabel htmlFor="ev-end" text={T.lastDay} help={help["event.dates"]} />
             <input id="ev-end" type="date" value={form.end_date} onChange={(e) => set(["end_date"], e.target.value)} />
-            {err("end_date") ? <p className="field-error">✖ {err("end_date")}</p> : null}
+            {showError("end_date")}
           </div>
           <div className={field}>
-            <label htmlFor="ev-tz">Time zone</label>
+            <FieldLabel htmlFor="ev-tz" text={T.timeZone} help={help["event.timeZone"]} />
             <select id="ev-tz" value={form.timezone} onChange={(e) => set(["timezone"], e.target.value)}>
               {timezones.map((z) => (
                 <option key={z} value={z}>
@@ -154,150 +157,181 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
                 </option>
               ))}
             </select>
-            <p className="text-sm font-semibold">All times are shown in this zone.</p>
-            {err("timezone") ? <p className="field-error">✖ {err("timezone")}</p> : null}
+            <p className="text-sm font-semibold">{T.timeZoneHint}</p>
+            {showError("timezone")}
           </div>
         </div>
       </section>
 
       <section className="panel flex flex-col gap-5">
-        <h2 className="text-xl font-extrabold">Branding</h2>
-        <LogoField orgId={initial.organisationId} purpose="event-logo" label="Event logo" value={form.branding.logoUrl} onChange={(u) => set(["branding", "logoUrl"], u ?? undefined)} />
+        <h2 className="text-xl font-extrabold">{T.branding}</h2>
+        <LogoField orgId={initial.organisationId} purpose="event-logo" label={T.eventLogo} value={form.branding.logoUrl} onChange={(u) => set(["branding", "logoUrl"], u ?? undefined)} />
         <div className="flex flex-col gap-3">
-          <h3 className="text-lg font-bold">Sponsor logos</h3>
-          {form.branding.sponsors.length === 0 ? <p className="font-semibold">No sponsors yet.</p> : null}
+          <FieldLabel as="span" text={T.sponsors} help={help["event.sponsors"]} />
+          {form.branding.sponsors.length === 0 ? <p className="font-semibold">{T.noSponsors}</p> : null}
           {form.branding.sponsors.map((sp, i) => (
             <div key={i} className="flex flex-col gap-3 rounded-lg border-2 border-[#111] p-3">
               <div className="grid gap-3 md:grid-cols-2">
                 <div className={field}>
-                  <label htmlFor={`sp-name-${i}`}>Sponsor {i + 1} name</label>
+                  <label htmlFor={`sp-name-${i}`}>{T.sponsorName(i + 1)}</label>
                   <input id={`sp-name-${i}`} value={sp.name} onChange={(e) => set(["branding", "sponsors", i, "name"], e.target.value)} />
-                  {err(`branding.sponsors.${i}.name`) ? <p className="field-error">✖ {err(`branding.sponsors.${i}.name`)}</p> : null}
+                  {showError(`branding.sponsors.${i}.name`)}
                 </div>
                 <div className={field}>
-                  <label htmlFor={`sp-url-${i}`}>Sponsor {i + 1} website (optional)</label>
+                  <label htmlFor={`sp-url-${i}`}>{T.sponsorUrl(i + 1)}</label>
                   <input id={`sp-url-${i}`} value={sp.url ?? ""} onChange={(e) => set(["branding", "sponsors", i, "url"], e.target.value)} placeholder="https://" />
-                  {err(`branding.sponsors.${i}.url`) ? <p className="field-error">✖ {err(`branding.sponsors.${i}.url`)}</p> : null}
+                  {showError(`branding.sponsors.${i}.url`)}
                 </div>
               </div>
-              <LogoField orgId={initial.organisationId} purpose={`sponsor-${i + 1}`} label={`Sponsor ${i + 1} logo`} value={sp.logoUrl} onChange={(u) => set(["branding", "sponsors", i, "logoUrl"], u ?? undefined)} />
+              <LogoField orgId={initial.organisationId} purpose={`sponsor-${i + 1}`} label={T.sponsorLogo(i + 1)} value={sp.logoUrl} onChange={(u) => set(["branding", "sponsors", i, "logoUrl"], u ?? undefined)} />
               <div className="flex flex-wrap gap-2">
-                <button type="button" className="btn" disabled={i === 0} aria-label={`Move sponsor ${i + 1} up`} onClick={() => setForm((f) => moveIn(f, ["branding", "sponsors"], i, i - 1))}>
-                  ↑
+                <button type="button" className="btn" disabled={i === 0} aria-label={T.sponsorUp(i + 1)} onClick={() => setForm((f) => moveIn(f, ["branding", "sponsors"], i, i - 1))}>
+                  {copy.common.up}
                 </button>
-                <button type="button" className="btn" disabled={i === form.branding.sponsors.length - 1} aria-label={`Move sponsor ${i + 1} down`} onClick={() => setForm((f) => moveIn(f, ["branding", "sponsors"], i, i + 1))}>
-                  ↓
+                <button type="button" className="btn" disabled={i === form.branding.sponsors.length - 1} aria-label={T.sponsorDown(i + 1)} onClick={() => setForm((f) => moveIn(f, ["branding", "sponsors"], i, i + 1))}>
+                  {copy.common.down}
                 </button>
                 <button type="button" className="btn btn-danger" onClick={() => setForm((f) => removeIn(f, ["branding", "sponsors", i]))}>
-                  Remove sponsor
+                  {T.sponsorRemove}
                 </button>
               </div>
             </div>
           ))}
           <div>
             <button type="button" className="btn" onClick={() => set(["branding", "sponsors", form.branding.sponsors.length], { name: "" })}>
-              + Add sponsor
+              {T.addSponsor}
             </button>
           </div>
         </div>
       </section>
 
-      <section className="panel flex flex-col gap-4">
-        <h2 className="text-xl font-extrabold">Live scores and timing</h2>
-        <div className={field}>
-          <label htmlFor="ev-live">Public live scores</label>
-          <select id="ev-live" value={form.settings.publicLiveScores} onChange={(e) => set(["settings", "publicLiveScores"], e.target.value)}>
-            {Object.entries(LIVE_OPTIONS).map(([k, label]) => (
-              <option key={k} value={k}>
-                {label}
-              </option>
-            ))}
-          </select>
+      <section className="panel flex flex-col gap-4" aria-labelledby="visibility-heading">
+        <div className="flex items-start gap-2">
+          <h2 id="visibility-heading" className="text-xl font-extrabold">
+            {T.visibilityHeading}
+          </h2>
         </div>
+        <FieldLabel as="span" text={T.visibilityIntro} help={help["event.visibility"]} />
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <span className="flex items-start gap-2">
+              <label className="flex items-center gap-3 font-bold">
+                <input type="checkbox" checked={form.settings.publicLiveScores === "live"} onChange={(e) => set(["settings", "publicLiveScores"], e.target.checked ? "live" : "after_publish")} />
+                {T.showLive}
+              </label>
+              <HelpButton what={T.showLive} help={help["event.showLive"]} />
+            </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="flex items-start gap-2">
+              <label className="flex items-center gap-3 font-bold">
+                <input type="checkbox" checked={form.settings.publicResultsOnPublish} onChange={(e) => set(["settings", "publicResultsOnPublish"], e.target.checked)} />
+                {T.showResults}
+              </label>
+              <HelpButton what={T.showResults} help={help["event.showResults"]} />
+            </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="flex items-start gap-2">
+              <label className="flex items-center gap-3 font-bold">
+                <input type="checkbox" checked={form.settings.holdFinalResult} onChange={(e) => set(["settings", "holdFinalResult"], e.target.checked)} />
+                {T.holdFinal}
+              </label>
+              <HelpButton what={T.holdFinal} help={help["event.holdFinal"]} />
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel flex flex-col gap-4">
+        <h2 className="text-xl font-extrabold">{T.timing}</h2>
         <div className="grid gap-4 md:grid-cols-3">
           <div className={field}>
-            <label htmlFor="ev-ready">Ready call (minutes before a heat)</label>
-            <input id="ev-ready" type="number" min={0} max={120} value={Number.isNaN(form.settings.readyCallMin) ? "" : form.settings.readyCallMin} onChange={(e) => set(["settings", "readyCallMin"], numeric(e.target.value))} />
-            {err("settings.readyCallMin") ? <p className="field-error">✖ {err("settings.readyCallMin")}</p> : null}
+            <FieldLabel htmlFor="ev-ready" text={T.readyCall} help={help["event.readyCall"]} />
+            <input id="ev-ready" type="number" min={0} max={120} value={num(form.settings.readyCallMin)} onChange={(e) => set(["settings", "readyCallMin"], numeric(e.target.value))} />
+            {showError("settings.readyCallMin")}
           </div>
           <div className={field}>
-            <label htmlFor="ev-poll">Live update every (seconds)</label>
-            <input id="ev-poll" type="number" min={3} max={60} value={Number.isNaN(form.settings.livePollSec) ? "" : form.settings.livePollSec} onChange={(e) => set(["settings", "livePollSec"], numeric(e.target.value))} />
-            {err("settings.livePollSec") ? <p className="field-error">✖ {err("settings.livePollSec")}</p> : null}
+            <FieldLabel htmlFor="ev-poll" text={T.livePoll} help={help["event.livePoll"]} />
+            <input id="ev-poll" type="number" min={3} max={60} value={num(form.settings.livePollSec)} onChange={(e) => set(["settings", "livePollSec"], numeric(e.target.value))} />
+            {showError("settings.livePollSec")}
           </div>
           <div className={field}>
-            <label htmlFor="ev-grace">Judges may still score after a heat (seconds)</label>
-            <input id="ev-grace" type="number" min={0} max={3600} value={Number.isNaN(form.settings.judgeGraceSec) ? "" : form.settings.judgeGraceSec} onChange={(e) => set(["settings", "judgeGraceSec"], numeric(e.target.value))} />
-            {err("settings.judgeGraceSec") ? <p className="field-error">✖ {err("settings.judgeGraceSec")}</p> : null}
+            <FieldLabel htmlFor="ev-grace" text={T.grace} help={help["event.grace"]} />
+            <input id="ev-grace" type="number" min={0} max={3600} value={num(form.settings.judgeGraceSec)} onChange={(e) => set(["settings", "judgeGraceSec"], numeric(e.target.value))} />
+            {showError("settings.judgeGraceSec")}
           </div>
         </div>
-        <label className="flex items-center gap-3 font-bold">
-          <input type="checkbox" checked={form.settings.judgesMayLogAttempts} onChange={(e) => set(["settings", "judgesMayLogAttempts"], e.target.checked)} />
-          Judges may log attempts too (not only spotters)
-        </label>
-        <label className="flex items-center gap-3 font-bold">
-          <input type="checkbox" checked={form.settings.windCallBanner} onChange={(e) => set(["settings", "windCallBanner"], e.target.checked)} />
-          Show the wind-call banner on public pages and the big screen
-        </label>
+        <span className="flex items-start gap-2">
+          <label className="flex items-center gap-3 font-bold">
+            <input type="checkbox" checked={form.settings.judgesMayLogAttempts} onChange={(e) => set(["settings", "judgesMayLogAttempts"], e.target.checked)} />
+            {T.judgesLog}
+          </label>
+          <HelpButton what={T.judgesLog} help={help["event.judgesLog"]} />
+        </span>
+        <span className="flex items-start gap-2">
+          <label className="flex items-center gap-3 font-bold">
+            <input type="checkbox" checked={form.settings.windCallBanner} onChange={(e) => set(["settings", "windCallBanner"], e.target.checked)} />
+            {T.windBanner}
+          </label>
+          <HelpButton what={T.windBanner} help={help["event.windBanner"]} />
+        </span>
       </section>
 
       <section className="panel flex flex-col gap-4">
-        <h2 className="text-xl font-extrabold">Rider registration</h2>
-        <label className="flex items-center gap-3 font-bold">
-          <input type="checkbox" checked={form.settings.registrationOpen} onChange={(e) => set(["settings", "registrationOpen"], e.target.checked)} />
-          Registration is open (riders can register from the event page)
-        </label>
-        <p className="font-semibold">Registration is closed until you switch it on. It only works once the event is published.</p>
+        <h2 className="text-xl font-extrabold">{T.registration}</h2>
+        <span className="flex items-start gap-2">
+          <label className="flex items-center gap-3 font-bold">
+            <input type="checkbox" checked={form.settings.registrationOpen} onChange={(e) => set(["settings", "registrationOpen"], e.target.checked)} />
+            {T.registrationOpen}
+          </label>
+          <HelpButton what={T.registrationOpen} help={help["event.registrationOpen"]} />
+        </span>
+        <p className="font-semibold">{T.registrationNote}</p>
         <div className={field}>
-          <label htmlFor="ev-closes">Registration closes after (optional)</label>
+          <FieldLabel htmlFor="ev-closes" text={T.registrationCloses} help={help["event.registrationCloses"]} />
           <input id="ev-closes" type="date" value={form.settings.registrationClosesOn ?? ""} onChange={(e) => set(["settings", "registrationClosesOn"], e.target.value || null)} />
-          <p className="text-sm font-semibold">The whole of this day still counts, in the event’s time zone.</p>
-          {err("settings.registrationClosesOn") ? <p className="field-error">✖ {err("settings.registrationClosesOn")}</p> : null}
+          <p className="text-sm font-semibold">{T.registrationClosesHint}</p>
+          {showError("settings.registrationClosesOn")}
         </div>
       </section>
 
-      <IdentificationEditor
-        value={ident}
-        onChange={(v) => set(["settings", "identification"], v)}
-        presets={schemes}
-        organisationId={initial.organisationId}
-        errors={identErrors}
-      />
+      <IdentificationEditor value={ident} onChange={(v) => set(["settings", "identification"], v)} presets={schemes} organisationId={initial.organisationId} errors={identErrors} />
 
       <section className="panel flex flex-col gap-3">
-        <h2 className="text-xl font-extrabold">Officials’ join details</h2>
+        <h2 className="text-xl font-extrabold">{T.joinHeading}</h2>
+        <p className="font-semibold">{T.joinText(origin || "…", form.slug || "…")}</p>
         <p className="font-semibold">
-          Officials join at <strong>{origin || "…"}/join</strong> with the event code <strong data-testid="event-code">{form.slug || "…"}</strong> and their own personal PIN (you create seats and PINs in the Officials step).
-          There is no single PIN for the whole event: every official has their own.
+          {T.eventCode} <strong data-testid="event-code">{form.slug || "…"}</strong>
         </p>
       </section>
 
       {canPublishToggle ? (
         <section className="panel flex flex-col gap-2">
-          <h2 className="text-xl font-extrabold">Visibility</h2>
+          <h2 className="text-xl font-extrabold">{T.visibility}</h2>
           <label className="flex items-center gap-3 font-bold">
             <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
-            Published: the event is listed on the home page and its public pages work
+            {T.published}
           </label>
-          <p className="font-semibold">While unpublished (draft) only your team can see the event.</p>
+          <p className="font-semibold">{T.draftNote}</p>
         </section>
       ) : (
-        <p className="panel font-semibold">This event is {initial.status}; its visibility is now controlled by the heat controls.</p>
+        <p className="panel font-semibold">{T.otherStatus(initial.status)}</p>
       )}
 
       {serverError ? (
         <p role="alert" className="panel field-error">
-          ✖ {serverError}
+          {copy.common.problem(serverError)}
         </p>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" className="btn btn-primary" disabled={pending || (slugChangedOnPublished && !understood)}>
-          {pending ? "Saving…" : initial.id ? "Save event" : "Create event"}
+          {pending ? copy.common.saving : initial.id ? T.saveEvent : T.create}
         </button>
         {initial.id ? (
           <Link href={`/org/events/${initial.id}/divisions`} className="btn">
-            Next: Divisions →
+            {T.next}
           </Link>
         ) : null}
       </div>

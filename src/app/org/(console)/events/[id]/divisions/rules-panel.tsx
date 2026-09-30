@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
+import { FieldLabel, HelpButton } from "@/components/help-button";
+import { LadderDiagram } from "@/components/ladder-diagram";
 import { SchemaForm, type NewItem, type SelectOptions } from "@/components/schema-form/schema-form";
 import { toast } from "@/hooks/use-toast";
 import { issuesToMap } from "@/lib/form/path";
@@ -10,18 +12,19 @@ import { exportPreset, type PresetKind } from "@/lib/presets/io";
 import { presetGroups, type PresetRow } from "@/lib/presets/options";
 import { FormatTemplateSchema, type FormatTemplate } from "@/lib/schemas/format-template";
 import { ScoringModelSchema } from "@/lib/schemas/scoring-model";
-import { FORMAT_HIDDEN, FORMAT_LABELS, SCORING_HIDDEN, SCORING_LABELS } from "@/lib/schema-form/labels";
 import { friendlyMessage, schemaToNodes } from "@/lib/schema-form/nodes";
 import { describeScoringModel } from "@/lib/scoring-ui/describe";
 import { diffOverrides, FORMAT_NULLABLE, mergeOverrides, sameOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
+import { copy, FORMAT_HIDDEN, FORMAT_LABELS, help, SCORING_HIDDEN, SCORING_LABELS } from "@/lib/ui-copy";
 import { importPreset, savePreset, saveDivisionRules, unlockRules } from "./actions";
 import type { DivisionRow } from "./divisions-manager";
+import { FormatSimple, ladderKindOf } from "./format-simple";
 import { ScoringSimple } from "./scoring-simple";
 
+const R = copy.rules;
 const scoringNodes = schemaToNodes(ScoringModelSchema, SCORING_LABELS, SCORING_HIDDEN);
 const formatNodes = schemaToNodes(FormatTemplateSchema, FORMAT_LABELS, FORMAT_HIDDEN);
 
-type Level = "simple" | "advanced";
 type Message = { kind: "ok" | "error"; text: string; problems?: string[] } | null;
 
 function parseWith(kind: PresetKind, json: unknown) {
@@ -50,8 +53,8 @@ export function RulesPanel({
   const savedOverrides = scoring ? division.scoring_overrides : division.format_params;
 
   const [presetId, setPresetId] = useState<string | null>(savedPresetId);
-  const [custom, setCustom] = useState(false); // an unsaved custom format
-  const [level, setLevel] = useState<Level>("simple");
+  const [custom, setCustom] = useState(false); // an unsaved custom ladder
+  const [showAll, setShowAll] = useState(false);
   const [riders, setRiders] = useState(14);
   const [message, setMessage] = useState<Message>(null);
   const [presetName, setPresetName] = useState("");
@@ -85,6 +88,7 @@ export function RulesPanel({
   const model = check?.success && scoring ? (check.data as Parameters<typeof describeScoringModel>[0]) : null;
   const template = check?.success && !scoring ? (check.data as FormatTemplate) : null;
   const preview = useMemo(() => (template ? previewFormat(template, riders) : null), [template, riders]);
+  const isFixed = !scoring && ladderKindOf(working) === "custom";
 
   function choose(id: string) {
     const row = presets.find((p) => p.id === id);
@@ -99,7 +103,7 @@ export function RulesPanel({
     if (res.ok) {
       setMessage({ kind: "ok", text: okText });
       toast({ title: okText });
-    } else setMessage({ kind: "error", text: res.error ?? "That did not work.", problems: res.problems });
+    } else setMessage({ kind: "error", text: res.error ?? copy.divisions.errors.failed, problems: res.problems });
   }
 
   function saveForDivision() {
@@ -108,7 +112,7 @@ export function RulesPanel({
     start(async () => {
       const res = await saveDivisionRules({ divisionId: division.id, kind, presetId, overrides });
       if (res.ok) onDivisionChange(scoring ? { scoring_model_id: presetId, scoring_overrides: overrides } : { format_template_id: presetId, format_params: overrides });
-      report(res, `${scoring ? "Scoring" : "Format"} saved for ${division.name}`);
+      report(res, R.savedFor(scoring ? "scoring" : "format", division.name));
     });
   }
 
@@ -126,7 +130,7 @@ export function RulesPanel({
         setCustom(false);
         setPresetName("");
       }
-      report(applied, newVersion ? `Saved “${res.row.name}” as version ${res.row.version}; ${division.name} now uses it` : `Preset “${res.row.name}” saved; ${division.name} now uses it`);
+      report(applied, newVersion ? R.versionSavedUsing(res.row.name, res.row.version, division.name) : R.presetSavedUsing(res.row.name, division.name));
     });
   }
 
@@ -139,13 +143,13 @@ export function RulesPanel({
       choose(res.row.id);
       setShowPaste(false);
       setPasted("");
-      report({ ok: true }, `Imported “${res.row.name}” as a new preset. Press “Save for this division” to use it.`);
+      report({ ok: true }, R.imported(res.row.name));
     });
   }
 
   function download() {
     if (!working) return;
-    const { filename, text } = exportPreset(working, baseRow?.name ?? "my-preset");
+    const { filename, text } = exportPreset(working, baseRow?.name ?? copy.presets.exportName);
     const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
     const a = document.createElement("a");
     a.href = url;
@@ -161,7 +165,7 @@ export function RulesPanel({
         onDivisionChange({ locked: false });
         setReason("");
       }
-      report(res, "Unlocked. Your reason was written to the audit log.");
+      report(res, R.unlocked);
     });
   }
 
@@ -189,31 +193,32 @@ export function RulesPanel({
     setMessage(null);
   };
   const noun = scoring ? "scoring" : "format";
+  const idSuffix = `${kind}-${division.id}`;
 
   return (
-    <section className="flex flex-col gap-5" aria-label={`${scoring ? "Scoring" : "Format"} of ${division.name}`}>
+    <section className="flex flex-col gap-5" aria-label={`${scoring ? copy.divisions.tabScoring : copy.divisions.tabFormat}: ${division.name}`}>
       {locked ? (
         <div className="panel flex flex-col gap-3" role="note">
-          <p className="text-lg font-bold">🔒 Scoring and format are locked: a heat of this division has started.</p>
-          <p className="font-semibold">Changing rules mid-event affects results already entered. To change them anyway, write down why. It is kept in the audit log.</p>
+          <p className="text-lg font-bold">{R.lockedTitle}</p>
+          <p className="font-semibold">{R.lockedText}</p>
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex flex-col gap-1">
-              <label htmlFor={`reason-${kind}-${division.id}`}>Reason for unlocking</label>
-              <input id={`reason-${kind}-${division.id}`} value={reason} onChange={(e) => setReason(e.target.value)} className="w-96 max-w-full" />
+              <label htmlFor={`reason-${idSuffix}`}>{R.reason}</label>
+              <input id={`reason-${idSuffix}`} value={reason} onChange={(e) => setReason(e.target.value)} className="w-96 max-w-full" />
             </div>
             <button type="button" className="btn btn-danger" disabled={pending || reason.trim().length < 5} onClick={unlock}>
-              Unlock scoring and format
+              {R.unlock}
             </button>
           </div>
         </div>
       ) : null}
 
       <div className="flex flex-col gap-1">
-        <label htmlFor={`preset-${kind}-${division.id}`}>{scoring ? "Scoring preset" : "Format"}</label>
-        <select id={`preset-${kind}-${division.id}`} value={custom ? "" : (presetId ?? "")} disabled={locked} onChange={(e) => choose(e.target.value)}>
-          <option value="">{custom ? "Custom format (not saved yet)" : "Choose…"}</option>
+        <FieldLabel htmlFor={`preset-${idSuffix}`} text={scoring ? R.scoringPreset : R.formatPreset} help={help[scoring ? "scoring.preset" : "format.preset"]} />
+        <select id={`preset-${idSuffix}`} value={custom ? "" : (presetId ?? "")} disabled={locked} onChange={(e) => choose(e.target.value)}>
+          <option value="">{custom ? R.customUnsaved : copy.common.choose}</option>
           {groups.organisation.length > 0 ? (
-            <optgroup label="My organisation’s presets">
+            <optgroup label={R.myPresets}>
               {groups.organisation.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.label}
@@ -221,7 +226,7 @@ export function RulesPanel({
               ))}
             </optgroup>
           ) : null}
-          <optgroup label="Built-in presets">
+          <optgroup label={R.builtIn}>
             {groups.system.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.label}
@@ -229,7 +234,7 @@ export function RulesPanel({
             ))}
           </optgroup>
         </select>
-        {baseRow && baseParsed && "description" in baseParsed && typeof baseParsed.description === "string" ? <p className="text-sm font-semibold">{baseParsed.description}</p> : null}
+        {baseRow && baseParsed && typeof baseParsed.description === "string" ? <p className="text-sm font-semibold">{baseParsed.description}</p> : null}
       </div>
 
       {model ? (
@@ -238,41 +243,45 @@ export function RulesPanel({
         </p>
       ) : null}
 
-      {scoring && working ? (
-        <fieldset className="flex flex-wrap gap-4" disabled={locked}>
-          <legend className="sr-only">Level of detail</legend>
-          {(["simple", "advanced"] as const).map((l) => (
-            <label key={l} className="flex items-center gap-2 font-bold">
-              <input type="radio" name={`level-${division.id}`} checked={level === l} onChange={() => setLevel(l)} />
-              {l === "simple" ? "Simple: the common settings" : "Advanced: every setting"}
+      {working ? (
+        <div className="flex flex-col gap-1">
+          <span className="flex items-start gap-2">
+            <label className="flex items-center gap-3 font-bold">
+              <input type="checkbox" checked={showAll} disabled={locked} onChange={(e) => setShowAll(e.target.checked)} />
+              {R.showAll}
             </label>
-          ))}
-        </fieldset>
+            <HelpButton what={R.showAll} help={help["rules.showAll"]} />
+          </span>
+          <p className="text-sm font-semibold">{R.showAllHint}</p>
+        </div>
       ) : null}
 
-      {!working && !custom ? <p className="font-semibold">Choose a {scoring ? "scoring preset" : "format"} to see and edit its settings.</p> : null}
+      {!working && !custom ? <p className="font-semibold">{R.chooseFirst(scoring ? R.scoringWord : R.formatWord)}</p> : null}
 
-      {working && scoring && level === "simple" ? <ScoringSimple working={working} onChange={setValue} errors={errors} readOnly={locked} /> : null}
-      {working && scoring && level === "advanced" ? (
-        <SchemaForm node={scoringNodes} value={working} onChange={setValue} errors={errors} readOnly={locked} selectOptions={selectOptions} />
-      ) : null}
+      {working && scoring && !showAll ? <ScoringSimple working={working} onChange={setValue} errors={errors} readOnly={locked} /> : null}
+      {working && scoring && showAll ? <SchemaForm node={scoringNodes} value={working} onChange={setValue} errors={errors} readOnly={locked} selectOptions={selectOptions} /> : null}
+
       {working && !scoring ? (
         <>
-          <SchemaForm
-            node={formatNodes}
-            value={working}
-            onChange={setValue}
-            errors={errors}
-            readOnly={locked}
-            hidden={(working as { kind?: string }).kind === "fixed" ? ["generator"] : ["rounds"]}
-            selectOptions={selectOptions}
-            newItem={newItem}
-          />
-          <div className="panel flex flex-col gap-3" aria-label="Format preview">
+          <FormatSimple working={working as Record<string, unknown>} onChange={setValue} errors={errors} readOnly={locked} compact={showAll} />
+          {isFixed && !showAll ? <p className="panel font-semibold">{R.fixedRoundsNote}</p> : null}
+          {showAll ? (
+            <SchemaForm
+              node={formatNodes}
+              value={working}
+              onChange={setValue}
+              errors={errors}
+              readOnly={locked}
+              hidden={(working as { kind?: string }).kind === "fixed" ? ["generator"] : ["rounds"]}
+              selectOptions={selectOptions}
+              newItem={newItem}
+            />
+          ) : null}
+          <div className="panel flex flex-col gap-3" aria-label={copy.formatSimple.previewLabel}>
             <div className="flex flex-wrap items-center gap-3">
-              <label htmlFor={`riders-${division.id}`}>Preview with</label>
+              <FieldLabel htmlFor={`riders-${division.id}`} text={copy.formatSimple.previewWith} help={help["format.preview"]} />
               <input id={`riders-${division.id}`} type="number" min={1} max={200} value={riders} onChange={(e) => setRiders(Math.max(1, Math.min(200, Number(e.target.value) || 1)))} className="w-24" />
-              <span className="font-bold">riders</span>
+              <span className="font-bold">{copy.formatSimple.riders}</span>
               {[8, 14, 24].map((n) => (
                 <button key={n} type="button" className="btn" onClick={() => setRiders(n)}>
                   {n}
@@ -280,19 +289,22 @@ export function RulesPanel({
               ))}
             </div>
             {preview ? (
-              <>
-                <p className="text-lg font-bold" data-testid="format-preview" aria-live="polite">
-                  {preview.sentence}
-                </p>
-                {preview.ok ? <p className="font-semibold">About {preview.ridingMinutes} minutes of riding, not counting breaks.</p> : null}
-                {preview.warnings.map((w) => (
-                  <p key={w} className="font-bold">
-                    ⚠ {w}
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+                <div className="flex flex-col gap-2">
+                  <p className="text-lg font-bold" data-testid="format-preview" aria-live="polite">
+                    {preview.sentence}
                   </p>
-                ))}
-              </>
+                  {preview.ok ? <p className="font-semibold">{copy.formatSimple.ridingTime(preview.ridingMinutes)}</p> : null}
+                  {preview.warnings.map((w) => (
+                    <p key={w} className="font-bold">
+                      {copy.formatSimple.warning(w)}
+                    </p>
+                  ))}
+                </div>
+                <LadderDiagram columns={preview.ladder} />
+              </div>
             ) : (
-              <p className="font-semibold">Fix the highlighted settings to see the preview.</p>
+              <p className="font-semibold">{copy.formatSimple.fixFirst}</p>
             )}
           </div>
         </>
@@ -304,22 +316,22 @@ export function RulesPanel({
             type="button"
             className="btn"
             onClick={() => {
-              const parsed = FormatTemplateSchema.parse(newCustomFormat());
               setPresetId(null);
               setCustom(true);
-              setWorking(parsed);
+              setWorking(FormatTemplateSchema.parse(newCustomFormat()));
+              setShowAll(true);
               setMessage(null);
             }}
           >
-            + Start a custom format
+            {copy.formatSimple.startCustom}
           </button>
-          <p className="mt-1 text-sm font-semibold">Add rounds, heat sizes, durations, breaks, where riders come from and where each place goes. Save it as a preset to use it.</p>
+          <p className="mt-1 text-sm font-semibold">{copy.formatSimple.startCustomHint}</p>
         </div>
       ) : null}
 
       {Object.keys(errors).length > 0 ? (
         <div role="alert" className="panel">
-          <p className="field-error">✖ Some settings need fixing before they can be saved:</p>
+          <p className="field-error">{R.fixTitle}</p>
           <ul className="list-disc pl-6 font-semibold">
             {Object.entries(errors)
               .slice(0, 8)
@@ -334,10 +346,7 @@ export function RulesPanel({
 
       {message ? (
         <div role={message.kind === "error" ? "alert" : "status"} className="panel">
-          <p className={message.kind === "error" ? "field-error" : "font-bold"}>
-            {message.kind === "error" ? "✖ " : "✔ "}
-            {message.text}
-          </p>
+          <p className={message.kind === "error" ? "field-error" : "font-bold"}>{message.kind === "error" ? copy.common.problem(message.text) : copy.common.toastDone(message.text)}</p>
           {message.problems && message.problems.length > 0 ? (
             <ul className="list-disc pl-6 font-semibold">
               {message.problems.map((p) => (
@@ -352,44 +361,44 @@ export function RulesPanel({
         <div className="flex flex-col gap-4 border-t-2 border-[#111] pt-4">
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" className="btn btn-primary" disabled={pending || !valid || !presetId || custom} onClick={saveForDivision}>
-              {pending ? "Saving…" : `Save ${noun} for ${division.name}`}
+              {pending ? copy.common.saving : R.saveFor(noun, division.name)}
             </button>
-            {unsaved && presetId && !custom ? <span className="font-bold">● Unsaved changes</span> : null}
-            {custom ? <span className="font-bold">Save it as a preset first, then it is used for this division.</span> : null}
+            {unsaved && presetId && !custom ? <span className="font-bold">{copy.common.unsaved}</span> : null}
+            {custom ? <span className="font-bold">{R.saveFirst}</span> : null}
             {!custom && baseParsed && unsaved ? (
               <button type="button" className="btn" onClick={() => choose(presetId ?? "")}>
-                Discard changes
+                {R.discard}
               </button>
             ) : null}
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex flex-col gap-1">
-              <label htmlFor={`pname-${kind}-${division.id}`}>Save these settings as a new preset</label>
-              <input id={`pname-${kind}-${division.id}`} value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder="Preset name" className="w-72" />
+              <label htmlFor={`pname-${idSuffix}`}>{R.newPresetLabel}</label>
+              <input id={`pname-${idSuffix}`} value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder={R.presetPlaceholder} className="w-72" />
             </div>
             <button type="button" className="btn" disabled={pending || !valid || presetName.trim().length < 2} onClick={() => saveAsPreset(false)}>
-              Save as new preset
+              {R.saveNewPreset}
             </button>
             {owned && !custom ? (
               <button type="button" className="btn" disabled={pending || !valid} onClick={() => saveAsPreset(true)}>
-                Save as new version of “{baseRow?.name}”
+                {R.saveNewVersion(baseRow?.name ?? "")}
               </button>
             ) : null}
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" className="btn" disabled={!valid} onClick={download}>
-              Export as JSON
+              {R.export}
             </button>
             <label className="btn cursor-pointer">
-              Import a JSON file…
+              {R.import}
               <input
                 ref={fileInput}
                 type="file"
                 accept="application/json,.json"
                 className="sr-only"
-                aria-label={`Import a ${noun} JSON file`}
+                aria-label={R.importAria(noun)}
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (file) doImport(await file.text());
@@ -398,24 +407,23 @@ export function RulesPanel({
               />
             </label>
             <button type="button" className="btn" onClick={() => setShowPaste((v) => !v)}>
-              {showPaste ? "Hide paste box" : "Paste JSON instead"}
+              {showPaste ? R.pasteHide : R.pasteShow}
             </button>
           </div>
           {showPaste ? (
             <div className="flex flex-col gap-2">
-              <label htmlFor={`paste-${kind}-${division.id}`}>Paste the JSON here</label>
-              <textarea id={`paste-${kind}-${division.id}`} rows={8} value={pasted} onChange={(e) => setPasted(e.target.value)} className="font-mono" />
+              <label htmlFor={`paste-${idSuffix}`}>{R.pasteLabel}</label>
+              <textarea id={`paste-${idSuffix}`} rows={8} value={pasted} onChange={(e) => setPasted(e.target.value)} className="font-mono" />
               <div>
                 <button type="button" className="btn" disabled={pending || pasted.trim() === ""} onClick={() => doImport(pasted)}>
-                  Import pasted JSON
+                  {R.pasteImport}
                 </button>
               </div>
             </div>
           ) : null}
-          <p className="text-sm font-semibold">Imports are always saved as a new preset of your organisation. Nothing existing is overwritten.</p>
+          <p className="text-sm font-semibold">{R.importNote}</p>
         </div>
       ) : null}
     </section>
   );
 }
-

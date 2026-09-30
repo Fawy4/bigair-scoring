@@ -1,7 +1,8 @@
 import type { IdentificationScheme, PaletteColour } from "@/lib/schemas/identification";
+import { copy } from "@/lib/ui-copy";
 
-/** What we know about one rider when a chip is drawn. Identifiers follow docs/05 `entries.identifiers`. */
-export interface ChipRider {
+/** What we know about one rider when a rider label is drawn. Identifiers follow docs/05 `entries.identifiers`. */
+export interface LabelRider {
   name: string;
   nationality?: string | null;
   sponsor?: string | null;
@@ -17,7 +18,7 @@ export interface ChipRider {
   };
 }
 
-export interface ChipPrimary {
+export interface LabelPrimary {
   kind: "colour" | "text" | "photo" | "none";
   /** Always filled: colour names are shown as text too (beach standard 00.5). */
   text: string;
@@ -29,8 +30,8 @@ export interface ChipPrimary {
   usedFallback: boolean;
 }
 
-export interface ChipModel {
-  primary: ChipPrimary;
+export interface LabelModel {
+  primary: LabelPrimary;
   secondary: Array<{ key: string; text: string }>;
   /** What the spotter calls out for this rider. */
   callout: string;
@@ -54,13 +55,13 @@ function colourOf(palette: PaletteColour[], key: string | null | undefined): Pal
   return palette.find((c) => c.key === key) ?? null;
 }
 
-function kiteText(k: NonNullable<ChipRider["identifiers"]>["kite"]): string {
+function kiteText(k: NonNullable<LabelRider["identifiers"]>["kite"]): string {
   if (!k) return "";
   const head = [k.brand, k.model, k.size !== undefined && k.size !== "" ? String(k.size) : ""].filter(Boolean).join(" ");
   return [head, k.colours].filter(Boolean).join(" · ");
 }
 
-function colourFor(scheme: IdentificationScheme, rider: ChipRider, which: string): PaletteColour | null {
+function colourFor(scheme: IdentificationScheme, rider: LabelRider, which: string): PaletteColour | null {
   const ids = rider.identifiers ?? {};
   if (which === "vest_colour") {
     const key = scheme.vestAssignment === "per_heat_slot" ? (rider.slotColour ?? ids.vest_colour) : (ids.vest_colour ?? rider.slotColour);
@@ -71,13 +72,16 @@ function colourFor(scheme: IdentificationScheme, rider: ChipRider, which: string
   return null;
 }
 
-function primaryFor(scheme: IdentificationScheme, rider: ChipRider, which: string, usedFallback: boolean): ChipPrimary | null {
+function primaryFor(scheme: IdentificationScheme, rider: LabelRider, which: string, usedFallback: boolean): LabelPrimary | null {
   const ids = rider.identifiers ?? {};
   if (which === "vest_colour" || which === "rashguard_colour" || which === "helmet_colour") {
     const c = colourFor(scheme, rider, which);
     if (!c) return null;
     const lum = luminance(c.hex);
     return { kind: "colour", text: c.label.toUpperCase(), hex: c.hex, outlined: lum > 0.8 || lum < 0.02 || /^(white|black)$/i.test(c.label), ink: inkFor(c.hex), usedFallback };
+  }
+  if (which === "name") {
+    return rider.name.trim() ? { kind: "text", text: rider.name.trim(), outlined: true, ink: "#111111", usedFallback } : null;
   }
   if (which === "bib_number") {
     if (ids.bib === undefined || ids.bib === "") return null;
@@ -94,19 +98,19 @@ function primaryFor(scheme: IdentificationScheme, rider: ChipRider, which: strin
 }
 
 /** Works out what a rider chip shows for a scheme; the React component only draws this. */
-export function chipModel(scheme: IdentificationScheme, rider: ChipRider): ChipModel {
+export function riderLabelModel(scheme: IdentificationScheme, rider: LabelRider): LabelModel {
   const primary =
     primaryFor(scheme, rider, scheme.primary, false) ??
     (scheme.fallbackPrimary ? primaryFor(scheme, rider, scheme.fallbackPrimary, true) : null) ?? {
       kind: "none" as const,
-      text: "NOT SET",
+      text: copy.riderLabel.notSet,
       outlined: true,
       ink: "#111111" as const,
       usedFallback: false,
     };
 
   const ids = rider.identifiers ?? {};
-  const secondary: ChipModel["secondary"] = [];
+  const secondary: LabelModel["secondary"] = [];
   const push = (key: string, text: string | null | undefined) => {
     if (text) secondary.push({ key, text });
   };
@@ -125,7 +129,7 @@ export function chipModel(scheme: IdentificationScheme, rider: ChipRider): ChipM
       case "rashguard_colour":
       case "helmet_colour": {
         const c = colourFor(scheme, rider, key);
-        if (c) push(key, `${key === "vest_colour" ? "Vest" : key === "rashguard_colour" ? "Rash guard" : "Helmet"}: ${c.label}`);
+        if (c) push(key, `${key === "vest_colour" ? copy.riderLabel.lycra : key === "rashguard_colour" ? copy.riderLabel.rashguard : copy.riderLabel.helmet}: ${c.label}`);
         break;
       }
       case "bib_number":
@@ -135,18 +139,19 @@ export function chipModel(scheme: IdentificationScheme, rider: ChipRider): ChipM
         push(key, kiteText(ids.kite));
         break;
       case "kite_size_colour":
-        push(key, [ids.kite?.size !== undefined && ids.kite.size !== "" ? `${ids.kite.size} m` : "", ids.kite?.colours].filter(Boolean).join(" · "));
+        push(key, [ids.kite?.size !== undefined && ids.kite.size !== "" ? copy.riderLabel.kiteSize(String(ids.kite.size)) : "", ids.kite?.colours].filter(Boolean).join(" · "));
         break;
       case "photo":
-        if (rider.photoUrl) push(key, "Photo on file");
+        if (rider.photoUrl) push(key, copy.riderLabel.photoOnFile);
         break;
     }
   }
   return { primary, secondary, callout: calloutFor(scheme, rider, primary) };
 }
 
-function calloutFor(scheme: IdentificationScheme, rider: ChipRider, primary: ChipPrimary): string {
+function calloutFor(scheme: IdentificationScheme, rider: LabelRider, primary: LabelPrimary): string {
   const ids = rider.identifiers ?? {};
+  if (scheme.calloutLabel === "name") return rider.name.trim() || primary.text;
   if (scheme.calloutLabel === "number") return ids.bib !== undefined && ids.bib !== "" ? String(ids.bib) : primary.text;
   if (scheme.calloutLabel === "kite") {
     const first = ids.kite?.colours?.split(/[\/,]/)[0]?.trim();

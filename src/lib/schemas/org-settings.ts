@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { copy } from "@/lib/ui-copy";
 
 /** Time zones the browser and Node know about (docs/06 §12 decision 18). */
 export function knownTimeZones(): string[] {
@@ -18,7 +19,7 @@ export function isValidTimeZone(tz: string): boolean {
   }
 }
 
-export const TimeZoneSchema = z.string().refine(isValidTimeZone, { message: "Not a known time zone (for example Africa/Cairo)" });
+export const TimeZoneSchema = z.string().refine(isValidTimeZone, { message: copy.event.validation.timeZone });
 
 export const OrgSettingsSchema = z.object({
   defaultTimezone: TimeZoneSchema.default("Africa/Cairo"),
@@ -35,8 +36,8 @@ export const OrgSlugSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .min(2, "The web address needs at least 2 characters")
-  .max(40, "The web address can be at most 40 characters")
-  .regex(/^[a-z0-9][a-z0-9-]*$/, "Use only lowercase letters, numbers and hyphens, starting with a letter or number");
+  .min(2, copy.event.validation.slugMin)
+  .max(40, copy.orgSettings.validation.slugMax)
+  .regex(/^[a-z0-9][a-z0-9-]*$/, copy.event.validation.slugChars);
 
-export const OrgNameSchema = z.string().trim().min(2, "Give the organisation a name").max(80, "That name is too long (80 characters at most)");
+export const OrgNameSchema = z.string().trim().min(2, copy.orgSettings.validation.nameMin).max(80, copy.orgSettings.validation.nameMax);

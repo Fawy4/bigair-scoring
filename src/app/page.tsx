@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PRODUCT_NAME } from "@/lib/product";
+import { copy } from "@/lib/ui-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -19,26 +20,26 @@ export default async function Home() {
     <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-8 p-4 text-[#111]">
       <header className="pt-10 text-center">
         <h1 className="text-4xl font-extrabold">{PRODUCT_NAME}</h1>
-        <p className="mt-2 text-lg font-semibold">Live scoring for kitesurfing Big Air competitions.</p>
+        <p className="mt-2 text-lg font-semibold">{copy.landing.tagline}</p>
       </header>
       <nav aria-label="Main" className="flex flex-col gap-3">
         <Link href="/join" className={linkClass}>
-          Officials: join with a PIN
+          {copy.landing.join}
         </Link>
         <Link href="/org/login" className={linkClass}>
-          Organiser sign in
+          {copy.landing.organiser}
         </Link>
       </nav>
       <section aria-labelledby="events-heading">
         <h2 id="events-heading" className="text-2xl font-extrabold">
-          Events
+          {copy.landing.eventsHeading}
         </h2>
         {error ? (
           <p role="alert" className="mt-2 rounded-lg border-2 border-[#111] p-3 text-lg font-semibold">
-            ✖ The event list could not be loaded just now. Try again in a minute.
+            {copy.common.problem(copy.landing.loadError)}
           </p>
         ) : (events ?? []).length === 0 ? (
-          <p className="mt-2 text-lg font-semibold">No events are published yet.</p>
+          <p className="mt-2 text-lg font-semibold">{copy.landing.none}</p>
         ) : (
           <ul className="mt-2 flex flex-col gap-2">
             {(events ?? []).map((e) => (
@@ -47,7 +48,7 @@ export default async function Home() {
                   <span className="block text-xl font-bold">{e.name}</span>
                   <span className="block text-base font-semibold">
                     {[e.location, e.start_date].filter(Boolean).join(" · ")}
-                    {e.status === "live" ? " · ● LIVE now" : e.status === "complete" ? " · finished" : ""}
+                    {e.status === "live" ? copy.landing.live : e.status === "complete" ? copy.landing.finished : ""}
                   </span>
                 </Link>
               </li>

@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { getOrgContext } from "@/lib/org/context";
 import type { PresetRow } from "@/lib/presets/options";
+import { copy } from "@/lib/ui-copy";
 import { DivisionsManager, type DivisionRow } from "./divisions-manager";
 
-export const metadata = { title: "Divisions" };
+export const metadata = { title: copy.wizard.steps.divisions };
 
 export default async function DivisionsStepPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -40,8 +41,11 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
 
   return (
     <main className="flex max-w-4xl flex-col gap-6">
-      <h1 className="text-3xl font-extrabold">Step 2: Divisions</h1>
-      <p className="font-semibold">A division is a group that ranks together (for example Pro Men). Each has its own scoring rules and format. Everything can be started from a preset and adjusted.</p>
+      <h1 className="text-3xl font-extrabold">{copy.divisions.stepHeading}</h1>
+      <p className="font-semibold">{copy.divisions.intro}</p>
+      <p className="panel font-bold" role="note" data-testid="lock-banner">
+        {copy.divisions.lockBanner}
+      </p>
       <DivisionsManager
         eventId={id}
         organisationId={event.organisation_id}

@@ -1,3 +1,5 @@
+import { copy } from "@/lib/ui-copy";
+
 /** Plain-language "what's missing" for each wizard step (docs/06 §1: unfinished steps say what is missing). */
 export interface EventStepInput {
   name: string;
@@ -17,18 +19,18 @@ export interface DivisionStepInput {
 
 export function eventStepMissing(e: EventStepInput): string[] {
   const out: string[] = [];
-  if (!e.name.trim()) out.push("Give the event a name.");
-  if (!e.start_date || !e.end_date) out.push("Set the first and last day of the event.");
-  if (!e.location?.trim()) out.push("Add the location.");
+  if (!e.name.trim()) out.push(copy.wizard.missing.name);
+  if (!e.start_date || !e.end_date) out.push(copy.wizard.missing.dates);
+  if (!e.location?.trim()) out.push(copy.wizard.missing.location);
   return out;
 }
 
 export function divisionsStepMissing(divisions: DivisionStepInput[]): string[] {
-  if (divisions.length === 0) return ["Add at least one division (for example Pro Men)."];
+  if (divisions.length === 0) return [copy.wizard.missing.noDivisions];
   const out: string[] = [];
   for (const d of divisions) {
-    if (!d.scoring_model_id) out.push(`${d.name}: choose how it is scored.`);
-    if (!d.format_template_id) out.push(`${d.name}: choose its format.`);
+    if (!d.scoring_model_id) out.push(copy.wizard.missing.scoring(d.name));
+    if (!d.format_template_id) out.push(copy.wizard.missing.format(d.name));
   }
   return out;
 }
@@ -43,11 +45,11 @@ export interface StepInfo {
 
 export function wizardSteps(event: EventStepInput | null, divisions: DivisionStepInput[]): StepInfo[] {
   return [
-    { key: "event", label: "1. Event", available: true, missing: event ? eventStepMissing(event) : [] },
-    { key: "divisions", label: "2. Divisions", available: true, missing: divisionsStepMissing(divisions) },
-    { key: "riders", label: "3. Riders", available: false, missing: [] },
-    { key: "officials", label: "4. Officials", available: false, missing: [] },
-    { key: "draw", label: "5. Draw", available: false, missing: [] },
-    { key: "schedule", label: "6. Run order & timetable", available: false, missing: [] },
+    { key: "event", label: copy.wizard.steps.event, available: true, missing: event ? eventStepMissing(event) : [] },
+    { key: "divisions", label: copy.wizard.steps.divisions, available: true, missing: divisionsStepMissing(divisions) },
+    { key: "riders", label: copy.wizard.steps.riders, available: false, missing: [] },
+    { key: "officials", label: copy.wizard.steps.officials, available: false, missing: [] },
+    { key: "draw", label: copy.wizard.steps.draw, available: false, missing: [] },
+    { key: "schedule", label: copy.wizard.steps.schedule, available: false, missing: [] },
   ];
 }

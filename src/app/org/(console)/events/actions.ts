@@ -7,6 +7,9 @@ import { brandingPathFromUrl } from "@/lib/branding/image";
 import { EventFormSchema, parseEventBranding, slugify } from "@/lib/schemas/event-settings";
 import { parseIdentificationScheme } from "@/lib/schemas/identification";
 import { issuesToMap } from "@/lib/form/path";
+import { copy } from "@/lib/ui-copy";
+
+const T = copy.event;
 
 export type SaveEventResult =
   | { ok: true; id: string; slug: string }
@@ -15,12 +18,12 @@ export type SaveEventResult =
 /** `id = null` creates the event in the organiser's current organisation; otherwise updates it (Row Level Security decides who may). */
 export async function saveEvent(id: string | null, raw: unknown, status: "draft" | "published" | null): Promise<SaveEventResult> {
   const parsed = EventFormSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, error: "Some settings need fixing.", fields: issuesToMap(parsed.error.issues) };
+  if (!parsed.success) return { ok: false, error: copy.orgSettings.fixThese, fields: issuesToMap(parsed.error.issues) };
   const form = parsed.data;
   const { supabase, current } = await getOrgContext();
 
   if (id === null) {
-    if (!current) return { ok: false, error: "You are not a member of an organisation." };
+    if (!current) return { ok: false, error: T.noOrg };
     const { data, error } = await supabase
       .from("events")
       .insert({
@@ -43,7 +46,7 @@ export async function saveEvent(id: string | null, raw: unknown, status: "draft"
   }
 
   const { data: before } = await supabase.from("events").select("organisation_id, status, settings, branding").eq("id", id).maybeSingle();
-  if (!before) return { ok: false, error: "That event was not found, or you do not have access to it." };
+  if (!before) return { ok: false, error: T.notFound };
   const patch: Record<string, unknown> = {
     name: form.name,
     slug: form.slug,
@@ -59,7 +62,7 @@ export async function saveEvent(id: string | null, raw: unknown, status: "draft"
   if (status && (before.status === "draft" || before.status === "published")) patch.status = status;
   const { data, error } = await supabase.from("events").update(patch as never).eq("id", id).select("id, slug");
   if (error) return failure(error);
-  if (!data || data.length === 0) return { ok: false, error: "The event could not be saved (no permission). Nothing was changed." };
+  if (!data || data.length === 0) return { ok: false, error: T.saveDenied };
 
   // Remove logo files that are no longer used (best effort).
   const oldBranding = parseEventBranding(before.branding);
@@ -73,15 +76,15 @@ export async function saveEvent(id: string | null, raw: unknown, status: "draft"
 }
 
 function failure(error: { code?: string; message: string }): SaveEventResult {
-  if (error.code === "23505") return { ok: false, error: "That web address is already used by another event.", fields: { slug: "Already taken: choose another" } };
-  if (error.code === "23514") return { ok: false, error: "One of the values is not allowed. Check the highlighted fields.", fields: {} };
-  return { ok: false, error: "The event could not be saved. Nothing was changed; try again." };
+  if (error.code === "23505") return { ok: false, error: T.slugTaken, fields: { slug: T.slugTakenField } };
+  if (error.code === "23514") return { ok: false, error: T.notAllowedValue, fields: {} };
+  return { ok: false, error: T.saveFailed };
 }
 
 /** Saves an identification scheme as an organisation preset (a new version when the name already exists). */
 export async function saveIdentificationPreset(input: { organisationId: string; name: string; scheme: unknown }): Promise<{ ok: true; key: string; name: string; version: number } | { ok: false; error: string }> {
   const name = input.name.trim();
-  if (name.length < 2) return { ok: false, error: "Give the preset a name (at least 2 characters)." };
+  if (name.length < 2) return { ok: false, error: copy.ident.nameTooShort };
   let scheme;
   try {
     scheme = parseIdentificationScheme(input.scheme);
@@ -102,6 +105,6 @@ export async function saveIdentificationPreset(input: { organisationId: string; 
     json: json as never,
     content_hash: canonicalHash(json),
   });
-  if (error) return { ok: false, error: "The preset could not be saved. Try again." };
+  if (error) return { ok: false, error: copy.ident.saveFailed };
   return { ok: true, key, name, version };
 }

@@ -20,6 +20,7 @@ export interface Entrant {
 }
 
 export type IdentificationSchemeId =
+  | "name-callout"
   | "vests-per-heat"
   | "fixed-lycra-per-rider"
   | "bib-numbers"

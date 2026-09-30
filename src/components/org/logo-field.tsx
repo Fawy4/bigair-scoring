@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { uploadBrandingImage } from "@/lib/branding/upload";
+import { copy } from "@/lib/ui-copy";
 
 /** Picks and uploads one image, then hands its public address to the form. Errors stay on screen (decision 16). */
 export function LogoField({
@@ -41,32 +42,32 @@ export function LogoField({
       <div className="flex flex-wrap items-center gap-3">
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={value} alt={`${label} (current)`} className="h-16 max-w-[12rem] rounded border-2 border-[#111] bg-white object-contain p-1" />
+          <img src={value} alt={copy.logo.current(label)} className="h-16 max-w-[12rem] rounded border-2 border-[#111] bg-white object-contain p-1" />
         ) : (
-          <span className="flex h-16 w-24 items-center justify-center rounded border-2 border-dashed border-[#111] text-sm font-semibold">No image</span>
+          <span className="flex h-16 w-24 items-center justify-center rounded border-2 border-dashed border-[#111] text-sm font-semibold">{copy.logo.none}</span>
         )}
         <label className="btn cursor-pointer">
-          {busy ? "Uploading…" : value ? "Replace image" : "Choose image"}
+          {busy ? copy.logo.uploading : value ? copy.logo.replace : copy.logo.choose}
           <input
             ref={input}
             type="file"
             accept="image/png,image/jpeg,image/webp"
             className="sr-only"
-            aria-label={`${label}: choose an image file`}
+            aria-label={copy.logo.chooseAria(label)}
             disabled={busy}
             onChange={(e) => pick(e.target.files?.[0])}
           />
         </label>
         {value ? (
           <button type="button" className="btn" onClick={() => onChange(null)} disabled={busy}>
-            Remove
+            {copy.common.remove}
           </button>
         ) : null}
       </div>
-      <p className="text-sm font-semibold">PNG, JPEG or WebP, up to 2 MB.</p>
+      <p className="text-sm font-semibold">{copy.common.imageTypes}</p>
       {error ? (
         <p role="alert" className="field-error">
-          ✖ {error}
+          {copy.common.problem(error)}
         </p>
       ) : null}
     </div>

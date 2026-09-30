@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import type { PresetRow } from "@/lib/presets/options";
+import { copy } from "@/lib/ui-copy";
 import { addDivision, deleteDivision, duplicateDivision, moveDivision, renameDivision } from "./actions";
 import { RulesPanel } from "./rules-panel";
 
@@ -63,7 +64,7 @@ export function DivisionsManager({
       setDivisions((ds) => [...ds, { id: res.id, name: newName.trim(), sort_order: res.sortOrder, scoring_model_id: null, scoring_overrides: {}, format_template_id: null, format_params: {}, hasHeats: false, locked: false }]);
       setOpenId(res.id);
       setNewName("");
-      toast({ title: "Division added" });
+      toast({ title: copy.divisions.added });
       router.refresh();
     });
   }
@@ -85,7 +86,7 @@ export function DivisionsManager({
       const src = divisions.find((d) => d.id === id)!;
       setDivisions((ds) => [...ds, { ...src, id: res.id, name: res.name, sort_order: Math.max(...ds.map((d) => d.sort_order)) + 1, hasHeats: false, locked: false }]);
       setOpenId(res.id);
-      toast({ title: `Duplicated as “${res.name}”` });
+      toast({ title: copy.divisions.duplicated(res.name) });
       router.refresh();
     });
   }
@@ -98,7 +99,7 @@ export function DivisionsManager({
       if (!res.ok) return fail(res.error);
       setDivisions((ds) => ds.filter((d) => d.id !== id));
       if (openId === id) setOpenId(null);
-      toast({ title: "Division deleted" });
+      toast({ title: copy.divisions.deleted });
       router.refresh();
     });
   }
@@ -115,7 +116,7 @@ export function DivisionsManager({
         void _gone;
         return rest;
       });
-      toast({ title: "Division renamed" });
+      toast({ title: copy.divisions.renamed });
     });
   }
 
@@ -123,11 +124,11 @@ export function DivisionsManager({
     <div className="flex flex-col gap-6">
       {error ? (
         <p role="alert" className="panel field-error">
-          ✖ {error}
+          {copy.common.problem(error)}
         </p>
       ) : null}
 
-      {sorted.length === 0 ? <p className="panel text-lg font-semibold">No divisions yet. Add the first one below (for example “Pro Men”).</p> : null}
+      {sorted.length === 0 ? <p className="panel text-lg font-semibold">{copy.divisions.none}</p> : null}
 
       <ol className="flex flex-col gap-4">
         {sorted.map((d, i) => {
@@ -140,52 +141,51 @@ export function DivisionsManager({
                 <span className="text-lg font-extrabold">{i + 1}.</span>
                 <div className="flex min-w-56 flex-1 items-center gap-2">
                   <input
-                    aria-label={`Name of division ${i + 1}`}
+                    aria-label={copy.divisions.nameOf(i + 1)}
                     value={renaming[d.id] ?? d.name}
                     onChange={(e) => setRenaming((r) => ({ ...r, [d.id]: e.target.value }))}
                     onBlur={() => renaming[d.id] !== undefined && renaming[d.id].trim() !== d.name && rename(d.id)}
                     className="min-w-0 flex-1 !text-lg !font-extrabold"
                   />
                 </div>
-                <button type="button" className="btn" disabled={pending || i === 0} aria-label={`Move ${d.name} up`} onClick={() => move(d.id, -1)}>
-                  ↑
+                <button type="button" className="btn" disabled={pending || i === 0} aria-label={copy.divisions.moveUp(d.name)} onClick={() => move(d.id, -1)}>
+                  {copy.common.up}
                 </button>
-                <button type="button" className="btn" disabled={pending || i === sorted.length - 1} aria-label={`Move ${d.name} down`} onClick={() => move(d.id, 1)}>
-                  ↓
+                <button type="button" className="btn" disabled={pending || i === sorted.length - 1} aria-label={copy.divisions.moveDown(d.name)} onClick={() => move(d.id, 1)}>
+                  {copy.common.down}
                 </button>
                 <button type="button" className="btn" disabled={pending} onClick={() => duplicate(d.id)}>
-                  Duplicate
+                  {copy.divisions.duplicate}
                 </button>
                 {confirmDelete === d.id ? (
                   <>
                     <button type="button" className="btn btn-danger" disabled={pending} onClick={() => remove(d.id)}>
-                      Yes, delete {d.name}
+                      {copy.divisions.confirmDelete(d.name)}
                     </button>
                     <button type="button" className="btn" onClick={() => setConfirmDelete(null)}>
-                      Cancel
+                      {copy.common.cancel}
                     </button>
                   </>
                 ) : (
-                  <button type="button" className="btn btn-danger" disabled={pending || d.hasHeats} title={d.hasHeats ? "This division already has heats" : undefined} onClick={() => setConfirmDelete(d.id)}>
-                    Delete
+                  <button type="button" className="btn btn-danger" disabled={pending || d.hasHeats} title={d.hasHeats ? copy.divisions.hasHeatsTitle : undefined} onClick={() => setConfirmDelete(d.id)}>
+                    {copy.divisions.delete}
                   </button>
                 )}
                 <button type="button" className="btn btn-primary" aria-expanded={open} onClick={() => setOpenId(open ? null : d.id)}>
-                  {open ? "Close" : "Edit scoring & format"}
+                  {open ? copy.common.close : copy.divisions.editRules}
                 </button>
               </div>
-              {d.hasHeats ? <p className="font-semibold">This division has heats, so it cannot be deleted.</p> : null}
+              {d.hasHeats ? <p className="font-semibold">{copy.divisions.hasHeats}</p> : null}
               <p className="font-semibold">
-                Scoring: <strong>{sModel ? sModel.name : "not chosen yet"}</strong> · Format: <strong>{fTemplate ? fTemplate.name : "not chosen yet"}</strong>
-                {d.locked ? " · 🔒 locked" : ""}
+                {copy.divisions.summary(sModel ? sModel.name : copy.divisions.notChosen, fTemplate ? fTemplate.name : copy.divisions.notChosen, d.locked)}
               </p>
 
               {open ? (
                 <div className="flex flex-col gap-4 border-t-2 border-[#111] pt-4">
-                  <div role="tablist" aria-label={`${d.name} settings`} className="flex gap-2">
+                  <div role="tablist" aria-label={copy.divisions.tabsLabel(d.name)} className="flex gap-2">
                     {(["scoring", "format"] as const).map((t) => (
                       <button key={t} type="button" role="tab" aria-selected={tab === t} className={`btn ${tab === t ? "btn-primary" : ""}`} onClick={() => setTab(t)}>
-                        {t === "scoring" ? "Scoring" : "Format"}
+                        {t === "scoring" ? copy.divisions.tabScoring : copy.divisions.tabFormat}
                       </button>
                     ))}
                   </div>
@@ -225,11 +225,11 @@ export function DivisionsManager({
         }}
       >
         <div className="flex flex-col gap-1">
-          <label htmlFor="new-division">New division name</label>
-          <input id="new-division" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Pro Men" className="w-72" />
+          <label htmlFor="new-division">{copy.divisions.newName}</label>
+          <input id="new-division" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={copy.divisions.newPlaceholder} className="w-72" />
         </div>
         <button type="submit" className="btn btn-primary" disabled={pending || newName.trim().length < 2}>
-          + Add division
+          {copy.divisions.add}
         </button>
       </form>
     </div>

@@ -1,17 +1,18 @@
 import { z } from "zod";
 import schemesFile from "../../../presets/identification/schemes.json";
+import { copy } from "@/lib/ui-copy";
 
 /**
  * Rider identification scheme (docs/06 §0). One primary identifier shown big on every rider chip, secondary ones small.
  * The palette travels with the scheme, so an event keeps working even if the preset it started from changes later.
  */
 export const PaletteColourSchema = z.object({
-  key: z.string().regex(/^[a-z][a-z0-9_]*$/, "colour key must be lowercase letters, numbers or _"),
-  label: z.string().trim().min(1, "give the colour a name (it is always shown as text too)"),
-  hex: z.string().regex(/^#[0-9a-fA-F]{6}$/, "colour must look like #e11d48"),
+  key: z.string().regex(/^[a-z][a-z0-9_]*$/, copy.ident.validation.colourKey),
+  label: z.string().trim().min(1, copy.ident.validation.colourName),
+  hex: z.string().regex(/^#[0-9a-fA-F]{6}$/, copy.ident.validation.colourHex),
 });
 
-export const PrimaryIdentifierSchema = z.enum(["vest_colour", "bib_number", "kite", "rashguard_colour", "helmet_colour", "photo"]);
+export const PrimaryIdentifierSchema = z.enum(["name", "vest_colour", "bib_number", "kite", "rashguard_colour", "helmet_colour", "photo"]);
 export const SecondaryIdentifierSchema = z.enum([
   "name",
   "nationality",
@@ -28,7 +29,7 @@ export const SecondaryIdentifierSchema = z.enum([
 export const IdentificationSchemeSchema = z
   .object({
     id: z.string().min(1),
-    name: z.string().trim().min(1, "give the scheme a name"),
+    name: z.string().trim().min(1, copy.ident.validation.schemeName),
     description: z.string().optional(),
     primary: PrimaryIdentifierSchema,
     /** Used when the primary identifier is not available on the day (e.g. no vests). */
@@ -38,21 +39,21 @@ export const IdentificationSchemeSchema = z
     bibNumbering: z.enum(["none", "per_event", "per_division"]).default("none"),
     kiteFields: z.array(z.enum(["brand", "model", "size", "colours"])).default([]),
     /** What the spotter calls out: the colour ("Red"), the number ("14") or the kite ("Blue Orbit"). */
-    calloutLabel: z.enum(["colour", "number", "kite"]).default("colour"),
-    palette: z.array(PaletteColourSchema).min(1, "the palette needs at least one colour"),
+    calloutLabel: z.enum(["colour", "number", "kite", "name"]).default("colour"),
+    palette: z.array(PaletteColourSchema).min(1, copy.ident.validation.paletteMin),
   })
   .superRefine((s, ctx) => {
     const keys = s.palette.map((c) => c.key);
     const dupes = keys.filter((k, i) => keys.indexOf(k) !== i);
     if (dupes.length > 0) {
-      ctx.addIssue({ code: "custom", path: ["palette"], message: `colour keys must be unique (duplicate: ${[...new Set(dupes)].join(", ")})` });
+      ctx.addIssue({ code: "custom", path: ["palette"], message: copy.ident.validation.keysUnique([...new Set(dupes)].join(", ")) });
     }
     const names = s.palette.map((c) => c.label.toLowerCase());
     if (names.some((n, i) => names.indexOf(n) !== i)) {
-      ctx.addIssue({ code: "custom", path: ["palette"], message: "two colours share a name; colours are called out by name, so each needs its own" });
+      ctx.addIssue({ code: "custom", path: ["palette"], message: copy.ident.validation.namesUnique });
     }
     if (s.fallbackPrimary === s.primary) {
-      ctx.addIssue({ code: "custom", path: ["fallbackPrimary"], message: "the fallback must differ from the primary identifier" });
+      ctx.addIssue({ code: "custom", path: ["fallbackPrimary"], message: copy.ident.validation.fallbackDiffers });
     }
   });
 
@@ -65,26 +66,25 @@ export function builtInSchemes(): IdentificationScheme[] {
   return schemesFile.schemes.map((s) => IdentificationSchemeSchema.parse({ ...s, palette: schemesFile.palette }));
 }
 
-/** The default scheme: coloured vests assigned per heat (docs/06 §0). */
+/** The default for a new event: recognise riders by name, because nothing may be assumed to be handed out (docs/06 §0). */
 export function defaultScheme(): IdentificationScheme {
+  return builtInSchemes().find((s) => s.id === "name-callout") ?? builtInSchemes()[0];
+}
+
+/** The scheme chosen when the organiser says riders will wear lycras. */
+export function lycraScheme(): IdentificationScheme {
   return builtInSchemes().find((s) => s.id === "vests-per-heat") ?? builtInSchemes()[0];
+}
+
+/** Does this scheme rely on lycra colours as its main identifier? */
+export function usesLycras(scheme: Pick<IdentificationScheme, "primary">): boolean {
+  return scheme.primary === "vest_colour";
 }
 
 export function parseIdentificationScheme(json: unknown): IdentificationScheme {
   const r = IdentificationSchemeSchema.safeParse(json);
-  if (!r.success) throw new Error(`Invalid identification scheme:\n${z.prettifyError(r.error)}`);
+  if (!r.success) throw new Error(copy.ident.validation.invalid(z.prettifyError(r.error)));
   return r.data;
 }
 
-export const IDENTIFIER_LABELS: Record<string, string> = {
-  vest_colour: "Vest / lycra colour",
-  bib_number: "Bib / sail number",
-  kite: "Kite (brand, model, size, colours)",
-  kite_size_colour: "Kite size + colourway",
-  rashguard_colour: "Rash guard / wetsuit colour",
-  helmet_colour: "Helmet colour",
-  photo: "Rider photo",
-  name: "Name",
-  nationality: "Nationality",
-  sponsor: "Sponsor",
-};
+export const IDENTIFIER_LABELS: Record<string, string> = copy.ident.identifiers;

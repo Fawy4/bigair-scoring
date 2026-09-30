@@ -186,7 +186,8 @@ interface Primary {
   what: string;
 }
 
-function primaryOf(scheme: IdentificationSchemeId, e: { identifiers?: import("./types").EntrantIdentifiers }): Primary | undefined {
+function primaryOf(scheme: IdentificationSchemeId, e: { name?: string; identifiers?: import("./types").EntrantIdentifiers }): Primary | undefined {
+  if (scheme === "name-callout") return e.name?.trim() ? { key: lower(e.name), text: e.name.trim(), what: "name" } : undefined;
   const id = e.identifiers;
   if (!id) return undefined;
   switch (scheme) {

@@ -11,7 +11,7 @@ export function blankEventValues(timezone: string): EventForm {
     start_date: today,
     end_date: today,
     timezone,
-    settings: parseEventSettings({ identification: { scheme: defaultScheme(), basedOn: "vests-per-heat", allowDivisionOverride: false } }),
+    settings: parseEventSettings({ identification: { scheme: defaultScheme(), basedOn: defaultScheme().id, allowDivisionOverride: false } }),
     branding: parseEventBranding({}),
   };
 }
@@ -27,7 +27,7 @@ export function valuesFromRow(row: { name: string; slug: string; location: strin
     start_date: row.start_date ?? today,
     end_date: row.end_date ?? row.start_date ?? today,
     timezone: row.timezone,
-    settings: { ...settings, identification: settings.identification ?? { scheme: defaultScheme(), basedOn: "vests-per-heat", allowDivisionOverride: false } },
+    settings: { ...settings, identification: settings.identification ?? { scheme: defaultScheme(), basedOn: defaultScheme().id, allowDivisionOverride: false } },
     branding: parseEventBranding(row.branding),
   };
 }

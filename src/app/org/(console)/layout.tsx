@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Toaster } from "@/components/ui/toaster";
 import { getOrgContext } from "@/lib/org/context";
 import { PRODUCT_NAME } from "@/lib/product";
+import { copy } from "@/lib/ui-copy";
 import { OrgSwitcher } from "./org-switcher";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +17,12 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           <Link href="/org" className="text-xl font-extrabold">
             {PRODUCT_NAME}
           </Link>
-          <nav aria-label="Organiser" className="flex flex-wrap items-center gap-2">
+          <nav aria-label={copy.layout.navLabel} className="flex flex-wrap items-center gap-2">
             <Link href="/org" className="btn">
-              Events
+              {copy.layout.events}
             </Link>
             <Link href="/org/settings" className="btn">
-              Organisation settings
+              {copy.layout.settings}
             </Link>
           </nav>
           <div className="ml-auto flex flex-wrap items-center gap-3">
@@ -29,7 +30,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
             <span className="hidden text-sm font-semibold sm:inline">{user.email}</span>
             <form action="/auth/signout" method="post">
               <button type="submit" className="btn">
-                Sign out
+                {copy.layout.signOut}
               </button>
             </form>
           </div>

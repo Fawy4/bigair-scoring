@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { builtInSchemes, defaultScheme, IdentificationSchemeSchema } from "./identification";
+import { builtInSchemes, defaultScheme, IdentificationSchemeSchema, lycraScheme, usesLycras } from "./identification";
 import { EventFormSchema, parseEventSettings, slugify } from "./event-settings";
 import { isValidTimeZone, OrgSlugSchema, parseOrgSettings } from "./org-settings";
 
@@ -15,11 +15,14 @@ const base = {
 };
 
 describe("identification schemes", () => {
-  it("all five built-in schemes parse and carry the shared palette", () => {
+  it("all six built-in schemes parse and carry the shared palette", () => {
     const all = builtInSchemes();
-    expect(all.map((s) => s.id)).toEqual(["vests-per-heat", "fixed-lycra-per-rider", "bib-numbers", "kites-no-vests", "brand-launch-same-kites"]);
+    expect(all.map((s) => s.id)).toEqual(["name-callout", "vests-per-heat", "fixed-lycra-per-rider", "bib-numbers", "kites-no-vests", "brand-launch-same-kites"]);
     expect(all.every((s) => s.palette.length === 10)).toBe(true);
-    expect(defaultScheme().id).toBe("vests-per-heat");
+    expect(defaultScheme().id).toBe("name-callout"); // nothing may be assumed to be handed out
+    expect(lycraScheme().id).toBe("vests-per-heat");
+    expect(usesLycras(lycraScheme())).toBe(true);
+    expect(usesLycras(defaultScheme())).toBe(false);
   });
 
   it("rejects duplicate colour names and a fallback equal to the primary", () => {
@@ -42,6 +45,13 @@ describe("event form", () => {
     expect(r.settings.publicLiveScores).toBe("after_publish");
     expect(r.settings.registrationOpen).toBe(false);
     expect(r.settings.livePollSec).toBe(7);
+  });
+
+  it("visibility: every option is off by default (nothing is shown until the head judge publishes)", () => {
+    const r = EventFormSchema.parse(base);
+    expect(r.settings.publicLiveScores).not.toBe("live");
+    expect(r.settings.publicResultsOnPublish).toBe(false);
+    expect(r.settings.holdFinalResult).toBe(false);
   });
 
   it("explains a last day before the first day", () => {
@@ -87,13 +97,13 @@ describe("event form starting values", () => {
   it("a blank event starts with the organisation's time zone, the default scheme and everything closed", () => {
     const v = blankEventValues("Europe/Berlin");
     expect(v.timezone).toBe("Europe/Berlin");
-    expect(v.settings.identification?.scheme.id).toBe("vests-per-heat");
+    expect(v.settings.identification?.scheme.id).toBe("name-callout");
     expect(v.settings.registrationOpen).toBe(false);
     expect(EventFormSchema.safeParse({ ...v, name: "Arrow", slug: "arrow" }).success).toBe(true);
   });
   it("a saved row without an identification scheme gets the default one", () => {
     const v = valuesFromRow({ name: "Old", slug: "old", location: null, timezone: "Africa/Cairo", start_date: null, end_date: null, settings: { publicLiveScores: "live" }, branding: {} });
     expect(v.settings.publicLiveScores).toBe("live");
-    expect(v.settings.identification?.basedOn).toBe("vests-per-heat");
+    expect(v.settings.identification?.basedOn).toBe("name-callout");
   });
 });

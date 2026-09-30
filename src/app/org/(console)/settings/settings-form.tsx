@@ -2,8 +2,16 @@
 
 import { useState, useTransition } from "react";
 import { LogoField } from "@/components/org/logo-field";
+import { FieldLabel } from "@/components/help-button";
 import { toast } from "@/hooks/use-toast";
+import { copy } from "@/lib/ui-copy";
 import { saveOrganisationSettings } from "./actions";
+
+const help = {
+  name: { text: "The name of your organisation, shown in the header of organiser screens.", example: "Arrow" },
+  slug: { text: "Your organisation’s address. Lowercase letters, numbers and hyphens.", example: "arrow" },
+  timeZone: { text: "The time zone pre-filled for every new event. Each event can still choose its own.", example: "Africa/Cairo" },
+};
 
 interface Initial {
   id: string;
@@ -37,7 +45,7 @@ export function SettingsForm({ initial, timeZones, canEdit }: { initial: Initial
         setSaved({ slug: res.slug });
         setSlug(res.slug);
         setUnderstood(false);
-        toast({ title: "Organisation settings saved" });
+        toast({ title: copy.orgSettings.saved });
       } else {
         setError(res.error);
         setFields(res.fields ?? {});
@@ -46,34 +54,34 @@ export function SettingsForm({ initial, timeZones, canEdit }: { initial: Initial
   }
 
   return (
-    <form onSubmit={save} className="flex flex-col gap-6" aria-label="Organisation settings">
+    <form onSubmit={save} className="flex flex-col gap-6" aria-label={copy.orgSettings.heading}>
       <fieldset disabled={!canEdit || pending} className="flex flex-col gap-6">
         <div className="flex flex-col gap-1">
-          <label htmlFor="org-name">Organisation name</label>
+          <FieldLabel htmlFor="org-name" text={copy.orgSettings.name} help={help.name} />
           <input id="org-name" value={name} onChange={(e) => setName(e.target.value)} aria-invalid={Boolean(fields.name)} />
-          {fields.name ? <p className="field-error">✖ {fields.name}</p> : null}
+          {fields.name ? <p className="field-error">{copy.common.problem(fields.name)}</p> : null}
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="org-slug">Web address (slug)</label>
+          <FieldLabel htmlFor="org-slug" text={copy.orgSettings.slug} help={help.slug} />
           <input id="org-slug" value={slug} onChange={(e) => setSlug(e.target.value)} aria-invalid={Boolean(fields.slug)} spellCheck={false} autoCapitalize="none" />
-          <p className="text-sm font-semibold">Lowercase letters, numbers and hyphens, for example “arrow”.</p>
-          {fields.slug ? <p className="field-error">✖ {fields.slug}</p> : null}
+          <p className="text-sm font-semibold">{copy.orgSettings.slugHint}</p>
+          {fields.slug ? <p className="field-error">{copy.common.problem(fields.slug)}</p> : null}
           {slugChanged ? (
             <div className="panel mt-2" role="note">
-              <p className="font-bold">⚠ Changing the web address changes your public links.</p>
-              <p className="font-semibold">Anything that already points to “{saved.slug}” (printed QR codes, shared links) will stop working. Only continue if you have not shared links yet.</p>
+              <p className="font-bold">{copy.orgSettings.slugWarnTitle}</p>
+              <p className="font-semibold">{copy.orgSettings.slugWarn(saved.slug)}</p>
               <label className="mt-2 flex items-center gap-3 font-bold">
-                <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />I understand, change the address
+                <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />{copy.orgSettings.understand}
               </label>
             </div>
           ) : null}
         </div>
 
-        <LogoField orgId={initial.id} purpose="organisation-logo" label="Organisation logo" value={logoUrl} onChange={setLogoUrl} />
+        <LogoField orgId={initial.id} purpose="organisation-logo" label={copy.orgSettings.logo} value={logoUrl} onChange={setLogoUrl} />
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="org-tz">Default time zone for new events</label>
+          <FieldLabel htmlFor="org-tz" text={copy.orgSettings.timeZone} help={help.timeZone} />
           <select id="org-tz" value={tz} onChange={(e) => setTz(e.target.value)}>
             {zones.map((z) => (
               <option key={z} value={z}>
@@ -81,19 +89,19 @@ export function SettingsForm({ initial, timeZones, canEdit }: { initial: Initial
               </option>
             ))}
           </select>
-          <p className="text-sm font-semibold">New events start with this time zone; each event can still choose its own.</p>
-          {fields.defaultTimezone ? <p className="field-error">✖ {fields.defaultTimezone}</p> : null}
+          <p className="text-sm font-semibold">{copy.orgSettings.timeZoneHint}</p>
+          {fields.defaultTimezone ? <p className="field-error">{copy.common.problem(fields.defaultTimezone)}</p> : null}
         </div>
       </fieldset>
 
       {error ? (
         <p role="alert" className="panel field-error">
-          ✖ {error}
+          {copy.common.problem(error)}
         </p>
       ) : null}
       <div>
         <button type="submit" className="btn btn-primary" disabled={!canEdit || pending || (slugChanged && !understood)}>
-          {pending ? "Saving…" : "Save settings"}
+          {pending ? copy.common.saving : copy.orgSettings.save}
         </button>
       </div>
     </form>

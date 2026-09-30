@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FormatTemplateSchema } from "@/lib/schemas/format-template";
 import { ScoringModelSchema } from "@/lib/schemas/scoring-model";
-import { FORMAT_HIDDEN, FORMAT_LABELS, SCORING_HIDDEN, SCORING_LABELS } from "./labels";
+import { FORMAT_HIDDEN, FORMAT_LABELS, SCORING_HIDDEN, SCORING_LABELS } from "@/lib/ui-copy";
 import { allNodes, defaultValueFor, friendlyMessage, humanise, schemaToNodes, type FieldNode } from "./nodes";
 
 const scoring = schemaToNodes(ScoringModelSchema, SCORING_LABELS, SCORING_HIDDEN);
@@ -17,6 +17,29 @@ describe("the Advanced form is generated from the schemas and covers every field
   it("every format-template field has a plain-language label", () => {
     const missing = allNodes(format).filter((n) => n.pattern.length > 0 && !(key(n) in FORMAT_LABELS)).map(key);
     expect(missing).toEqual([]);
+  });
+
+  it("every field has a “?” help sentence and an example, so every setting can be explained on tap", () => {
+    const check = (root: FieldNode, labels: typeof SCORING_LABELS) =>
+      allNodes(root)
+        .filter((n) => n.pattern.length > 0)
+        .map(key)
+        .filter((k) => !labels[k]?.help || !labels[k]?.example);
+    expect(check(scoring, SCORING_LABELS)).toEqual([]);
+    expect(check(format, FORMAT_LABELS)).toEqual([]);
+  });
+
+  it("optional sections (no default) get an on/off switch instead of empty fields", () => {
+    const by = new Map<string, FieldNode>();
+    for (const n of allNodes(format)) if (!by.has(key(n))) by.set(key(n), n);
+    expect(by.get("flagOut")).toMatchObject({ kind: "nullable", absent: true });
+    expect(by.get("rounds.*.crossHeat")).toMatchObject({ kind: "nullable", absent: true });
+    const sb = new Map<string, FieldNode>();
+    for (const n of allNodes(scoring)) if (!sb.has(key(n))) sb.set(key(n), n);
+    expect(sb.get("heat.countedWeights")).toMatchObject({ kind: "nullable", absent: true });
+    expect(sb.get("heat.counting.perCategoryMax")).toMatchObject({ kind: "nullable", absent: true });
+    expect(sb.get("heat.impression")).toMatchObject({ kind: "nullable", absent: false }); // null is a real value here
+    expect(sb.get("heightSensor")?.kind).toBe("object"); // has a default: always present
   });
 
   it("the labels do not describe fields that no longer exist", () => {
@@ -46,7 +69,6 @@ describe("the Advanced form is generated from the schemas and covers every field
     expect(by.get("tieBreakers")?.kind).toBe("list");
     expect(by.get("heightSensor.mapping.toScore")?.kind).toBe("tuple");
     expect(by.get("modifiers.dns.total")).toMatchObject({ kind: "fixed", value: 0 });
-    expect(by.get("heat.counting.perCategoryMax")?.kind).toBe("record");
     const counting = by.get("heat.counting");
     expect(counting?.kind === "choice" && counting.variants.map((v) => v.value)).toEqual(["best_n", "best_per_category", "single_best", "all", "none"]);
   });

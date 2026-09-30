@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { RiderChip } from "@/components/rider-chip";
+import { FieldLabel } from "@/components/help-button";
+import { RiderLabel } from "@/components/rider-label";
 import { toast } from "@/hooks/use-toast";
-import { chipModel } from "@/lib/identification/chip";
 import { moveIn, removeIn, setIn } from "@/lib/form/path";
-import { IDENTIFIER_LABELS, PrimaryIdentifierSchema, SecondaryIdentifierSchema, type IdentificationScheme } from "@/lib/schemas/identification";
+import { riderLabelModel } from "@/lib/identification/rider-label";
+import { defaultScheme, lycraScheme, PrimaryIdentifierSchema, SecondaryIdentifierSchema, usesLycras, type IdentificationScheme } from "@/lib/schemas/identification";
+import { copy, help } from "@/lib/ui-copy";
 import { saveIdentificationPreset } from "./actions";
 
+const T = copy.ident;
 const SAMPLE = {
   name: "Sam Sample",
   nationality: "EG",
@@ -15,10 +18,6 @@ const SAMPLE = {
   slotColour: "red",
   identifiers: { vest_colour: "red", bib: 14, kite: { brand: "North", model: "Orbit", size: 9, colours: "blue/white" }, rashguard_colour: "blue", helmet_colour: "black" },
 };
-
-const CALLOUTS = { colour: "The colour (“Red”)", number: "The number (“14”)", kite: "The kite (“Blue Orbit”)" } as const;
-const VEST = { per_heat_slot: "Vest colour changes every heat (each slot has a colour)", fixed_per_rider: "One colour per rider for the whole event", none: "No vests" } as const;
-const BIB = { none: "No numbers", per_event: "Numbers are unique in the whole event", per_division: "Numbers are unique inside each division" } as const;
 
 export interface IdentificationValue {
   scheme: IdentificationScheme;
@@ -56,6 +55,13 @@ export function IdentificationEditor({
     if (p) onChange({ ...value, scheme: structuredClone(p), basedOn: p.id });
   }
 
+  /** "Will riders wear coloured lycras?" picks the matching ready-made scheme. */
+  function answerLycras(yes: boolean) {
+    if (yes === usesLycras(s)) return;
+    const next = yes ? lycraScheme() : defaultScheme();
+    onChange({ ...value, scheme: structuredClone(next), basedOn: next.id });
+  }
+
   function savePreset() {
     setPresetError(null);
     start(async () => {
@@ -65,21 +71,40 @@ export function IdentificationEditor({
         setList((l) => [...l.filter((x) => x.id !== saved.id), saved]);
         onChange({ ...value, basedOn: saved.id });
         setPresetName("");
-        toast({ title: `Preset “${res.name}” saved` });
+        toast({ title: T.presetSaved(res.name) });
       } else setPresetError(res.error);
     });
   }
 
+  const lycras = usesLycras(s);
+  const isName = s.primary === "name";
+  const callout = riderLabelModel(s, SAMPLE).callout;
+
   return (
     <fieldset className="panel flex flex-col gap-5">
-      <legend className="px-1 text-xl font-extrabold">Rider identification</legend>
-      <p className="font-semibold">How officials recognise a rider from the beach. Every screen shows the same rider chip built from this scheme.</p>
+      <legend className="px-1 text-xl font-extrabold">{T.heading}</legend>
+      <p className="font-semibold">{T.intro}</p>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend>
+          <FieldLabel as="span" text={T.lycraQuestion} help={help["ident.lycraQuestion"]} />
+        </legend>
+        <label className="flex items-center gap-3 font-bold">
+          <input type="radio" name="lycras" checked={lycras} onChange={() => answerLycras(true)} />
+          {T.lycraYes}
+        </label>
+        <label className="flex items-center gap-3 font-bold">
+          <input type="radio" name="lycras" checked={isName} onChange={() => answerLycras(false)} />
+          {T.lycraNo}
+        </label>
+        <p className="text-sm font-semibold">{T.lycraHint}</p>
+      </fieldset>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="ident-preset">Start from a preset</label>
+        <FieldLabel htmlFor="ident-preset" text={T.preset} help={help["ident.preset"]} />
         <select id="ident-preset" value={value.basedOn ?? ""} onChange={(e) => pickPreset(e.target.value)}>
           {value.basedOn && !list.some((p) => p.id === value.basedOn) ? <option value={value.basedOn}>{value.basedOn}</option> : null}
-          {!value.basedOn ? <option value="">Custom (edited)</option> : null}
+          {!value.basedOn ? <option value="">{T.custom}</option> : null}
           {list.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -91,32 +116,32 @@ export function IdentificationEditor({
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-1">
-          <label htmlFor="ident-primary">Big label on every chip (primary)</label>
+          <FieldLabel htmlFor="ident-primary" text={T.primary} help={help["ident.primary"]} />
           <select id="ident-primary" value={s.primary} onChange={(e) => set(["primary"], e.target.value)}>
             {PrimaryIdentifierSchema.options.map((o) => (
               <option key={o} value={o}>
-                {IDENTIFIER_LABELS[o]}
+                {T.identifiers[o]}
               </option>
             ))}
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label htmlFor="ident-fallback">If the primary is missing on the day (fallback)</label>
+          <FieldLabel htmlFor="ident-fallback" text={T.fallback} help={help["ident.fallback"]} />
           <select id="ident-fallback" value={s.fallbackPrimary ?? ""} onChange={(e) => set(["fallbackPrimary"], e.target.value || undefined)}>
-            <option value="">No fallback</option>
+            <option value="">{T.noFallback}</option>
             {PrimaryIdentifierSchema.options
               .filter((o) => o !== s.primary)
               .map((o) => (
                 <option key={o} value={o}>
-                  {IDENTIFIER_LABELS[o]}
+                  {T.identifiers[o]}
                 </option>
               ))}
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label htmlFor="ident-callout">The spotter calls out</label>
+          <FieldLabel htmlFor="ident-callout" text={T.callout} help={help["ident.callout"]} />
           <select id="ident-callout" value={s.calloutLabel} onChange={(e) => set(["calloutLabel"], e.target.value)}>
-            {Object.entries(CALLOUTS).map(([k, label]) => (
+            {Object.entries(T.callouts).map(([k, label]) => (
               <option key={k} value={k}>
                 {label}
               </option>
@@ -124,9 +149,9 @@ export function IdentificationEditor({
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label htmlFor="ident-vest">Vests</label>
+          <FieldLabel htmlFor="ident-vest" text={T.lycras} help={help["ident.lycras"]} />
           <select id="ident-vest" value={s.vestAssignment} onChange={(e) => set(["vestAssignment"], e.target.value)}>
-            {Object.entries(VEST).map(([k, label]) => (
+            {Object.entries(T.lycraAssign).map(([k, label]) => (
               <option key={k} value={k}>
                 {label}
               </option>
@@ -134,9 +159,9 @@ export function IdentificationEditor({
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label htmlFor="ident-bib">Bib / sail numbers</label>
+          <FieldLabel htmlFor="ident-bib" text={T.bibs} help={help["ident.bibs"]} />
           <select id="ident-bib" value={s.bibNumbering} onChange={(e) => set(["bibNumbering"], e.target.value)}>
-            {Object.entries(BIB).map(([k, label]) => (
+            {Object.entries(T.bibNumbering).map(([k, label]) => (
               <option key={k} value={k}>
                 {label}
               </option>
@@ -147,39 +172,45 @@ export function IdentificationEditor({
 
       <div className="grid gap-4 md:grid-cols-2">
         <fieldset className="flex flex-col gap-1">
-          <legend className="text-base">Small details on the chip (secondary)</legend>
+          <legend>
+            <FieldLabel as="span" text={T.secondary} help={help["ident.secondary"]} />
+          </legend>
           {SecondaryIdentifierSchema.options.map((o) => (
             <label key={o} className="flex items-center gap-3 font-semibold">
               <input type="checkbox" checked={s.secondary.includes(o)} onChange={() => toggle("secondary", o)} />
-              {IDENTIFIER_LABELS[o]}
+              {T.identifiers[o]}
             </label>
           ))}
         </fieldset>
         <fieldset className="flex flex-col gap-1">
-          <legend className="text-base">Kite details to record</legend>
+          <legend>
+            <FieldLabel as="span" text={T.kiteFields} help={help["ident.kiteFields"]} />
+          </legend>
           {(["brand", "model", "size", "colours"] as const).map((o) => (
-            <label key={o} className="flex items-center gap-3 font-semibold capitalize">
+            <label key={o} className="flex items-center gap-3 font-semibold">
               <input type="checkbox" checked={s.kiteFields.includes(o)} onChange={() => toggle("kiteFields", o)} />
-              {o}
+              {T.kite[o]}
             </label>
           ))}
         </fieldset>
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-base">Colour palette (in slot order; colours are always written out as text too)</legend>
+        <legend>
+          <FieldLabel as="span" text={T.palette} help={help["ident.palette"]} />
+        </legend>
         {s.palette.map((c, i) => (
           <div key={c.key} className="flex flex-wrap items-center gap-2">
-            <input type="color" aria-label={`${c.label} colour`} value={c.hex} onChange={(e) => set(["palette", i, "hex"], e.target.value)} className="!min-h-[48px] w-14 p-1" />
-            <input aria-label={`Name of colour ${i + 1}`} value={c.label} onChange={(e) => set(["palette", i, "label"], e.target.value)} className="w-40" />
-            <button type="button" className="btn" aria-label={`Move ${c.label} up`} disabled={i === 0} onClick={() => onChange({ ...value, scheme: moveIn(s, ["palette"], i, i - 1) })}>
-              ↑
+            <input type="color" aria-label={T.colourPicker(c.label)} value={c.hex} onChange={(e) => set(["palette", i, "hex"], e.target.value)} className="!min-h-[48px] w-14 p-1" />
+            <input aria-label={T.colourName(i + 1)} value={c.label} onChange={(e) => set(["palette", i, "label"], e.target.value)} className="w-40" />
+            <button type="button" className="btn" aria-label={T.colourUp(c.label)} disabled={i === 0} onClick={() => onChange({ ...value, scheme: moveIn(s, ["palette"], i, i - 1) })}>
+              {copy.common.up}
             </button>
-            <button type="button" className="btn" aria-label={`Move ${c.label} down`} disabled={i === s.palette.length - 1} onClick={() => onChange({ ...value, scheme: moveIn(s, ["palette"], i, i + 1) })}>
-              ↓
+            <button type="button" className="btn" aria-label={T.colourDown(c.label)} disabled={i === s.palette.length - 1} onClick={() => onChange({ ...value, scheme: moveIn(s, ["palette"], i, i + 1) })}>
+              {copy.common.down}
             </button>
-            <button type="button" className="btn btn-danger" aria-label={`Remove ${c.label}`} disabled={s.palette.length === 1} onClick={() => onChange({ ...value, scheme: removeIn(s, ["palette", i]) })}>
-              Remove
+            <button type="button" className="btn btn-danger" aria-label={T.colourRemove(c.label)} disabled={s.palette.length === 1} onClick={() => onChange({ ...value, scheme: removeIn(s, ["palette", i]) })}>
+              {copy.common.remove}
             </button>
           </div>
         ))}
@@ -190,53 +221,51 @@ export function IdentificationEditor({
             onClick={() => {
               let n = s.palette.length + 1;
               while (s.palette.some((c) => c.key === `colour_${n}`)) n++;
-              set(["palette", s.palette.length], { key: `colour_${n}`, label: `Colour ${n}`, hex: "#888888" });
+              set(["palette", s.palette.length], { key: `colour_${n}`, label: T.newColour(n), hex: "#888888" });
             }}
           >
-            + Add colour
+            {T.addColour}
           </button>
         </div>
       </fieldset>
 
-      <label className="flex items-center gap-3 font-bold">
-        <input type="checkbox" checked={value.allowDivisionOverride} onChange={(e) => onChange({ ...value, allowDivisionOverride: e.target.checked })} />
-        Allow a different scheme for individual divisions
-      </label>
+      <span className="flex items-start gap-2">
+        <label className="flex items-center gap-3 font-bold">
+          <input type="checkbox" checked={value.allowDivisionOverride} onChange={(e) => onChange({ ...value, allowDivisionOverride: e.target.checked })} />
+          {T.allowOverride}
+        </label>
+      </span>
 
       <div className="flex flex-wrap items-center gap-4" aria-live="polite">
-        <span className="text-base font-bold">Preview:</span>
-        <RiderChip scheme={s} rider={SAMPLE} size="lg" />
+        <span className="text-base font-bold">{T.preview}</span>
+        <RiderLabel scheme={s} rider={SAMPLE} size="lg" />
         <span className="font-semibold">
-          Spotter calls out: <strong>{previewCallout(s)}</strong>
+          {T.previewCallout} <strong>{callout}</strong>
         </span>
       </div>
 
       {errors.length > 0 ? (
         <ul role="alert" className="field-error list-disc pl-6">
           {errors.map((e) => (
-            <li key={e}>✖ {e}</li>
+            <li key={e}>{copy.common.problem(e)}</li>
           ))}
         </ul>
       ) : null}
 
       <div className="flex flex-wrap items-end gap-3 border-t-2 border-[#111] pt-4">
         <div className="flex flex-col gap-1">
-          <label htmlFor="ident-save-name">Save this scheme as a preset</label>
-          <input id="ident-save-name" value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder="Preset name" className="w-64" />
+          <FieldLabel htmlFor="ident-save-name" text={T.saveName} help={help["ident.savePreset"]} />
+          <input id="ident-save-name" value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder={T.presetName} className="w-64" />
         </div>
         <button type="button" className="btn" onClick={savePreset} disabled={pending || presetName.trim().length < 2}>
-          {pending ? "Saving…" : "Save as preset"}
+          {pending ? copy.common.saving : T.savePreset}
         </button>
         {presetError ? (
           <p role="alert" className="field-error w-full">
-            ✖ {presetError}
+            {copy.common.problem(presetError)}
           </p>
         ) : null}
       </div>
     </fieldset>
   );
-}
-
-function previewCallout(s: IdentificationScheme): string {
-  return chipModel(s, SAMPLE).callout;
 }

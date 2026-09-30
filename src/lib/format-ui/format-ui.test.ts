@@ -4,7 +4,7 @@ import single from "../../../presets/formats/heats4-top2-single-elim.json";
 import pools from "../../../presets/formats/pools-to-final.json";
 import { parseFormatTemplate } from "@/lib/schemas/format-template";
 import { advanceTargets, newCustomFormat, newRound, validateFormat } from "./custom";
-import { previewFormat } from "./preview";
+import { placesLabel, previewFormat } from "./preview";
 
 describe("format preview", () => {
   it("describes the real draw the engine deals", () => {
@@ -76,5 +76,42 @@ describe("custom format builder", () => {
 
   it("targets for 'where each place goes'", () => {
     expect(advanceTargets(["R1", "R2", "F"], "R1")).toEqual(["R2", "F", "eliminated", "final_placing"]);
+  });
+});
+
+describe("ladder diagram model", () => {
+  it("14 riders, heats of 4, top 2: three rounds with their heats and where places go", () => {
+    const p = previewFormat(parseFormatTemplate(single), 14);
+    expect(p.ladder.map((c) => c.shortName)).toEqual(["R1", "SF", "F"]);
+    expect(p.ladder.map((c) => c.summary)).toEqual(["4 heats · 3–4 riders", "2 heats · 4 riders", "1 heat · 4 riders"]);
+    expect(p.ladder[0].heats.map((h) => h.size)).toEqual([3, 3, 4, 4]); // smaller heats for the top seeds
+    expect(p.ladder[0].routes).toEqual(["1st–2nd → SF", "the rest → out"]);
+    expect(p.ladder[2].routes).toEqual(["the rest → final placing"]);
+  });
+
+  it("the number of rounds and heats matches the text preview", () => {
+    for (const [file, n] of [[single, 14], [dingle, 18], [pools, 23]] as const) {
+      const p = previewFormat(parseFormatTemplate(file), n);
+      expect(p.ladder).toHaveLength(p.rounds.length);
+      expect(p.ladder.reduce((s, c) => s + c.heats.filter((h) => !h.bye).length, 0)).toBe(p.totalHeats);
+    }
+  });
+
+  it("pools: everyone rides once, then the best N of all heats go to the final", () => {
+    const p = previewFormat(parseFormatTemplate(pools), 23);
+    expect(p.ladder[0].routes).toEqual(["best 6 of all heats → F", "the rest → out"]);
+  });
+
+  it("second chance: winners go on, 2nd and 3rd get another heat", () => {
+    const p = previewFormat(parseFormatTemplate(dingle), 18);
+    expect(p.ladder[0].routes.join(" | ")).toMatch(/1st → R3.*2nd–3rd → R2/);
+  });
+
+  it("place lists read naturally", () => {
+    expect(placesLabel([1])).toBe("1st");
+    expect(placesLabel([1, 2, 3])).toBe("1st–3rd");
+    expect(placesLabel([1, 3])).toBe("1st, 3rd");
+    expect(placesLabel([11, 12])).toBe("11th–12th");
+    expect(placesLabel([2, 3])).toBe("2nd–3rd");
   });
 });

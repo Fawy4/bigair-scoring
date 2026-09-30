@@ -2,6 +2,7 @@ import { z } from "zod";
 import { FormatTemplateSchema, type FormatTemplate } from "@/lib/schemas/format-template";
 import { ScoringModelSchema, type ScoringModel } from "@/lib/schemas/scoring-model";
 import { friendlyMessage } from "@/lib/schema-form/nodes";
+import { copy } from "@/lib/ui-copy";
 
 /** Export and import of scoring models and formats as JSON files (docs/06 §1). Pure; imports always become NEW organisation presets. */
 export type PresetKind = "scoring_model" | "format_template";
@@ -29,23 +30,23 @@ export function describeJsonError(text: string, error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   let where = "";
   const lc = message.match(/line (\d+) column (\d+)/i);
-  if (lc) where = ` (line ${lc[1]}, column ${lc[2]})`;
+  if (lc) where = copy.presets.where(Number(lc[1]), Number(lc[2]));
   else {
     const pos = message.match(/position (\d+)/i);
     if (pos) {
       const before = text.slice(0, Number(pos[1]));
       const line = before.split("\n").length;
-      where = ` (line ${line}, column ${before.length - before.lastIndexOf("\n")})`;
+      where = copy.presets.where(line, before.length - before.lastIndexOf("\n"));
     }
   }
-  return `This file is not valid JSON${where}. ${message.replace(/ in JSON at position \d+.*/, "").replace(/ \(line \d+ column \d+\)/, "")}`;
+  return copy.presets.notJson(where, message.replace(/ in JSON at position \d+.*/, "").replace(/ \(line \d+ column \d+\)/, ""));
 }
 
 function zodProblems(error: z.ZodError): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const i of error.issues) {
-    const where = i.path.length ? i.path.join(" › ") : "the file";
+    const where = i.path.length ? i.path.join(" › ") : copy.presets.theFile;
     const line = `${where}: ${friendlyMessage(i.message)}`;
     if (!seen.has(line)) {
       seen.add(line);
@@ -66,21 +67,21 @@ function looksLike(json: unknown): PresetKind | null {
 export type ImportResult<T> = { ok: true; json: Record<string, unknown>; parsed: T; name: string } | { ok: false; problems: string[] };
 
 function importAs<T>(kind: PresetKind, text: string, schema: z.ZodType<T>, noun: string): ImportResult<T> {
-  if (new TextEncoder().encode(text).length > MAX_IMPORT_BYTES) return { ok: false, problems: [`This file is larger than ${MAX_IMPORT_BYTES / 1024} KB, which is far more than a ${noun} needs. Is it the right file?`] };
+  if (new TextEncoder().encode(text).length > MAX_IMPORT_BYTES) return { ok: false, problems: [copy.presets.tooLarge(MAX_IMPORT_BYTES / 1024, noun)] };
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch (e) {
     return { ok: false, problems: [describeJsonError(text, e)] };
   }
-  if (!json || typeof json !== "object" || Array.isArray(json)) return { ok: false, problems: [`A ${noun} file must contain one JSON object (starting with “{”).`] };
+  if (!json || typeof json !== "object" || Array.isArray(json)) return { ok: false, problems: [copy.presets.notObject(noun)] };
   const other = looksLike(json);
   if (other && other !== kind) {
-    return { ok: false, problems: [`This looks like a ${other === "scoring_model" ? "scoring model" : "format"}, not a ${noun}. Import it in the matching place.`] };
+    return { ok: false, problems: [copy.presets.wrongKind(copy.presets.kindNames[other], noun)] };
   }
   const r = schema.safeParse(json);
   if (!r.success) return { ok: false, problems: zodProblems(r.error) };
-  const name = String((json as { name?: unknown }).name ?? "Imported");
+  const name = String((json as { name?: unknown }).name ?? copy.presets.imported);
   return { ok: true, json: json as Record<string, unknown>, parsed: r.data, name };
 }
 

@@ -1,8 +1,8 @@
 {
   "id": "club-quick-best2",
-  "name": "Club quick: single mark per trick, best 2 count",
-  "description": "Fast format for amateur / expression-session heats of up to 10 riders: each trick gets one 0-10 mark per judge (step 0.5), best 2 tricks count, no impression. Heat total 0-20. Inspired by PUKL Division 2.5 'expression session style' heats.",
-  "version": 1,
+  "name": "Club quick: single score per trick, best 2 count",
+  "description": "Fast format for amateur / expression-session heats of up to 10 riders: each trick gets one 0-10 score per judge (step 0.5), best 2 tricks count, no impression. Heat total 0-20. Inspired by PUKL Division 2.5 'expression session style' heats.",
+  "version": 2,
   "basedOn": "PUKL Division 2.5 description (heats of up to 10, expression-session style)",
   "trick": {
     "entry": "single",
