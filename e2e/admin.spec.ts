@@ -30,6 +30,7 @@ test("a signed-out visitor is sent to the sign-in page", async ({ page }) => {
 });
 
 test("an organiser gets a plain 404 on every admin page and never sees the admin switch", async ({ page }) => {
+  test.setTimeout(120_000); // a first visit to each page compiles it in dev mode
   await plain.signIn(page, "/org");
   await expect(page.getByRole("heading", { name: /events/i }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: /admin$/ })).toHaveCount(0);

@@ -52,6 +52,7 @@ export async function addDivision(eventId: string, name: string): Promise<Ok<{ i
   const sortOrder = (last?.[0]?.sort_order ?? 0) + 1;
   const { data, error } = await supabase.from("divisions").insert({ event_id: eventId, name: parsed.data, sort_order: sortOrder }).select("id").single();
   if (error) return { ok: false, error: explain(error.message) };
+  await supabase.rpc("ensure_division_panel", { p_division: data.id }); // the scoring head judge is on every panel
   refresh(eventId);
   return { ok: true, id: data.id, sortOrder };
 }
@@ -114,6 +115,7 @@ export async function duplicateDivision(divisionId: string): Promise<Ok<{ id: st
     .select("id")
     .single();
   if (error) return { ok: false, error: explain(error.message) };
+  await supabase.rpc("ensure_division_panel", { p_division: data.id });
   refresh(src.event_id);
   return { ok: true, id: data.id, name };
 }

@@ -2015,6 +2015,7 @@ export type Database = {
         Args: { p_event: string; p_slug_confirm: string }
         Returns: Json
       }
+      ensure_division_panel: { Args: { p_division: string }; Returns: string }
       get_public_event: {
         Args: { p_slug: string }
         Returns: {

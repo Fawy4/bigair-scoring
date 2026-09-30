@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getOrgContext } from "@/lib/org/context";
+import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { loadPanelOverview } from "@/lib/org/panel-overview";
 import { createServiceClient } from "@/lib/supabase/service";
 import { copy } from "@/lib/ui-copy";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function OfficialsStepPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase } = await getOrgContext();
-  const { data: event } = await supabase.from("events").select("id, name").eq("id", id).maybeSingle();
+  const { data: event } = await supabase.from("events").select("id, name, settings").eq("id", id).maybeSingle();
   if (!event) notFound();
 
   const [{ data: seats }, { data: contacts }, overview, { data: entries }, { data: divisions }] = await Promise.all([
@@ -42,6 +43,7 @@ export default async function OfficialsStepPage({ params }: { params: Promise<{ 
       hasPin: pinIds.has(s.id),
       phone: phones.get(s.id) ?? null,
       spotterEntries: assigned,
+      spotterColours: s.spotter_assignment && Array.isArray((s.spotter_assignment as { colours?: unknown }).colours) ? (s.spotter_assignment as { colours: string[] }).colours : [],
     };
   });
   const riders: RiderChoice[] = (divisions ?? []).map((d) => ({
@@ -50,6 +52,10 @@ export default async function OfficialsStepPage({ params }: { params: Promise<{ 
     riders: (entries ?? []).filter((e) => e.division_id === d.id).map((e) => ({ entryId: e.id, name: `${e.riders?.first_name ?? ""} ${e.riders?.last_name ?? ""}`.trim() })),
   }));
 
+  // lycra colours can be assigned to a spotter only when the event's scheme uses them
+  const scheme = parseEventSettings(event.settings).identification?.scheme;
+  const usesColours = Boolean(scheme && [scheme.primary, scheme.fallbackPrimary, ...scheme.secondary].includes("vest_colour"));
+  const colours = usesColours && scheme ? scheme.palette.map((c) => ({ key: c.key, label: c.label })) : [];
   return (
     <main className="flex max-w-5xl flex-col gap-6">
       <h1 className="text-3xl font-extrabold">{copy.officials.stepHeading}</h1>
@@ -60,6 +66,7 @@ export default async function OfficialsStepPage({ params }: { params: Promise<{ 
         seats={rows}
         panels={overview.map((o) => ({ id: o.id, name: o.name, minJudges: o.minJudges, hasScoringModel: o.hasScoringModel, seatIds: o.seatIds }))}
         riders={riders}
+        colours={colours}
       />
     </main>
   );

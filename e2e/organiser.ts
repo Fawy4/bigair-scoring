@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import type { Page } from "@playwright/test";
-import { record } from "./cleanup";
+import { record, removeOrganisationFiles } from "./cleanup";
 
 /**
  * A throwaway organiser (login + organisation) created with the service key, signed in through a magic-link token
@@ -61,11 +61,14 @@ export async function createOrganiser(options: { password?: string; platformAdmi
       for (const slug of extraOrgSlugs) {
         await step(async () => {
           const { data: o } = await db.from("organisations").select("id").eq("slug", slug).maybeSingle();
-          if (o) await db.rpc("purge_organisation", { p_org: o.id });
+          if (o) {
+            await removeOrganisationFiles(db, o.id);
+            await db.rpc("purge_organisation", { p_org: o.id });
+          }
         });
       }
       for (const id of extraUsers) await step(() => db.auth.admin.deleteUser(id));
-      await step(async () => db.storage.from("branding").remove((await db.storage.from("branding").list(org.id)).data?.map((o) => `${org.id}/${o.name}`) ?? []));
+      await step(() => removeOrganisationFiles(db, org.id));
       await step(() => db.rpc("purge_organisation", { p_org: org.id }));
       await step(() => db.auth.admin.deleteUser(created.user.id));
     },

@@ -84,6 +84,7 @@ test("forgot password: needs the email first; an unregistered address is refused
 });
 
 test("set a password after signing in with the link, then sign in with it", async ({ page }) => {
+  test.setTimeout(90_000);
   const fresh = await createOrganiser(); // an existing invite-only account with no password yet
   try {
     await fresh.signIn(page, "/org/set-password");

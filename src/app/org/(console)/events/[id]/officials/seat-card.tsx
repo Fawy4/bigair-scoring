@@ -21,6 +21,7 @@ export interface SeatRow {
   hasPin: boolean;
   phone: string | null;
   spotterEntries: string[] | null;
+  spotterColours: string[];
 }
 
 export interface RiderChoice {
@@ -37,7 +38,7 @@ export function seenText(seat: Pick<SeatRow, "bound" | "lastSeenAt">, now: Date)
   return `${seat.bound && h.kind === "recent" ? T.connected : T.notConnected} · ${T.lastSeen} ${when}`;
 }
 
-export function SeatCard({ seat, eventId, now, riders, act, onIssued }: { seat: SeatRow; eventId: string; now: Date; riders: RiderChoice[]; act: ReturnType<typeof useAction>; onIssued: (i: IssuedPin) => void }) {
+export function SeatCard({ seat, eventId, now, riders, colours, act, onIssued }: { seat: SeatRow; eventId: string; now: Date; riders: RiderChoice[]; colours: Array<{ key: string; label: string }>; act: ReturnType<typeof useAction>; onIssued: (i: IssuedPin) => void }) {
   const { pending, run } = act;
   const [shown, setShown] = useState<string | null>(null);
   const [pinError, setPinError] = useState<string | null>(null);
@@ -45,6 +46,7 @@ export function SeatCard({ seat, eventId, now, riders, act, onIssued }: { seat: 
   useEffect(() => setScores(seat.scores), [seat.scores]);
   const [assigning, setAssigning] = useState(seat.spotterEntries !== null);
   const [picked, setPicked] = useState<Set<string>>(new Set(seat.spotterEntries ?? []));
+  const [pickedColours, setPickedColours] = useState<Set<string>>(new Set(seat.spotterColours));
 
   async function togglePin() {
     if (shown) return setShown(null);
@@ -130,6 +132,19 @@ export function SeatCard({ seat, eventId, now, riders, act, onIssued }: { seat: 
             </label>
             {assigning ? (
               <>
+                {colours.length > 0 ? (
+                  <fieldset className="flex flex-col gap-1" data-testid="spotter-colours">
+                    <legend className="font-bold">{T.spotterColours}</legend>
+                    <div className="flex flex-wrap gap-x-5 gap-y-1">
+                      {colours.map((c) => (
+                        <label key={c.key} className="flex items-center gap-2 font-semibold">
+                          <input type="checkbox" checked={pickedColours.has(c.key)} onChange={(e) => setPickedColours((p) => { const n = new Set(p); if (e.target.checked) n.add(c.key); else n.delete(c.key); return n; })} />
+                          {c.label}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                ) : null}
                 {riders.map((d) => (
                   <fieldset key={d.divisionId} className="flex flex-col gap-1">
                     <legend className="font-bold">{d.divisionName}</legend>
@@ -142,7 +157,7 @@ export function SeatCard({ seat, eventId, now, riders, act, onIssued }: { seat: 
                   </fieldset>
                 ))}
                 <div>
-                  <button type="button" className="btn btn-primary" disabled={pending} onClick={() => run(() => saveSpotterAssignment(seat.id, [...picked]), T.spotterSaved)}>
+                  <button type="button" className="btn btn-primary" disabled={pending} onClick={() => run(() => saveSpotterAssignment(seat.id, [...picked], [...pickedColours]), T.spotterSaved)}>
                     {copy.common.save} · {T.spotterRiders(picked.size)}
                   </button>
                 </div>

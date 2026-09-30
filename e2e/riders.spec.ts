@@ -98,8 +98,9 @@ test("Riders step: paste a CSV with one bad row, see the problem line before any
     await expect.poll(async () => (await names(page)).join(",")).toBe(shuffled.join(","));
 
     // sort by seed number: type a seed into a cell, then sort
-    await page.getByLabel(/^Seed: Jo Juliet$/).fill("1");
-    await page.getByLabel(/^Seed: Jo Juliet$/).blur();
+    const lastSeed = page.getByTestId("rider-row").last().getByLabel(/^Seed:/); // never the rider already at seed 1
+    await lastSeed.fill("1");
+    await lastSeed.blur();
     await expect(page.getByTestId("clash-warnings")).toContainText("Seed 1 is given to more than one rider"); // a warning, not a block
     await page.getByTestId("sort-by-seed").click();
     await expect.poll(async () => (await org.db.from("entries").select("seed").eq("division_id", divisions["Pro Men"]).order("seed")).data!.map((e) => e.seed).join(",")).toBe("1,2,3,4,5,6,7,8,9");

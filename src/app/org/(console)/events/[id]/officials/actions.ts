@@ -176,15 +176,16 @@ export async function savePanel(divisionId: string, seatIds: string[]): Promise<
   return error ? fail(/NOT_ALLOWED/.test(error.message) ? T.notAllowed : T.failed) : { ok: true };
 }
 
-/** A spotter is free (null) or assigned to riders (entry ids). */
-export async function saveSpotterAssignment(seatId: string, entryIds: string[] | null): Promise<Result> {
+/** A spotter is free (null) or assigned to riders (entry ids) and/or lycra colours (palette keys). */
+export async function saveSpotterAssignment(seatId: string, entryIds: string[] | null, colours: string[] = []): Promise<Result> {
   const found = await seatOf(seatId);
   if (!found) return fail(T.unknownSeat);
-  let value: { entries: string[] } | null = null;
+  let value: { entries: string[]; colours: string[] } | null = null;
   if (entryIds !== null) {
     const ids = z.array(Uuid).max(500).safeParse(entryIds);
-    if (!ids.success) return fail(T.failed);
-    value = { entries: ids.data };
+    const cols = z.array(z.string().regex(/^[a-z][a-z0-9_]*$/)).max(30).safeParse(colours);
+    if (!ids.success || !cols.success) return fail(T.failed);
+    value = { entries: ids.data, colours: cols.data };
   }
   const { data, error } = await found.supabase.from("judge_seats").update({ spotter_assignment: value as never }).eq("id", seatId).eq("role", "spotter").select("id");
   return error || !data?.length ? fail(T.failed) : { ok: true };

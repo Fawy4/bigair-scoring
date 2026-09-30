@@ -86,14 +86,14 @@ test("organiser: settings, then the Event step", async ({ page }) => {
   await page.getByRole("button", { name: "Save as preset" }).click();
   await expect(page.getByText(`Preset “Arrow lycras ${org.run}” saved`).first()).toBeVisible();
 
-  await page.getByRole("checkbox", { name: /^Registration is open/ }).check();
+  await page.getByTestId("registration-settings").getByRole("radio", { name: "Open" }).check();
   await page.getByRole("checkbox", { name: /^Published: the event is listed/ }).check();
   await page.getByRole("button", { name: "Create event" }).click();
   await expect(page).toHaveURL(/\/org\/events\/[0-9a-f-]{36}\/event$/);
   await expect(field("Event name")).toHaveValue(`Arrow Big Air ${org.run}`);
   await expect(field("Sponsor 1 name")).toHaveValue("WOO");
   await expect(page.getByTestId("rider-label-primary")).toContainText("SCARLET");
-  await expect(page.getByRole("checkbox", { name: /^Registration is open/ })).toBeChecked();
+  await expect(page.getByTestId("registration-settings").getByRole("radio", { name: "Open" })).toBeChecked();
   await expect(live).toBeChecked();
   await expect(results).not.toBeChecked();
   await expect(hold).toBeChecked();

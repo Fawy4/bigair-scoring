@@ -412,6 +412,18 @@ describe.skipIf(!ENV_OK)("Riders, officials, registration, trick base and feedba
       expect(failed(await f.clients.orgA.rpc("set_division_panel", { p_division: f.ids.divA2, p_seat_ids: [] }))).toBe("");
       expect((await f.s.from("divisions").select("panel_id").eq("id", f.ids.divA2).single()).data!.panel_id).not.toBeNull();
     });
+    it("a division with no panel gets one, with the scoring head judge already on it", async () => {
+      await f.clients.orgA.rpc("set_seat_scores", { p_seat: f.ids.seat_head, p_scores: true });
+      const fresh = (await f.s.from("divisions").insert({ event_id: f.ids.evA1, name: "Fresh division", sort_order: 7 }).select("id").single()).data!.id;
+      const panel = await f.clients.orgA.rpc("ensure_division_panel", { p_division: fresh });
+      expect(failed(panel)).toBe("");
+      const members = (await f.s.from("panel_members").select("judge_seat_id").eq("panel_id", panel.data as string)).data!;
+      expect(members.map((m) => m.judge_seat_id)).toEqual([f.ids.seat_head]);
+      expect((await f.clients.orgA.rpc("ensure_division_panel", { p_division: fresh })).data).toBe(panel.data); // asking again changes nothing
+      expect(failed(await f.clients.orgB.rpc("ensure_division_panel", { p_division: fresh }))).not.toBe("");
+      expect(failed(await f.clients.head.rpc("ensure_division_panel", { p_division: fresh }))).not.toBe("");
+      await f.clients.orgA.rpc("set_seat_scores", { p_seat: f.ids.seat_head, p_scores: false });
+    });
     it("refuses another organisation, officials, and seats of another event or of the wrong role", async () => {
       expect(failed(await f.clients.orgB.rpc("set_division_panel", { p_division: f.ids.divA1, p_seat_ids: [f.ids.seat_j1] }))).not.toBe("");
       expect(failed(await f.clients.head.rpc("set_division_panel", { p_division: f.ids.divA1, p_seat_ids: [f.ids.seat_j1] }))).not.toBe("");

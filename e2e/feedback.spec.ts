@@ -4,7 +4,7 @@ import { createOrganiser, PNG } from "./organiser";
 
 test.use({ permissions: ["clipboard-read", "clipboard-write"] });
 
-test("the Note button saves a note with its context; it appears in /admin, is filtered, exported as a downloaded file (no token needed), marked done", async ({ page }) => {
+test("the Note button saves a note with its context; it appears in /admin, is filtered, exported as a downloaded file (no token needed), set to done", async ({ page }) => {
   test.setTimeout(240_000);
   const owner = await createOrganiser({ platformAdmin: "owner" });
   try {
@@ -83,12 +83,12 @@ test("the Note button saves a note with its context; it appears in /admin, is fi
     await expect(page.getByTestId("export-copy")).toContainText("Copied");
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(text);
     const { data: exported } = await owner.db.from("feedback_notes").select("exported_at, status").eq("organisation_id", owner.orgId);
-    expect(exported!.every((n) => n.exported_at !== null && n.status === "open")).toBe(true); // dated, and still open until marked done
+    expect(exported!.every((n) => n.exported_at !== null && n.status === "open")).toBe(true); // dated, and still open until set to done
 
-    // notes stay open until the owner marks them done; a done note is not exported again
+    // notes stay open until the owner sets them to done; a done note is not exported again
     await page.goto("/admin/feedback");
     await expect(mine.filter({ hasText: "Seed column too narrow" })).toContainText("exported");
-    for (const body of ["Seed column too narrow", "Second note"]) await mine.filter({ hasText: body }).getByRole("button", { name: "Mark done" }).click();
+    for (const body of ["Seed column too narrow", "Second note"]) await mine.filter({ hasText: body }).getByRole("button", { name: "Set as done" }).click();
     await expect.poll(async () => (await owner.db.from("feedback_notes").select("status").eq("organisation_id", owner.orgId).eq("status", "done")).data?.length).toBe(2);
     await page.reload();
     await page.getByTestId("export-button").click();
@@ -116,7 +116,7 @@ test("an organiser sees the Note button and a reduced list of their own notes; n
     await expect(page.getByRole("heading", { name: "Feedback from your team" })).toBeVisible();
     await expect(page.getByTestId("note-row")).toContainText("Wording: this sentence is confusing");
     await expect(page.getByTestId("note-row")).toContainText("Events list");
-    await expect(page.getByRole("button", { name: "Mark done" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Set as done" })).toHaveCount(0);
     await expect(page.getByTestId("export-button")).toHaveCount(0);
     await page.goto("/admin/feedback");
     await expect(page.getByText("This page could not be found")).toBeVisible();

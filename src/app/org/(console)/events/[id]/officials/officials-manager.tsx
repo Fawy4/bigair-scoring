@@ -19,7 +19,7 @@ export interface PanelRow {
   seatIds: string[];
 }
 
-export function OfficialsManager({ eventId, eventName, seats, panels, riders }: { eventId: string; eventName: string; seats: SeatRow[]; panels: PanelRow[]; riders: RiderChoice[] }) {
+export function OfficialsManager({ eventId, eventName, seats, panels, riders, colours }: { eventId: string; eventName: string; seats: SeatRow[]; panels: PanelRow[]; riders: RiderChoice[]; colours: Array<{ key: string; label: string }> }) {
   const act = useAction();
   const { pending, error, setError, run } = act;
   const [issued, setIssued] = useState<IssuedPin | null>(null);
@@ -142,7 +142,7 @@ export function OfficialsManager({ eventId, eventName, seats, panels, riders }: 
         {active.length === 0 ? <p className="panel text-lg font-semibold">{T.noSeats}</p> : null}
         <ul className="flex flex-col gap-3">
           {active.map((s) => (
-            <SeatCard key={s.id} seat={s} eventId={eventId} now={now} riders={riders} act={act} onIssued={setIssued} />
+            <SeatCard key={s.id} seat={s} eventId={eventId} now={now} riders={riders} colours={colours} act={act} onIssued={setIssued} />
           ))}
         </ul>
       </section>

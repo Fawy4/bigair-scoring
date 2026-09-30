@@ -214,26 +214,30 @@ test("panels: tick the judges of a division and the 'needs 3 judges' check turns
     for (const n of ["Judge A", "Judge B", "Judge C"]) await addSeat(page, n);
     await addSeat(page, "Head Hal", "Head judge");
 
-    await expect(page.getByTestId("panel-warnings")).toContainText("Pro Men needs 3 judges, 0 assigned");
+    // the head judge who also scores is on the panel from the start
+    await expect(page.getByLabel("Head Hal: Pro Men")).toBeChecked();
+    await expect(page.getByTestId("panel-warnings")).toContainText("Pro Men needs 3 judges, 1 assigned");
     await expect(page.getByRole("link", { name: /4\. Officials/ }).first()).toBeVisible();
     await page.getByLabel("Judge A: Pro Men").check();
-    await page.getByLabel("Judge B: Pro Men").check();
     await expect(page.getByTestId("panel-warnings")).toContainText("Pro Men needs 3 judges, 2 assigned");
-    await page.getByLabel("Judge C: Pro Men").check();
+    await page.getByLabel("Judge B: Pro Men").check();
     await expect(page.getByTestId("panel-ok")).toBeVisible();
     await expect(page.getByTestId("panel-warnings")).toHaveCount(0);
     await expect.poll(async () => ((await org.db.from("panel_members").select("seat_no").eq("event_id", eventId).order("seat_no")).data ?? []).map((x) => x.seat_no).join(",")).toBe("1,2,3");
 
     // untick one: it warns again, nothing is blocked
-    await page.getByLabel("Judge C: Pro Men").uncheck();
+    await page.getByLabel("Judge B: Pro Men").uncheck();
     await expect(page.getByTestId("panel-warnings")).toContainText("needs 3 judges, 2 assigned");
 
-    // the head judge who also scores is on every panel
-    await page.getByLabel("Judge C: Pro Men").check();
+    // untick "Head judge also scores": the head judge leaves every panel; tick it again: back on all of them
+    await page.getByLabel("Judge B: Pro Men").check();
     const head = seatCard(page, "Head Hal");
     await head.getByLabel("Head judge also scores").uncheck();
+    await expect(page.getByLabel("Head Hal: Pro Men")).not.toBeChecked();
+    await expect(page.getByTestId("panel-warnings")).toContainText("needs 3 judges, 2 assigned");
     await head.getByLabel("Head judge also scores").check();
     await expect(page.getByLabel("Head Hal: Pro Men")).toBeChecked();
+    await expect(page.getByTestId("panel-ok")).toBeVisible();
     expect((await org.db.from("divisions").select("panel_id").eq("id", div!.id).single()).data!.panel_id).not.toBeNull();
   } finally {
     await org.cleanup();
