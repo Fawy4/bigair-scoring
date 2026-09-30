@@ -47,3 +47,26 @@ export async function joinWithToken(input: { slug: string; token: string }): Pro
   const { data, error } = await ctx.service.rpc("bind_seat_by_token", { p_event: ctx.eventId, p_token: input.token, p_user: ctx.user.id, p_ip: ctx.ip });
   return toResult(data, error);
 }
+
+const SelfAdd = z.object({
+  slug: Slug,
+  name: z.string().trim().min(2).max(60),
+  role: z.enum(["judge", "spotter", "announcer"]),
+  phone: z.string().trim().max(30).optional(),
+  website: z.string().max(200).optional(), // hidden honeypot: people leave it empty
+});
+
+/** "Not on the list? Add your name": creates a pending seat (no PIN, no access) for the organiser to approve. */
+export async function requestSeat(input: z.input<typeof SelfAdd>): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (input.website && input.website.trim() !== "") return { ok: true }; // a script filled the hidden field: pretend it worked, store nothing
+  const parsed = SelfAdd.safeParse(input);
+  if (!parsed.success) {
+    const field = parsed.error.issues[0]?.path[0];
+    return { ok: false, error: field === "role" ? "INVALID_ROLE" : field === "phone" ? "INVALID_PHONE" : field === "slug" ? "EVENT_NOT_FOUND" : "INVALID_NAME" };
+  }
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const { data, error } = await createServiceClient().rpc("request_seat", { p_event_slug: parsed.data.slug, p_name: parsed.data.name, p_role: parsed.data.role, p_ip: ip, p_phone: parsed.data.phone || undefined });
+  if (error) return { ok: false, error: "FAILED" };
+  const r = data as { ok: boolean; error?: string };
+  return r.ok ? { ok: true } : { ok: false, error: r.error ?? "FAILED" };
+}
