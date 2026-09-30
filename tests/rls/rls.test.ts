@@ -504,14 +504,17 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
 
   // ------------------------------------------------------------------ Phase 4a-1: divisions (draw columns, rules lock, delete guard)
   describe("divisions: draw, rules lock, delete guard", () => {
-    it("an organiser stores a draw and locks it on their own division; another organiser cannot", async () => {
-      const draw = { status: "locked", rounds: [] };
-      expect(failed(await f.clients.orgA.from("divisions").update({ draw, draw_locked_at: new Date().toISOString() }).eq("id", f.ids.divA2))).toBe("");
-      const row = (await f.s.from("divisions").select("draw, draw_locked_at").eq("id", f.ids.divA2).single()).data!;
-      expect(row.draw).toEqual(draw);
-      expect(row.draw_locked_at).not.toBeNull();
-      await f.clients.orgB.from("divisions").update({ draw: { hacked: true } }).eq("id", f.ids.divA2);
+    it("an organiser stores a draw and locks it on their own division through the draw functions; another organiser cannot, and nobody can write it directly (Phase 4b)", async () => {
+      const draw = { status: "draft", rounds: [], entrants: [] };
+      const save = (c: typeof f.clients.orgA, d: object) => c.rpc("save_division_draw", { p_division: f.ids.divA2, p_draw: d as never, p_projection: { rounds: [], heats: [] } as never, p_action: "generate", p_audit: {} as never });
+      expect(failed(await save(f.clients.orgA, draw))).toBe("");
       expect((await f.s.from("divisions").select("draw").eq("id", f.ids.divA2).single()).data!.draw).toEqual(draw);
+      expect(failed(await f.clients.orgA.rpc("lock_division_draw", { p_division: f.ids.divA2 }))).toBe("");
+      expect((await f.s.from("divisions").select("draw_locked_at").eq("id", f.ids.divA2).single()).data!.draw_locked_at).not.toBeNull();
+      expect(failed(await save(f.clients.orgB, { hacked: true }))).toContain("NOT_ALLOWED");
+      expect(failed(await f.clients.orgA.from("divisions").update({ draw: { hacked: true } }).eq("id", f.ids.divA2))).toContain("DRAW_FUNCTION_ONLY");
+      await f.clients.orgB.from("divisions").update({ draw: { hacked: true } }).eq("id", f.ids.divA2);
+      expect((await f.s.from("divisions").select("draw").eq("id", f.ids.divA2).single()).data!.draw).toEqual({ ...draw, status: "locked" });
     });
 
     it("scoring and format can be edited freely until a heat has started", async () => {
