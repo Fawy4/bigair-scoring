@@ -86,3 +86,13 @@ describe("how many judges a division needs", () => {
     expect(minJudgesFor({ panel: { minJudges: 0 } }, {})).toBe(1);
   });
 });
+
+import { tryPinKey } from "./pin-crypto";
+
+describe("a missing PIN key never crashes", () => {
+  it("tryPinKey gives null instead of throwing when the server has no key", () => {
+    expect(tryPinKey({})).toBeNull();
+    expect(tryPinKey({ SEAT_PIN_KEY: "" })).toBeNull();
+    expect(tryPinKey({ SUPABASE_SERVICE_ROLE_KEY: "x" })).not.toBeNull();
+  });
+});

@@ -10,6 +10,15 @@ export function seatPinKey(env: Record<string, string | undefined> = process.env
   throw new Error("No key available to protect seat PINs (set SUPABASE_SERVICE_ROLE_KEY or SEAT_PIN_KEY).");
 }
 
+/** The key, or null when the server has no key to use (callers then show a plain message instead of failing). */
+export function tryPinKey(env: Record<string, string | undefined> = process.env): Buffer | null {
+  try {
+    return seatPinKey(env);
+  } catch {
+    return null;
+  }
+}
+
 /** AES-256-GCM, new random value each time: base64 of iv + tag + ciphertext. */
 export function encryptPin(pin: string, key: Buffer): string {
   if (!/^\d{6}$/.test(pin)) throw new Error("A PIN has six digits.");

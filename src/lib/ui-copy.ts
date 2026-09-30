@@ -1492,6 +1492,7 @@ export const copy = {
       unknownSeat: "That seat was not found.",
       notPending: "That seat is not waiting for approval.",
       pinInUse: "Could not find a free PIN; try again.",
+      noKey: "PINs cannot be shown or made because the server has no PIN key. Ask the owner to check the server settings (SUPABASE_SERVICE_ROLE_KEY, or SEAT_PIN_KEY). Logging in with PINs already given is not affected.",
       hasScores: "This seat already gave scores, so it cannot be deleted. Switch it off instead.",
     },
   },

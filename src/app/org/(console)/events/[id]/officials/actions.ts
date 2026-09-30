@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { getOrgContext } from "@/lib/org/context";
 import { generatePin, generateQrToken, joinUrl } from "@/lib/join/pin";
-import { decryptPin, encryptPin, seatPinKey } from "@/lib/officials/pin-crypto";
+import { decryptPin, encryptPin, tryPinKey } from "@/lib/officials/pin-crypto";
 import { joinAddress } from "@/lib/officials/share";
 import { requestOrigin } from "@/lib/platform/origin";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -34,7 +34,8 @@ async function seatOf(seatId: string) {
 
 /** A fresh PIN that no other seat of the event holds: tries a few times, then gives up. */
 async function withFreshPin<R extends { ok: boolean; error?: string }>(attempt: (pin: string, enc: string) => Promise<R>): Promise<{ pin: string; result: R } | null> {
-  const key = seatPinKey();
+  const key = tryPinKey();
+  if (!key) return null;
   for (let i = 0; i < 8; i++) {
     const pin = generatePin();
     const result = await attempt(pin, encryptPin(pin, key));
@@ -70,6 +71,7 @@ export async function addSeat(input: z.input<typeof NewSeat>): Promise<Result<{ 
   const parsed = NewSeat.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? T.failed);
   const v = parsed.data;
+  if (!tryPinKey()) return fail(T.noKey);
   const { supabase } = await getOrgContext();
   const scores = v.role === "head" && v.headAlsoScores === true;
   const { data: seat, error } = await supabase.from("judge_seats").insert({ event_id: v.eventId, name: v.name, role: v.role, scores: false, status: "active", active: true }).select("id, name, role, events(slug, end_date)").single();
@@ -94,7 +96,9 @@ export async function revealPin(seatId: string): Promise<Result<{ pin: string }>
   if (!found) return fail(T.unknownSeat);
   const { data } = await createServiceClient().from("judge_seats").select("pin_enc").eq("id", seatId).maybeSingle();
   if (!data?.pin_enc) return fail(copy.officials.pinUnknown);
-  const pin = decryptPin(data.pin_enc, seatPinKey());
+  const key = tryPinKey();
+  if (!key) return fail(T.noKey);
+  const pin = decryptPin(data.pin_enc, key);
   return pin ? { ok: true, pin } : fail(copy.officials.pinCouldNotRead);
 }
 
@@ -102,6 +106,7 @@ export async function revealPin(seatId: string): Promise<Result<{ pin: string }>
 export async function regeneratePin(seatId: string): Promise<Result<{ issued: IssuedPin }>> {
   const found = await seatOf(seatId);
   if (!found) return fail(T.unknownSeat);
+  if (!tryPinKey()) return fail(T.noKey);
   const service = createServiceClient();
   const made = await withFreshPin(async (pin, enc) => {
     const { data, error } = await service.rpc("regenerate_seat_pin", { p_seat: seatId, p_pin: pin, p_enc: enc, p_actor: found.user.id });
@@ -119,6 +124,7 @@ export async function approveSeat(seatId: string): Promise<Result<{ issued: Issu
   const found = await seatOf(seatId);
   if (!found) return fail(T.unknownSeat);
   if (found.seat.status !== "pending") return fail(T.notPending);
+  if (!tryPinKey()) return fail(T.noKey);
   const service = createServiceClient();
   const made = await withFreshPin(async (pin, enc) => {
     const { data, error } = await service.rpc("approve_seat", { p_seat: seatId, p_pin: pin, p_enc: enc, p_actor: found.user.id });
@@ -214,7 +220,7 @@ export async function prepareCards(eventId: string, seatId: string | null): Prom
   const service = createServiceClient();
   const { data: stored } = await service.from("judge_seats").select("id, pin_enc").in("id", (seats ?? []).map((s) => s.id));
   const pins = new Map((stored ?? []).map((s) => [s.id, s.pin_enc]));
-  const key = seatPinKey();
+  const key = tryPinKey(); // without a key the cards still print, each saying that its PIN cannot be shown
   const origin = await requestOrigin();
   const order = { head: 0, judge: 1, spotter: 2, announcer: 3 } as Record<string, number>;
   const cards: CardData[] = [];
@@ -222,7 +228,7 @@ export async function prepareCards(eventId: string, seatId: string | null): Prom
     const enc = pins.get(s.id);
     const token = generateQrToken();
     const { error } = await service.rpc("set_seat_qr", { p_seat: s.id, p_token: token, p_expires: qrExpiry(event.end_date) });
-    cards.push({ seatId: s.id, seatName: s.name, role: s.role, pin: enc ? decryptPin(enc, key) : null, qrUrl: error ? null : joinUrl(origin, event.slug, token) });
+    cards.push({ seatId: s.id, seatName: s.name, role: s.role, pin: enc && key ? decryptPin(enc, key) : null, qrUrl: error ? null : joinUrl(origin, event.slug, token) });
   }
   return { ok: true, eventName: event.name, joinUrl: joinAddress(origin, event.slug), cards };
 }
