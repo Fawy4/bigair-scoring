@@ -34,9 +34,9 @@ export default async function DrawPrintPage({ params, searchParams }: { params: 
     logoUrl: parseEventBranding(event.branding).logoUrl ?? null,
   };
   return (
-    <main className="flex flex-col gap-4 p-2" data-testid="draw-print">
+    <main className="print-root flex flex-col gap-4 p-2" data-testid="draw-print">
       <PrintActions sheet={sheet} header={header} />
-      <div className="overflow-x-auto pb-4">
+      <div className="print-root overflow-x-auto pb-4">
         <PrintSheetView sheet={sheet} header={header} />
       </div>
     </main>

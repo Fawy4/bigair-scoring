@@ -329,8 +329,9 @@ test("Warm-up, run order and timetable: warm-up 5 + heat 10, breaks of 2, pin th
   await expect(page.getByTestId("print-page")).toHaveCount(1);
   await expect(page.getByTestId("print-heat")).toHaveCount(15);
   await expect(page.getByTestId("print-heat-time")).toHaveCount(15);
-  await expect(page.getByTestId("print-heat-time").first()).toHaveText("10:00");
-  await expect(page.getByTestId("print-heat-time").nth(1)).toHaveText("10:17");
+  // the plan was put on hold and resumed at 11:00 above, so the first heat starts at 11:00, then every 17 minutes (10 + 5 warm-up + 2 break)
+  await expect(page.getByTestId("print-heat-time").first()).toHaveText("11:00");
+  await expect(page.getByTestId("print-heat-time").nth(1)).toHaveText("11:17");
   await expect(page.getByTestId("print-page")).toContainText("Times are estimates");
 
   // the dashboard: missing list, share cards with link and QR
