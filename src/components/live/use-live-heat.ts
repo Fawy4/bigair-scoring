@@ -8,17 +8,21 @@ import { rowToPlan, type PlanRow } from "@/lib/schedule/plans";
 import type { Json } from "@/lib/supabase/database.types";
 import {
   ATTEMPT_COLUMNS,
+  DECISION_COLUMNS,
   FLAG_COLUMNS,
   HEAT_COLUMNS,
   IMPRESSION_COLUMNS,
+  PENALTY_COLUMNS,
   SCORE_COLUMNS,
   SHEET_COLUMNS,
   SLOT_COLUMNS,
   type AttemptRow,
+  type DecisionRow,
   type FlagRow,
   type HeatRow,
   type ImpressionRow,
   type LiveContext,
+  type PenaltyRowLive,
   type ScoreRow,
   type SheetRow,
   type SlotRow,
@@ -43,8 +47,12 @@ interface Snapshot {
   impressions: ImpressionRow[];
   flags: FlagRow[];
   sheets: SheetRow[];
+  /** Interference penalties of the heat (every seat of the event can read them). */
+  penalties: PenaltyRowLive[];
+  /** The head judge's tie orders and publish overrides; judges get none (row security). */
+  decisions: DecisionRow[];
 }
-const EMPTY: Snapshot = { slots: [], attempts: [], scores: [], impressions: [], flags: [], sheets: [] };
+const EMPTY: Snapshot = { slots: [], attempts: [], scores: [], impressions: [], flags: [], sheets: [], penalties: [], decisions: [] };
 
 export interface LiveHeatState extends Snapshot {
   heats: HeatRow[];
@@ -60,7 +68,7 @@ export interface LiveHeatState extends Snapshot {
   /** Shows a hold or pins the server has just answered with, before the stream delivers them. */
   applyPlan: (planId: string, hold: Json | null, anchors: Json) => void;
   /** Puts a row the server has just returned (our own attempt, score, impression, flag or sheet) into the list at once, without waiting for the stream. */
-  apply: (key: "attempts" | "scores" | "impressions" | "flags" | "sheets", row: { id: string; heat_id?: string; updated_at?: string }) => void;
+  apply: (key: "attempts" | "scores" | "impressions" | "flags" | "sheets" | "penalties" | "decisions", row: { id: string; heat_id?: string; updated_at?: string }) => void;
 }
 
 /**
@@ -142,13 +150,15 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
   const fetchSnapshot = useCallback(
     async (id: string) => {
       const q = (table: string, cols: string) => supabase.from(table).select(cols).eq("heat_id", id);
-      const [slots, attempts, scores, impressions, flags, sheets] = await Promise.all([
+      const [slots, attempts, scores, impressions, flags, sheets, penalties, decisions] = await Promise.all([
         q("heat_slots", SLOT_COLUMNS),
         q("trick_attempts", ATTEMPT_COLUMNS),
         q("trick_scores", SCORE_COLUMNS),
         q("impression_scores", IMPRESSION_COLUMNS),
         q("attempt_flags", FLAG_COLUMNS),
         q("judge_sheets", SHEET_COLUMNS),
+        q("penalties", PENALTY_COLUMNS),
+        q("heat_decisions", DECISION_COLUMNS),
       ]);
       setSnap({
         slots: (slots.data ?? []) as unknown as SlotRow[],
@@ -157,6 +167,8 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
         impressions: (impressions.data ?? []) as unknown as ImpressionRow[],
         flags: (flags.data ?? []) as unknown as FlagRow[],
         sheets: (sheets.data ?? []) as unknown as SheetRow[],
+        penalties: (penalties.data ?? []) as unknown as PenaltyRowLive[],
+        decisions: (decisions.data ?? []) as unknown as DecisionRow[],
       });
     },
     [supabase],
@@ -183,6 +195,8 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
       ["impression_scores", "impressions"],
       ["attempt_flags", "flags"],
       ["judge_sheets", "sheets"],
+      ["penalties", "penalties"],
+      ["heat_decisions", "decisions"],
     ];
     let ch: RealtimeChannel = supabase.channel(`heat-${heatId}`);
     for (const [table, key] of tables) {

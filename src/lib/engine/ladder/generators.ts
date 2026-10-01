@@ -77,8 +77,9 @@ export function generateSingleElimination(n: number, p: SingleEliminationParams)
       Math.max(p.finalSize, plan.finalSize),
       p.finalMin,
       p.reseed,
-      // "By original seeding": the winners of the semi-finals meet in the Final in the order of their heats, so a seat is known the moment its heat is published
-      adjacent && last ? { seeding: "adjacent" } : {},
+      // "By original seeding", one rider advancing from each semi-final heat: the winners meet in the Final in the order of their heats, so a seat is known
+      // the moment its heat is published. With more than one rider advancing per heat the Final is seeded by original seed and dealt when the round is complete.
+      adjacent && last && plan.rounds.at(-1)!.advance === 1 ? { seeding: "adjacent" } : {},
     ),
   );
   return rounds;

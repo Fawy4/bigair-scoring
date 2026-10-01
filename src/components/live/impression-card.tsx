@@ -6,6 +6,7 @@ import { Chip } from "./chip";
 import { HeatSummaryCard } from "./heat-summary-card";
 import { RiderTile } from "./rider-tile";
 import { ScorePad } from "./score-pad";
+import { nextUnscored } from "@/lib/live/impression-step";
 import { formatPadValue } from "@/lib/live/score-pad";
 import type { ImpressionRider } from "@/lib/live/design-fixtures";
 import type { DivisionLive } from "@/lib/schemas/division-live";
@@ -69,7 +70,19 @@ export function ImpressionCard({
       </div>
       <section data-testid="impression-rider" data-rider={rider.id} className="flex flex-col gap-1.5">
         <HeatSummaryCard summary={rider.summary} parts={summaryParts} />
-        <ScorePad scale={scale} value={values[rider.id] ?? null} onChange={(v) => onChange(rider.id, v)} label={T.heading} caption={caption} disabled={submitted} />
+        <ScorePad
+          scale={scale}
+          value={values[rider.id] ?? null}
+          onChange={(v) => {
+            onChange(rider.id, v);
+            // after a score is saved, move on to the next rider who has none; with everybody scored Submit is what is left
+            const next = nextUnscored(riders.map((r) => r.id), values, rider.id, rider.id);
+            if (next) setActive(next);
+          }}
+          label={T.heading}
+          caption={caption}
+          disabled={submitted}
+        />
       </section>
       {error ? (
         <p role="alert" data-testid="submit-error" className="rounded-lg border border-beach-failed bg-beach-surface px-2 py-1 text-body font-semibold">

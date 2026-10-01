@@ -3,7 +3,7 @@ import { farthestJudge } from "@/lib/engine/scoring/outlier";
 import type { LabelModel } from "@/lib/identification/rider-label";
 import type { ScoringModel } from "@/lib/schemas/scoring-model";
 import { markOf } from "./heat-input";
-import { formatCell, type CellState, type MatrixCell, type MatrixModel, type MatrixRow, type PanelState } from "./matrix-model";
+import { formatCell, type CellState, type MatrixCell, type MatrixRow, type PanelState } from "./matrix-model";
 import type { AttemptRow, FlagRow, ScoreRow } from "./types";
 
 /** A row of the head judge's table with what the console needs to act on it. */
@@ -15,7 +15,10 @@ export type LiveMatrixRow = MatrixRow & {
   openFlags: FlagRow[];
   possibleDuplicateOf: string | null;
 };
-export type LiveMatrix = MatrixModel & { rows: LiveMatrixRow[] };
+export interface LiveMatrix {
+  judgeIds: string[];
+  rows: LiveMatrixRow[];
+}
 
 const two = (n: number) => roundHalfUp(n, 2).toFixed(2);
 

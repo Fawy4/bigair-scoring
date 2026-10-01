@@ -14,6 +14,7 @@ import { heatInputFromRows } from "./heat-input";
 import { publishChecklist, type ChecklistItem } from "./publish-checklist";
 import { ATTEMPT_COLUMNS, IMPRESSION_COLUMNS, SCORE_COLUMNS, SLOT_COLUMNS, type AttemptRow, type ImpressionRow, type ScoreRow, type SlotRow } from "./types";
 import { effectiveSetting, holdAtPublish } from "./visibility";
+import { softWord } from "./words";
 
 export type PublishResult =
   | { ok: true; version: number; already: boolean }
@@ -21,8 +22,6 @@ export type PublishResult =
 
 const fail = (code: string | null, message?: string): PublishResult => ({ ok: false, code, message: message ?? errorSentence(code) });
 
-/** A colour word reads "Red" in a sentence, whether it is stored as "red" or shown as "RED". */
-const soften = (t: string) => (/^[A-Za-z]+$/.test(t) ? t[0].toUpperCase() + t.slice(1).toLowerCase() : t);
 
 /** Judge seats are replaced by "J1", "J2" … so the public breakdown never carries a seat id. */
 function scrub<T>(value: T, seatNo: Map<string, number>): T {
@@ -102,12 +101,12 @@ export async function publishHeatCore(
   // words for the blockers: the rider's colour (or name), the judge's number
   const slotColour = new Map((slots ?? []).map((s) => [s.entry_id, s.vest_colour] as const));
   const nameOf = new Map((entries ?? []).map((e) => [e.id, `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || "Rider"] as const));
-  const labelOf = (id: string) => opts.labels?.[id] ?? (slotColour.get(id) ? soften(String(slotColour.get(id))) : nameOf.get(id) ?? "Rider");
+  const labelOf = (id: string) => opts.labels?.[id] ?? (slotColour.get(id) ? softWord(String(slotColour.get(id))) : nameOf.get(id) ?? "Rider");
   const checklist = publishChecklist({
     blockers: result.publishBlockers,
     unsubmitted,
     judgeNumber: (id) => seatNo.get(id) ?? 0,
-    riderLabel: (id) => soften(labelOf(id)),
+    riderLabel: (id) => softWord(labelOf(id)),
     impressionLabel: copy.checklist.impressionWord,
   });
   const reason = opts.overrideReason?.trim() ?? "";

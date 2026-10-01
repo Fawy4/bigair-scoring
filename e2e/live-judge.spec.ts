@@ -141,8 +141,9 @@ test("at time up the Impression / Variety step opens with the summary card; Subm
   await expect(card.getByRole("button", { name: "Submit", exact: true })).toBeDisabled();
   // the heat is ended in the database by the phones themselves (no one pressed End)
   await expect.poll(async () => (await w.db.from("heats").select("status").eq("id", w.heats[0]).single()).data?.status, { timeout: 30_000 }).toBe("ended");
+  // after each saved score the step moves on to the next rider who has none, so nobody has to be tapped (owner, 5b test)
   for (let i = 0; i < 4; i++) {
-    await card.getByTestId("rider-tile").nth(i).click();
+    await expect(card.getByTestId("rider-tile").nth(i)).toHaveAttribute("aria-pressed", "true");
     await score(card, 6 + (i % 3), i % 2 ? "5" : "0");
   }
   await expect(card.getByTestId("impression-progress")).toHaveText("4 / 4 riders");
