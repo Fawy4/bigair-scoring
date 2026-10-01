@@ -116,6 +116,13 @@ Goal: the owner approves the look on a phone outdoors before any live screen exi
 - **Look.** One accent (deep teal) for selection, the primary button and progress; status pills with icon and word; the Rider label is a stripe, a dot and the colour word in ink (`RiderLabel variant="stripe"`), replacing the white nameplate.
 - **Content.** `/design` opens with six full-screen mocks (Judge — live heat; Details on; rider sheet open; Spotter — live heat; Judge — heat end; Head judge — phone), then the parts. No percentages on any screen. Tic-tac moved to Add-ons (master vocabulary v3).
 
+**Round 3 (owner, 1 Oct 2026, after the second outdoor test)** — the structure is right; these replace the details above and the round-2 notes:
+- **Queue model for the judge** (step 3), **auto-chosen Rider label look** (below), **head judge Score and Control tabs** (step 4), **interactive laptop console** mock, **public result rows with three attempt displays and colour coding** (step 6).
+- **Sizes everywhere, Normal:** pad digits 19 px on 46 px buttons with 6 px gaps, the selected score 30 px (the only large number), section headings 14 px, body 15, status words 13, rider names 17, other buttons 44; the slim timer 20 px. No full-width heading blocks, no decorative padding. Every live screen fits a 390 × 844 phone with little or no scrolling. Large keeps roughly the first preview's sizes.
+- **Rider label look follows the scheme, no manual switch** (`labelStyleFor`, tested): Lycra, rash-guard or helmet colour → a **coloured block** with the colour word, the name and nationality beside it; bib number (or kite) → a **number block**; name call-out (or photo) → the **name first**, no block. This brings back the first preview's coloured block (replacing the stripe and dot). Black or white text is whichever reads better on the colour (at least 4.5:1); text on seven of the ten Lycra colours cannot reach 7:1 whichever is used, which is the owner's explicit choice.
+- **Spotter, compact and vertical:** the riders in one row, Left / Right and the multiplier in one row, the base tricks as a vertical list (the common ones first, so they are loggable without scrolling), add-ons and then grabs in two columns, CRASH and Log fixed at the bottom with the composed name.
+- **Heat end:** smaller numbers; the button says **Submit**.
+
 **Database:** none.
 
 **Tests first:**
@@ -299,7 +306,7 @@ Test vectors:
 - **Change `private.judge_can_write`:**
   - A judge may write while the heat is `running|paused`, or `ended` and **their sheet is not submitted** (or was reopened).
   - Never in `under_review` or `published`, unless the head judge reopened that sheet.
-  - **Lock rule (owner, §11.2):** a judge's scores lock at Submit sheet or when the head judge moves the heat to review, whichever comes first. The head judge can reopen one judge's sheet. The 3-minute timer is dropped.
+  - **Lock rule (owner, §11.2):** a judge's scores lock at Submit or when the head judge moves the heat to review, whichever comes first. The head judge can reopen one judge's sheet. The 3-minute timer is dropped.
   - `events.settings.judgeGraceSec` is no longer read by the database. It stays in the Zod schema (old events still parse) but is removed from the Event step; 5b updates docs/05 decision 7.
 
 ### Pure code (tests first)
@@ -328,22 +335,27 @@ Repeat badge: from `repeatIndexes` plus this judge's earlier score.
 ### Files
 
 - **Route.** `src/app/judge/[eventId]/page.tsx` and `judge-screen.tsx`, using `use-live-heat`.
-- **Default view (owner, 1 Oct 2026).** A slim header (`heat-timer` small, `connection-badge`, "Details" toggle, heat and seat on one muted line), the rider strip of 3 to 4 riders, the current attempt with its whole pad, and the top of the previous card. No scrolling on an iPhone 14. Tapping a rider's name opens **that rider's sheet** (`rider-sheet.tsx`: attempts landed or crashed, my scores, which tricks count, left and right counts, the attempt counter; one tap closes it). The **Details** toggle switches the whole screen to every attempt card (trick names, status pills, repeat badges) and back. The mocks on `/design` are the reference.
+- **The judge's screen is a scoring queue (owner decision, round 3, 1 Oct 2026; replaces the rider strip and the attempt-card list).** Judges mostly watch the water, so the phone asks for almost nothing: there is **no rider to select to score**.
+  - **Default view:** a slim header (small timer, connection pill, seat and heat on one muted line, "Details" toggle), the **current attempt** as one card (rider label, trick, direction, a Repeat pill when it applies) with its pad under it, and a thin **history** (the last three).
+  - **The queue.** Each attempt the spotter logs lands in front of the judge as the next card. One score and the next unscored attempt slides in (a 150 ms fade, nothing else moves). Unscored attempts wait behind it with a small "2 waiting". A scored card drops into a thin history row below; tapping a row corrects it (it comes back as the current card, "Correcting attempt 5", and the queue resumes after). Missed is an answer too. A crashed attempt never enters the queue (the judge only flags "That was a landing").
+  - **Pad.** A short scale is one tap. A 0–10 scale in tenths is two taps (the whole number, then the decimal); the card advances on the decimal, and the "7." shows while one waits. Pure logic: `src/lib/live/queue-model.ts` (`queueView`), tested.
+  - **Details** (the toggle in the header) is where everything else lives: the rider cards with their counters ("6 / 7", the grey "Out" state), and, by tapping a rider, everything about them: every attempt (landed or crashed), my scores, which tricks count, left and right counts, the attempt counter. The Details view replaces the old rider sheet and attempt list.
+  - Normal sizes (round 3): pad digits 19 px on 46 px buttons, the selected score the only large number (30 px), headings 14 px, no decorative padding. Large text size stays as a per-device switch.
+  - The mocks on `/design` are the reference.
 - **Percentages.** No screen shows a percentage of the maximum. Totals and the formula are in words ("31.54 = tricks 24.04 + Impression 7.50", the second name being the scoring model's own). The percentage stays in the engine and in exports. New division setting `liveSettings.showPercentOfMax` (default off), "Show scores as % of maximum", under Advanced in the Divisions step, with a "?". It overlaps the scoring model's existing `heat.total.display` field; 5b settles which one wins before building (the KOTA preset has `display: both`).
 - **Header.** See the default view above. The Daylight / Dark and Normal / Large switches live in the settings of the screen, not in the slim header.
-- **Rider strip.** `rider-tile` with "n / max" and the grey out-of-attempts state.
-  - Tapping a tile adds an attempt only when `judgesMayLogAttempts` is on.
-- **Attempt cards.** Newest on top, from `trick_attempts`.
-  - Landed attempts show the pad: `score-pad` for `entry = single`, `criteria-rows` for `entry = criteria`.
-  - Crashed attempts show "Crashed — no score needed" and no pad (owner, §11.7). When the head judge switches the attempt to Landed, the pad appears on every judge phone through realtime.
-  - Missed is one tap, undoable by tapping a score.
+- **Queue rules that stay from before.**
+  - Landed attempts show the pad: `score-pad` for `entry = single`; for `entry = criteria` one tab per criterion and one pad (`criteria-rows`).
+  - Crashed attempts are not in the queue (owner, §11.7); their history row says "Crashed". When the head judge switches an attempt to Landed (after a judge's "That was a landing" flag), it joins the queue on every judge phone through realtime.
+  - Missed is one tap and counts as an answer.
   - Flag opens a sheet with "That was a crash" / "That was a landing" / Wrong rider / Duplicate / Other. "That was a landing" is offered only on crashed attempts, "That was a crash" only on landed ones.
-  - Every tap auto-saves through the queue and shows `saved-banner`.
+  - Every score auto-saves through the client queue (step 3, `queue.ts`) and shows the persistent "Saved 7.5 — RED — attempt 6" line next to the selected score.
+  - Tapping a rider card (Details view) adds an attempt only when `judgesMayLogAttempts` is on.
 - **Review tab.** My scores per rider, editable until the sheet is locked.
 - **Impression / Variety step.** It opens when the effective status is `ended`.
-  - One `score-pad` per rider on `impression.scale`, with the `heatSummary` card above each pad.
+  - One `score-pad` per rider on `impression.scale`, with the compact `heatSummary` card above the pad; the riders are a row of cards at the top.
   - Progress "2 / 3 riders".
-  - Submit sheet asks for one confirmation and then calls `submit_sheet`.
+  - **Submit** (the button says "Submit", never "Submit sheet") asks for one confirmation and then calls `submit_sheet`.
   - After that the screen is read-only and says "Ask head judge to reopen".
   - With `entry = none` (overall-impression preset) the judge sees only this step.
 - **Summary card settings.** New Zod field in `src/lib/schemas/division-live.ts`, stored in a new column `divisions.live_settings jsonb default '{}'`: `impressionSummary {counts, variety, directions, families, landedList}`, all on by default. Shown in the Divisions step under Show all settings, with a "?".
@@ -355,7 +367,7 @@ Repeat badge: from `repeatIndexes` plus this judge's earlier score.
 - **RLS:**
   - A judge cannot read another judge's scores.
   - A judge off the panel is refused.
-  - Writing after Submit sheet is refused (`SHEET_LOCKED`), and allowed again after `reopen_sheet`.
+  - Writing after Submit is refused (`SHEET_LOCKED`), and allowed again after `reopen_sheet`.
   - `submit_sheet` with a rider missing is refused.
   - Flags are readable by the head judge.
 - **Playwright:** a judge scores, goes offline (context `setOffline(true)`) for 20 s, scores twice, goes back online → the badge goes from "Pending 2" to "Synced", and the database holds one row per attempt.
@@ -398,25 +410,25 @@ All functions below are head-only (head seat or organiser), audited, and take a 
 ### Files
 
 - **Route.** `src/app/head/[eventId]/page.tsx` and `head-console.tsx`. Three columns on a laptop or tablet.
-- **On a phone (below 900 px; owner, addition A)** the page is never refused. It stacks, top to bottom:
-  - the heat controls: Start, Pause, Resume, End, Hold, Resume at, Shift, Publish, Re-open;
-  - the rider totals with provisional rank and the tie words;
-  - the publish blocker list, with "Choose order" for a tie and the override with a reason;
-  - one line where the matrix would be: "Score table: open this page on a tablet or laptop".
+- **On a phone (below 900 px; owner, addition A, revised in round 3)** the page is never refused. A head judge who also scores has **one login and two tabs**:
+  - **Score**: exactly a judge's queue (step 3), the same screen.
+  - **Control**: the heat's buttons — **Start heat**, Pause, Resume, End heat, Hold, Resume at, Shift +5 and +10, Publish, **Cancel heat** (reason required), **Re-run heat** (reason required), Re-open. Which buttons are on follows the heat's state (`src/lib/live/head-state.ts`, tested). **There is no timer reset**: the equivalent is Cancel heat with a reason or Re-run heat. The timer is 48 px here, on the head console and on the big screen only.
+  - **Behind Details** on the Control tab: the rider totals with provisional rank and the tie words, and the list of what blocks Publish (with "Choose order" for a tie and the override with a reason).
+  - A head judge who does not score gets the Control tab only. Start heat lives on Control and on the laptop console.
   - **Consequence:** the jobs that live in the matrix are tablet or laptop only: delete, merge, edit attempt, edit score, absent, and adding an attempt past the cap. A head judge with only a phone can still run the clock, see the blockers, decide a tie and publish.
 - **Left:** `heat-control` (step 1), plus Flag-out at `flagOut.atMin`, shown only when the round is listed in the format's `flagOut.rounds`.
 - **Centre:**
-  - `head-matrix` (live). Tapping a cell opens the criteria and "Edit score" with a reason.
+  - `head-matrix` (live) is a working tool, mocked as interactive on `/design`: tapping a cell opens the criteria and "Edit score" with a reason dialog.
   - Rider totals: counted tricks highlighted, Impression / Variety score, total, provisional rank and the tie words.
   - Attempt menu: Delete (reason), Merge (when a possible duplicate exists), Edit, "+ Add attempt".
   - Rider menu: DNS / DNF / DSQ / Interference.
-  - "Owes Impression / Variety score: Judge 2 (Blue, Green)".
+  - "Owes Impression score: Judge 2 (Blue)" with a button to type it in (paper sheets), the Publish button beside its blocker list, "Publish with a reason", Re-open and Re-run heat.
 - **Right:**
   - Judge connection. Live means seen within 45 s; it uses the heartbeat plus realtime presence on the heat channel.
   - Open flags with Resolve.
   - Attempts per minute.
   - **Agreement report** after the heat: per judge, the mean distance from the panel and the number of outliers (pure `agreement.ts`, tested on 1A).
-- **Second tab.** A "head judge also scores" seat opens `/judge/[eventId]` in a second tab. It is the same login and already on the panel.
+- **Score and Control tabs.** A "head judge also scores" seat is the same login and already on the panel; its phone has the Score and Control tabs above, not a second browser tab.
 - **Announcer.** `?mode=announcer` shows the read-only matrix and feed (docs/06 §9). It is cheap here, so include it; the rider bios wait for Phase 6.
 
 ### Re-run heat: one button (owner, change of 1 Oct 2026)
@@ -582,6 +594,7 @@ All functions below are head-only (head seat or organiser), audited, and take a 
   - `heat_results.public_read` already hides held heats.
   - `get_public_live_heat` checks `publicLiveScores = 'live'` but ignores `publish_hold`.
   - Anon can read `heat_slots.place/total/breakdown`, and any signed-in user can read `divisions.draw` of a published event, which holds `results`. **Both would leak a held final.** Phase 5 must close them now, not in Phase 6.
+- **Public result rows (owner decision, round 3).** New per-division setting **"What spectators see per attempt"** (`liveSettings.spectatorAttemptDisplay`, with a "?"): **Trick name + score** (default) · **Attempt number + score** · **Scores only**. Phase 6 renders it; 5c stores it and exposes it through `get_public_results`. Every public result row is colour-coded, each line with a word or an icon: a crash is red ("CRASH"), a trick that did not count is grey ("Not counted"), a counted trick is green shaded from the darkest (the highest counted) to the lightest (the lowest counted) ("Counted"). A crash never shows a score. All three choices and the colour coding are mocked on `/design`; the shading is the pure `src/lib/live/result-shading.ts` (tested), the tints are theme tokens that keep 7:1 for ink.
 - **Changes:**
   1. `divisions.live_settings` may override the three event settings (null = the event's value). This is the "division's tick boxes" (owner, §11.4): the event's boxes are the default and a division may override them, in the Divisions step under Show all settings.
   2. New `heats.public_live bool null`. The head judge's per-heat switch; null = the setting.
@@ -613,7 +626,7 @@ All functions below are head-only (head seat or organiser), audited, and take a 
   - Taps only.
   - Colour always with its name.
   - `saved-banner` stays until the next action.
-  - One confirmation for CRASH, Submit sheet, Delete attempt, Merge, Publish and Re-open, and nothing else.
+  - One confirmation for CRASH, Submit, Delete attempt, Merge, Publish and Re-open, and nothing else.
 - **Playwright (Pixel 5 and iPhone 13 profiles):**
   - Every button on `/judge` and `/spot` is ≥ 56 px.
   - No hover-only or long-press handlers: a grep test fails on `onContextMenu`, `onPointerDown` timers and drag handlers in `src/app/{judge,spot,head}`.
@@ -641,7 +654,7 @@ These are decisions now. The steps above already follow them. 5b copies them int
 | # | Topic | Decision | Where |
 |---|---|---|---|
 | 1 | Actual start | Not copied into the plan; the heat row is the truth | Steps 1, 5 |
-| 2 | Judge lock | At Submit sheet or when the head judge moves the heat to review, whichever comes first. The head judge can reopen one judge's sheet. The 3-minute timer is dropped | Step 3 |
+| 2 | Judge lock | At Submit or when the head judge moves the heat to review, whichever comes first. The head judge can reopen one judge's sheet. The 3-minute timer is dropped | Step 3 |
 | 3 | Unresolved tie | The head judge chooses the order with a reason. "Share the place" only when the model allows it. No plain override | Step 5 |
 | 4 | Visibility | The event's boxes are the default; a division may override them | Step 6 |
 | 5 | Public pages | Polling for the public, realtime only for officials | Step 7 |
@@ -654,10 +667,14 @@ These are decisions now. The steps above already follow them. 5b copies them int
 | 12 | Out of scope | Wind calls go to Phase 6 with the public banner. Highest Jump metres come after the event | §13 |
 | 12a | Re-run heat (changed the same day) | A one-button "Re-run heat" in 5c: head judge or organiser, one confirmation, reason required; cancels the heat and creates "Heat 3 re-run" (3R) with the same riders, seats, lycras and timing; later seats follow it; the draw stays locked; it goes right after the live heat in the run order; one audit line; riders can be left out. The manual five-step path stays as the fallback | Step 4 |
 | 13 | Riders left out of a re-run | Marked Disqualified or Did not start and ranked last in the re-run (DSQ below DNS). No third option. An injured rider who was clearly ahead is handled by not re-running: end the heat and publish what was scored | Step 4 |
-| 14 | Focus and fit (iPhone 14 test, 1 Oct 2026) | Judge default view = slim header, rider strip, current attempt with whole pad; spotter default = strip, direction, builder, CRASH, Log; timer small except on the head console and big screen; rider sheet and Details toggle for the rest; Normal / Large text size per device; weight 700 only on the selected score | Steps 0, 2, 3 |
+| 14 | Focus and fit (iPhone 14 test, 1 Oct 2026) | Judge default view = slim header, current attempt with whole pad, thin history (superseded by 18); spotter default = strip, direction, builder, CRASH, Log; timer small except on the head console and big screen; rider sheet and Details toggle for the rest; Normal / Large text size per device; weight 700 only on the selected score | Steps 0, 2, 3 |
 | 15 | Look | Calm sports-app look; one accent (deep teal) for selection, primary button and progress; status pills with icon and word; Rider label is a stripe, a dot and the colour word in ink | Step 0 |
 | 16 | No percentages | None on screen; totals and the formula in words; kept in engine and exports; division setting "Show scores as % of maximum" under Advanced, off by default | Step 3 |
 | 17 | Spotter layout per division | Order of families and blocks, blocks movable between families, favourites on top, "+ Add block" into any family, all in the Trick base panel; the spotter renders it | Step 2 |
+| 18 | Judge screen is a scoring queue (round 3) | No rider selection; each logged attempt is the next card with its pad; "2 waiting"; thin history, tap to correct; the rest (rider cards, counters, attempts, my scores) behind Details | Step 3 |
+| 19 | Rider label look (round 3) | Chosen from the identification scheme: coloured block for Lycra / rash guard, number block for bib, name first for name call-out; no manual switch | Step 0 |
+| 20 | Head judge who also scores (round 3) | One login, two tabs on the phone: Score (a judge's queue) and Control (Start / Pause / Resume / End / Hold / Shift, Cancel heat, Re-run heat; totals and blockers behind Details); no timer reset | Step 4 |
+| 21 | Public result rows (round 3) | Per-division "What spectators see per attempt": trick name + score (default), attempt number + score, scores only; crash red, not counted grey, counted green from darkest (highest) to lightest, each with a word or icon | Step 6 |
 | A | Head console on a phone | Below 900 px nothing is refused. Controls, rider totals and the blocker list are shown; only the matrix asks for a tablet or laptop | Step 4 |
 | B | Timer sounds | A short beep and vibration at 1:00 and 0:00. On by default on the head console, optional on judge phones, switchable per device | Step 1 |
 | C | PR split | 5a, 5b, 5c, with the 5b-1 / 5b-2 fallback. The hours go into STATUS.md when 5a starts | §10 |
