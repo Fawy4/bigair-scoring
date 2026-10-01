@@ -1,6 +1,6 @@
 import { Check, Circle, Globe, Pause, Pencil, Radio, TriangleAlert, type LucideIcon } from "lucide-react";
 import { Pill, type PillTone } from "@/components/live/pill";
-import { orgCopy } from "@/lib/org-design/copy";
+import { orgCopy } from "@/lib/ui-copy";
 
 /** Every state the organiser screens show as a pill. Always an icon and a word, never colour alone (docs/06 §00.5). */
 export type StatusState = "done" | "attention" | "not_started" | "live" | "held" | "draft" | "published";

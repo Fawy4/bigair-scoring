@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { orgCopy } from "@/lib/org-design/copy";
+import { orgCopy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 

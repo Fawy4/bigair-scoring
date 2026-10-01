@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
-import { orgCopy } from "@/lib/org-design/copy";
+import { orgCopy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { useShellLayout } from "./layout-context";
 

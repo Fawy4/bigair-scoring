@@ -6,7 +6,7 @@ import { MenuItem, Popover } from "@/components/org/popover";
 import { Segmented } from "@/components/org/setting-controls";
 import { useBeachTextSize, useBeachTheme } from "@/components/live/theme-switch";
 import { BEACH_THEMES } from "@/lib/live/theme-tokens";
-import { orgCopy } from "@/lib/org-design/copy";
+import { orgCopy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { PreviewSections, SECTION_IDS, type FrameKind } from "./sections";
 import "@/components/org/org-tokens.css";

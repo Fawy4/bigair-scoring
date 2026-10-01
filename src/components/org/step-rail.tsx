@@ -1,6 +1,6 @@
 "use client";
 
-import { orgCopy } from "@/lib/org-design/copy";
+import { orgCopy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { StatusPill, type StatusState } from "./status-pill";
 

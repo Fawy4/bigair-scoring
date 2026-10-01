@@ -1,7 +1,7 @@
 "use client";
 
 import { ExternalLink, Monitor, Pause, Play, Printer, RotateCcw, SkipForward, Wind } from "lucide-react";
-import { orgCopy } from "@/lib/org-design/copy";
+import { orgCopy } from "@/lib/ui-copy";
 import type { ReadinessCheck, RunOrderRow } from "@/lib/org-design/fixtures";
 import { cn } from "@/lib/utils";
 import { CopyLinkButton } from "./app-shell";

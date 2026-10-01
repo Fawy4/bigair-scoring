@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
 import { Check, CircleUser, Copy, ExternalLink, KeyRound, LogOut, MessageSquare, QrCode } from "lucide-react";
 import { QR_COLOURS } from "@/lib/org-design/qr";
-import { orgCopy } from "@/lib/org-design/copy";
+import { orgCopy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import { ShellLayoutProvider, type ShellLayout } from "./layout-context";

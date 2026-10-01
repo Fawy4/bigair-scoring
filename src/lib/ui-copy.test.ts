@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import identification from "../../presets/identification/schemes.json";
-import { copy, FORMAT_LABELS, help, SCORING_LABELS } from "./ui-copy";
+import { copy, FORMAT_LABELS, help, orgCopy, SCORING_LABELS } from "./ui-copy";
 
 // House words (owner's wording rules): never "chip", "vest" or "mark(s)" (use "Rider label", "Lycra", "score") and no bracket jargon:
 // "bye" (use "Advances without riding"), "repechage" (use "Second-chance round"), "dingle elimination", "man-on-man" (use "1 v 1 heats"),
@@ -53,7 +53,7 @@ function strings(value: unknown, out: string[] = []): string[] {
 
 describe("house words in everything a user reads", () => {
   it("the copy file has no banned words", () => {
-    const all = [...strings(copy), ...strings(help), ...strings(SCORING_LABELS), ...strings(FORMAT_LABELS)];
+    const all = [...strings(copy), ...strings(orgCopy), ...strings(help), ...strings(SCORING_LABELS), ...strings(FORMAT_LABELS)];
     expect(all.length).toBeGreaterThan(400);
     expect(all.filter((t) => BANNED.test(t))).toEqual([]);
   });

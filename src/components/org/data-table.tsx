@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, Search } from "lucide-react";
-import { orgCopy } from "@/lib/org-design/copy";
+import { orgCopy } from "@/lib/ui-copy";
 import { matchesSearch } from "@/lib/table/search";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";

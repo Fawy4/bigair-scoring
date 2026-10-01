@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { ChevronDown, FolderOpen } from "lucide-react";
-import { orgCopy } from "@/lib/org-design/copy";
+import { orgCopy } from "@/lib/ui-copy";
 import { MenuItem, MenuLabel, Popover } from "./popover";
 
 interface SettingsPanelProps {
