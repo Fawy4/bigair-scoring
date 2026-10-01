@@ -3,7 +3,7 @@
 import { DndContext, pointerWithin, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { useState } from "react";
 import { RiderLabel } from "@/components/rider-label";
-import { heatLabel, placeholderText, type DivisionDraw, type DrawHeat, type DrawRound, type Slot } from "@/lib/engine/ladder";
+import { heatLabel, placeholderText, provisionalSeat, type DivisionDraw, type DrawHeat, type DrawRound, type Slot } from "@/lib/engine/ladder";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
@@ -51,7 +51,12 @@ function SeatBody({ draw, scheme, round, slot, compact }: { draw: DivisionDraw; 
       </span>
     );
   }
-  if (slot.from) return <span className={cn("font-extrabold", compact ? "text-base" : "text-lg")} data-testid="placeholder">{placeholderText(draw, slot.from, round.id)}</span>;
+  if (slot.from) {
+    // a round that re-seeds from all its arrivals deals later, but the seat can already say who is on the way
+    const coming = provisionalSeat(draw, round, slot);
+    if (coming) return <span className={cn("font-extrabold", compact ? "text-base" : "text-lg")} data-testid="placeholder" data-provisional="true">{T.seatPending(coming.name, coming.placeholder)}</span>;
+    return <span className={cn("font-extrabold", compact ? "text-base" : "text-lg")} data-testid="placeholder">{placeholderText(draw, slot.from, round.id)}</span>;
+  }
   return <span className="font-semibold italic" data-testid="empty-seat">{T.emptySeat}</span>;
 }
 

@@ -546,6 +546,64 @@ export type Database = {
           },
         ]
       }
+      heat_decisions: {
+        Row: {
+          at: string
+          by_seat: string | null
+          by_user: string | null
+          event_id: string
+          heat_id: string
+          id: string
+          kind: string
+          payload: Json
+          reason: string | null
+        }
+        Insert: {
+          at?: string
+          by_seat?: string | null
+          by_user?: string | null
+          event_id: string
+          heat_id: string
+          id?: string
+          kind: string
+          payload?: Json
+          reason?: string | null
+        }
+        Update: {
+          at?: string
+          by_seat?: string | null
+          by_user?: string | null
+          event_id?: string
+          heat_id?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "heat_decisions_by_seat_fkey"
+            columns: ["by_seat"]
+            isOneToOne: false
+            referencedRelation: "judge_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "heat_decisions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "heat_decisions_heat_id_fkey"
+            columns: ["heat_id"]
+            isOneToOne: false
+            referencedRelation: "heats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       heat_results: {
         Row: {
           breakdown: Json | null
@@ -2043,6 +2101,32 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      add_penalty: {
+        Args: {
+          p_entry: string
+          p_heat: string
+          p_reason: string
+          p_type: string
+        }
+        Returns: {
+          created_at: string
+          entry_id: string
+          event_id: string
+          heat_id: string
+          id: string
+          issued_by: string | null
+          reason: string | null
+          type: string
+          updated_at: string
+          value: Json
+        }
+        SetofOptions: {
+          from: "*"
+          to: "penalties"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_add_organiser: {
         Args: { p_org: string; p_role?: string; p_user: string }
         Returns: undefined
@@ -2183,6 +2267,7 @@ export type Database = {
           organisation_name: string
         }[]
       }
+      am_i_head: { Args: { p_event: string }; Returns: boolean }
       approve_seat: {
         Args: { p_actor?: string; p_enc: string; p_pin: string; p_seat: string }
         Returns: Json
@@ -2237,6 +2322,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      decide_tie: {
+        Args: { p_heat: string; p_reason: string; p_rider_ids: string[] }
+        Returns: {
+          at: string
+          by_seat: string | null
+          by_user: string | null
+          event_id: string
+          heat_id: string
+          id: string
+          kind: string
+          payload: Json
+          reason: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "heat_decisions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       delete_attempt: {
         Args: { p_attempt: string; p_reason: string }
         Returns: {
@@ -2275,6 +2380,50 @@ export type Database = {
       delete_event: {
         Args: { p_event: string; p_slug_confirm: string }
         Returns: Json
+      }
+      edit_attempt: {
+        Args: {
+          p_attempt: string
+          p_category?: string
+          p_direction?: string
+          p_entry?: string
+          p_reason: string
+          p_status?: string
+          p_trick_name?: string
+          p_trick_parts?: Json
+        }
+        Returns: {
+          category_key: string | null
+          client_key: string
+          created_at: string
+          created_by_seat: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          direction: string | null
+          entry_id: string
+          event_id: string
+          heat_id: string
+          height_at: string | null
+          height_m: number | null
+          height_ref: string | null
+          height_source: string | null
+          id: string
+          input_method: string
+          possible_duplicate_of: string | null
+          raw_text: string | null
+          seq: number
+          status: string
+          trick_name: string | null
+          trick_parts: Json
+          updated_at: string
+          video_ts: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trick_attempts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       end_heat: {
         Args: { p_heat: string }
@@ -2345,6 +2494,10 @@ export type Database = {
         }
       }
       ensure_division_panel: { Args: { p_division: string }; Returns: string }
+      flag_out: {
+        Args: { p_entries: string[]; p_heat: string; p_reason: string }
+        Returns: undefined
+      }
       get_public_event: {
         Args: { p_slug: string }
         Returns: {
@@ -2385,11 +2538,112 @@ export type Database = {
         }[]
       }
       has_password: { Args: never; Returns: boolean }
+      head_set_impression: {
+        Args: {
+          p_entry: string
+          p_heat: string
+          p_reason: string
+          p_seat: string
+          p_value: number
+        }
+        Returns: {
+          client_key: string
+          client_rev: number
+          created_at: string
+          entry_id: string
+          event_id: string
+          heat_id: string
+          id: string
+          judge_seat_id: string
+          updated_at: string
+          value: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "impression_scores"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      head_set_trick_score: {
+        Args: {
+          p_attempt: string
+          p_criteria: Json
+          p_missed: boolean
+          p_reason: string
+          p_score: number
+          p_seat: string
+        }
+        Returns: {
+          attempt_id: string
+          client_key: string
+          client_rev: number
+          created_at: string
+          criteria: Json
+          edit_reason: string | null
+          edited_by: string | null
+          event_id: string
+          flag: string | null
+          heat_id: string
+          id: string
+          judge_seat_id: string
+          missed: boolean
+          score: number | null
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trick_scores"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       import_riders: {
         Args: { p_division: string; p_rows: Json }
         Returns: Json
       }
       lock_division_draw: { Args: { p_division: string }; Returns: undefined }
+      merge_attempts: {
+        Args: {
+          p_choices: Json
+          p_drop: string
+          p_keep: string
+          p_reason: string
+        }
+        Returns: {
+          category_key: string | null
+          client_key: string
+          created_at: string
+          created_by_seat: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          direction: string | null
+          entry_id: string
+          event_id: string
+          heat_id: string
+          height_at: string | null
+          height_m: number | null
+          height_ref: string | null
+          height_source: string | null
+          id: string
+          input_method: string
+          possible_duplicate_of: string | null
+          raw_text: string | null
+          seq: number
+          status: string
+          trick_name: string | null
+          trick_parts: Json
+          updated_at: string
+          video_ts: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trick_attempts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       pause_heat: {
         Args: { p_heat: string }
         Returns: {
@@ -2427,6 +2681,20 @@ export type Database = {
       platform_session: { Args: never; Returns: Json }
       public_platform_settings: { Args: never; Returns: Json }
       public_registration_info: { Args: { p_slug: string }; Returns: Json }
+      publish_heat_commit: {
+        Args: {
+          p_actor: string
+          p_blockers?: Json
+          p_draw: Json
+          p_expected_version: number
+          p_heat: string
+          p_hold: boolean
+          p_override_reason: string
+          p_projection: Json
+          p_results: Json
+        }
+        Returns: Json
+      }
       purge_organisation: { Args: { p_org: string }; Returns: undefined }
       regenerate_seat_pin: {
         Args: { p_actor?: string; p_enc: string; p_pin: string; p_seat: string }
@@ -2443,6 +2711,44 @@ export type Database = {
           p_photo_path?: string
         }
         Returns: Json
+      }
+      remove_penalty: {
+        Args: { p_penalty: string; p_reason: string }
+        Returns: undefined
+      }
+      reopen_heat: {
+        Args: { p_heat: string; p_reason: string }
+        Returns: {
+          created_at: string
+          division_id: string
+          draw_uid: string | null
+          duration_sec: number
+          ended_at: string | null
+          event_id: string
+          flag_out: Json | null
+          id: string
+          live_rev: number
+          manual_override: boolean
+          name: string | null
+          number: number
+          number_suffix: string | null
+          paused_at: string | null
+          paused_total_sec: number
+          publish_hold: boolean
+          published_at: string | null
+          reopened_at: string | null
+          round_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          warm_up_sec: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "heats"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       reopen_sheet: {
         Args: { p_heat: string; p_reason: string; p_seat: string }
@@ -2478,8 +2784,66 @@ export type Database = {
         }
         Returns: Json
       }
+      resolve_flag: {
+        Args: { p_flag: string; p_resolution?: string }
+        Returns: {
+          attempt_id: string
+          client_key: string
+          created_at: string
+          event_id: string
+          heat_id: string
+          id: string
+          judge_seat_id: string
+          kind: string
+          note: string | null
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "attempt_flags"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       resume_heat: {
         Args: { p_heat: string }
+        Returns: {
+          created_at: string
+          division_id: string
+          draw_uid: string | null
+          duration_sec: number
+          ended_at: string | null
+          event_id: string
+          flag_out: Json | null
+          id: string
+          live_rev: number
+          manual_override: boolean
+          name: string | null
+          number: number
+          number_suffix: string | null
+          paused_at: string | null
+          paused_total_sec: number
+          publish_hold: boolean
+          published_at: string | null
+          reopened_at: string | null
+          round_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          warm_up_sec: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "heats"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      review_heat: {
+        Args: { p_heat: string; p_override_reason?: string }
         Returns: {
           created_at: string
           division_id: string
@@ -2614,6 +2978,36 @@ export type Database = {
       set_publish_hold: {
         Args: { p_heat: string; p_hold: boolean; p_reason?: string }
         Returns: undefined
+      }
+      set_rider_status: {
+        Args: {
+          p_entry: string
+          p_heat: string
+          p_modifier: string
+          p_reason: string
+        }
+        Returns: {
+          breakdown: Json | null
+          created_at: string
+          entry_id: string | null
+          event_id: string
+          flagged_out: boolean
+          heat_id: string
+          id: string
+          modifier: string | null
+          place: number | null
+          position: number
+          source: Json | null
+          total: number | null
+          updated_at: string
+          vest_colour: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "heat_slots"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_seat_pin: {
         Args: { p_enc?: string; p_pin: string; p_seat: string }

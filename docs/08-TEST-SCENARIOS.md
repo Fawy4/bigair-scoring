@@ -206,7 +206,7 @@ Capacity-aware snake, N = 13 (docs/04 §3 step 3):
 Pools: 3 heats sized 7 / 8 / 8 (smaller heat for top seeds first). All 23 ranked by pool total across pools; top 6 → Final (1 heat). Tie across pools uses the scoring model's tie-breakers, then original seed.
 
 ### 2F — Progression behaviours
-- Publishing R1 Heat 2 (places Red 1st, Blue 2nd, Green 3rd) fills R3 pool with Red and R2 pool with Blue, Green. R2 heats are generated only when all six R1 heats are published, or when the organiser presses "Seed now" (missing places become DNS walkovers).
+- Publishing R1 Heat 2 (places Red 1st, Blue 2nd, Green 3rd) fills R3 pool with Red and R2 pool with Blue, Green. **A round that re-seeds from all its arrivals** ("By their result", snake) is dealt only when all six R1 heats are published, or when the organiser presses "Seed now" (missing places become DNS walkovers); until then a waiting seat only *shows* who is on the way (§2I). **A round whose seats are fixed in advance** ("By original seeding" with adjacent pairing, a custom ladder, a hand-arranged round) fills each seat the moment its source heat is published (§2I; owner's decision of 1 Oct 2026, changed from "generated only when all are published").
 - Withdrawal before draw (N 18 → 17): regenerate gives 6 heats of 2/3/3/3/3/3, heat 1 has 2 riders ([1, 12] · [2, 11, 13] · [3, 10, 14] · [4, 9, 15] · [5, 8, 16] · [6, 7, 17]).
 - Withdrawal after draw: slot keeps the rider with modifier DNS; heat still runs (`minRidersToRun 1`).
 - Correction: re-publishing R1 Heat 1 with a different winner when R3 Heat 1 has status `running` → returns `conflict` listing the affected heat; nothing changes.
@@ -260,6 +260,13 @@ The expected values below are the owner's own examples. Every heat count and siz
 - **Property test:** target 2–6, minimum 2 to the target, maximum the target to target + 2, advance 1 to target − 1, final size 2, 3, 4 or 6, for N = 4…40 (the plan for every combination, and the real draw for a spread of them): no heat above the maximum (when the maximum is 3 or more); at least the minimum whenever a split exists, otherwise the 1 v 1 fallback; every round before the Final has at least 2 heats; nobody advances without riding; somebody is out of every heat; every rider gets a placing.
 - **Older tests changed because of the new rules:** a heat of two now advances one rider (so the "eliminates nobody" warning is tested with the older "smaller heats" rule); 6 riders left with 4 / 4 / 4 make three heats of 2, not a heat of 6; the Semi-finals pair neighbouring heats.
 - Diagram and text preview (unit tests and Playwright, 24 riders): "With 24 riders: R1 8 heats of 3 → R2 4 heats of 2 → SF 2 heats of 2 → F 1 heat of 2 (15 heats)"; the 1 v 1 rounds are labelled "(1 v 1)"; the R2 heats read "1st H1, 1st H2"; routes "1st → R2 · 2nd–3rd → out" and "1st → SF · 2nd → out".
+
+### 2I — Seats fill the moment they are known (Phase 5c, owner's decision 1 Oct 2026; `2i-seats-fill.test.ts`)
+- **Fixed in advance → fills at once.** Arrow's ladder: 24 riders, 3 per heat, 1 advances, final of 2 (8 + 4 + 2 + 1 = 15 heats, "By original seeding"). Publish R1 H1 (the lower seed wins): **R2 H1 seat 1 holds the winner of R1 H1** at once; R2 H1 seat 2 is still the placeholder "1st H2" (R1 H2, place 1); R2 H2 to H4 are untouched. Publish R1 H2: R2 H1 seat 2 holds the winner of R1 H2. After all eight R1 heats R2 is exactly what §2G7 says (H1 = winners of R1 H1 and R1 H2, …).
+- **A correction.** Re-publish R1 H1 with a different winner while R2 H1 has not started → R2 H1 seat 1 changes to the new winner. The same correction while R2 H1 is running (or finished) → `conflict` naming R2 H1, the draw unchanged. A correction that does not change the winner changes nothing and never conflicts.
+- **Custom and hand-arranged ladders** already filled seat by seat (§2G3 and §2H); unchanged.
+- **Re-seeded rounds deal later.** The same 24 riders with `reseed = "By their result"` (snake): publishing R1 H1 alone deals nothing (every R2 seat is still a placeholder), but the Draw step shows who is on the way on the seat that waits for it: **"Rider 1 · 1st H1 · seat pending"** (lower seed wins; Rider 1 is the winner of R1 H1). When all eight R1 heats are published (or on "Seed now") R2 is dealt exactly as before (all the snake tests of §2A, §2C and §2G stay as they are).
+- A seat never shows a provisional name for a place decided by a pool across heats ("1st of all heats").
 
 ## 3. Timetable engine (`presets/schedule/kitemania-day2.json`)
 

@@ -77,6 +77,8 @@ export function generateSingleElimination(n: number, p: SingleEliminationParams)
       Math.max(p.finalSize, plan.finalSize),
       p.finalMin,
       p.reseed,
+      // "By original seeding": the winners of the semi-finals meet in the Final in the order of their heats, so a seat is known the moment its heat is published
+      adjacent && last ? { seeding: "adjacent" } : {},
     ),
   );
   return rounds;
