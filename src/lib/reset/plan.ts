@@ -9,7 +9,6 @@ export function resetTarget(drawAtLock: DivisionDraw): { draw: DivisionDraw; pro
   const draw: DivisionDraw = structuredClone(drawAtLock);
   const started = Object.keys(draw.results ?? {}).length > 0 || draw.rounds.some((r) => r.heats.some((h) => h.status !== "pending"));
   if (started) throw new Error(T.copyHasResults);
-  draw.status = "locked";
   draw.results = {};
   return { draw, projection: drawProjection(draw) };
 }

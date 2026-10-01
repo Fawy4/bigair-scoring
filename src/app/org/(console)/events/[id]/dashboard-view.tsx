@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/browser";
 import { effectiveStatus, remainingMs, type HeatTiming } from "@/lib/live/timer";
 import { copy, orgCopy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
+import { ResetEvent } from "./reset-panel";
 import { ShareCard } from "./share-card";
 
 export interface DashboardRow {
@@ -62,7 +63,7 @@ function LiveNow({ running, held, next, after, timezone }: { running: DashboardV
 }
 
 /** Hold, Resume at, Shift, the head judge console, the big screen. Each runs on the server with the database's clock and says why when it cannot run. */
-function QuickActionsLive({ eventId, plan, timezone }: { eventId: string; plan: DashboardViewProps["plan"]; timezone: string }) {
+function QuickActionsLive({ eventId, plan, timezone, runningHeat }: { eventId: string; plan: DashboardViewProps["plan"]; timezone: string; runningHeat: string | null }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -148,6 +149,9 @@ function QuickActionsLive({ eventId, plan, timezone }: { eventId: string; plan: 
           {orgCopy.dashboard.bigScreen}
         </Button>
       </div>
+      <div className="mt-3 border-t border-beach-line pt-3">
+        <ResetEvent eventId={eventId} runningHeat={runningHeat} />
+      </div>
       {held && plan?.heldSince ? (
         <p data-testid="run-hold" className="mt-3 text-body font-semibold">
           {orgCopy.dashboard.held(plan.heldSince)}
@@ -171,7 +175,7 @@ export function DashboardView(p: DashboardViewProps) {
         <ReadinessList checks={p.checks} />
         <LiveNow running={p.running} held={held} next={p.next} after={p.after} timezone={p.timezone} />
         <WindCallSlot />
-        <QuickActionsLive eventId={p.eventId} plan={p.plan} timezone={p.timezone} />
+        <QuickActionsLive eventId={p.eventId} plan={p.plan} timezone={p.timezone} runningHeat={p.running?.label ?? null} />
         <div className={laptop ? "col-span-2" : undefined} data-testid="dashboard-today">
           <OrgCard title={copy.dashboard.today} actions={p.finish ? <span className="text-small font-semibold text-beach-muted">{copy.runOrder.finish(p.finish)}</span> : undefined} testId="dashboard-timetable">
             {p.rows.length === 0 ? (
