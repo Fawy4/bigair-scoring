@@ -140,7 +140,7 @@ export interface LiveRiderInfo extends LabelRider {
 }
 
 export interface LiveContext {
-  event: { id: string; name: string; slug: string; timezone: string; judgesMayLogAttempts: boolean; maxRunningHeats: number; isSimulation: boolean };
+  event: { id: string; name: string; slug: string; timezone: string; judgesMayLogAttempts: boolean; maxRunningHeats: number; isSimulation: boolean; readyCallMin: number };
   /** Who is looking: a seat, or an organiser of the event (the head page only). */
   viewer: { kind: "seat"; seatId: string; name: string; role: SeatRole; spotterEntries: string[]; spotterColours: string[] } | { kind: "organiser"; name: string };
   divisions: LiveDivisionContext[];

@@ -7,6 +7,15 @@ const v = copy.event.validation;
 
 const SLUG = /^[a-z0-9][a-z0-9-]*$/;
 
+/** One extra tab on the public site: a leaderboard that lives elsewhere (for example the Highest Jump board of WOO Events). */
+export const ExternalLeaderboardSchema = z.object({
+  title: z.string().trim().min(1, v.leaderboardTitle).max(40, v.leaderboardTitle),
+  /** https only: the page opens in a new tab, or is shown inside the site when `embed` is on. */
+  url: z.string().trim().url(v.leaderboardUrl).refine((u) => u.startsWith("https://"), v.leaderboardUrl),
+  embed: z.boolean().default(false),
+});
+export type ExternalLeaderboard = z.infer<typeof ExternalLeaderboardSchema>;
+
 /** Everything on `events.settings` that the Event step edits. Unknown keys written by later phases are kept. */
 export const EventSettingsSchema = z.looseObject({
   /** "live" = the public may follow scores during a heat; anything else = nothing before the head judge publishes. */
@@ -15,10 +24,14 @@ export const EventSettingsSchema = z.looseObject({
   publicResultsOnPublish: z.boolean().default(false),
   /** The final's result stays hidden until the organiser releases it (podium). Uses heats.publish_hold. */
   holdFinalResult: z.boolean().default(false),
-  /** Minutes before a heat that riders are called to the ready area. */
-  readyCallMin: z.number().int().min(0).max(120).default(10),
+  /** Minutes before a heat that riders are called to the ready area. The one place this is set: the run order, the timetables and the rider pages all read it. */
+  readyCallMin: z.number().int().min(0).max(120).default(15),
   /** How often public pages ask for new scores. */
   livePollSec: z.number().int().min(3).max(60).default(7),
+  /** Seconds each page of the big screen stays up before the next one (live heat, timetable, last results, sponsors). */
+  screenRotateSec: z.number().int().min(5).max(120).default(20),
+  /** Extra tabs on the public site that link to (or show) a leaderboard kept elsewhere. */
+  externalLeaderboards: z.array(ExternalLeaderboardSchema).max(6, v.leaderboardsMax).default([]),
   /** No longer read (since 5b a judge's scores lock at Submit or at review); kept so older events still parse. */
   judgeGraceSec: z.number().int().min(0).max(3600).default(180),
   /** Heats that may run (or be paused) at the same time in this event. */

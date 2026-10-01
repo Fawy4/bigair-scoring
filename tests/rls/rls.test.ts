@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildFixture, ENV_OK, failed, run, anonClient, uuid, type Fixture } from "./helpers";
 
 // Plain-language guide: each `it` below is one sentence about who may (or may not) do what.
@@ -361,17 +362,27 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
   // ------------------------------------------------------------------ public live view
   describe("public live scores (polling function)", () => {
     const live = () => anonClient().rpc("get_public_live_heat", { p_heat: f.ids.H1 });
-    it("returns attempts and marks by panel position, never by judge identity, when the event allows live scores", async () => {
+    it("returns the heat, seats and attempts, and no score of any kind: not by judge, not by seat number, not Impression scores or penalties", async () => {
       const { data, error } = await live();
       expect(error).toBeNull();
-      const d = data as { allowed: boolean; attempts: unknown[]; scores: Array<Record<string, unknown>>; heat: { live_rev: number } };
+      const d = data as Record<string, unknown> & { allowed: boolean; attempts: unknown[]; heat: { live_rev: number } };
       expect(d.allowed).toBe(true);
       expect(d.attempts.length).toBeGreaterThan(0);
+      for (const key of ["scores", "impressions", "penalties"]) expect(d, key).not.toHaveProperty(key);
+      const text = JSON.stringify(d);
+      for (const bad of ["seat_no", "judge_seat_id", "edited_by", "criteria"]) expect(text).not.toContain(bad);
+    });
+    it("the full live view (with scores by panel position) is for the server only: visitors, judges and organisers are refused; the server gets it", async () => {
+      const call = (c: SupabaseClient) => c.rpc("get_live_heat_for_server", { p_heat: f.ids.H1 });
+      for (const c of [anonClient(), f.clients.j1, f.clients.orgA, f.clients.head]) expect((await call(c)).error, "refused").not.toBeNull();
+      const { data, error } = await call(f.s);
+      expect(error).toBeNull();
+      const d = data as { allowed: boolean; scores: Array<Record<string, unknown>> };
+      expect(d.allowed).toBe(true);
       expect(d.scores.length).toBeGreaterThan(0);
       for (const sc of d.scores) {
         expect(sc).toHaveProperty("seat_no");
         expect(sc).not.toHaveProperty("judge_seat_id");
-        expect(sc).not.toHaveProperty("edited_by");
       }
     });
     it("the live counter moves when a mark arrives, so pollers know to refresh", async () => {

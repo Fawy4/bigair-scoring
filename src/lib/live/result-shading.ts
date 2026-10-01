@@ -5,6 +5,13 @@ export type AttemptDisplay = "number_score" | "trick_score" | "scores_only";
 export const ATTEMPT_DISPLAYS: AttemptDisplay[] = ["number_score", "trick_score", "scores_only"];
 export const DEFAULT_ATTEMPT_DISPLAY: AttemptDisplay = "number_score";
 
+/** The stored division setting is "score_only" (Divisions step); the boxes call it "scores_only". Anything unknown is Arrow's default. */
+export function toAttemptDisplay(stored: unknown): AttemptDisplay {
+  if (stored === "score_only" || stored === "scores_only") return "scores_only";
+  if (stored === "trick_score") return "trick_score";
+  return DEFAULT_ATTEMPT_DISPLAY;
+}
+
 export const GRADE_STEPS = 5;
 
 /**

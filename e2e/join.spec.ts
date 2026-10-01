@@ -1,22 +1,36 @@
 import { test, expect } from "./base";
+import { createLiveWorld, type LiveWorld } from "./live-world";
 
-// Needs the demo seed (Demo Cup, judge PIN 100001) in the linked Supabase project and `npm run dev` (started automatically).
+// Officials join with a PIN on a throwaway event (made with the service key), so the tests do not depend on the demo seed. Since 5b a joined phone goes straight
+// to the screen of its role (`/judge/<event>`), and the card "Connected · Judge 1" stays on `/seat?card=1`.
 
-test("a judge joins with the event code and PIN, and the phone stays joined after a reload", async ({ page }) => {
+let world: LiveWorld;
+const PIN = "482915";
+test.beforeAll(async () => {
+  test.setTimeout(120_000);
+  world = await createLiveWorld();
+  const { error } = await world.db.rpc("set_seat_pin", { p_seat: world.seats.j1.id, p_pin: PIN });
+  if (error) throw new Error(error.message);
+});
+test.afterAll(async () => {
+  await world?.cleanup();
+});
+
+test("a judge joins with the event code and PIN, lands on the judge screen, and the phone stays joined after a reload", async ({ page }) => {
   await page.goto("/join");
-  await page.getByLabel("Event code").fill("demo-cup");
-  await page.getByLabel("Your 6-digit PIN").fill("100 001");
+  await page.getByLabel("Event code").fill(`e2e-live-${world.org.run}`);
+  await page.getByLabel("Your 6-digit PIN").fill("482 915");
   await page.getByRole("button", { name: "Join" }).click();
-  await expect(page).toHaveURL(/\/(seat|judge\/[^/]+|spot\/[^/]+|head\/[^/]+)$/);
+  await expect(page).toHaveURL(new RegExp(`/judge/${world.eventId}$`));
+  await page.goto("/seat?card=1");
   await expect(page.getByText("Judge 1")).toBeVisible();
-  await expect(page.getByText("Demo Cup")).toBeVisible();
   await page.reload();
   await expect(page.getByText("Judge 1")).toBeVisible(); // still bound: no re-join needed
 });
 
 test("a wrong PIN gets a plain-language message and no seat", async ({ page }) => {
-  await page.goto("/e/demo-cup/join");
-  await expect(page.getByRole("heading", { name: "Demo Cup" })).toBeVisible();
+  await page.goto(`/e/e2e-live-${world.org.run}/join`);
+  await expect(page.getByRole("heading", { name: `E2E Live ${world.org.run}` })).toBeVisible();
   await page.getByLabel("Your 6-digit PIN").fill("999999");
   await page.getByRole("button", { name: "Join" }).click();
   await expect(page.locator("p[role=alert]")).toContainText("not recognised");

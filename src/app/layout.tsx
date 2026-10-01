@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { getProductName } from "@/lib/platform/public-settings";
-import { FeedbackButton } from "@/components/feedback/feedback-button";
+import { FeedbackGate } from "@/components/feedback/feedback-gate";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -13,7 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         {children}
-        <FeedbackButton />
+        <FeedbackGate />
       </body>
     </html>
   );

@@ -53,7 +53,7 @@ export default async function ScheduleStepPage({ params }: { params: Promise<{ i
           days={days.length ? days : [today]}
           today={today}
           logoUrl={branding.logoUrl ?? null}
-          readyCallMin={typeof settings.readyCallMin === "number" ? settings.readyCallMin : 15}
+          readyCallMin={settings.readyCallMin}
           infos={model.infos}
           lives={model.lives}
           plans={(plans ?? []) as PlanRow[]}

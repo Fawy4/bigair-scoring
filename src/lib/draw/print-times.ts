@@ -28,7 +28,7 @@ export async function loadDrawTimes(supabase: SupabaseClient<Database>, eventId:
   const byUid: Record<string, string> = {};
   let day: string | null = null;
   for (const row of plans) {
-    const { plan, defaults } = rowToPlan(row as PlanRow);
+    const { plan, defaults } = rowToPlan(row as PlanRow, 0) /* the printed draw shows start times only, never the ready call */;
     const now = todayIn(timezone, Date.now()) === row.day ? new Date().toISOString() : undefined;
     const table = computeTimetable(plan, model.lives, { timezone, eventDay: row.day, defaults, ...(now ? { now } : {}) });
     for (const r of table.rows) {

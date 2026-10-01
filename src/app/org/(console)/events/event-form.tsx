@@ -265,7 +265,7 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
 
       <section className="panel flex flex-col gap-4">
         <h2 className="text-xl font-extrabold">{T.timing}</h2>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <div className={field}>
             <FieldLabel htmlFor="ev-ready" text={T.readyCall} help={help["event.readyCall"]} />
             <input id="ev-ready" type="number" min={0} max={120} value={num(form.settings.readyCallMin)} onChange={(e) => set(["settings", "readyCallMin"], numeric(e.target.value))} />
@@ -275,6 +275,11 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
             <FieldLabel htmlFor="ev-poll" text={T.livePoll} help={help["event.livePoll"]} />
             <input id="ev-poll" type="number" min={3} max={60} value={num(form.settings.livePollSec)} onChange={(e) => set(["settings", "livePollSec"], numeric(e.target.value))} />
             {showError("settings.livePollSec")}
+          </div>
+          <div className={field}>
+            <FieldLabel htmlFor="ev-rotate" text={T.screenRotate} help={help["event.screenRotate"]} />
+            <input id="ev-rotate" type="number" min={5} max={120} value={num(form.settings.screenRotateSec)} onChange={(e) => set(["settings", "screenRotateSec"], numeric(e.target.value))} />
+            {showError("settings.screenRotateSec")}
           </div>
           <div className={field}>
             <FieldLabel htmlFor="ev-max-running" text={T.maxRunning} help={help["event.maxRunning"]} />
@@ -289,6 +294,42 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
           </label>
           <HelpButton what={T.judgesLog} help={help["event.judgesLog"]} />
         </span>
+        <div className="flex flex-col gap-2" data-testid="external-leaderboards">
+          <FieldLabel as="span" text={T.leaderboards} help={help["event.leaderboards"]} />
+          {form.settings.externalLeaderboards.length === 0 ? <p className="font-semibold">{T.noLeaderboards}</p> : null}
+          {form.settings.externalLeaderboards.map((lb, i) => (
+            <div key={i} className="flex flex-col gap-2 rounded-lg border-2 border-[#111] p-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className={field}>
+                  <FieldLabel htmlFor={`lb-title-${i}`} text={T.leaderboardTitle(i + 1)} />
+                  <input id={`lb-title-${i}`} value={lb.title} onChange={(e) => set(["settings", "externalLeaderboards", i, "title"], e.target.value)} />
+                  {showError(`settings.externalLeaderboards.${i}.title`)}
+                </div>
+                <div className={field}>
+                  <FieldLabel htmlFor={`lb-url-${i}`} text={T.leaderboardUrl(i + 1)} />
+                  <input id={`lb-url-${i}`} value={lb.url} onChange={(e) => set(["settings", "externalLeaderboards", i, "url"], e.target.value)} placeholder="https://" />
+                  {showError(`settings.externalLeaderboards.${i}.url`)}
+                </div>
+              </div>
+              <label className="flex items-center gap-3 font-bold">
+                <input type="checkbox" checked={lb.embed} onChange={(e) => set(["settings", "externalLeaderboards", i, "embed"], e.target.checked)} />
+                {T.leaderboardEmbed}
+              </label>
+              <div>
+                <button type="button" className="btn btn-danger" onClick={() => setForm((f) => removeIn(f, ["settings", "externalLeaderboards", i]))}>
+                  {T.removeLeaderboard}
+                </button>
+              </div>
+            </div>
+          ))}
+          {form.settings.externalLeaderboards.length < 6 ? (
+            <div>
+              <button type="button" className="btn" onClick={() => set(["settings", "externalLeaderboards", form.settings.externalLeaderboards.length], { title: "", url: "", embed: false })}>
+                {T.addLeaderboard}
+              </button>
+            </div>
+          ) : null}
+        </div>
         <span className="flex items-start gap-2">
           <label className="flex items-center gap-3 font-bold">
             <input type="checkbox" checked={form.settings.windCallBanner} onChange={(e) => set(["settings", "windCallBanner"], e.target.checked)} />

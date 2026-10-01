@@ -4,6 +4,7 @@ import { z } from "zod";
 import { errorSentence, parseError } from "./errors";
 import { holdPlan as holdPlanPure, resumePlanAt as resumePlanAtPure, shiftPlan as shiftPlanPure } from "./plan-actions";
 import { buildHeatModel, type DivisionRowDb, type HeatRowDb, type RoundRowDb } from "@/lib/schedule/model";
+import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { rowToPlan, type PlanRow } from "@/lib/schedule/plans";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/database.types";
@@ -52,13 +53,13 @@ async function loadPlan(planId: string) {
   const { data: row } = await supabase.from("schedule_plans").select(PLAN_COLUMNS).eq("id", planId).maybeSingle();
   if (!row) return null;
   const [{ data: event }, { data: divisions }, { data: rounds }, { data: heats }, { data: now }] = await Promise.all([
-    supabase.from("events").select("timezone").eq("id", row.event_id).maybeSingle(),
+    supabase.from("events").select("timezone, settings").eq("id", row.event_id).maybeSingle(),
     supabase.from("divisions").select("id, name, sort_order, draw").eq("event_id", row.event_id),
     supabase.from("rounds").select("id, division_id, name, short_name, sort_order").eq("event_id", row.event_id),
     supabase.from("heats").select("id, division_id, round_id, draw_uid, number, name, status, started_at, ended_at, duration_sec, warm_up_sec, paused_total_sec").eq("event_id", row.event_id),
     supabase.rpc("server_now"),
   ]);
-  const dp = rowToPlan(row as unknown as PlanRow);
+  const dp = rowToPlan(row as unknown as PlanRow, parseEventSettings(event?.settings).readyCallMin);
   const model = buildHeatModel((divisions ?? []) as DivisionRowDb[], (rounds ?? []) as RoundRowDb[], (heats ?? []) as HeatRowDb[]);
   return { supabase, row, plan: dp.plan, defaults: dp.defaults, timezone: event?.timezone ?? "Africa/Cairo", lives: model.lives, serverNow: typeof now === "string" ? now : new Date().toISOString() };
 }

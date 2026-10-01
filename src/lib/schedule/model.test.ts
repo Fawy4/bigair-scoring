@@ -35,4 +35,9 @@ describe("the heat list of the run order screen", () => {
     const m = buildHeatModel([{ ...divisions[0], draw }], rounds, [heat({ id: "a", draw_uid: "u1" })]);
     expect(m.lives[0]).toMatchObject({ breakAfterHeatMin: 2, breakAfterRoundMin: 7, roundLast: true });
   });
+
+  it("a cancelled heat is flagged for the timetable engine, so a re-run takes its place instead of both taking time", () => {
+    const m = buildHeatModel(divisions, rounds, [heat({ id: "a", number: 1, status: "cancelled" }), heat({ id: "b", number: 1, status: "scheduled" })]);
+    expect(m.lives.map((l) => l.cancelled)).toEqual([true, false]);
+  });
 });

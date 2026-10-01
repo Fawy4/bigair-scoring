@@ -110,14 +110,14 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
     const next: ActivePlan[] = [];
     for (const r of data) {
       try {
-        const dp = rowToPlan(r as unknown as PlanRow);
+        const dp = rowToPlan(r as unknown as PlanRow, ctx.event.readyCallMin);
         next.push({ id: r.id, day: r.day, plan: dp.plan, defaults: dp.defaults, updatedAt: r.updated_at });
       } catch {
         /* a damaged plan is shown by the organiser's own screen, not here */
       }
     }
     setPlans(next);
-  }, [supabase, ctx.event.id]);
+  }, [supabase, ctx.event.id, ctx.event.readyCallMin]);
   const applyPlan = useCallback<LiveHeatState["applyPlan"]>((planId, hold, anchors) => {
     setPlans((l) =>
       l.map((p) => {

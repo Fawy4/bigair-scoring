@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { duplicatePlan, RunOrderError } from "@/lib/engine/schedule";
-import { planToRow, rowToPlan, type PlanRow } from "@/lib/schedule/plans";
+import { planOfRow, planToRow, type PlanRow } from "@/lib/schedule/plans";
 import { ScheduleDefaultsSchema, SchedulePlanSchema, type SchedulePlan } from "@/lib/schemas/schedule";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/database.types";
@@ -60,7 +60,7 @@ export async function duplicatePlanAction(planId: string, name: string): Promise
   if (!src) return fail(T.notAllowed);
   const { data: siblings } = await supabase.from("schedule_plans").select(COLUMNS).eq("event_id", src.event_id).eq("day", src.day);
   try {
-    const plans = (siblings ?? []).map((r) => rowToPlan(r as PlanRow).plan);
+    const plans = (siblings ?? []).map((r) => planOfRow(r as PlanRow));
     const copied = duplicatePlan(plans, planId, n.data).at(-1)!;
     const { data, error } = await supabase
       .from("schedule_plans")

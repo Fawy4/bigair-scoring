@@ -35,6 +35,7 @@ export function livesFor(ctx: Pick<LiveContext, "divisions" | "rounds">, heats: 
       roundLast: m?.roundLast ?? false,
       durationMin: h.duration_sec / 60,
       warmUpMin: h.warm_up_sec / 60,
+      cancelled: h.status === "cancelled",
       ...(m?.breakAfterHeatMin !== undefined ? { breakAfterHeatMin: m.breakAfterHeatMin } : {}),
       ...(m?.breakAfterRoundMin !== undefined ? { breakAfterRoundMin: m.breakAfterRoundMin } : {}),
     };

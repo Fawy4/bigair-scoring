@@ -3,6 +3,7 @@ import { PrintButton } from "@/components/print-button";
 import { computeTimetable, timetableExportRows } from "@/lib/engine/schedule";
 import { getOrgContext } from "@/lib/org/context";
 import { buildHeatModel, type DivisionRowDb, type HeatRowDb, type RoundRowDb } from "@/lib/schedule/model";
+import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { rowToPlan, todayIn, type PlanRow } from "@/lib/schedule/plans";
 import { parseEventBranding } from "@/lib/schemas/event-settings";
 import { copy } from "@/lib/ui-copy";
@@ -16,7 +17,7 @@ export default async function SchedulePrintPage({ params, searchParams }: { para
   const { plan: planId } = await searchParams;
   if (!planId || !/^[0-9a-f-]{36}$/.test(planId)) notFound();
   const { supabase } = await getOrgContext();
-  const { data: event } = await supabase.from("events").select("id, name, timezone, branding").eq("id", id).maybeSingle();
+  const { data: event } = await supabase.from("events").select("id, name, timezone, branding, settings").eq("id", id).maybeSingle();
   const { data: row } = await supabase.from("schedule_plans").select("id, event_id, day, name, items, anchors, actual_starts, hold, defaults, active").eq("id", planId).eq("event_id", id).maybeSingle();
   if (!event || !row) notFound();
   const [{ data: divisions }, { data: rounds }, { data: heats }] = await Promise.all([
@@ -25,7 +26,7 @@ export default async function SchedulePrintPage({ params, searchParams }: { para
     supabase.from("heats").select("id, division_id, round_id, draw_uid, number, name, status, started_at, ended_at, duration_sec, warm_up_sec, paused_total_sec").eq("event_id", id),
   ]);
   const model = buildHeatModel((divisions ?? []) as DivisionRowDb[], (rounds ?? []) as RoundRowDb[], (heats ?? []) as HeatRowDb[]);
-  const { plan, defaults } = rowToPlan(row as PlanRow);
+  const { plan, defaults } = rowToPlan(row as PlanRow, parseEventSettings(event.settings).readyCallMin);
   const tz = event.timezone || "Africa/Cairo";
   const now = todayIn(tz, Date.now()) === row.day ? new Date().toISOString() : undefined;
   const table = computeTimetable(plan, model.lives, { timezone: tz, eventDay: row.day, defaults, ...(now ? { now } : {}) });

@@ -6,7 +6,7 @@ import { checkImpression, checkTrickScore } from "./head-validate";
 import { defaultKeep } from "./merge-plan";
 import { publishHeatCore, type PublishResult } from "./publish-core";
 import { mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
-import { rowToPlan, type PlanRow } from "@/lib/schedule/plans";
+import { planOfRow, type PlanRow } from "@/lib/schedule/plans";
 import type { RunItem } from "@/lib/schemas/schedule";
 import { insertRerunItem, rerunName } from "./rerun";
 import { parseScoringModel, type ScoringModel } from "@/lib/schemas/scoring-model";
@@ -239,10 +239,10 @@ export async function rerunHeat(input: { heatId: string; reason: string; leaveOu
   const row = (plans ?? []).find((p) => Array.isArray(p.items) && (p.items as Array<{ heatId?: string }>).some((i) => i.heatId === heat.id));
   let plan: { id: string; items: Json; updatedAt: string } | null = null;
   if (row) {
-    const dp = rowToPlan(row as unknown as PlanRow);
+    const dpPlan = planOfRow(row as unknown as PlanRow);
     const rawItems = row.items as unknown as RunItem[];
     const liveId = (liveRows ?? []).find((h) => h.id !== heat.id)?.id ?? ((liveRows ?? []).some((h) => h.id === heat.id) ? heat.id : null);
-    const next = insertRerunItem({ ...dp.plan, items: rawItems }, heat.id, newId, liveId);
+    const next = insertRerunItem({ ...dpPlan, items: rawItems }, heat.id, newId, liveId);
     plan = { id: row.id, items: next.items as unknown as Json, updatedAt: row.updated_at };
   }
   const { error } = await db.rpc("rerun_heat", {

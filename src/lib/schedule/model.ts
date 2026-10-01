@@ -85,6 +85,7 @@ export function buildHeatModel(divisions: readonly DivisionRowDb[], rounds: read
       roundLast: dh ? dh.roundLast : h.number === lastNumberOfRound.get(h.round_id),
       durationMin,
       warmUpMin,
+      cancelled: h.status === "cancelled",
       ...(dh ? { breakAfterHeatMin: dh.breakAfterHeatMin, breakAfterRoundMin: dh.breakAfterRoundMin } : {}),
     });
   }

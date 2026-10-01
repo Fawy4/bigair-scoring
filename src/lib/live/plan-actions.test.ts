@@ -22,11 +22,11 @@ describe("Hold, Resume at and Shift on server time", () => {
     expect(planChange(main, resumed).hold).toBeNull();
   });
   it("Shift +10 with Heat 3 still running pins Heat 4 at 15:48", () => {
-    const shifted = shiftPlan(main, running(), 10, { timezone: TZ, eventDay: "2026-10-03", defaults: day.defaults, serverNowIso: at("15:31") });
+    const shifted = shiftPlan(main, running(), 10, { timezone: TZ, eventDay: "2026-10-03", defaults: { ...day.defaults, readyCallMin: 15 }, serverNowIso: at("15:31") });
     expect(shifted.anchors["p-r1-h4"]).toBe("15:48");
   });
   it("Shift refuses while the plan is on hold", () => {
-    expect(() => shiftPlan(holdPlan(main, at("15:30")), running(), 5, { timezone: TZ, eventDay: "2026-10-03", defaults: day.defaults, serverNowIso: at("15:31") })).toThrow(/on hold/);
+    expect(() => shiftPlan(holdPlan(main, at("15:30")), running(), 5, { timezone: TZ, eventDay: "2026-10-03", defaults: { ...day.defaults, readyCallMin: 15 }, serverNowIso: at("15:31") })).toThrow(/on hold/);
   });
 });
 
