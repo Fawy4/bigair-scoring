@@ -62,8 +62,72 @@ KOTA preset. Red counted 8.6, 8.0, 7.2 + impression 7.4 → 31.20. Blue counted 
 - **Missed**: KOTA 1A attempt 3 with J3 = Missed → panel from J1, J2 = **7.31**, `missedBy = [J3]`, `incomplete = false`; all three judges Missed → attempt has no panel score and is not counted.
 - **Impression required**: 1A heat with J3's impression for Red absent → `publishBlockers` contains `{ type: "impression_missing", judge: "J3", rider: "Red" }`; with `required = false` → no blocker and impression computed from J1, J2 = **7.25**.
 - **Duplicates**: attempts for Red from spotter A at 12:00:00 and spotter B at 12:00:08 → the second carries `possibleDuplicateOf` = first; at 12:00:45 → no flag. Soft-deleting the second removes it from counting and from the "n / 7" counter; seq numbers of remaining attempts unchanged.
-- **Speech/text parsing** (`presets/tricks/big-air-vocabulary.json`): "left double backroll board off handle" → direction left, multiplier x2, base backroll, modifiers [board_off, handle_pass], name "Left ×2 Backroll Board-off Handle pass", category `handle_pass` (precedence); "right mega" → Right Megaloop, category `kiteloop`; "left banana jump" → base unmatched, kept as free text "banana jump" with `needsReview = true`.
+- **Speech/text parsing** (`presets/tricks/big-air-vocabulary.json`; since 5b a trick is an **ordered sequence of blocks**, see §1G-3 and §1G-4): "left double backroll board off handle" → direction left, then the blocks Backroll (×2), Board-off, Handle pass in that order, name "Left ×2 Backroll Board-off Handle pass", category `handle_pass` (precedence); "right mega" → Right Megaloop, category `kiteloop`; "left banana jump" → no block, kept as free text "banana jump" with `needsReview = true`.
 - Legacy preset sanity check against the old app's public data: panel trick averages 4.7, 4.3, 4.0, 3.5, 2.8 + two crashes, Variety 4.3 → best 3 = 13.0, total **17.3** (decimals = 1); the crash chips are listed but not counted; attempt counter reads "7 / 7".
+
+### 1G — Live heat (Phase 5b; authoritative before the code: `src/lib/live/*.test.ts`, `src/lib/engine/tricks/*.test.ts`, `src/lib/engine/scoring/summary.test.ts`)
+
+**1G-1 Timer** (`timer.ts`). Heat of 600 s, `started_at` 10:00:00.
+- Running, paused 10:03:00–10:04:30 (`paused_total_sec` 90), server time 10:06:00 → **330 s, "5:30"**.
+- Device clock 40 s fast: the phone sends at 10:00:40.000 (device), receives the answer at 10:00:40.200 (device), and the server said 10:00:00.100 → offset `serverNow − (sentAt + receivedAt) / 2` = **−40.000 s**, and the same heat reads 5:30 again after adding the offset.
+- Paused at 10:03:00 (no earlier pause), server time 10:03:40 → frozen at **420 s, "7:00"**; ten seconds later still 7:00.
+- Time up: server time 10:11:31 with 90 s paused → **0, "0:00"**, and the effective status is `ended`. At 10:11:29 it is still `running` with 1 s left. A paused heat is never effectively ended.
+- Not started heat: remaining = the whole duration (600 s, "10:00").
+
+**1G-2 Timer cues** (`timer-cues.ts`). 61 000 → 59 500 ms gives `one_minute`; 500 → 0 gives `time_up`; 59 000 → 58 000 gives nothing; while paused nothing fires; a reload that starts already below the threshold (previous = null, now 30 000) fires nothing; 61 000 → 0 (a long freeze) gives `time_up` only (the one-minute cue is skipped, never both).
+
+**1G-3 Trick composer** (`engine/tricks/compose.ts`). A trick is a direction (optional, pick one, always written first) followed by blocks **in the order the spotter tapped them**. A multiplier belongs to one block and is written before it ("×2 Backroll"); "×1" is hidden. Blocks may repeat. The name is the sequence; the category is the first entry of `categoryPrecedence` (handle_pass, board_off, kiteloop, rotation, other) among all the blocks' categories.
+| Input | Name | Category |
+|---|---|---|
+| left; Backroll ×2, Board-off, Handle pass | Left ×2 Backroll Board-off Handle pass | `handle_pass` |
+| right; Megaloop | Right Megaloop | `kiteloop` |
+| right; Frontroll ×1 | Right Frontroll | `rotation` |
+| left; Backroll, Handle pass, Board-off | Left Backroll Handle pass Board-off (a different trick from the first row: the normalised names differ) | `handle_pass` |
+| left; Backroll, Backroll | Left Backroll Backroll | `rotation` |
+| left; Backroll, Kiteloop, Board-off, Tic-tac, Late rotations ×4 | Left Backroll Kiteloop Board-off Tic-tac ×4 Late rotations | `board_off` |
+| no direction; Backroll | Backroll | `rotation` |
+| left; nothing, free text "banana jump" | Left banana jump | none |
+| nothing at all | "" | none |
+Two spotters who tap the same blocks in a different order log two different tricks (repeat detection compares the normalised name, so "Left Backroll Handle pass Board-off" is not a repeat of "Left Backroll Board-off Handle pass"). Tapping a multiplier after a block sets it on that block; a multiplier tapped before any block, or after a block that cannot take one (Board-off), waits and goes on the next block that can. Only base tricks and blocks marked `takesMultiplier` (Late rotations) take one.
+
+**1G-4 Trick reader** (`engine/tricks/parse.ts`), the same ordered sequence from typed or spoken text. Lower-case, tokens, longest alias first, then edit distance ≤ 1 for tokens of 5 letters or more (one clear winner only).
+- "left double backroll board off handle" → direction left; Backroll ×2, Board-off, Handle pass; nothing unmatched; name "Left ×2 Backroll Board-off Handle pass"; `handle_pass`.
+- "right mega" → Right Megaloop; `kiteloop`.
+- "left banana jump" → direction left; no block; unmatched ["banana jump"]; `needsReview`. **Rule (owner, 1 Oct 2026):** a word the vocabulary does not know, standing right next to a block that was found only through a nickname (not the block's own name) such as "jump", is not guessed: the whole phrase goes in as free text. Direction, multipliers and blocks elsewhere in the text are still read.
+- "left dubble backroll" → Left ×2 Backroll (edit distance 1 on "double").
+- With `modifier:board_off` unticked, "left backroll board off" → Backroll; unmatched ["board off"]; `needsReview`. A word of an unticked block is known: it never voids a neighbour.
+- "right backroll handle pass board off" → Right Backroll Handle pass Board-off (text order is kept).
+- "left backroll kiteloop board off tic tac four late rotations" → Left Backroll Kiteloop Board-off Tic-tac ×4 Late rotations; `board_off`.
+- "left backroll double" → Left ×2 Backroll (a trailing multiplier goes to the block before it).
+- "left backroll backroll" → two Backroll blocks.
+- "left right backroll" → direction left; Backroll; unmatched ["right"]; `needsReview` (the first direction wins).
+- "banana" → no block; unmatched ["banana"]; `needsReview`. "" → nothing, `needsReview` false.
+- The master vocabulary has the add-on **Late rotations** (`takesMultiplier`; aliases "late rotation", "rotations on the way down", "tornado"); the older add-on "Late" no longer answers to "late rotation".
+
+**1G-5 Spotter layout per division** (`trick-base/layout.ts`; stored in `divisions.trick_base.layout`). Families only organise the spotter's screen. Default: the five families in their order, blocks in vocabulary order. Direction and Multiplier stay in their own family (reorder inside it only); Base trick, Add-ons and Grabs & landings exchange blocks freely.
+- Move Tic-tac from Add-ons to Base trick: Base trick lists it (last), Add-ons no longer does; the block still composes exactly as before.
+- Move up / down inside a family changes the order by one place; at the top or bottom it does nothing.
+- Favourites: the favourite blocks of a family come first (in their own order), then the others.
+- Unticked blocks (`disabled`) never appear on the spotter; a ticked block that was moved to a family appears there.
+- A block that no longer exists is dropped from the layout; a new master block appears at the end of its own family.
+- "+ Add block" into any of Base trick, Add-ons or Grabs & landings: the new block is listed last in that family.
+- Family order: moving Grabs & landings above Add-ons puts Grabs first on the spotter.
+
+**1G-6 Attempts counter and Undo** (`attempt-state.ts`). Cap 7: 6 attempts → "6 / 7" and Log is on; 7 → "Out of attempts · 7 / 7" and Log is off; one of the 7 deleted (realtime `deleted_at`) → "6 / 7" again. A crashed attempt counts. Undo last: available for exactly 10 s after the server `created_at` (9.9 s yes, 10.1 s no) and only on the spotter's own last attempt.
+
+**1G-7 Send queue** (`queue.ts`). 20 s offline: three edits of one score (7.0, 7.5, 8.0 for the same attempt) and one edit of another attempt → after reconnect exactly **2 sends**, the first attempt with **8.0**, nothing duplicated, badge counts "Pending 2" while offline and "Synced" at the end. Backoff after a network failure: 1, 2, 4, 8, 16 s, then 30 s every time. A named refusal (`ATTEMPT_CAP_REACHED`, `NOT_ALLOWED`, `SHEET_LOCKED`, `HEAT_NOT_RUNNING`, `NOT_SCORABLE`) becomes `refused`, is never sent again, and shows in the badge as failed. A server error (5xx) stays `pending`. A newer edit of the same (attempt, seat) replaces an older one that is still pending; an edit that is already `synced` is not touched and the newer one is sent as a fresh item. Items survive a reload (an in-memory store stands in for IndexedDB in the tests).
+
+**1G-8 The judge's queue and the Repeat badge** (`queue-model.ts`, `judge-items.ts`). Red lands "Left Backroll" at attempt 2 (I gave 7.0) and again at attempt 5 → attempt 5 reads **"Repeat — 2nd time · you gave 7.0 before"**. Crash at attempt 3, landing at attempt 4 of the same trick → attempt 4 has no badge (docs/03 decision 11). A crashed attempt never enters the queue and never gets a pad. An attempt switched back to Landed joins the queue.
+
+**1G-9 Heat summary** (`engine/scoring/summary.ts`). The legacy vector (5 landed, 2 crashed, cap 7): attempts 7 · landed 5 · crashed 2 · "7 / 7". Left / right counts count landed attempts only. Repeats ×n = landed attempts whose normalised name was already landed. The landed list is sorted by the judge's own score, highest first, ties by attempt number. KOTA §1A seen by Judge 1: Red 5 attempts · landed 4 · crashed 1 · left 3 · right 1 · repeats 0; list: attempt 2 (8.25), attempt 5 (8.125), attempt 1 (7.625), attempt 3 (7.25), written the way the head matrix writes a cell (`formatCell`: two decimals, three when the third is not 0).
+
+**1G-10 Percentages.** `showPercent(division.liveSettings)`: only an explicit `showPercentOfMax = true` shows a percentage on a screen; the scoring model's `heat.total.display` ("both" in the KOTA preset) is the **export default only** and never decides a screen. With the setting on, 31.54 of 40 reads **78.85 %**.
+
+**1G-11 Hold, Resume at and Shift on server time** (`plan-actions.ts`, values from §3E, Main plan, Africa/Cairo). Server time 15:30 → Hold sets `hold.since` to 15:30 (never the device's clock). With Heat 3 finished 15:35, Resume at 16:00 → Heat 4 pinned 16:00. Shift +10 with Heat 3 still running → Heat 4 pinned 15:48. A device clock an hour wrong changes nothing, because the server's time is passed in.
+
+**1G-12 Starting a heat** (`start-checks.ts` mirrors the database; the database is the authority). Refused, in this order: `DRAW_NOT_LOCKED` (draw not locked) → `PANEL_TOO_SMALL` (panel members < the model's `panel.minJudges`) → `SEATS_NOT_FILLED` (a seat still waits for a place) → `HEAT_ALREADY_RUNNING` (the event already has `maxRunningHeats`, default 1, heats running or paused). Each has a plain sentence (`errors.ts`), and every error code the database can raise on these screens has one.
+
+**1G-13 Next heat estimate** (`next-heat.ts`). Between heats the spotter and judge see "Next: Pro Men · R1 · Heat 3 — est. 15:23", from `computeTimetable` (§3A: Pros R1 Heat 3, 15:23, after Heat 2 started at 15:08).
 
 ## 2. Ladder engine (`presets/formats/*.json`)
 
@@ -227,6 +291,7 @@ Switching the active plan from Main to "Good wind" after Women's heats have actu
 - **Phase 1–2**: `npm test` green; ask Claude to print the 1A breakdown as text and compare with this doc.
 - **Phase 3**: judge PIN join works on a phone; a judge cannot open another heat's scorecard (RLS test green).
 - **Phase 4**: create division → import 10 riders → generate heats-of-4 draw → compositions match §2A (N = 10) → run order with two anchors → times match the pattern in §3A → switch the identification scheme from vests-per-heat to kites-no-vests and confirm the rider chips on the draw change accordingly (§5).
+- **Phase 5b**: start a heat from the laptop; the spotter phone opens it by itself and logs by tap, by typing and by speaking; CRASH works; the 7th attempt greys the rider out; two judge phones see each attempt within a second and score it; 20 s of airplane mode loses and duplicates nothing; at time up the Impression step with the summary card and Submit.
 - **Phase 5**: 3-phone run-through (spotter logs, two judges score, head judge publishes) → totals equal the engine breakdown; airplane-mode judge for 20 s → no duplicates, badge returns to synced.
 - **Phase 6**: public page updates within 2 s of publish; big screen rotates; timetable shows est./pinned/live states.
 - **Phase 7**: WOO toggle on → spotter can enter metres; Highest Jump leaderboard; exports open; paper sheets print.

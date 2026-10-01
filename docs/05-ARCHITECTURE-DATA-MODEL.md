@@ -119,7 +119,7 @@ Derived/live: a Postgres view `v_live_heat` joins heat, slots, attempts, scores 
 | 4 | Public live | Public pages **poll every 5–10 s (configurable)** via `get_public_live_heat`; Realtime is reserved for official screens. `heats.live_rev` lets polls skip unchanged data. |
 | 5 | Write paths | Attempts, scores, impressions and head-judge edits with a reason go through functions that run as the caller (RLS decides who); service role only for join binding, publish and exports. |
 | 6 | Overrides | `divisions.scoring_overrides` is a deep-merge object (e.g. `{"heat":{"maxAttemptsPerRider":5}}`). |
-| 7 | Heat end / lock | "Effectively ended" is derived from `started_at + duration + paused_total_sec`; no pg_cron. `events.settings.judgeGraceSec` default 180. |
+| 7 | Heat end / lock | "Effectively ended" is derived from `started_at + duration + paused_total_sec`; no pg_cron. `events.settings.judgeGraceSec` default 180 (**since 5b the database no longer reads it**: a judge's marks lock at Submit or review, see §14; the field stays in the settings schema so old events still parse). |
 | 8 | Organisers | Invite-only for now (magic link cannot create users); a script creates the organisation "Arrow Big Air" with the owner. |
 | 9 | Auth config | Anonymous sign-ins on; token-hash magic-link flow; redirect URLs = production site, `https://*.vercel.app`, `http://localhost:3000`. |
 | 10 | Email | Supabase built-in sender for now (only organisers get email). Resend is a Phase 7 option for rider emails. |
@@ -155,3 +155,23 @@ Written in words; no row refers to another by number. Where a row refines earlie
 | Event trick blocks | An event's own blocks live in its own `trick_vocabularies` row (key `event-additions`, `{"blocks": [...]}`, organisation and event must match). Once a heat of the event has started blocks cannot be removed. `admin_trick_proposals` lists proposals for platform admins and `admin_set_proposal_status` (owner only, audited) records accepted or declined. The master row `big-air-vocabulary` is now version 2: every modifier has a `family` of addon or grab_landing. |
 | Feedback | Table `feedback_notes` (organisation null for an owner's note from /admin; author, role, page, names saved as words, text, kind, status open or done, screenshot path, export and done dates). Organisers insert and read their organisation's notes; the platform owner reads everything and alone updates kind, status and export date; the text is never editable (column rights). Deleting an organisation deletes its notes. |
 | Account label | `has_password()` reads a flag in the login's own metadata (set when a password is saved or used to sign in). It only decides whether the header says Set a password or Change password; a login invited by the owner has a random stored password, so the stored hash cannot tell. |
+
+## 14. Decisions log (Phase 5b, owner, 1 Oct 2026)
+
+Written in words. Where a row refines earlier text in this file, this section wins.
+
+| Topic | Decision |
+|---|---|
+| Actual start | The heat row is the truth. Starting a heat does not copy anything into `schedule_plans.actual_starts`: `computeTimetable` reads `heats.started_at` and `ended_at`, so the run order re-flows the moment the server stamps `started_at`. (This corrects §7's "update schedule_plans.actual_starts/ends".) |
+| Heat functions | `start_heat`, `pause_heat`, `resume_heat`, `end_heat`, `cancel_heat` (head judge or an organiser of the event; each audited) and `end_heat_if_due` (any seat of the event; it only ends a heat whose time is really up, so "end at zero" needs no cron). `server_now()` gives the clock. Nobody can move a heat's status by editing the row any more: the functions are the only way. |
+| Start refusals | `DRAW_NOT_LOCKED`, `PANEL_TOO_SMALL` (fewer panel judges than the model's `panel.minJudges`), `SEATS_NOT_FILLED`, `HEAT_ALREADY_RUNNING`. |
+| One running heat | `events.settings.maxRunningHeats`, default 1, counts heats that are running or paused. |
+| Plan changes | `set_plan_hold` and `set_plan_anchors` change only the hold and the pins of the active plan, audited, with the time taken from the server. The head seat still cannot write a plan row. |
+| Spotter Undo | `undo_attempt`: the creating spotter only, within 10 seconds of the server's `created_at`; a soft delete audited as `attempt_undone`. |
+| Sheets and locking | `judge_sheets` (one row per heat and seat: submitted, reopened). `submit_sheet` is refused with `IMPRESSION_MISSING` while a riding rider has no Impression / Variety score from that seat. `private.judge_can_write` lets a judge write while the heat is running or paused, or ended and the sheet is not submitted (or was reopened); never under review or published unless the head judge reopened that sheet. `reopen_sheet` is head only and audited. |
+| Flags | `attempt_flags` (kind crash, landed, wrong_rider, duplicate, other; note; resolved by and when). Insert by the panel judge of that heat, read by the author, the head judge and the organiser. |
+| Trick layout | `divisions.trick_base` keeps `disabled` (ticks) and gains `layout` (order of families, order of blocks, blocks moved between families, favourites). A moved block keeps its own scoring category. |
+| Live settings | New column `divisions.live_settings` (JSON, default empty): `showPercentOfMax` and the summary card's parts. |
+| Height data, later | `trick_attempts` gains `height_source`, `height_ref` and `height_at` next to the existing `height_m`; new table `sensor_bindings` (event, entry, provider, external user id, device serial, bound and unbound times). No screen uses them yet. |
+| Realtime | `attempt_flags` and `judge_sheets` join the publication. |
+

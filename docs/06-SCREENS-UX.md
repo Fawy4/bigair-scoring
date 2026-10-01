@@ -232,3 +232,23 @@ Written in words on purpose. Where a row refines earlier text in this file, this
 | Pad: tap or type (round 4) | The two pad rows stay; beside them are the selected score, a small number field with the numeric keyboard and Save. A whole number alone is a valid score (Save completes it); a decimal tap or typing then Save completes it too. |
 | Public results (round 4) | A heat summary with tabs per heat (one compact row per rider in rank order, score boxes in attempt order graded yellow to green across the heat, crash red, not counted grey, each with an icon or word) and a ladder with riders in their Lycra colours. What a box shows is a division setting; attempt number + score is Arrow's default. No percentages. |
 | Head console (round 4) | Each judge's cell is coloured by its distance from the panel score (green within the model's outlier tolerance, then yellow, orange, red; the signed distance is written too). Tick boxes left of the attempt number select several attempts for Merge or Delete. |
+
+### Decisions log – Phase 5b (timer, spotter, judge; owner, 1 Oct 2026)
+
+Written in words. Where a row refines earlier text in this file, this section wins.
+
+| Topic | Decision |
+|---|---|
+| Routes | `/head/[eventId]`, `/spot/[eventId]` and `/judge/[eventId]`; a heat can be pinned with `?heat=`. After joining, `/seat` sends the phone to the screen of its role (the connected card stays on `/seat?card=1`; announcers stay on it). |
+| Tap size | The compact Normal size (round 4) decides the tap sizes on every live screen; the 56 px of §00 applies to Large. |
+| Auto-follow | The spotter and judge phones open the running or paused heat by themselves (a judge: a heat whose panel holds the seat) and between heats show "Next: …" with the estimated start. |
+| Undo last | After Log the spotter sees "Undo" on that attempt for 10 seconds, then it disappears. |
+| Spotter layout | Families only organise the spotter's screen. The organiser orders the families and the blocks inside them, moves blocks between Base trick, Add-ons and Grabs & landings, pins favourites and adds blocks into any of those three, in the Trick base panel of the Divisions step (drag with a tap alternative: ↑ ↓ and "Move to…"). Direction and Multiplier keep their own rows and can only be reordered inside them. The spotter renders exactly that and reorders nothing. |
+| Building a trick | Tap blocks in the order the rider does them; a multiplier tapped after a block belongs to it; one tap on a block in the name removes it before Log. CRASH asks once, Log does not ask. Typed or spoken text is shown back as blocks to confirm; unmatched words show as "Free text — head judge will check". |
+| Out of attempts | The rider's label turns grey with "Out of attempts · 7 / 7", Log is off, and it comes back live when the head judge deletes one. A stale phone gets "Red is out of attempts (7 / 7)" and the item is dropped, never retried. |
+| Paused heat | Spotters cannot log; judges can still score what is already logged. |
+| Judge screen | The scoring queue of the approved /design page, fed by live data. Crashed attempts never enter it. Submit asks once and locks the sheet; "Ask head judge to reopen". |
+| Percentages | Screens follow the division setting "Show scores as % of maximum" (Advanced, off by default); the scoring model's display field is only the default for exports. |
+| Sounds | One beep and a vibration at 1:00 and at 0:00, behind a "Sound on" tap (the tap also lets iPhones play sound). On by default on the head console, off on judge phones; iPhones do not vibrate from a web page; the timer is never sound-dependent. |
+| Head controls | `/head` works on a phone: Start (with its refusals in plain words), Pause, Resume, End, Hold, Resume at, Shift +5 and +10, and each rider's running total. Publishing and the score table come in 5c. |
+

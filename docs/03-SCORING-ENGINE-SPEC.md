@@ -244,3 +244,19 @@ All decisions below were agreed with the owner on 29 Sep 2026 (Phase 1). The cod
 | 15 | Missed disallowed | If a preset sets `allowNoScore = false` and a Missed mark arrives, the engine throws a readable error rather than skipping it. |
 | 16 | Two optional dials (built in Phase 4a-1) | `counting.perCategoryMax` (per-category map that overrides `maxPerCategory` for the categories it names; others keep `maxPerCategory`) and `heat.countedWeights` (weights on counted tricks in rank order, best first; missing entries = 1). Both default to absent = today's behaviour. **Implemented in Phase 4a-1** (`dials.test.ts`). Tests: `perCategoryMax {kiteloop: 2, board_off: 1}` with kiteloops 8.9, 8.4, 7.0 and board-offs 7.2, 6.0 → counted 8.9 + 8.4 + 7.2 = **24.50**; `countedWeights [1, 0.75, 0.5]` on counted 8.0, 7.0, 6.0 → 8.0 + 5.25 + 3.0 = **16.25**. |
 | 17 | Dials: interference and automatic maximum (recorded in Phase 4a-1, to confirm) | After "drop best trick" the next-best landed trick takes the freed place (as before) and `countedWeights` are applied in rank order to the new counted list. Automatic maximum with `categoriesCounted` smaller than the number of categories uses the largest per-category limits (best possible score). |
+
+### Decisions log – Phase 5b (spotter, judge, timer; owner, 1 Oct 2026)
+
+Written in words. Where a row refines earlier text in this file, this section wins.
+
+| Topic | Decision |
+|---|---|
+| A trick is an ordered sequence | The spotter taps blocks in the order the rider does them: an optional Direction first (pick one), then any blocks, repeating freely. A multiplier belongs to the block it is set on and is written before it ("×2 Backroll"; "×1" is hidden); only base tricks and blocks marked `takesMultiplier` (Late rotations) take one. The name is the sequence, in tap order. The category is the highest-precedence category among all the blocks. Families no longer decide how a trick is built; they only organise the spotter's screen. This replaces decision 4's "direction + multiplier + base + modifiers in vocabulary order". |
+| Repeats follow the sequence | Repeat detection (decision 11) compares the normalised name, which is the sequence, so the same blocks in another order are a different trick. |
+| Typed and spoken text | Read as the same ordered sequence (docs/08 §1G-4). A word the vocabulary does not know, next to a block found only through a nickname, is not guessed: the phrase is kept as free text for the head judge ("banana jump"). Nothing is ever blocked from being logged. |
+| Late rotations | New add-on in the master vocabulary (takes a multiplier; aliases "late rotation", "rotations on the way down", "tornado"). The older add-on "Late" no longer answers to "late rotation". |
+| Judges never score a crash | A crashed attempt never enters a judge's queue and the database refuses a score on it. A judge who saw a landing flags "That was a landing"; the head judge switches the attempt to Landed (5c) and the pad appears. |
+| Scores lock at Submit or at review | A judge's marks lock when the judge submits the sheet or when the head judge moves the heat to review, whichever comes first. The head judge can reopen one judge's sheet. The three-minute timer (`judgeGraceSec`) is dropped. |
+| Flags live in their own table | `attempt_flags` holds a flag without needing a score; `trick_scores.flag` stays unused. |
+| Percentages on screens | The division setting "Show scores as % of maximum" (Advanced, off by default) decides what screens show. The scoring model's `heat.total.display` ("both" in the KOTA preset) is only the default for exports. The engine always computes the percentage. |
+
