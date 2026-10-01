@@ -567,6 +567,76 @@ One pull request holds steps 4, 5, 6 and the rest of step 7 (the Re-run heat but
 #### How to test on the preview
 See the click-through at the end of the pull request description.
 
+## Phase 7a – organiser and admin redesign
+
+Plan: `docs/PLAN-phase-7a.md`. The owner's answers of 1 Oct 2026 are in its top table. The owner notes are in docs/06 §13.
+
+**Hard rule (owner, 1 Oct 2026):** 7a-1 ships before the event **only if the owner accepts it by Saturday 3 Oct 2026 evening**. Otherwise it waits until after the event, and the event runs on the current screens. Nothing from 7a reaches `main` before the event without that acceptance.
+
+| PR | Branch | When | Contents | Planned hours | Actual hours |
+|---|---|---|---|---|---|
+| **7a-0** | `phase-7a-0-preview` | before the event | `/design/organiser` preview, shared organiser components | 4–5 h | – |
+| **7a-1** | `phase-7a-1-shell-dashboard` | before the event, only if accepted by Sat 3 Oct evening | copy and banned words, shell and rail, dashboard (wind call from Phase 6), settings pattern, Previous / Next, number fields, head console division picker, then Reset + Restore last in its own commits | 16–20 h | – |
+| **7a-1b** | `phase-7a-1b-reset` | only if Reset is not green by Fri 2 Oct evening | Reset + Restore split out of 7a-1; the rest of 7a-1 ships without it | (inside 7a-1) | – |
+| **7a-2** | `phase-7a-2-tables` | only if 7a-1 is accepted by Sat 3 Oct evening, otherwise after the event | tables, Draw and Run order pass, consistency sweep, fixes from the Sunday test | 7–9 h | – |
+| **7a-3** | `phase-7a-3-landing` | after Phase 6 merges | landing page `/` with three doors | 1 h | – |
+
+Safeguards accepted by the owner:
+- Reset is built last, in its own commits.
+- If Reset is not green by Friday evening it moves to 7a-1b.
+- The database change is additive only (a column, a table and functions; no existing data changed).
+
+Test ids and web addresses stay unchanged.
+
+Event-day steps if 7a-1 is live are in docs/09 §A.6:
+- lock draws after 7a-1, before the first heat;
+- recreate Demo and lock its draws.
+
+The 30-minute test with a stranger runs on Sunday 4 Oct 2026.
+
+### Status
+- Plan merged (PR #13).
+
+### Phase 7a-0 – the organiser design preview (built; waiting for the owner's "approved" or a list of changes)
+
+**What it is.** A public page at `/design/organiser` that shows the whole organiser look with a made-up event ("Preview Cup", 3 divisions, 18 riders, 5 officials). It needs no login, is kept out of search engines, reads nothing from the database and saves nothing. Nothing else in Phase 7a starts before the owner says "approved" or lists changes.
+
+**Done**
+- The page shows nine sections, each as a full-width laptop mock (switch to a phone mock with the Laptop / Phone buttons at the top, Daylight / Dark and Normal / Large next to them):
+  1. the event shell: top bar (event name, dates, state, public link with its QR code, organisation switcher, note, account menu) and the left rail of seven steps (Event, Divisions, Riders, Officials, Draw, Run order, Go live), each with a state word and one line of reason;
+  2. Go live: the readiness list (two done, two needing attention, one not started, each with a Fix link), the heat that is running with its timer, the next two heats, the wind call slot, quick actions (Hold and Resume work), today's timetable and the share cards;
+  3. Riders: a dense table with a header that stays put, search, filters, tick boxes with a bar for the ticked riders, a name you can edit in place, and the empty state;
+  4. Divisions settings, Simple: six plain dials, each with a line under it and a "?" with an example; the sentence at the top is made by the real scoring code and changes with the dials; "Load…" is a small button;
+  5. the same panel with "More settings (10)" open, the sentence staying in view;
+  6. Previous / Next at the foot of a step (only Previous on Go live);
+  7. number boxes: today's full-width box next to the new one (as wide as its biggest number, digits at the right) and the earlier idea (digits centred);
+  8. buttons in four kinds, each also disabled with its reason printed under it, and every status pill;
+  9. one organiser page (Riders) on a phone, with the step drop-down and the sticky Previous / Next bar.
+- Sizes: controls and rows are 40 px on a computer, 44 px on a touch screen, 48 px with Large text. The official judge, spotter and head judge screens keep their own sizes.
+- The new shared parts are built for real and are what 7a-1 will use: `src/components/org/` (app shell, step rail and picker, status pill, button with a required reason when disabled, number field, setting row, settings panel, data table, step footer, popover, dashboard parts). The made-up data is in `src/lib/org-design/` (the ladder is drawn by the real ladder engine and the sentence by the real scoring code).
+- No database change, no existing screen touched, no new dependency. New files only, apart from this file.
+
+**Choices I made (please confirm or change)**
+1. **Digits at the right.** You asked for right-aligned digits. The plan said centred. The preview shows both; today's look is next to them.
+2. **The wind call is only a place-holder** (a disabled card saying "The wind call arrives with the public pages"), because Phase 6 builds the control.
+3. **The words live in `src/lib/org-design/copy.ts`**, not yet in `ui-copy.ts`, so this branch cannot clash with Phase 6. 7a-1 moves them into `ui-copy.ts` as the plan says. Its banned-words test already uses the longer list from the plan (configure, entity, record, RPC).
+4. **No new colour values.** Everything uses the existing beach colours; a test fails if a component writes a hex colour. The QR code is the one fixed black on white, kept in its own file, because a dark QR code does not scan.
+5. **A disabled button is never faded to light grey.** It keeps full-strength text with a dashed frame and its reason underneath, so it still reads at 7:1.
+6. **Branch name.** The work is on `claude/phase-7a-0-organiser-preview-bziiuf` (the branch this session was given) instead of `phase-7a-0-preview`.
+
+**Not done / not verified**
+- Not seen on a real iPhone or in sun; it was checked in Chromium at 390 and 1280 px and 1440 px.
+- Popovers (account menu, public link, Load…) are simple panels, not yet tested with a screen reader.
+- The preview's Laptop frame on a phone is shrunk to fit; it is only there so the page never scrolls sideways.
+
+**Test evidence**
+- `npm run typecheck`, `npm run lint` and `npm test` pass (see the summary lines in the pull request).
+- New unit tests: `src/lib/org-design/fixtures.test.ts`, `copy.test.ts` (banned words, no hex), `src/lib/table/search.test.ts`, `src/components/org/number-field.test.ts`.
+- New browser tests, `e2e/design-organiser.spec.ts` (20): controls and rows 40 / 44 / 48 px, text at 7:1 in both themes, no sideways scrolling at 390, 1280 and 1440 px, a word on every pill, a reason on every disabled button, the rail and the step picker, search, tick boxes, bulk bar, in-place edit, the live sentence, Previous / Next, Hold and Resume.
+
+**How to test on the phone and the laptop**
+See the click-through at the end of the pull request description.
+
 ## Fix – timetable crash when a heat has no length (branch `fix-run-order-duration`, 1 Oct 2026)
 
 On the Demo event, the head console and the Run order step both ended in "Application error" after the second division (Pro Women) was drawn and locked.
