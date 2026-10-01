@@ -2787,6 +2787,12 @@ export const copy = {
     downstream: (names: string[]) => `${names.join(" and ")} ${names.length === 1 ? "has" : "have"} already started — this correction would change who rides in ${names.length === 1 ? "it" : "them"}. Nothing was changed.`,
   },
   /** The head judge's real console and Control tab (Phase 5c): dialogs, panels and answers. */
+  reset: {
+    copyHasResults: "The saved starting draw already holds results, so it cannot be used to start over.",
+    copyRelock: (division: string) => `${division}: unlock and lock the draw again first`,
+    copyUnknown: (division: string) => `${division} was locked before Reset existed (or re-locked after its first heat), so its starting draw is not known and it cannot be reset.`,
+  },
+
   headDivision: {
     label: "Division",
     all: "All divisions",
