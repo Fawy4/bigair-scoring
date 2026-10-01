@@ -595,4 +595,4 @@ Event-day steps if 7a-1 is live are in docs/09 §A.6:
 The 30-minute test with a stranger runs on Sunday 4 Oct 2026.
 
 ### Status
-- Plan merged-ready (PR "Phase 7a – organiser design plan"). Nothing built yet.
+- Plan ready to merge (PR "Phase 7a – organiser design plan"). Nothing built yet.
