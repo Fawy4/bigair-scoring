@@ -142,7 +142,7 @@ All new functions are `security definer` and check the role themselves. "Head" m
 | `pause_heat`, `resume_heat` | Head only. Status change; the trigger handles the timestamps |
 | `end_heat(p_heat)` | Head only, from running or paused |
 | `end_heat_if_due(p_heat)` | Any seat of the event. Ends the heat **only** when `private.heat_effective_status` says `ended`, and is idempotent. Every official device calls it when its timer reaches 0, so "end at zero" needs no cron and no trusted client |
-| `cancel_heat(p_heat, p_reason)` | Head only. Reason required. Audited. Also the first half of a re-run (see "Re-running a heat" in step 4) |
+| `cancel_heat(p_heat, p_reason)` | Head only. Reason required. Audited. A started heat keeps `started_at` and gets `ended_at`. For a heat that must be ridden again, use "Re-run heat" (step 4) |
 | `set_plan_hold(p_plan, p_hold jsonb, p_reason)`<br>`set_plan_anchors(p_plan, p_anchors jsonb, p_reason)` | Head or organiser. They change only `hold` and `anchors` of the **active** plan. Audited. The server action computes the values with the pure `startHold` / `resumeHold` / `shift` using `server_now()` |
 | `private.division_model_setting(p_division, p_path text[])` | Generalises `division_heat_setting` to any path in the merged model, e.g. `{panel,minJudges}` |
 
@@ -405,16 +405,81 @@ All functions below are head-only (head seat or organiser), audited, and take a 
 - **Second tab.** A "head judge also scores" seat opens `/judge/[eventId]` in a second tab. It is the same login and already on the panel.
 - **Announcer.** `?mode=announcer` shows the read-only matrix and feed (docs/06 §9). It is cheap here, so include it; the rider bios wait for Phase 6.
 
-### Re-running a heat (owner, §11.12: no new feature)
+### Re-run heat: one button (owner, change of 1 Oct 2026)
 
-The path uses only Cancel heat and the 4b Draw step:
-1. On the console, **Cancel heat** with a reason (`cancel_heat`).
-2. In the Draw step, **Unlock draw** with a reason. A locked draw refuses changes (4b).
-3. **Add an extra heat** in the same round, put the cancelled heat's riders in it, and rename it, e.g. "Heat 3 re-run". It gets the next free number (4b: numbers never change once a heat has started); there is no "R" suffix. docs/05 §8 is corrected in 5c.
-4. Every later seat that waited for the cancelled heat ("1st H3") is re-pointed to the new heat with the seat menu's "put a place in a seat".
-5. **Lock draw**, add the new heat to the run order, Start.
+**Who and when.**
+- The head judge, or an organiser. One confirmation, and a reason is required.
+- Allowed while the heat is `running`, `paused`, `ended` or `under_review`.
+- Refused once `published`: "Re-open the heat instead".
+- Also refused while `scheduled` ("Start it instead") and while `cancelled`.
 
-5c proves it with one test: cancel R1 H3, follow steps 2–5, then run and publish the new heat → the Semi-final seat fills with its winner, and the cancelled heat stays cancelled. If any 4b guard refuses a step (for example a cancelled heat counted as "started"), 5c fixes the guard, not the path.
+**Database** (`rerun_heat(p_heat, p_reason, p_leave_out uuid[], p_plan_items jsonb, p_plan_updated_at timestamptz)`)
+
+`security definer`, so it checks the role itself. One transaction:
+
+1. **Cancel the original.** `status = 'cancelled'`.
+   - A heat that had started keeps `started_at` and gets `ended_at = now()` (paused: `paused_at`), so the timetable knows how long it really ran.
+   - Its attempts, scores, impressions and flags stay stored. Officials and organisers can read them for the audit; the public never can (`get_public_live_heat` already refuses cancelled heats).
+   - Nothing is ever published for it.
+2. **Create the re-run row** in the same round, with `rerun_of = <original id>` (new column `heats.rerun_of uuid null`):
+   - the same seats, riders and `vest_colour`;
+   - the same `duration_sec` and `warm_up_sec`;
+   - `number` the same, `number_suffix = 'R'` (a second re-run gets `R2`). The existing unique key `(division, number, suffix)` allows this, so the next-free-number fallback is not needed;
+   - `name` = "Heat 3 re-run" (the original's name plus "re-run").
+3. **Later seats follow the re-run without editing the draw.** Every placeholder in the stored draw points at the draw's heat ("1st H3"), and the draw finds its database row through `draw_uid`. The function moves `draw_uid` from the cancelled row to the re-run row, and clears it on the cancelled one.
+   - So every later seat that waited for "1st H3" now waits for the re-run, and the draw stays locked and unchanged. This is the owner's "re-point every later seat"; the mechanism is one column, not a draw edit.
+   - The cancelled row leaves the ladder entirely.
+   - The function sets `app.draw_bypass` for this one change, because the 4b guard otherwise refuses a `draw_uid` change on a started heat.
+4. **Run order.** The server action computes the new items with the pure `insertRerunItem` (below) and passes them in.
+   - The function checks that `p_plan_updated_at` still matches (`PLAN_CHANGED` otherwise, so the head judge simply presses again).
+   - It also checks that exactly one item was added and nothing else changed (`BAD_PLAN_ITEMS`).
+   - The original's item stays where it was.
+5. **One audit line,** `heat_rerun`: the reason, the old and new heat, and the riders left out.
+
+**Riders left out** (tick boxes in the confirmation, all ticked "rides again" by default):
+- A left-out rider keeps a seat in the re-run marked as not riding, so the re-run's result still places them and the ladder needs no special case.
+- How they are placed is **open question 13 below**. The owner's rule ("keeps their place from the original heat's ranking") contradicts the owner's own example. Until it is answered, 5c builds everything else and leaves this one rule behind a single function, `leftOutPlacement`.
+
+**Pure code (tests first, docs/08 §1G):**
+- `src/lib/live/rerun.ts` `rerunName(heat)`:
+  - "Heat 3" → `{suffix: "R", name: "Heat 3 re-run"}`;
+  - a heat renamed "Semi-final 1" → "Semi-final 1 re-run";
+  - re-running "Heat 3 re-run" → `{suffix: "R2", name: "Heat 3 re-run 2"}`.
+- `insertRerunItem(plan, originalHeatId, rerunHeatId, liveHeatId)` puts the new item **right after the heat that is live now**:
+  - the original itself when it is being re-run while running;
+  - otherwise the running or paused heat;
+  - if nothing is running, right after the original's item.
+  - It keeps every pin, break and note. A pin on the item that used to follow moves to "not before" as usual.
+  - Tests: order H1, H2, H3, H4 with H3 running → H1, H2, H3, H3R, H4. H3 under review while H4 runs → …, H4, H3R, H5. Nothing running → right after H3.
+- `computeTimetable` gets a `cancelled` row state:
+  - a cancelled heat that ran keeps its real start and end;
+  - one that never started takes no time and shows no times.
+  - Test with docs/08 §3G values (heat 10, break 2, warm-up 5): H3 starts 10:34 and is cancelled at 10:40 → H3R warm-up 10:42, start 10:47, end 10:57; H4 then starts 11:04.
+
+**Screens.**
+- Console: "Re-run heat" sits beside End and Cancel, on the phone layout too.
+- The cancelled heat stays visible, read-only, with "Cancelled — re-run as Heat 3 re-run".
+- Officials' phones follow the re-run when the head judge presses Start, like any heat. The cancelled heat never re-opens on their screens.
+- Public timetable (Phase 6 renders it; 5c provides the data through `heats.rerun_of`): the old row reads "Cancelled — re-run as Heat 3 re-run", with no scores.
+
+**Tests.**
+- **RLS** (`tests/rls/rerun.test.ts`):
+  - refused for judge and spotter seats, for another organisation's organiser, and when the heat is published;
+  - the re-run has the same riders, seats and lycra colours;
+  - the later seats ("1st H3" in the Semi-final) now resolve to the re-run;
+  - the draw is still locked and its JSON unchanged;
+  - the cancelled heat's attempts and scores are still stored and readable by the head judge;
+  - exactly one audit line;
+  - a stale `p_plan_updated_at` changes nothing.
+- **Unit:** `rerunName` and `insertRerunItem` (above), plus the timetable values.
+- **Playwright:** re-run Heat 3 from the console with a reason → "Heat 3 re-run" appears next in the run order → Start → the spotter phone opens the re-run by itself.
+
+**Fallback (manual path, kept for anything the button refuses):**
+1. Cancel heat (with reason).
+2. Draw step: Unlock draw (with reason).
+3. Add an extra heat in the same round with the cancelled heat's riders, and rename it "Heat 3 re-run". It gets the next free number.
+4. Re-point every later seat that waited for "1st H3" with the seat menu.
+5. Lock draw, add the heat to the run order, Start.
 
 ### Practice heat (owner, §11.11: the seed of the later simulator; keep it small)
 
@@ -454,6 +519,7 @@ The path uses only Cancel heat and the 4b Draw step:
 6. On a phone, `/head` shows the controls, totals and blockers, and the line about the score table.
 7. Judge 1 flags a crashed attempt "That was a landing". Switch it to Landed, and the pads appear on both judge phones.
 8. On a simulation event, start a heat and a practice feed. The judge phone fills with attempts every 20 s. The event does not appear on the home page.
+9. Re-run a running Heat 3 with the reason "kite tangle": Heat 3 shows "Cancelled — re-run as Heat 3 re-run", "Heat 3 re-run" is next in the run order with the same riders and lycras, the Semi-final still says "1st H3", and Start opens it on the phones.
 
 ## 7. Step 5 — publish (PR 5c)
 
@@ -542,13 +608,13 @@ The path uses only Cancel heat and the 4b Draw step:
 |---|---|---|---|
 | **5a** | `phase-5a-design` | Step 0: tokens, the presentational live components, `/design` | 3–4 h |
 | **5b** | `phase-5b-spotter-judge` (after the owner approves 5a) | Steps 1–3 and the 5b part of 7: migration, timer, minimal `/head` controls, trick composer and parser, queue, spotter, judge | 8–10 h |
-| **5c** | `phase-5c-head-publish` (after 5b merges) | Steps 4–6, plus the rest of 7: head console, publish, re-open, visibility and the leak fixes, announcer view, the full 3-phone acceptance run | 7–9 h |
+| **5c** | `phase-5c-head-publish` (after 5b merges) | Steps 4–6, plus the rest of 7: head console, publish, re-open, Re-run heat, visibility and the leak fixes, announcer view, practice heat, the full 3-phone acceptance run | 9–11 h |
 
 docs/07 budgets about 3 h for all of Phase 5. **That is not realistic.** Phase 4 took three PRs, and Phase 5 has more server logic and three new screens.
 
 If 5b runs long, split it at the spotter / judge boundary: 5b-1 is steps 1–2, 5b-2 is step 3. Each step's "done means" is a stopping point.
 
-Owner's answers added work to 5c: the phone layout of `/head`, the re-run test and the practice heat. 7–9 h already allows for it. The timer sounds are about 1 h in 5b.
+Owner's answers added work to 5c: the phone layout of `/head`, the practice heat and the Re-run heat button (about 2 h on its own, hence 9–11 h). If 5c runs long, Re-run heat and the practice heat move to a small 5d. The timer sounds are about 1 h in 5b.
 
 **When 5a starts,** its session writes this table (PRs, branches and rough hours) into a new "Phase 5" section of `docs/STATUS.md`. Each later PR adds the hours it actually took (owner, addition C).
 
@@ -569,10 +635,19 @@ These are decisions now. The steps above already follow them. 5b copies them int
 | 9 | Spotter Undo | Keep "Undo last" within 10 seconds | Step 2 |
 | 10 | Merge | The dialog shows both scores and defaults to the first-logged attempt | Step 4 |
 | 11 | Simulator | The full simulator is its own PR after Phase 6 (the owner gives its spec then). 5c ships only its seed: an organiser-only "Practice heat" on events flagged `is_simulation` (never public, excluded from exports) | Step 4 |
-| 12 | Out of scope | Wind calls go to Phase 6 with the public banner. Re-running a heat is Cancel heat (with reason) plus "add an extra heat" in the 4b Draw step; no new feature. Highest Jump metres come after the event | Step 4, §13 |
+| 12 | Out of scope | Wind calls go to Phase 6 with the public banner. Highest Jump metres come after the event | §13 |
+| 12a | Re-run heat (changed the same day) | A one-button "Re-run heat" in 5c: head judge or organiser, one confirmation, reason required; cancels the heat and creates "Heat 3 re-run" (3R) with the same riders, seats, lycras and timing; later seats follow it; the draw stays locked; it goes right after the live heat in the run order; one audit line; riders can be left out. The manual five-step path stays as the fallback | Step 4 |
 | A | Head console on a phone | Below 900 px nothing is refused. Controls, rider totals and the blocker list are shown; only the matrix asks for a tablet or laptop | Step 4 |
 | B | Timer sounds | A short beep and vibration at 1:00 and 0:00. On by default on the head console, optional on judge phones, switchable per device | Step 1 |
 | C | PR split | 5a, 5b, 5c, with the 5b-1 / 5b-2 fallback. The hours go into STATUS.md when 5a starts | §10 |
+
+### Still open
+
+13. **Riders left out of a re-run: where are they placed?** Your rule was "a left-out rider keeps their place from the original heat's ranking". That contradicts your own example. The original heat is cancelled, so its ranking is only provisional, often incomplete, and it is the result you just decided not to trust. A disqualified rider who was leading at the cancel would keep 1st and advance.
+    - *Beach:* Heat 3, 2 advance. Cancelled at minute 6 with Red provisionally 1st. Red is disqualified and left out of the re-run. Under the rule as written, Red goes to the Semi-final, and the three riders who re-ride fight for the one remaining place.
+    - **Recommendation:** the confirmation asks per left-out rider, **Disqualified** or **Did not start**. Both are ranked last in the re-run, DSQ below DNS (docs/03 §4.5), and both are audited with the re-run's reason.
+    - If you do want "keep the provisional place" for some case (e.g. an injured rider who was clearly ahead), say which case. It then becomes a third choice, allowed only when the cancelled heat had every score in.
+    - **This blocks only `leftOutPlacement` in 5c**, nothing else.
 
 ## 12. Repo rules I had to interpret
 
@@ -585,6 +660,7 @@ These are decisions now. The steps above already follow them. 5b copies them int
   - docs/06 names `/judge/[heatId]`. Auto-follow needs the event, so the routes are `/judge/[eventId]` and `/spot/[eventId]`, and a heat can be pinned with `?heat=`.
   - CLAUDE.md's route list allows both.
 - **"Correction after a later heat started":** read as "a heat that this result feeds has started" (docs/04 and docs/08 §2F). An unrelated later heat in the run order does not block a correction.
+- **Re-run numbering:** the database already allows a suffix, so the re-run is "3R" and keeps its place in the ladder through `draw_uid`. Only the manual fallback gives a next-free number.
 - **Pause:** spotters cannot log while paused (riders are off the water); judges can still score attempts already logged.
 - **Dependencies:** none added. IndexedDB, speech, wake lock, Web Audio and vibration are browser APIs.
 - **"Never public" for simulation events:** officials can still join a simulation event with their PINs; everything a visitor could see is closed.
@@ -595,7 +671,6 @@ These are decisions now. The steps above already follow them. 5b copies them int
 - Public pages, big screen, rider pages (Phase 6). They only read the functions from step 6.
 - Wind calls (Phase 6, with the public banner).
 - Highest Jump metres (after the event).
-- A dedicated "re-run heat" feature: Cancel heat plus the 4b Draw step covers it.
 - The full simulator: auto-play spotters and judges, scenario buttons, "View as…", checklist. It is its own PR after Phase 6.
 - Exports.
 - Paper sheets printing.
