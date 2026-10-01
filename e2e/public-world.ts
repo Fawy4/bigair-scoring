@@ -26,7 +26,7 @@ export async function createPublicWorld(opts: { liveScores?: "live" | "after_pub
     .from("events")
     .update({
       status: "live",
-      settings: { ...(ev!.settings as object), publicLiveScores: opts.liveScores ?? "live", publicResultsOnPublish: true, livePollSec: 3, readyCallMin: 10, ...(opts.settings ?? {}) } as never,
+      settings: { ...(ev!.settings as object), publicLiveScores: opts.liveScores ?? "live", publicResultsOnPublish: true, livePollSec: 3, readyCallMin: 15, ...(opts.settings ?? {}) } as never,
       ...(opts.branding ? { branding: opts.branding as never } : {}),
     })
     .eq("id", w.eventId);
@@ -77,7 +77,7 @@ export async function createPublicWorld(opts: { liveScores?: "live" | "after_pub
 
   // today's run order holds every heat (Pro Men first, then the ladder)
   const items = [...w.heats, ...Object.values(ladder.heats), ...Object.values(reseedLadder.heats)].map((id, i) => ({ id: `i${i + 1}`, kind: "heat", heatId: id }));
-  await db.from("schedule_plans").update({ items: items as never, anchors: { i1: "10:00" }, defaults: { breakAfterHeatMin: 2, breakAfterRoundMin: 3, readyCallMin: 15 } as never }).eq("id", w.planId);
+  await db.from("schedule_plans").update({ items: items as never, anchors: { i1: "10:00" }, defaults: { breakAfterHeatMin: 2, breakAfterRoundMin: 3 } as never }).eq("id", w.planId);
   void drawProjection;
   return Object.assign(w, { ladder, reseedLadder, slug: ev!.slug as string, published: h1, running: h2 });
 }
