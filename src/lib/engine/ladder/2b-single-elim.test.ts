@@ -53,8 +53,11 @@ describe("2B single_elimination", () => {
   });
 
   it("round durations follow the params: early 10, semi 12, final 15", () => {
-    const draw = expandFormat(template(), makeEntrants(16));
+    const t = loadFormat("heats4-top2-single-elim", (j) => Object.assign(j.generator.params, { earlyMin: 10, semiMin: 12, finalMin: 15 }));
+    const draw = expandFormat(t, makeEntrants(16));
     expect(draw.rounds.map((r) => r.heats[0].durationMin)).toEqual([10, 12, 15]);
+    // the shipped preset gives every round 10 minutes (owner, Phase 4b)
+    expect(expandFormat(template(), makeEntrants(16)).rounds.map((r) => r.heats[0].durationMin)).toEqual([10, 10, 10]);
     expect(draw.rounds[0].heats[0].breakAfterHeatMin).toBe(3);
     expect(draw.rounds[0].heats[0].breakAfterRoundMin).toBe(5);
     expect(draw.rounds[0].heats.map((h) => h.roundLast)).toEqual([false, false, false, true]);

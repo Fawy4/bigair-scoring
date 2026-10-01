@@ -424,6 +424,13 @@ The owner decided that the target / minimum / maximum rule with the 1 v 1 fallba
 8. The old "Build my own ladder…" button is replaced by the Custom ladder card; older saved custom formats still open in their round editor.
 9. Signed-in users of other organisations can read the stored draw of a **published** event (names are public there anyway); drafts stay private.
 
+### Owner's decisions on the choices (1 Oct 2026)
+- Accepted as built: warm-up after the break; regenerate refused while locked with one confirmation (docs/06 decision 14 updated); choices 3–6 and 8 of the list above (one place per rank per round, "Allow heats of 2", keep only first-round heats on regenerate, heat numbers stable once a heat starts, Custom ladder card replaces "Build my own ladder…").
+- Changed: the Knockout preset's heat length is now **10 minutes in every round** (preset version 4, seeded and published; existing divisions keep the version they use).
+
+### Owed for Phase 6 (owner, 1 Oct 2026)
+- **The stored draw of a published event must be readable only through the public pages.** Today any signed-in user can read `divisions.draw` of a published event (the public role cannot). In Phase 6 the public pages must serve only what is meant to be shown, and drafts and unpublished rounds must never be visible to other organisations. Keep for now; do not forget.
+
 ### Not done / not verified
 - Start / Hold / Shift for the head judge and the live timer are Phase 5; the organiser's live buttons exist now.
 - The Vercel preview could not be opened from here; everything ran locally against the hosted development project.

@@ -441,7 +441,7 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(page.getByTestId("format-preview")).toContainText("R1 8 heats of 3");
   await expect(page.getByTestId("per-round-lengths")).toContainText("Heat length per round");
   await expect(field("Heat length: R1 (minutes)")).toHaveValue("10");
-  await expect(field("Heat length: F (minutes)")).toHaveValue("15");
+  await expect(field("Heat length: F (minutes)")).toHaveValue("10");
   await expect(page.getByTestId("ladder-round").first()).toContainText("10 min");
   await field("Heat length: R1 (minutes)").fill("9");
   await field("Heat length: F (minutes)").fill("20");

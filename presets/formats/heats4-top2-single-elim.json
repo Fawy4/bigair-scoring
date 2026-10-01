@@ -14,8 +14,8 @@
       "advancePerHeat": 2,
       "finalSize": 4,
       "earlyMin": 10,
-      "semiMin": 12,
-      "finalMin": 15,
+      "semiMin": 10,
+      "finalMin": 10,
       "seeding": "snake",
       "reseed": "by_original_seed"
     }
