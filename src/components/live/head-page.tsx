@@ -22,6 +22,7 @@ import { remainingMs } from "@/lib/live/timer";
 import type { LiveContext } from "@/lib/live/types";
 import { softWord } from "@/lib/live/words";
 import { createClient } from "@/lib/supabase/browser";
+import { PartBoundary } from "@/components/part-boundary";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
@@ -186,7 +187,9 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
 
   const controlColumn = (
     <div className="flex flex-col gap-3">
-      <HeatControl ctx={ctx} heats={live.heats} selectedId={shownId} onSelect={setSelected} nowServer={nowServer} plans={live.plans} onPlanChanged={live.applyPlan} review={review} />
+      <PartBoundary what={copy.crash.parts.timetable}>
+        <HeatControl ctx={ctx} heats={live.heats} selectedId={shownId} onSelect={setSelected} nowServer={nowServer} plans={live.plans} onPlanChanged={live.applyPlan} review={review} />
+      </PartBoundary>
       {!wide ? (
         <>
           <button type="button" data-testid="details-toggle" aria-expanded={details} onClick={() => setDetails((d) => !d)} className="min-h-[48px] rounded-xl border border-beach-border bg-beach-bg px-3 text-body font-semibold">

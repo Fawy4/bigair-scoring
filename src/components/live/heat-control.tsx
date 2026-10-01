@@ -81,19 +81,23 @@ export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans
   const lives = useMemo(() => livesFor(ctx, heats, ctx.heatMeta), [ctx, heats]);
   const table = useMemo(() => (plan ? computeTimetable(plan.plan, lives, timetableOptions(plan, ctx.event.timezone, nowServer)) : null), [plan, lives, ctx.event.timezone, Math.floor(nowServer / 5000)]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const order: Array<{ heat: HeatRow; time: string | null; held: boolean }> = useMemo(() => {
+  type OrderEntry = { heat: HeatRow; time: string | null; held: boolean; problem?: string } | { heat?: undefined; gone: string; problem: string };
+  const order: OrderEntry[] = useMemo(() => {
     if (table) {
-      const listed = table.rows.filter((r) => r.kind === "heat" && r.heatId).flatMap((r) => {
-        const heat = heats.find((h) => h.id === r.heatId);
-        return heat ? [{ heat, time: r.start, held: r.status === "held" }] : [];
-      });
-      const rest = heats.filter((h) => !listed.some((l) => l.heat.id === h.id));
-      return [...listed, ...rest.map((heat) => ({ heat, time: null, held: false }))];
+      const listed: OrderEntry[] = table.rows
+        .filter((r) => r.kind === "heat")
+        .map((r) => {
+          const heat = r.heatId ? heats.find((h) => h.id === r.heatId) : undefined;
+          const problem = r.issue ? r.warnings[0] : undefined;
+          return heat ? { heat, time: r.start, held: r.status === "held", ...(problem ? { problem } : {}) } : { gone: r.itemId, problem: problem ?? "" };
+        });
+      const rest = heats.filter((h) => !listed.some((l) => l.heat?.id === h.id));
+      return [...listed, ...rest.map((heat): OrderEntry => ({ heat, time: null, held: false }))];
     }
     const divisionOrder = new Map(ctx.divisions.map((d, i) => [d.id, i]));
     return [...heats]
       .sort((a, b) => (divisionOrder.get(a.division_id) ?? 0) - (divisionOrder.get(b.division_id) ?? 0) || a.number - b.number)
-      .map((heat) => ({ heat, time: null, held: false }));
+      .map((heat): OrderEntry => ({ heat, time: null, held: false }));
   }, [table, heats, ctx.divisions]);
 
   const selected = heats.find((h) => h.id === selectedId) ?? null;
@@ -131,7 +135,16 @@ export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans
         </p>
       ) : (
         <ol data-testid="run-order" className="flex max-h-[34dvh] flex-col divide-y divide-beach-line overflow-y-auto rounded-xl border border-beach-line bg-beach-bg">
-          {order.map(({ heat, time, held }) => {
+          {order.map((entry) => {
+            if (!entry.heat) {
+              return (
+                <li key={`gone-${entry.gone}`} data-testid="order-gone" className="flex min-h-[48px] flex-col justify-center gap-0.5 px-2 py-1">
+                  <span className="text-body font-semibold text-beach-muted">{T.goneRow}</span>
+                  <span role="note" data-testid="order-problem" className="text-small font-semibold">{T.rowProblem(entry.problem)}</span>
+                </li>
+              );
+            }
+            const { heat, time, held, problem } = entry;
             const st = stateOf(heat, nowServer);
             const word = T.status[st === "ended" && heat.status === "under_review" ? "under_review" : st] ?? st;
             return (
@@ -157,6 +170,11 @@ export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans
                     <Pill tone={st === "running" ? "live" : st === "paused" ? "pending" : st === "ended" ? "crash" : st === "cancelled" ? "missing" : "ink"}>{word}</Pill>
                   </span>
                 </button>
+                {problem ? (
+                  <p role="note" data-testid="order-problem" className="px-2 pb-1 text-small font-semibold">
+                    {T.rowProblem(problem)}
+                  </p>
+                ) : null}
               </li>
             );
           })}

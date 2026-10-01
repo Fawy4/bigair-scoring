@@ -1,18 +1,13 @@
 "use client";
 
 import { FieldLabel } from "@/components/help-button";
+import type { RoundLengthRow } from "@/lib/format-ui/per-round";
 import { warmUpOf, withoutRoundLengths, withoutRoundWarmUps, withRoundLength, withRoundWarmUp, withWarmUp } from "@/lib/format-ui/ladder-kind";
 import { copy, help } from "@/lib/ui-copy";
 
 const P = copy.formatSimple.perRound;
 
-export interface RoundLength {
-  id: string;
-  shortName: string;
-  name: string;
-  /** The length the ladder's own settings give this round. */
-  defaultMin: number;
-}
+export type RoundLength = RoundLengthRow;
 
 /** "Heat length per round": optional overrides, pre-filled from the ladder's own lengths. Breaks stay global. */
 export function PerRoundLengths({ working, rounds, onChange, readOnly }: { working: Record<string, unknown>; rounds: RoundLength[]; onChange: (v: unknown) => void; readOnly?: boolean }) {
@@ -26,6 +21,11 @@ export function PerRoundLengths({ working, rounds, onChange, readOnly }: { worki
       </legend>
       <p className="text-sm font-semibold">{P.note}</p>
       <WarmUpField working={working} onChange={onChange} readOnly={readOnly} />
+      {rounds.length === 0 ? (
+        <p className="font-bold" data-testid="per-round-empty">
+          {P.empty}
+        </p>
+      ) : null}
       <table className="w-full max-w-xl border-collapse">
         <tbody>
           {rounds.map((r) => {

@@ -28,8 +28,7 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
 
   const entries: Entry[] = plan.items.map((item) => {
     if (item.kind === "heat") {
-      if (!item.heatId) throw new Error(`Run item "${item.id}" has no heatId yet (resolve heatRef first).`);
-      const live = byHeat.get(item.heatId);
+      const live = item.heatId ? byHeat.get(item.heatId) : undefined;
       return { item, live, actualStart: live?.startedAt ? Date.parse(live.startedAt) : undefined };
     }
     const at = plan.actualStarts[item.id];
@@ -50,6 +49,7 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
     const pinHhmm = plan.anchors[item.id];
     const pin = pinHhmm ? localToUtc(eventDay, pinHhmm, timezone) : undefined;
     const warnings: string[] = [];
+    let issue: TimetableRow["issue"] = null;
     const base = {
       itemId: item.id,
       kind: item.kind,
@@ -57,9 +57,14 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
       ...(item.kind === "heat" ? { heatId: item.heatId, division: live?.division, round: live?.round, heat: live?.heat } : {}),
       pinned: pin !== undefined,
     };
-    const duration = item.kind === "note" ? 0 : (item.durationMin ?? live?.durationMin);
-    const warmUp = item.kind === "heat" ? (item.warmUpMin ?? live?.warmUpMin ?? 0) : 0;
-    if (duration === undefined) throw new Error(`Heat "${item.id}" has no duration (set durationMin on the item or the round).`);
+    // length: the row's own, else the heat's (always stored with the heat), else none: a warning and no time, never an exception
+    const given = item.kind === "note" ? 0 : (item.durationMin ?? live?.durationMin);
+    const hasLength = given !== undefined && Number.isFinite(given) && (item.kind === "note" || given > 0);
+    const duration = hasLength ? given : 0;
+    const warmUpRaw = item.kind === "heat" ? (item.warmUpMin ?? live?.warmUpMin ?? 0) : 0;
+    const warmUp = Number.isFinite(warmUpRaw) && warmUpRaw > 0 ? warmUpRaw : 0;
+    // a heat row that points at nothing: its heat was removed from the draw after it was added
+    const orphan = item.kind === "heat" && (!item.heatId || !live);
 
     const emit = (
       row: Pick<TimetableRow, "status" | "reason"> & { start: number | null; end: number | null; breakAfter: number | null },
@@ -82,6 +87,7 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
         readyCall: heatRow && startMs !== null ? hhmm(startMs - defaults.readyCallMin * MIN) : null,
         reason: row.reason,
         warnings,
+        issue,
       });
     };
 
@@ -99,6 +105,18 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
       emit({ start: held ? null : at, end: held ? null : at, breakAfter: null, status: held ? "held" : pin !== undefined ? "pinned" : "est", reason: held ? holdReason(plan, hhmm) : "Marker (takes no time)" });
       return;
     }
+
+    // ── a row whose heat is gone (or was never linked): it takes no time, moves nothing and is never "next"
+    if (orphan && e.actualStart === undefined) {
+      issue = "no-heat";
+      warnings.push(item.kind === "heat" && !item.heatId ? "This row is not linked to a heat yet. Take it out of the run order." : "This heat is no longer in the draw (the draw was changed after it was added). Take this row out of the run order.");
+      emit({ start: null, end: null, breakAfter: null, status: "cancelled", reason: "Its heat is not in the draw any more: it takes no time" });
+      return;
+    }
+
+    // ── no length anywhere: say so on the row, give it no time, and carry on with the rest of the day
+    if (!hasLength) issue = "no-length";
+    if (!hasLength) warnings.push(item.kind === "break" ? "No break length — set it on the row in the run order." : "No heat length — set it in Divisions → Format");
 
     // ── cancelled before it ever started: it takes no time and moves nothing
     if (live?.cancelled && e.actualStart === undefined) {

@@ -636,3 +636,39 @@ The 30-minute test with a stranger runs on Sunday 4 Oct 2026.
 
 **How to test on the phone and the laptop**
 See the click-through at the end of the pull request description.
+
+## Fix – timetable crash when a heat has no length (branch `fix-run-order-duration`, 1 Oct 2026)
+
+On the Demo event, the head console and the Run order step both ended in "Application error" after the second division (Pro Women) was drawn and locked.
+
+### What was really wrong (found by reproducing it on the hosted project)
+- **Not a missing heat length.** Every heat on the hosted project has a length: the database refuses a heat without one (`duration_sec` and `warm_up_sec` can never be empty), and all 28 stored heats have both. Pro Women's rounds are 10 minutes, as the preview said.
+- **The real cause:** the run order stores each row's heat by its id. When a draw is made again, the heats that are no longer in it are deleted, and the run-order rows that named them stayed behind. Demo Cup's run order had two such rows (`r12` and `r13`) pointing at heats that no longer exist. With no heat and no length of its own, the timetable threw `Heat "r12" has no duration`, and that error took down every page that works out the timetable. Unlocking the draw could not help, because those rows stayed in the run order.
+- Reproduced with Demo Cup's real run order and heats (read-only): the old engine throws exactly that message; the new one returns all 15 rows.
+
+### Done
+- **The timetable never throws any more.** A heat with no length comes back as a row with the warning "No heat length — set it in Divisions → Format" and takes no time, and the rest of the day is still worked out. A row whose heat is gone comes back flagged "This heat is no longer in the draw … Take this row out of the run order", takes no time, moves nothing and is never offered as the next heat. A row with no heat link, or a break with no length, is handled the same way. The warning shows on the row itself in the run order and in the head console's run-order list; the printed timetable leaves a dangling row out and prints a missing length as blank.
+- **Error boundaries.** Every live page (head, judge, spotter, seat), every organiser step (one boundary covers the whole event wizard, so the header and the step list stay) and the public event pages now end in a readable page with a reason and a way back instead of "Application error", plus one site-wide net. The run-order list in the head console and the Run order editor are also wrapped so that if only that part fails, it shows one line and the rest of the page keeps working. A test fails if a live page or organiser step ever loses its boundary.
+- **Stops it happening again (migration, applied to the hosted project on 1 Oct 2026).** `20261007100000_run_order_follows_heats.sql`: deleting a heat now also removes its row, pin and recorded start from every run order of that event, and a one-off cleanup removes rows that already point at nothing. Dry-run on the hosted project inside a transaction that was rolled back: the trigger works, breaks are left alone, and the cleanup would change exactly one run order (Demo Cup, rows `r12` and `r13`); Arrow's is untouched. The version number had to be later than `20261006100100`, which the unmerged Phase 6 branch already applied to the shared project.
+- **Heat lengths are tested end to end.** Every built-in format, at 6, 14 and 24 riders, gives every heat a length above zero and a warm-up of zero or more. A round with no length of its own takes the format's default; its own length wins when it has one.
+- **"Heat length per round".** The table's rows now come from one tested function. For every built-in format and every rider count from 1 to 40 it lists exactly the rounds of the preview that have heats, each pre-filled with the heat length. If it ever has no rounds, it says why in one sentence instead of showing nothing.
+
+### Test evidence
+- `npm run typecheck` and `npm run lint` clean. `npm test`: **127 files, 1536 tests passed** (main had 123 / 1440). New: the timetable fallback chain and warning rows, draw lengths for every built-in format, the per-round table rows for every format at 1–40 riders, and the boundary-coverage test.
+- `npm run build` succeeds.
+- Playwright (throwaway organisations, removed by the ledger): the new two-division spec `run-order-missing-heat` locks two divisions on the Draw screen, makes a run-order row whose heat is gone, and opens the head console and the Run order step; it passes in dev and on the production build, and **fails on the old engine** with `Heat "r99" has no duration`. Affected suites (organiser, draw-timetable, live-console, live-head): 17 passed, 3 failed on the first parallel run with hosted-database statement timeouts and a redirect timeout under load; run again one at a time, all 3 passed.
+- Migration dry-run on the hosted project (rolled back): trigger and cleanup behave as described; nothing was left behind.
+
+### Choices I made (please confirm or change)
+1. **A heat with no length takes 0 minutes** and is flagged, rather than guessing a length. The spec defines no event-wide heat length, so none was invented.
+2. **Run-order rows do not copy the heat's length when they are added.** The heat always has one, and copying it would freeze the row: changing the round's length later would stop reaching the run order. A row's own length is still an override, as before.
+3. **A dangling row is shown as "cancelled" in the engine,** so it takes no time and is never "next".
+4. **The migration is applied** to the shared hosted project (on your go-ahead). Demo Cup's run order lost the two dead rows `r12` and `r13` (15 rows became 13); Pro Women's Final still has to be added to the run order with "Add". The new Playwright spec was run once more against the hosted project after that and passes.
+
+### Not done / not verified
+- **The empty "Heat length per round" table could not be reproduced.** With Pro Women's exact data (6 riders, same format, no overrides, stored draw copied in), on a throwaway event in a real browser, the table lists R1 and F, pre-filled with 10. The change is a hardening plus tests, not a proven fix of what you saw. If you still see it, tell me the number in "Preview with" and whether the draw was locked.
+- A failing part showing one line was checked once by hand in a real browser (forced failure, then removed), not by a permanent test. Server-side page errors show an error reference rather than the reason, because the hosting setup hides server error text.
+- Arrow Big Air: no problem found (12 heats in its run order, all exist). EKL: no run order and no heats yet.
+
+### How to test on the preview
+Open Demo Cup → Run order and the head console: both open; the two dead rows are gone. Add Pro Women's Final with "Add". If a row ever points at a missing heat again, it shows a yellow note with a ✕ button.

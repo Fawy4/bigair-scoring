@@ -56,7 +56,11 @@ export interface TimetableRow {
   /** Plain-language explanation of why the row starts when it does. */
   reason: string;
   warnings: string[];
+  /** What is wrong with the row itself (as opposed to timing remarks): the heat has no length, or its heat is gone from the draw. Null when the row is sound. */
+  issue: RowIssue | null;
 }
+
+export type RowIssue = "no-length" | "no-heat";
 
 export interface TimetableOptions {
   /** "Now" is always a parameter: the engine never reads the clock. ISO instant. */

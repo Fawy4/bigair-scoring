@@ -64,7 +64,7 @@ function UnscheduledHeat({ h, onAdd, disabled }: { h: HeatInfo; onAdd: () => voi
   );
 }
 
-function RowShell({ id, children }: { id: string; children: React.ReactNode }) {
+function RowShell({ id, problem, children }: { id: string; problem?: string; children: React.ReactNode }) {
   const drop = useDroppable({ id: `row:${id}` });
   const drag = useDraggable({ id: `row:${id}` });
   return (
@@ -82,6 +82,11 @@ function RowShell({ id, children }: { id: string; children: React.ReactNode }) {
         </button>
         {children}
       </div>
+      {problem ? (
+        <p role="note" className="rounded border-2 border-[#111] bg-[#fde68a] px-2 py-1 text-sm font-bold" data-testid="row-problem">
+          {T.rowProblem(problem)}
+        </p>
+      ) : null}
     </li>
   );
 }
@@ -358,11 +363,11 @@ export function ScheduleManager(props: ScheduleProps) {
                 {table.rows.map((r, idx) => {
                   const started = liveStarted(r.itemId);
                   return (
-                    <RowShell key={r.itemId} id={r.itemId}>
+                    <RowShell key={r.itemId} id={r.itemId} problem={r.issue ? r.warnings[0] : undefined}>
                       <span className="w-7 text-center font-extrabold" aria-hidden>{idx + 1}</span>
                       {r.kind === "heat" ? (
                         <span className="min-w-0 flex-1 basis-56 font-bold" data-testid="row-label">
-                          {r.division} · {r.round} · {r.heat}
+                          {[r.division, r.round, r.heat].filter(Boolean).join(" · ") || T.goneHeat}
                         </span>
                       ) : (
                         <input

@@ -27,6 +27,7 @@ import type { DivisionRow } from "./divisions-manager";
 import { CustomBuilder } from "./custom-builder";
 import { LadderBuilder } from "./ladder-builder";
 import { FormatSimple, ladderKindOf } from "./format-simple";
+import { perRoundRows } from "@/lib/format-ui/per-round";
 import { PerRoundLengths, WarmUpField } from "./per-round-lengths";
 import { ScoringSimple } from "./scoring-simple";
 
@@ -129,13 +130,8 @@ export function RulesPanel({
   const builderRiders = useMemo(() => previewRiders(division.riders, riders), [division.riders, riders]);
   // what "Apply to draw" does differently from the design (the draw always uses the division's real confirmed riders)
   const difference = useMemo(() => designDifference(riders, division.riders.length), [riders, division.riders.length]);
-  // the single settings' heat length of every round of the preview (without the per-round overrides)
-  const defaultLengths = useMemo(() => {
-    if (!template || isFixed) return new Map<string, number>();
-    const plain = previewFormat({ ...template, roundDurationMin: undefined }, riders);
-    return new Map(plain.rounds.map((r) => [r.id, Number(r.heatMin.split("–")[0])]));
-  }, [template, isFixed, riders]);
-  const perRound = (preview?.rounds ?? []).filter((r) => r.heats > 0).map((r) => ({ id: r.id, shortName: r.shortName, name: r.name, defaultMin: defaultLengths.get(r.id) ?? Number(r.heatMin.split("–")[0]) }));
+  // the rounds of "Heat length per round": those of the preview, pre-filled with the single settings' heat length (see perRoundRows)
+  const perRound = useMemo(() => (template && !isFixed ? perRoundRows(template, riders) : []), [template, isFixed, riders]);
 
   function choose(id: string) {
     const row = presets.find((p) => p.id === id);
