@@ -16,6 +16,10 @@ test("organiser: settings, then the Event step", async ({ page }) => {
   test.setTimeout(180_000);
   // exact matching: every setting also has a "Help: …" button whose name contains the same words
   const field = (label: string) => page.getByLabel(label, { exact: true });
+  const openMore = async () => {
+    const toggle = page.getByTestId("advanced-toggle");
+    if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  };
 
   await org.signIn(page, "/org/settings");
   await expect(page.getByRole("heading", { name: "Organisation settings" })).toBeVisible();
@@ -45,12 +49,13 @@ test("organiser: settings, then the Event step", async ({ page }) => {
   await page.goto("/org/events/new");
   await expect(field("Time zone")).toHaveValue("Europe/Berlin");
   await field("Event name").fill(`Arrow Big Air ${org.run}`);
+  await openMore(); // the web address, logo, sponsors, registration and rider label are behind "More settings"
   await expect(field("Web address (slug)")).toHaveValue(`arrow-big-air-${org.run}`);
 
   // "?" help: a tap opens one sentence with an example, another tap closes it
-  await page.getByRole("button", { name: "Help: Event name" }).click();
+  await page.getByRole("button", { name: "About “Event name”" }).click();
   await expect(page.getByRole("note").filter({ hasText: "Example:" }).first()).toBeVisible();
-  await page.getByRole("button", { name: "Help: Event name" }).click();
+  await page.getByRole("button", { name: "About “Event name”" }).click();
   await expect(page.getByRole("note").filter({ hasText: "Arrow Big Air 2026" })).toHaveCount(0);
 
   await field("Location").fill("El Gouna, Egypt");

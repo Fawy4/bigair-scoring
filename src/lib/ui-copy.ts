@@ -241,6 +241,12 @@ export const copy = {
   orgSettings: {
     heading: "Organisation settings",
     readOnly: "Only owners and admins can change these settings. You can look, but not save.",
+    readOnlyReason: "Only owners and admins can save these settings.",
+    panelTitle: "Name, address and time zone",
+    understandFirst: "Tick “I understand, change the address” first.",
+    noName: "No name yet",
+    noSlug: "no web address yet",
+    sentence: (name: string, slug: string, tz: string) => `${name} · web address ${slug} · new events start in ${tz}`,
     name: "Organisation name",
     slug: "Web address (slug)",
     slugHint: "Lowercase letters, numbers and hyphens, for example “arrow”.",
@@ -325,6 +331,18 @@ export const copy = {
     } as Record<string, string>,
   },
 
+  eventSentence: {
+    newEvent: "New event",
+    datesNotSet: "dates not set",
+    zone: (tz: string) => `times in ${tz}`,
+    lycras: "coloured lycras",
+    names: "riders called by name",
+    nothingPublic: "nothing public until the head judge publishes",
+    liveOnly: "live scores shown during heats",
+    resultsOnly: "results shown when a heat is published",
+    liveAndResults: "live scores shown during heats and results shown when a heat is published",
+  },
+
   formatSentence: {
     heats: (n: number) => `heats of ${n}`,
     advance: (n: number) => `top ${n} advance`,
@@ -344,6 +362,12 @@ export const copy = {
   },
 
   event: {
+    understandFirst: "Tick “I understand, change the address” first.",
+    sponsorFirst: "This sponsor is already first.",
+    sponsorLast: "This sponsor is already last.",
+    minutesUnit: "min",
+    secondsUnit: "s",
+    noLimitWord: "no limit",
     simulationHeading: "Rehearsal",
     simulation: "Simulation event (never public)",
     simulationLocked: "A heat of this event has already started, so this can no longer be changed.",
@@ -554,6 +578,12 @@ export const copy = {
     descriptionPlaceholder: "Advanced riders, 18 and over",
     descriptionSaved: "Description saved",
     identification: {
+      panelTitle: "Rider label",
+      ownSentence: (name: string) => `This division uses its own: ${name}.`,
+      modeLabel: "Which Rider label this division uses",
+      modeExplain: "The event’s, or one of its own.",
+      modeExample: "Pro Men use the event’s Lycra colours; Juniors use bib numbers.",
+      fixFirst: "Fix the problems listed first.",
       useEvent: "Use the event’s identification",
       own: "This division has its own",
       eventScheme: (name: string) => `The event uses: ${name}.`,
@@ -1354,6 +1384,9 @@ export const copy = {
       heading: "Platform settings",
       intro: "Shown on the public site and in every header. Changes apply to everybody at once.",
       productName: "Product name",
+      readOnlyReason: "Only platform owners can save these settings.",
+      panelTitle: "Name, logo and legal texts",
+      sentence: (name: string, tz: string) => `${name} · new organisations start in ${tz}`,
       productNameHelp: { text: "The name shown in headers, footers and page titles. Once set it replaces the built-in name (NEXT_PUBLIC_PRODUCT_NAME); clear it to go back to the built-in name.", example: "Sendbook" },
       logo: "Platform logo",
       logoHelp: { text: "Shown on the public home page. PNG, JPEG or WebP, up to 2 MB.", example: "Your company logo" },
@@ -3432,6 +3465,7 @@ export const orgCopy = {
   },
 
   settings: {
+    datesLabel: "Dates",
     helpLabel: (label: string) => `About “${label}”`,
     example: (text: string) => `Example: ${text}`,
     load: "Load…",

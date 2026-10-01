@@ -55,8 +55,10 @@ test("the owner runs the platform: create, invite, rename, open as organiser, ar
   await expect(ownRow).toContainText("free");
   await expect(page.getByRole("columnheader", { name: "Events" })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "Last activity" })).toBeVisible();
-  // the header switch is there for admins, and the organiser view names the organisation
-  await expect(page.getByRole("link", { name: `Organiser view (E2E Big Air ${admin.run})` })).toBeVisible();
+  // the switch is in the account menu for admins, and the organiser view names the organisation
+  await page.getByTestId("account-menu").getByRole("button", { name: "Account" }).click();
+  await expect(page.getByRole("menuitem", { name: `Organiser view (E2E Big Air ${admin.run})` })).toBeVisible();
+  await page.keyboard.press("Escape");
 
   // create
   await page.getByRole("link", { name: "Create organisation" }).click();

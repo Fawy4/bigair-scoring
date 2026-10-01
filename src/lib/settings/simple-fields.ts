@@ -45,3 +45,12 @@ export function simpleText(f: SimpleField): { label: string; explanation: string
   const h: Help = help[f.helpKey];
   return { label: f.label, explanation: h.line ?? h.text, example: h.example };
 }
+
+/** Event step, behind the fold: the web address, logo and sponsors, rehearsal, the timing numbers, registration and the rider label settings (one group). */
+export const EVENT_ADVANCED: readonly string[] = [
+  "slug", "logo", "sponsors", "simulation", "readyCall", "livePoll", "screenRotate", "maxRunning", "judgesLog", "windBanner", "leaderboards",
+  "registrationOpen", "registrationCloses", "registrationClosesTime", "registrationMax", "registrationClosedMessage", "riderLabel",
+];
+
+/** Rider label panel of a division, behind the fold: what the editor shows. */
+export const IDENT_ADVANCED: readonly string[] = ["preset", "primary", "fallback", "callout", "lycraAssignment", "bibNumbering", "secondary", "kiteFields", "palette", "savePreset"];

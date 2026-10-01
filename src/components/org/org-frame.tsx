@@ -3,7 +3,7 @@
 import { useEffect, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarDays, MessageSquare, Settings, ShieldCheck, KeyRound, LogOut } from "lucide-react";
+import { CalendarDays, Folder, MessageSquare, Settings, ShieldCheck, KeyRound, LogOut } from "lucide-react";
 import { useBeachTextSize, useBeachTheme } from "@/components/live/theme-switch";
 import { BEACH_THEMES } from "@/lib/live/theme-tokens";
 import { copy, orgCopy } from "@/lib/ui-copy";
@@ -38,6 +38,8 @@ export interface OrgFrameProps {
   event?: ShellEvent;
   /** Steps in order; each has an href. */
   steps?: readonly RailStep[];
+  /** The platform admin's frame: its own list of places on the left, "Organiser view" in the account menu instead of the organiser's places. */
+  admin?: { places: Array<{ href: string; label: string; prefixes: string[] }>; organiserLabel: string; roleLabel: string };
   children: ReactNode;
 }
 
@@ -48,7 +50,7 @@ export function activeStepKey(path: string, steps: readonly RailStep[]): string 
 }
 
 /** Everything around an organiser screen: the top bar, the left rail of seven steps (or, with no event, a short list of places), Previous / Next at the foot, and the Daylight / Dark and Normal / Large choice. */
-export function OrgFrame({ productName, email, passwordIsSet, organisations, currentOrganisationId, isPlatformAdmin, banner, switchOrganisation, signOutAction, event, steps, children }: OrgFrameProps) {
+export function OrgFrame({ productName, email, passwordIsSet, organisations, currentOrganisationId, isPlatformAdmin, banner, switchOrganisation, signOutAction, event, steps, admin, children }: OrgFrameProps) {
   const [theme, setTheme] = useBeachTheme();
   const [size, setSize] = useBeachTextSize();
   const layout = useViewportLayout();
@@ -109,12 +111,14 @@ export function OrgFrame({ productName, email, passwordIsSet, organisations, cur
       <span className="text-body font-semibold text-beach-muted">{organisations[0].name}</span>
     ) : null;
 
-  const places: Array<{ href: string; label: string; icon: typeof CalendarDays }> = [
-    { href: "/org", label: orgCopy.shell.events, icon: CalendarDays },
-    { href: "/org/settings", label: orgCopy.shell.orgSettings, icon: Settings },
-    { href: "/org/feedback", label: orgCopy.shell.feedback, icon: MessageSquare },
-  ];
-  const placeActive = (href: string) => (href === "/org" ? path === "/org" || path.startsWith("/org/events") : path.startsWith(href));
+  const places: Array<{ href: string; label: string; icon: typeof CalendarDays; prefixes?: string[] }> = admin
+    ? admin.places.map((p) => ({ ...p, icon: Folder }))
+    : [
+        { href: "/org", label: orgCopy.shell.events, icon: CalendarDays },
+        { href: "/org/settings", label: orgCopy.shell.orgSettings, icon: Settings },
+        { href: "/org/feedback", label: orgCopy.shell.feedback, icon: MessageSquare },
+      ];
+  const placeActive = (p: { href: string; prefixes?: string[] }) => (p.prefixes ? p.prefixes.some((x) => path === x || path.startsWith(`${x}/`)) : p.href === "/org" ? path === "/org" || path.startsWith("/org/events") : path.startsWith(p.href));
 
   return (
     <div
@@ -129,7 +133,7 @@ export function OrgFrame({ productName, email, passwordIsSet, organisations, cur
         <AppShell
           layout={layout}
           productName={productName}
-          productHref="/org"
+          productHref={admin ? "/admin" : "/org"}
           organisations={organisations}
           currentOrganisationId={current?.id ?? ""}
           orgSwitcher={switcher}
@@ -142,10 +146,10 @@ export function OrgFrame({ productName, email, passwordIsSet, organisations, cur
           }}
           sidebar={
             steps ? undefined : (
-              <nav aria-label={copy.layout.navLabel} data-testid="org-places" className={cn("flex gap-1", layout === "laptop" ? "flex-col" : "flex-row flex-wrap")}>
-                {layout === "laptop" ? <p className="px-3 pb-1 text-small font-semibold text-beach-muted">{orgCopy.shell.organisationNav}</p> : null}
+              <nav aria-label={admin ? copy.admin.navLabel : copy.layout.navLabel} data-testid="org-places" className={cn("flex gap-1", layout === "laptop" ? "flex-col" : "flex-row flex-wrap")}>
+                {layout === "laptop" ? <p className="px-3 pb-1 text-small font-semibold text-beach-muted">{admin ? admin.roleLabel : orgCopy.shell.organisationNav}</p> : null}
                 {places.map((p) => (
-                  <Link key={p.href} href={p.href} aria-current={placeActive(p.href) ? "page" : undefined} className={cn("flex min-h-[var(--org-ctl)] items-center gap-2 rounded-[8px] px-3 text-body font-semibold hover:bg-beach-surface", placeActive(p.href) && "bg-beach-surface")}>
+                  <Link key={p.href} href={p.href} aria-current={placeActive(p) ? "page" : undefined} className={cn("flex min-h-[var(--org-ctl)] items-center gap-2 rounded-[8px] px-3 text-body font-semibold hover:bg-beach-surface", placeActive(p) && "bg-beach-surface")}>
                     <p.icon aria-hidden className="size-4" />
                     {p.label}
                   </Link>
@@ -169,7 +173,12 @@ export function OrgFrame({ productName, email, passwordIsSet, organisations, cur
                     {p.label}
                   </MenuItem>
                 ))}
-                {isPlatformAdmin ? (
+                {admin ? (
+                  <MenuItem icon={ShieldCheck} href="/org" onClick={close}>
+                    {admin.organiserLabel}
+                  </MenuItem>
+                ) : null}
+                {isPlatformAdmin && !admin ? (
                   <MenuItem icon={ShieldCheck} href="/admin" onClick={close}>
                     {orgCopy.shell.adminLink(productName)}
                   </MenuItem>
@@ -191,9 +200,11 @@ export function OrgFrame({ productName, email, passwordIsSet, organisations, cur
                     ))}
                   </>
                 ) : null}
-                <MenuItem icon={KeyRound} href="/org/set-password" onClick={close}>
-                  {passwordIsSet ? copy.layout.changePassword : copy.layout.setPassword}
-                </MenuItem>
+                {admin ? null : (
+                  <MenuItem icon={KeyRound} href="/org/set-password" onClick={close}>
+                    {passwordIsSet ? copy.layout.changePassword : copy.layout.setPassword}
+                  </MenuItem>
+                )}
                 <form action={signOutAction} method="post">
                   <button type="submit" role="menuitem" className="flex min-h-[var(--org-ctl)] w-full items-center gap-2 rounded-[8px] px-3 text-left text-body font-semibold text-beach-ink hover:bg-beach-surface">
                     <LogOut aria-hidden className="size-4 shrink-0" />

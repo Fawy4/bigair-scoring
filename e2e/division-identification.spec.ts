@@ -38,6 +38,7 @@ test("each division can use the event's identification (default) or its own sche
 
     // own scheme: bib numbers, with an edited palette name
     await page.getByRole("radio", { name: "This division has its own" }).check();
+    await page.getByTestId("advanced-toggle").click(); // the editor is behind "More settings"
     await page.locator("#ident-preset").selectOption({ label: "Bib / sail numbers" });
     await page.getByRole("button", { name: "Save this division’s Rider label" }).click();
     await expect.poll(async () => (await org.db.from("divisions").select("identification").eq("id", ids["Pro Men"]).single()).data?.identification).toMatchObject({ scheme: { id: "bib-numbers", primary: "bib_number" } });
@@ -70,6 +71,7 @@ test("the Event step's 'Will riders wear coloured lycras?' picks Name call-out f
   try {
     await org.signIn(page, "/org/events/new");
     await expect(page.getByRole("radio", { name: /No/ }).first()).toBeChecked();
+    await page.getByTestId("advanced-toggle").click();
     await expect(page.locator("#ident-preset")).toHaveValue("name-callout");
   } finally {
     await org.cleanup();

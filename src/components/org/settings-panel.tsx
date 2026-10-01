@@ -16,7 +16,7 @@ interface SettingsPanelProps {
   sentence: string;
   sentenceTestId?: string;
   /** The quiet "Load…" menu: names of saved presets (the preview) or `{ id, label }` with `onLoad` (the real screens), and "Save as preset…". */
-  loadMenu: { builtIn: LoadItem[]; mine: LoadItem[]; onLoad?: (id: string) => void; onSaveAsPreset?: () => void; disabledReason?: string };
+  loadMenu?: { builtIn: LoadItem[]; mine: LoadItem[]; onLoad?: (id: string) => void; onSaveAsPreset?: () => void; disabledReason?: string };
   /** A note above the dials: a locked division says so here, once. */
   banner?: ReactNode;
   /** Under the Advanced fold: Save buttons, export and import. */
@@ -57,7 +57,7 @@ export function SettingsPanel({ title, sentence, sentenceTestId = "model-sentenc
     <section data-testid={testId} aria-label={title} className="rounded-card border border-beach-line bg-beach-bg">
       <header className="flex items-center justify-between gap-2 border-b border-beach-line px-4 py-2">
         <h3 className="text-[14px] font-semibold">{title}</h3>
-        {loadMenu.disabledReason ? (
+        {!loadMenu ? null : loadMenu.disabledReason ? (
           <Button variant="quiet" icon={FolderOpen} disabled disabledReason={loadMenu.disabledReason}>
             {orgCopy.settings.load}
           </Button>

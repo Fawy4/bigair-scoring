@@ -25,16 +25,16 @@ export default async function EventStepPage({ params }: { params: Promise<{ id: 
     supabase.from("heats").select("id", { count: "exact", head: true }).eq("event_id", event.id).eq("status", "published"),
   ]);
   return (
-    <main className="flex max-w-3xl flex-col gap-6">
-      <h1 className="text-3xl font-extrabold">{copy.event.stepHeading}</h1>
+    <main className="flex min-w-0 flex-col gap-4">
+      <h1 className="text-[20px] font-semibold leading-tight">{copy.event.stepHeading}</h1>
       <EventForm
         key={event.id}
         initial={{ id: event.id, organisationId: event.organisation_id, status: event.status, values: valuesFromRow(event), savedSlug: event.slug }}
         timeZones={knownTimeZones()}
         schemes={schemes}
       />
-      <section className="panel flex flex-col gap-4" aria-labelledby="lifecycle-h">
-        <h2 id="lifecycle-h" className="text-2xl font-extrabold">
+      <section className="org-new flex flex-col gap-3 rounded-card border border-beach-line p-4" aria-labelledby="lifecycle-h">
+        <h2 id="lifecycle-h" className="text-[14px] font-semibold">
           {copy.eventLifecycle.heading}
         </h2>
         <EventLifecycle

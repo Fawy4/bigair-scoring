@@ -9,12 +9,12 @@ export const metadata = { title: copy.orgHome.newEvent };
 
 export default async function NewEventPage() {
   const { supabase, current } = await getOrgContext();
-  if (!current) return <p className="panel text-lg font-semibold">{copy.orgHome.noOrg}</p>;
+  if (!current) return <p className="rounded-card border border-beach-line p-4 text-body font-semibold">{copy.orgHome.noOrg}</p>;
   const schemes = await loadIdentificationSchemes(supabase, current.id);
   return (
-    <main className="flex max-w-3xl flex-col gap-6">
-      <h1 className="text-3xl font-extrabold">{copy.event.newHeading(current.name)}</h1>
-      <p className="font-semibold">{copy.event.newIntro}</p>
+    <main className="flex min-w-0 flex-col gap-4">
+      <h1 className="text-[20px] font-semibold leading-tight">{copy.event.newHeading(current.name)}</h1>
+      <p className="text-body font-medium text-beach-muted">{copy.event.newIntro}</p>
       <EventForm
         initial={{ id: null, organisationId: current.id, status: "draft", values: blankEventValues(current.settings.defaultTimezone), savedSlug: null }}
         timeZones={knownTimeZones()}

@@ -7,14 +7,12 @@ export const metadata = { title: copy.orgSettings.heading };
 
 export default async function SettingsPage() {
   const { current } = await getOrgContext();
-  if (!current) return <p className="panel text-lg font-semibold">{copy.orgHome.noOrg}</p>;
+  if (!current) return <p className="rounded-card border border-beach-line p-4 text-body font-semibold">{copy.orgHome.noOrg}</p>;
   const canEdit = current.role === "owner" || current.role === "admin";
   return (
-    <main className="flex max-w-2xl flex-col gap-6">
-      <h1 className="text-3xl font-extrabold">{copy.orgSettings.heading}</h1>
-      {canEdit ? null : (
-        <p className="panel text-lg font-semibold">{copy.orgSettings.readOnly}</p>
-      )}
+    <main className="flex min-w-0 max-w-3xl flex-col gap-4">
+      <h1 className="text-[20px] font-semibold leading-tight">{copy.orgSettings.heading}</h1>
+      {canEdit ? null : <p className="rounded-card border border-beach-line p-4 text-body font-semibold">{copy.orgSettings.readOnly}</p>}
       <SettingsForm
         canEdit={canEdit}
         timeZones={knownTimeZones()}
