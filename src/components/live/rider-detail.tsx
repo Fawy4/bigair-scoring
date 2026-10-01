@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
  * Everything about one rider, in the Details view: the counter, left and right counts, and every attempt (landed or crashed) with my score and a
  * "Counts" pill on the tricks that count. Chosen by tapping the rider's card.
  */
-export function RiderDetail({ sheet }: { sheet: RiderSheetModel }) {
+export function RiderDetail({ sheet, onEdit }: { sheet: RiderSheetModel; onEdit?: (id: string | number) => void }) {
   const T = copy.live.sheet;
   return (
     <section data-testid="rider-detail" aria-label={T.title(sheet.name)} className="flex flex-col gap-1.5 rounded-card border border-beach-line bg-beach-surface p-2">
@@ -18,8 +18,15 @@ export function RiderDetail({ sheet }: { sheet: RiderSheetModel }) {
         {T.attempts} {sheet.counter} · {T.leftRight(sheet.left, sheet.right)}
       </p>
       <ol className="flex flex-col divide-y divide-beach-line rounded-xl border border-beach-line bg-beach-bg">
-        {[...sheet.attempts].reverse().map((a) => (
-          <li key={a.seq} data-counted={a.counted} className={cn("flex items-center justify-between gap-2 px-2 py-1", a.counted && "bg-beach-tint-grade3")}>
+        {[...sheet.attempts].reverse().map((a) => {
+          const editable = onEdit && a.id !== undefined && a.status !== "crashed";
+          const Row = editable ? "button" : "div";
+          return (
+          <li key={a.seq} data-counted={a.counted} className={cn(a.counted && "bg-beach-tint-grade3")}>
+            <Row
+              {...(editable ? { type: "button" as const, onClick: () => onEdit!(a.id!), "data-testid": "detail-row-edit", "aria-label": `${copy.live.queue.tapToCorrect}: ${a.seq}` } : {})}
+              className={cn("flex w-full items-center justify-between gap-2 px-2 py-1 text-left", editable && "min-h-row")}
+            >
             <span className="min-w-0 truncate text-body font-medium">
               {copy.live.result.attemptLine(a.seq, a.trick)}
               <span className="ml-1.5 text-small text-beach-muted">{a.direction === "left" ? copy.live.summary.left : a.direction === "right" ? copy.live.summary.right : ""}</span>
@@ -40,8 +47,10 @@ export function RiderDetail({ sheet }: { sheet: RiderSheetModel }) {
                 <span className="text-body font-semibold tabular-nums">{a.myScoreLabel}</span>
               )}
             </span>
+            </Row>
           </li>
-        ))}
+          );
+        })}
       </ol>
     </section>
   );

@@ -48,7 +48,7 @@ export function LiveShell({ children, soundDefault = false }: { children: React.
   }, [theme]);
   return (
     <Ctx.Provider value={{ theme, setTheme, size, setSize, soundOn, setSoundOn }}>
-      <div data-testid="live-root" data-theme={theme} data-text={size} className={cn(theme === "dark" ? "beach-dark" : "beach-day", size === "large" ? "beach-text-large" : "beach-text-normal", "mx-auto flex h-[100dvh] w-full max-w-[640px] flex-col bg-beach-bg text-beach-ink")}>
+      <div data-testid="live-root" data-theme={theme} data-text={size} className={cn(theme === "dark" ? "beach-dark" : "beach-day", size === "large" ? "beach-text-large" : "beach-text-normal", "relative mx-auto flex h-[100dvh] w-full max-w-[640px] flex-col bg-beach-bg text-beach-ink")}>
         {children}
       </div>
     </Ctx.Provider>

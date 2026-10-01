@@ -1995,6 +1995,7 @@ export const copy = {
       detailsOn: "Details on",
       heatLine: (heat: string, seat: string) => `${heat} · ${seat}`,
       between: "Between heats",
+      judgeTitle: "Judge",
     },
     queue: {
       waiting: (n: number) => `${n} waiting`,
@@ -2308,6 +2309,10 @@ export const copy = {
     sound: "Sound",
     sheetSubmittedAt: "Submitted",
     summaryShow: "Summary card",
+    stillSending: "Still sending your scores. Try Submit again when it says Synced.",
+    reviewTab: "Review",
+    impressionTab: "Impression",
+    nothingToScore: "Nothing to score for this heat.",
   },
   /** The spotter's phone (docs/PLAN-phase-5 step 2). */
   spotter: {

@@ -25,11 +25,13 @@ describe("which heat a phone opens by itself", () => {
     const paused = heat("h3", "men", { status: "paused", started_at: iso("10:00:00"), paused_at: iso("10:03:00") });
     expect(pickCurrentHeat({ ...base, heats: [paused], viewer: { role: "spotter" } })).toMatchObject({ phase: "paused", heat: { id: "h3" } });
   });
-  it("a heat whose time is up is 'ended' even before the database says so; the judge stays on it until they submit", () => {
+  it("a heat whose time is up is 'ended' even before the database says so; the judge stays on it, submitted or not, until another heat starts", () => {
     const late = heat("h4", "men", { status: "running", started_at: iso("09:50:00") });
     const picked = pickCurrentHeat({ ...base, heats: [late], viewer: { role: "judge", seatId: "j1" } });
     expect(picked).toMatchObject({ phase: "ended", heat: { id: "h4" } });
-    expect(pickCurrentHeat({ ...base, heats: [late], viewer: { role: "judge", seatId: "j1" }, submittedHeatIds: new Set(["h4"]) }).heat).toBeNull();
+    expect(pickCurrentHeat({ ...base, heats: [late], viewer: { role: "judge", seatId: "j1" }, submittedHeatIds: new Set(["h4"]) }).heat?.id).toBe("h4");
+    const next = heat("h9", "men", { status: "running", started_at: iso("10:04:00") });
+    expect(pickCurrentHeat({ ...base, heats: [late, next], viewer: { role: "judge", seatId: "j1" } }).heat?.id).toBe("h9");
   });
   it("a spotter is not held on an ended heat: between heats they see 'Next'", () => {
     const done = heat("h5", "men", { status: "ended", started_at: iso("09:40:00"), ended_at: iso("09:50:00") });

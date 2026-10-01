@@ -8,6 +8,7 @@ import { RiderTile } from "./rider-tile";
 import { ScorePad } from "./score-pad";
 import { formatPadValue } from "@/lib/live/score-pad";
 import type { ImpressionRider } from "@/lib/live/design-fixtures";
+import type { DivisionLive } from "@/lib/schemas/division-live";
 import type { Scale } from "@/lib/schemas/scoring-model";
 import { copy } from "@/lib/ui-copy";
 
@@ -24,6 +25,9 @@ export function ImpressionCard({
   submitted,
   onSubmit,
   caption,
+  summaryParts,
+  error,
+  scoreLabel,
 }: {
   riders: ImpressionRider[];
   scale: Scale;
@@ -32,6 +36,11 @@ export function ImpressionCard({
   submitted: boolean;
   onSubmit: () => void;
   caption?: React.ReactNode;
+  summaryParts?: DivisionLive["impressionSummary"];
+  /** The server's answer to Submit, in words (for example a rider still missing). */
+  error?: string | null;
+  /** The model's own name for this score ("Variety"). Defaults to the house words. */
+  scoreLabel?: string;
 }) {
   const T = copy.live.impression;
   const [active, setActive] = useState(riders[0]?.id);
@@ -42,7 +51,7 @@ export function ImpressionCard({
   return (
     <div data-testid="impression-card" className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-heading font-semibold">{T.heading}</h3>
+        <h3 className="text-heading font-semibold">{scoreLabel ?? T.heading}</h3>
         <span data-testid="impression-progress" className="shrink-0 whitespace-nowrap rounded-full border border-beach-line bg-beach-surface px-2 py-0 text-small font-semibold tabular-nums">
           {T.progress(done, riders.length)}
         </span>
@@ -59,9 +68,14 @@ export function ImpressionCard({
         })}
       </div>
       <section data-testid="impression-rider" data-rider={rider.id} className="flex flex-col gap-1.5">
-        <HeatSummaryCard summary={rider.summary} />
+        <HeatSummaryCard summary={rider.summary} parts={summaryParts} />
         <ScorePad scale={scale} value={values[rider.id] ?? null} onChange={(v) => onChange(rider.id, v)} label={T.heading} caption={caption} disabled={submitted} />
       </section>
+      {error ? (
+        <p role="alert" data-testid="submit-error" className="rounded-lg border border-beach-failed bg-beach-surface px-2 py-1 text-body font-semibold">
+          {error}
+        </p>
+      ) : null}
       {submitted ? (
         <p data-testid="submitted-note" className="rounded-lg border border-beach-live bg-beach-surface px-2 py-1 text-body font-semibold">
           {T.submitted}

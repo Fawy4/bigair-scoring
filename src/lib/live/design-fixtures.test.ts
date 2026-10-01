@@ -154,7 +154,7 @@ describe("the Details view (rider cards and everything per rider)", () => {
     expect(q.riders.length).toBeGreaterThanOrEqual(3);
     expect(q.riders.length).toBeLessThanOrEqual(4);
     expect(q.riders[0]).toMatchObject({ id: "red", attempts: 6, max: 7 });
-    expect(q.riders.some((r) => r.attempts >= r.max)).toBe(true);
+    expect(q.riders.some((r) => r.attempts >= (r.max ?? Infinity))).toBe(true);
   });
   it("Red's sheet: counted tricks 1, 2, 5, the crash, Left 3 · Right 1, counter 6 / 7, attempt 2 scored 8.25", () => {
     const s = q.sheets.red;

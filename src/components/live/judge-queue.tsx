@@ -67,6 +67,8 @@ export interface JudgeQueueViewProps {
   /** Why nothing can be changed (the sheet is locked), or null. */
   lockedMessage?: string | null;
   startDetails?: boolean;
+  /** No header of its own: the parent draws one (the heat-end screen). A small Details toggle sits in the body instead. */
+  bare?: boolean;
   /** Under the rider's sheet in the Details view (e.g. "Log an attempt" when judges may). */
   detailsExtra?: (riderId: string) => React.ReactNode;
 }
@@ -101,6 +103,7 @@ export function JudgeQueueView(p: JudgeQueueViewProps) {
 
   return (
     <>
+      {p.bare ? null : (
       <ScreenHeader
         heatName={p.heatName}
         seat={p.seat}
@@ -115,7 +118,13 @@ export function JudgeQueueView(p: JudgeQueueViewProps) {
           setEditing(null);
         }}
       />
+      )}
       <div data-testid="screen-body" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 py-1.5">
+        {p.bare ? (
+          <Chip data-testid="review-details-toggle" pressed={details} onClick={() => { setDetails((d) => !d); setEditing(null); }} className="self-start">
+            {details ? T.header.detailsOn : T.header.details}
+          </Chip>
+        ) : null}
         {p.lockedMessage ? (
           <p role="status" data-testid="sheet-locked" className="rounded-card border border-beach-border bg-beach-surface px-2 py-1 text-body font-semibold">
             {p.lockedMessage}
@@ -149,7 +158,15 @@ export function JudgeQueueView(p: JudgeQueueViewProps) {
                 <RiderTile key={r.id} compact label={r.label} attempts={r.attempts} max={r.max} selected={picked === r.id} onSelect={() => setPicked(r.id)} />
               ))}
             </div>
-            {p.sheets[picked] ? <RiderDetail sheet={p.sheets[picked]} /> : null}
+            {p.sheets[picked] ? (
+              <RiderDetail
+                sheet={p.sheets[picked]}
+                onEdit={locked ? undefined : (id) => {
+                  setDetails(false);
+                  setEditing(id);
+                }}
+              />
+            ) : null}
             {p.detailsExtra?.(picked)}
           </div>
         ) : (

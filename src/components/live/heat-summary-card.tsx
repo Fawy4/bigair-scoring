@@ -1,20 +1,27 @@
-import type { HeatSummary } from "@/lib/live/design-fixtures";
+import type { HeatSummary } from "@/lib/engine/scoring/summary";
+import type { DivisionLive } from "@/lib/schemas/division-live";
 import { copy } from "@/lib/ui-copy";
 
 /**
  * The rider's heat in one compact card, above the Impression / Variety pad: attempts / landed / crashed, left and right, repeats ×n, and the landed tricks
  * with their direction and the judge's own score. Nothing about rotations or families.
  */
-export function HeatSummaryCard({ summary }: { summary: HeatSummary }) {
+export function HeatSummaryCard({ summary, parts }: { summary: HeatSummary; parts?: DivisionLive["impressionSummary"] }) {
+  const on = { counts: true, variety: true, directions: true, landedList: true, ...(parts ?? {}) };
   const T = copy.live.summary;
   return (
     <section data-testid="heat-summary" aria-label={T.heading} className="flex flex-col gap-1.5 rounded-card border border-beach-line bg-beach-surface p-2">
-      <p data-testid="summary-counts" className="text-body font-semibold">
-        {T.counts(summary.attempts, summary.landed, summary.crashed)}
-      </p>
-      <p className="text-body font-medium text-beach-muted">
-        {T.leftRight(summary.left, summary.right)} · {T.repeats(summary.repeats)}
-      </p>
+      {on.counts ? (
+        <p data-testid="summary-counts" className="text-body font-semibold">
+          {T.counts(summary.attempts, summary.landed, summary.crashed)}
+        </p>
+      ) : null}
+      {on.directions || on.variety ? (
+        <p className="text-body font-medium text-beach-muted">
+          {[on.directions ? T.leftRight(summary.left, summary.right) : null, on.variety ? T.repeats(summary.repeats) : null].filter(Boolean).join(" · ")}
+        </p>
+      ) : null}
+      {on.landedList ? (
       <ol className="mt-1 flex flex-col divide-y divide-beach-line" aria-label={T.landedList}>
         {summary.landedList.map((t) => (
           <li key={t.seq} className="flex items-baseline justify-between gap-3 py-0.5">
@@ -26,6 +33,7 @@ export function HeatSummaryCard({ summary }: { summary: HeatSummary }) {
           </li>
         ))}
       </ol>
+      ) : null}
     </section>
   );
 }

@@ -45,7 +45,7 @@ export function SpotterLive() {
         canLog
         categoryLabelOf={categoryLabel}
         onLog={(id) => {
-          setCounts((c) => c.map((n, i) => (live.riders[i].id === id ? Math.min(n + 1, live.riders[i].max) : n)));
+          setCounts((c) => c.map((n, i) => (live.riders[i].id === id ? Math.min(n + 1, live.riders[i].max ?? n + 1) : n)));
           return `preview-${Date.now()}`;
         }}
         onUndo={() => {}}

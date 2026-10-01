@@ -2,6 +2,8 @@
 import type { LabelModel } from "@/lib/identification/rider-label";
 
 export interface SheetAttempt {
+  /** The attempt's id, so a row can be tapped to be corrected. */
+  id?: string | number;
   seq: number;
   trick: string;
   direction: "left" | "right" | null;
@@ -23,5 +25,5 @@ export interface LiveRider {
   id: string;
   label: LabelModel;
   attempts: number;
-  max: number;
+  max: number | null;
 }

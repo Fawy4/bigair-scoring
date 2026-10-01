@@ -11,7 +11,7 @@ export interface PickInput {
   nowServer: number;
   /** `?heat=` on the address. */
   pinnedId?: string | null;
-  /** Heats whose sheet this judge has submitted (their impression step is finished). */
+  /** Not used to choose the heat (a judge stays on the heat they submitted, read-only, until another one starts); kept so callers need no change. */
   submittedHeatIds?: ReadonlySet<string>;
 }
 
@@ -26,7 +26,7 @@ export function heatEnd(h: HeatRow): number {
 
 /**
  * Which heat an official's phone shows by itself: the running one (else the paused one); for a judge, a heat of their own panel. When none is
- * running a judge stays on the heat that has just ended until their sheet is submitted (the Impression / Variety step); everybody else sees
+ * running a judge stays on the heat that has just ended (the Impression / Variety step, then read-only once submitted) until another heat starts; everybody else sees
  * "Next: …". A heat pinned with `?heat=` wins.
  */
 export function pickCurrentHeat(i: PickInput): { heat: HeatRow | null; phase: HeatPhase } {
@@ -50,7 +50,7 @@ export function pickCurrentHeat(i: PickInput): { heat: HeatRow | null; phase: He
   if (paused[0]) return { heat: paused[0], phase: "paused" };
   if (scores) {
     const waiting = mine
-      .filter((h) => phaseOf(h) === "ended" && (h.status === "ended" || h.status === "running") && !i.submittedHeatIds?.has(h.id) && i.nowServer - heatEnd(h) < ENDED_WINDOW_MS)
+      .filter((h) => phaseOf(h) === "ended" && (h.status === "ended" || h.status === "running") && i.nowServer - heatEnd(h) < ENDED_WINDOW_MS)
       .sort((a, b) => heatEnd(b) - heatEnd(a));
     if (waiting[0]) return { heat: waiting[0], phase: "ended" };
   }
