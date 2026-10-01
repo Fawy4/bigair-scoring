@@ -232,6 +232,15 @@ describe.skipIf(!ENV_OK)("Public site functions (hosted development project)", (
     expect(codeOf(await anon().from("heat_results").select("breakdown").eq("heat_id", ladder.heats["R1-H1"]))).toBe("");
   });
 
+  it("an organiser can create an event with the simulation flag in the same insert (the Event step sends it), and a visitor never sees a simulation one", async () => {
+    const slug = `rls-p6-new-${f.ids.orgA.slice(0, 6)}`;
+    const ok = await f.clients.orgA.from("events").insert({ organisation_id: f.ids.orgA, name: "Created by the form", slug, timezone: "Africa/Cairo", start_date: "2026-10-10", end_date: "2026-10-11", status: "published", is_simulation: true });
+    expect(ok.error?.message ?? "").toBe("");
+    expect((await rpc("get_public_site", { p_slug: slug })).found).toBe(false);
+    await f.s.from("events").update({ is_simulation: false }).eq("slug", slug);
+    expect((await rpc("get_public_site", { p_slug: slug })).found).toBe(true);
+  });
+
   it("the rules function hands over each division's scoring model and format of a public event, and only that", async () => {
     const r = await rpc("get_public_rules", { p_event: ids.open });
     expect(r.allowed).toBe(true);
