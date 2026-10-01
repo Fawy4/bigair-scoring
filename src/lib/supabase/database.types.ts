@@ -141,6 +141,7 @@ export type Database = {
           created_at: string
           description: string | null
           draw: Json | null
+          draw_at_lock: Json | null
           draw_locked_at: string | null
           event_id: string
           format_params: Json
@@ -163,6 +164,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           draw?: Json | null
+          draw_at_lock?: Json | null
           draw_locked_at?: string | null
           event_id: string
           format_params?: Json
@@ -185,6 +187,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           draw?: Json | null
+          draw_at_lock?: Json | null
           draw_locked_at?: string | null
           event_id?: string
           format_params?: Json
@@ -300,6 +303,47 @@ export type Database = {
             columns: ["rider_id"]
             isOneToOne: false
             referencedRelation: "riders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_reset_snapshots: {
+        Row: {
+          event_id: string
+          expires_at: string
+          id: string
+          organisation_id: string
+          payload: Json
+          restored_at: string | null
+          taken_at: string
+          taken_by: string | null
+        }
+        Insert: {
+          event_id: string
+          expires_at?: string
+          id?: string
+          organisation_id: string
+          payload: Json
+          restored_at?: string | null
+          taken_at?: string
+          taken_by?: string | null
+        }
+        Update: {
+          event_id?: string
+          expires_at?: string
+          id?: string
+          organisation_id?: string
+          payload?: Json
+          restored_at?: string | null
+          taken_at?: string
+          taken_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_reset_snapshots_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -2765,6 +2809,7 @@ export type Database = {
         }
         Returns: Json
       }
+      purge_expired_reset_snapshots: { Args: never; Returns: number }
       purge_organisation: { Args: { p_org: string }; Returns: undefined }
       regenerate_seat_pin: {
         Args: { p_actor?: string; p_enc: string; p_pin: string; p_seat: string }
@@ -2870,6 +2915,16 @@ export type Database = {
         }
         Returns: Json
       }
+      reset_event: {
+        Args: {
+          p_draws: Json
+          p_event: string
+          p_reason: string
+          p_slug: string
+        }
+        Returns: Json
+      }
+      reset_event_preview: { Args: { p_event: string }; Returns: Json }
       resolve_flag: {
         Args: { p_flag: string; p_resolution?: string }
         Returns: {
@@ -2894,6 +2949,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      restore_event_reset: { Args: { p_snapshot: string }; Returns: Json }
       resume_heat: {
         Args: { p_heat: string }
         Returns: {
