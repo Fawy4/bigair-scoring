@@ -144,7 +144,7 @@ function Dashboard({ layout, held, setHold }: { layout: ShellLayout; held: boole
       <PageTitle>{STEP_LABEL.golive}</PageTitle>
       <div className={cn("grid items-start gap-4", laptop ? "grid-cols-2" : "grid-cols-1")}>
         <ReadinessList checks={READINESS} />
-        <NowNextCard now={NOW_NEXT.now.label} timerText={TIMER.text} serverTime={SERVER_TIME} next={NOW_NEXT.next} after={NOW_NEXT.after} held={held} />
+        <NowNextCard now={NOW_NEXT.now.label} timerText={TIMER.text} serverTime={SERVER_TIME} serverZone="Cairo" next={NOW_NEXT.next} after={NOW_NEXT.after} held={held} />
         <WindCallSlot />
         <QuickActions runningHeat={NOW_NEXT.now.label} held={held} onHold={() => setHold(true)} onResume={() => setHold(false)} />
         <div className={laptop ? "col-span-2" : undefined}>

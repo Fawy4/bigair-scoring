@@ -2,6 +2,10 @@
 
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
+import { Check, Copy, ExternalLink } from "lucide-react";
+import { Button } from "@/components/org/button";
+import { OrgCard } from "@/components/org/org-card";
+import { QR_COLOURS } from "@/lib/org-design/qr";
 import { copy } from "@/lib/ui-copy";
 
 /** A link with a Copy button and its QR code, for the officials' join page and the public event page. */
@@ -10,43 +14,47 @@ export function ShareCard({ title, text, url, testId }: { title: string; text: s
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     let live = true;
-    QRCode.toDataURL(url, { margin: 1, width: 240 }).then((d) => live && setQr(d)).catch(() => live && setQr(null));
+    QRCode.toDataURL(url, { margin: 1, width: 240, color: QR_COLOURS }).then((d) => live && setQr(d)).catch(() => live && setQr(null));
     return () => {
       live = false;
     };
   }, [url]);
   return (
-    <section className="panel flex flex-wrap items-center gap-4" data-testid={testId} aria-label={title}>
-      {qr ? (
-        // eslint-disable-next-line @next/next/no-img-element -- a generated data URL
-        <img src={qr} alt={copy.dashboard.qrLabel(title)} width={120} height={120} className="border-2 border-[#111]" />
-      ) : (
-        <span className="h-[120px] w-[120px] border-2 border-dashed border-[#111]" aria-hidden />
-      )}
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <h3 className="text-lg font-extrabold">{title}</h3>
-        <p className="font-semibold">{text}</p>
-        <a href={url} target="_blank" rel="noopener noreferrer" className="break-all font-bold underline" data-testid={`${testId}-link`}>
-          {url}
-        </a>
-        <div>
-          <button
-            type="button"
-            className="btn"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(url);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2500);
-              } catch {
-                setCopied(false);
-              }
-            }}
-          >
-            {copied ? copy.dashboard.copied : copy.dashboard.copyLink}
-          </button>
+    <OrgCard title={title} testId={testId}>
+      <div className="flex flex-wrap items-center gap-4">
+        {qr ? (
+          // eslint-disable-next-line @next/next/no-img-element -- a generated data URL
+          <img src={qr} alt={copy.dashboard.qrLabel(title)} width={120} height={120} className="rounded-[8px]" />
+        ) : (
+          <span className="size-[120px] rounded-[8px] border border-dashed border-beach-border" aria-hidden />
+        )}
+        <div className="flex min-w-0 flex-1 basis-56 flex-col gap-2">
+          <p className="text-small font-medium text-beach-muted">{text}</p>
+          <a href={url} target="_blank" rel="noopener noreferrer" className="break-all text-body font-semibold underline" data-testid={`${testId}-link`}>
+            {url}
+          </a>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              icon={copied ? Check : Copy}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(url);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2500);
+                } catch {
+                  setCopied(false);
+                }
+              }}
+            >
+              {copied ? copy.dashboard.copied : copy.dashboard.copyLink}
+            </Button>
+            <Button variant="quiet" icon={ExternalLink} href={url}>
+              {copy.dashboard.openLink}
+            </Button>
+          </div>
         </div>
       </div>
-    </section>
+    </OrgCard>
   );
 }

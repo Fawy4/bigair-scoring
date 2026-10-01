@@ -1,4 +1,5 @@
 import { copy } from "@/lib/ui-copy";
+import { readiness } from "@/lib/org/readiness";
 
 /** Plain-language "what's missing" for each wizard step (docs/06 §1: unfinished steps say what is missing). */
 export interface EventStepInput {
@@ -35,12 +36,18 @@ export function divisionsStepMissing(divisions: DivisionStepInput[]): string[] {
   return out;
 }
 
+export type StepState = "done" | "attention" | "not_started";
+
 export interface StepInfo {
-  key: "event" | "divisions" | "riders" | "officials" | "draw" | "schedule";
+  key: "event" | "divisions" | "riders" | "officials" | "draw" | "schedule" | "golive";
   label: string;
   /** Steps that arrive in a later release are shown but not clickable. */
   available: boolean;
   missing: string[];
+  /** not_started: nothing entered; attention: something entered and something missing; done: nothing missing. */
+  state: StepState;
+  /** One line for the rail: the first missing item plus "(+N more)", or what is set. */
+  reason: string;
 }
 
 /** Counts the later steps report on (read once by the wizard layout). */
@@ -55,6 +62,15 @@ export interface SetupCounts {
   drawn?: string[];
   locked?: string[];
   activePlan?: boolean;
+  /** A plan is active for today (event time zone). */
+  activePlanToday?: boolean;
+  /** All seats of the event, whatever their role or status; and plans of any kind. */
+  seatCount?: number;
+  planCount?: number;
+  /** Active seats whose PIN cannot be shown (made before PINs were stored). */
+  seatsWithoutPin?: number;
+  /** Judges assigned to each division's panel against what its scoring rules ask for. */
+  panels?: Array<{ id: string; name: string; minJudges: number; assigned: number; hasScoringModel: boolean }>;
 }
 
 export function ridersStepMissing(divisions: DivisionStepInput[], counts: SetupCounts): string[] {
@@ -82,13 +98,39 @@ export function scheduleStepMissing(counts: SetupCounts): string[] {
   return counts.activePlan ? [] : [copy.wizard.missing.noPlan];
 }
 
+function oneLine(key: string, missing: string[], state: StepState): string {
+  if (missing.length > 0) return missing[0] + (missing.length > 1 ? copy.wizard.more(missing.length - 1) : "");
+  return state === "done" ? copy.wizard.reasonDone[key] : copy.wizard.reasonEmpty[key];
+}
+
+function stepOf(key: StepInfo["key"], missing: string[], entered: boolean): StepInfo {
+  const state: StepState = !entered ? "not_started" : missing.length > 0 ? "attention" : "done";
+  return { key, label: copy.wizard.stepNames[key], available: true, missing, state, reason: oneLine(key, missing, state) };
+}
+
 export function wizardSteps(event: EventStepInput | null, divisions: DivisionStepInput[], counts?: SetupCounts): StepInfo[] {
-  return [
-    { key: "event", label: copy.wizard.steps.event, available: true, missing: event ? eventStepMissing(event) : [] },
-    { key: "divisions", label: copy.wizard.steps.divisions, available: true, missing: divisionsStepMissing(divisions) },
-    { key: "riders", label: copy.wizard.steps.riders, available: true, missing: counts ? ridersStepMissing(divisions, counts) : [] },
-    { key: "officials", label: copy.wizard.steps.officials, available: true, missing: counts ? officialsStepMissing(counts) : [] },
-    { key: "draw", label: copy.wizard.steps.draw, available: true, missing: counts ? drawStepMissing(divisions, counts) : [] },
-    { key: "schedule", label: copy.wizard.steps.schedule, available: true, missing: counts ? scheduleStepMissing(counts) : [] },
+  const c = counts;
+  const anyRiders = c ? Object.values(c.ridersByDivision).some((n) => n > 0) : false;
+  const seatCount = c ? (c.seatCount ?? c.judgeSeats + c.pendingSeats) : 0;
+  const drawStarted = (c?.drawn ?? []).length > 0;
+  const planEntered = c ? Boolean(c.activePlan) || (c.planCount ?? 0) > 0 : false;
+  const eventEntered = event ? Boolean(event.name.trim() || event.start_date || event.end_date || event.location?.trim()) : false;
+
+  const steps = [
+    stepOf("event", event ? eventStepMissing(event) : [], eventEntered),
+    stepOf("divisions", divisionsStepMissing(divisions), divisions.length > 0),
+    stepOf("riders", c ? ridersStepMissing(divisions, c) : [], anyRiders),
+    stepOf("officials", c ? officialsStepMissing(c) : [], seatCount > 0),
+    stepOf("draw", c ? drawStepMissing(divisions, c) : [], drawStarted),
+    stepOf("schedule", c ? scheduleStepMissing(c) : [], planEntered),
   ];
+
+  // Go live: green when the readiness checklist is all green; not started until the Draw step has started.
+  const r = c ? readiness({ eventId: "", divisions, counts: c }) : null;
+  const goLive: StepInfo = !r || !drawStarted
+    ? { key: "golive", label: copy.wizard.stepNames.golive, available: true, missing: [], state: "not_started", reason: copy.wizard.reasonEmpty.golive }
+    : r.ready
+      ? { key: "golive", label: copy.wizard.stepNames.golive, available: true, missing: [], state: "done", reason: copy.wizard.reasonDone.golive }
+      : { key: "golive", label: copy.wizard.stepNames.golive, available: true, missing: r.checks.filter((x) => x.state !== "done").map((x) => x.sentence), state: "attention", reason: r.firstOpen!.sentence + (r.openCount > 1 ? copy.wizard.more(r.openCount - 1) : "") };
+  return [...steps, goLive];
 }

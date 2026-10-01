@@ -3,7 +3,7 @@ import { loadIdentificationSchemes } from "@/lib/org/presets";
 import { knownTimeZones } from "@/lib/schemas/org-settings";
 import { copy } from "@/lib/ui-copy";
 import { blankEventValues } from "@/lib/schemas/event-values";
-import { EventForm } from "../event-form";
+import { EventForm } from "@/app/org/(console)/events/event-form";
 
 export const metadata = { title: copy.orgHome.newEvent };
 

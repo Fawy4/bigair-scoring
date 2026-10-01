@@ -15,6 +15,8 @@ import "./org-tokens.css";
 
 export interface ShellEvent {
   name: string;
+  /** The event's dashboard (Go live). When given, the name is a link to it. */
+  href?: string;
   /** Dates in words: "10–12 Oct 2026". */
   dates: string;
   status: Extract<StatusState, "draft" | "published" | "live">;
@@ -26,11 +28,27 @@ export interface AppShellProps {
   productName: string;
   organisations: ReadonlyArray<{ id: string; name: string }>;
   currentOrganisationId: string;
-  event: ShellEvent;
-  steps: readonly RailStep[];
-  activeStep: string;
-  onStep: (key: string) => void;
-  account: { email: string; /** Daylight / Dark and Normal / Large live here. */ preferences: ReactNode };
+  /** No event open (events list, settings, feedback): the top bar shows no event part and the rail is `sidebar`. */
+  event?: ShellEvent;
+  steps?: readonly RailStep[];
+  activeStep?: string;
+  /** Step picker on a phone (the rail's own links navigate by themselves). */
+  onStep?: (key: string) => void;
+  /** Left column used instead of the step rail when there is no event. */
+  sidebar?: ReactNode;
+  /** Where the product name leads. */
+  productHref?: string;
+  /** Replaces the organisation switcher of the top bar (the real one runs a server action). */
+  orgSwitcher?: ReactNode;
+  account: {
+    email: string;
+    /** Daylight / Dark and Normal / Large live here. */
+    preferences: ReactNode;
+    /** The real menu entries (password, sign out, admin switch). When absent the preview's inert entries are shown. */
+    items?: (close: () => void) => ReactNode;
+  };
+  /** The "Note" button of the top bar; the real app has the floating note button instead. */
+  showNote?: boolean;
   children: ReactNode;
   /** Previous / Next at the foot of the step. */
   footer?: ReactNode;
@@ -94,12 +112,32 @@ function PublicLinkMenu({ url, iconOnly }: { url: string; iconOnly: boolean }) {
   );
 }
 
+function ProductName({ name, href }: { name: string; href?: string }) {
+  return href ? (
+    <a href={href} data-testid="product-name" className="text-body font-semibold">
+      {name}
+    </a>
+  ) : (
+    <span className="text-body font-semibold">{name}</span>
+  );
+}
+
+function EventName({ event }: { event: ShellEvent }) {
+  return event.href ? (
+    <a href={event.href} data-testid="rail-dashboard" className="underline">
+      {event.name}
+    </a>
+  ) : (
+    <>{event.name}</>
+  );
+}
+
 /** The top bar: product name, organisation switcher, event name and dates, state, public link with its QR code, a note button and the account menu. 48 px on a laptop. */
-function TopBar({ layout, productName, organisations, currentOrganisationId, event, account }: Pick<AppShellProps, "layout" | "productName" | "organisations" | "currentOrganisationId" | "event" | "account">) {
+function TopBar({ layout, productName, organisations, currentOrganisationId, event, account, productHref, orgSwitcher, showNote = true }: Pick<AppShellProps, "layout" | "productName" | "organisations" | "currentOrganisationId" | "event" | "account" | "productHref" | "orgSwitcher" | "showNote">) {
   const phone = layout === "phone";
   const current = organisations.find((o) => o.id === currentOrganisationId) ?? organisations[0];
   const switcher =
-    organisations.length > 1 ? (
+    orgSwitcher !== undefined ? orgSwitcher : organisations.length > 1 ? (
       <Popover label={current.name} ariaLabel={orgCopy.shell.organisation} variant="quiet" panelRole="menu" testId="org-switcher">
         {(close) => (
           <>
@@ -118,7 +156,7 @@ function TopBar({ layout, productName, organisations, currentOrganisationId, eve
       {(close) => (
         <>
           <p className="break-all px-3 pt-1 text-small font-semibold text-beach-muted">{account.email}</p>
-          {phone && switcher ? (
+          {phone && switcher && orgSwitcher === undefined ? (
             <>
               <MenuLabel>{orgCopy.shell.organisation}</MenuLabel>
               {organisations.map((o) => (
@@ -131,17 +169,23 @@ function TopBar({ layout, productName, organisations, currentOrganisationId, eve
           <MenuLabel>{orgCopy.shell.preferences}</MenuLabel>
           <div className="flex flex-col items-start gap-2 px-3 pb-2">{account.preferences}</div>
           <div className="border-t border-beach-line pt-1">
-            {phone ? (
-              <MenuItem icon={MessageSquare} onClick={close}>
-                {orgCopy.shell.note}
-              </MenuItem>
-            ) : null}
-            <MenuItem icon={KeyRound} onClick={close}>
-              {orgCopy.shell.password}
-            </MenuItem>
-            <MenuItem icon={LogOut} onClick={close}>
-              {orgCopy.shell.signOut}
-            </MenuItem>
+            {account.items ? (
+              account.items(close)
+            ) : (
+              <>
+                {phone ? (
+                  <MenuItem icon={MessageSquare} onClick={close}>
+                    {orgCopy.shell.note}
+                  </MenuItem>
+                ) : null}
+                <MenuItem icon={KeyRound} onClick={close}>
+                  {orgCopy.shell.password}
+                </MenuItem>
+                <MenuItem icon={LogOut} onClick={close}>
+                  {orgCopy.shell.signOut}
+                </MenuItem>
+              </>
+            )}
           </div>
         </>
       )}
@@ -150,33 +194,49 @@ function TopBar({ layout, productName, organisations, currentOrganisationId, eve
   if (phone) {
     return (
       <header data-testid="top-bar" className="flex items-center gap-1 border-b border-beach-line px-3 py-2">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-semibold">{event.name}</p>
-          <p className="flex flex-wrap items-center gap-x-2 text-small font-medium text-beach-muted">
-            <span>{event.dates}</span>
-            <StatusPill state={event.status} />
-          </p>
-        </div>
-        <PublicLinkMenu url={event.publicUrl} iconOnly />
+        {event ? (
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[14px] font-semibold">
+              <EventName event={event} />
+            </p>
+            <p className="flex flex-wrap items-center gap-x-2 text-small font-medium text-beach-muted">
+              <span>{event.dates}</span>
+              <StatusPill state={event.status} />
+            </p>
+          </div>
+        ) : (
+          <div className="min-w-0 flex-1">
+            <ProductName name={productName} href={productHref} />
+          </div>
+        )}
+        {event ? <PublicLinkMenu url={event.publicUrl} iconOnly /> : null}
         {accountMenu}
       </header>
     );
   }
   return (
     <header data-testid="top-bar" className="flex min-h-12 items-center gap-3 border-b border-beach-line px-4 py-1">
-      <span className="text-body font-semibold">{productName}</span>
+      <ProductName name={productName} href={productHref} />
       {switcher}
-      <span aria-hidden className="h-6 w-px bg-beach-line" />
-      <div className="flex min-w-0 items-baseline gap-2">
-        <span className="truncate text-[14px] font-semibold">{event.name}</span>
-        <span className="whitespace-nowrap text-small font-medium text-beach-muted">{event.dates}</span>
-      </div>
-      <StatusPill state={event.status} />
+      {event ? (
+        <>
+          <span aria-hidden className="h-6 w-px bg-beach-line" />
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span className="truncate text-[14px] font-semibold">
+              <EventName event={event} />
+            </span>
+            <span className="whitespace-nowrap text-small font-medium text-beach-muted">{event.dates}</span>
+          </div>
+          <StatusPill state={event.status} />
+        </>
+      ) : null}
       <div className="ml-auto flex items-center gap-1">
-        <PublicLinkMenu url={event.publicUrl} iconOnly={false} />
-        <Button variant="quiet" icon={MessageSquare}>
-          {orgCopy.shell.note}
-        </Button>
+        {event ? <PublicLinkMenu url={event.publicUrl} iconOnly={false} /> : null}
+        {showNote ? (
+          <Button variant="quiet" icon={MessageSquare}>
+            {orgCopy.shell.note}
+          </Button>
+        ) : null}
         {accountMenu}
       </div>
     </header>
@@ -184,24 +244,24 @@ function TopBar({ layout, productName, organisations, currentOrganisationId, eve
 }
 
 /** The organiser shell: top bar, left rail of steps (a step picker on a phone) and the content column. Props only: it fetches nothing. */
-export function AppShell({ layout, steps, activeStep, onStep, children, footer, ...bar }: AppShellProps) {
+export function AppShell({ layout, steps, activeStep, onStep, sidebar, children, footer, ...bar }: AppShellProps) {
   const laptop = layout === "laptop";
+  const rail = steps && activeStep !== undefined ? <StepRail steps={steps} activeKey={activeStep} onSelect={onStep} /> : sidebar;
+  const picker = steps && activeStep !== undefined && onStep ? <StepPicker steps={steps} activeKey={activeStep} onSelect={onStep} /> : sidebar;
   return (
     <ShellLayoutProvider value={layout}>
       <div data-testid="app-shell" data-layout={layout} className="flex min-h-full flex-col bg-beach-bg text-beach-ink">
         <TopBar layout={layout} {...bar} />
         <div className={cn("flex flex-1", laptop ? "flex-row" : "flex-col")}>
-          {laptop ? (
-            <aside className="w-[240px] shrink-0 border-r border-beach-line p-3">
-              <div className="sticky top-[var(--org-sticky-top,0px)]">
-                <StepRail steps={steps} activeKey={activeStep} onSelect={onStep} />
-              </div>
-            </aside>
-          ) : (
-            <div className="border-b border-beach-line px-3 py-2">
-              <StepPicker steps={steps} activeKey={activeStep} onSelect={onStep} />
-            </div>
-          )}
+          {rail ? (
+            laptop ? (
+              <aside className="w-[240px] shrink-0 border-r border-beach-line p-3">
+                <div className="sticky top-[var(--org-sticky-top,0px)]">{rail}</div>
+              </aside>
+            ) : (
+              <div className="border-b border-beach-line px-3 py-2">{picker}</div>
+            )
+          ) : null}
           <div className="flex min-w-0 flex-1 flex-col">
             <main className={cn("flex min-w-0 flex-1 flex-col", laptop ? "gap-4 p-6" : "gap-4 p-3")}>{children}</main>
             {footer}

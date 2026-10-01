@@ -12,6 +12,8 @@ interface Base {
   iconOnly?: boolean;
   /** Renders a link that looks like the button. */
   href?: string;
+  /** With href: "_blank" opens a new tab. */
+  target?: "_blank";
   className?: string;
   children?: ReactNode;
 }
@@ -30,7 +32,7 @@ const VARIANT: Record<ButtonVariant, string> = {
 // A disabled control is never faded to light grey: it keeps full-strength text, a dashed frame and a flat fill, and its reason sits under it.
 const DISABLED = "cursor-not-allowed border-dashed border-beach-border bg-beach-surface text-beach-muted";
 
-export function Button({ variant = "secondary", icon: Icon, iconOnly, href, className, children, disabled, disabledReason, type = "button", ...rest }: ButtonProps) {
+export function Button({ variant = "secondary", icon: Icon, iconOnly, href, target, className, children, disabled, disabledReason, type = "button", ...rest }: ButtonProps) {
   const reasonId = useId();
   const classes = cn(
     "inline-flex min-h-[var(--org-ctl)] items-center justify-center gap-2 rounded-[8px] border px-3 py-1.5 text-body font-semibold",
@@ -46,7 +48,7 @@ export function Button({ variant = "secondary", icon: Icon, iconOnly, href, clas
   );
   const control =
     href && !disabled ? (
-      <a href={href} data-variant={variant} className={classes} aria-label={rest["aria-label"]} data-testid={(rest as Record<string, unknown>)["data-testid"] as string | undefined} onClick={rest.onClick as unknown as MouseEventHandler<HTMLAnchorElement>}>
+      <a href={href} target={target} rel={target ? "noopener noreferrer" : undefined} data-variant={variant} className={classes} aria-label={rest["aria-label"]} data-testid={(rest as Record<string, unknown>)["data-testid"] as string | undefined} onClick={rest.onClick as unknown as MouseEventHandler<HTMLAnchorElement>}>
         {inside}
       </a>
     ) : (

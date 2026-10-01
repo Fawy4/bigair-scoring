@@ -147,8 +147,49 @@
   }
 }
 
+/* New-look parts inside a screen that still has the old look (Phase 7a): the old rules above must not reach them.
+   Wrap new-look content in `.org-new`; controls keep the organiser size (--org-ctl), 1 px frames and the beach colours. */
+@layer components {
+  .org-console .org-new :is(h1, h2, h3, label, th, legend) {
+    font-weight: 600;
+  }
+  .org-console .org-new :is(button, [role="button"], select) {
+    min-height: var(--org-ctl, 40px);
+  }
+  .org-console .org-new input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .org-console .org-new textarea {
+    min-height: var(--org-ctl, 40px);
+    border-width: 1px;
+    border-color: var(--beach-border, #475569);
+    border-radius: 8px;
+    background: transparent;
+    font-weight: 600;
+  }
+  .org-console .org-new select {
+    border-width: 1px;
+    border-color: var(--beach-border, #475569);
+    border-radius: 8px;
+    background: transparent;
+    font-weight: 600;
+  }
+  .org-console .org-new :focus-visible {
+    outline: 3px solid var(--beach-accent, #0f766e);
+    outline-offset: 2px;
+  }
+}
+
 /* Printing (start lists, official cards): only the page's own content, no header, footer, rail or buttons. */
 @media print {
+  .org-ui [data-testid="top-bar"],
+  .org-ui [data-testid="step-footer"],
+  .org-ui aside,
+  .org-ui [data-testid="step-picker"],
+  .org-ui [data-testid="org-places"] {
+    display: none !important;
+  }
+  .org-ui {
+    background: #fff !important;
+  }
   .org-console > header,
   .org-console > footer,
   .org-console .no-print,
