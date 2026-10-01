@@ -438,7 +438,9 @@ All functions below are head-only (head seat or organiser), audited, and take a 
 
 **Riders left out** (tick boxes in the confirmation, all ticked "rides again" by default):
 - A left-out rider keeps a seat in the re-run marked as not riding, so the re-run's result still places them and the ladder needs no special case.
-- How they are placed is **open question 13 below**. The owner's rule ("keeps their place from the original heat's ranking") contradicts the owner's own example. Until it is answered, 5c builds everything else and leaves this one rule behind a single function, `leftOutPlacement`.
+- **Placement (owner, §11 decision 13):** the confirmation asks, for each left-out rider, **Disqualified** or **Did not start**. The re-run's seat carries `DSQ` or `DNS`; the rider is ranked last in the re-run, DSQ below DNS (docs/03 §4.5), and audited with the re-run's reason. There is no third option.
+- **An injured rider who was clearly ahead is not a re-run case.** The head judge ends the heat and publishes what was scored; DNF for that rider if the model's `dnf.keepScores` applies.
+- Test (RLS): re-run Heat 3 with Red left out as Disqualified and Blue as Did not start → the re-run's slots carry DSQ and DNS. Publishing the re-run ranks the riders who rode first, then Blue, then Red.
 
 **Pure code (tests first, docs/08 §1G):**
 - `src/lib/live/rerun.ts` `rerunName(heat)`:
@@ -637,17 +639,10 @@ These are decisions now. The steps above already follow them. 5b copies them int
 | 11 | Simulator | The full simulator is its own PR after Phase 6 (the owner gives its spec then). 5c ships only its seed: an organiser-only "Practice heat" on events flagged `is_simulation` (never public, excluded from exports) | Step 4 |
 | 12 | Out of scope | Wind calls go to Phase 6 with the public banner. Highest Jump metres come after the event | §13 |
 | 12a | Re-run heat (changed the same day) | A one-button "Re-run heat" in 5c: head judge or organiser, one confirmation, reason required; cancels the heat and creates "Heat 3 re-run" (3R) with the same riders, seats, lycras and timing; later seats follow it; the draw stays locked; it goes right after the live heat in the run order; one audit line; riders can be left out. The manual five-step path stays as the fallback | Step 4 |
+| 13 | Riders left out of a re-run | Marked Disqualified or Did not start and ranked last in the re-run (DSQ below DNS). No third option. An injured rider who was clearly ahead is handled by not re-running: end the heat and publish what was scored | Step 4 |
 | A | Head console on a phone | Below 900 px nothing is refused. Controls, rider totals and the blocker list are shown; only the matrix asks for a tablet or laptop | Step 4 |
 | B | Timer sounds | A short beep and vibration at 1:00 and 0:00. On by default on the head console, optional on judge phones, switchable per device | Step 1 |
 | C | PR split | 5a, 5b, 5c, with the 5b-1 / 5b-2 fallback. The hours go into STATUS.md when 5a starts | §10 |
-
-### Still open
-
-13. **Riders left out of a re-run: where are they placed?** Your rule was "a left-out rider keeps their place from the original heat's ranking". That contradicts your own example. The original heat is cancelled, so its ranking is only provisional, often incomplete, and it is the result you just decided not to trust. A disqualified rider who was leading at the cancel would keep 1st and advance.
-    - *Beach:* Heat 3, 2 advance. Cancelled at minute 6 with Red provisionally 1st. Red is disqualified and left out of the re-run. Under the rule as written, Red goes to the Semi-final, and the three riders who re-ride fight for the one remaining place.
-    - **Recommendation:** the confirmation asks per left-out rider, **Disqualified** or **Did not start**. Both are ranked last in the re-run, DSQ below DNS (docs/03 §4.5), and both are audited with the re-run's reason.
-    - If you do want "keep the provisional place" for some case (e.g. an injured rider who was clearly ahead), say which case. It then becomes a third choice, allowed only when the cancelled heat had every score in.
-    - **This blocks only `leftOutPlacement` in 5c**, nothing else.
 
 ## 12. Repo rules I had to interpret
 
