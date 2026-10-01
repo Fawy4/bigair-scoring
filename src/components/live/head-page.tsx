@@ -10,7 +10,7 @@ import { JudgeScreen } from "./judge-screen";
 import { useEndAtZero, useTimerSound, useWakeLock } from "./live-hooks";
 import { LiveShell, ScreenSettings, useLiveSettings } from "./live-shell";
 import { PracticePanel } from "./practice-panel";
-import { WindCallControl } from "./wind-call-control";
+import { WindCallControl } from "@/components/wind-call-control";
 import { useLiveHeat } from "./use-live-heat";
 import { useServerClock, useTick } from "./use-server-clock";
 import { SeatHeartbeat } from "@/app/seat/heartbeat";

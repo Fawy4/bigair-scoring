@@ -40,7 +40,7 @@ export function buildScreenSlides(i: ScreenInput): ScreenSlide[] {
   const last = latestComplete(i.tabs);
   if (last) slides.push({ kind: "results", heatId: last.id, title: last.title, riders: last.riders.slice(0, SLIDE_ROWS.results) });
   const podium = i.podiums[0];
-  if (podium && podium.places.length) slides.push({ kind: "podium", division: podium.division, places: podium.places.slice(0, 3).map((p) => ({ label: p.label, name: p.name })) });
+  if (podium && podium.places.length) slides.push({ kind: "podium", division: podium.division, places: podium.places.slice(0, 6).map((p) => ({ label: p.label, name: p.name })) });
   if (i.sponsors.length) slides.push({ kind: "sponsors", sponsors: i.sponsors });
   return slides;
 }

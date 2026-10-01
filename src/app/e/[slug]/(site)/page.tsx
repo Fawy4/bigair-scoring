@@ -52,7 +52,7 @@ export default async function PublicHome({ params }: { params: Promise<{ slug: s
               {liveHeat ? (
                 <>
                   {" · "}
-                  <HeatClock startedAt={liveHeat.started_at} durationSec={liveHeat.duration_sec} pausedAt={liveHeat.paused_at} pausedTotalSec={liveHeat.paused_total_sec} status={liveHeat.effective_status === "paused" || liveHeat.paused_at ? "paused" : "running"} serverNow={timetable!.server_now} />
+                  <HeatClock leftWord={copy.pub.home.left} pausedWord={copy.pub.home.paused} startedAt={liveHeat.started_at} durationSec={liveHeat.duration_sec} pausedAt={liveHeat.paused_at} pausedTotalSec={liveHeat.paused_total_sec} status={liveHeat.effective_status === "paused" || liveHeat.paused_at ? "paused" : "running"} serverNow={timetable!.server_now} />
                 </>
               ) : null}
             </p>
@@ -105,7 +105,7 @@ export default async function PublicHome({ params }: { params: Promise<{ slug: s
           <a data-testid="share-whatsapp" href={whatsappLink(copy.pub.share.text(site.event.name), url)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-tap items-center rounded-xl border border-beach-accent bg-beach-accent px-3 text-body font-semibold text-beach-on-accent">
             {copy.pub.share.whatsapp}
           </a>
-          <CopyLink url={url} />
+          <CopyLink url={url} label={copy.pub.share.copy} doneLabel={copy.pub.share.copied} />
         </div>
         <div className="flex items-center gap-3">
           <Qr url={url} size={120} />

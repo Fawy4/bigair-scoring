@@ -185,3 +185,12 @@ Written in words. Where a row refines earlier text in this file, this section wi
 | Visibility | `heats.public_live` (null = follow the division, true, false); `heats.publish_hold`; anonymous visitors read only column-granted `heat_slots` and `divisions` and results through `get_public_results`. |
 | Re-run | `rerun_heat` creates the new heat (`rerun_of`), copies riders, seats and Lycras, moves `draw_uid`, updates the run order; refused once published. |
 | Simulation | `events.is_simulation` hides the event from every public door; `practice_add_attempt` is organiser only and only on such events. |
+
+## 16. Decisions log (Phase 6, public site)
+
+- **Public functions** (`supabase/migrations/20261006100000_phase6_public.sql`, all `security definer`, executable by `anon` and `authenticated`): `get_public_site(slug)`, `get_public_timetable(event)`, `get_public_results(event)` (replaces the 5c version: no judge-level marks, percentages only when the division asks, `highest_jump`, seats fed from unreleased heats masked), `get_public_draw(event)` (the stored draw with unreleased results, the riders of unreleased seats, seat histories, arrivals and warnings removed), `get_public_rules(event)`. All answer `allowed: false` / `found: false` for a draft, simulation or archived event or archived organisation. A division whose draw is not locked contributes nothing.
+- **Helpers in `private`**: `draw_heat`, `heat_released`, `source_visible`, `public_breakdown`, `public_draw`.
+- **`wind_calls`**: status also allows `clear`; `set_wind_call(event, status, message)` for the head judge or an organiser (audited as `wind_call_set`, message up to 140 letters). The public site shows the newest call unless it is `clear` or the event's banner switch is off.
+- **Visitors cannot select from `heat_slots`** any more (the 5c column grant is gone); seats reach them only through the functions above.
+- **Event settings** added: `screenRotateSec` (5 to 120, default 20) and `externalLeaderboards` (title, https url, embed; up to six).
+

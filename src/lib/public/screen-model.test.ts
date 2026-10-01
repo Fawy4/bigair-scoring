@@ -23,7 +23,7 @@ describe("the big screen's pages", () => {
     expect((slides[1] as { rows: PublicRow[] }).rows.map((r) => r.heat)).toEqual(["Heat 2", "Heat 3", "Heat 4"]);
     expect(slides[2]).toMatchObject({ kind: "results", heatId: "h1" }); // the most recently published
     expect((slides[2] as { riders: RiderRowVM[] }).riders.length).toBe(4);
-    expect((slides[3] as { places: unknown[] }).places.length).toBe(3);
+    expect((slides[3] as { places: unknown[] }).places.length).toBe(4); // a shared third place lists everybody who shares it
   });
 
   it("with live scores off the live page shows the seats (no totals); an empty page is left out, never shown empty", () => {

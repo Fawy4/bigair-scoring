@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { formatClock, remainingMs } from "@/lib/live/timer";
-import { copy } from "@/lib/ui-copy";
 
 /**
- * Time left in the running heat. The server sends its own clock with the heat's start stamp, and every poll corrects it, so a phone whose own clock is wrong still
+ * Time left in the running heat (the words come from the server, so this file stays tiny). The server sends its own clock with the heat's start stamp, and every poll corrects it, so a phone whose own clock is wrong still
  * shows the right time. A paused heat stands still and says so.
  */
-export function HeatClock({ startedAt, durationSec, pausedAt, pausedTotalSec, status, serverNow, className }: { startedAt: string | null; durationSec: number; pausedAt: string | null; pausedTotalSec: number; status: string; serverNow: string; className?: string }) {
+export function HeatClock({ startedAt, durationSec, pausedAt, pausedTotalSec, status, serverNow, className, leftWord, pausedWord }: { startedAt: string | null; durationSec: number; pausedAt: string | null; pausedTotalSec: number; status: string; serverNow: string; className?: string; leftWord: string; pausedWord: string }) {
   const [offset, setOffset] = useState(0);
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -24,8 +23,8 @@ export function HeatClock({ startedAt, durationSec, pausedAt, pausedTotalSec, st
   const left = remainingMs({ status, durationSec, startedAt, pausedAt, pausedTotalSec }, status === "running" ? now : Date.parse(serverNow));
   return (
     <span data-testid="heat-clock" data-state={status} suppressHydrationWarning className={className}>
-      {copy.pub.home.timeLeft(formatClock(left))}
-      {status === "paused" ? ` · ${copy.pub.home.paused}` : ""}
+      {formatClock(left)} {leftWord}
+      {status === "paused" ? ` · ${pausedWord}` : ""}
     </span>
   );
 }

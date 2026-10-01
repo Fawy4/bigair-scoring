@@ -1,13 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { copy } from "@/lib/ui-copy";
 
 /**
  * The big screen's pages, one at a time. The pages are drawn on the server (so they stay fresh with every poll); this only decides which one is visible: it moves on every
  * N seconds, Space pauses and resumes, the number keys jump to a page. Pages change by swapping, never by sliding or fading (nothing that fights the sun).
  */
-export function ScreenRotator({ seconds, children, labels }: { seconds: number; children: React.ReactNode[]; labels: string[] }) {
+export function ScreenRotator({ seconds, children, labels, pausedLabel }: { seconds: number; children: React.ReactNode[]; labels: string[]; pausedLabel: string }) {
   const count = children.length;
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -40,11 +39,11 @@ export function ScreenRotator({ seconds, children, labels }: { seconds: number; 
         </section>
       ))}
       <p className="sr-only" aria-live="polite">
-        {paused ? copy.pub.screen.pause : labels[shown]}
+        {paused ? pausedLabel : labels[shown]}
       </p>
       {paused ? (
         <p data-testid="screen-paused" className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border-2 border-white px-5 py-1 text-[1.6vw] font-semibold">
-          {copy.pub.screen.pause}
+          {pausedLabel}
         </p>
       ) : null}
     </div>

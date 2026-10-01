@@ -9,7 +9,7 @@ import { buildHeatModel, type DivisionRowDb, type HeatRowDb, type RoundRowDb } f
 import { rowToPlan, todayIn, type PlanRow } from "@/lib/schedule/plans";
 import { copy } from "@/lib/ui-copy";
 import { ShareCard } from "./share-card";
-import { WindCallControl } from "@/components/live/wind-call-control";
+import { WindCallControl } from "@/components/wind-call-control";
 
 export const metadata = { title: copy.layout.dashboard };
 export const dynamic = "force-dynamic";

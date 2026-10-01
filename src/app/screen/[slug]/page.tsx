@@ -89,7 +89,7 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
         <div className="flex h-full flex-col gap-[1vw]">
           <div className="flex items-baseline justify-between gap-[2vw]">
             <p className="truncate text-[3.2vw] font-semibold">{s.title}</p>
-            {liveHeat ? <HeatClock startedAt={liveHeat.started_at} durationSec={liveHeat.duration_sec} pausedAt={liveHeat.paused_at} pausedTotalSec={liveHeat.paused_total_sec} status={liveHeat.paused_at ? "paused" : "running"} serverNow={timetable!.server_now} className="shrink-0 text-[7.5vw] font-semibold leading-none tabular-nums" /> : null}
+            {liveHeat ? <HeatClock leftWord={copy.pub.home.left} pausedWord={copy.pub.home.paused} startedAt={liveHeat.started_at} durationSec={liveHeat.duration_sec} pausedAt={liveHeat.paused_at} pausedTotalSec={liveHeat.paused_total_sec} status={liveHeat.paused_at ? "paused" : "running"} serverNow={timetable!.server_now} className="shrink-0 text-[7.5vw] font-semibold leading-none tabular-nums" /> : null}
           </div>
           {!s.scoresShown ? <p className="text-[2.6vw] font-semibold">{copy.pub.live.scoresAfter}</p> : null}
           <ol className="flex flex-col">
@@ -181,7 +181,7 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
       <WindBanner wind={site.wind} big />
       <div className="mt-[1.5vw] flex min-h-0 flex-1 pr-[15vw]">
         {slides.length ? (
-          <ScreenRotator seconds={site.settings.screenRotateSec} labels={slides.map((s) => labels[s.kind])}>
+          <ScreenRotator pausedLabel={S.pause} seconds={site.settings.screenRotateSec} labels={slides.map((s) => labels[s.kind])}>
             {slides.map((s, i) => (
               <div key={i} className="h-full">
                 {render(s)}

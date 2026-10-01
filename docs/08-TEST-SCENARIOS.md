@@ -318,6 +318,14 @@ Switching the active plan from Main to "Good wind" after Women's heats have actu
 - The hand-built 24-rider ladder (rounds of 8, 4, 2 and 1 heats, seeds as the generated draw dealt them, "fill the remaining seats" for the rest) equals the generated one: same rounds, heats, seats, numbers and lengths, and the same winners reach the same heats. "Ladder complete — 15 heats, 24 riders, every place accounted for".
 - Property: any ladder with no red fault (200 knockout-style, 60 second-chance, 400 randomly edited and repaired ladders) runs from the first heat to the final with every rider placed exactly once in the first round and every rider placed at the end.
 
+## 2I. Public site (Phase 6; `src/lib/public/*.test.ts`, `tests/rls/public-site.test.ts`, `e2e/public-site.spec.ts`)
+- Timetable at 09:00 with heat 1 pinned 10:00, 10-minute heats, 2-minute breaks, ready call 15 minutes: rows 10:00 next, 10:12 est., 10:24 est.; ready call for heat 1 is 09:45. With heat 1 done (10:00–10:10) and heat 2 started 10:14: done, live, next (10:26), est. A pin shows as pinned and is not an estimate. A hold shows every unstarted row as held with no time. A cancelled heat that never started is not listed and takes no time.
+- Heat summary: a released heat of three riders (20.0, 15.0, 10.0 on the Legacy Variety model, one decimal) reads "20.0 = tricks 15.0 + Variety 5.0"; the highest counted score of the heat has grade 4 and the lowest grade 0; boxes read "1 · 7.0", "Backroll · 7.0" or "7.0" for the three box settings, "CRASH" for a crash; no percentage unless the division's setting is on ("50 % of maximum").
+- Ladder: after Round 1 heat 1 is released, the winner sits in the Final; with a Final dealt from all arrivals the seat reads "Ana Ladder · 1st H1 · seat pending" and the other seat "1st H2". Six riders, two heats of three and a Final: places 1, 2 and then four riders as "3=".
+- Held heat: no result, no winner in the next seat, no winner in the stored draw, no highest jump; after release all of them appear. No judge-level mark, flag or percentage in any public result. A draft draw, a simulation event, an archived event and an archived organisation say nothing through any public function.
+- Big screen: pages live heat, timetable (at most six rows), latest result (four riders), podium (everybody who shares places 1 to 3), sponsors; empty pages are left out; rotation wraps round.
+- Rules page for the Legacy Variety model: "Best 3 of 7 attempts + Variety 0–10, 3 judges averaged"; "Each trick gets one score from 0 to 10, in steps of 0.5."; "The best 3 tricks count."; tie-breakers numbered in order.
+
 ## 5. Rider identification chips (`presets/identification/schemes.json`)
 - `vests-per-heat`: slot 2 of any heat → chip primary text "YELLOW" with hex `#facc15`; secondary shows name and nationality; `heat_slots.vest_colour = "yellow"`.
 - `fixed-lycra-per-rider`: two entries with `identifiers.vest_colour = "red"` seeded into the same heat → `expandFormat` returns a warning naming that heat; the draw still generates.
@@ -332,6 +340,6 @@ Switching the active plan from Main to "Good wind" after Women's heats have actu
 - **Phase 4**: create division → import 10 riders → generate heats-of-4 draw → compositions match §2A (N = 10) → run order with two anchors → times match the pattern in §3A → switch the identification scheme from vests-per-heat to kites-no-vests and confirm the rider chips on the draw change accordingly (§5).
 - **Phase 5b**: start a heat from the laptop; the spotter phone opens it by itself and logs by tap, by typing and by speaking; CRASH works; the 7th attempt greys the rider out; two judge phones see each attempt within a second and score it; 20 s of airplane mode loses and duplicates nothing; at time up the Impression step with the summary card and Submit.
 - **Phase 5**: 3-phone run-through (spotter logs, two judges score, head judge publishes) → totals equal the engine breakdown; airplane-mode judge for 20 s → no duplicates, badge returns to synced.
-- **Phase 6**: public page updates within 2 s of publish; big screen rotates; timetable shows est./pinned/live states.
+- **Phase 6**: public page updates within one poll (3 to 60 s, default 7) of publish; big screen rotates; timetable shows est./pinned/live states (§2I). Slow-connection budget: `npm run test:e2e:budget`.
 - **Phase 7**: WOO toggle on → spotter can enter metres; Highest Jump leaderboard; exports open; paper sheets print.
 - **Phase 8**: dry run per doc 09 completed end to end without touching the database manually.

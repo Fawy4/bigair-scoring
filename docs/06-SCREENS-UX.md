@@ -288,3 +288,26 @@ These are the owner's standing notes (handover pack notes 1a–1e), in short for
   - The head judge publishes after review.
   - Outlier cells are coloured by their distance from the panel score.
 - **Organiser screens.** First drafts until Phase 7a. In the owner's words: "hard to work with; I need to understand what I'm setting up".
+
+
+### Decisions log – Phase 6 (public pages, big screen; owner brief of 1 Oct 2026, built 1 Oct 2026)
+
+Written in words. Where a row refines §7 to §9 above, this section wins.
+
+| Topic | Decision |
+|---|---|
+| One door | A visitor reads only through the public functions (`get_public_site`, `get_public_timetable`, `get_public_results`, `get_public_draw`, `get_public_rules`, `get_public_live_heat`, plus the event and organisation lists), as a visitor with no cookies even when the person is signed in. Nothing before publish unless the division allows live scores; held heats show nothing; simulation, draft and archived events and archived organisations answer "not found". |
+| Draft draws | A division whose draw is not locked has no public heats, ladder or seats. |
+| Seats from held heats | A seat fed from a heat that is not released reads as its placeholder ("1st H1") until the heat is released. |
+| Judge-level marks | Not on the public pages and not in `get_public_results`; panel scores only (the default of §7). The older live function still carries them by seat number: see STATUS Phase 6, open point 1. |
+| Results rows | As in the Phase 5a round-4 row: Rider label, place, total, formula in words, boxes in attempt order (crash red + CRASH, not counted grey, counted graded yellow to green across the heat, each with an icon or word); no percentage unless the division's setting is on; the box text follows "What spectators see per attempt" (stored values number_score, trick_score, score_only). The leaderboard opens on the live heat, then the last published. |
+| Timetable | Rows from the run order and the heats' server times: done, live, next, estimated ("est."), on hold, pinned ("not before"); cancelled heats are not listed. "Times are estimates and update live." and, on a hold, "Competition on hold — times will update when we resume." Today's run order, else the nearest day that has one. |
+| Rider page | Next heat with the estimate and the ready call (the run order's own value), their heats, released results and a share line; address `/e/<slug>/riders/<entry id>`. |
+| Highest jump | The highest landed attempt with a height among released heats of the division. |
+| Wind call | Red / amber / green with a message of up to 140 letters, or cleared; set by the head judge or an organiser on the dashboard or the head page; shown on every public page and the big screen when the event's banner switch is on. |
+| Big screen | Pages in order: live heat (while one runs), timetable (next six rows), latest result (four riders), podium of a released final, sponsors; a page with nothing to say is left out. Every N seconds (event setting, default 20, 5 to 120); Space pauses; the number keys jump. White on dark, totals about 130 px at 1600 px wide, QR in the corner, no animation. |
+| Outside leaderboards | Event setting `externalLeaderboards` (title, https address, show inside the site or open in a new tab), up to six, each a tab. |
+| Join | Judge, Spotter, Head judge and Announcer open the PIN form for that role (`?role=`); Leaderboard, Ladder and Timetable need no PIN; "Not on the list? Add your name" stays. |
+| Link previews | Open Graph and Twitter tags on every public page; a 1200 × 630 picture with the event name, its logo (from the project's storage only) and, for a result, the heat with its top three; the description says what is on now or the latest result. |
+| Speed | Polling by refreshing the server page every "Live update" seconds while the page is visible; no realtime for the public; no heavy libraries on the public pages; logos from the project's storage are resized by Next. Budget on slow 4G with a 4× slower CPU: 180 kB, 140 kB of script, 16 requests, paint within 2.5 s. |
+

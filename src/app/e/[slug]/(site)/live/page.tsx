@@ -57,7 +57,7 @@ export default async function LivePage({ params, searchParams }: { params: Promi
         <span data-testid="live-state" className="rounded-full border border-beach-line px-2 text-small font-semibold">
           {stateWord}
         </span>
-        {heat && (state === "running" || state === "paused") ? <HeatClock startedAt={heat.started_at} durationSec={heat.duration_sec} pausedAt={heat.paused_at} pausedTotalSec={heat.paused_total_sec} status={state} serverNow={timetable!.server_now} className="tabular-nums" /> : null}
+        {heat && (state === "running" || state === "paused") ? <HeatClock leftWord={copy.pub.home.left} pausedWord={copy.pub.home.paused} startedAt={heat.started_at} durationSec={heat.duration_sec} pausedAt={heat.paused_at} pausedTotalSec={heat.paused_total_sec} status={state} serverNow={timetable!.server_now} className="tabular-nums" /> : null}
       </p>
       {others.length > 1 ? <ChipLinks label={T.heatPicker} items={others.map((t) => ({ href: `${base}/live?heat=${t.id}`, label: `${t.divisionName} · ${t.tab}`, current: t.id === heatId }))} /> : null}
       {tab.state !== "complete" && !liveOn ? (

@@ -2,10 +2,9 @@
 
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
-import { copy } from "@/lib/ui-copy";
 
 /** "Copy link": the page's address to the clipboard, with a word to confirm (never colour alone). */
-export function CopyLink({ url }: { url: string }) {
+export function CopyLink({ url, label, doneLabel }: { url: string; label: string; doneLabel: string }) {
   const [done, setDone] = useState(false);
   return (
     <button
@@ -28,7 +27,7 @@ export function CopyLink({ url }: { url: string }) {
       className="inline-flex min-h-tap items-center gap-1.5 rounded-xl border border-beach-border bg-beach-bg px-3 text-body font-semibold text-beach-ink"
     >
       {done ? <Check aria-hidden className="size-4" /> : <Copy aria-hidden className="size-4" />}
-      {done ? copy.pub.share.copied : copy.pub.share.copy}
+      {done ? doneLabel : label}
     </button>
   );
 }

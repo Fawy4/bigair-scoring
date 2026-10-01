@@ -15,6 +15,8 @@ Next.js 15 (App Router, TypeScript strict) · Tailwind + shadcn/ui · Supabase (
 - `npm run lint` — ESLint
 - `npx supabase db reset` — rebuild local DB from `supabase/migrations` + `supabase/seed.sql`
 - `npx supabase db push` — apply migrations to the linked hosted project (blocked in some sandboxes: use `npm run db:apply`, which sends them over HTTPS; `npm run db:combine` writes `supabase/combined.sql` for the SQL Editor)
+- `npm run test:e2e:budget` — public pages over a slow phone connection against the production build (transfer, scripts, requests, paint time); needs `npm run build` and `npx next start -p 3200`, then `E2E_BASE_URL=http://localhost:3200`
+- `npm run preview:public -- create` / `-- remove <code>` — a throwaway public event on the hosted project to look at on a real phone
 - `npm run test:rls` — Row Level Security tests against the hosted dev project (separate from `npm test`; skips without keys)
 - `npm run seed:demo` / `npm run bootstrap:organiser -- --email … --org-name … --org-slug …` — demo draw / create the organiser login + organisation (name and slug are required)
 - `npm run auth:password` — enables email + password sign-in for organisers in the hosted auth settings (Management API; idempotent)
@@ -25,6 +27,7 @@ Next.js 15 (App Router, TypeScript strict) · Tailwind + shadcn/ui · Supabase (
 ## Repo layout
 ```
 src/app/            routes (App Router). Public: / , /e/[eventSlug]/... , /o/[orgSlug] , /design (look-and-feel preview, Phase 5a) ; organiser: /org/... ; platform owner: /admin/... (404 for everybody else) ; judge: /judge/... ; head: /head/... ; spotter: /spot/... ; screen: /screen/...
+src/lib/public/     what the public pages show: loaders (public functions only, as a visitor), timetable states, heat tabs, ladder, placings, rules text, rider page, big-screen pages (pure + tests)
 src/lib/engine/     PURE logic, no I/O: scoring/, ladder/, schedule/ (+ tests). Import nothing from Supabase or React here.
 src/lib/schemas/    Zod schemas for ScoringModel, FormatTemplate, Schedule (single source of truth for types)
 src/lib/supabase/   clients (server, browser, service), typed helpers

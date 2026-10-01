@@ -90,7 +90,7 @@ export default async function RiderPage({ params }: { params: Promise<{ slug: st
           <a data-testid="share-whatsapp" href={whatsappLink(vm.shareText, url)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-tap items-center rounded-xl border border-beach-accent bg-beach-accent px-3 text-body font-semibold text-beach-on-accent">
             {copy.pub.share.whatsapp}
           </a>
-          <CopyLink url={url} />
+          <CopyLink url={url} label={copy.pub.share.copy} doneLabel={copy.pub.share.copied} />
         </div>
       </section>
     </>

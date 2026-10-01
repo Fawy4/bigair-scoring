@@ -2327,6 +2327,7 @@ export const copy = {
       estimates: "Times are estimates and update live.",
       onHold: "Competition on hold — times will update when we resume.",
       timeLeft: (clock: string) => `${clock} left`,
+      left: "left",
       paused: "Paused",
       warmUp: (t: string) => `warm-up ${t}`,
       resultHeld: "Result to be announced",
