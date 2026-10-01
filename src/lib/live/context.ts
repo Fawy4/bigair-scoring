@@ -36,7 +36,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
     data: { user },
   } = await db.auth.getUser();
   if (!user) return null;
-  const { data: event } = await db.from("events").select("id, organisation_id, name, slug, timezone, settings").eq("id", eventId).maybeSingle();
+  const { data: event } = await db.from("events").select("id, organisation_id, name, slug, timezone, settings, is_simulation").eq("id", eventId).maybeSingle();
   if (!event) return null;
   const settings = parseEventSettings(event.settings);
 
@@ -128,7 +128,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
   for (const l of model.lives) heatMeta[l.heatId] = { roundLast: Boolean(l.roundLast), ...(l.breakAfterHeatMin !== undefined ? { breakAfterHeatMin: l.breakAfterHeatMin } : {}), ...(l.breakAfterRoundMin !== undefined ? { breakAfterRoundMin: l.breakAfterRoundMin } : {}) };
 
   return {
-    event: { id: event.id, name: event.name, slug: event.slug, timezone: event.timezone, judgesMayLogAttempts: settings.judgesMayLogAttempts, maxRunningHeats: settings.maxRunningHeats },
+    event: { id: event.id, name: event.name, slug: event.slug, timezone: event.timezone, judgesMayLogAttempts: settings.judgesMayLogAttempts, maxRunningHeats: settings.maxRunningHeats, isSimulation: Boolean(event.is_simulation) },
     viewer,
     divisions,
     rounds: roundRows ?? [],

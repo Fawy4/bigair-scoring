@@ -6,6 +6,9 @@ import { checkImpression, checkTrickScore } from "./head-validate";
 import { defaultKeep } from "./merge-plan";
 import { publishHeatCore, type PublishResult } from "./publish-core";
 import { mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
+import { rowToPlan, type PlanRow } from "@/lib/schedule/plans";
+import type { RunItem } from "@/lib/schemas/schedule";
+import { insertRerunItem, rerunName } from "./rerun";
 import { parseScoringModel, type ScoringModel } from "@/lib/schemas/scoring-model";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -15,8 +18,9 @@ export type HeadResult = { ok: true } | { ok: false; code: string | null; messag
 export type { PublishResult };
 
 const uuid = z.string().uuid();
-const fail = (code: string | null, message?: string): HeadResult => ({ ok: false, code, message: message ?? errorSentence(code) });
-const from = (error: { message: string }): HeadResult => ({ ok: false, code: parseError(error.message).code, message: errorSentence(error.message) });
+type Failure = { ok: false; code: string | null; message: string };
+const fail = (code: string | null, message?: string): Failure => ({ ok: false, code, message: message ?? errorSentence(code) });
+const from = (error: { message: string }): Failure => ({ ok: false, code: parseError(error.message).code, message: errorSentence(error.message) });
 const reasonOk = (r: string) => r.trim().length >= 3;
 
 type Db = Awaited<ReturnType<typeof createClient>>;
@@ -210,5 +214,68 @@ export async function setPublishHold(heatId: string, hold: boolean, reason?: str
   if (hold && !reasonOk(reason ?? "")) return fail("REASON_REQUIRED");
   const db = await createClient();
   const { error } = await db.rpc("set_publish_hold", { p_heat: heatId, p_hold: hold, ...(reason?.trim() ? { p_reason: reason.trim() } : {}) });
+  return error ? from(error) : { ok: true };
+}
+
+/**
+ * Re-run heat (owner, 1 Oct 2026): cancels the heat and creates "Heat 3 re-run" with the same riders, seats, Lycras and timing; later seats follow it; the draw
+ * stays locked. The new run order (the re-run right after the heat that is live now) is worked out here with the pure insertRerunItem and handed to the
+ * database, which accepts it only if the plan is as we saw it and exactly one item was added. Riders in `leaveOut` are marked DSQ or DNS and ranked last.
+ */
+export async function rerunHeat(input: { heatId: string; reason: string; leaveOut: Record<string, "DSQ" | "DNS"> }): Promise<{ ok: true; newHeatId: string } | { ok: false; code: string | null; message: string }> {
+  if (!uuid.safeParse(input.heatId).success) return fail("HEAT_NOT_FOUND");
+  if (!reasonOk(input.reason)) return fail("REASON_REQUIRED");
+  const db = await createClient();
+  const { data: heat } = await db.from("heats").select("id, event_id, number, number_suffix, name").eq("id", input.heatId).maybeSingle();
+  if (!heat) return fail("HEAT_NOT_FOUND");
+  const named = rerunName({ number: heat.number, suffix: heat.number_suffix, name: heat.name });
+  const newId = crypto.randomUUID();
+
+  // the run order that holds this heat, and the heat that is live now
+  const [{ data: plans }, { data: liveRows }] = await Promise.all([
+    db.from("schedule_plans").select("id, event_id, day, name, items, anchors, actual_starts, hold, defaults, active, updated_at").eq("event_id", heat.event_id).eq("active", true),
+    db.from("heats").select("id").eq("event_id", heat.event_id).in("status", ["running", "paused"]),
+  ]);
+  const row = (plans ?? []).find((p) => Array.isArray(p.items) && (p.items as Array<{ heatId?: string }>).some((i) => i.heatId === heat.id));
+  let plan: { id: string; items: Json; updatedAt: string } | null = null;
+  if (row) {
+    const dp = rowToPlan(row as unknown as PlanRow);
+    const rawItems = row.items as unknown as RunItem[];
+    const liveId = (liveRows ?? []).find((h) => h.id !== heat.id)?.id ?? ((liveRows ?? []).some((h) => h.id === heat.id) ? heat.id : null);
+    const next = insertRerunItem({ ...dp.plan, items: rawItems }, heat.id, newId, liveId);
+    plan = { id: row.id, items: next.items as unknown as Json, updatedAt: row.updated_at };
+  }
+  const { error } = await db.rpc("rerun_heat", {
+    p_heat: heat.id,
+    p_new_heat: newId,
+    p_suffix: named.suffix,
+    p_name: named.name,
+    p_reason: input.reason.trim(),
+    p_leave_out: input.leaveOut as unknown as Json,
+    p_plan: (plan?.id ?? null) as never,
+    p_plan_items: (plan?.items ?? null) as never,
+    p_plan_updated_at: (plan?.updatedAt ?? null) as never,
+  });
+  return error ? from(error) : { ok: true, newHeatId: newId };
+}
+
+/** The head judge's per-heat switch for live scores on the public site: on, off, or follow the setting (null). */
+export async function setHeatPublicLive(heatId: string, value: boolean | null): Promise<HeadResult> {
+  if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
+  const db = await createClient();
+  const { error } = await db.rpc("set_heat_public_live", { p_heat: heatId, p_value: value as never });
+  return error ? from(error) : { ok: true };
+}
+
+/** Practice heat: one made-up attempt on a simulation event (organisers only; the database checks both). */
+export async function practiceAdd(input: { heatId: string; entryId: string; trickName: string; direction: "left" | "right"; category: string | null; parts: Json; status: "landed" | "crashed" }): Promise<HeadResult> {
+  if (!uuid.safeParse(input.heatId).success || !uuid.safeParse(input.entryId).success) return fail("RIDER_NOT_IN_HEAT");
+  const db = await createClient();
+  const { error } = await db.rpc("practice_add_attempt", {
+    p_heat: input.heatId,
+    p_entry: input.entryId,
+    p_trick: { name: input.trickName, direction: input.direction, category: input.category, parts: input.parts } as unknown as Json,
+    p_status: input.status,
+  });
   return error ? from(error) : { ok: true };
 }

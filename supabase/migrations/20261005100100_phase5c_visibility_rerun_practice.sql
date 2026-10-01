@@ -394,3 +394,11 @@ grant execute on all functions in schema private to anon, authenticated, service
 
 -- Its riders are fictional and its PINs are public, so it never appears on the public site (docs/PLAN-phase-5 §12).
 update public.events set is_simulation = true where slug = 'demo-cup';
+
+-- Wherever the Demo event is (re)created (the demo seed function or a script), it is a simulation again.
+create or replace function private.demo_event_is_simulation() returns trigger language plpgsql as $$
+begin
+  new.is_simulation := true;
+  return new;
+end $$;
+create trigger b_demo_simulation before insert on public.events for each row when (new.slug = 'demo-cup') execute function private.demo_event_is_simulation();

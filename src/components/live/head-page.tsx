@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnnouncerView } from "./announcer-view";
 import { HeadLiveConsole } from "./head-live-console";
 import { TieDialog } from "./head-dialogs";
 import { HeadSidePanel } from "./head-side-panel";
@@ -8,6 +9,7 @@ import { HeatControl, type ReviewProps } from "./heat-control";
 import { JudgeScreen } from "./judge-screen";
 import { useEndAtZero, useTimerSound, useWakeLock } from "./live-hooks";
 import { LiveShell, ScreenSettings, useLiveSettings } from "./live-shell";
+import { PracticePanel } from "./practice-panel";
 import { useLiveHeat } from "./use-live-heat";
 import { useServerClock, useTick } from "./use-server-clock";
 import { SeatHeartbeat } from "@/app/seat/heartbeat";
@@ -38,10 +40,10 @@ function useWide(): boolean {
   return wide;
 }
 
-export function HeadRoot({ ctx }: { ctx: LiveContext }) {
+export function HeadRoot({ ctx, mode }: { ctx: LiveContext; mode?: "announcer" }) {
   return (
     <LiveShell soundDefault wide>
-      <HeadPage ctx={ctx} />
+      <HeadPage ctx={ctx} announcer={mode === "announcer" || (ctx.viewer.kind === "seat" && ctx.viewer.role === "announcer")} />
     </LiveShell>
   );
 }
@@ -51,7 +53,7 @@ export function HeadRoot({ ctx }: { ctx: LiveContext }) {
  * menus and dialogs in the middle, the judges, flags and audit log on the right. On a phone nothing is refused: the Control tab holds the clock, Publish, Re-open
  * and (behind Details) the rider totals and what blocks Publish; a head judge who also scores has one login and two tabs, Score and Control.
  */
-function HeadPage({ ctx }: { ctx: LiveContext }) {
+function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) {
   const supabase = useMemo(() => createClient(), []);
   const clock = useServerClock(supabase);
   const nowServer = useTick(clock.now);
@@ -126,7 +128,7 @@ function HeadPage({ ctx }: { ctx: LiveContext }) {
     void live.refresh();
     setRefreshKey((k) => k + 1);
   }, [live]);
-  const review: ReviewProps | undefined = head ? { items: blockerItems, canOverride: head.checklist.canOverride, onChooseOrder: setTieFor, onChanged } : undefined;
+  const review: ReviewProps | undefined = head ? { items: blockerItems, canOverride: head.checklist.canOverride, riders: riders.map((r) => ({ entryId: r.entryId, word: wordFor(r.entryId), name: r.name })), onChooseOrder: setTieFor, onChanged } : undefined;
 
   const totalsList = (
     <section data-testid="rider-totals" aria-label={H.totalsHeading} className="flex flex-col gap-1.5">
@@ -199,6 +201,7 @@ function HeadPage({ ctx }: { ctx: LiveContext }) {
           ) : null}
         </>
       ) : null}
+      {ctx.event.isSimulation && viewer.kind === "organiser" ? <PracticePanel ctx={ctx} heat={shown} division={division} attempts={live.attempts} riderIds={riders.filter((r) => r.riding).map((r) => r.entryId)} /> : null}
       <ScreenSettings />
     </div>
   );
@@ -222,6 +225,16 @@ function HeadPage({ ctx }: { ctx: LiveContext }) {
         }}
       />
     ) : null;
+
+  // the announcer's view: the heat that is on, read-only
+  if (announcer) {
+    return (
+      <div data-testid="head-page" data-layout="announcer" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <SeatHeartbeat />
+        {shown && division && head ? <AnnouncerView ctx={ctx} heat={shown} division={division} attempts={live.attempts} riders={riders} head={head} wordFor={wordFor} /> : <p className="px-3 py-2 text-body font-medium text-beach-muted">{H.noHeat}</p>}
+      </div>
+    );
+  }
 
   // a phone with a head judge who also scores: Score and Control tabs; otherwise the page is just the controls
   if (!wide && scores) {

@@ -37,6 +37,7 @@ export async function saveEvent(id: string | null, raw: unknown, status: "draft"
         status: status ?? "draft",
         settings: form.settings as never,
         branding: form.branding as never,
+        is_simulation: form.isSimulation,
       })
       .select("id, slug")
       .single();
@@ -57,6 +58,7 @@ export async function saveEvent(id: string | null, raw: unknown, status: "draft"
     // keep settings written by later phases; the form only owns the keys it knows
     settings: { ...((before.settings ?? {}) as object), ...form.settings },
     branding: { ...((before.branding ?? {}) as object), ...form.branding },
+    is_simulation: form.isSimulation,
   };
   // only draft <-> published is set here; live and complete belong to the heat controls in later phases
   if (status && (before.status === "draft" || before.status === "published")) patch.status = status;
@@ -76,6 +78,7 @@ export async function saveEvent(id: string | null, raw: unknown, status: "draft"
 }
 
 function failure(error: { code?: string; message: string }): SaveEventResult {
+  if (error.message.includes("SIMULATION_LOCKED")) return { ok: false, error: T.simulationLocked, fields: { isSimulation: T.simulationLocked } };
   if (error.code === "23505") return { ok: false, error: T.slugTaken, fields: { slug: T.slugTakenField } };
   if (error.code === "23514") return { ok: false, error: T.notAllowedValue, fields: {} };
   return { ok: false, error: T.saveFailed };

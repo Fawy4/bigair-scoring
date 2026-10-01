@@ -23,13 +23,17 @@ export interface HeatRow {
   paused_total_sec: number;
   ended_at: string | null;
   draw_uid: string | null;
+  /** The heat this one re-runs (a cancelled heat is read-only and says "re-run as …"). */
+  rerun_of: string | null;
+  /** The head judge's per-heat live switch: true = show live, false = do not, null = follow the setting. */
+  public_live: boolean | null;
   /** Set when the head judge re-opened a published result: it is "under correction" until published again. */
   reopened_at: string | null;
   /** The published result is held back from the public (a final waiting for its prize-giving). */
   publish_hold: boolean;
   updated_at: string;
 }
-export const HEAT_COLUMNS = "id, division_id, round_id, number, number_suffix, name, status, duration_sec, warm_up_sec, started_at, paused_at, paused_total_sec, ended_at, draw_uid, reopened_at, publish_hold, updated_at";
+export const HEAT_COLUMNS = "id, division_id, round_id, number, number_suffix, name, status, duration_sec, warm_up_sec, started_at, paused_at, paused_total_sec, ended_at, draw_uid, rerun_of, public_live, reopened_at, publish_hold, updated_at";
 
 export interface SlotRow {
   id: string;
@@ -136,7 +140,7 @@ export interface LiveRiderInfo extends LabelRider {
 }
 
 export interface LiveContext {
-  event: { id: string; name: string; slug: string; timezone: string; judgesMayLogAttempts: boolean; maxRunningHeats: number };
+  event: { id: string; name: string; slug: string; timezone: string; judgesMayLogAttempts: boolean; maxRunningHeats: number; isSimulation: boolean };
   /** Who is looking: a seat, or an organiser of the event (the head page only). */
   viewer: { kind: "seat"; seatId: string; name: string; role: SeatRole; spotterEntries: string[]; spotterColours: string[] } | { kind: "organiser"; name: string };
   divisions: LiveDivisionContext[];

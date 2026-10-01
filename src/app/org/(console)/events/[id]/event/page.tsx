@@ -14,7 +14,7 @@ export default async function EventStepPage({ params }: { params: Promise<{ id: 
   const { supabase } = await getOrgContext();
   const { data: event } = await supabase
     .from("events")
-    .select("id, organisation_id, name, slug, location, timezone, start_date, end_date, status, settings, branding, archived_at")
+    .select("id, organisation_id, name, slug, location, timezone, start_date, end_date, status, settings, branding, archived_at, is_simulation")
     .eq("id", id)
     .maybeSingle();
   if (!event) notFound();

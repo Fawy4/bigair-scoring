@@ -6,7 +6,7 @@ const t = (hhmmss: string) => Date.parse(`2026-10-01T${hhmmss}Z`);
 const iso = (hhmmss: string) => new Date(t(hhmmss)).toISOString();
 const heat = (id: string, division: string, patch: Partial<HeatRow> = {}): HeatRow => ({
   id, division_id: division, round_id: "r", number: 1, number_suffix: null, name: null, status: "scheduled", duration_sec: 600, warm_up_sec: 0,
-  started_at: null, paused_at: null, paused_total_sec: 0, ended_at: null, draw_uid: null, reopened_at: null, publish_hold: false, updated_at: iso("09:00:00"), ...patch,
+  started_at: null, paused_at: null, paused_total_sec: 0, ended_at: null, draw_uid: null, rerun_of: null, public_live: null, reopened_at: null, publish_hold: false, updated_at: iso("09:00:00"), ...patch,
 });
 const panels = [{ divisionId: "men", seatIds: ["j1", "j2"] }, { divisionId: "women", seatIds: ["j3"] }];
 const base = { panels, nowServer: t("10:05:00") };

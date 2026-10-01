@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Footer, Modal, plain, Reason } from "./console-parts";
-import { decideTie, publishHeat, reopenHeat, type PublishResult } from "@/lib/live/head-actions";
+import { decideTie, publishHeat, reopenHeat, rerunHeat, setPublishHold, type PublishResult } from "@/lib/live/head-actions";
 import type { ChecklistItem } from "@/lib/live/publish-checklist";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
@@ -149,6 +149,80 @@ export function TieDialog({ heatId, riders, onClose, onDone }: { heatId: string;
           start(async () => {
             const r = await decideTie(heatId, order, reason);
             if (r.ok) onDone(H.tieSaved);
+            else setError(r.message);
+          })
+        }
+      />
+    </Modal>
+  );
+}
+
+/** Re-run heat: one confirmation and a reason; riders who do not ride again are marked Disqualified or Did not start and ranked last (no third option). */
+export function RerunDialog({ heatId, title, riders, onClose, onDone }: { heatId: string; title: string; riders: Array<{ entryId: string; word: string; name: string }>; onClose: () => void; onDone: (newHeatId: string) => void }) {
+  const [reason, setReason] = useState("");
+  const [out, setOut] = useState<Record<string, "" | "DSQ" | "DNS">>({});
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  return (
+    <Modal screen title={H.rerunTitle(title)} onClose={onClose}>
+      <p className="text-body font-medium">{H.rerunAsk}</p>
+      <p className="text-small font-semibold text-beach-muted">{H.rerunRiders}</p>
+      {riders.map((r) => (
+        <label key={r.entryId} className="flex items-center justify-between gap-2 text-body font-medium">
+          <span>
+            {r.word} · {r.name}
+          </span>
+          <select data-testid="rerun-rider" data-rider={r.entryId} value={out[r.entryId] ?? ""} onChange={(e) => setOut((o) => ({ ...o, [r.entryId]: e.target.value as "" | "DSQ" | "DNS" }))} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink">
+            <option value="">{H.rerunRidesAgain}</option>
+            <option value="DSQ">{H.rerunDsq}</option>
+            <option value="DNS">{H.rerunDns}</option>
+          </select>
+        </label>
+      ))}
+      <Reason value={reason} onChange={setReason} />
+      {error ? (
+        <p role="alert" data-testid="dialog-error" className="rounded-lg border border-beach-failed bg-beach-surface px-2 py-1 text-body font-semibold">
+          {error}
+        </p>
+      ) : null}
+      <Footer
+        canSave={!pending && reason.trim().length >= 3}
+        saveLabel={pending ? H.working : H.rerunYes}
+        onCancel={onClose}
+        onSave={() =>
+          start(async () => {
+            const leaveOut = Object.fromEntries(Object.entries(out).filter(([, v]) => v)) as Record<string, "DSQ" | "DNS">;
+            const r = await rerunHeat({ heatId, reason, leaveOut });
+            if (r.ok) onDone(r.newHeatId);
+            else setError(r.message);
+          })
+        }
+      />
+    </Modal>
+  );
+}
+
+/** Hold a published result back from the public (a reason is needed); releasing needs none. */
+export function HoldDialog({ heatId, title, onClose, onDone }: { heatId: string; title: string; onClose: () => void; onDone: () => void }) {
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  return (
+    <Modal screen title={`${H.holdTitle}: ${title}`} onClose={onClose}>
+      <Reason value={reason} onChange={setReason} />
+      {error ? (
+        <p role="alert" className="rounded-lg border border-beach-failed bg-beach-surface px-2 py-1 text-body font-semibold">
+          {error}
+        </p>
+      ) : null}
+      <Footer
+        canSave={!pending && reason.trim().length >= 3}
+        saveLabel={pending ? H.working : H.holdYes}
+        onCancel={onClose}
+        onSave={() =>
+          start(async () => {
+            const r = await setPublishHold(heatId, true, reason);
+            if (r.ok) onDone();
             else setError(r.message);
           })
         }
