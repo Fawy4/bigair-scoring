@@ -311,6 +311,7 @@ export type Database = {
           created_at: string
           end_date: string | null
           id: string
+          is_simulation: boolean
           join_pin_hash: string | null
           location: string | null
           name: string
@@ -328,6 +329,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
+          is_simulation?: boolean
           join_pin_hash?: string | null
           location?: string | null
           name: string
@@ -345,6 +347,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
+          is_simulation?: boolean
           join_pin_hash?: string | null
           location?: string | null
           name?: string
@@ -772,9 +775,11 @@ export type Database = {
           number_suffix: string | null
           paused_at: string | null
           paused_total_sec: number
+          public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
           reopened_at: string | null
+          rerun_of: string | null
           round_id: string
           started_at: string | null
           status: string
@@ -797,9 +802,11 @@ export type Database = {
           number_suffix?: string | null
           paused_at?: string | null
           paused_total_sec?: number
+          public_live?: boolean | null
           publish_hold?: boolean
           published_at?: string | null
           reopened_at?: string | null
+          rerun_of?: string | null
           round_id: string
           started_at?: string | null
           status?: string
@@ -822,9 +829,11 @@ export type Database = {
           number_suffix?: string | null
           paused_at?: string | null
           paused_total_sec?: number
+          public_live?: boolean | null
           publish_hold?: boolean
           published_at?: string | null
           reopened_at?: string | null
+          rerun_of?: string | null
           round_id?: string
           started_at?: string | null
           status?: string
@@ -844,6 +853,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "heats_rerun_of_fkey"
+            columns: ["rerun_of"]
+            isOneToOne: false
+            referencedRelation: "heats"
             referencedColumns: ["id"]
           },
           {
@@ -2306,9 +2322,11 @@ export type Database = {
           number_suffix: string | null
           paused_at: string | null
           paused_total_sec: number
+          public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
           reopened_at: string | null
+          rerun_of: string | null
           round_id: string
           started_at: string | null
           status: string
@@ -2443,9 +2461,11 @@ export type Database = {
           number_suffix: string | null
           paused_at: string | null
           paused_total_sec: number
+          public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
           reopened_at: string | null
+          rerun_of: string | null
           round_id: string
           started_at: string | null
           status: string
@@ -2477,9 +2497,11 @@ export type Database = {
           number_suffix: string | null
           paused_at: string | null
           paused_total_sec: number
+          public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
           reopened_at: string | null
+          rerun_of: string | null
           round_id: string
           started_at: string | null
           status: string
@@ -2530,6 +2552,7 @@ export type Database = {
       }
       get_public_live_heat: { Args: { p_heat: string }; Returns: Json }
       get_public_organisation: { Args: { p_slug: string }; Returns: Json }
+      get_public_results: { Args: { p_event: string }; Returns: Json }
       get_seat_contacts: {
         Args: { p_event: string }
         Returns: {
@@ -2662,9 +2685,11 @@ export type Database = {
           number_suffix: string | null
           paused_at: string | null
           paused_total_sec: number
+          public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
           reopened_at: string | null
+          rerun_of: string | null
           round_id: string
           started_at: string | null
           status: string
@@ -2679,6 +2704,46 @@ export type Database = {
         }
       }
       platform_session: { Args: never; Returns: Json }
+      practice_add_attempt: {
+        Args: {
+          p_entry: string
+          p_heat: string
+          p_status: string
+          p_trick: Json
+        }
+        Returns: {
+          category_key: string | null
+          client_key: string
+          created_at: string
+          created_by_seat: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          direction: string | null
+          entry_id: string
+          event_id: string
+          heat_id: string
+          height_at: string | null
+          height_m: number | null
+          height_ref: string | null
+          height_source: string | null
+          id: string
+          input_method: string
+          possible_duplicate_of: string | null
+          raw_text: string | null
+          seq: number
+          status: string
+          trick_name: string | null
+          trick_parts: Json
+          updated_at: string
+          video_ts: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trick_attempts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       public_platform_settings: { Args: never; Returns: Json }
       public_registration_info: { Args: { p_slug: string }; Returns: Json }
       publish_heat_commit: {
@@ -2734,9 +2799,11 @@ export type Database = {
           number_suffix: string | null
           paused_at: string | null
           paused_total_sec: number
+          public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
           reopened_at: string | null
+          rerun_of: string | null
           round_id: string
           started_at: string | null
           status: string
@@ -2784,6 +2851,20 @@ export type Database = {
         }
         Returns: Json
       }
+      rerun_heat: {
+        Args: {
+          p_heat: string
+          p_leave_out: Json
+          p_name: string
+          p_new_heat: string
+          p_plan: string
+          p_plan_items: Json
+          p_plan_updated_at: string
+          p_reason: string
+          p_suffix: string
+        }
+        Returns: Json
+      }
       resolve_flag: {
         Args: { p_flag: string; p_resolution?: string }
         Returns: {
@@ -2826,9 +2907,11 @@ export type Database = {
           number_suffix: string | null
           paused_at: string | null
           paused_total_sec: number
+          public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
           reopened_at: string | null
+          rerun_of: string | null
           round_id: string
           started_at: string | null
           status: string
@@ -2860,9 +2943,11 @@ export type Database = {
           number_suffix: string | null
           paused_at: string | null
           paused_total_sec: number
+          public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
           reopened_at: string | null
+          rerun_of: string | null
           round_id: string
           started_at: string | null
           status: string
@@ -2917,6 +3002,42 @@ export type Database = {
       set_event_archived: {
         Args: { p_archived: boolean; p_event: string }
         Returns: undefined
+      }
+      set_heat_public_live: {
+        Args: { p_heat: string; p_value: boolean }
+        Returns: {
+          created_at: string
+          division_id: string
+          draw_uid: string | null
+          duration_sec: number
+          ended_at: string | null
+          event_id: string
+          flag_out: Json | null
+          id: string
+          live_rev: number
+          manual_override: boolean
+          name: string | null
+          number: number
+          number_suffix: string | null
+          paused_at: string | null
+          paused_total_sec: number
+          public_live: boolean | null
+          publish_hold: boolean
+          published_at: string | null
+          reopened_at: string | null
+          rerun_of: string | null
+          round_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          warm_up_sec: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "heats"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_plan_anchors: {
         Args: {
@@ -3039,9 +3160,11 @@ export type Database = {
           number_suffix: string | null
           paused_at: string | null
           paused_total_sec: number
+          public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
           reopened_at: string | null
+          rerun_of: string | null
           round_id: string
           started_at: string | null
           status: string
