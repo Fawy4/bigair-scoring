@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { pickCurrentHeat, type HeatPhase } from "@/lib/live/current-heat";
+import type { ActivePlan } from "@/lib/live/run-order";
+import { rowToPlan, type PlanRow } from "@/lib/schedule/plans";
+import type { Json } from "@/lib/supabase/database.types";
 import {
   ATTEMPT_COLUMNS,
   FLAG_COLUMNS,
@@ -52,6 +55,10 @@ export interface LiveHeatState extends Snapshot {
   /** Heats whose sheet this seat has submitted (it only knows its own sheets). */
   submittedHeatIds: Set<string>;
   refresh: () => Promise<void>;
+  /** The active run orders, kept current (a hold or a shift made on another device arrives here). */
+  plans: ActivePlan[];
+  /** Shows a hold or pins the server has just answered with, before the stream delivers them. */
+  applyPlan: (planId: string, hold: Json | null, anchors: Json) => void;
   /** Puts a row the server has just returned (our own attempt, score, impression, flag or sheet) into the list at once, without waiting for the stream. */
   apply: (key: "attempts" | "scores" | "impressions" | "flags" | "sheets", row: { id: string; heat_id?: string; updated_at?: string }) => void;
 }
@@ -64,6 +71,7 @@ export interface LiveHeatState extends Snapshot {
 export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServer: number, pinnedHeatId?: string | null): LiveHeatState {
   const [heats, setHeats] = useState<HeatRow[]>(ctx.heats);
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
+  const [plans, setPlans] = useState<ActivePlan[]>(() => ctx.plans.map((p) => ({ id: p.id, day: p.day, plan: p.plan, defaults: p.defaults, updatedAt: p.updatedAt })));
   const [heatsUp, setHeatsUp] = useState(false);
   const [heatUp, setHeatUp] = useState(false);
   const viewer = ctx.viewer;
@@ -88,19 +96,47 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
     const { data } = await supabase.from("heats").select(HEAT_COLUMNS).eq("event_id", ctx.event.id);
     if (data) setHeats(data as unknown as HeatRow[]);
   }, [supabase, ctx.event.id]);
+  const refreshPlans = useCallback(async () => {
+    const { data } = await supabase.from("schedule_plans").select("id, event_id, day, name, items, anchors, actual_starts, hold, defaults, active, updated_at").eq("event_id", ctx.event.id).eq("active", true);
+    if (!data) return;
+    const next: ActivePlan[] = [];
+    for (const r of data) {
+      try {
+        const dp = rowToPlan(r as unknown as PlanRow);
+        next.push({ id: r.id, day: r.day, plan: dp.plan, defaults: dp.defaults, updatedAt: r.updated_at });
+      } catch {
+        /* a damaged plan is shown by the organiser's own screen, not here */
+      }
+    }
+    setPlans(next);
+  }, [supabase, ctx.event.id]);
+  const applyPlan = useCallback<LiveHeatState["applyPlan"]>((planId, hold, anchors) => {
+    setPlans((l) =>
+      l.map((p) => {
+        if (p.id !== planId) return p;
+        const { hold: _old, ...rest } = p.plan;
+        void _old;
+        return { ...p, plan: { ...rest, anchors: anchors as Record<string, string>, ...(hold ? { hold: hold as unknown as NonNullable<typeof p.plan.hold> } : {}) } };
+      }),
+    );
+  }, []);
   useEffect(() => {
     const ch = supabase
       .channel(`heats-${ctx.event.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "schedule_plans", filter: `event_id=eq.${ctx.event.id}` }, () => void refreshPlans())
       .on("postgres_changes", { event: "*", schema: "public", table: "heats", filter: `event_id=eq.${ctx.event.id}` }, (p) => {
         if (p.eventType === "DELETE") setHeats((l) => l.filter((h) => h.id !== (p.old as Row).id));
         else setHeats((l) => upsertRow(l, p.new as unknown as HeatRow));
       })
       .subscribe((status) => {
         setHeatsUp(status === "SUBSCRIBED");
-        if (status === "SUBSCRIBED") void refreshHeats();
+        if (status === "SUBSCRIBED") {
+          void refreshHeats();
+          void refreshPlans();
+        }
       });
     return () => void supabase.removeChannel(ch);
-  }, [supabase, ctx.event.id, refreshHeats]);
+  }, [supabase, ctx.event.id, refreshHeats, refreshPlans]);
 
   // ---- the chosen heat
   const fetchSnapshot = useCallback(
@@ -127,8 +163,9 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
   );
   const refresh = useCallback(async () => {
     await refreshHeats();
+    await refreshPlans();
     if (heatId) await fetchSnapshot(heatId);
-  }, [refreshHeats, fetchSnapshot, heatId]);
+  }, [refreshHeats, refreshPlans, fetchSnapshot, heatId]);
 
   useEffect(() => {
     if (!heatId) {
@@ -189,5 +226,5 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
     [heatId],
   );
 
-  return { heats, heat, phase, ...snap, apply, connected: up && (typeof navigator === "undefined" || navigator.onLine), submittedHeatIds: submittedMemory.current, refresh };
+  return { heats, heat, phase, ...snap, apply, plans, applyPlan, connected: up && (typeof navigator === "undefined" || navigator.onLine), submittedHeatIds: submittedMemory.current, refresh };
 }

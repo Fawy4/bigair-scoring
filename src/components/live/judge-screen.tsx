@@ -218,7 +218,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   };
 
   // ---- between heats
-  const plan = activePlanFor(ctx.plans, ctx.event.timezone, nowServer);
+  const plan = activePlanFor(live.plans, ctx.event.timezone, nowServer);
   const next = useMemo(
     () => (plan ? nextHeat(plan.plan, livesFor(ctx, live.heats, ctx.heatMeta), timetableOptions(plan, ctx.event.timezone, nowServer)) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps

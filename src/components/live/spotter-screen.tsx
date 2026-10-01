@@ -109,7 +109,7 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
     if (r.error) setNotices((n) => [...n, { key: `undo-${key}`, text: T.undoFailed(errorSentence(r.error!.message)) }]);
   };
 
-  const plan = activePlanFor(ctx.plans, ctx.event.timezone, nowServer);
+  const plan = activePlanFor(live.plans, ctx.event.timezone, nowServer);
   const next = useMemo(
     () => (plan ? nextHeat(plan.plan, livesFor(ctx, live.heats, ctx.heatMeta), timetableOptions(plan, ctx.event.timezone, nowServer)) : null),
     // the estimate only needs to follow the heats, not every tick

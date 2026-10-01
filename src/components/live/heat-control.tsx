@@ -4,12 +4,13 @@ import { useMemo, useState, useTransition } from "react";
 import { HeatTimer } from "./heat-timer";
 import { useLiveSettings } from "./live-shell";
 import { Pill } from "./pill";
-import { cancelHeat, endHeat, holdPlan, pauseHeat, resumeHeat, resumePlanAt, shiftPlan, startHeat, type ActionResult } from "@/lib/live/heat-actions";
+import { cancelHeat, endHeat, holdPlan, pauseHeat, resumeHeat, resumePlanAt, shiftPlan, startHeat, type ActionResult, type PlanActionResult } from "@/lib/live/heat-actions";
 import { controlsFor, type ControlId, type HeatState } from "@/lib/live/head-state";
 import { activePlanFor, heatTitle, livesFor, timetableOptions, type ActivePlan } from "@/lib/live/run-order";
 import { computeTimetable, utcToLocalHHMM } from "@/lib/engine/schedule";
 import { effectiveStatus, remainingMs } from "@/lib/live/timer";
 import type { HeatRow, LiveContext } from "@/lib/live/types";
+import type { Json } from "@/lib/supabase/database.types";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +46,7 @@ function ControlButton({ children, onClick, disabled, tone = "plain", testId }: 
  * of the selected heat: Start (with its refusals in plain words), Pause, Resume, End, Hold, Resume at, Shift, Cancel. Every press is a server action that
  * uses the database's own clock; the screen only shows what the database answered.
  */
-export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans }: { ctx: LiveContext; heats: HeatRow[]; selectedId: string | null; onSelect: (id: string) => void; nowServer: number; plans: ActivePlan[] }) {
+export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans, onPlanChanged }: { ctx: LiveContext; heats: HeatRow[]; selectedId: string | null; onSelect: (id: string) => void; nowServer: number; plans: ActivePlan[]; onPlanChanged?: (planId: string, hold: Json | null, anchors: Json) => void }) {
   const settings = useLiveSettings();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
@@ -79,11 +80,12 @@ export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans
   const onHold = Boolean(plan?.plan.hold);
   const planId = plan?.id ?? null;
 
-  const act = (label: string, run: () => Promise<ActionResult>) =>
+  const act = (label: string, run: () => Promise<ActionResult | PlanActionResult>) =>
     startTransition(async () => {
       setMessage(null);
       const r = await run();
       setMessage(r.ok ? { ok: true, text: label } : { ok: false, text: r.message });
+      if (r.ok && "anchors" in r && planId) onPlanChanged?.(planId, r.hold, r.anchors);
       if (r.ok) {
         setCancelling(false);
         setReason("");

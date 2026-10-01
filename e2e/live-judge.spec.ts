@@ -1,4 +1,4 @@
-import { test, expect, installSupabaseProxy } from "./base";
+import { test, expect, installSupabaseProxy, closePhones } from "./base";
 import { createLiveWorld, type LiveWorld } from "./live-world";
 import type { BrowserContext, Page } from "@playwright/test";
 
@@ -16,7 +16,7 @@ test.afterEach(async () => {
 
 const phones: BrowserContext[] = [];
 test.afterEach(async () => {
-  while (phones.length) await phones.pop()!.close();
+  await closePhones(phones);
 });
 async function phone(browser: import("@playwright/test").Browser, key: Parameters<LiveWorld["signInAs"]>[1], path: string): Promise<Page> {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -26,7 +26,6 @@ async function phone(browser: import("@playwright/test").Browser, key: Parameter
   await w.signInAs(page, key, path);
   return page;
 }
-const attempts = async (entry = w.entries[0]) => (await w.db.from("trick_attempts").select("id, seq, status").eq("heat_id", w.heats[0]).eq("entry_id", entry).is("deleted_at", null).order("seq")).data ?? [];
 const scores = async (judge: string) => (await w.db.from("trick_scores").select("attempt_id, score, missed, version").eq("heat_id", w.heats[0]).eq("judge_seat_id", w.seats[judge as "j1"].id)).data ?? [];
 const score = async (p: Pick<Page, "getByRole">, whole: number, half: "0" | "5") => {
   await p.getByRole("button", { name: `Set ${whole}`, exact: true }).click();

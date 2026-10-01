@@ -9,9 +9,11 @@ import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/database.types";
 
 export type ActionResult = { ok: true } | { ok: false; code: string | null; message: string };
+/** A run order change answers with the hold and pins as they are now, so the screen can show them at once. */
+export type PlanActionResult = { ok: true; hold: Json | null; anchors: Json } | { ok: false; code: string | null; message: string };
 
 const uuid = z.string().uuid();
-const fail = (code: string | null, message?: string): ActionResult => ({ ok: false, code, message: message ?? errorSentence(code) });
+const fail = (code: string | null, message?: string): { ok: false; code: string | null; message: string } => ({ ok: false, code, message: message ?? errorSentence(code) });
 
 /** Every heat change goes through the database's own functions (they check who may, the rules, and write the audit line). */
 async function heatRpc(fn: "start_heat" | "pause_heat" | "resume_heat" | "end_heat", heatId: string): Promise<ActionResult> {
@@ -21,10 +23,18 @@ async function heatRpc(fn: "start_heat" | "pause_heat" | "resume_heat" | "end_he
   return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true };
 }
 
-export const startHeat = (heatId: string) => heatRpc("start_heat", heatId);
-export const pauseHeat = (heatId: string) => heatRpc("pause_heat", heatId);
-export const resumeHeat = (heatId: string) => heatRpc("resume_heat", heatId);
-export const endHeat = (heatId: string) => heatRpc("end_heat", heatId);
+export async function startHeat(heatId: string): Promise<ActionResult> {
+  return heatRpc("start_heat", heatId);
+}
+export async function pauseHeat(heatId: string): Promise<ActionResult> {
+  return heatRpc("pause_heat", heatId);
+}
+export async function resumeHeat(heatId: string): Promise<ActionResult> {
+  return heatRpc("resume_heat", heatId);
+}
+export async function endHeat(heatId: string): Promise<ActionResult> {
+  return heatRpc("end_heat", heatId);
+}
 
 export async function cancelHeat(heatId: string, reason: string): Promise<ActionResult> {
   if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
@@ -53,7 +63,7 @@ async function loadPlan(planId: string) {
   return { supabase, row, plan: dp.plan, defaults: dp.defaults, timezone: event?.timezone ?? "Africa/Cairo", lives: model.lives, serverNow: typeof now === "string" ? now : new Date().toISOString() };
 }
 
-function planFailure(e: unknown): ActionResult {
+function planFailure(e: unknown): { ok: false; code: string | null; message: string } {
   const text = e instanceof Error ? e.message : "";
   if (/on hold/i.test(text) && /resume/i.test(text)) return fail("ON_HOLD");
   if (/not on hold/i.test(text)) return fail("NOT_ON_HOLD");
@@ -62,17 +72,17 @@ function planFailure(e: unknown): ActionResult {
 }
 
 /** Hold: from now on every un-started row is "held". The moment is the database's clock. */
-export async function holdPlan(planId: string, reason?: string): Promise<ActionResult> {
+export async function holdPlan(planId: string, reason?: string): Promise<PlanActionResult> {
   if (!uuid.safeParse(planId).success) return fail("PLAN_NOT_FOUND");
   const p = await loadPlan(planId);
   if (!p) return fail("PLAN_NOT_FOUND");
   const held = holdPlanPure(p.plan, p.serverNow, reason?.trim() || undefined);
-  const { error } = await p.supabase.rpc("set_plan_hold", { p_plan: planId, p_hold: held.hold as unknown as Json, p_reason: reason?.trim() || undefined, p_expected: p.row.updated_at });
-  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true };
+  const { data, error } = await p.supabase.rpc("set_plan_hold", { p_plan: planId, p_hold: held.hold as unknown as Json, p_reason: reason?.trim() || undefined, p_expected: p.row.updated_at });
+  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, hold: data?.hold ?? null, anchors: data?.anchors ?? {} };
 }
 
 /** Resume at HH:MM (event time): that restart pins the next heat that has not started, and clears the hold. */
-export async function resumePlanAt(planId: string, hhmm: string): Promise<ActionResult> {
+export async function resumePlanAt(planId: string, hhmm: string): Promise<PlanActionResult> {
   if (!uuid.safeParse(planId).success) return fail("PLAN_NOT_FOUND");
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hhmm)) return fail("BAD_PLAN_VALUE");
   const p = await loadPlan(planId);
@@ -80,23 +90,23 @@ export async function resumePlanAt(planId: string, hhmm: string): Promise<Action
   if (!p.plan.hold) return fail("NOT_ON_HOLD");
   try {
     const resumed = resumePlanAtPure(p.plan, p.lives, p.row.day, hhmm, p.timezone);
-    const { error } = await p.supabase.rpc("set_plan_hold", { p_plan: planId, p_hold: null, p_expected: p.row.updated_at, p_anchors: resumed.anchors as unknown as Json });
-    return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true };
+    const { data, error } = await p.supabase.rpc("set_plan_hold", { p_plan: planId, p_hold: null, p_expected: p.row.updated_at, p_anchors: resumed.anchors as unknown as Json });
+    return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, hold: data?.hold ?? null, anchors: data?.anchors ?? {} };
   } catch (e) {
     return planFailure(e);
   }
 }
 
 /** Shift +N minutes: pins the next heat that has not started at its projected start + N. */
-export async function shiftPlan(planId: string, minutes: number): Promise<ActionResult> {
+export async function shiftPlan(planId: string, minutes: number): Promise<PlanActionResult> {
   if (!uuid.safeParse(planId).success) return fail("PLAN_NOT_FOUND");
   if (!Number.isFinite(minutes) || Math.abs(minutes) > 240) return fail("BAD_PLAN_VALUE");
   const p = await loadPlan(planId);
   if (!p) return fail("PLAN_NOT_FOUND");
   try {
     const shifted = shiftPlanPure(p.plan, p.lives, minutes, { timezone: p.timezone, eventDay: p.row.day, defaults: p.defaults, serverNowIso: p.serverNow });
-    const { error } = await p.supabase.rpc("set_plan_anchors", { p_plan: planId, p_anchors: shifted.anchors as unknown as Json, p_expected: p.row.updated_at });
-    return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true };
+    const { data, error } = await p.supabase.rpc("set_plan_anchors", { p_plan: planId, p_anchors: shifted.anchors as unknown as Json, p_expected: p.row.updated_at });
+    return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, hold: data?.hold ?? null, anchors: data?.anchors ?? {} };
   } catch (e) {
     return planFailure(e);
   }

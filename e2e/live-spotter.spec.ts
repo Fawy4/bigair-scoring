@@ -1,4 +1,4 @@
-import { test, expect, installSupabaseProxy } from "./base";
+import { test, expect, installSupabaseProxy, closePhones } from "./base";
 import { createLiveWorld, type LiveWorld } from "./live-world";
 
 // Phase 5b step 2 on a throwaway event: the spotter's phone opens the running heat by itself, logs by tap, by typing and by speaking (a stand-in for the
@@ -160,7 +160,6 @@ test("a second spotter logging the same rider a few seconds later shows Possible
       await expect(p.getByTestId("feed")).toContainText("Possible duplicate");
     }
   } finally {
-    await a.context().close();
-    await b.context().close();
+    await closePhones([a.context(), b.context()]);
   }
 });

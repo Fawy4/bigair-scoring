@@ -20,3 +20,12 @@ export const test = base.extend({
   },
 });
 export { expect };
+
+/** Closes the extra phones a test opened. Requests still in flight (the heartbeat) are given up on quietly, not reported as errors. */
+export async function closePhones(list: BrowserContext[]): Promise<void> {
+  while (list.length) {
+    const context = list.pop()!;
+    await context.unrouteAll({ behavior: "ignoreErrors" }).catch(() => {});
+    await context.close().catch(() => {});
+  }
+}

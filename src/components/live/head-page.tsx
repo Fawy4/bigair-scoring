@@ -59,7 +59,7 @@ function HeadPage({ ctx }: { ctx: LiveContext }) {
   const scores = Boolean(seatId && ctx.divisions.some((d) => d.panelSeatIds.includes(seatId)));
 
   // nothing picked: follow the running heat, else the next one on the run order
-  const plan = activePlanFor(ctx.plans, ctx.event.timezone, nowServer);
+  const plan = activePlanFor(live.plans, ctx.event.timezone, nowServer);
   const upcoming = useMemo(
     () => (plan ? nextHeat(plan.plan, livesFor(ctx, live.heats, ctx.heatMeta), timetableOptions(plan, ctx.event.timezone, nowServer)) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -87,7 +87,7 @@ function HeadPage({ ctx }: { ctx: LiveContext }) {
 
   const control = (
     <div className="flex flex-col gap-3">
-      <HeatControl ctx={ctx} heats={live.heats} selectedId={shownId} onSelect={setSelected} nowServer={nowServer} plans={ctx.plans} />
+      <HeatControl ctx={ctx} heats={live.heats} selectedId={shownId} onSelect={setSelected} nowServer={nowServer} plans={live.plans} onPlanChanged={live.applyPlan} />
       <section data-testid="rider-totals" aria-label={copy.heatControl.totals} className="flex flex-col gap-1.5">
         <h2 className="text-heading font-semibold text-beach-muted">{copy.heatControl.totals}</h2>
         {totals.length === 0 || totals.every((t) => !t.formula) ? (
