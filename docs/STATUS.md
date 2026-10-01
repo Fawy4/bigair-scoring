@@ -443,3 +443,54 @@ The owner decided that the target / minimum / maximum rule with the 1 v 1 fallba
 
 ### How to test on the preview
 See the pull request description.
+
+## Phase 5 – live heat operations
+
+Plan: `docs/PLAN-phase-5.md` (the owner's answers of 1 Oct 2026 are in its §11). No migration in this phase's first PR.
+
+| PR | Branch | Contents | Planned hours | Actual hours |
+|---|---|---|---|---|
+| **5a** | `phase-5a-design` | Step 0: beach colour themes, the presentational live components, the public `/design` page | 3–4 h | not measured (no clock was kept in the session); to be filled in by the owner |
+| **5b** | `phase-5b-spotter-judge` (after the owner approves 5a) | Steps 1–3 and the 5b part of 7: migration, timer, minimal `/head` controls, trick composer and parser, queue, spotter, judge | 8–10 h | – |
+| **5c** | `phase-5c-head-publish` (after 5b merges) | Steps 4–6, the rest of 7: head console, publish, re-open, Re-run heat, visibility and the leak fixes, announcer view, practice heat, the 3-phone acceptance run | 9–11 h | – |
+
+If 5b runs long it splits at the spotter / judge boundary (5b-1 steps 1–2, 5b-2 step 3). If 5c runs long, Re-run heat and the practice heat move to a small 5d.
+
+### Phase 5a – the /design preview (branch `phase-5a-design`)
+
+**5b does not start before the owner writes "approved" (or a list of changes) on the pull request.** Four rounds so far (first preview; iPhone 14 test; second outdoor test; round 4 on size and the public results). This entry describes the result of round 4; rounds 1–3 stand unless said otherwise.
+
+#### Done (round 4)
+- **Sizes.** What "Normal" was is now **Large**. The new Normal is genuinely compact: pad squares 38 px with 4 px gaps and 16 px digits, chips no wider than their text plus 12 px (36 px minimum tap target), rows 38, composed trick name 15 px in at most two lines, CRASH and Log one row 44 px high, headings 12 px, selected-score readout 26 px. Every live screen (judge queue with the whole pad and history, spotter, heat end) fits 390 × 844 without scrolling; the queue also fits at 750 and 664 high.
+- **Pad: tap or type.** The two rows stay (whole number, decimal) and a small number field with the numeric keyboard sits beside them. A whole number alone is valid: after 3 or 4, **Save** completes it (the readout shows "7." meanwhile); the decimal tap also completes it; typing then Save completes it. Off-step or out-of-range typing is refused (Save stays off); a comma works as the decimal mark.
+- **Rider label follows the scheme and always shows the name,** on every screen (queue, spotter strip, heat end, results): Lycra → colour word in a coloured block with the name and nationality beside it; bib → number block + name; name call-out → name first. It replaces the round-3 label everywhere.
+- **Details bug fixed:** every rider card is tappable, including riders who have used all attempts (only the spotter strip locks them out). The queue card carries one help line: Missed = "I did not see it" (no score from me; the panel average uses the others); Flag = "alert the head judge" (I still score).
+- **Spotter:** riders in one row; a row for Left / Right; a row for the multipliers (with the type-a-trick field and mic); base tricks as a compact list on the left, add-ons and grabs in two columns on the right; CRASH and Log fixed at the bottom. Direction, multiplier, six base tricks, add-ons and Log are all reachable without scrolling in Normal. PLAN step 2 now says the base-trick order per division is set by drag-and-drop in the Divisions step (tap alternative) and the spotter shows that order.
+- **Public results = heat summary** (modelled on the previous app and your two references; colours are not copied). Tabs per heat; one compact row per rider in rank order with the Rider label, place, total and the formula in words ("18.20 = tricks 13.50 + Impression 4.70"); the attempts as small boxes in attempt order. Crash red, not counted grey, counted graded yellow → green **across the whole heat** (highest counted score greenest, lowest yellowest), every box also with its word or icon. A per-division setting for what a box shows: attempt number + score (Arrow's default), trick name + score, or scores only. A **ladder view** shows each heat with its riders in their Lycra colour and their totals, with placeholders for heats not yet decided. Mocked on /design; the model is written into PLAN step 6 for Phase 6.
+- **Head judge console:** each judge cell is coloured by its distance from the panel score, high and low alike (within tolerance green, then yellow, orange, red), with the distance written ("+0.4", "−1.6"); the tolerance is the scoring model's outlier threshold (1.5 for KOTA). A **tick box** left of each attempt number: selecting several enables **Merge** (duplicates) and **Delete** for the selection; the single-attempt menus stay.
+- **Heat end:** same number sizes and the same label.
+- **Docs:** PLAN-phase-5 steps 0, 2, 3, 4, 6 and §11 rows 22–26; docs/06 §00.2, §0 and the Phase 5a decisions log.
+
+#### Test evidence
+- `npm run typecheck` clean · `npm run lint` clean · production build: see the PR description.
+- `npm test`: **92 files, 1141 tests passed.** New or changed in round 4: `size-tokens` (Normal inside your ranges, Large = old Normal), `theme-tokens` (grade and distance tints carry ink at 7:1 in both themes), `score-pad` (`parsePadInput`), `result-shading` (grade across the heat, crash / not counted, the three box texts), `cell-tone` (tolerance from the model, bands, signed distance), `console-ops` (merge keeps the first logged attempt; same rider and trick), `label-style`, fixtures (docs/08 values 31.54, 24.04 + 7.50, 7.71 / 8.25 / 7.29 / crash / 8.08).
+- Playwright `e2e/design.spec.ts` at **390 × 844**, 27 tests: sizes (Normal and Large), chips ≤ text + 12, no scrolling on the live screens, pad tap-or-type, Details with an "Out" rider, the help line, spotter layout and fixed bar, heat end, both head tabs, distance bands, tick boxes with Merge and Delete, the rest of the console, public results (tabs, grades, three box modes, ladder), colour names, no sideways scroll, dark mode, no percentages.
+
+#### Choices I made where the docs were silent (please confirm or change)
+1. **Chips and 38 px pad squares instead of full-width list rows** for secondary controls. This is what makes it compact; the tap target is 36 px minimum, below the 44–56 px of the earlier rounds. Large is there if a thumb in the sun needs it.
+2. **Large is the old Normal** (46 px pad), not the old Large.
+3. **The colour word on a coloured Lycra block still cannot reach 7:1** for seven of ten colours (4.5:1 at best with the better ink). You asked for the block.
+4. **Names are truncated in the rider strips** (spotter, Details) so the row stays one line; the full name is in the detail below and on results.
+5. **The default box display is "attempt number + score"** (your wording for Arrow); the percent preview switch from round 2 is removed because the preview now shows no percentages at all.
+6. **Distance bands (my choice):** green up to 1× the tolerance, yellow up to 1.5×, orange up to 2×, red beyond.
+7. **Merge needs the same rider and the same trick (at least two ticked);** it keeps the earliest logged attempt. Delete works on any selection. Different tricks cannot be merged.
+8. Carried over: tenths are two taps unless typed; criteria scoring is tabs + one pad; start heat on Control and the console; percent overlaps `heat.total.display` (5b settles).
+
+#### Not done / not verified
+- Nothing is live: no server-clock timer, no queue storage, no realtime, no saving (5b). The console's actions change only what the page shows.
+- Not seen by me on a real phone in sun or on iPhone Safari (Chromium only; screenshots use a fallback font).
+- Large is tested for sizes and sideways scroll, not for fitting one screen.
+- Drag-and-drop trick ordering and the per-division display setting are written in the plan, not built.
+
+#### How to test on a phone
+See the click-through at the end of the pull request description.

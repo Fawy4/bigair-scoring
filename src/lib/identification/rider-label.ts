@@ -1,5 +1,6 @@
 import type { IdentificationScheme, PaletteColour } from "@/lib/schemas/identification";
 import { copy } from "@/lib/ui-copy";
+import { bestInk } from "./label-style";
 
 /** What we know about one rider when a rider label is drawn. Identifiers follow docs/05 `entries.identifiers`. */
 export interface LabelRider {
@@ -20,6 +21,8 @@ export interface LabelRider {
 
 export interface LabelPrimary {
   kind: "colour" | "text" | "photo" | "none";
+  /** Which identifier this is (the live screens pick the label's look from it: colour block, number block or name first). */
+  source?: "vest_colour" | "rashguard_colour" | "helmet_colour" | "bib_number" | "kite" | "name" | "photo";
   /** Always filled: colour names are shown as text too (beach standard 00.5). */
   text: string;
   hex?: string;
@@ -46,8 +49,9 @@ function luminance(hex: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+/** Black or white text on a colour, whichever reads better. */
 export function inkFor(hex: string): "#111111" | "#ffffff" {
-  return luminance(hex) > 0.35 ? "#111111" : "#ffffff";
+  return bestInk(hex);
 }
 
 function colourOf(palette: PaletteColour[], key: string | null | undefined): PaletteColour | null {
@@ -78,21 +82,21 @@ function primaryFor(scheme: IdentificationScheme, rider: LabelRider, which: stri
     const c = colourFor(scheme, rider, which);
     if (!c) return null;
     const lum = luminance(c.hex);
-    return { kind: "colour", text: c.label.toUpperCase(), hex: c.hex, outlined: lum > 0.8 || lum < 0.02 || /^(white|black)$/i.test(c.label), ink: inkFor(c.hex), usedFallback };
+    return { kind: "colour", source: which as "vest_colour" | "rashguard_colour" | "helmet_colour", text: c.label.toUpperCase(), hex: c.hex, outlined: lum > 0.8 || lum < 0.02 || /^(white|black)$/i.test(c.label), ink: inkFor(c.hex), usedFallback };
   }
   if (which === "name") {
-    return rider.name.trim() ? { kind: "text", text: rider.name.trim(), outlined: true, ink: "#111111", usedFallback } : null;
+    return rider.name.trim() ? { kind: "text", source: "name" as const, text: rider.name.trim(), outlined: true, ink: "#111111", usedFallback } : null;
   }
   if (which === "bib_number") {
     if (ids.bib === undefined || ids.bib === "") return null;
-    return { kind: "text", text: String(ids.bib), outlined: true, ink: "#111111", usedFallback };
+    return { kind: "text", source: "bib_number" as const, text: String(ids.bib), outlined: true, ink: "#111111", usedFallback };
   }
   if (which === "kite") {
     const t = kiteText(ids.kite);
-    return t ? { kind: "text", text: t, outlined: true, ink: "#111111", usedFallback } : null;
+    return t ? { kind: "text", source: "kite" as const, text: t, outlined: true, ink: "#111111", usedFallback } : null;
   }
   if (which === "photo") {
-    return rider.photoUrl ? { kind: "photo", text: rider.name, outlined: true, ink: "#111111", usedFallback } : null;
+    return rider.photoUrl ? { kind: "photo", source: "photo" as const, text: rider.name, outlined: true, ink: "#111111", usedFallback } : null;
   }
   return null;
 }

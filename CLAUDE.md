@@ -24,7 +24,7 @@ Next.js 15 (App Router, TypeScript strict) · Tailwind + shadcn/ui · Supabase (
 
 ## Repo layout
 ```
-src/app/            routes (App Router). Public: / , /e/[eventSlug]/... , /o/[orgSlug] ; organiser: /org/... ; platform owner: /admin/... (404 for everybody else) ; judge: /judge/... ; head: /head/... ; spotter: /spot/... ; screen: /screen/...
+src/app/            routes (App Router). Public: / , /e/[eventSlug]/... , /o/[orgSlug] , /design (look-and-feel preview, Phase 5a) ; organiser: /org/... ; platform owner: /admin/... (404 for everybody else) ; judge: /judge/... ; head: /head/... ; spotter: /spot/... ; screen: /screen/...
 src/lib/engine/     PURE logic, no I/O: scoring/, ladder/, schedule/ (+ tests). Import nothing from Supabase or React here.
 src/lib/schemas/    Zod schemas for ScoringModel, FormatTemplate, Schedule (single source of truth for types)
 src/lib/supabase/   clients (server, browser, service), typed helpers

@@ -24,8 +24,7 @@
     { "key": "boogie_loop", "label": "Boogie loop", "category": "kiteloop", "aliases": ["boogie"] },
     { "key": "late_backroll", "label": "Late backroll", "category": "rotation", "aliases": ["late back", "late BR"] },
     { "key": "late_frontroll", "label": "Late frontroll", "category": "rotation", "aliases": ["late front", "late FR"] },
-    { "key": "heart_attack", "label": "Heart attack", "category": "other", "aliases": ["heartattack"] },
-    { "key": "tic_tac", "label": "Tic-tac", "category": "other", "aliases": ["tictac", "tic tac"] }
+    { "key": "heart_attack", "label": "Heart attack", "category": "other", "aliases": ["heartattack"] }
   ],
   "modifiers": [
     { "key": "board_off", "family": "addon", "label": "Board-off", "category": "board_off", "aliases": ["BO", "board off", "boardoff"] },
@@ -34,6 +33,7 @@
     { "key": "handle_pass", "family": "addon", "label": "Handle pass", "category": "handle_pass", "aliases": ["handle", "HP", "pass"] },
     { "key": "kiteloop_mod", "family": "addon", "label": "+ Kiteloop", "category": "kiteloop", "aliases": ["with loop", "with kiteloop", "KL"] },
     { "key": "late", "family": "addon", "label": "Late", "category": null, "aliases": ["late rotation"] },
+    { "key": "tic_tac", "family": "addon", "label": "Tic-tac", "category": null, "aliases": ["tictac", "tic tac"] },
     { "key": "grab", "family": "grab_landing", "label": "Grab", "category": null, "aliases": ["indy", "tail grab", "nose grab", "melon", "mute", "stalefish", "method"], "variants": ["Indy", "Tail", "Nose", "Melon", "Mute", "Stalefish", "Method"] },
     { "key": "blind_landing", "family": "grab_landing", "label": "Blind landing", "category": null, "aliases": ["to blind", "blind"] },
     { "key": "toeside", "family": "grab_landing", "label": "Toeside", "category": null, "aliases": ["toe side", "toe"] },
