@@ -443,3 +443,57 @@ The owner decided that the target / minimum / maximum rule with the 1 v 1 fallba
 
 ### How to test on the preview
 See the pull request description.
+
+## Phase 5 – live heat operations
+
+Plan: `docs/PLAN-phase-5.md` (the owner's answers of 1 Oct 2026 are in its §11). No migration in this phase's first PR.
+
+| PR | Branch | Contents | Planned hours | Actual hours |
+|---|---|---|---|---|
+| **5a** | `phase-5a-design` | Step 0: beach colour themes, the presentational live components, the public `/design` page | 3–4 h | not measured (no clock was kept in the session); to be filled in by the owner |
+| **5b** | `phase-5b-spotter-judge` (after the owner approves 5a) | Steps 1–3 and the 5b part of 7: migration, timer, minimal `/head` controls, trick composer and parser, queue, spotter, judge | 8–10 h | – |
+| **5c** | `phase-5c-head-publish` (after 5b merges) | Steps 4–6, the rest of 7: head console, publish, re-open, Re-run heat, visibility and the leak fixes, announcer view, practice heat, the 3-phone acceptance run | 9–11 h | – |
+
+If 5b runs long it splits at the spotter / judge boundary (5b-1 steps 1–2, 5b-2 step 3). If 5c runs long, Re-run heat and the practice heat move to a small 5d.
+
+### Phase 5a – the /design preview (branch `phase-5a-design`)
+
+**5b does not start before the owner writes "approved" (or a list of changes) on the pull request.**
+
+#### Done
+- **Public page `/design`** (no login, `noindex`, no database changes). Top: the sentence "Design preview — nothing here is live"; a sticky bar with the **Daylight / Dark** switch (remembered on that device only) and a **Jump to…** menu for the eight sections: Rider labels · Heat timer and status · Judge card · Impression / Variety step · Spotter builder · Result row · Head judge score table · Sizes.
+- **Rider label section.** It shows the Arrow event's real scheme ("Arrow Big Air: Lycra colour per heat" on the hosted dev project) when one can be read, then the three standard schemes (Lycra colour per heat, Bib / sail number, Name call-out) with White and Black Lycras, then the rider tiles with their "n / 7" counters and the grey "Out of attempts · 7 / 7" state. Where the Arrow scheme cannot be read, a sentence says so and the three standard ones are shown.
+- **Judge card**: header (heat name, timer, Synced, seat), rider strip, a landed attempt with one pad, a landed attempt with four criteria pads and the live trick score, a Repeat badge, Missed and Flag, a crashed attempt ("Crashed — no score needed", no pad, "Flag: that was a landing"), and the large "Saved 7.5 — BLUE — attempt 5" banner that stays until the next tap.
+- **Impression / Variety step** (as you asked): three riders, **the heat summary card above each pad**, progress "1 / 3 riders", Submit sheet off until every rider has a score, one confirmation, then read-only with "Ask the head judge to reopen it".
+- **Spotter builder**: one row of blocks per family, add-ons and grabs that toggle, the composed name and category, a text field and a microphone button (both do nothing yet), CRASH with one confirmation, Log.
+- **Result row** and **head judge score table** with every cell state (scored, missing, missed, absent, outlier, crash, deleted, possible duplicate), each with a word and an icon.
+- **Themes** (`.beach-day`, `.beach-dark` in `globals.css`, mapped in `tailwind.config.ts`; the same hex values live in `src/lib/live/theme-tokens.ts` and a test fails if they differ). Sizes from docs/06 §00.2 are variables: pad button ≥ 56 px (built at 60 px) with 8 px gaps, pad digits 28 px bold, rider names ≥ 20 px, timer 56 px, other taps ≥ 48 px.
+- **Components** in `src/components/live/`: `theme-switch`, `help-tip`, `rider-tile`, `heat-timer`, `connection-badge`, `saved-banner`, `score-pad`, `criteria-rows`, `attempt-card`, `trick-builder`, `result-row`, `head-matrix`, `heat-summary-card`, `impression-card`. All take props and fetch nothing. The shared `RiderLabel` gained an opt-in `nameplate` (see choice 2).
+- **Pure code** in `src/lib/live/`: `score-pad.ts` (layout, snapping, range, uses the engine's own step check), `theme-tokens.ts` (colours and the contrast maths), `matrix-model.ts`, `timer.ts` (`formatClock` only; 5b adds the clock maths), `design-fixtures.ts` (made-up riders and the docs/08 numbers), `arrow-scheme.ts` and `arrow-loader.ts`.
+- Every word is in `src/lib/ui-copy.ts` (new sections `design` and `live`); the house-words test caught one banned word while I wrote it ("marked") and passes now.
+
+#### Test evidence
+- `npm run typecheck` clean · `npm run lint` clean · `npm run build` (production) succeeds, `/design` is a dynamic page of 28 kB.
+- `npm test`: **84 files, 1025 tests passed** (the Phase 4b entry above records 929; I did not re-run main before starting). New: pad snapping and range (8.55 on step 0.1 refused, 0.3 is 0.3, every preset scale fits in rows of ≤ 12), contrast of every text/background pair ≥ 7:1 in both themes (lowest of the status colours: 7.16 in Daylight, 8.98 in Dark) plus a check that `globals.css` carries exactly those colours, the Lycra colours in both themes, the docs/08 values on the page data (31.54, 78.85 %, 24.04 + 7.50, panel 7.71 / 8.25 / 7.29 / crash / 8.08, 7.31 for the missing and Missed variants), `formatClock`, the Arrow scheme reader.
+- `npm run test:rls`: 215 passed (unchanged; no database change).
+- Playwright `e2e/design.spec.ts` at **390 × 844**, 12 tests: **passed against the dev server and again against the production build** (`next start`). They check: every pad button ≥ 56 px with 8 px gaps, every other tap target ≥ 48 px, timer ≥ 48 px, pad digits ≥ 28 px, rider names ≥ 20 px, no sideways scroll in either theme (the score table scrolls inside its own box), dark mode and its memory, the colour names, the pad, the criteria (7.625 for docs/08 attempt 1), the Submit-sheet flow, the builder (name "Left ×2 Backroll Board-off Handle pass") and the docs/08 numbers.
+- Also run: `division-identification` and `smoke` specs (the shared Rider label changed) – 3 passed. The `riders`, `organiser` and `acceptance-4a2` specs (the other places the Rider label is drawn): 6 passed.
+
+#### Choices I made where the docs were silent (please confirm or change)
+1. **The pad is two taps for long scales.** 0–10 in tenths would be 101 buttons. A scale with more than 12 values shows a row of whole numbers and a row of decimals; tapping a whole number already saves a valid score (7 means 7.0) and the decimal refines it. Short scales (0–3 in halves, 0–1) are one row. The "10" button sits alone on a third row on a 390 px phone.
+2. **The colour name sits on a white plate.** Text printed straight onto Red, Blue, Green, Orange, Pink, Purple or Grey Lycra reaches only 3.5–6.7 : 1, below your 7 : 1 rule, whichever of black or white is used. So the official screens write the name on a plain plate over the colour. This is an opt-in `nameplate` on the shared `RiderLabel`; the organiser screens look exactly as before. If you prefer text straight on the colour, the rule has to be relaxed for lycras.
+3. **Status colours are text and borders, never fills**, each with an icon and a word, so all of them reach 7 : 1 (Daylight: green, blue, rose, red, brown, grey; Dark: pale versions). Selected is a filled deep blue with a thick border.
+4. **Arrow's scheme is read on a public page with the server key.** Only the event name and its Rider label scheme are read, only from an event a visitor could see anyway (published, live or complete), unless you are signed in as an organiser of Arrow, when your own access shows it before publishing. If nothing is found the page says so and shows the three standard schemes.
+5. **The score table is shown on the phone inside its own scrolling box**, with a sentence that on a phone the real page shows totals instead (plan addition A). It is the only thing on the page that scrolls sideways.
+6. **Preview-only code is marked as such**: the trick name in the spotter builder (`previewCompose`) and the numbers on the summary card (`summarise`) are small stand-ins for the engine functions written test-first in 5b. The directions ("Left 3 / Right 1") on the summary card are made up; the test document has none.
+7. **Made-up second and third riders on the result row** (Blue 2nd, a DNS rider 3rd) use simple scores run through the real engine; only Red is from docs/08.
+8. **`cn()` now knows the new font sizes** (`text-pad-digit`, `text-rider-name`, `text-timer`). Without that, `tailwind-merge` silently dropped the timer's size when a colour class sat beside it: the first Playwright run measured the timer at 16 px, and this was the cause.
+9. **Daylight / Dark is per device** (localStorage in try/catch, Daylight when unavailable). On a phone set to Dark the first paint is Daylight for a moment before the saved choice applies.
+
+#### Not done / not verified
+- Nothing on this page is live: no timer maths from the server clock, no queue, no realtime, no saving. That is 5b.
+- Not seen on a real phone in full sun by me; I checked layout in a 390 × 844 browser and the contrast by arithmetic. That is your check.
+- iPhone Safari was not available here (Chromium only).
+
+#### How to test on a phone
+See the click-through at the end of the pull request description.
