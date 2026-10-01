@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   blockIdsFor,
+  headPhone,
+  judgeLive,
   FIXTURE_SCHEMES,
   impressionRiders,
   JUDGE_IDS,
@@ -15,13 +17,17 @@ import {
 // The /design page shows real numbers: the KOTA heat of docs/08 §1A and its variants. If a value here is wrong, the page is lying to the owner.
 describe("docs/08 §1A on the result row", () => {
   const red = resultRows()[0];
-  it("Red wins with 31.54, 78.85 %", () => {
+  it("Red wins with 31.54", () => {
     expect(red.place).toBe(1);
     expect(red.totalLabel).toBe("31.54");
-    expect(red.percentLabel).toBe("78.85 %");
   });
-  it("the sum is written in words: tricks 24.04 + Impression / Variety score 7.50", () => {
-    expect(red.formula).toBe("31.54 = tricks 24.04 + Impression / Variety score 7.50");
+  it("the percent of maximum stays in the data (78.85) for exports, but is only worded when a division turns it on", () => {
+    expect(red.percent).toBe(78.85);
+    expect(red.percentLabel).toBe("78.85 % of maximum");
+  });
+  it("the sum is written in words with the scoring model's own name for the score: 31.54 = tricks 24.04 + Impression 7.50", () => {
+    expect(red.formula).toBe("31.54 = tricks 24.04 + Impression 7.50");
+    expect(resultRows().every((r) => !/%/.test(r.formula ?? ""))).toBe(true);
   });
   it("attempts 2, 5 and 1 count (8.25, 8.08, 7.71); attempt 4 is the crash", () => {
     expect(red.attempts.filter((a) => a.counted).map((a) => [a.seq, a.scoreLabel])).toEqual([
@@ -93,23 +99,64 @@ describe("Rider label fixtures", () => {
   });
 });
 
-describe("the impression step", () => {
+describe("the heat-end summary (compact)", () => {
   const riders = impressionRiders();
-  it("Red's summary is the §1A heat: 5 attempts, 4 landed, 1 crashed", () => {
-    const red = riders[0];
-    expect(red.summary.attempts).toBe(5);
-    expect(red.summary.landed).toBe(4);
-    expect(red.summary.crashed).toBe(1);
+  it("Red's summary is the §1A heat: 5 attempts, 4 landed, 1 crashed, no repeats, Left 3 · Right 1", () => {
+    const red = riders[0].summary;
+    expect([red.attempts, red.landed, red.crashed, red.repeats]).toEqual([5, 4, 1, 0]);
+    expect([red.left, red.right]).toEqual([3, 1]);
   });
-  it("Red's landed list is sorted by the judge's own score: Double loop 8.25 first", () => {
+  it("has no rotation or family analysis", () => {
+    expect(Object.keys(riders[0].summary).sort()).toEqual(["attempts", "crashed", "landedList", "landed", "left", "repeats", "right"].sort());
+  });
+  it("Red's landed list is sorted by the judge's own score and shows the direction: Double loop, Right, 8.25 first", () => {
     const list = riders[0].summary.landedList;
-    expect(list[0]).toMatchObject({ trick: "Double loop", scoreLabel: "8.25" });
+    expect(list[0]).toMatchObject({ trick: "Double loop", scoreLabel: "8.25", direction: "right" });
     expect(list.map((x) => x.seq)).toEqual([2, 5, 1, 3]);
+  });
+  it("a repeated landing counts as a repeat (Blue landed Backroll twice)", () => {
+    expect(riders[1].summary.repeats).toBe(1);
   });
   it("three riders; the first already has the 7.5 of docs/08 §1A, the others none yet", () => {
     expect(riders).toHaveLength(3);
     expect(riders[0].initialValue).toBe(7.5);
     expect(riders[1].initialValue).toBeNull();
+  });
+});
+
+describe("the judge's live screen", () => {
+  const j = judgeLive();
+  it("shows 3 to 4 riders, Red selected at 6 / 7, one rider out of attempts", () => {
+    expect(j.riders.length).toBeGreaterThanOrEqual(3);
+    expect(j.riders.length).toBeLessThanOrEqual(4);
+    expect(j.riders[0]).toMatchObject({ attempts: 6, max: 7, selected: true });
+    expect(j.riders.some((r) => r.attempts >= r.max)).toBe(true);
+  });
+  it("the current attempt is Red's 6th; the previous one is the 5th (Contra loop, you gave 8.125)", () => {
+    expect(j.current.number).toBe(6);
+    expect(j.previous).toMatchObject({ number: 5, trick: "Contra loop", myScoreLabel: "8.125" });
+  });
+  it("Red's sheet: attempts 1–5 from docs/08, counted tricks 2, 5, 1, the crash, Left 3 · Right 1, attempts 6 / 7", () => {
+    const s = j.sheet;
+    expect(s.attempts.filter((a) => a.counted).map((a) => a.seq)).toEqual([1, 2, 5]);
+    expect(s.attempts.find((a) => a.status === "crashed")?.seq).toBe(4);
+    expect([s.left, s.right]).toEqual([3, 1]);
+    expect(s.counter).toBe("6 / 7");
+    expect(s.attempts.find((a) => a.seq === 2)?.myScoreLabel).toBe("8.25");
+  });
+  it("the detailed list has every attempt with its trick name and status", () => {
+    expect(j.details.map((d) => d.number)).toEqual([6, 5, 4, 3, 2, 1]);
+    expect(j.details.find((d) => d.number === 4)?.status).toBe("crashed");
+  });
+});
+
+describe("the head judge's phone", () => {
+  it("shows the controls of a running heat and nothing about scores", () => {
+    const h = headPhone();
+    expect(h.state).toBe("running");
+    expect(h.remainingMs).toBe(330_000);
+    expect(h.controls.map((c) => c.id)).toEqual(["pause", "end", "hold", "resumeAt", "shift5", "shift10", "publish", "reopen"]);
+    expect(h.controls.find((c) => c.id === "publish")?.enabled).toBe(false);
   });
 });
 

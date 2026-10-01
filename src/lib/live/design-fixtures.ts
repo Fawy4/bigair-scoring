@@ -97,6 +97,8 @@ export interface ResultRowModel {
   label: LabelModel;
   status: "ok" | "DNS";
   totalLabel: string;
+  /** Percent of the maximum. Kept for exports; no screen shows it unless a division turns "Show scores as % of maximum" on. */
+  percent: number | null;
   percentLabel: string | null;
   formula: string | null;
   attempts: ResultAttempt[];
@@ -141,8 +143,9 @@ export function resultRows(): ResultRowModel[] {
       label: labelOf(name, colour),
       status: dns ? "DNS" : "ok",
       totalLabel: dns ? copy.live.result.noTotal : r.totalLabel,
+      percent: dns || r.percent === null ? null : roundHalfUp(r.percent, 2),
       percentLabel: dns || r.percent === null ? null : copy.live.result.percent(two(r.percent)),
-      formula: dns ? null : copy.live.result.formula(r.totalLabel, two(r.components.tricks), two(r.components.impression)),
+      formula: dns ? null : copy.live.result.formula(r.totalLabel, two(r.components.tricks), KOTA.heat.impression?.label ?? "", two(r.components.impression)),
       attempts: attemptsOf(r),
     };
   });
@@ -234,17 +237,17 @@ export function matrixStates(): MatrixModel {
 export interface SummaryTrick {
   seq: number;
   trick: string;
+  direction: "left" | "right" | null;
   scoreLabel: string;
 }
+/** The compact heat-end card: counts, left and right, repeats, and the landed tricks with the judge's own scores. No rotation analysis. */
 export interface HeatSummary {
   attempts: number;
   landed: number;
   crashed: number;
-  different: number;
   repeats: number;
   left: number;
   right: number;
-  families: string[];
   landedList: SummaryTrick[];
 }
 export interface ImpressionRider {
@@ -263,20 +266,17 @@ function summarise(attempts: Attempt[], judgeId = "J1"): HeatSummary {
     .map((a) => {
       const m = a.marks.find((x) => x.judgeId === judgeId)?.value;
       const score = typeof m === "object" ? judgeTrickScore(KOTA, m).score : 0;
-      return { seq: a.seq, trick: a.trickName ?? "", score };
+      return { seq: a.seq, trick: a.trickName ?? "", direction: a.direction ?? null, score };
     })
     .sort((x, y) => y.score - x.score || x.seq - y.seq);
-  const families = [...new Set(landed.map((a) => a.categoryKey).filter((k): k is string => Boolean(k)))].map((k) => KOTA.categories.find((c) => c.key === k)?.label ?? k);
   return {
     attempts: attempts.length,
     landed: landed.length,
     crashed: attempts.length - landed.length,
-    different: new Set(names).size,
     repeats: names.length - new Set(names).size,
     left: landed.filter((a) => a.direction === "left").length,
     right: landed.filter((a) => a.direction === "right").length,
-    families,
-    landedList: mine.map((x) => ({ seq: x.seq, trick: x.trick, scoreLabel: formatCell(x.score) })),
+    landedList: mine.map((x) => ({ seq: x.seq, trick: x.trick, direction: x.direction, scoreLabel: formatCell(x.score) })),
   };
 }
 
@@ -338,4 +338,106 @@ export function previewCompose(parts: PreviewParts): { name: string; categoryKey
 /** Category word for the builder (from the copy file's existing labels). */
 export function categoryLabel(key: string | null): string {
   return key ? (copy.trickBase.categoryLabels[key] ?? key) : "";
+}
+
+// ---- The judge's and the head judge's phone screens
+export interface LiveRider {
+  id: string;
+  label: LabelModel;
+  attempts: number;
+  max: number;
+  selected: boolean;
+}
+export interface LiveAttempt {
+  number: number;
+  label: LabelModel;
+  riderName: string;
+  trick: string;
+  direction: "left" | "right" | null;
+  categoryKey: string | null;
+  status: "landed" | "crashed";
+  repeat?: { nth: string; previous: string };
+  /** The judge's own score for this attempt, if given. */
+  myScoreLabel: string | null;
+}
+export interface SheetAttempt {
+  seq: number;
+  trick: string;
+  direction: "left" | "right" | null;
+  status: "landed" | "crashed" | "pending";
+  myScoreLabel: string | null;
+  counted: boolean;
+}
+export interface RiderSheetModel {
+  name: string;
+  label: LabelModel;
+  attempts: SheetAttempt[];
+  left: number;
+  right: number;
+  counter: string;
+}
+
+/**
+ * What the judge's phone shows mid-heat. Red's attempts 1 to 5 are docs/08 §1A (the judge is Judge 1: 7.625, 8.25, 7.25, crash, 8.125);
+ * the 6th attempt, Blue, Yellow and Green are made up.
+ */
+export function judgeLive() {
+  const base = redAttempts();
+  const red = riderLabelModel(FIXTURE_SCHEMES[0], { name: "Sam Rivera", slotColour: "red" });
+  const heat = redHeat().riders[0];
+  const countedSeqs = new Set(heat.counted.map((c) => c.attemptSeq));
+  const mine = (a: Attempt) => {
+    const v = a.marks.find((m) => m.judgeId === "J1")?.value;
+    return typeof v === "object" ? formatCell(judgeTrickScore(KOTA, v).score) : null;
+  };
+  const sheetAttempts: SheetAttempt[] = [
+    ...base.map((a) => ({ seq: a.seq, trick: a.trickName ?? "", direction: a.direction ?? null, status: a.status, myScoreLabel: mine(a), counted: countedSeqs.has(a.seq) })),
+    { seq: 6, trick: "Left ×2 Backroll", direction: "left" as const, status: "pending" as const, myScoreLabel: null, counted: false },
+  ];
+  const strip = (name: string, colour: string, attempts: number, selected = false): LiveRider => ({
+    id: colour,
+    label: riderLabelModel(FIXTURE_SCHEMES[0], { name, slotColour: colour }),
+    attempts,
+    max: 7,
+    selected,
+  });
+  const riders = [strip("Sam Rivera", "red", 6, true), strip("Noor Haddad", "blue", 3), strip("Lena Vogt", "yellow", 7), strip("Mia Costa", "green", 2)];
+  const current: LiveAttempt = { number: 6, label: red, riderName: "Sam Rivera", trick: "Left ×2 Backroll", direction: "left", categoryKey: "rotation", status: "landed", myScoreLabel: null };
+  const previous: LiveAttempt = { number: 5, label: red, riderName: "Sam Rivera", trick: "Contra loop", direction: "left", categoryKey: "kiteloop", status: "landed", myScoreLabel: mine(base[4]) };
+  const details: LiveAttempt[] = [
+    current,
+    previous,
+    { number: 4, label: red, riderName: "Sam Rivera", trick: "Board-off", direction: "right", categoryKey: "board_off", status: "crashed", myScoreLabel: null },
+    { number: 3, label: red, riderName: "Sam Rivera", trick: "Late backroll kiteloop", direction: "left", categoryKey: "kiteloop", status: "landed", myScoreLabel: mine(base[2]), repeat: undefined },
+    { number: 2, label: red, riderName: "Sam Rivera", trick: "Double loop", direction: "right", categoryKey: "kiteloop", status: "landed", myScoreLabel: mine(base[1]) },
+    { number: 1, label: red, riderName: "Sam Rivera", trick: "Kiteloop board-off", direction: "left", categoryKey: "board_off", status: "landed", myScoreLabel: mine(base[0]) },
+  ];
+  const sheet: RiderSheetModel = {
+    name: "Sam Rivera",
+    label: red,
+    attempts: sheetAttempts,
+    left: sheetAttempts.filter((a) => a.status === "landed" && a.direction === "left").length,
+    right: sheetAttempts.filter((a) => a.status === "landed" && a.direction === "right").length,
+    counter: "6 / 7",
+  };
+  return { heatName: "Pro Men · R1 · Heat 3", seat: "Judge 1", remainingMs: 330_000, riders, current, previous, details, sheet };
+}
+
+export interface HeadControl {
+  id: "pause" | "resume" | "end" | "hold" | "resumeAt" | "shift5" | "shift10" | "publish" | "reopen";
+  enabled: boolean;
+}
+/** The head judge's phone: a running heat and the controls (publish is off while the heat is running). No scores. */
+export function headPhone() {
+  const controls: HeadControl[] = [
+    { id: "pause", enabled: true },
+    { id: "end", enabled: true },
+    { id: "hold", enabled: true },
+    { id: "resumeAt", enabled: true },
+    { id: "shift5", enabled: true },
+    { id: "shift10", enabled: true },
+    { id: "publish", enabled: false },
+    { id: "reopen", enabled: false },
+  ];
+  return { heatName: "Pro Men · R1 · Heat 3", state: "running" as const, remainingMs: 330_000, next: { heat: "Pro Men · R1 · Heat 4", time: "15:23" }, controls };
 }

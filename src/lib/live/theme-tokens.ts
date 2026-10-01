@@ -9,16 +9,22 @@
 export interface BeachTokens {
   /** Page background. */
   bg: string;
-  /** Cards and pads. */
+  /** Cards, sheets and the resting state of pads. */
   surface: string;
+  /** The soft 1 px line around cards. Decoration only: nothing is read from it. */
+  line: string;
   /** Normal text. */
   ink: string;
   /** Secondary text. Never light grey. */
   muted: string;
-  /** Frames of cards, pads and buttons. */
+  /** The frame of a control (pad button, field, toggle): 4.5:1 so a button is findable in the sun. */
   border: string;
   /** Keyboard focus ring. */
   focus: string;
+  /** The one accent colour (deep teal): selected state, primary button and progress. Text is never accent-coloured. */
+  accent: string;
+  /** Text on an `accent` fill. */
+  onAccent: string;
   /** Live / synced. */
   live: string;
   /** Waiting to be sent. */
@@ -27,52 +33,50 @@ export interface BeachTokens {
   failed: string;
   /** Crash. Also the fill of the CRASH button. */
   crash: string;
+  /** Text on a `crash` fill. */
+  onCrash: string;
   /** A score far from the other judges. */
   outlier: string;
   /** A score that is not there (yet). */
   missing: string;
-  /** The selected rider, attempt or pad button: its fill. */
-  selected: string;
-  /** Text on a `selected` fill. */
-  onSelected: string;
-  /** Text on a `crash` fill. */
-  onCrash: string;
 }
 
 export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
   day: {
     bg: "#ffffff",
-    surface: "#f2f2f2",
+    surface: "#f4f6f6",
+    line: "#d5dadc",
     ink: "#111111",
-    muted: "#3b3b3b",
-    border: "#111111",
-    focus: "#0b2e8a",
+    muted: "#3d4246",
+    border: "#5f6970",
+    focus: "#0b4a46",
+    accent: "#0f5c57",
+    onAccent: "#ffffff",
     live: "#14532d",
     pending: "#1e3a8a",
     failed: "#9f1239",
     crash: "#991b1b",
+    onCrash: "#ffffff",
     outlier: "#7c3f00",
     missing: "#404040",
-    selected: "#0b2e8a",
-    onSelected: "#ffffff",
-    onCrash: "#ffffff",
   },
   dark: {
-    bg: "#0a0a0a",
-    surface: "#1c1c1c",
-    ink: "#fafafa",
-    muted: "#d4d4d4",
-    border: "#fafafa",
-    focus: "#9ec5ff",
+    bg: "#0b0e0f",
+    surface: "#151a1b",
+    line: "#2b3436",
+    ink: "#f2f5f5",
+    muted: "#c9d1d3",
+    border: "#8d999c",
+    focus: "#9ee7de",
+    accent: "#5fd3c6",
+    onAccent: "#04211e",
     live: "#86efac",
     pending: "#9ec5ff",
     failed: "#fda4af",
     crash: "#fca5a5",
+    onCrash: "#0b0e0f",
     outlier: "#fcd34d",
     missing: "#c4c4c4",
-    selected: "#9ec5ff",
-    onSelected: "#0a0a0a",
-    onCrash: "#0a0a0a",
   },
 };
 
@@ -96,14 +100,9 @@ export const TEXT_PAIRS: ReadonlyArray<readonly [TokenName, TokenName]> = [
   ["outlier", "surface"],
   ["missing", "bg"],
   ["missing", "surface"],
-  ["onSelected", "selected"],
+  ["onAccent", "accent"],
   ["onCrash", "crash"],
-  ["selected", "bg"],
-  ["selected", "surface"],
 ];
-
-/** The plain plate that carries the colour name on a Lycra colour block (same in both themes). */
-export const NAMEPLATE = { bg: "#ffffff", ink: "#111111" } as const;
 
 /** WCAG relative luminance of a #rrggbb colour. */
 export function relativeLuminance(hex: string): number {

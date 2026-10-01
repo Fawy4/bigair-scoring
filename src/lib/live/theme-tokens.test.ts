@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { builtInSchemes } from "@/lib/schemas/identification";
 import { inkFor } from "@/lib/identification/rider-label";
-import { BEACH_THEMES, contrastRatio, NAMEPLATE, TEXT_PAIRS, type BeachTokens } from "./theme-tokens";
+import { BEACH_THEMES, contrastRatio, TEXT_PAIRS, type BeachTokens } from "./theme-tokens";
 
 // docs/06 §00.1: contrast of at least 7:1 for essential text and numbers, in the daylight and the dark theme; no light-grey text.
 const MIN = 7;
@@ -22,15 +22,19 @@ describe.each(themes)("%s theme tokens", (_name, t) => {
     const failures = TEXT_PAIRS.map(([fg, bg]) => ({ fg, bg, ratio: contrastRatio(t[fg], t[bg]) })).filter((p) => p.ratio < MIN);
     expect(failures).toEqual([]);
   });
-  it("has all thirteen named tokens", () => {
-    for (const key of ["bg", "surface", "ink", "muted", "border", "focus", "live", "pending", "failed", "crash", "outlier", "missing", "selected"] as const) {
+  it("has every named token", () => {
+    for (const key of ["bg", "surface", "line", "ink", "muted", "border", "focus", "accent", "onAccent", "live", "pending", "failed", "crash", "outlier", "missing", "onCrash"] as const) {
       expect(t[key]).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
-  it("borders and the focus ring stand out from the page by 7:1 too", () => {
-    expect(contrastRatio(t.border, t.bg)).toBeGreaterThanOrEqual(MIN);
+  it("the frame of a control (pad button, field) stands out by 4.5:1 and the focus ring by 7:1; the soft card line is decoration only", () => {
+    expect(contrastRatio(t.border, t.bg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(t.border, t.surface)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(t.focus, t.bg)).toBeGreaterThanOrEqual(MIN);
     expect(contrastRatio(t.focus, t.surface)).toBeGreaterThanOrEqual(MIN);
+  });
+  it("the accent (selected state, primary button, progress) carries white or near-black text at 7:1", () => {
+    expect(contrastRatio(t.onAccent, t.accent)).toBeGreaterThanOrEqual(MIN);
   });
   it("no light-grey text: muted ink is at least as strong as 7:1 on both backgrounds", () => {
     expect(contrastRatio(t.muted, t.bg)).toBeGreaterThanOrEqual(MIN);
@@ -66,23 +70,21 @@ describe("globals.css carries exactly these values", () => {
 
 describe("lycra colours in both themes (inkFor, outlined white and black)", () => {
   const palette = builtInSchemes()[0].palette;
-  it("the plate that carries the colour name is 7:1 in both themes, whatever the lycra colour", () => {
-    for (const c of palette) {
-      expect(contrastRatio(NAMEPLATE.ink, NAMEPLATE.bg), c.label).toBeGreaterThanOrEqual(MIN);
+  it("the colour word is written in the page ink, never on the colour, so it reads at 7:1 whatever the Lycra colour", () => {
+    for (const t of Object.values(BEACH_THEMES)) {
+      expect(contrastRatio(t.ink, t.surface)).toBeGreaterThanOrEqual(MIN);
+      expect(contrastRatio(t.ink, t.bg)).toBeGreaterThanOrEqual(MIN);
     }
   });
-  it("without the plate, most lycra colours cannot reach 7:1 for text printed on them (why the plate exists)", () => {
-    const below = palette.filter((c) => contrastRatio(inkFor(c.hex), c.hex) < MIN).map((c) => c.label);
-    expect(below).toEqual(expect.arrayContaining(["Red", "Blue", "Green", "Orange", "Pink", "Purple", "Grey"]));
-  });
-  it("the label's own frame is the page ink in the dark theme, so a black lycra is still outlined against a dark page", () => {
-    expect(contrastRatio(BEACH_THEMES.dark.border, BEACH_THEMES.dark.bg)).toBeGreaterThanOrEqual(MIN);
-    // the label body is white in both themes: black lycra (#111111 / #000000) sits on white, white lycra gets the black inset outline
+  it("the dot and stripe carry the colour; white and black are outlined in the page ink so they stand out on a light and on a dark page", () => {
+    for (const t of Object.values(BEACH_THEMES)) expect(contrastRatio(t.ink, t.bg)).toBeGreaterThanOrEqual(MIN);
     const black = palette.find((c) => c.label === "Black")!;
     const white = palette.find((c) => c.label === "White")!;
-    expect(contrastRatio(black.hex, "#ffffff")).toBeGreaterThanOrEqual(MIN);
     expect(inkFor(black.hex)).toBe("#ffffff");
     expect(inkFor(white.hex)).toBe("#111111");
+  });
+  it("(old block label) its frame follows the page ink in the dark theme", () => {
+    expect(contrastRatio(BEACH_THEMES.dark.ink, BEACH_THEMES.dark.bg)).toBeGreaterThanOrEqual(MIN);
   });
   it("the dark rule for the label frame exists in globals.css", () => {
     const css = readFileSync("src/app/globals.css", "utf8");

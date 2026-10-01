@@ -239,64 +239,106 @@ body:has(.print-sheet) {
   background: #fff;
 }
 
-/* ---- Official screens (judge, spotter, head judge) and /design: the beach themes (docs/06 §00, Phase 5a).
-   The hex values are the same ones as src/lib/live/theme-tokens.ts; a test fails if they differ.
-   .beach-day is the default, .beach-dark is switchable per device. Sizes: docs/06 §00.2. */
+/* ---- Official screens (judge, spotter, head judge) and /design: the beach themes and text sizes (docs/06 §00, Phase 5a).
+   The hex values are the ones in src/lib/live/theme-tokens.ts and the sizes those in size-tokens.ts; tests fail if they differ.
+   .beach-day is the default, .beach-dark is switchable per device; .beach-text-normal is the default, .beach-text-large a per-device switch.
+   One accent (deep teal) for the selected state, the primary button and progress; text stays ink. Cards: 1 px soft line, no shadow. */
 .beach-day {
   --beach-bg: #ffffff;
-  --beach-surface: #f2f2f2;
+  --beach-surface: #f4f6f6;
+  --beach-line: #d5dadc;
   --beach-ink: #111111;
-  --beach-muted: #3b3b3b;
-  --beach-border: #111111;
-  --beach-focus: #0b2e8a;
+  --beach-muted: #3d4246;
+  --beach-border: #5f6970;
+  --beach-focus: #0b4a46;
+  --beach-accent: #0f5c57;
+  --beach-on-accent: #ffffff;
   --beach-live: #14532d;
   --beach-pending: #1e3a8a;
   --beach-failed: #9f1239;
   --beach-crash: #991b1b;
+  --beach-on-crash: #ffffff;
   --beach-outlier: #7c3f00;
   --beach-missing: #404040;
-  --beach-selected: #0b2e8a;
-  --beach-on-selected: #ffffff;
-  --beach-on-crash: #ffffff;
   color-scheme: light;
 }
 .beach-dark {
-  --beach-bg: #0a0a0a;
-  --beach-surface: #1c1c1c;
-  --beach-ink: #fafafa;
-  --beach-muted: #d4d4d4;
-  --beach-border: #fafafa;
-  --beach-focus: #9ec5ff;
+  --beach-bg: #0b0e0f;
+  --beach-surface: #151a1b;
+  --beach-line: #2b3436;
+  --beach-ink: #f2f5f5;
+  --beach-muted: #c9d1d3;
+  --beach-border: #8d999c;
+  --beach-focus: #9ee7de;
+  --beach-accent: #5fd3c6;
+  --beach-on-accent: #04211e;
   --beach-live: #86efac;
   --beach-pending: #9ec5ff;
   --beach-failed: #fda4af;
   --beach-crash: #fca5a5;
+  --beach-on-crash: #0b0e0f;
   --beach-outlier: #fcd34d;
   --beach-missing: #c4c4c4;
-  --beach-selected: #9ec5ff;
-  --beach-on-selected: #0a0a0a;
-  --beach-on-crash: #0a0a0a;
   color-scheme: dark;
+}
+.beach-text-normal {
+  --size-body: 16px;
+  --size-small: 14px;
+  --size-name: 18px;
+  --size-digit: 24px;
+  --size-pad-height: 50px;
+  --size-pad-gap: 6px;
+  --size-tap: 44px;
+  --size-timer-slim: 22px;
+  --size-timer-head: 48px;
+  --size-radius: 14px;
+}
+.beach-text-large {
+  --size-body: 18px;
+  --size-small: 15px;
+  --size-name: 20px;
+  --size-digit: 28px;
+  --size-pad-height: 56px;
+  --size-pad-gap: 8px;
+  --size-tap: 48px;
+  --size-timer-slim: 24px;
+  --size-timer-head: 48px;
+  --size-radius: 16px;
 }
 .beach-day,
 .beach-dark {
   background: var(--beach-bg);
   color: var(--beach-ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: var(--size-body);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+.beach-day th,
+.beach-dark th {
   font-weight: 600;
-  /* base sizes (docs/06 §00.2) as variables the components read */
-  --pad-button-min: 56px;
-  --pad-gap: 8px;
-  --pad-digit: 1.75rem; /* 28 px */
-  --rider-name: 1.25rem; /* 20 px */
-  --timer-size: 3.5rem; /* 56 px, above the 48 px floor */
-  --tap-min: 48px;
 }
 .beach-day :focus-visible,
 .beach-dark :focus-visible {
-  outline: 4px solid var(--beach-focus);
+  outline: 3px solid var(--beach-focus);
   outline-offset: 2px;
 }
-/* the Rider label has a fixed white body; on a dark page its frame takes the page ink so a Black Lycra is still outlined against the page */
-.beach-dark [data-testid="rider-label"] {
-  border-color: var(--beach-border);
+.beach-day button,
+.beach-dark button,
+.beach-day a,
+.beach-dark a,
+.beach-day summary,
+.beach-dark summary {
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .beach-day *,
+  .beach-dark * {
+    transition: none !important;
+  }
+}
+/* the old block-style Rider label (organiser screens) has a fixed white body; on a dark page its frame takes the page ink so a Black Lycra is still outlined */
+.beach-dark [data-testid="rider-label"]:not([data-variant="stripe"]) {
+  border-color: var(--beach-ink);
 }
