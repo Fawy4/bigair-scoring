@@ -11,7 +11,7 @@
 > - docs/08 §1A, §1E, §1F, §2F, §3D–§3E and §4
 > - docs/11 §2–§4
 >
-> Where the spec and this plan differ, the owner's answers to §11 decide. The answers are then written into the decisions logs of docs/03, docs/05 and docs/06.
+> Where the spec and this plan differ, the owner's answers in §11 (given 1 Oct 2026) decide. 5b starts by writing them into the decisions logs of docs/03, docs/05 and docs/06.
 
 ## 0. What already exists, and what is missing
 
@@ -93,7 +93,7 @@ Goal: the owner approves the look on a phone outdoors before any live screen exi
   | Component | What it shows |
   |---|---|
   | `rider-tile.tsx` | Wraps the existing `RiderLabel` and adds an "n / max" counter, the selected border, the "Out of attempts · 7 / 7" grey state and an optional photo |
-  | `heat-timer.tsx` | Takes `remainingMs`, `state` (running / paused / ended / held). Shows mm:ss in large type and the word "Paused" or "Time up" (never colour alone) |
+  | `heat-timer.tsx` | Takes `remainingMs`, `state` (running / paused / ended / held). Shows mm:ss in large type and the word "Paused" or "Time up" (never colour alone). Has a "Sound on / off" toggle (wired in 5b) |
   | `connection-badge.tsx` | "Synced", "Pending 2" or "Offline", each with an icon and a word; "Failed — tap to retry" |
   | `saved-banner.tsx` | The persistent "Saved 7.5 — RED — attempt 4" confirmation |
   | `score-pad.tsx` | One scale, tap to set, snaps to the step |
@@ -142,7 +142,7 @@ All new functions are `security definer` and check the role themselves. "Head" m
 | `pause_heat`, `resume_heat` | Head only. Status change; the trigger handles the timestamps |
 | `end_heat(p_heat)` | Head only, from running or paused |
 | `end_heat_if_due(p_heat)` | Any seat of the event. Ends the heat **only** when `private.heat_effective_status` says `ended`, and is idempotent. Every official device calls it when its timer reaches 0, so "end at zero" needs no cron and no trusted client |
-| `cancel_heat(p_heat, p_reason)` | Head only. Reason required. Audited |
+| `cancel_heat(p_heat, p_reason)` | Head only. Reason required. Audited. Also the first half of a re-run (see "Re-running a heat" in step 4) |
 | `set_plan_hold(p_plan, p_hold jsonb, p_reason)`<br>`set_plan_anchors(p_plan, p_anchors jsonb, p_reason)` | Head or organiser. They change only `hold` and `anchors` of the **active** plan. Audited. The server action computes the values with the pure `startHold` / `resumeHold` / `shift` using `server_now()` |
 | `private.division_model_setting(p_division, p_path text[])` | Generalises `division_heat_setting` to any path in the merged model, e.g. `{panel,minJudges}` |
 
@@ -152,7 +152,7 @@ New columns:
 
 RLS: no new table rights. All writes go through the functions above.
 
-**About "Start writes the actual start into the active plan": I recommend not doing this.** `SchedulePlanSchema` forbids actual starts on heat items on purpose. `computeTimetable` already reads `heats.started_at` / `ended_at` through `buildHeatModel`, so the run order re-flows the moment `started_at` is stamped. Writing it into the plan as well would create two truths. docs/05 §7 "update schedule_plans.actual_starts/ends" is therefore satisfied by the heat row. See §11 Q1.
+**Actual start (owner, §11.1): the heat row is the truth.** Start does not copy anything into the plan. `SchedulePlanSchema` forbids actual starts on heat items on purpose, and `computeTimetable` already reads `heats.started_at` / `ended_at` through `buildHeatModel`, so the run order re-flows the moment `started_at` is stamped. docs/05 §7 "update schedule_plans.actual_starts/ends" is satisfied by the heat row; 5b corrects that sentence in docs/05.
 
 ### Pure code (tests first, docs/08 §1G)
 
@@ -171,7 +171,13 @@ Test values:
 
 - `src/lib/live/heat-actions.ts`: `startHeat`, `pauseHeat`, `resumeHeat`, `endHeat`, `cancelHeat`, `holdPlan`, `resumePlanAt`, `shiftPlan`. They return `{ok} | {ok:false, code, message}`.
 - `src/components/live/heat-control.tsx`: the left column of the head console (run order with states and the buttons). It is reused in step 4.
-- In 5b it is mounted on a minimal `/head/[eventId]` page, so the spotter and judge flows can be tested end to end.
+- In 5b it is mounted on a minimal `/head/[eventId]` page, so the spotter and judge flows can be tested end to end. It works on a phone from the start (owner, addition A; see step 4).
+- **Timer sounds (owner, addition B).** `src/lib/live/timer-cues.ts` (pure) and `src/lib/live/beep.ts`:
+  - `timerCues(prevRemainingMs, remainingMs)` returns `one_minute` when the timer crosses 60 000 ms and `time_up` when it crosses 0. Nothing fires while paused, and nothing fires again after a reload past the threshold.
+  - Test: 61 000 → 59 500 gives `one_minute`; 500 → 0 gives `time_up`; 59 000 → 58 000 gives nothing; paused gives nothing.
+  - The sound is a 0.2 s beep from the browser's Web Audio API, plus `navigator.vibrate(200)` where the phone supports it. No new package.
+  - Switchable per device ("Sound on / off", stored in `localStorage` inside try/catch). Default **on** for the head console, **off** on judge phones.
+  - iPhones: Safari only plays sound after a tap on the page, so the "Sound on" toggle is that tap, and iPhones do not vibrate from a web page. The timer stays visible and is never sound-dependent (CLAUDE.md gotcha).
 - Swap the organiser's `schedule-manager.tsx` Hold / Resume / Shift onto the same actions. The 4b buttons stay where they are, and the head judge gets the same ones.
 
 ### Tests
@@ -223,7 +229,7 @@ Test vectors:
 ### Database (same migration)
 
 - `add_attempt` already stores `trick_parts`, `input_method` and `raw_text`. Store `needsReview` in `trick_parts.needsReview` and the free text in `raw_text`. No new column is needed.
-- `undo_attempt(p_attempt)`: the creating spotter only, within 10 s of `created_at` (server clock). Soft delete. Audited as `attempt_undone`. This is docs/06 §5 "Undo last"; see §11 Q9.
+- `undo_attempt(p_attempt)`: the creating spotter only, within 10 s of `created_at` (server clock). Soft delete, no reason asked. Audited as `attempt_undone`. This is docs/06 §5 "Undo last" (owner, §11.9: keep it). The spotter screen shows "Undo" on the last logged attempt for 10 s, then the button disappears.
 - `attempt_counts` is unchanged. The counter is computed client-side from the **same** attempts list (docs/11 §3), and `attempt_counts` is the reconnect check.
 
 ### Files
@@ -239,7 +245,7 @@ Test vectors:
   - It reads the master vocabulary, the event's own blocks and `divisions.trick_base` (loaders in `src/lib/org/trick-vocabulary.ts`), then `enabledBlocks`.
 - **Speech.** `src/lib/live/speech.ts` wraps `SpeechRecognition` / `webkitSpeechRecognition` and is feature-detected. The mic button is hidden where the browser has no speech recognition, and the text field stays (the keyboard's dictation key works there).
   - Typed or spoken text → `parseTrickText` → shown back as blocks to confirm (`speech.confirmBeforeLog`). Unmatched words show as "Free text — head judge will check".
-- **CRASH.** One confirmation (rule 00.3), then `add_attempt` with `status = 'crashed'` and the intended trick. Judges do not score crashes. The scoring model decides 0 or not counted (`trick.crash`).
+- **CRASH.** One confirmation (rule 00.3), then `add_attempt` with `status = 'crashed'` and the intended trick. Judges never score a crashed attempt (owner, §11.7). The scoring model decides 0 or not counted (`trick.crash`).
 - **Log.** Goes through the queue (step 3), with a `client_key` per tap.
   - Out of attempts: the label is grey, "Out of attempts · 7 / 7", and Log is disabled.
   - `ATTEMPT_CAP_REACHED` from a stale phone shows "Red is out of attempts (7 / 7)" and drops that queued item, marked as refused, never retried.
@@ -270,7 +276,7 @@ Test vectors:
 
 ### Database (same migration)
 
-- **`attempt_flags`** table: `id, event_id, heat_id, attempt_id, judge_seat_id, kind (crash|wrong_rider|duplicate|other), note, created_at, resolved_at, resolved_by, resolution`.
+- **`attempt_flags`** table: `id, event_id, heat_id, attempt_id, judge_seat_id, kind (crash|landed|wrong_rider|duplicate|other), note, created_at, resolved_at, resolved_by, resolution`.
   - Insert: the panel judge of that heat (RLS through `private.judge_can_write`). Read: own seat, head, organiser.
   - Realtime: yes. Audited.
   - `trick_scores.flag` is left unused, because a flag must not need a score.
@@ -280,7 +286,8 @@ Test vectors:
 - **Change `private.judge_can_write`:**
   - A judge may write while the heat is `running|paused`, or `ended` and **their sheet is not submitted** (or was reopened).
   - Never in `under_review` or `published`, unless the head judge reopened that sheet.
-  - This replaces the grace-period rule; see §11 Q2. If the owner keeps the grace period, `judgeGraceSec` stays as a second condition.
+  - **Lock rule (owner, §11.2):** a judge's scores lock at Submit sheet or when the head judge moves the heat to review, whichever comes first. The head judge can reopen one judge's sheet. The 3-minute timer is dropped.
+  - `events.settings.judgeGraceSec` is no longer read by the database. It stays in the Zod schema (old events still parse) but is removed from the Event step; 5b updates docs/05 decision 7.
 
 ### Pure code (tests first)
 
@@ -314,9 +321,9 @@ Repeat badge: from `repeatIndexes` plus this judge's earlier score.
   - Tapping a tile adds an attempt only when `judgesMayLogAttempts` is on.
 - **Attempt cards.** Newest on top, from `trick_attempts`.
   - Landed attempts show the pad: `score-pad` for `entry = single`, `criteria-rows` for `entry = criteria`.
-  - Crashed attempts show "Crashed — no score needed".
+  - Crashed attempts show "Crashed — no score needed" and no pad (owner, §11.7). When the head judge switches the attempt to Landed, the pad appears on every judge phone through realtime.
   - Missed is one tap, undoable by tapping a score.
-  - Flag opens a sheet with Crash / Wrong rider / Duplicate / Other.
+  - Flag opens a sheet with "That was a crash" / "That was a landing" / Wrong rider / Duplicate / Other. "That was a landing" is offered only on crashed attempts, "That was a crash" only on landed ones.
   - Every tap auto-saves through the queue and shows `saved-banner`.
 - **Review tab.** My scores per rider, editable until the sheet is locked.
 - **Impression / Variety step.** It opens when the effective status is `ended`.
@@ -358,8 +365,9 @@ All functions below are head-only (head seat or organiser), audited, and take a 
 | `head_set_trick_score(p_attempt, p_seat, p_score, p_criteria, p_missed, p_reason)` | Writes `edited_by` and `edit_reason`; `version + 1`. "Mark judge absent for an attempt" is this with `p_missed = true` and reason "Absent". Absent and Missed both leave the judge out of the average and never block publishing |
 | `head_set_impression(p_heat, p_entry, p_seat, p_value, p_reason)` | Paper sheets, typed in ("tabulator mode") |
 | `edit_attempt(p_attempt, p_entry, p_trick_name, p_trick_parts, p_category, p_status, p_reason)` | Moving to another rider takes that rider's next attempt number. Refused with `ATTEMPT_CAP_REACHED` unless a reason is given |
-| `merge_attempts(p_keep, p_drop, p_choices jsonb, p_reason)` | Moves the dropped attempt's scores to the kept one for every judge who has none there. Where both have a score, `p_choices` says which to keep (default: the kept attempt's). Then the dropped attempt is soft-deleted |
-| `head_add_attempt` | Existing `add_attempt` with `p_override_reason`. The only way past the cap is a reason (docs/05 decision 20) |
+| `merge_attempts(p_keep, p_drop, p_choices jsonb, p_reason)` | Moves the dropped attempt's scores to the kept one for every judge who has none there. Where both have a score, `p_choices` says which to keep. The dialog shows both scores and **defaults to the first-logged attempt**, both as the attempt kept and as the score kept (owner, §11.10). Then the dropped attempt is soft-deleted |
+| `head_add_attempt` | Existing `add_attempt` with `p_override_reason`, which is the only way past the cap (owner, §11.8). **Who:** the head judge, or an organiser only when the event has no active head-judge seat. 5c tightens `add_attempt` accordingly; today it lets any organiser override. Always with a reason, audited as `attempt_cap_override` |
+| `edit_attempt` status switch | Switching Crashed → Landed (after a judge's "That was a landing" flag) resolves that flag and makes the pads appear on the judge phones (owner, §11.7) |
 | `set_rider_status(p_heat, p_entry, p_modifier DNS\|DNF\|DSQ\|null, p_reason)` | Interference is a `penalties` row through `add_penalty(p_heat, p_entry, p_type, p_reason)` |
 | `flag_out(p_heat, p_entries uuid[], p_reason)` | Sets `heat_slots.flagged_out`. The server checks the count against the format's `flagOut.count` |
 | `heat_decisions` table + `decide_tie(p_heat, p_rider_ids uuid[], p_reason)` | `heat_id, kind (tie\|publish_override), payload, reason, by_user, by_seat, at`. Read by head and organiser; append-only |
@@ -375,7 +383,13 @@ All functions below are head-only (head seat or organiser), audited, and take a 
 
 ### Files
 
-- **Route.** `src/app/head/[eventId]/page.tsx` and `head-console.tsx`. Laptop or tablet layout; below 900 px it says "Use a tablet or laptop" (rule 00.2).
+- **Route.** `src/app/head/[eventId]/page.tsx` and `head-console.tsx`. Three columns on a laptop or tablet.
+- **On a phone (below 900 px; owner, addition A)** the page is never refused. It stacks, top to bottom:
+  - the heat controls: Start, Pause, Resume, End, Hold, Resume at, Shift, Publish, Re-open;
+  - the rider totals with provisional rank and the tie words;
+  - the publish blocker list, with "Choose order" for a tie and the override with a reason;
+  - one line where the matrix would be: "Score table: open this page on a tablet or laptop".
+  - **Consequence:** the jobs that live in the matrix are tablet or laptop only: delete, merge, edit attempt, edit score, absent, and adding an attempt past the cap. A head judge with only a phone can still run the clock, see the blockers, decide a tie and publish.
 - **Left:** `heat-control` (step 1), plus Flag-out at `flagOut.atMin`, shown only when the round is listed in the format's `flagOut.rounds`.
 - **Centre:**
   - `head-matrix` (live). Tapping a cell opens the criteria and "Edit score" with a reason.
@@ -391,6 +405,35 @@ All functions below are head-only (head seat or organiser), audited, and take a 
 - **Second tab.** A "head judge also scores" seat opens `/judge/[eventId]` in a second tab. It is the same login and already on the panel.
 - **Announcer.** `?mode=announcer` shows the read-only matrix and feed (docs/06 §9). It is cheap here, so include it; the rider bios wait for Phase 6.
 
+### Re-running a heat (owner, §11.12: no new feature)
+
+The path uses only Cancel heat and the 4b Draw step:
+1. On the console, **Cancel heat** with a reason (`cancel_heat`).
+2. In the Draw step, **Unlock draw** with a reason. A locked draw refuses changes (4b).
+3. **Add an extra heat** in the same round, put the cancelled heat's riders in it, and rename it, e.g. "Heat 3 re-run". It gets the next free number (4b: numbers never change once a heat has started); there is no "R" suffix. docs/05 §8 is corrected in 5c.
+4. Every later seat that waited for the cancelled heat ("1st H3") is re-pointed to the new heat with the seat menu's "put a place in a seat".
+5. **Lock draw**, add the new heat to the run order, Start.
+
+5c proves it with one test: cancel R1 H3, follow steps 2–5, then run and publish the new heat → the Semi-final seat fills with its winner, and the cancelled heat stays cancelled. If any 4b guard refuses a step (for example a cancelled heat counted as "started"), 5c fixes the guard, not the path.
+
+### Practice heat (owner, §11.11: the seed of the later simulator; keep it small)
+
+- **Database:** `events.is_simulation bool not null default false`.
+  - It can be set only while no heat of the event has started, and never switched off after one has.
+  - A simulation event is never public: `private.event_is_public` returns false, so it is off the home page, the organisation page, the event page, live views, results and registration.
+  - Officials can still join it with their PINs, which is the point.
+  - Every future export filters it out; 5c adds a helper `excludeSimulations()` and a test so Phase 7 exports cannot forget.
+- **Function:** `practice_add_attempt(p_heat, p_entry, p_trick jsonb, p_status)`. Organiser only. Refused with `NOT_A_SIMULATION` unless `events.is_simulation`. Otherwise the same path as `add_attempt`, including the cap.
+- **Pure:** `src/lib/live/practice.ts` `practiceAttempt(seed, vocab, enabledIds, riders, counts)`. It picks a rider still below the cap and a trick composed from the division's ticked trick base; about 1 in 5 attempts is a crash. Tests:
+  - the same seed gives the same feed;
+  - never a rider who is out of attempts;
+  - never an unticked block.
+- **Screen:** on `/head` of a simulation event only, the organiser gets "Practice heat: play a spotter feed every [20] s" with Start and Stop.
+  - It runs in that browser tab and stops when the heat ends or the tab closes.
+  - One person can then score the heat alone on a judge phone.
+- **Event step:** a "Simulation event (never public)" switch with a "?".
+- Auto-play judges, scenario buttons, "View as…" and the checklist are **not** in Phase 5. They are the separate simulator PR after Phase 6, specced by the owner then.
+
 ### Tests
 
 - **RLS:**
@@ -398,6 +441,8 @@ All functions below are head-only (head seat or organiser), audited, and take a 
   - Every one writes an audit line, and the reason is required where stated.
   - Merge keeps the right scores.
   - Moving an attempt to a rider who is out of attempts needs a reason.
+  - Past the cap: the head judge with a reason works; an organiser with a reason works only when the event has no active head-judge seat (`NOT_ALLOWED` otherwise); nobody gets past the cap without a reason.
+  - Simulation events: `practice_add_attempt` is refused on a normal event; a simulation event is invisible to anon and to `get_public_live_heat`; `is_simulation` cannot be switched off after a heat has started.
 - **Unit:** matrix, flag-out, tie words, agreement.
 
 **Done means (laptop + phones):**
@@ -406,6 +451,9 @@ All functions below are head-only (head seat or organiser), audited, and take a 
 3. Edit a score with the reason "paper sheet" → the audit log shows the old and new value.
 4. DNS a rider → they are ranked last with "—".
 5. With identical scores the console says "Red and Blue tied — choose". Choose with a reason.
+6. On a phone, `/head` shows the controls, totals and blockers, and the line about the score table.
+7. Judge 1 flags a crashed attempt "That was a landing". Switch it to Landed, and the pads appear on both judge phones.
+8. On a simulation event, start a heat and a practice feed. The judge phone fills with attempts every 20 s. The event does not appear on the home page.
 
 ## 7. Step 5 — publish (PR 5c)
 
@@ -414,7 +462,7 @@ All functions below are head-only (head seat or organiser), audited, and take a 
 2. Load the heat, model, panel, attempts, scores, impressions, penalties, decisions, the division's `draw` and the event settings.
 3. Run `computeHeat` and `rankHeat` with `headJudgeDecisions` from `heat_decisions`.
 4. Build the **blocker list**: the engine's `score_missing`, `impression_missing` and `tie_unresolved`, plus `sheet_not_submitted` from `judge_sheets`.
-   - Any blocker without `overrideReason` → return the list in words. `tie_unresolved` cannot be overridden: it needs a decision (see §11 Q3).
+   - Any blocker without `overrideReason` → return the list in words. `tie_unresolved` cannot be overridden (owner, §11.3): the head judge chooses the order with a reason (`decide_tie`), and "Share the place" is offered only when the model's `tieBreakers` include `share_place`.
 5. Run `toLadderResult(heatResult)` (new, in `src/lib/engine/scoring/ladder-adapter.ts`). It returns `{ranked: [{entrantId, place, total, modifier, tieKeys}]}`, where `tieKeys` = the raw values the model's tie-breakers compared, in order.
    - Then run `applyHeatResult(draw, …)`.
    - A `conflict` is returned to the screen as "Semi-final 1 has already started — this correction would change who rides in it. Nothing was changed." Nothing is written.
@@ -426,7 +474,7 @@ All functions below are head-only (head seat or organiser), audited, and take a 
    - Set `publish_hold` (step 6) and `status = 'published'`. The trigger stamps `published_at`.
    - Clear `reopened_at`.
    - Write an audit line with the override reason and the blocker list it overrode.
-7. "Actual end into the plan": already true. `ended_at` is on the heat and the timetable reads it (see step 1 and §11 Q1).
+7. "Actual end into the plan": nothing to write. `ended_at` is on the heat and the timetable reads it (owner, §11.1).
 
 **Re-open.** `reopen_heat(p_heat, p_reason)`: head only, from `published` to `under_review` (the trigger already allows it). It sets `reopened_at` and is audited. Every screen shows "Result under correction" (docs/06 §10). Judges stay locked unless the head judge reopens their sheet. Publishing again writes version 2.
 
@@ -453,7 +501,7 @@ All functions below are head-only (head seat or organiser), audited, and take a 
   - `get_public_live_heat` checks `publicLiveScores = 'live'` but ignores `publish_hold`.
   - Anon can read `heat_slots.place/total/breakdown`, and any signed-in user can read `divisions.draw` of a published event, which holds `results`. **Both would leak a held final.** Phase 5 must close them now, not in Phase 6.
 - **Changes:**
-  1. `divisions.live_settings` may override the three event settings (null = the event's value). This is the "division's tick boxes"; see §11 Q4.
+  1. `divisions.live_settings` may override the three event settings (null = the event's value). This is the "division's tick boxes" (owner, §11.4): the event's boxes are the default and a division may override them, in the Divisions step under Show all settings.
   2. New `heats.public_live bool null`. The head judge's per-heat switch; null = the setting.
   3. At publish, `p_hold = holdFinalResult && round is the division's last round` **or** `!publicResultsOnPublish`. Release uses `set_publish_hold(false)`, which already exists and is audited.
   4. `get_public_live_heat` respects `public_live` and returns no scores for held heats.
@@ -470,7 +518,7 @@ All functions below are head-only (head seat or organiser), audited, and take a 
   - They subscribe per event to `heats`.
   - Add `attempt_flags`, `judge_sheets` and `heat_decisions` to `supabase_realtime`.
   - Set `replica identity full` on `heat_results`.
-- **Public:** keep **polling** `get_public_live_heat` / `get_public_results` every `livePollSec`, as docs/05 decision 4 says. Realtime stays reserved for officials, because of the free plan's ~200 connections. See §11 Q5.
+- **Public:** keep **polling** `get_public_live_heat` / `get_public_results` every `livePollSec`, as docs/05 decision 4 says. Realtime stays reserved for officials, because of the free plan's ~200 connections (owner, §11.5). Phase 6 builds on polling.
 - **Reconnect:**
   - Detect it through the channel status in `use-live-heat`.
   - Refetch the snapshot (one query per table, by `heat_id`), then apply any buffered events newer than the snapshot.
@@ -500,69 +548,55 @@ docs/07 budgets about 3 h for all of Phase 5. **That is not realistic.** Phase 4
 
 If 5b runs long, split it at the spotter / judge boundary: 5b-1 is steps 1–2, 5b-2 is step 3. Each step's "done means" is a stopping point.
 
-## 11. Open questions for the owner
+Owner's answers added work to 5c: the phone layout of `/head`, the re-run test and the practice heat. 7–9 h already allows for it. The timer sounds are about 1 h in 5b.
 
-Each has a recommendation and a beach example.
+**When 5a starts,** its session writes this table (PRs, branches and rough hours) into a new "Phase 5" section of `docs/STATUS.md`. Each later PR adds the hours it actually took (owner, addition C).
 
-1. **Actual start in the plan.** You asked that Start writes the actual start into the run-order plan.
-   - The timetable already takes it from the heat itself, and the 4b schema refuses heat times in the plan on purpose.
-   - **Recommendation:** don't copy it. Writing it twice would give two clocks that can disagree.
-   - *Beach:* Heat 2 starts at 15:10; the dashboard shows 15:10 and pushes Heat 3 to 15:25 either way.
-2. **When are a judge's scores locked?** The docs give three rules: at review; 3 minutes after the end; or at Submit sheet.
-   - **Recommendation:** at Submit sheet, or when the head judge moves the heat to review, whichever comes first. The head judge can reopen one judge's sheet. Drop the 3-minute timer.
-   - *Beach:* Judge 2 realises they gave Red 5.5 instead of 6.5 one minute after time up; they fix it and then submit. Nobody is locked out mid-correction by a timer they cannot see.
-3. **An unresolved tie.** It can't be published with a plain override, because somebody has to be 1st.
-   - **Recommendation:** the head judge picks the order (or "share the place", only if the model's tie-breakers include it), with a reason.
-   - *Beach:* Red and Blue both on 31.20 with identical tricks; you choose Red with the reason "Re-ride declined, judges' call".
-4. **"The division's tick boxes".** The visibility boxes are per event today.
-   - **Recommendation:** keep the event's boxes as the default and let a division override them.
-   - *Beach:* the Youth division never shows live scores, Pro Men does.
-5. **Public live pages: polling or realtime?** The docs chose polling every 5–10 s. The free plan allows about 200 realtime connections; officials need about 10, spectators could be hundreds.
-   - **Recommendation:** keep polling for the public, and plan realtime for spectators only on a paid plan.
-   - *Beach:* 300 people on the public page during the final do not knock the judges' phones off.
-6. **How many heats can run at once?**
-   - **Recommendation:** one per event by default, as an event setting.
-   - *Beach:* a second Start while Heat 3 runs says "Heat 3 is still running — end it first", unless you set 2 for a two-zone event.
-7. **Crashes and judges.**
-   - **Recommendation:** judges never score a crashed attempt; it scores 0 or is not counted as the model says. A judge who saw a landing presses Flag → "that was a landing", and the head judge changes it.
-   - *Beach:* the spotter hits CRASH on a sketchy landing; Judge 1 flags it; you switch it to Landed and the judges' pads appear.
-8. **Who may go past the attempt cap?** You wrote "only the head judge"; docs/05 decision 20 also allows an organiser when there is no head judge.
-   - **Recommendation:** keep the organiser too, always with a reason.
-   - *Beach:* a club event with no head judge, where the organiser adds Red's missed 8th attempt with the reason "spotter missed it".
-9. **Spotter "Undo last" within 10 seconds.** docs/06 has it; your list does not.
-   - **Recommendation:** keep it. It is the spotter's own last attempt only, within 10 s, and audited.
-   - *Beach:* logged Blue instead of Red; undo, log Red.
-10. **Merge when both duplicates have a score from the same judge.**
-    - **Recommendation:** the merge dialog shows both and defaults to the first-logged attempt.
-    - *Beach:* Judge 1 scored 7.0 on one copy and 7.5 on the other; you pick 7.5.
-11. **"Simulator and feedback section" of docs/06 does not exist**, and nor does "owner feedback rules". I read them as:
-    - beach rule 00.6 (persistent confirmations) and decision 16 (no toasts for officials);
-    - the Feedback notes row (the Note button stays off official screens).
+## 11. Owner's answers (1 Oct 2026)
 
-    Did you mean a **practice-heat simulator** (a fake spotter feed so one person can test the judge screen)?
-    - **Recommendation:** yes. Add it to 5c as an organiser-only "Practice heat" on the demo event, which never touches real events.
-12. **Wind calls, heat re-run with suffix "R", Highest Jump metres:** not in this plan.
-    - **Recommendation:** wind calls in Phase 6 with the public banner. Re-run (cancel + new heat "3R") in 5c only if you need it for Arrow.
+These are decisions now. The steps above already follow them. 5b copies them into the decisions logs of docs/03, docs/05 and docs/06.
+
+| # | Topic | Decision | Where |
+|---|---|---|---|
+| 1 | Actual start | Not copied into the plan; the heat row is the truth | Steps 1, 5 |
+| 2 | Judge lock | At Submit sheet or when the head judge moves the heat to review, whichever comes first. The head judge can reopen one judge's sheet. The 3-minute timer is dropped | Step 3 |
+| 3 | Unresolved tie | The head judge chooses the order with a reason. "Share the place" only when the model allows it. No plain override | Step 5 |
+| 4 | Visibility | The event's boxes are the default; a division may override them | Step 6 |
+| 5 | Public pages | Polling for the public, realtime only for officials | Step 7 |
+| 6 | Running heats | One per event by default, as an event setting (`maxRunningHeats`) | Step 1 |
+| 7 | Crashes | Judges never score a crashed attempt. A judge presses Flag "That was a landing"; the head judge switches it to Landed and the pads appear | Steps 2–4 |
+| 8 | Past the cap | The head judge, or an organiser when the event has no head judge, always with a reason | Step 4 |
+| 9 | Spotter Undo | Keep "Undo last" within 10 seconds | Step 2 |
+| 10 | Merge | The dialog shows both scores and defaults to the first-logged attempt | Step 4 |
+| 11 | Simulator | The full simulator is its own PR after Phase 6 (the owner gives its spec then). 5c ships only its seed: an organiser-only "Practice heat" on events flagged `is_simulation` (never public, excluded from exports) | Step 4 |
+| 12 | Out of scope | Wind calls go to Phase 6 with the public banner. Re-running a heat is Cancel heat (with reason) plus "add an extra heat" in the 4b Draw step; no new feature. Highest Jump metres come after the event | Step 4, §13 |
+| A | Head console on a phone | Below 900 px nothing is refused. Controls, rider totals and the blocker list are shown; only the matrix asks for a tablet or laptop | Step 4 |
+| B | Timer sounds | A short beep and vibration at 1:00 and 0:00. On by default on the head console, optional on judge phones, switchable per device | Step 1 |
+| C | PR split | 5a, 5b, 5c, with the 5b-1 / 5b-2 fallback. The hours go into STATUS.md when 5a starts | §10 |
 
 ## 12. Repo rules I had to interpret
 
 - **"Server time is truth":** this also covers the organiser's existing Hold / Shift buttons, which use the device clock today. They move to server actions in 5b.
 - **"Tests first in doc 08 terms":** the new values in this plan go into a new docs/08 §1G at the start of 5b, before code. This PR may only add one file, so docs/08 is not edited here.
 - **"Service role only in server code":** publish needs it (it writes `heat_results` and slots of other heats). Every other head action is a security-definer function that checks the caller, so no service key is used for them.
-- **"Mobile first" vs the head console:** rule 00.2 says the matrix is never squeezed onto a phone, so `/head` asks for a tablet or laptop below 900 px.
+- **"Mobile first" vs the head console:** rule 00.2 says the matrix is never squeezed onto a phone. Per the owner's addition A, only the matrix asks for a tablet or laptop; everything else on `/head` works on a phone.
 - **"Re-opened" state:** docs/05 §5 says there is no separate status. Re-open is `published → under_review` plus `reopened_at`, and the next publish is version 2.
 - **Routes:**
   - docs/06 names `/judge/[heatId]`. Auto-follow needs the event, so the routes are `/judge/[eventId]` and `/spot/[eventId]`, and a heat can be pinned with `?heat=`.
   - CLAUDE.md's route list allows both.
 - **"Correction after a later heat started":** read as "a heat that this result feeds has started" (docs/04 and docs/08 §2F). An unrelated later heat in the run order does not block a correction.
 - **Pause:** spotters cannot log while paused (riders are off the water); judges can still score attempts already logged.
-- **Dependencies:** none added. IndexedDB, speech and wake lock are browser APIs.
+- **Dependencies:** none added. IndexedDB, speech, wake lock, Web Audio and vibration are browser APIs.
+- **"Never public" for simulation events:** officials can still join a simulation event with their PINs; everything a visitor could see is closed.
+- **The demo event:** 5c sets `is_simulation` on the seeded Demo Cup, because its riders are fictional and its PINs are public. That takes Demo Cup off the home page.
 
 ## 13. Not in Phase 5
 
 - Public pages, big screen, rider pages (Phase 6). They only read the functions from step 6.
-- Wind calls.
-- Highest Jump metres.
+- Wind calls (Phase 6, with the public banner).
+- Highest Jump metres (after the event).
+- A dedicated "re-run heat" feature: Cancel heat plus the 4b Draw step covers it.
+- The full simulator: auto-play spotters and judges, scenario buttons, "View as…", checklist. It is its own PR after Phase 6.
 - Exports.
 - Paper sheets printing.
 - Full offline-first.
