@@ -82,7 +82,7 @@ export function HeadControlTab() {
                 <Pill tone="ink">{T.stateWord[state]}</Pill>
               </>
             ) : (
-              <HeatTimer remainingMs={h.remainingMs} state={state} size="head" />
+              <HeatTimer remainingMs={h.remainingMs} state={state === "under_review" || state === "cancelled" ? "ended" : state} size="head" />
             )}
           </div>
           <p className="text-small font-medium text-beach-muted">{T.next(h.next.heat, h.next.time)}</p>

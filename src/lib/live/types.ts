@@ -69,9 +69,12 @@ export interface ScoreRow {
   missed: boolean;
   criteria: unknown;
   client_rev: number;
+  version: number;
+  /** Set when the head judge changed or entered the score ("Absent" for a judge marked absent for that attempt). */
+  edit_reason: string | null;
   updated_at: string;
 }
-export const SCORE_COLUMNS = "id, attempt_id, heat_id, judge_seat_id, score, missed, criteria, client_rev, updated_at";
+export const SCORE_COLUMNS = "id, attempt_id, heat_id, judge_seat_id, score, missed, criteria, client_rev, version, edit_reason, updated_at";
 
 export interface ImpressionRow {
   id: string;

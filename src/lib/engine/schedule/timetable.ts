@@ -100,6 +100,12 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
       return;
     }
 
+    // ── cancelled before it ever started: it takes no time and moves nothing
+    if (live?.cancelled && e.actualStart === undefined) {
+      emit({ start: null, end: null, breakAfter: null, status: "cancelled", reason: "Cancelled before it started: it takes no time" });
+      return;
+    }
+
     // ── started: actual times from the server
     if (e.actualStart !== undefined) {
       const start = e.actualStart;
@@ -109,8 +115,8 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
       if (item.kind === "heat" && live) {
         if (live.endedAt) {
           end = Date.parse(live.endedAt);
-          status = "done";
-          reason = `Started ${hhmm(start)}, ended ${hhmm(end)} (server time)`;
+          status = live.cancelled ? "cancelled" : "done";
+          reason = live.cancelled ? `Started ${hhmm(start)}, cancelled ${hhmm(end)} (server time)` : `Started ${hhmm(start)}, ended ${hhmm(end)} (server time)`;
         } else {
           const projected = start + (duration + (live.pausedMin ?? 0)) * MIN;
           const over = now !== undefined && now > projected;
@@ -168,12 +174,12 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
     prevBreak = breakAfter();
   });
 
-  const timed = rows.filter((r) => r.kind !== "note");
+  const timed = rows.filter((r) => r.kind !== "note" && r.status !== "cancelled");
   const complete = timed.length > 0 && timed.every((r) => r.endUtc !== null);
   const finishUtc = complete ? timed.reduce((m, r) => (Date.parse(r.endUtc!) > Date.parse(m) ? r.endUtc! : m), timed[0].endUtc!) : null;
   return {
     rows,
-    heatsLeft: rows.filter((r) => r.kind === "heat" && r.status !== "done").length,
+    heatsLeft: rows.filter((r) => r.kind === "heat" && r.status !== "done" && r.status !== "cancelled").length,
     finishUtc,
     finish: finishUtc ? hhmm(Date.parse(finishUtc)) : null,
     warnings: rows.flatMap((r) => r.warnings.map((w) => `${r.label}: ${w}`)),
