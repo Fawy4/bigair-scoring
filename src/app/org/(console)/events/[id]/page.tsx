@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { computeTimetable } from "@/lib/engine/schedule";
+import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { getOrgContext } from "@/lib/org/context";
 import { loadSetupCounts } from "@/lib/org/setup-counts";
 import { requestOrigin } from "@/lib/platform/origin";
@@ -8,6 +9,7 @@ import { buildHeatModel, type DivisionRowDb, type HeatRowDb, type RoundRowDb } f
 import { rowToPlan, todayIn, type PlanRow } from "@/lib/schedule/plans";
 import { copy } from "@/lib/ui-copy";
 import { ShareCard } from "./share-card";
+import { WindCallControl } from "@/components/live/wind-call-control";
 
 export const metadata = { title: copy.layout.dashboard };
 export const dynamic = "force-dynamic";
@@ -113,6 +115,8 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
           </table>
         )}
       </section>
+
+      <WindCallControl eventId={id} bannerOn={parseEventSettings((await supabase.from("events").select("settings").eq("id", id).single()).data?.settings).windCallBanner} />
 
       <section className="flex flex-col gap-3" aria-label={T.shareHeading}>
         <h2 className="text-xl font-extrabold">{T.shareHeading}</h2>

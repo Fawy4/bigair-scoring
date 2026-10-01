@@ -10,6 +10,7 @@ import { JudgeScreen } from "./judge-screen";
 import { useEndAtZero, useTimerSound, useWakeLock } from "./live-hooks";
 import { LiveShell, ScreenSettings, useLiveSettings } from "./live-shell";
 import { PracticePanel } from "./practice-panel";
+import { WindCallControl } from "./wind-call-control";
 import { useLiveHeat } from "./use-live-heat";
 import { useServerClock, useTick } from "./use-server-clock";
 import { SeatHeartbeat } from "@/app/seat/heartbeat";
@@ -187,6 +188,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
 
   const controlColumn = (
     <div className="flex flex-col gap-3">
+      {!announcer ? <WindCallControl eventId={ctx.event.id} /> : null}
       <PartBoundary what={copy.crash.parts.timetable}>
         <HeatControl ctx={ctx} heats={live.heats} selectedId={shownId} onSelect={setSelected} nowServer={nowServer} plans={live.plans} onPlanChanged={live.applyPlan} review={review} />
       </PartBoundary>

@@ -2520,6 +2520,7 @@ export type Database = {
         Args: { p_entries: string[]; p_heat: string; p_reason: string }
         Returns: undefined
       }
+      get_public_draw: { Args: { p_event: string }; Returns: Json }
       get_public_event: {
         Args: { p_slug: string }
         Returns: {
@@ -2553,6 +2554,9 @@ export type Database = {
       get_public_live_heat: { Args: { p_heat: string }; Returns: Json }
       get_public_organisation: { Args: { p_slug: string }; Returns: Json }
       get_public_results: { Args: { p_event: string }; Returns: Json }
+      get_public_rules: { Args: { p_event: string }; Returns: Json }
+      get_public_site: { Args: { p_slug: string }; Returns: Json }
+      get_public_timetable: { Args: { p_event: string }; Returns: Json }
       get_seat_contacts: {
         Args: { p_event: string }
         Returns: {
@@ -3141,6 +3145,23 @@ export type Database = {
       set_seat_scores: {
         Args: { p_scores: boolean; p_seat: string }
         Returns: undefined
+      }
+      set_wind_call: {
+        Args: { p_event: string; p_message: string; p_status: string }
+        Returns: {
+          created_at: string
+          event_id: string
+          id: string
+          message: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "wind_calls"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       start_heat: {
         Args: { p_heat: string }

@@ -37,9 +37,8 @@ describe.skipIf(!ENV_OK)("Visibility, simulation events and the Practice heat (h
       expect(((await c.from("heat_results").select("entry_id, place, total").eq("heat_id", h)).data ?? []).length).toBe(0);
       expect(((await c.from("divisions").select("name, draw").eq("id", d.div)).data ?? []).length).toBe(0);
     }
-    // a visitor can read who sits where, never the seat's place, total or breakdown
-    expect(((await anon().from("heat_slots").select("position, entry_id").eq("heat_id", h)).data ?? []).length).toBeGreaterThan(0);
-    for (const col of ["place", "total", "breakdown"]) expect(codeOf(await anon().from("heat_slots").select(col).eq("heat_id", h))).not.toBe("");
+    // Phase 6: a visitor reads seats only through the public functions (which hide a rider fed from a held heat), never from the table
+    for (const col of ["position, entry_id", "place", "total", "breakdown"]) expect(codeOf(await anon().from("heat_slots").select(col).eq("heat_id", h))).not.toBe("");
     expect(((await f.clients.orgB.from("heat_slots").select("position").eq("heat_id", h)).data ?? []).length).toBe(0);
     // the live view and the public results say nothing about a held heat
     for (const c of strangers()) {
