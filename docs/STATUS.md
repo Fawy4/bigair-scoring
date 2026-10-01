@@ -530,3 +530,39 @@ One pull request holds steps 1, 2 and 3 and the 5b part of step 7, so there is n
 
 #### How to test on the preview (laptop and two phones, Demo event)
 See the click-through at the end of the pull request description.
+
+### Phase 5c – head console, publish and visibility (branch `phase-5c-head-publish`)
+
+One pull request holds steps 4, 5, 6 and the rest of step 7 (the Re-run heat button, the Practice heat, the announcer view). The two fixes from your 5b test are in.
+
+#### Done
+- **Head console (laptop).** Live score table with each judge's cell coloured by how far it is from the panel score; click a cell to edit it with a reason (it appears in the audit log); tick boxes for bulk Merge / Delete; attempt menu (Delete, Merge duplicate, Edit, Add attempt — past the attempt cap only with a reason, by the head judge, or by an organiser when the event has no head judge); rider menu (Did not start / Did not finish / Disqualified / Interference); "owes Impression score" with a type-in button; tie decision with reason; Flag-out; "That was a landing" flags switch the attempt to Landed.
+- **Publish.** One server transaction. Blockers are listed in plain words; the head judge can override with a reason (recorded). Publishing twice gives one result; Re-open (with reason) then Publish gives version 2. The final can be held (`publish_hold`) and released.
+- **Ladder fill.** Your rule: when a round's seats are fixed in advance (by original seeding with adjacent pairing, custom or hand-arranged ladders) publishing fills the target seat at once. When the next round re-seeds from all arrivals ("By their result") it still deals when every feeding heat is published or on "Seed now"; until then the Draw step shows "Sam · 1st H1 · seat pending". The Arrow 24-rider ladder fills R2 H1 seat 1 right after R1 H1 publishes (test).
+- **Re-run heat / Cancel heat.** New heat "Heat N re-run" (number N, suffix R) with the same riders, seats and Lycras, placed right after the heat that was live; later seats follow it. Riders left out are marked Disqualified or Did not start and rank last. Refused once published.
+- **Visibility.** Event tick boxes with per-division override; the head judge's per-heat live switch (follow division / on / off); held finals leak nowhere (two leaks closed: heat_slots and divisions for anonymous visitors); `get_public_results`; the per-division "What spectators see per attempt" setting is stored (screens that use it are later).
+- **Practice heat.** Organiser only, on events marked "simulation": fake spotter feed from the division's trick base at a set rate while the tab is open. Demo is now flagged as a simulation and is hidden from every public door.
+- **Announcer view** (`/head/<event>?mode=announcer`): read-only table and feed. **Console sound:** beep at 1:00 and 0:00 behind "Sound on".
+- **Head phone:** Score and Control tabs; Control holds the controls, Publish, Re-open and a Details toggle (rider totals, blocker list).
+- **Your two 5b fixes:** the Impression step moves to the next unscored rider after Save and offers Submit when all are done; disabled controls (Hold, Shift, …) say why in one sentence.
+
+#### Test evidence
+- `npm run typecheck` and `npm run lint` clean. `npm test`: 123 files, 1440 tests passed.
+- RLS (hosted dev project): new suites live-head (18), live-publish (10), live-visibility (8), rerun (4) pass; the whole suite result is in the PR.
+- Playwright (throwaway organisations): live-console — console, publish, re-run, live switch / release, practice heat, announcer, sound switch.
+
+#### Choices I made (please confirm or change)
+1. **Migrations are applied to the shared hosted project** (dev, Vercel preview and production share it). Two migrations: `20261005100000_phase5c_review_publish`, `20261005100100_phase5c_visibility_rerun_practice`. Arrow and EKL were not touched; Demo only got the simulation flag.
+2. **Simulation events disappear from the public site** (home, event pages, registration). Demo is therefore no longer public.
+3. **Re-run keeps the stored draw unchanged**; the heat's `draw_uid` moves to the re-run row.
+4. **Head judge = head seat or organiser.** An organiser acts as head when the event has no head seat.
+5. Plan corrections (docs/PLAN-phase-5.md): publish function is `publish_heat_commit` (heat, expected version, results, draw, projection, hold, override reason, actor, blockers); `rerun_heat` takes a few extra arguments for the new run order; `remove_penalty` exists.
+
+#### Not done / not verified
+- Realtime could not be tested through the sandbox browser; phones poll every 5 s as a fallback. Please check the two-phone steps on the preview.
+- Not seen on a real iPhone or in sun. Sound depends on the browser's tap rule.
+- Screens that use "What spectators see per attempt" are later; the setting is stored only.
+- Browser tests for flag-out and the tie dialog are covered by unit and RLS tests only, not by Playwright.
+
+#### How to test on the preview
+See the click-through at the end of the pull request description.

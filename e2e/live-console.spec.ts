@@ -220,3 +220,112 @@ test("on a phone the Control tab has Publish and Re-open, and Details holds the 
   expect(line[0].reason).toBe("Judges 2 and 3 left the beach");
   expect(JSON.stringify(line[0].after)).toContain("Judge 2 has not submitted");
 });
+
+test("Re-run heat: a reason and one confirmation; Heat 1 is cancelled, 'Heat 1 re-run' is next with the same riders and Lycras, Blue did not start; Start opens it on the spotter's phone by itself", async ({ browser }) => {
+  test.setTimeout(420_000);
+  await w.startHeat(w.heats[0]);
+  const spotter = await open(browser, "spotter", `/spot/${w.eventId}`);
+  const head = await laptop(browser, `/head/${w.eventId}`);
+  await expect(spotter.getByTestId("trick-builder")).toBeVisible({ timeout: 40_000 });
+  await expect(head.getByTestId("selected-heat")).toHaveAttribute("data-state", "running", { timeout: 40_000 });
+  await head.getByTestId("rerun").click();
+  await expect(dialog(head)).toContainText("Re-run Pro Men · R1 · Heat 1");
+  await expect(dialog(head).getByTestId("dialog-save")).toBeDisabled();
+  await dialog(head).getByTestId("rerun-rider").nth(1).selectOption("DNS"); // Blue did not start
+  await dialog(head).getByTestId("reason-input").fill("kite tangle");
+  await dialog(head).getByTestId("dialog-save").click();
+  await expect(head.getByTestId("control-message")).toContainText("is next in the run order", { timeout: 40_000 });
+  const heats = (await w.db.from("heats").select("id, status, number, number_suffix, name, rerun_of, draw_uid").eq("division_id", w.divisionId).order("number").order("number_suffix")).data!;
+  const rerun = heats.find((h) => h.rerun_of === w.heats[0])!;
+  expect(rerun).toMatchObject({ status: "scheduled", number: 1, number_suffix: "R", name: "Heat 1 re-run" });
+  expect(heats.find((h) => h.id === w.heats[0])!.status).toBe("cancelled");
+  const slots = (await w.db.from("heat_slots").select("entry_id, vest_colour, modifier").eq("heat_id", rerun.id).order("position")).data!;
+  expect(slots.map((s) => [s.entry_id, s.vest_colour, s.modifier])).toEqual(w.entries.map((e, i) => [e, w.colours[i], i === 1 ? "DNS" : null]));
+  const plan = (await w.db.from("schedule_plans").select("items").eq("id", w.planId).single()).data!.items as Array<{ heatId?: string }>;
+  expect(plan.map((i) => i.heatId)).toEqual([w.heats[0], rerun.id, w.heats[1]]); // right after the heat that was live
+  // the cancelled heat stays visible, read-only, and says what replaced it
+  await head.locator(`[data-testid="order-row"][data-heat="${w.heats[0]}"]`).click();
+  await expect(head.getByTestId("cancelled-note")).toContainText("Cancelled — re-run as Heat 1 re-run");
+  // Start the re-run: the spotter's phone opens it by itself
+  await head.locator(`[data-testid="order-row"][data-heat="${rerun.id}"]`).click();
+  await head.getByTestId("start").click();
+  await expect(head.getByTestId("selected-heat")).toHaveAttribute("data-state", "running", { timeout: 40_000 });
+  await expect(spotter.getByTestId("screen-header")).toContainText("Heat 1 re-run", { timeout: 40_000 });
+  expect(((await w.db.from("audit_log").select("action").eq("event_id", w.eventId).eq("action", "heat_rerun")).data ?? []).length).toBe(1);
+});
+
+test("visibility: the head judge's per-heat live switch, and a held result stays hidden until Release", async ({ browser }) => {
+  test.setTimeout(300_000);
+  const ladder = await addLadder(w);
+  const { heat } = await endedLadderHeat(ladder, ["j1", "j2", "j3"]);
+  const head = await laptop(browser, `/head/${w.eventId}`);
+  await head.locator(`[data-testid="order-row"][data-heat="${heat}"]`).click({ timeout: 40_000 });
+  await expect(head.getByTestId("live-follow")).toHaveAttribute("aria-pressed", "true", { timeout: 40_000 });
+  await head.getByTestId("live-on").click();
+  await expect.poll(async () => (await w.db.from("heats").select("public_live").eq("id", heat).single()).data!.public_live, { timeout: 30_000 }).toBe(true);
+  await head.getByTestId("live-off").click();
+  await expect.poll(async () => (await w.db.from("heats").select("public_live").eq("id", heat).single()).data!.public_live, { timeout: 30_000 }).toBe(false);
+  await head.getByTestId("live-follow").click();
+  await expect.poll(async () => (await w.db.from("heats").select("public_live").eq("id", heat).single()).data!.public_live, { timeout: 30_000 }).toBeNull();
+  // the event does not show results on publish (the default): the published result is held until released
+  await head.getByTestId("publish").click();
+  await dialog(head).getByTestId("dialog-save").click();
+  await expect(head.getByTestId("control-message")).toContainText("Published", { timeout: 60_000 });
+  expect((await w.db.from("heats").select("publish_hold").eq("id", heat).single()).data!.publish_hold).toBe(true);
+  const anon = (await import("@supabase/supabase-js")).createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
+  expect(((await anon.from("heat_results").select("entry_id").eq("heat_id", heat)).data ?? []).length).toBe(0);
+  await expect(head.getByTestId("held-note")).toBeVisible({ timeout: 40_000 });
+  await head.getByTestId("release").click();
+  await expect(head.getByTestId("control-message")).toContainText("Result released", { timeout: 40_000 });
+  expect((await w.db.from("heats").select("publish_hold").eq("id", heat).single()).data!.publish_hold).toBe(false);
+  expect(((await anon.from("heat_results").select("entry_id").eq("heat_id", heat)).data ?? []).length).toBe(3);
+});
+
+test("Practice heat on a simulation event: the organiser's tab plays a spotter feed and a judge's phone fills by itself; the event is not on the home page", async ({ browser }) => {
+  test.setTimeout(420_000);
+  await w.db.from("events").update({ is_simulation: true }).eq("id", w.eventId);
+  await w.startHeat(w.heats[0]);
+  const context = await browser.newContext({ viewport: { width: 1500, height: 1000 } });
+  phones.push(context);
+  await installSupabaseProxy(context);
+  const page = await context.newPage();
+  await w.org.signIn(page, `/head/${w.eventId}`);
+  const j1 = await open(browser, "j1", `/judge/${w.eventId}`);
+  await expect(page.getByTestId("practice")).toBeVisible({ timeout: 60_000 });
+  await expect(j1.getByTestId("all-scored")).toBeVisible({ timeout: 40_000 });
+  await page.getByTestId("practice-seconds").fill("3");
+  await page.getByTestId("practice-start").click();
+  await expect(page.getByTestId("practice-status")).toContainText("Practice running", { timeout: 20_000 });
+  await expect.poll(async () => ((await w.db.from("trick_attempts").select("id").eq("heat_id", w.heats[0])).data ?? []).length, { timeout: 60_000 }).toBeGreaterThanOrEqual(2);
+  await expect(j1.getByTestId("queue-card")).toBeVisible({ timeout: 40_000 }); // the judge's queue filled by itself
+  await page.getByTestId("practice-stop").click();
+  await expect(page.getByTestId("practice-status")).toContainText("Practice stopped");
+  // never public
+  const anon = (await import("@supabase/supabase-js")).createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
+  const listed = ((await anon.rpc("get_public_events", { p_limit: 100 })).data ?? []) as Array<{ id: string }>;
+  expect(listed.some((e) => e.id === w.eventId)).toBe(false);
+  // a normal head seat does not get the Practice panel (organiser only)
+  const headSeat = await laptop(browser, `/head/${w.eventId}`);
+  await expect(headSeat.getByTestId("heat-control")).toBeVisible({ timeout: 40_000 });
+  await expect(headSeat.getByTestId("practice")).toHaveCount(0);
+});
+
+test("the announcer view is read-only: the score table and the feed, no menus, no tick boxes, no controls; Sound on is a switch", async ({ browser }) => {
+  test.setTimeout(300_000);
+  await w.startHeat(w.heats[0]);
+  const att = (await w.db.from("trick_attempts").insert({ heat_id: w.heats[0], entry_id: w.entries[0], seq: 1, status: "landed", trick_name: "Left Backroll", direction: "left", client_key: crypto.randomUUID() }).select("id").single()).data!;
+  for (const [i, key] of (["j1", "j2"] as const).entries()) await w.db.from("trick_scores").insert({ attempt_id: att.id, judge_seat_id: w.seats[key].id, score: [7.5, 8][i], client_key: crypto.randomUUID(), client_rev: 1 });
+  const ann = await laptop(browser, `/head/${w.eventId}?mode=announcer`);
+  await expect(ann.getByTestId("announcer-view")).toBeVisible({ timeout: 40_000 });
+  await expect(ann.getByTestId("matrix-row")).toHaveCount(1, { timeout: 40_000 });
+  await expect(ann.getByTestId("announcer-feed")).toContainText("Red — attempt 1 — Left Backroll — landed", { timeout: 40_000 });
+  await expect(ann.getByTestId("row-select")).toHaveCount(0);
+  await expect(ann.getByTestId("attempt-menu-button")).toHaveCount(0);
+  await expect(ann.getByTestId("matrix-cell").first()).not.toHaveJSProperty("tagName", "BUTTON");
+  await expect(ann.getByTestId("start")).toHaveCount(0);
+  // the head console has the Sound on switch, on by default, and it flips
+  const head = await laptop(browser, `/head/${w.eventId}`);
+  await expect(head.getByTestId("sound-toggle")).toHaveAttribute("aria-pressed", "true", { timeout: 40_000 });
+  await head.getByTestId("sound-toggle").click();
+  await expect(head.getByTestId("sound-toggle")).toHaveAttribute("aria-pressed", "false");
+});
