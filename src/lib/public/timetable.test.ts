@@ -104,6 +104,12 @@ describe("the public timetable", () => {
     expect(t.rows.map((r) => r.start)).toEqual(["10:00", "10:12"]);
   });
 
+  it("a heat with no length, and a row whose heat has left the draw, are not shown to the public (they are the organiser's to fix) and do not stop the rest of the day", () => {
+    const t = buildPublicTimetable(payload([heat(1), heat(2, { duration_sec: 0 }), heat(3)], { items: [{ id: "i1", kind: "heat", heatId: "h1" }, { id: "i2", kind: "heat", heatId: "h2" }, { id: "i3", kind: "heat", heatId: "h3" }, { id: "i4", kind: "heat", heatId: "gone" }] }), at("09:00"));
+    expect(t.rows.map((r) => r.heat)).toEqual(["Heat 1", "Heat 3"]);
+    expect(t.rows[1].start).toBe("10:14"); // the engine still counts the empty row's break
+  });
+
   it("a heat that ran but whose result is held back says so", () => {
     const t = buildPublicTimetable(payload([heat(1, { status: "published", held: true, started_at: at("10:00"), ended_at: at("10:10") }), heat(2)]), at("10:12"));
     expect(t.rows[0]).toMatchObject({ status: "done", resultHeld: true });

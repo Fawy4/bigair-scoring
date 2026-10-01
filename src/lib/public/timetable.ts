@@ -96,7 +96,7 @@ export function buildPublicTimetable(t: PublicTimetable | null, nowIso: string):
   }
   const heldResult = new Set(t.heats.filter((h) => h.held && h.status === "published").map((h) => h.id));
   const rows: PublicRow[] = table.rows
-    .filter((r) => r.status !== "cancelled")
+    .filter((r) => r.status !== "cancelled" && !r.issue) // a row with no length, or whose heat left the draw, is for the organiser to fix, not for the public
     .map((r) => ({
       itemId: r.itemId,
       kind: r.kind,

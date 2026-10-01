@@ -36,6 +36,9 @@ const clockSeconds = async (p: Page) => {
 test("the head judge runs a whole heat from a phone: Start refused in plain words, Start, Pause, Resume, Hold, Resume at, Shift, End", async ({ browser }) => {
   test.setTimeout(300_000);
   await w.db.from("divisions").update({ draw_locked_at: null }).eq("id", w.divisionId);
+  // The run order is for tomorrow, so "Resume at 23:30" is in the future at any hour (the engine never puts a start in the past: on today's plan this test failed after 23:30).
+  const tomorrow = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" }).format(Date.now() + 36 * 3600_000);
+  await w.db.from("schedule_plans").update({ day: tomorrow }).eq("id", w.planId);
   const head = await phone(browser, "head", `/head/${w.eventId}`);
   await expect(head.getByTestId("run-order")).toBeVisible({ timeout: 30_000 });
   await expect(head.getByTestId("order-row")).toHaveCount(2);
