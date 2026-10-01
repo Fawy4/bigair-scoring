@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ATTEMPT_DISPLAYS, boxText, boxTone, DEFAULT_ATTEMPT_DISPLAY, gradeIndex, type AttemptDisplay } from "./result-shading";
+import { ATTEMPT_DISPLAYS, boxText, boxTone, DEFAULT_ATTEMPT_DISPLAY, gradeIndex, toAttemptDisplay, type AttemptDisplay } from "./result-shading";
 
 // Public heat summary (owner, round 4): crash red, not counted grey, counted graded yellow to green ACROSS THE HEAT: the highest counted score in the heat is the greenest,
 // the lowest counted the yellowest. A box shows attempt number + score (Arrow's default), trick name + score, or the score only.
@@ -44,5 +44,13 @@ describe("what a box shows (a division setting)", () => {
     expect(t("scores_only", crash)).toBe("CRASH");
     expect(t("number_score", crash)).toBe("4 · CRASH");
     expect(t("trick_score", crash)).toBe("Board-off · CRASH");
+  });
+
+  it("the stored 'score_only' setting is read as scores only; anything unknown is attempt number + score", () => {
+    expect(toAttemptDisplay("score_only")).toBe("scores_only");
+    expect(toAttemptDisplay("trick_score")).toBe("trick_score");
+    expect(toAttemptDisplay("number_score")).toBe("number_score");
+    expect(toAttemptDisplay(undefined)).toBe("number_score");
+    expect(toAttemptDisplay("nonsense")).toBe("number_score");
   });
 });

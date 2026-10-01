@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { EventCard, type PublicEvent } from "@/components/event-card";
 import { groupOrgEvents, todayInZone } from "@/lib/platform/event-label";
 import { isValidTimeZone } from "@/lib/schemas/org-settings";
-import { createClient } from "@/lib/supabase/server";
+import { createAnonClient } from "@/lib/supabase/anon";
+import { requestOrigin } from "@/lib/platform/origin";
 import { copy } from "@/lib/ui-copy";
 
 export const dynamic = "force-dynamic";
@@ -17,13 +18,22 @@ interface PublicOrg {
 }
 
 async function load(slug: string): Promise<PublicOrg | null> {
-  const { data } = await (await createClient()).rpc("get_public_organisation", { p_slug: slug });
+  const { data } = await createAnonClient().rpc("get_public_organisation", { p_slug: slug });
   return (data as PublicOrg | null) ?? null;
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ orgSlug: string }> }) {
   const org = await load((await params).orgSlug);
-  return { title: org?.name ?? copy.publicSite.eventNotFound };
+  if (!org) return { title: copy.publicSite.eventNotFound };
+  const origin = await requestOrigin();
+  const description = copy.pub.og.eventDescription(org.name, "");
+  return {
+    metadataBase: new URL(origin),
+    title: org.name,
+    description,
+    openGraph: { type: "website", url: `${origin}/o/${org.slug}`, title: org.name, description, ...(org.logo_url ? { images: [{ url: org.logo_url, alt: org.name }] } : {}) },
+    twitter: { card: org.logo_url ? ("summary_large_image" as const) : ("summary" as const), title: org.name, description },
+  };
 }
 
 /** An organisation's public page: logo, then live, upcoming and past published events. Archived organisations answer 404. */

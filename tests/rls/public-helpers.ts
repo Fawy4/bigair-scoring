@@ -4,6 +4,9 @@ import { applyHeatResult, expandFormat, type DivisionDraw } from "@/lib/engine/l
 import { parseFormatTemplate } from "@/lib/schemas/format-template";
 import type { Fixture } from "./helpers";
 
+/** What the helpers need of a world: a service client and the ids of its organisation, event and a scoring model (the RLS fixture and the browser-test world both fit). */
+export type World = { s: Fixture["s"]; ids: Record<string, string> };
+
 const must = (r: { data: unknown; error: { message: string } | null }, what: string): { id: string } => {
   if (r.error || !r.data) throw new Error(`${what}: ${r.error?.message}`);
   return r.data as { id: string };
@@ -24,7 +27,7 @@ export interface Ladder {
  * A division with a real ladder, saved the way the Draw step saves it (stored draw, rounds, heats with their draw ids, seats): six riders, two heats of three
  * in Round 1, then a Final of two, "By original seeding" (a published heat fills the Final's seat at once). `locked: false` leaves it a draft.
  */
-export async function mkLadder(f: Fixture, o: { name: string; event?: string; locked?: boolean; live?: object; model?: string }): Promise<Ladder> {
+export async function mkLadder(f: World, o: { name: string; event?: string; locked?: boolean; live?: object; model?: string; reseed?: "by_original_seed" | "by_heat_score" }): Promise<Ladder> {
   const s = f.s;
   const event = o.event ?? f.ids.evA1;
   const div = must(
@@ -55,7 +58,7 @@ export async function mkLadder(f: Fixture, o: { name: string; event?: string; lo
     entrants: { min: 2, max: null },
     timing: { defaultHeatMin: 10, defaultBreakAfterHeatMin: 2, defaultBreakAfterRoundMin: 3 },
     kind: "generator",
-    generator: { type: "single_elimination", params: { heatSize: 3, minHeatSize: 3, maxHeatSize: 3, advancePerHeat: 1, finalSize: 2, reseed: "by_original_seed" } },
+    generator: { type: "single_elimination", params: { heatSize: 3, minHeatSize: 3, maxHeatSize: 3, advancePerHeat: 1, finalSize: 2, reseed: o.reseed ?? "by_original_seed" } },
   });
   const draw = expandFormat(template, entries.map((id, i) => ({ id, name: names[i] })), { identification: "vests-per-heat" });
   await s.from("divisions").update({ draw: draw as never }).eq("id", div);
@@ -98,7 +101,7 @@ export const breakdownOf = (total: number): Record<string, unknown> => ({
  * Publishes one heat of a ladder the way the app does it: results (with judge-level marks inside the breakdown), the heat row, the stored draw, and the next
  * round's seat filled at once. `hold: true` leaves it unreleased. Returns the winner's entry id.
  */
-export async function publishLadderHeat(f: Fixture, l: Ladder, uid: string, o: { hold?: boolean; draw?: DivisionDraw } = {}): Promise<{ winner: string; draw: DivisionDraw }> {
+export async function publishLadderHeat(f: World, l: Ladder, uid: string, o: { hold?: boolean; draw?: DivisionDraw } = {}): Promise<{ winner: string; draw: DivisionDraw }> {
   const s = f.s;
   const base = o.draw ?? l.draw;
   const drawHeat = base.rounds.flatMap((r) => r.heats).find((h) => (h.uid ?? h.id) === uid)!;
