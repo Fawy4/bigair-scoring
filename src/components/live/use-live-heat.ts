@@ -117,7 +117,7 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
       }
     }
     setPlans(next);
-  }, [supabase, ctx.event.id]);
+  }, [supabase, ctx.event.id, ctx.event.readyCallMin]);
   const applyPlan = useCallback<LiveHeatState["applyPlan"]>((planId, hold, anchors) => {
     setPlans((l) =>
       l.map((p) => {
