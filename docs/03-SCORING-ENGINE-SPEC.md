@@ -260,3 +260,11 @@ Written in words. Where a row refines earlier text in this file, this section wi
 | Flags live in their own table | `attempt_flags` holds a flag without needing a score; `trick_scores.flag` stays unused. |
 | Percentages on screens | The division setting "Show scores as % of maximum" (Advanced, off by default) decides what screens show. The scoring model's `heat.total.display` ("both" in the KOTA preset) is only the default for exports. The engine always computes the percentage. |
 
+
+### Decisions log – Phase 5c (head console, publish; owner, 1 Oct 2026)
+
+| Topic | Decision |
+|---|---|
+| Ladder seats | Seats fixed in advance (original seeding with adjacent pairing, custom ladders) are filled the moment the feeding heat is published. Re-seeded rounds ("By their result") deal when every feeding heat is published or on "Seed now"; until then the provisional name is shown on the waiting seat. |
+| DNS ranking | A rider who did not start ranks last (after scored riders). |
+| Publishing | Blockers are explained in plain words; the head judge can override with a recorded reason. A heat is published once per version; Re-open then Publish gives the next version. |

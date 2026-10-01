@@ -3,7 +3,7 @@
 // or finished cannot be edited except for their name. A heat or round changed by hand is marked, and a regenerate asks before it
 // touches it.
 import { RoundSpecSchema } from "@/lib/schemas/format-template";
-import { makeSlot, sourceSlots } from "./build";
+import { makeSlot, resultOf, sourceSlots } from "./build";
 import { recompute } from "./recompute";
 import type { DivisionDraw, DrawHeat, DrawRound, Slot, SlotSource } from "./types";
 
@@ -66,6 +66,20 @@ export function placeholderText(draw: DivisionDraw, from: SlotSource, inRound: s
   const round = draw.rounds.find((r) => r.id === from.round);
   if (from.heat === 0) return `${ordinal(from.place)} of all heats`;
   return `${ordinal(from.place)} ${previous ? "" : `${round?.shortName ?? from.round} `}H${from.heat}`;
+}
+
+/**
+ * A waiting seat whose source heat is already published: who is on the way, for display only ("Sam · 1st H1 · seat pending"). The seat itself stays a
+ * placeholder until the round is dealt (a round that re-seeds from all its arrivals). Null when the heat has no result yet, the seat has its rider, or the
+ * place is a place across all heats of a pool.
+ */
+export function provisionalSeat(draw: DivisionDraw, round: DrawRound, slot: Slot): { entrantId: string; name: string; placeholder: string } | null {
+  if (slot.entrantId || !slot.from || slot.from.heat === 0) return null;
+  const source = draw.rounds.find((r) => r.id === slot.from!.round)?.heats.find((h) => h.index === slot.from!.heat);
+  const result = source ? resultOf(draw, source) : undefined;
+  const won = result?.ranked.find((e) => e.place === slot.from!.place && e.modifier !== "DNS");
+  if (!won) return null;
+  return { entrantId: won.entrantId, name: riderName(draw, won.entrantId), placeholder: placeholderText(draw, slot.from, round.id) };
 }
 
 function seatText(draw: DivisionDraw, round: DrawRound, slot: Slot): string {

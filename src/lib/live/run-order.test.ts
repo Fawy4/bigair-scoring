@@ -4,7 +4,7 @@ import type { HeatRow } from "./types";
 
 const heat = (patch: Partial<HeatRow> = {}): HeatRow => ({
   id: "h", division_id: "d1", round_id: "r1", number: 3, number_suffix: null, name: null, status: "scheduled", duration_sec: 600, warm_up_sec: 120,
-  started_at: null, paused_at: null, paused_total_sec: 90, ended_at: null, draw_uid: null, updated_at: "", ...patch,
+  started_at: null, paused_at: null, paused_total_sec: 90, ended_at: null, draw_uid: null, rerun_of: null, public_live: null, reopened_at: null, publish_hold: false, updated_at: "", ...patch,
 });
 const ctx = { divisions: [{ id: "d1", name: "Pro Men" }] as never, rounds: [{ id: "r1", division_id: "d1", name: "Round 1", short_name: "R1", sort_order: 1 }] };
 const plan = (id: string, day: string): ActivePlan => ({ id, day, plan: { id, name: id, active: true, items: [], anchors: {}, actualStarts: {} } as never, defaults: {} as never, updatedAt: "" });

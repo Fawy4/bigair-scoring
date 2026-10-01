@@ -28,7 +28,7 @@ export function useLiveSettings(): Settings {
  * The frame of an official screen: the Daylight / Dark theme and Normal / Large size of this device, the page behind it in the theme's colour, and the
  * "Sound on" choice. Sound is off by default on judge and spotter phones and on for the head console; the tap on "Sound on" is also what lets iPhones play sound.
  */
-export function LiveShell({ children, soundDefault = false }: { children: React.ReactNode; soundDefault?: boolean }) {
+export function LiveShell({ children, soundDefault = false, wide = false }: { children: React.ReactNode; soundDefault?: boolean; wide?: boolean }) {
   const [theme, setTheme] = useBeachTheme();
   const [size, setSize] = useBeachTextSize();
   const [soundOn, setSound] = useState(soundDefault);
@@ -48,7 +48,7 @@ export function LiveShell({ children, soundDefault = false }: { children: React.
   }, [theme]);
   return (
     <Ctx.Provider value={{ theme, setTheme, size, setSize, soundOn, setSoundOn }}>
-      <div data-testid="live-root" data-theme={theme} data-text={size} className={cn(theme === "dark" ? "beach-dark" : "beach-day", size === "large" ? "beach-text-large" : "beach-text-normal", "relative mx-auto flex h-[100dvh] w-full max-w-[640px] flex-col bg-beach-bg text-beach-ink")}>
+      <div data-testid="live-root" data-theme={theme} data-text={size} className={cn(theme === "dark" ? "beach-dark" : "beach-day", size === "large" ? "beach-text-large" : "beach-text-normal", "relative mx-auto flex h-[100dvh] w-full max-w-[640px] flex-col bg-beach-bg text-beach-ink", wide && "min-[900px]:max-w-none")}>
         {children}
       </div>
     </Ctx.Provider>

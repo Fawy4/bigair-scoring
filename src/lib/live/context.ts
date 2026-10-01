@@ -16,6 +16,13 @@ import { HEAT_COLUMNS, type HeatRow, type LiveContext, type LiveDivisionContext,
 
 type Db = Awaited<ReturnType<typeof createClient>>;
 
+/** The format's flag-out from the stored draw's template (readable by officials of the event), or null. */
+function flagOutOf(draw: unknown): { rounds: string[]; atMin: number; count: number } | null {
+  const fo = (draw as { template?: { flagOut?: { rounds?: unknown; atMin?: unknown; count?: unknown } } } | null)?.template?.flagOut;
+  if (!fo || !Array.isArray(fo.rounds) || typeof fo.atMin !== "number" || typeof fo.count !== "number") return null;
+  return { rounds: fo.rounds.filter((r): r is string => typeof r === "string"), atMin: fo.atMin, count: fo.count };
+}
+
 const PLAN_COLUMNS = "id, event_id, day, name, items, anchors, actual_starts, hold, defaults, active, updated_at";
 
 /**
@@ -29,7 +36,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
     data: { user },
   } = await db.auth.getUser();
   if (!user) return null;
-  const { data: event } = await db.from("events").select("id, organisation_id, name, slug, timezone, settings").eq("id", eventId).maybeSingle();
+  const { data: event } = await db.from("events").select("id, organisation_id, name, slug, timezone, settings, is_simulation").eq("id", eventId).maybeSingle();
   if (!event) return null;
   const settings = parseEventSettings(event.settings);
 
@@ -57,7 +64,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
     db.from("divisions").select("id, name, sort_order, scoring_model_id, scoring_overrides, trick_base, live_settings, identification, panel_id, draw").eq("event_id", eventId).order("sort_order"),
     db.from("rounds").select("id, division_id, name, short_name, sort_order").eq("event_id", eventId),
     db.from("heats").select(HEAT_COLUMNS).eq("event_id", eventId),
-    db.from("panel_members").select("panel_id, judge_seat_id").eq("event_id", eventId),
+    db.from("panel_members").select("panel_id, judge_seat_id, seat_no").eq("event_id", eventId).order("seat_no"),
     db.from("v_entries").select("id, division_id, status, identifiers, first_name, last_name, nationality, sponsor, photo_url").eq("event_id", eventId),
     db.from("schedule_plans").select(PLAN_COLUMNS).eq("event_id", eventId).eq("active", true),
     loadMasterVocabulary(db),
@@ -87,6 +94,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
       scheme: effectiveScheme(eventIdentification, own ? { scheme: own } : null),
       trickBase: { disabled: tb.disabled, layout: tb.layout ?? null },
       live: parseDivisionLive(d.live_settings),
+      flagOut: flagOutOf(d.draw),
       panelSeatIds: (panelRows ?? []).filter((p) => p.panel_id === d.panel_id).map((p) => p.judge_seat_id),
       maxAttempts: model.heat.maxAttemptsPerRider,
     });
@@ -120,7 +128,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
   for (const l of model.lives) heatMeta[l.heatId] = { roundLast: Boolean(l.roundLast), ...(l.breakAfterHeatMin !== undefined ? { breakAfterHeatMin: l.breakAfterHeatMin } : {}), ...(l.breakAfterRoundMin !== undefined ? { breakAfterRoundMin: l.breakAfterRoundMin } : {}) };
 
   return {
-    event: { id: event.id, name: event.name, slug: event.slug, timezone: event.timezone, judgesMayLogAttempts: settings.judgesMayLogAttempts, maxRunningHeats: settings.maxRunningHeats },
+    event: { id: event.id, name: event.name, slug: event.slug, timezone: event.timezone, judgesMayLogAttempts: settings.judgesMayLogAttempts, maxRunningHeats: settings.maxRunningHeats, isSimulation: Boolean(event.is_simulation) },
     viewer,
     divisions,
     rounds: roundRows ?? [],

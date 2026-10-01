@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { MoreVertical } from "lucide-react";
 import { Chip } from "./chip";
+import { Footer, Modal, off, plain, primary, Reason, btn } from "./console-parts";
 import { HeadMatrix } from "./head-matrix";
 import { Pill } from "./pill";
 import { ScorePad } from "./score-pad";
@@ -17,11 +18,6 @@ import { cn } from "@/lib/utils";
 
 const C = copy.live.console;
 const H = copy.live.head;
-const btn = "inline-flex min-h-tap items-center justify-center gap-1.5 rounded-xl border px-3 text-body font-semibold";
-const plain = `${btn} border-beach-border bg-beach-bg text-beach-ink`;
-const primary = `${btn} border-beach-accent bg-beach-accent text-beach-on-accent`;
-const off = `${btn} border-beach-line bg-beach-surface text-beach-muted`;
-
 type Menu = { kind: "attempt"; rowId: string } | { kind: "rider"; riderKey: string } | null;
 type Dialog =
   | { kind: "cell"; rowId: string; judgeId: string }
@@ -36,45 +32,6 @@ type Dialog =
   | { kind: "override" }
   | { kind: "rerun" }
   | null;
-
-/** A dialog that sits over the console. Every change asks for a reason (audited). */
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="absolute inset-0 z-20 flex items-start justify-center bg-black/40 p-3" data-testid="console-dialog-layer">
-      <section role="dialog" aria-label={title} data-testid="console-dialog" className="flex w-full max-w-[26rem] flex-col gap-2 rounded-card border border-beach-border bg-beach-bg p-3">
-        <h3 className="text-name font-semibold">{title}</h3>
-        {children}
-        <span className="sr-only">
-          <button type="button" onClick={onClose}>
-            {C.cancel}
-          </button>
-        </span>
-      </section>
-    </div>
-  );
-}
-
-function Reason({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <label className="flex flex-col gap-0.5 text-small font-medium text-beach-muted">
-      {C.reason}
-      <input data-testid="reason-input" value={value} onChange={(e) => onChange(e.target.value)} placeholder={C.reasonPlaceholder} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink placeholder:text-beach-muted" />
-    </label>
-  );
-}
-
-function Footer({ canSave, onSave, onCancel, saveLabel = C.save }: { canSave: boolean; onSave: () => void; onCancel: () => void; saveLabel?: string }) {
-  return (
-    <div className="grid grid-cols-2 gap-1.5">
-      <button type="button" data-testid="dialog-save" disabled={!canSave} onClick={onSave} className={canSave ? primary : off}>
-        {saveLabel}
-      </button>
-      <button type="button" onClick={onCancel} className={plain}>
-        {C.cancel}
-      </button>
-    </div>
-  );
-}
 
 /**
  * The head judge's laptop console as a working tool (owner, round 3): tap a score to edit it with a reason, tap an attempt for its menu (Delete, Merge

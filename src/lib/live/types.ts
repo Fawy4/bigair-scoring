@@ -23,9 +23,17 @@ export interface HeatRow {
   paused_total_sec: number;
   ended_at: string | null;
   draw_uid: string | null;
+  /** The heat this one re-runs (a cancelled heat is read-only and says "re-run as …"). */
+  rerun_of: string | null;
+  /** The head judge's per-heat live switch: true = show live, false = do not, null = follow the setting. */
+  public_live: boolean | null;
+  /** Set when the head judge re-opened a published result: it is "under correction" until published again. */
+  reopened_at: string | null;
+  /** The published result is held back from the public (a final waiting for its prize-giving). */
+  publish_hold: boolean;
   updated_at: string;
 }
-export const HEAT_COLUMNS = "id, division_id, round_id, number, number_suffix, name, status, duration_sec, warm_up_sec, started_at, paused_at, paused_total_sec, ended_at, draw_uid, updated_at";
+export const HEAT_COLUMNS = "id, division_id, round_id, number, number_suffix, name, status, duration_sec, warm_up_sec, started_at, paused_at, paused_total_sec, ended_at, draw_uid, rerun_of, public_live, reopened_at, publish_hold, updated_at";
 
 export interface SlotRow {
   id: string;
@@ -69,9 +77,12 @@ export interface ScoreRow {
   missed: boolean;
   criteria: unknown;
   client_rev: number;
+  version: number;
+  /** Set when the head judge changed or entered the score ("Absent" for a judge marked absent for that attempt). */
+  edit_reason: string | null;
   updated_at: string;
 }
-export const SCORE_COLUMNS = "id, attempt_id, heat_id, judge_seat_id, score, missed, criteria, client_rev, updated_at";
+export const SCORE_COLUMNS = "id, attempt_id, heat_id, judge_seat_id, score, missed, criteria, client_rev, version, edit_reason, updated_at";
 
 export interface ImpressionRow {
   id: string;
@@ -116,6 +127,8 @@ export interface LiveDivisionContext {
   scheme: IdentificationScheme;
   trickBase: { disabled: string[]; layout: unknown };
   live: DivisionLive;
+  /** The format's flag-out (the lowest riders leave the heat at a minute), when it has one: the rounds it applies to, the minute and how many riders. */
+  flagOut: { rounds: string[]; atMin: number; count: number } | null;
   /** Seats on this division's panel. */
   panelSeatIds: string[];
   maxAttempts: number | null;
@@ -127,7 +140,7 @@ export interface LiveRiderInfo extends LabelRider {
 }
 
 export interface LiveContext {
-  event: { id: string; name: string; slug: string; timezone: string; judgesMayLogAttempts: boolean; maxRunningHeats: number };
+  event: { id: string; name: string; slug: string; timezone: string; judgesMayLogAttempts: boolean; maxRunningHeats: number; isSimulation: boolean };
   /** Who is looking: a seat, or an organiser of the event (the head page only). */
   viewer: { kind: "seat"; seatId: string; name: string; role: SeatRole; spotterEntries: string[]; spotterColours: string[] } | { kind: "organiser"; name: string };
   divisions: LiveDivisionContext[];
@@ -141,3 +154,24 @@ export interface LiveContext {
   /** Breaks and last-heat-of-round per heat (from the stored draw), for the estimated start times. */
   heatMeta: Record<string, HeatMeta>;
 }
+
+export interface PenaltyRowLive {
+  id: string;
+  heat_id: string;
+  entry_id: string;
+  type: string;
+  reason: string | null;
+  updated_at: string;
+}
+export const PENALTY_COLUMNS = "id, heat_id, entry_id, type, reason, updated_at";
+
+/** A head judge's recorded decision: a tie order (payload.riderIds, best first) or a publish override. Only the head judge and organisers can read these. */
+export interface DecisionRow {
+  id: string;
+  heat_id: string;
+  kind: string;
+  payload: { riderIds?: string[] } & Record<string, unknown>;
+  reason: string | null;
+  at: string;
+}
+export const DECISION_COLUMNS = "id, heat_id, kind, payload, reason, at";

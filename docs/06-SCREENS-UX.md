@@ -252,3 +252,14 @@ Written in words. Where a row refines earlier text in this file, this section wi
 | Sounds | One beep and a vibration at 1:00 and at 0:00, behind a "Sound on" tap (the tap also lets iPhones play sound). On by default on the head console, off on judge phones; iPhones do not vibrate from a web page; the timer is never sound-dependent. |
 | Head controls | `/head` works on a phone: Start (with its refusals in plain words), Pause, Resume, End, Hold, Resume at, Shift +5 and +10, and each rider's running total. Publishing and the score table come in 5c. |
 
+
+### Decisions log – Phase 5c (head console, publish, practice; owner, 1 Oct 2026)
+
+| Topic | Decision |
+|---|---|
+| Head console | Laptop: score table with judge cells coloured by distance from the panel score, cell edit with reason, tick boxes for bulk Merge / Delete, attempt and rider menus. Phone: Score and Control tabs; Details toggle shows rider totals and blockers. |
+| Disabled controls | Always say why, in one sentence (for example "No active run order — create one in Run order & timetable"). |
+| Impression step | After saving, move to the next unscored rider; Submit when all are done. |
+| Announcer | Read-only view of the table and the feed. |
+| Sound | Beep at 1:00 and 0:00 only after a "Sound on" tap, switchable on the console. |
+| One confirmation | Delete, Merge, Publish, Re-open, Cancel and Re-run each ask once. |

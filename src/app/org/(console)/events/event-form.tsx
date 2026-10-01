@@ -249,6 +249,20 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
         </div>
       </section>
 
+      <section className="panel flex flex-col gap-4" aria-label={T.simulationHeading}>
+        <h2 className="text-xl font-extrabold">{T.simulationHeading}</h2>
+        <div className="flex flex-col gap-1">
+          <span className="flex items-start gap-2">
+            <label className="flex items-center gap-3 font-bold">
+              <input type="checkbox" data-testid="simulation-switch" checked={form.isSimulation} onChange={(e) => set(["isSimulation"], e.target.checked)} />
+              {T.simulation}
+            </label>
+            <HelpButton what={T.simulation} help={help["event.simulation"]} />
+          </span>
+          {showError("isSimulation")}
+        </div>
+      </section>
+
       <section className="panel flex flex-col gap-4">
         <h2 className="text-xl font-extrabold">{T.timing}</h2>
         <div className="grid gap-4 md:grid-cols-3">

@@ -1,4 +1,7 @@
 import type { Page } from "@playwright/test";
+import { drawProjection } from "../src/lib/draw/projection";
+import { expandFormat } from "../src/lib/engine/ladder";
+import { parseFormatTemplate } from "../src/lib/schemas/format-template";
 import { builtInSchemes } from "../src/lib/schemas/identification";
 import { createOrganiser } from "./organiser";
 
@@ -98,6 +101,9 @@ export async function createLiveWorld(opts: { headScores?: boolean; maxRunning?:
     org,
     db,
     eventId: event.id,
+    orgId: org.orgId,
+    panelId: panel.id,
+    modelId: model!.id,
     divisionId: division.id,
     heats,
     entries,
@@ -122,3 +128,47 @@ export async function createLiveWorld(opts: { headScores?: boolean; maxRunning?:
   };
 }
 export type LiveWorld = Awaited<ReturnType<typeof createLiveWorld>>;
+
+
+/**
+ * A second division with a real ladder (two heats of three riders, then a Final of two, "By original seeding") saved the way the Draw step saves it: stored draw,
+ * rounds, heats with their draw ids and seats. Publishing a heat of Round 1 must put its winner in the Final's seat.
+ */
+export async function addLadder(w: LiveWorld) {
+  const db = w.db;
+  const must = <T extends { id: string }>(r: { data: T | null; error: { message: string } | null }, what: string): T => {
+    if (r.error || !r.data) throw new Error(`${what}: ${r.error?.message}`);
+    return r.data;
+  };
+  const division = must(
+    await db.from("divisions").insert({ event_id: w.eventId, name: "Ladder", sort_order: 2, scoring_model_id: w.modelId, panel_id: w.panelId, draw_locked_at: new Date().toISOString() }).select("id").single(),
+    "ladder division",
+  );
+  const entries: string[] = [];
+  const names: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const first = ["Ana", "Ben", "Cy", "Di", "Eli", "Flo"][i];
+    const rider = must(await db.from("riders").insert({ organisation_id: w.orgId, first_name: first, last_name: "Ladder", nationality: "EG" }).select("id").single(), "rider");
+    entries.push(must(await db.from("entries").insert({ division_id: division.id, rider_id: rider.id, seed: i + 1, status: "confirmed", source: "manual" }).select("id").single(), "entry").id);
+    names.push(`${first} Ladder`);
+  }
+  const template = parseFormatTemplate({
+    id: "t", name: "Knockout", entrants: { min: 2, max: null }, timing: { defaultHeatMin: 10, defaultBreakAfterHeatMin: 2, defaultBreakAfterRoundMin: 2 }, kind: "generator",
+    generator: { type: "single_elimination", params: { heatSize: 3, minHeatSize: 3, maxHeatSize: 3, advancePerHeat: 1, finalSize: 2, reseed: "by_original_seed" } },
+  });
+  const draw = expandFormat(template, entries.map((id, i) => ({ id, name: names[i] })), { identification: "vests-per-heat" });
+  await db.from("divisions").update({ draw: draw as never }).eq("id", division.id);
+  const projection = drawProjection(draw);
+  const roundIds = new Map<string, string>();
+  for (const r of projection.rounds) roundIds.set(r.key, must(await db.from("rounds").insert({ division_id: division.id, sort_order: r.sort_order, name: r.name, short_name: r.short_name, spec: r.spec as never }).select("id").single(), "round").id);
+  const heats: Record<string, string> = {};
+  for (const h of projection.heats) {
+    const row = must(
+      await db.from("heats").insert({ round_id: roundIds.get(h.round_key)!, division_id: division.id, event_id: w.eventId, number: h.number, draw_uid: h.uid, duration_sec: h.duration_sec, warm_up_sec: 0 }).select("id").single(),
+      "ladder heat",
+    );
+    heats[h.uid] = row.id;
+    for (const s of h.slots) await db.from("heat_slots").insert({ heat_id: row.id, position: s.position, entry_id: s.entry_id, vest_colour: s.vest_colour, source: s.source as never });
+  }
+  return { divisionId: division.id, entries, names, heats, draw };
+}

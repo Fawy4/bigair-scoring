@@ -21,9 +21,11 @@ export interface HeatLive {
   warmUpMin?: number;
   breakAfterHeatMin?: number;
   breakAfterRoundMin?: number;
+  /** The heat was cancelled (for example replaced by a re-run). One that ran keeps its real times; one that never started takes no time. */
+  cancelled?: boolean;
 }
 
-export type RowStatus = "done" | "live" | "next" | "est" | "held" | "pinned";
+export type RowStatus = "done" | "live" | "next" | "est" | "held" | "pinned" | "cancelled";
 
 export interface TimetableRow {
   itemId: string;

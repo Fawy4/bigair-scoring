@@ -1,14 +1,18 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { HoldDialog, PublishDialog, ReopenDialog, RerunDialog } from "./head-dialogs";
 import { HeatTimer } from "./heat-timer";
 import { useLiveSettings } from "./live-shell";
 import { Pill } from "./pill";
 import { cancelHeat, endHeat, holdPlan, pauseHeat, resumeHeat, resumePlanAt, shiftPlan, startHeat, type ActionResult, type PlanActionResult } from "@/lib/live/heat-actions";
+import { setHeatPublicLive, setPublishHold } from "@/lib/live/head-actions";
+import { heatLabel } from "@/lib/live/run-order";
 import { controlsFor, type ControlId, type HeatState } from "@/lib/live/head-state";
 import { activePlanFor, heatTitle, livesFor, timetableOptions, type ActivePlan } from "@/lib/live/run-order";
 import { computeTimetable, utcToLocalHHMM } from "@/lib/engine/schedule";
 import { effectiveStatus, remainingMs } from "@/lib/live/timer";
+import type { ChecklistItem } from "@/lib/live/publish-checklist";
 import type { HeatRow, LiveContext } from "@/lib/live/types";
 import type { Json } from "@/lib/supabase/database.types";
 import { copy } from "@/lib/ui-copy";
@@ -17,28 +21,46 @@ import { cn } from "@/lib/utils";
 const T = copy.heatControl;
 
 /** The heat buttons use the real heat state: a running heat whose time is up counts as ended (the database says the same). */
-function stateOf(h: HeatRow, nowServer: number): HeatState | "cancelled" {
+function stateOf(h: HeatRow, nowServer: number): HeatState {
   const eff = effectiveStatus({ status: h.status, durationSec: h.duration_sec, startedAt: h.started_at, pausedAt: h.paused_at, pausedTotalSec: h.paused_total_sec }, nowServer);
-  if (eff === "cancelled") return "cancelled";
-  if (eff === "scheduled" || eff === "running" || eff === "paused" || eff === "published") return eff;
+  if (eff === "cancelled" || eff === "under_review" || eff === "scheduled" || eff === "running" || eff === "paused" || eff === "published") return eff;
   return "ended";
 }
 
-function ControlButton({ children, onClick, disabled, tone = "plain", testId }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; tone?: "plain" | "accent" | "danger"; testId: string }) {
+function ControlButton({ children, onClick, disabled, tone = "plain", testId, reason }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; tone?: "plain" | "accent" | "danger"; testId: string; reason?: string }) {
   return (
-    <button
-      type="button"
-      data-testid={testId}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "min-h-[48px] rounded-xl border px-3 text-body font-semibold",
-        disabled ? "border-beach-line bg-beach-surface text-beach-muted" : tone === "accent" ? "border-beach-accent bg-beach-accent text-beach-on-accent" : tone === "danger" ? "border-beach-crash bg-beach-bg text-beach-ink" : "border-beach-border bg-beach-bg text-beach-ink",
-      )}
-    >
-      {children}
-    </button>
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <button
+        type="button"
+        data-testid={testId}
+        disabled={disabled}
+        aria-describedby={disabled && reason ? `why-${testId}` : undefined}
+        onClick={onClick}
+        className={cn(
+          "min-h-[48px] rounded-xl border px-3 text-body font-semibold",
+          disabled ? "border-beach-line bg-beach-surface text-beach-muted" : tone === "accent" ? "border-beach-accent bg-beach-accent text-beach-on-accent" : tone === "danger" ? "border-beach-crash bg-beach-bg text-beach-ink" : "border-beach-border bg-beach-bg text-beach-ink",
+        )}
+      >
+        {children}
+      </button>
+      {disabled && reason ? (
+        <p id={`why-${testId}`} data-testid={`why-${testId}`} className="text-small font-medium text-beach-muted">
+          {reason}
+        </p>
+      ) : null}
+    </div>
   );
+}
+
+/** What the Control tab needs to publish and re-open: the blocker list in words, and what to do after a change. */
+export interface ReviewProps {
+  items: ChecklistItem[];
+  canOverride: boolean;
+  /** The riders of the shown heat, for Re-run heat ("who does not ride again"). */
+  riders: Array<{ entryId: string; word: string; name: string }>;
+  /** The riders of a tie (for "Choose order"). */
+  onChooseOrder: (riders: string[]) => void;
+  onChanged: () => void;
 }
 
 /**
@@ -46,13 +68,14 @@ function ControlButton({ children, onClick, disabled, tone = "plain", testId }: 
  * of the selected heat: Start (with its refusals in plain words), Pause, Resume, End, Hold, Resume at, Shift, Cancel. Every press is a server action that
  * uses the database's own clock; the screen only shows what the database answered.
  */
-export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans, onPlanChanged }: { ctx: LiveContext; heats: HeatRow[]; selectedId: string | null; onSelect: (id: string) => void; nowServer: number; plans: ActivePlan[]; onPlanChanged?: (planId: string, hold: Json | null, anchors: Json) => void }) {
+export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans, onPlanChanged, review }: { ctx: LiveContext; heats: HeatRow[]; selectedId: string | null; onSelect: (id: string) => void; nowServer: number; plans: ActivePlan[]; onPlanChanged?: (planId: string, hold: Json | null, anchors: Json) => void; review?: ReviewProps }) {
   const settings = useLiveSettings();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [restart, setRestart] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState("");
+  const [dialog, setDialog] = useState<"publish" | "reopen" | "rerun" | "hold" | null>(null);
 
   const plan = activePlanFor(plans, ctx.event.timezone, nowServer);
   const lives = useMemo(() => livesFor(ctx, heats, ctx.heatMeta), [ctx, heats]);
@@ -75,12 +98,13 @@ export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans
 
   const selected = heats.find((h) => h.id === selectedId) ?? null;
   const state = selected ? stateOf(selected, nowServer) : null;
-  const controls = new Map((state && state !== "cancelled" ? controlsFor(state, 0) : []).map((c) => [c.id, c.enabled]));
-  const on = (id: ControlId) => Boolean(controls.get(id));
-  const onHold = Boolean(plan?.plan.hold);
   const planId = plan?.id ?? null;
+  const controls = new Map((state ? controlsFor(state, review?.items.length ?? 0, { hasPlan: Boolean(planId), publishOpensList: Boolean(review) }) : []).map((c) => [c.id, c]));
+  const on = (id: ControlId) => Boolean(controls.get(id)?.enabled);
+  const why = (id: ControlId) => controls.get(id)?.reason;
+  const onHold = Boolean(plan?.plan.hold);
 
-  const act = (label: string, run: () => Promise<ActionResult | PlanActionResult>) =>
+  const act = (label: string, run: () => Promise<ActionResult | PlanActionResult>, after?: () => void) =>
     startTransition(async () => {
       setMessage(null);
       const r = await run();
@@ -89,12 +113,13 @@ export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans
       if (r.ok) {
         setCancelling(false);
         setReason("");
+        after?.();
       }
     });
 
   const title = selected ? heatTitle(ctx, selected) : "";
   const remaining = selected ? remainingMs({ status: selected.status, durationSec: selected.duration_sec, startedAt: selected.started_at, pausedAt: selected.paused_at, pausedTotalSec: selected.paused_total_sec }, nowServer) : 0;
-  const timerState = onHold && state === "scheduled" ? "held" : state === "paused" ? "paused" : state === "ended" || state === "published" || state === "cancelled" ? "ended" : "running";
+  const timerState = onHold && state === "scheduled" ? "held" : state === "paused" ? "paused" : state === "ended" || state === "under_review" || state === "published" || state === "cancelled" ? "ended" : "running";
 
   return (
     <section data-testid="heat-control" aria-label={T.heading} className="flex flex-col gap-3">
@@ -145,29 +170,36 @@ export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans
             <Pill tone="ink">{T.status[selected.status === "under_review" ? "under_review" : state === "ended" && selected.status === "running" ? "ended" : state] ?? state}</Pill>
           </div>
           <HeatTimer remainingMs={remaining} state={timerState} size="head" soundOn={settings.soundOn} onToggleSound={() => settings.setSoundOn(!settings.soundOn)} />
-          {state === "cancelled" ? null : (
+          {state === "cancelled" ? (
+            <p data-testid="cancelled-note" className="rounded-lg border border-beach-crash bg-beach-bg px-2 py-1 text-body font-semibold">
+              {(() => {
+                const again = heats.find((h) => h.rerun_of === selected.id);
+                return again ? copy.headLive.cancelledRerun(heatLabel(again)) : copy.heatControl.status.cancelled;
+              })()}
+            </p>
+          ) : (
             <>
               <div className="grid grid-cols-2 gap-2">
-                <ControlButton testId="start" tone="accent" disabled={pending || !on("start")} onClick={() => act(T.done.start(title), () => startHeat(selected.id))}>
+                <ControlButton testId="start" tone="accent" reason={why("start")} disabled={pending || !on("start")} onClick={() => act(T.done.start(title), () => startHeat(selected.id))}>
                   {T.start}
                 </ControlButton>
-                <ControlButton testId="end" disabled={pending || !on("end")} onClick={() => act(T.done.end(title), () => endHeat(selected.id))}>
+                <ControlButton testId="end" reason={why("end")} disabled={pending || !on("end")} onClick={() => act(T.done.end(title), () => endHeat(selected.id))}>
                   {T.end}
                 </ControlButton>
-                <ControlButton testId="pause" disabled={pending || !on("pause")} onClick={() => act(T.done.pause(title), () => pauseHeat(selected.id))}>
+                <ControlButton testId="pause" reason={why("pause")} disabled={pending || !on("pause")} onClick={() => act(T.done.pause(title), () => pauseHeat(selected.id))}>
                   {T.pause}
                 </ControlButton>
-                <ControlButton testId="resume" disabled={pending || !on("resume")} onClick={() => act(T.done.resume(title), () => resumeHeat(selected.id))}>
+                <ControlButton testId="resume" reason={why("resume")} disabled={pending || !on("resume")} onClick={() => act(T.done.resume(title), () => resumeHeat(selected.id))}>
                   {T.resume}
                 </ControlButton>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <ControlButton testId="hold" disabled={pending || !planId || onHold} onClick={() => planId && act(T.done.hold, () => holdPlan(planId))}>
+                <ControlButton testId="hold" reason={why("hold")} disabled={pending || !on("hold") || onHold} onClick={() => planId && act(T.done.hold, () => holdPlan(planId))}>
                   {T.hold}
                 </ControlButton>
                 <div className="grid grid-cols-2 gap-2">
                   {[5, 10].map((m) => (
-                    <ControlButton key={m} testId={`shift${m}`} disabled={pending || !planId || onHold} onClick={() => planId && act(T.done.shift(m), () => shiftPlan(planId, m))}>
+                    <ControlButton key={m} testId={`shift${m}`} reason={why(m === 5 ? "shift5" : "shift10")} disabled={pending || !on(m === 5 ? "shift5" : "shift10") || onHold} onClick={() => planId && act(T.done.shift(m), () => shiftPlan(planId, m))}>
                       {m === 5 ? T.shift5 : T.shift10}
                     </ControlButton>
                   ))}
@@ -189,6 +221,55 @@ export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans
                   </div>
                 </div>
               ) : null}
+              {review && state !== "scheduled" ? (
+                <section data-testid="visibility" aria-label={copy.headLive.visibilityHeading} className="flex flex-col gap-1.5 rounded-xl border border-beach-line bg-beach-bg p-2">
+                  <p className="text-small font-semibold text-beach-muted">{copy.headLive.liveHeading}</p>
+                  <div role="group" aria-label={copy.headLive.liveHeading} className="grid grid-cols-3 gap-1.5">
+                    {([[null, copy.headLive.liveFollow], [true, copy.headLive.liveOn], [false, copy.headLive.liveOff]] as Array<[boolean | null, string]>).map(([v, text]) => (
+                      <button
+                        key={String(v)}
+                        type="button"
+                        data-testid={`live-${v === null ? "follow" : v ? "on" : "off"}`}
+                        aria-pressed={selected.public_live === v}
+                        disabled={pending}
+                        onClick={() => act(copy.headLive.saved, async () => (await setHeatPublicLive(selected.id, v)) as ActionResult, review.onChanged)}
+                        className={cn("min-h-[44px] rounded-xl border px-1 text-small font-semibold", selected.public_live === v ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}
+                      >
+                        {text}
+                      </button>
+                    ))}
+                  </div>
+                  {state === "published" ? (
+                    selected.publish_hold ? (
+                      <>
+                        <p data-testid="held-note" className="text-small font-semibold">{copy.headLive.heldNote}</p>
+                        <ControlButton testId="release" tone="accent" disabled={pending} onClick={() => act(copy.headLive.released, async () => (await setPublishHold(selected.id, false)) as ActionResult, review.onChanged)}>
+                          {copy.headLive.release}
+                        </ControlButton>
+                      </>
+                    ) : (
+                      <ControlButton testId="hold-result" disabled={pending} onClick={() => setDialog("hold")}>
+                        {copy.headLive.hold}
+                      </ControlButton>
+                    )
+                  ) : null}
+                </section>
+              ) : null}
+              {review ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <ControlButton testId="publish" tone="accent" reason={why("publish")} disabled={pending || !on("publish")} onClick={() => setDialog("publish")}>
+                    {copy.live.console.publish}
+                  </ControlButton>
+                  <ControlButton testId="reopen" reason={why("reopen")} disabled={pending || !on("reopen")} onClick={() => setDialog("reopen")}>
+                    {copy.live.console.reopen}
+                  </ControlButton>
+                </div>
+              ) : null}
+              {selected.reopened_at && selected.status === "under_review" ? (
+                <p data-testid="under-correction" className="rounded-lg border border-beach-outlier bg-beach-bg px-2 py-1 text-body font-semibold">
+                  {copy.headLive.underCorrection}
+                </p>
+              ) : null}
               {cancelling ? (
                 <div data-testid="cancel-panel" className="flex flex-col gap-2 rounded-xl border border-beach-crash bg-beach-bg p-2">
                   <label className="flex flex-col gap-1 text-small font-semibold">
@@ -205,9 +286,16 @@ export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans
                   </div>
                 </div>
               ) : (
-                <ControlButton testId="cancel" tone="danger" disabled={pending || !on("cancel")} onClick={() => setCancelling(true)}>
-                  {T.cancel}
-                </ControlButton>
+                <div className="grid grid-cols-2 gap-2">
+                  <ControlButton testId="cancel" tone="danger" reason={why("cancel")} disabled={pending || !on("cancel")} onClick={() => setCancelling(true)}>
+                    {T.cancel}
+                  </ControlButton>
+                  {review ? (
+                    <ControlButton testId="rerun" tone="danger" reason={why("rerun")} disabled={pending || !on("rerun")} onClick={() => setDialog("rerun")}>
+                      {copy.live.console.rerun}
+                    </ControlButton>
+                  ) : null}
+                </div>
               )}
             </>
           )}
@@ -219,7 +307,62 @@ export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans
       <p data-testid="control-message" data-ok={message?.ok ?? ""} role={message && !message.ok ? "alert" : "status"} aria-live="polite" className={cn("min-h-[1.5rem] text-body font-semibold", message && !message.ok && "rounded-lg border border-beach-failed bg-beach-surface px-2 py-1")}>
         {pending ? T.working : (message?.text ?? "")}
       </p>
-      <p className="text-small font-medium text-beach-muted">{T.later}</p>
+      {review && selected && dialog === "publish" ? (
+        <PublishDialog
+          heatId={selected.id}
+          title={title}
+          items={review.items}
+          canOverride={review.canOverride}
+          onChooseOrder={(riders) => {
+            setDialog(null);
+            review.onChooseOrder(riders);
+          }}
+          onClose={() => setDialog(null)}
+          onDone={(text) => {
+            setDialog(null);
+            setMessage({ ok: true, text });
+            review.onChanged();
+          }}
+        />
+      ) : null}
+      {review && selected && dialog === "reopen" ? (
+        <ReopenDialog
+          heatId={selected.id}
+          title={title}
+          onClose={() => setDialog(null)}
+          onDone={(text) => {
+            setDialog(null);
+            setMessage({ ok: true, text });
+            review.onChanged();
+          }}
+        />
+      ) : null}
+      {review && selected && dialog === "rerun" ? (
+        <RerunDialog
+          heatId={selected.id}
+          title={title}
+          riders={review.riders}
+          onClose={() => setDialog(null)}
+          onDone={(newId) => {
+            setDialog(null);
+            setMessage({ ok: true, text: copy.headLive.rerunDone(title) });
+            onSelect(newId);
+            review.onChanged();
+          }}
+        />
+      ) : null}
+      {review && selected && dialog === "hold" ? (
+        <HoldDialog
+          heatId={selected.id}
+          title={title}
+          onClose={() => setDialog(null)}
+          onDone={() => {
+            setDialog(null);
+            setMessage({ ok: true, text: copy.headLive.held });
+            review.onChanged();
+          }}
+        />
+      ) : null}
     </section>
   );
 }

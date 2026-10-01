@@ -1,7 +1,8 @@
-import { computeHeat, type Attempt, type HeatResult, type JudgeMark, type RiderInput } from "@/lib/engine/scoring";
+import { computeHeat, type HeatResult, type TieDecision } from "@/lib/engine/scoring";
 import { roundHalfUp } from "@/lib/engine/scoring";
 import type { ScoringModel } from "@/lib/schemas/scoring-model";
 import { copy } from "@/lib/ui-copy";
+import { heatInputFromRows, type PenaltyRow } from "./heat-input";
 import type { AttemptRow, ImpressionRow, ScoreRow, SlotRow } from "./types";
 
 export interface RiderTotal {
@@ -32,30 +33,14 @@ export function riderTotals(
   scores: ScoreRow[],
   impressions: ImpressionRow[],
   showPercent = false,
+  penalties: PenaltyRow[] = [],
+  decisions: TieDecision[] = [],
 ): RiderTotal[] {
   const riding = slots.filter((s) => s.entry_id);
-  const inputs: RiderInput[] = riding.map((s) => {
-    const mine = attempts.filter((a) => a.entry_id === s.entry_id && !a.deleted_at).sort((a, b) => a.seq - b.seq);
-    const engineAttempts: Attempt[] = mine.map((a) => {
-      const marks: JudgeMark[] = scores
-        .filter((x) => x.attempt_id === a.id && panelSeatIds.includes(x.judge_seat_id))
-        .flatMap((x): JudgeMark[] => {
-          if (x.missed) return [{ judgeId: x.judge_seat_id, value: "missed" }];
-          if (model.trick.entry === "criteria") return x.criteria && typeof x.criteria === "object" && Object.keys(x.criteria as object).length ? [{ judgeId: x.judge_seat_id, value: x.criteria as Record<string, number> }] : [];
-          return x.score === null ? [] : [{ judgeId: x.judge_seat_id, value: Number(x.score) }];
-        });
-      return { seq: a.seq, status: a.status, trickName: a.trick_name, categoryKey: a.category_key, direction: a.direction, marks };
-    });
-    return {
-      riderId: s.entry_id!,
-      attempts: engineAttempts,
-      impressionMarks: impressions.filter((i) => i.entry_id === s.entry_id && panelSeatIds.includes(i.judge_seat_id)).map((i) => ({ judgeId: i.judge_seat_id, value: Number(i.value) })),
-      ...(s.modifier === "DNS" || s.modifier === "DNF" || s.modifier === "DSQ" ? { modifiers: [{ type: s.modifier }] } : {}),
-    };
-  });
+  const input = heatInputFromRows(model, panelSeatIds, slots, attempts, scores, impressions, penalties, decisions);
   let result: HeatResult;
   try {
-    result = computeHeat(model, { panelJudgeIds: panelSeatIds, riders: inputs });
+    result = computeHeat(model, input);
   } catch {
     return riding.map((s) => ({ entryId: s.entry_id!, place: null, totalLabel: copy.live.result.noTotal, formula: null, percentLabel: null, attempts: 0, cap: model.heat.maxAttemptsPerRider, incomplete: true }));
   }

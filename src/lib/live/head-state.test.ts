@@ -40,3 +40,43 @@ describe("what a press does", () => {
     expect(press("running", "shift5")).toBe("running");
   });
 });
+
+// docs/08 §1H-13 — the Control tab on the real page: every disabled control says why in one sentence
+describe("1H-13 why a control is off", () => {
+  const reason = (state: Parameters<typeof controlsFor>[0], id: ControlId, opts: Parameters<typeof controlsFor>[2] = { hasPlan: true }) => controlsFor(state, 0, opts).find((c) => c.id === id)!;
+  it("Hold, Resume at and Shift without an active run order say so", () => {
+    for (const id of ["hold", "resumeAt", "shift5", "shift10"] as const) {
+      const c = reason("running", id, { hasPlan: false });
+      expect(c.enabled).toBe(false);
+      expect(c.reason).toBe("No active run order — create one in Run order & timetable.");
+    }
+  });
+  it("Hold while nothing is live: available while a heat is running or paused", () => {
+    expect(reason("scheduled", "hold").reason).toBe("Available while a heat is running or paused.");
+  });
+  it("one sentence for every other control that is off", () => {
+    expect(reason("running", "start").reason).toBe("Only a heat that has not started can be started.");
+    expect(reason("paused", "pause").reason).toBe("Only a running heat can be paused.");
+    expect(reason("running", "resume").reason).toBe("Only a paused heat can be resumed.");
+    expect(reason("scheduled", "end").reason).toBe("Only a running or paused heat can be ended.");
+    expect(reason("scheduled", "publish").reason).toBe("Available once the heat has ended.");
+    expect(reason("running", "reopen").reason).toBe("Only a published heat can be re-opened.");
+    expect(reason("scheduled", "cancel").reason).toBe("Available while the heat is running, paused, ended or under review.");
+    expect(reason("published", "rerun").reason).toBe("Re-open the heat instead.");
+  });
+  it("a control that is on has no reason", () => {
+    expect(reason("running", "pause").reason).toBeUndefined();
+  });
+  it("Publish is on when the heat has ended or is under review, even with blockers (pressing it shows the list)", () => {
+    const on = (state: Parameters<typeof controlsFor>[0], blockers: number) => controlsFor(state, blockers, { hasPlan: true, publishOpensList: true }).find((c) => c.id === "publish")!.enabled;
+    expect(on("ended", 3)).toBe(true);
+    expect(on("under_review", 0)).toBe(true);
+    expect(on("running", 0)).toBe(false);
+  });
+  it("under review: Cancel, Re-run and Publish are on; published: only Re-open", () => {
+    const onIds = (s: Parameters<typeof controlsFor>[0]) => controlsFor(s, 0, { hasPlan: true, publishOpensList: true }).filter((c) => c.enabled).map((c) => c.id);
+    expect(onIds("under_review")).toEqual(["publish", "cancel", "rerun"]);
+    expect(onIds("published")).toEqual(["reopen"]);
+    expect(onIds("cancelled")).toEqual([]);
+  });
+});

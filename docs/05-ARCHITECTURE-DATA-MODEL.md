@@ -175,3 +175,13 @@ Written in words. Where a row refines earlier text in this file, this section wi
 | Height data, later | `trick_attempts` gains `height_source`, `height_ref` and `height_at` next to the existing `height_m`; new table `sensor_bindings` (event, entry, provider, external user id, device serial, bound and unbound times). No screen uses them yet. |
 | Realtime | `attempt_flags` and `judge_sheets` join the publication. |
 
+
+## 15. Decisions log (Phase 5c, owner, 1 Oct 2026)
+
+| Topic | Decision |
+|---|---|
+| Publish | `publish_heat_commit` (service role) does the whole publish in one transaction with the heat row locked; idempotent per version. |
+| Head functions | review, re-open, add attempt past the cap, rider status, penalties and tie decisions are database functions for the head judge or an organiser (when the event has no active head seat). |
+| Visibility | `heats.public_live` (null = follow the division, true, false); `heats.publish_hold`; anonymous visitors read only column-granted `heat_slots` and `divisions` and results through `get_public_results`. |
+| Re-run | `rerun_heat` creates the new heat (`rerun_of`), copies riders, seats and Lycras, moves `draw_uid`, updates the run order; refused once published. |
+| Simulation | `events.is_simulation` hides the event from every public door; `practice_add_attempt` is organiser only and only on such events. |

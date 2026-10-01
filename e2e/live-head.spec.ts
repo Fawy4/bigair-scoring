@@ -113,6 +113,7 @@ test("Cancel heat needs a reason and keeps what ran; rider totals appear as scor
   // an attempt and three scores: Red's total is on the head's phone
   const attempt = (await w.db.from("trick_attempts").insert({ heat_id: w.heats[0], entry_id: w.entries[0], seq: 1, status: "landed", trick_name: "Left Backroll", direction: "left", client_key: crypto.randomUUID() }).select("id").single()).data!;
   for (const [i, key] of (["j1", "j2", "j3"] as const).entries()) await w.db.from("trick_scores").insert({ attempt_id: attempt.id, judge_seat_id: w.seats[key].id, score: [7.5, 8, 7][i], client_key: crypto.randomUUID(), client_rev: 1 });
+  await head.getByTestId("details-toggle").click(); // on a phone the rider totals and the blocker list are behind Details
   const totals = head.getByTestId("rider-totals");
   await expect(totals.getByTestId("total-row").first()).toContainText("RED", { timeout: 30_000 });
   await expect(totals.getByTestId("total-row").first().getByTestId("total-value")).toHaveText("7.5", { timeout: 30_000 });

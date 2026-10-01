@@ -79,6 +79,8 @@ export const EventFormSchema = z
     timezone: TimeZoneSchema,
     settings: EventSettingsSchema,
     branding: EventBrandingSchema,
+    /** A simulation event is never public (Practice heat, rehearsals). It can be set only before a heat has started. */
+    isSimulation: z.boolean().default(false),
   })
   .superRefine((f, ctx) => {
     if (f.end_date < f.start_date) {

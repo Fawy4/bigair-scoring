@@ -21,7 +21,7 @@ const attempt = (entry: string, seq: number, status: "landed" | "crashed", name:
   created_by_seat: null, created_at: `2026-10-01T10:00:0${seq}Z`, deleted_at: null, possible_duplicate_of: null, input_method: "builder", raw_text: null, updated_at: "",
 });
 const attempts = rows.map(([seq, st, n, cat]) => attempt("red", seq, st, n, cat));
-const scores: ScoreRow[] = rows.flatMap(([seq, , , , marks]) => marks.map((m, i) => ({ id: `${seq}${i}`, attempt_id: `red-${seq}`, heat_id: "h", judge_seat_id: seats[i], score: null, missed: false, criteria: c(m[0], m[1], m[2], m[3]), client_rev: 1, updated_at: "" })));
+const scores: ScoreRow[] = rows.flatMap(([seq, , , , marks]) => marks.map((m, i) => ({ id: `${seq}${i}`, attempt_id: `red-${seq}`, heat_id: "h", judge_seat_id: seats[i], score: null, missed: false, criteria: c(m[0], m[1], m[2], m[3]), client_rev: 1, version: 1, edit_reason: null, updated_at: "" })));
 const imp = (v: number[]): ImpressionRow[] => v.map((value, i) => ({ id: `i${i}`, heat_id: "h", entry_id: "red", judge_seat_id: seats[i], value, client_rev: 1, updated_at: "" }));
 
 describe("riderTotals", () => {
@@ -44,7 +44,7 @@ describe("riderTotals", () => {
   });
   it("riders are listed in provisional rank order", () => {
     const blueAttempts = [attempt("blue", 1, "landed", "Backroll", "rotation")];
-    const blueScores: ScoreRow[] = seats.map((s, i) => ({ id: `b${i}`, attempt_id: "blue-1", heat_id: "h", judge_seat_id: s, score: null, missed: false, criteria: c(5, 5, 5, 5), client_rev: 1, updated_at: "" }));
+    const blueScores: ScoreRow[] = seats.map((s, i) => ({ id: `b${i}`, attempt_id: "blue-1", heat_id: "h", judge_seat_id: s, score: null, missed: false, criteria: c(5, 5, 5, 5), client_rev: 1, version: 1, edit_reason: null, updated_at: "" }));
     const totals = riderTotals(kota, seats, [slot("blue", 1), slot("red", 2)], [...blueAttempts, ...attempts], [...blueScores, ...scores], imp([7.5, 7.0, 8.0]));
     expect(totals.map((t) => t.entryId)).toEqual(["red", "blue"]);
   });

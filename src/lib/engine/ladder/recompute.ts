@@ -135,6 +135,17 @@ function provisionalSlots(draw: DivisionDraw, round: DrawRound): Slot[][] {
   return dealByRule(sources, layout, spec.seeding).map((heat) => heat.map((from, i) => makeSlot(draw, i, { from })));
 }
 
+/** The seats of a fixed-in-advance round whose source heat has a result: the same seat the full deal gives them (`slotFromArrival`), so nothing moves later. */
+function fillKnownSeats(draw: DivisionDraw, slots: Slot[][], arrivals: Arrival[]): Slot[][] {
+  return slots.map((heat) =>
+    heat.map((slot) => {
+      if (!slot.from || slot.from.heat === 0) return slot; // a place across all heats of a pool is only known when the pool is complete
+      const arrival = arrivals.find((a) => a.entrantId && sameSource(a.from, slot.from!));
+      return arrival ? slotFromArrival(draw, slot.index, arrival) : slot;
+    }),
+  );
+}
+
 /** Riders (or placeholder sources) in the order they left their heats: source round, then heat, then place (for "adjacent" pairing). */
 function orderAdjacent<T>(draw: DivisionDraw, list: T[], source: (item: T) => { round: string; heat: number; place: number }): T[] {
   const order = (id: string) => draw.rounds.findIndex((r) => r.id === id);
@@ -213,6 +224,9 @@ export function recompute(draw: DivisionDraw): RoundConflict[] {
       next = dealArrivals(draw, round, ordered);
     } else {
       next = provisionalSlots(draw, round);
+      // A round whose seats are fixed in advance ("By original seeding": adjacent pairing) fills each seat the moment its source heat is published.
+      // A round that re-seeds from all its arrivals waits until every feeding heat is published (or "Seed now").
+      if (effectiveSpec(draw, round).seeding === "adjacent") next = fillKnownSeats(draw, next, arrivals);
     }
 
     const changedHeats = (target: Slot[][]) => round.heats.filter((h, i) => heatSignature(h.slots) !== heatSignature(target[i]));

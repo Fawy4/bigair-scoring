@@ -13,11 +13,12 @@ export function blankEventValues(timezone: string): EventForm {
     timezone,
     settings: parseEventSettings({ identification: { scheme: defaultScheme(), basedOn: defaultScheme().id, allowDivisionOverride: false } }),
     branding: parseEventBranding({}),
+    isSimulation: false,
   };
 }
 
 /** Form values from a saved event row. */
-export function valuesFromRow(row: { name: string; slug: string; location: string | null; timezone: string; start_date: string | null; end_date: string | null; settings: unknown; branding: unknown }): EventForm {
+export function valuesFromRow(row: { name: string; slug: string; location: string | null; timezone: string; start_date: string | null; end_date: string | null; settings: unknown; branding: unknown; is_simulation?: boolean | null }): EventForm {
   const today = new Date().toISOString().slice(0, 10);
   const settings = parseEventSettings(row.settings);
   return {
@@ -29,6 +30,7 @@ export function valuesFromRow(row: { name: string; slug: string; location: strin
     timezone: row.timezone,
     settings: { ...settings, identification: settings.identification ?? { scheme: defaultScheme(), basedOn: defaultScheme().id, allowDivisionOverride: false } },
     branding: parseEventBranding(row.branding),
+    isSimulation: Boolean(row.is_simulation),
   };
 }
 

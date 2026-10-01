@@ -1,4 +1,4 @@
-import { Copy, EyeOff, Flame, MoreVertical, Minus, Trash2, UserX } from "lucide-react";
+import { Copy, EyeOff, Flag, Flame, MoreVertical, Minus, Trash2, UserX } from "lucide-react";
 import { RiderLabel } from "@/components/rider-label";
 import { cellTone, outlierTolerance } from "@/lib/live/cell-tone";
 import { KOTA } from "@/lib/live/design-fixtures";
@@ -9,9 +9,9 @@ import { cn } from "@/lib/utils";
 const T = copy.live.matrix;
 // a judge's score by its distance from the panel score: within tolerance green, then yellow, orange, red (literal class names for Tailwind)
 const DIST = ["bg-beach-tint-dist0", "bg-beach-tint-dist1", "bg-beach-tint-dist2", "bg-beach-tint-dist3"];
-const TOLERANCE = outlierTolerance(KOTA);
+const DEFAULT_TOLERANCE = outlierTolerance(KOTA);
 
-type Row = MatrixRow & { riderKey?: string };
+type Row = MatrixRow & { riderKey?: string; openFlags?: Array<{ id: string; kind: string }> };
 
 export interface MatrixActions {
   /** Tap a score: edit it (with a reason). */
@@ -26,7 +26,7 @@ export interface MatrixActions {
 }
 
 /** One cell: the score, or a word with an icon. Never colour alone, and struck through where the score does not count. */
-function Cell({ cell, panel, onTap, label }: { cell: MatrixCell; panel: number | null; onTap?: () => void; label: string }) {
+function Cell({ cell, panel, onTap, label, tolerance }: { cell: MatrixCell; panel: number | null; onTap?: () => void; label: string; tolerance: number }) {
   const view: Record<CellState, { word: string | null; Icon: typeof Minus | null; cls: string }> = {
     scored: { word: null, Icon: null, cls: "border-beach-line text-beach-ink" },
     missing: { word: T.missing, Icon: Minus, cls: "border-dashed border-beach-missing bg-beach-surface text-beach-missing" },
@@ -38,7 +38,7 @@ function Cell({ cell, panel, onTap, label }: { cell: MatrixCell; panel: number |
     duplicate: { word: T.duplicate, Icon: Copy, cls: "border-beach-outlier bg-beach-bg text-beach-outlier" },
   };
   const v = view[cell.state];
-  const tone = (cell.state === "scored" || cell.state === "outlier") && cell.value !== null && panel !== null ? cellTone(cell.value, panel, TOLERANCE) : null;
+  const tone = (cell.state === "scored" || cell.state === "outlier") && cell.value !== null && panel !== null ? cellTone(cell.value, panel, tolerance) : null;
   const editable = onTap && cell.state !== "crash" && cell.state !== "deleted";
   const cls = cn("flex min-h-row min-w-[4rem] flex-col items-center justify-center rounded-lg border px-1 py-0 text-body font-semibold leading-tight tabular-nums", v.cls, tone ? DIST[tone.band] : "bg-beach-bg");
   const body = (
@@ -64,7 +64,7 @@ function Cell({ cell, panel, onTap, label }: { cell: MatrixCell; panel: number |
   );
 }
 
-function Row({ row, actions }: { row: Row; actions: MatrixActions }) {
+function Row({ row, actions, tolerance }: { row: Row; actions: MatrixActions; tolerance: number }) {
   const struck = row.state === "deleted";
   return (
     <tr data-testid="matrix-row" data-row-id={row.id} data-row-state={row.state} className="border-t border-beach-line align-middle">
@@ -96,6 +96,12 @@ function Row({ row, actions }: { row: Row; actions: MatrixActions }) {
       </td>
       <td className={cn("min-w-[6rem] px-1.5 py-1 text-body font-medium", (struck || row.status === "crashed") && "line-through")}>
         {row.trick}
+        {row.openFlags?.length ? (
+          <span data-testid="row-flag" className="mt-0.5 flex items-center gap-1 text-small font-semibold text-beach-outlier">
+            <Flag aria-hidden className="size-3.5" />
+            {row.openFlags.map((f) => copy.headLive.flagKinds[f.kind] ?? f.kind).join(", ")}
+          </span>
+        ) : null}
         {row.state === "duplicate" ? (
           <span className="mt-0.5 flex items-center gap-1 text-small font-semibold text-beach-outlier">
             <Copy aria-hidden className="size-3.5" />
@@ -105,7 +111,7 @@ function Row({ row, actions }: { row: Row; actions: MatrixActions }) {
       </td>
       {row.cells.map((c, i) => (
         <td key={c.judgeId} className="px-1 py-1">
-          <Cell cell={c} panel={row.panel} label={`${T.judge(i + 1)}, ${T.attempt} ${row.seq}: ${c.label}`} onTap={actions.onCell ? () => actions.onCell!(row, c.judgeId) : undefined} />
+          <Cell tolerance={tolerance} cell={c} panel={row.panel} label={`${T.judge(i + 1)}, ${T.attempt} ${row.seq}: ${c.label}`} onTap={actions.onCell ? () => actions.onCell!(row, c.judgeId) : undefined} />
         </td>
       ))}
       <td className="px-1.5 py-1 text-right">
@@ -123,7 +129,7 @@ function Row({ row, actions }: { row: Row; actions: MatrixActions }) {
  * The head judge's score table: attempts down, judges across, the panel score last. For a tablet or laptop. With `actions` it is a working tool:
  * tap a score to edit it, tap the attempt number for its menu, tap the rider for theirs.
  */
-export function HeadMatrix({ model, actions = {} }: { model: MatrixModel & { rows: Row[] }; actions?: MatrixActions }) {
+export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE }: { model: MatrixModel & { rows: Row[] }; actions?: MatrixActions; tolerance?: number }) {
   return (
     <div data-testid="matrix-scroll" className="overflow-x-auto rounded-card border border-beach-line bg-beach-bg">
       <table data-testid="head-matrix" className="min-w-[34rem] border-collapse text-beach-ink">
@@ -153,7 +159,7 @@ export function HeadMatrix({ model, actions = {} }: { model: MatrixModel & { row
         </thead>
         <tbody>
           {model.rows.map((r) => (
-            <Row key={r.id} row={r} actions={actions} />
+            <Row key={r.id} row={r} actions={actions} tolerance={tolerance} />
           ))}
         </tbody>
       </table>
