@@ -1,0 +1,35 @@
+/* Put `org-ui` once, on the outermost element of a page (with `beach-day` or `beach-dark` and the text-size class); everything inside reads the sizes from it. Nesting it again would reset Large.
+   Organiser control sizes (docs/PLAN-phase-7a.md, owner's answer of 1 Oct 2026): 40 px controls and rows on a computer, 44 px on a touch screen,
+   48 px with Large text. The 48 px rule stays for the official screens. Everything else comes from the beach tokens in globals.css. */
+.org-ui {
+  --org-ctl: 40px;
+  --org-row: 40px;
+}
+@media (pointer: coarse) {
+  .org-ui {
+    --org-ctl: 44px;
+    --org-row: 44px;
+  }
+}
+/* a phone mock shown on a computer measures like a phone */
+.org-ui.org-touch,
+.org-ui .org-touch {
+  --org-ctl: 44px;
+  --org-row: 44px;
+}
+.org-ui.beach-text-large,
+.org-ui .beach-text-large,
+.org-ui.beach-text-large .org-touch {
+  --org-ctl: 48px;
+  --org-row: 48px;
+}
+/* number fields: no spinner arrows, the digits are the control */
+.org-number {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.org-number::-webkit-inner-spin-button,
+.org-number::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
