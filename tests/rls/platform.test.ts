@@ -575,7 +575,7 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
     });
     it("the old organisation's organiser loses sight of the event and the new organisation's organiser gains it; the move is audited", async () => {
       expect(((await w.orgA.from("events").select("id").eq("id", mv.ev)).data ?? []).length).toBe(1); // published: still public, but not theirs
-      expect(((await w.orgA.from("divisions").select("id").eq("id", mv.div)).data ?? []).length).toBe(1); // public read of a published event
+      expect(((await w.orgA.from("divisions").select("id").eq("id", mv.div)).data ?? []).length).toBe(0); // 5c: divisions carry the stored draw, so they are no longer a public table; the public pages use get_public_* functions
       expect((await w.orgA.from("events").update({ name: "Hijack" }).eq("id", mv.ev).select("id")).data ?? []).toEqual([]);
       expect((await orgCClient.from("events").update({ location: "New home" }).eq("id", mv.ev).select("id")).data).toHaveLength(1);
       const { data } = await w.s.from("audit_log").select("actor_user_id, before, after, row_id, organisation_id").eq("action", "event_moved").eq("row_id", mv.ev);
