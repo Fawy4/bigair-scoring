@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   blockIdsFor,
+  headConsole,
   headPhone,
-  judgeLive,
+  judgeQueue,
   FIXTURE_SCHEMES,
   impressionRiders,
   JUDGE_IDS,
@@ -13,6 +14,8 @@ import {
   resultRows,
   tileRiders,
 } from "./design-fixtures";
+import { formatCell } from "./matrix-model";
+import { queueView } from "./queue-model";
 
 // The /design page shows real numbers: the KOTA heat of docs/08 §1A and its variants. If a value here is wrong, the page is lying to the owner.
 describe("docs/08 §1A on the result row", () => {
@@ -124,39 +127,70 @@ describe("the heat-end summary (compact)", () => {
   });
 });
 
-describe("the judge's live screen", () => {
-  const j = judgeLive();
-  it("shows 3 to 4 riders, Red selected at 6 / 7, one rider out of attempts", () => {
-    expect(j.riders.length).toBeGreaterThanOrEqual(3);
-    expect(j.riders.length).toBeLessThanOrEqual(4);
-    expect(j.riders[0]).toMatchObject({ attempts: 6, max: 7, selected: true });
-    expect(j.riders.some((r) => r.attempts >= r.max)).toBe(true);
+describe("the judge's scoring queue", () => {
+  const q = judgeQueue();
+  it("starts with Red's 6th attempt in front of the judge and 2 waiting (Blue and Green)", () => {
+    const v = queueView(q.items, null);
+    expect(v.current).toMatchObject({ riderKey: "red", seq: 6, trick: "Left ×2 Backroll" });
+    expect(v.waiting).toBe(2);
+    expect(v.waitingIds.map((id) => q.items.find((i) => i.id === id)?.riderKey)).toEqual(["blue", "green"]);
   });
-  it("the current attempt is Red's 6th; the previous one is the 5th (Contra loop, you gave 8.125)", () => {
-    expect(j.current.number).toBe(6);
-    expect(j.previous).toMatchObject({ number: 5, trick: "Contra loop", myScoreLabel: "8.125" });
+  it("the history is Red's attempts 1 to 5 from docs/08 §1A, newest first, with the judge's own scores 8.125, crash, 7.25, 8.25, 7.625", () => {
+    const h = queueView(q.items, null).history;
+    expect(h.map((i) => i.seq)).toEqual([5, 4, 3, 2, 1]);
+    expect(h.map((i) => (i.status === "crashed" ? "crash" : formatCell(i.score as number)))).toEqual(["8.125", "crash", "7.25", "8.25", "7.625"]);
   });
-  it("Red's sheet: attempts 1–5 from docs/08, counted tricks 2, 5, 1, the crash, Left 3 · Right 1, attempts 6 / 7", () => {
-    const s = j.sheet;
+  it("the strip is not part of scoring: there is no rider to pick on the default view", () => {
+    expect(q.items.every((i) => "riderKey" in i)).toBe(true);
+  });
+});
+
+describe("the Details view (rider cards and everything per rider)", () => {
+  const q = judgeQueue();
+  it("shows 3 to 4 riders with counters: Red 6 / 7 and one rider out of attempts", () => {
+    expect(q.riders.length).toBeGreaterThanOrEqual(3);
+    expect(q.riders.length).toBeLessThanOrEqual(4);
+    expect(q.riders[0]).toMatchObject({ id: "red", attempts: 6, max: 7 });
+    expect(q.riders.some((r) => r.attempts >= r.max)).toBe(true);
+  });
+  it("Red's sheet: counted tricks 1, 2, 5, the crash, Left 3 · Right 1, counter 6 / 7, attempt 2 scored 8.25", () => {
+    const s = q.sheets.red;
     expect(s.attempts.filter((a) => a.counted).map((a) => a.seq)).toEqual([1, 2, 5]);
     expect(s.attempts.find((a) => a.status === "crashed")?.seq).toBe(4);
     expect([s.left, s.right]).toEqual([3, 1]);
     expect(s.counter).toBe("6 / 7");
     expect(s.attempts.find((a) => a.seq === 2)?.myScoreLabel).toBe("8.25");
   });
-  it("the detailed list has every attempt with its trick name and status", () => {
-    expect(j.details.map((d) => d.number)).toEqual([6, 5, 4, 3, 2, 1]);
-    expect(j.details.find((d) => d.number === 4)?.status).toBe("crashed");
+  it("every rider has a sheet", () => {
+    for (const r of q.riders) expect(q.sheets[r.id]).toBeTruthy();
   });
 });
 
-describe("the head judge's phone", () => {
-  it("shows the controls of a running heat and nothing about scores", () => {
+describe("the head judge who also scores: one login, two tabs", () => {
+  it("Control shows a running heat; Start is on the Control tab and on the laptop console", () => {
     const h = headPhone();
     expect(h.state).toBe("running");
     expect(h.remainingMs).toBe(330_000);
-    expect(h.controls.map((c) => c.id)).toEqual(["pause", "end", "hold", "resumeAt", "shift5", "shift10", "publish", "reopen"]);
-    expect(h.controls.find((c) => c.id === "publish")?.enabled).toBe(false);
+  });
+  it("behind Details: rider totals and the blocker list", () => {
+    const h = headPhone();
+    expect(h.totals[0]).toMatchObject({ place: 1, totalLabel: "31.54" });
+    expect(h.blockers).toEqual(["Judge 3 has no score for BLUE, attempt 2", "Judge 2 has no Impression score for BLUE"]);
+  });
+});
+
+describe("the head judge's laptop console", () => {
+  const c = headConsole();
+  it("has a possible duplicate pair, a crash and every judge's cells; the panel column reads 7.71 / 8.25 / 7.29 / — / 8.08 for Red's first five", () => {
+    const red = c.rows.filter((r) => r.riderKey === "red");
+    expect(red.slice(0, 5).map((r) => r.panelLabel)).toEqual(["7.71", "8.25", "7.29", "—", "8.08"]);
+    expect(c.rows.some((r) => r.state === "duplicate")).toBe(true);
+  });
+  it("Judge 2 owes Blue's Impression score", () => {
+    expect(c.owes).toEqual([{ judge: "Judge 2", rider: "BLUE" }]);
+  });
+  it("Red's total from the engine is 31.54", () => {
+    expect(c.totals.find((t) => t.riderKey === "red")?.totalLabel).toBe("31.54");
   });
 });
 

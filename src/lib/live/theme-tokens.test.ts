@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { builtInSchemes } from "@/lib/schemas/identification";
 import { inkFor } from "@/lib/identification/rider-label";
-import { BEACH_THEMES, contrastRatio, TEXT_PAIRS, type BeachTokens } from "./theme-tokens";
+import { BEACH_THEMES, contrastRatio, relativeLuminance, TEXT_PAIRS, type BeachTokens } from "./theme-tokens";
 
 // docs/06 §00.1: contrast of at least 7:1 for essential text and numbers, in the daylight and the dark theme; no light-grey text.
 const MIN = 7;
@@ -23,7 +23,7 @@ describe.each(themes)("%s theme tokens", (_name, t) => {
     expect(failures).toEqual([]);
   });
   it("has every named token", () => {
-    for (const key of ["bg", "surface", "line", "ink", "muted", "border", "focus", "accent", "onAccent", "live", "pending", "failed", "crash", "outlier", "missing", "onCrash"] as const) {
+    for (const key of ["bg", "surface", "line", "ink", "muted", "border", "focus", "accent", "onAccent", "live", "pending", "failed", "crash", "outlier", "missing", "onCrash", "tintCrash", "tintGrey", "tintGreen0", "tintGreen1", "tintGreen2", "tintGreen3"] as const) {
       expect(t[key]).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
@@ -39,6 +39,23 @@ describe.each(themes)("%s theme tokens", (_name, t) => {
   it("no light-grey text: muted ink is at least as strong as 7:1 on both backgrounds", () => {
     expect(contrastRatio(t.muted, t.bg)).toBeGreaterThanOrEqual(MIN);
     expect(contrastRatio(t.muted, t.surface)).toBeGreaterThanOrEqual(MIN);
+  });
+});
+
+describe("result row tints", () => {
+  it.each(themes)("%s: the four greens run from strongest to lightest and carry ink at 7:1", (_n, t) => {
+    const greens = [t.tintGreen0, t.tintGreen1, t.tintGreen2, t.tintGreen3];
+    expect(new Set(greens).size).toBe(4);
+    for (const g of greens) expect(contrastRatio(t.ink, g)).toBeGreaterThanOrEqual(MIN);
+  });
+  it("in Daylight shade 0 is the darkest green and shade 3 the lightest; in Dark shade 0 is the strongest and shade 3 the dimmest", () => {
+    const d = BEACH_THEMES.day;
+    expect(relativeLuminance(d.tintGreen0)).toBeLessThan(relativeLuminance(d.tintGreen3));
+    const k = BEACH_THEMES.dark;
+    expect(relativeLuminance(k.tintGreen0)).toBeGreaterThan(relativeLuminance(k.tintGreen3));
+  });
+  it("crash, not counted and counted do not look alike", () => {
+    for (const t of Object.values(BEACH_THEMES)) expect(new Set([t.tintCrash, t.tintGrey, t.tintGreen1]).size).toBe(3);
   });
 });
 

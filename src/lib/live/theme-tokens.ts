@@ -39,6 +39,15 @@ export interface BeachTokens {
   outlier: string;
   /** A score that is not there (yet). */
   missing: string;
+  /** Result rows: a crash is red. Text on it is ink. */
+  tintCrash: string;
+  /** Result rows: a trick that did not count is grey. */
+  tintGrey: string;
+  /** Result rows: counted tricks are green, shade 0 (the highest counted trick) the strongest, shade 3 (the lowest counted) the lightest. Text on them is ink. */
+  tintGreen0: string;
+  tintGreen1: string;
+  tintGreen2: string;
+  tintGreen3: string;
 }
 
 export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
@@ -59,6 +68,12 @@ export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
     onCrash: "#ffffff",
     outlier: "#7c3f00",
     missing: "#404040",
+    tintCrash: "#f8cfcf",
+    tintGrey: "#e2e5e6",
+    tintGreen0: "#6fcf97",
+    tintGreen1: "#9be0b6",
+    tintGreen2: "#c3edd2",
+    tintGreen3: "#e3f6ea",
   },
   dark: {
     bg: "#0b0e0f",
@@ -77,6 +92,12 @@ export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
     onCrash: "#0b0e0f",
     outlier: "#fcd34d",
     missing: "#c4c4c4",
+    tintCrash: "#5a1f1f",
+    tintGrey: "#2a3133",
+    tintGreen0: "#165c35",
+    tintGreen1: "#134c2c",
+    tintGreen2: "#103f24",
+    tintGreen3: "#0d331d",
   },
 };
 
@@ -102,6 +123,13 @@ export const TEXT_PAIRS: ReadonlyArray<readonly [TokenName, TokenName]> = [
   ["missing", "surface"],
   ["onAccent", "accent"],
   ["onCrash", "crash"],
+  ["ink", "tintCrash"],
+  ["ink", "tintGrey"],
+  ["muted", "tintGrey"],
+  ["ink", "tintGreen0"],
+  ["ink", "tintGreen1"],
+  ["ink", "tintGreen2"],
+  ["ink", "tintGreen3"],
 ];
 
 /** WCAG relative luminance of a #rrggbb colour. */

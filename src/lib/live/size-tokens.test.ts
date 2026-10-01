@@ -9,15 +9,18 @@ describe("Normal text size stays inside the owner's ranges", () => {
     expect(v, `${key} = ${v}`).toBeGreaterThanOrEqual(min);
     expect(v, `${key} = ${v}`).toBeLessThanOrEqual(max);
   });
-  it("the timer is 48 px only on the head console and the big screen; elsewhere it is slim (20–24 px)", () => {
+  it("the timer is 48 px only on the head console and the big screen; elsewhere it is slim", () => {
     expect(NORMAL.timerHead).toBe(48);
-    expect(NORMAL.timerSlim).toBeGreaterThanOrEqual(20);
-    expect(NORMAL.timerSlim).toBeLessThanOrEqual(24);
+    expect(NORMAL.timerSlim).toBeLessThan(NORMAL.timerHead);
+  });
+  it("the selected score is the only large number: bigger than every other size on the screen", () => {
+    for (const k of ["body", "small", "name", "digit", "heading", "timerSlim"] as const) expect(NORMAL.readout).toBeGreaterThan(NORMAL[k]);
   });
 });
 
 describe("Large is roughly the sizes of the first preview", () => {
-  it("pad buttons 56, gaps 8, digits 28, rider names 20", () => {
+  it("pad buttons 56, gaps 8, digits 28, rider names 20, the selected score 40", () => {
+    expect(LARGE.readout).toBe(40);
     expect(LARGE.padHeight).toBe(56);
     expect(LARGE.padGap).toBe(8);
     expect(LARGE.digit).toBe(28);

@@ -7,6 +7,8 @@ import { builtInSchemes, type IdentificationScheme } from "@/lib/schemas/identif
 import { parseScoringModel, type ScoringModel } from "@/lib/schemas/scoring-model";
 import { blockId, blocksFromVocabulary, type Block, type VocabularyJson } from "@/lib/trick-base";
 import { copy } from "@/lib/ui-copy";
+import type { QueueItem } from "./queue-model";
+import { formatClock } from "./timer";
 import { formatCell, type CellState, type MatrixCell, type MatrixModel, type MatrixRow, type PanelState } from "./matrix-model";
 
 /**
@@ -161,7 +163,7 @@ function farthestJudge(scores: Array<{ judgeId: string; score: number }>): strin
   return [...scores].sort((a, b) => Math.abs(b.score - median) - Math.abs(a.score - median))[0].judgeId;
 }
 
-function rowOf(id: string, a: AttemptResult, over: { absent?: string; outlierCell?: boolean; row?: "deleted" | "duplicate"; seq?: number } = {}): MatrixRow {
+function rowOf(id: string, a: AttemptResult, over: { absent?: string; outlierCell?: boolean; row?: "deleted" | "duplicate"; seq?: number; label?: LabelModel } = {}): MatrixRow {
   const crash = a.status === "crashed";
   const out = a.panel?.outlier && over.outlierCell ? farthestJudge(a.panel.judgeScores) : null;
   const cells: MatrixCell[] = JUDGE_IDS.map((judgeId) => {
@@ -183,7 +185,7 @@ function rowOf(id: string, a: AttemptResult, over: { absent?: string; outlierCel
   return {
     id,
     seq: over.seq ?? a.seq,
-    label: RED_LABEL,
+    label: over.label ?? RED_LABEL,
     trick: a.trickName ?? "",
     status: a.status,
     state: over.row ?? "ok",
@@ -340,25 +342,16 @@ export function categoryLabel(key: string | null): string {
   return key ? (copy.trickBase.categoryLabels[key] ?? key) : "";
 }
 
-// ---- The judge's and the head judge's phone screens
-export interface LiveRider {
-  id: string;
-  label: LabelModel;
-  attempts: number;
-  max: number;
-  selected: boolean;
-}
-export interface LiveAttempt {
-  number: number;
-  label: LabelModel;
+// ---- The judge's phone: a scoring queue
+export interface QueueAttempt extends QueueItem {
+  riderKey: string;
   riderName: string;
+  label: LabelModel;
+  /** The rider's own attempt number. */
+  seq: number;
   trick: string;
   direction: "left" | "right" | null;
-  categoryKey: string | null;
-  status: "landed" | "crashed";
   repeat?: { nth: string; previous: string };
-  /** The judge's own score for this attempt, if given. */
-  myScoreLabel: string | null;
 }
 export interface SheetAttempt {
   seq: number;
@@ -376,68 +369,153 @@ export interface RiderSheetModel {
   right: number;
   counter: string;
 }
+export interface LiveRider {
+  id: string;
+  label: LabelModel;
+  attempts: number;
+  max: number;
+}
+
+const lycraLabel = (name: string, colour: string) => riderLabelModel(FIXTURE_SCHEMES[0], { name, nationality: "EG", slotColour: colour });
+
+/** A made-up rider's sheet: the best three landed scores count (the owner's default model). */
+function sheetOf(name: string, label: LabelModel, rows: Array<{ trick: string; direction: "left" | "right"; status: "landed" | "crashed" | "pending"; my?: number }>, max = 7): RiderSheetModel {
+  const best = rows.map((r, i) => ({ i, my: r.status === "landed" ? (r.my ?? 0) : -1 })).sort((x, y) => y.my - x.my).slice(0, 3).filter((x) => x.my >= 0).map((x) => x.i);
+  const attempts: SheetAttempt[] = rows.map((r, i) => ({ seq: i + 1, trick: r.trick, direction: r.direction, status: r.status, myScoreLabel: r.my !== undefined ? formatCell(r.my) : null, counted: best.includes(i) }));
+  return {
+    name,
+    label,
+    attempts,
+    left: attempts.filter((a) => a.status === "landed" && a.direction === "left").length,
+    right: attempts.filter((a) => a.status === "landed" && a.direction === "right").length,
+    counter: `${rows.length} / ${max}`,
+  };
+}
 
 /**
  * What the judge's phone shows mid-heat. Red's attempts 1 to 5 are docs/08 §1A (the judge is Judge 1: 7.625, 8.25, 7.25, crash, 8.125);
- * the 6th attempt, Blue, Yellow and Green are made up.
+ * the 6th attempt, Blue, Yellow and Green are made up. The spotter logged three attempts the judge has not scored yet: Red 6 (in front), then Blue 4 and Green 3.
  */
-export function judgeLive() {
+export function judgeQueue() {
   const base = redAttempts();
-  const red = riderLabelModel(FIXTURE_SCHEMES[0], { name: "Sam Rivera", slotColour: "red" });
-  const heat = redHeat().riders[0];
-  const countedSeqs = new Set(heat.counted.map((c) => c.attemptSeq));
+  const red = lycraLabel("Sam Rivera", "red");
+  const blue = lycraLabel("Noor Haddad", "blue");
+  const green = lycraLabel("Mia Costa", "green");
+  const yellow = lycraLabel("Lena Vogt", "yellow");
   const mine = (a: Attempt) => {
     const v = a.marks.find((m) => m.judgeId === "J1")?.value;
-    return typeof v === "object" ? formatCell(judgeTrickScore(KOTA, v).score) : null;
+    return typeof v === "object" ? judgeTrickScore(KOTA, v).score : null;
   };
-  const sheetAttempts: SheetAttempt[] = [
-    ...base.map((a) => ({ seq: a.seq, trick: a.trickName ?? "", direction: a.direction ?? null, status: a.status, myScoreLabel: mine(a), counted: countedSeqs.has(a.seq) })),
-    { seq: 6, trick: "Left ×2 Backroll", direction: "left" as const, status: "pending" as const, myScoreLabel: null, counted: false },
+  const redItems: QueueAttempt[] = base.map((a, i) => ({
+    id: i + 1,
+    riderKey: "red",
+    riderName: "Sam Rivera",
+    label: red,
+    seq: a.seq,
+    trick: a.trickName ?? "",
+    direction: a.direction ?? null,
+    status: a.status,
+    score: mine(a),
+  }));
+  const items: QueueAttempt[] = [
+    ...redItems,
+    { id: 6, riderKey: "red", riderName: "Sam Rivera", label: red, seq: 6, trick: "Left ×2 Backroll", direction: "left", status: "landed", score: null },
+    { id: 7, riderKey: "blue", riderName: "Noor Haddad", label: blue, seq: 4, trick: "Right Frontroll", direction: "right", status: "landed", score: null, repeat: { nth: "2nd", previous: "6.5" } },
+    { id: 8, riderKey: "green", riderName: "Mia Costa", label: green, seq: 3, trick: "Left Kiteloop", direction: "left", status: "landed", score: null },
   ];
-  const strip = (name: string, colour: string, attempts: number, selected = false): LiveRider => ({
-    id: colour,
-    label: riderLabelModel(FIXTURE_SCHEMES[0], { name, slotColour: colour }),
-    attempts,
-    max: 7,
-    selected,
-  });
-  const riders = [strip("Sam Rivera", "red", 6, true), strip("Noor Haddad", "blue", 3), strip("Lena Vogt", "yellow", 7), strip("Mia Costa", "green", 2)];
-  const current: LiveAttempt = { number: 6, label: red, riderName: "Sam Rivera", trick: "Left ×2 Backroll", direction: "left", categoryKey: "rotation", status: "landed", myScoreLabel: null };
-  const previous: LiveAttempt = { number: 5, label: red, riderName: "Sam Rivera", trick: "Contra loop", direction: "left", categoryKey: "kiteloop", status: "landed", myScoreLabel: mine(base[4]) };
-  const details: LiveAttempt[] = [
-    current,
-    previous,
-    { number: 4, label: red, riderName: "Sam Rivera", trick: "Board-off", direction: "right", categoryKey: "board_off", status: "crashed", myScoreLabel: null },
-    { number: 3, label: red, riderName: "Sam Rivera", trick: "Late backroll kiteloop", direction: "left", categoryKey: "kiteloop", status: "landed", myScoreLabel: mine(base[2]), repeat: undefined },
-    { number: 2, label: red, riderName: "Sam Rivera", trick: "Double loop", direction: "right", categoryKey: "kiteloop", status: "landed", myScoreLabel: mine(base[1]) },
-    { number: 1, label: red, riderName: "Sam Rivera", trick: "Kiteloop board-off", direction: "left", categoryKey: "board_off", status: "landed", myScoreLabel: mine(base[0]) },
-  ];
-  const sheet: RiderSheetModel = {
+  const heat = redHeat().riders[0];
+  const countedSeqs = new Set(heat.counted.map((c) => c.attemptSeq));
+  const redSheet: RiderSheetModel = {
     name: "Sam Rivera",
     label: red,
-    attempts: sheetAttempts,
-    left: sheetAttempts.filter((a) => a.status === "landed" && a.direction === "left").length,
-    right: sheetAttempts.filter((a) => a.status === "landed" && a.direction === "right").length,
+    attempts: [
+      ...redItems.map((r) => ({ seq: r.seq, trick: r.trick, direction: r.direction, status: r.status, myScoreLabel: typeof r.score === "number" ? formatCell(r.score) : null, counted: countedSeqs.has(r.seq) })),
+      { seq: 6, trick: "Left ×2 Backroll", direction: "left" as const, status: "pending" as const, myScoreLabel: null, counted: false },
+    ],
+    left: 3,
+    right: 1,
     counter: "6 / 7",
   };
-  return { heatName: "Pro Men · R1 · Heat 3", seat: "Judge 1", remainingMs: 330_000, riders, current, previous, details, sheet };
+  const sheets: Record<string, RiderSheetModel> = {
+    red: redSheet,
+    blue: sheetOf("Noor Haddad", blue, [
+      { trick: "Backroll", direction: "left", status: "landed", my: 7.0 },
+      { trick: "Frontroll", direction: "right", status: "landed", my: 6.5 },
+      { trick: "Double loop", direction: "left", status: "crashed" },
+      { trick: "Right Frontroll", direction: "right", status: "pending" },
+    ]),
+    yellow: sheetOf("Lena Vogt", yellow, [
+      { trick: "Kiteloop", direction: "left", status: "landed", my: 6.0 },
+      { trick: "Backroll", direction: "right", status: "landed", my: 7.5 },
+      { trick: "Megaloop", direction: "left", status: "crashed" },
+      { trick: "Frontroll", direction: "right", status: "landed", my: 6.5 },
+      { trick: "Contra loop", direction: "left", status: "crashed" },
+      { trick: "Backroll", direction: "left", status: "landed", my: 7.0 },
+      { trick: "Straight jump", direction: "right", status: "landed", my: 5.0 },
+    ]),
+    green: sheetOf("Mia Costa", green, [
+      { trick: "Kiteloop", direction: "right", status: "landed", my: 8.0 },
+      { trick: "Handle pass", direction: "left", status: "landed", my: 8.5 },
+      { trick: "Left Kiteloop", direction: "left", status: "pending" },
+    ]),
+  };
+  const riders: LiveRider[] = [
+    { id: "red", label: red, attempts: 6, max: 7 },
+    { id: "blue", label: blue, attempts: 4, max: 7 },
+    { id: "yellow", label: yellow, attempts: 7, max: 7 },
+    { id: "green", label: green, attempts: 3, max: 7 },
+  ];
+  return { heatName: "Pro Men · R1 · Heat 3", seat: "Judge 1", remainingMs: 330_000, items, riders, sheets };
 }
 
-export interface HeadControl {
-  id: "pause" | "resume" | "end" | "hold" | "resumeAt" | "shift5" | "shift10" | "publish" | "reopen";
-  enabled: boolean;
+// ---- The head judge who also scores: one login, two tabs (Score = a judge's queue, Control)
+function nameOfJudge(id: string): string {
+  return copy.live.matrix.judge((PANEL as string[]).indexOf(id) + 1);
 }
-/** The head judge's phone: a running heat and the controls (publish is off while the heat is running). No scores. */
+
+/** What the head judge's Control tab shows behind Details: the rider totals and the list of what blocks Publish. */
 export function headPhone() {
-  const controls: HeadControl[] = [
-    { id: "pause", enabled: true },
-    { id: "end", enabled: true },
-    { id: "hold", enabled: true },
-    { id: "resumeAt", enabled: true },
-    { id: "shift5", enabled: true },
-    { id: "shift10", enabled: true },
-    { id: "publish", enabled: false },
-    { id: "reopen", enabled: false },
+  const rows = resultRows();
+  const blockers = [copy.live.head.blockerScore(nameOfJudge("J3"), "BLUE", 2), copy.live.head.blockerImpression(nameOfJudge("J2"), "BLUE")];
+  return {
+    heatName: "Pro Men · R1 · Heat 3",
+    state: "running" as const,
+    remainingMs: 330_000,
+    next: { heat: "Pro Men · R1 · Heat 4", time: "15:23" },
+    totals: rows.map((r) => ({ place: r.place, label: r.label, totalLabel: r.totalLabel, status: r.status })),
+    blockers,
+  };
+}
+
+// ---- The head judge's laptop console
+export interface ConsoleRow extends MatrixRow {
+  riderKey: string;
+}
+
+/** Red (docs/08 §1A) plus a possible duplicate of attempt 2 logged by a second spotter, and two attempts of Blue whose Impression score Judge 2 still owes. */
+export function headConsole() {
+  const blueLabel = lycraLabel("Noor Haddad", "blue");
+  const flatMarks = (v: number) => JUDGE_IDS.map((judgeId) => ({ judgeId, value: flat(v) }));
+  const blueAttempts: Attempt[] = [
+    { seq: 1, status: "landed", trickName: "Backroll", direction: "left", marks: flatMarks(7.0) },
+    { seq: 2, status: "landed", trickName: "Frontroll", direction: "right", marks: flatMarks(6.5).filter((m) => m.judgeId !== "J3") },
   ];
-  return { heatName: "Pro Men · R1 · Heat 3", state: "running" as const, remainingMs: 330_000, next: { heat: "Pro Men · R1 · Heat 4", time: "15:23" }, controls };
+  const impression = { red: [7.5, 7.0, 8.0], blue: [6.0, null, 6.0] } as Record<string, Array<number | null>>;
+  const result = heatOf([
+    { riderId: "Red", attempts: redAttempts(), impressionMarks: impressionMarks([7.5, 7.0, 8.0]) },
+    { riderId: "Blue", attempts: blueAttempts, impressionMarks: [{ judgeId: "J1", value: 6.0 }, { judgeId: "J3", value: 6.0 }] },
+  ]);
+  const redRes = result.riders.find((r) => r.riderId === "Red")!;
+  const blueRes = result.riders.find((r) => r.riderId === "Blue")!;
+  const rows: ConsoleRow[] = [
+    ...redRes.allAttempts.map((a) => ({ ...rowOf(`red-${a.seq}`, a), riderKey: "red" })),
+    { ...rowOf("red-6", single(structuredClone(redAttempts()[1])), { row: "duplicate", seq: 6 }), riderKey: "red" },
+    ...blueRes.allAttempts.map((a) => ({ ...rowOf(`blue-${a.seq}`, a, { label: blueLabel }), riderKey: "blue" })),
+  ];
+  const totals = [
+    { riderKey: "red", label: RED_LABEL, totalLabel: redRes.totalLabel, tricks: two(redRes.components.tricks), impression: two(redRes.components.impression), incomplete: redRes.flags.incomplete },
+    { riderKey: "blue", label: blueLabel, totalLabel: blueRes.totalLabel, tricks: two(blueRes.components.tricks), impression: two(blueRes.components.impression), incomplete: true },
+  ];
+  const owes = result.publishBlockers.flatMap((b) => (b.type === "impression_missing" ? [{ judge: nameOfJudge(b.judge), rider: (b.rider === "Blue" ? blueLabel : RED_LABEL).primary.text }] : []));
+  return { judgeIds: [...JUDGE_IDS], rows, totals, owes, impression, blueLabel, labels: { red: "RED", blue: "BLUE" } as Record<string, string>, heatName: "Pro Men · R1 · Heat 3", remaining: formatClock(330_000) };
 }
