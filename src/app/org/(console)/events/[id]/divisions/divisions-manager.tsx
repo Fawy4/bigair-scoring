@@ -9,6 +9,7 @@ import type { LocalBlock, VocabularyJson } from "@/lib/trick-base";
 import { copy } from "@/lib/ui-copy";
 import { addDivision, deleteDivision, duplicateDivision, moveDivision, renameDivision, saveDivisionDescription } from "./actions";
 import { DivisionIdentification } from "./division-identification";
+import { LiveSettingsPanel } from "./live-settings-panel";
 import { TrickBasePanel } from "./trick-base-panel";
 import { RulesPanel } from "./rules-panel";
 
@@ -25,6 +26,8 @@ export interface DivisionRow {
   /** The division's own Rider label scheme; null = the event's. */
   identification: { scheme: IdentificationScheme; basedOn?: string } | null;
   trickBase: unknown;
+  /** `divisions.live_settings`: percentages and the heat-end summary card. */
+  liveSettings: unknown;
   /** A heat of this division has started (trick base blocks can then be added but not removed). */
   started: boolean;
   /** Any heat exists (a division with heats cannot be deleted). */
@@ -93,7 +96,7 @@ export function DivisionsManager({
     start(async () => {
       const res = await addDivision(eventId, newName);
       if (!res.ok) return fail(res.error);
-      setDivisions((ds) => [...ds, { id: res.id, name: newName.trim(), sort_order: res.sortOrder, scoring_model_id: null, scoring_overrides: {}, format_template_id: null, format_params: {}, description: null, identification: null, trickBase: {}, started: false, hasHeats: false, locked: false, riders: [], drawLocked: false }]);
+      setDivisions((ds) => [...ds, { id: res.id, name: newName.trim(), sort_order: res.sortOrder, scoring_model_id: null, scoring_overrides: {}, format_template_id: null, format_params: {}, description: null, identification: null, trickBase: {}, liveSettings: {}, started: false, hasHeats: false, locked: false, riders: [], drawLocked: false }]);
       setOpenId(res.id);
       setNewName("");
       toast({ title: copy.divisions.added });
@@ -254,6 +257,7 @@ export function DivisionsManager({
                       organisationId={organisationId}
                       onPresetAdded={(row) => setScoring((s) => [...s, row])}
                       onDivisionChange={(p) => patch(d.id, p)}
+                      advancedExtra={<LiveSettingsPanel key={`l-${d.id}`} divisionId={d.id} initial={d.liveSettings} readOnly={false} />}
                     />
                   ) : tab === "trickbase" ? (
                     vocabulary ? (

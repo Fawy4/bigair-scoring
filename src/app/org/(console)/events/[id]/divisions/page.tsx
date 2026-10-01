@@ -20,7 +20,7 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
   const [{ data: divisions }, { data: started }, { data: withHeats }, { data: models }, { data: formats }, { data: entryRows }] = await Promise.all([
     supabase
       .from("divisions")
-      .select("id, name, sort_order, scoring_model_id, scoring_overrides, format_template_id, format_params, rules_unlocked_at, description, identification, trick_base, draw_locked_at")
+      .select("id, name, sort_order, scoring_model_id, scoring_overrides, format_template_id, format_params, rules_unlocked_at, description, identification, trick_base, live_settings, draw_locked_at")
       .eq("event_id", id)
       .order("sort_order")
       .order("created_at"),
@@ -44,6 +44,7 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
     description: d.description,
     identification: divisionScheme(d.identification) ? { scheme: divisionScheme(d.identification)!, basedOn: (d.identification as { basedOn?: string } | null)?.basedOn } : null,
     trickBase: d.trick_base,
+    liveSettings: d.live_settings,
     started: startedIds.has(d.id),
     hasHeats: heatIds.has(d.id),
     locked: startedIds.has(d.id) && d.rules_unlocked_at === null,

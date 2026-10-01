@@ -220,6 +220,8 @@ Test values:
 
 ### Pure code (`src/lib/engine/tricks/`, tests first)
 
+> **Changed during 5b (decision 27):** a trick is an ordered sequence of blocks, not one choice per family. The `parts = {direction?, multiplier?, base?, addons[], grabs[]}` shape below is superseded by `{direction, items[{id, multiplier}], freeText}`; see docs/08 §1G-3 and §1G-4.
+
 `compose.ts`:
 - `composeTrick(vocab, parts)` returns `{name, categoryKey}`, where `parts = {direction?, multiplier?, base?, addons[], grabs[]}`.
 - The name follows `namingTemplate`.
@@ -694,6 +696,8 @@ These are decisions now. The steps above already follow them. 5b copies them int
 | 24 | Trick base order (round 4) | Ordered by drag and drop in the Divisions step (tap alternative); the spotter renders that order | Step 2 |
 | 25 | Public results model (round 4) | Heat summary with tabs, one row per rider in rank order, score boxes in attempt order graded yellow to green across the heat, crash red, not counted grey; box content a division setting (attempt number + score is Arrow's default); ladder view with riders in Lycra colours | Step 6 |
 | 26 | Head console (round 4) | Judge cells coloured by distance from the panel score (tolerance = the model's outlier threshold); tick boxes with Merge and Delete for a selection | Step 4 |
+| 27 | A trick is an ordered sequence of blocks (owner, 1 Oct 2026, during 5b) | Replaces the one-per-family `parts` model of step 2: Direction (pick one, first), then any base tricks, add-ons and grabs in the order the rider does them, repeating freely; a multiplier is written before its block ("×2 Backroll", "×4 Late rotations"); category = highest-precedence category among the blocks; repeats compare the normalised sequence; typed and spoken text is read the same way; an unknown word touching the trick word is kept as free text. Families only organise the spotter screen. "Late rotations" added as an add-on that takes a multiplier. | docs/08 §1G-3, 1G-4; docs/03 decisions log 5b |
+| 28 | Percentages (5b) | The division setting "Show scores as % of maximum" (Advanced, off) decides what screens show; the scoring model's `heat.total.display` is only the export default. | docs/08 §1G-10 |
 | A | Head console on a phone | Below 900 px nothing is refused. Controls, rider totals and the blocker list are shown; only the matrix asks for a tablet or laptop | Step 4 |
 | B | Timer sounds | A short beep and vibration at 1:00 and 0:00. On by default on the head console, optional on judge phones, switchable per device | Step 1 |
 | C | PR split | 5a, 5b, 5c, with the 5b-1 / 5b-2 fallback. The hours go into STATUS.md when 5a starts | §10 |

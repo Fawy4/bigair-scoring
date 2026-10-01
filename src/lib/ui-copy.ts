@@ -1616,6 +1616,20 @@ export const copy = {
     saved: "Trick base saved",
     count: (on: number, all: number) => `${on} of ${all} blocks ticked`,
     tickAll: "Tick all",
+    layoutHeading: "The spotter's screen",
+    layoutIntro: "The spotter's phone shows the blocks in exactly this order, and never reorders anything. Drag a block with ⠿, or use the arrow buttons. Base tricks, Add-ons and Grabs & landings can swap blocks; Direction and Multiplier keep their own rows.",
+    layoutSaved: "Spotter layout saved",
+    dragBlock: (label: string) => `Drag ${label}`,
+    moveUp: (label: string) => `Move ${label} up`,
+    moveDown: (label: string) => `Move ${label} down`,
+    moveTo: (label: string) => `Move ${label} to`,
+    moveToChoose: "Move to…",
+    favourite: (label: string) => `Favourite: ${label} (shown first)`,
+    familyUp: (label: string) => `Move ${label} up on the spotter's screen`,
+    familyDown: (label: string) => `Move ${label} down on the spotter's screen`,
+    resetLayout: "Reset the order",
+    favouriteTag: "★ first",
+    movedTag: (family: string) => `moved from ${family}`,
     errors: {
       family: "Choose one of the five families.",
       empty: "Give the block a name.",
@@ -2399,6 +2413,18 @@ export const copy = {
     tabsLabel: "Head judge",
     controlsHeading: "Controls",
   },
+  /** The division's live-screen settings (Advanced). */
+  liveSettings: {
+    heading: "Live screens",
+    saved: "Live screen settings saved",
+    showPercent: "Show scores as % of maximum",
+    showPercentNote: "Off by default. The scoring rules’ own display setting only decides what an export starts with.",
+    summaryHeading: "Summary card above the Impression / Variety score",
+    summaryCounts: "Attempts, landed and crashed",
+    summaryVariety: "Repeats (how many times the same trick was landed again)",
+    summaryDirections: "Left and right",
+    summaryList: "The landed tricks with my scores",
+  },
 };
 
 function ordinal(n: number): string {
@@ -2477,6 +2503,11 @@ export const help: Record<string, Help> = {
   "format.warmUp": { text: "Minutes riders warm up before each heat. The timetable adds them before the heat; the heat's own timer does not include them.", example: "5 minutes: warm-up 10:00, start 10:05" },
   "format.preview": { text: "Shows the ladder this format would create for a number of riders, using the same rules as the real draw.", example: "With 14 riders: R1 4 heats of 3–4 → SF → F" },
   "format.seeding": { text: "Decides who meets whom in the next round. In a knockout, “By original seeding” pairs neighbouring heats (the winners of H1 and H2 meet).", example: "By original seeding" },
+  "division.showPercent": { text: "Shows each rider's total as a percentage of the highest score possible, next to the total. Off, screens show only the total in words.", example: "31.54 of 40 reads 78.85 %" },
+  "division.summary.counts": { text: "The first line of the card a judge sees before giving the Impression / Variety score.", example: "7 attempts · 5 landed · 2 crashed" },
+  "division.summary.variety": { text: "How many of the landed tricks were the same trick landed again. It helps a judge give the Variety score.", example: "Repeats ×1" },
+  "division.summary.directions": { text: "How many landed tricks went to the left and to the right.", example: "Left 3 · Right 2" },
+  "division.summary.landedList": { text: "Every landed trick with the score this judge gave it, best first.", example: "Attempt 2 — Double loop — 8.25" },
   "rules.showAll": { text: "Shows every setting, not only the common ones. Each has its own “?”.", example: "Turn on to change weights, tie-breakers or flag-out." },
 };
 

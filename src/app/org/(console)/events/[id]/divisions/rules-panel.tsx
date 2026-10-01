@@ -67,6 +67,7 @@ export function RulesPanel({
   organisationId,
   onPresetAdded,
   onDivisionChange,
+  advancedExtra,
 }: {
   kind: PresetKind;
   eventId: string;
@@ -75,6 +76,8 @@ export function RulesPanel({
   organisationId: string;
   onPresetAdded: (row: PresetRow) => void;
   onDivisionChange: (patch: Partial<DivisionRow>) => void;
+  /** Shown under "Show all settings" of the Scoring tab (the division's live-screen settings). */
+  advancedExtra?: React.ReactNode;
 }) {
   const scoring = kind === "scoring_model";
   const nullable = scoring ? SCORING_NULLABLE : FORMAT_NULLABLE;
@@ -419,6 +422,7 @@ export function RulesPanel({
       {working && scoring && showAll ? (
         <SchemaForm node={scoringNodes} value={working} onChange={setValue} errors={errors} readOnly={locked} selectOptions={selectOptions} hiddenPaths={SCORING_SIMPLE_PATHS} />
       ) : null}
+      {working && scoring && showAll ? advancedExtra : null}
 
       {!scoring ? (
         <section className="panel flex flex-col gap-3" aria-label={R.formatWord} data-testid="format-card">

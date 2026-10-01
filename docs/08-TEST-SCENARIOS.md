@@ -129,6 +129,8 @@ Two spotters who tap the same blocks in a different order log two different tric
 
 **1G-13 Next heat estimate** (`next-heat.ts`). Between heats the spotter and judge see "Next: Pro Men · R1 · Heat 3 — est. 15:23", from `computeTimetable` (§3A: Pros R1 Heat 3, 15:23, after Heat 2 started at 15:08).
 
+**1G-14 Head totals and criteria values** (`head-totals.ts`, `criteria.ts`). Red with impression marks 7.5 / 7.0 / 8.0 (panel 7.50): rank 1, **"31.54 = tricks 24.04 + Impression 7.50"**, 5 attempts, complete; "78.85 % of maximum" appears only when the division's percentage setting is on. While a judge still owes an Impression score the total is shown as provisional (incomplete). A rider with nothing scored has no formula; a rider who did not start has no total; riders list in provisional rank order. Criteria on a judge's phone: one tab per criterion in the model's order; Height 8.0, Extremity 7.5, Technicality 7.0 is not yet a score (Execution missing → none); with Execution 8.0 the trick score is **7.625**; a value off its scale gives no score instead of an error.
+
 ## 2. Ladder engine (`presets/formats/*.json`)
 
 ### 2A — Snake seeding, heat size 4, `uneven = smaller_heats_for_top_seeds` (seed numbers)
