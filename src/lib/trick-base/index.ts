@@ -16,6 +16,7 @@ interface VocabItem {
   category?: string | null;
   aliases?: string[];
   family?: string;
+  takesMultiplier?: boolean;
 }
 export interface VocabularyJson {
   directions: VocabItem[];
@@ -66,16 +67,19 @@ export function blocksFromVocabulary(vocab: VocabularyJson, local: LocalBlock[])
 export interface TrickBase {
   /** `family:key` of every block the organiser unticked. Everything else is on, so new master blocks appear ticked. */
   disabled: string[];
+  /** How the spotter's screen is laid out (docs/08 §1G-5). Absent = the vocabulary's own order. */
+  layout?: unknown;
 }
 
 export function parseTrickBase(json: unknown): TrickBase {
-  const d = json && typeof json === "object" ? (json as { disabled?: unknown }).disabled : undefined;
-  return { disabled: Array.isArray(d) ? [...new Set(d.filter((x): x is string => typeof x === "string"))] : [] };
+  const obj = json && typeof json === "object" ? (json as { disabled?: unknown; layout?: unknown }) : {};
+  const d = obj.disabled;
+  return { disabled: Array.isArray(d) ? [...new Set(d.filter((x): x is string => typeof x === "string"))] : [], ...(obj.layout !== undefined ? { layout: obj.layout } : {}) };
 }
 
 export function toggleBlock(base: TrickBase, id: string, on: boolean): TrickBase {
   const rest = base.disabled.filter((d) => d !== id);
-  return { disabled: on ? rest : [...rest, id] };
+  return { ...base, disabled: on ? rest : [...rest, id] };
 }
 
 export function enabledBlocks(blocks: Block[], disabled: string[]): Block[] {

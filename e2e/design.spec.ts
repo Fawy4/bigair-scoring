@@ -230,16 +230,25 @@ test("spotter: riders in one row, a row for Left / Right, a row for the multipli
     const b = (await f.locator(`[data-block="${id}"]`).boundingBox())!;
     expect(b.y + b.height, id).toBeLessThanOrEqual(crash.y);
   }
+  // a trick is built in the order it is done: the name is the sequence (Handle pass tapped before Board-off stays before it)
   for (const id of ["direction:left", "multiplier:x2", "base:backroll", "addon:handle_pass", "addon:board_off"]) await f.locator(`[data-block="${id}"]`).click();
   const name = f.getByTestId("composed-name");
-  await expect(name).toContainText("Left ×2 Backroll Board-off Handle pass");
-  const nameP = name.locator("p").first();
-  expect(await fontPx(nameP)).toBeGreaterThanOrEqual(14);
-  expect(await fontPx(nameP)).toBeLessThanOrEqual(15);
-  expect(await nameP.evaluate((el) => el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight))).toBeLessThanOrEqual(2.05);
+  await expect(name.locator("p.sr-only")).toHaveText("Left ×2 Backroll Handle pass Board-off");
+  const tokens = name.getByTestId("sequence-block");
+  await expect(tokens).toHaveCount(3);
+  expect(await fontPx(tokens.first())).toBeGreaterThanOrEqual(14);
+  expect(await fontPx(tokens.first())).toBeLessThanOrEqual(15);
+  // one tap on a block of the name takes it out before Log
+  await tokens.nth(1).click();
+  await expect(name.locator("p.sr-only")).toHaveText("Left ×2 Backroll Board-off");
+  await f.locator('[data-block="addon:handle_pass"]').click();
+  await expect(name.locator("p.sr-only")).toHaveText("Left ×2 Backroll Board-off Handle pass");
   await f.getByTestId("log-button").click();
   await expect(name).toContainText("Logged — RED — attempt 7");
   await expect(f.getByTestId("rider-tile-counter").first()).toHaveText(/^7 \/ 7/);
+  // Red is out of attempts now: CRASH and Log are off for Red; another rider can still be logged
+  await expect(f.getByTestId("crash-button")).toBeDisabled();
+  await f.getByTestId("rider-tile").nth(1).click();
   await f.getByTestId("crash-button").click();
   await expect(f.getByRole("alertdialog")).toBeVisible();
   await f.getByRole("button", { name: "Cancel" }).click();

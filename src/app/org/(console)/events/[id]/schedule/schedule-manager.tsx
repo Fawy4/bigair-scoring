@@ -10,21 +10,16 @@ import {
   addHeatToPlan,
   addNote,
   computeTimetable,
-  localToUtc,
   moveItem,
   nudgeItem,
   removeItem,
   renameItem,
-  resumeHold,
   RunOrderError,
   setBreakAfter,
   setDuration,
   setPin,
   setWarmUp,
-  shift,
-  startHold,
   timetableExportRows,
-  toIso,
   unscheduledHeats,
   type HeatInfo,
   type HeatLive,
@@ -36,6 +31,7 @@ import { toast } from "@/hooks/use-toast";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { activatePlan, createPlan, deletePlanAction, duplicatePlanAction, savePlan } from "./actions";
+import { holdPlan as holdPlanAction, resumePlanAt as resumePlanAtAction, shiftPlan as shiftPlanAction, type PlanActionResult } from "@/lib/live/heat-actions";
 
 const T = copy.runOrder;
 
@@ -163,6 +159,18 @@ export function ScheduleManager(props: ScheduleProps) {
       if (r.ok) then(r as R & { ok: true });
       else setError((r as unknown as { error: string }).error);
     });
+  }
+
+  /** Hold, Resume at and Shift run on the server with the database's own clock (never this device's); the answer is the plan's hold and pins as they are now. */
+  function live(run: () => Promise<PlanActionResult>) {
+    const id = currentRow?.id;
+    act(
+      async () => {
+        const r = await run();
+        return r.ok ? r : { ok: false as const, error: r.message };
+      },
+      (r) => setPlans((ps) => ps.map((p) => (p.id === id ? { ...p, hold: r.hold, anchors: r.anchors } : p))),
+    );
   }
 
   function onDragEnd(e: DragEndEvent) {
@@ -429,13 +437,13 @@ export function ScheduleManager(props: ScheduleProps) {
                         <label htmlFor="resume-at" className="text-sm font-bold">{T.resumeAt}</label>
                         <input id="resume-at" type="time" value={resumeAt} onChange={(e) => setResumeAt(e.target.value)} className="w-32" />
                       </div>
-                      <button type="button" className="btn btn-primary" disabled={pending || !resumeAt} onClick={() => mutate((p) => resumeHold(p, lives, toIso(localToUtc(day, resumeAt, timezone)), { timezone }))}>{T.resume}</button>
+                      <button type="button" className="btn btn-primary" disabled={pending || !resumeAt} onClick={() => currentRow && live(() => resumePlanAtAction(currentRow.id, resumeAt))}>{T.resume}</button>
                     </>
                   ) : (
-                    <button type="button" className="btn" disabled={pending || !currentRow?.active} onClick={() => mutate((p) => startHold(p, new Date().toISOString()))}>{T.hold}</button>
+                    <button type="button" className="btn" disabled={pending || !currentRow?.active} onClick={() => currentRow && live(() => holdPlanAction(currentRow.id))}>{T.hold}</button>
                   )}
                   {[5, 10].map((m) => (
-                    <button key={m} type="button" className="btn" disabled={pending || !currentRow?.active || Boolean(plan.hold)} onClick={() => mutate((p) => shift(p, lives, m, { timezone, eventDay: day, defaults: ok!.defaults, now: new Date().toISOString() }))}>
+                    <button key={m} type="button" className="btn" disabled={pending || !currentRow?.active || Boolean(plan.hold)} onClick={() => currentRow && live(() => shiftPlanAction(currentRow.id, m))}>
                       {T.shift(m)}
                     </button>
                   ))}

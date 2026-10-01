@@ -7,7 +7,7 @@ test("a judge joins with the event code and PIN, and the phone stays joined afte
   await page.getByLabel("Event code").fill("demo-cup");
   await page.getByLabel("Your 6-digit PIN").fill("100 001");
   await page.getByRole("button", { name: "Join" }).click();
-  await expect(page).toHaveURL(/\/seat$/);
+  await expect(page).toHaveURL(/\/(seat|judge\/[^/]+|spot\/[^/]+|head\/[^/]+)$/);
   await expect(page.getByText("Judge 1")).toBeVisible();
   await expect(page.getByText("Demo Cup")).toBeVisible();
   await page.reload();

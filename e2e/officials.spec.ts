@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { test, expect, installSupabaseProxy } from "./base";
+import { test, expect, installSupabaseProxy, closePhones } from "./base";
 import { createOrganiser } from "./organiser";
 
 type Org = Awaited<ReturnType<typeof createOrganiser>>;
@@ -70,7 +70,7 @@ test("a seat: the PIN is shown in full once, afterwards behind Show PIN; regener
     // a phone joins with the PIN and shows as connected
     const a = await phoneA.newPage();
     await joinWithPin(a, slug, pin);
-    await expect(a).toHaveURL(/\/seat$/);
+    await expect(a).toHaveURL(/\/(seat|judge\/[^/]+|spot\/[^/]+|head\/[^/]+)$/);
     await expect(a.getByText("Judge One")).toBeVisible();
     // officials never get the Note button
     await a.waitForLoadState("networkidle");
@@ -94,11 +94,10 @@ test("a seat: the PIN is shown in full once, afterwards behind Show PIN; regener
     await joinWithPin(b, slug, pin);
     await expect(b.locator("p[role=alert]")).toContainText("not recognised"); // the old PIN is refused on the join page
     await joinWithPin(b, slug, fresh);
-    await expect(b).toHaveURL(/\/seat$/);
+    await expect(b).toHaveURL(/\/(seat|judge\/[^/]+|spot\/[^/]+|head\/[^/]+)$/);
     await expect(b.getByText("Judge One")).toBeVisible();
   } finally {
-    await phoneA.close();
-    await phoneB.close();
+    await closePhones([phoneA, phoneB]);
     await org.cleanup();
   }
 });
@@ -187,7 +186,7 @@ test("self-add from the join page appears pending; approve gives a PIN that join
     await expect(seatCard(page, "Sally Self")).toBeVisible();
 
     await joinWithPin(p, slug, pin);
-    await expect(p).toHaveURL(/\/seat$/);
+    await expect(p).toHaveURL(/\/(seat|judge\/[^/]+|spot\/[^/]+|head\/[^/]+)$/);
     await expect(p.getByText("Sally Self")).toBeVisible();
 
     // an archived event refuses the join page's form like an unknown event

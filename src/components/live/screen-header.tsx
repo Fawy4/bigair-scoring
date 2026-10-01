@@ -14,8 +14,11 @@ export function ScreenHeader({
   timerState = "running",
   connection = "synced",
   pending,
+  onRetry,
   details,
+  detailsLabels,
   onToggleDetails,
+  showTimer = true,
 }: {
   heatName: string;
   seat: string;
@@ -23,6 +26,11 @@ export function ScreenHeader({
   timerState?: TimerState;
   connection?: ConnectionStatus;
   pending?: number;
+  onRetry?: () => void;
+  /** Words for the toggle (the spotter's says "Feed"). */
+  detailsLabels?: { off: string; on: string };
+  /** False between heats: no clock, just the lines. */
+  showTimer?: boolean;
   /** undefined = no Details toggle (the spotter has none). */
   details?: boolean;
   onToggleDetails?: () => void;
@@ -30,16 +38,16 @@ export function ScreenHeader({
   return (
     <header data-testid="screen-header" className="flex flex-col border-b border-beach-line bg-beach-bg px-2 pb-0.5 pt-0.5">
       <div className="flex min-h-tap items-center justify-between gap-2">
-        <HeatTimer remainingMs={remainingMs} state={timerState} />
+        {showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className="text-name font-semibold">{copy.live.header.between}</span>}
         {details !== undefined ? (
           <Chip data-testid="details-toggle" pressed={details} onClick={onToggleDetails}>
-            {details ? copy.live.header.detailsOn : copy.live.header.details}
+            {details ? (detailsLabels?.on ?? copy.live.header.detailsOn) : (detailsLabels?.off ?? copy.live.header.details)}
           </Chip>
         ) : null}
       </div>
       <div className="flex items-center justify-between gap-2">
         <p className="min-w-0 truncate text-small font-medium text-beach-muted">{copy.live.header.heatLine(heatName, seat)}</p>
-        <ConnectionBadge status={connection} pending={pending} />
+        <ConnectionBadge status={connection} pending={pending} onRetry={onRetry} />
       </div>
     </header>
   );

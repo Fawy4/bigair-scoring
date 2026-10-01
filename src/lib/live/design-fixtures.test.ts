@@ -12,10 +12,11 @@ import {
   labelRiders,
   matrixMain,
   matrixStates,
-  previewCompose,
+  previewVocab,
   resultRows,
   tileRiders,
 } from "./design-fixtures";
+import { composeTrick } from "@/lib/engine/tricks";
 import { formatCell } from "./matrix-model";
 import { queueView } from "./queue-model";
 
@@ -153,7 +154,7 @@ describe("the Details view (rider cards and everything per rider)", () => {
     expect(q.riders.length).toBeGreaterThanOrEqual(3);
     expect(q.riders.length).toBeLessThanOrEqual(4);
     expect(q.riders[0]).toMatchObject({ id: "red", attempts: 6, max: 7 });
-    expect(q.riders.some((r) => r.attempts >= r.max)).toBe(true);
+    expect(q.riders.some((r) => r.attempts >= (r.max ?? Infinity))).toBe(true);
   });
   it("Red's sheet: counted tricks 1, 2, 5, the crash, Left 3 · Right 1, counter 6 / 7, attempt 2 scored 8.25", () => {
     const s = q.sheets.red;
@@ -196,19 +197,12 @@ describe("the head judge's laptop console", () => {
   });
 });
 
-describe("the spotter builder (preview only; the real composer is built in 5b)", () => {
-  it("Left ×2 Backroll Board-off Handle pass, whatever order the add-ons were tapped (docs/08 §1F)", () => {
-    const a = previewCompose({ direction: "left", multiplier: "x2", base: "backroll", addons: ["board_off", "handle_pass"] });
-    const b = previewCompose({ direction: "left", multiplier: "x2", base: "backroll", addons: ["handle_pass", "board_off"] });
-    expect(a.name).toBe("Left ×2 Backroll Board-off Handle pass");
-    expect(b.name).toBe(a.name);
-    expect(a.categoryKey).toBe("handle_pass");
-  });
-  it("×1 is not written", () => {
-    expect(previewCompose({ direction: "right", multiplier: "x1", base: "frontroll", addons: [] })).toEqual({ name: "Right Frontroll", categoryKey: "rotation" });
-  });
-  it("nothing chosen gives no name", () => expect(previewCompose({ addons: [] }).name).toBe(""));
+describe("the spotter builder's blocks", () => {
   it("every block of the vocabulary has an id the builder can use", () => expect(blockIdsFor().length).toBeGreaterThan(30));
+  it("the real composer reads the same vocabulary the page draws", () => {
+    const vocab = previewVocab();
+    expect(composeTrick(vocab, { direction: "left", items: [{ id: "base:backroll", multiplier: "x2" }, { id: "addon:board_off" }, { id: "addon:handle_pass" }] }).name).toBe("Left ×2 Backroll Board-off Handle pass");
+  });
 });
 
 describe("public results: the heat summary", () => {

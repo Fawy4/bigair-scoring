@@ -494,3 +494,39 @@ If 5b runs long it splits at the spotter / judge boundary (5b-1 steps 1–2, 5b-
 
 #### How to test on a phone
 See the click-through at the end of the pull request description.
+
+### Phase 5b – timer, spotter and judge (branch `phase-5b-spotter-judge`)
+
+One pull request holds steps 1, 2 and 3 and the 5b part of step 7, so there is no 5b-2.
+
+#### Done
+- **Heat timer on server time.** Start, Pause, Resume, End and "End at 0:00" are database functions; phones work out the time left from the server's clock (offset measured on each request), never from their own. Every official phone calls "end if due" at 0:00, so no scheduled job is needed. One running heat per event (event setting "Heats running at once", default 1). Start refuses in plain words: draw not locked, panel too small, a seat still waiting for a place, another heat running.
+- **Beep and vibration** at 1:00 and 0:00 only after a "Sound on" tap (iPhone rule). The timer stays visible without sound.
+- **Minimal /head page** (laptop or phone): Start, Pause, Resume, End, Hold, Resume at, Shift, rider totals as scores come in. The organiser's Hold / Resume at / Shift in the Timetable step now use server time. Publishing and the score table are 5c.
+- **Spotter screen** (`/spot/<event>`): opens the running heat by itself; logs by tap, by typing and by speaking (where the browser has speech recognition); CRASH asks once; the 7th attempt greys the rider out; Undo last for 10 seconds; "Possible duplicate" between two spotters; works through a send queue (retry, idempotency key, pending / sent shown).
+- **Trick model (your change during 5b):** a trick is an ordered sequence of blocks; "Late rotations" added (vocabulary v4); typed and spoken text read the same way; an unknown word touching the trick word is kept as free text for the head judge. Written in docs/03, 05, 06, 08 §1G and the plan (§11 row 27).
+- **Spotter layout per division** in the Divisions step (family order, block order, visibility, move to another family, favourites on top, add block into any family; drag with arrows / "Move to…" as the tap alternative); stored in `divisions.trick_base.layout`; rendered on the spotter screen.
+- **Judge screen** (`/judge/<event>`): scoring queue, each attempt appears within a second, one tap scores it, criteria tabs if the model has them, Missed and Flag, "Repeat" badge, no scoring of crashes, then the Impression / Variety step with the heat summary card and Submit (one confirmation). Scores lock at Submit or at review; the head judge can reopen one judge. Offline for 20 s loses and duplicates nothing.
+- **Percentages:** division setting "Show scores as % of maximum" (Advanced, default off) decides what screens show; the model's display field is only the export default.
+- **Data model without screens:** `trick_attempts.height_m / height_source / height_ref / height_at` and the `sensor_bindings` table.
+- **Replaced the /design stand-ins** (trick-name builder, summary card counts) with the tested code.
+
+#### Test evidence
+- `npm run typecheck` clean · `npm run lint` clean · `npm test`: **106 files, 1321 tests** passed (new: tricks composer / reader / builder, layout, timer, cues, queue, current heat, run order, judge items, head totals, criteria, summary, beach-rules scan of the live screens).
+- `npm run test:rls`: **10 files, 257 tests passed** against the hosted dev project (new: live-heat, live-judge, live-spotter, live-realtime).
+- Playwright (throwaway organisations, removed by the ledger): live-spotter, live-spotter-layout, live-judge, live-head, trick-layout, plus the older suites updated for the new rules. Full run: **91 passed, 1 skipped, 6 failed on the first pass**; the 6 are timeouts after 20 minutes of load on the dev server (15 s limits); run again on their own, all 6 passed (5 in one batch, the Custom ladder test in its own run, 20 s).
+- The migration `20261004100000_phase5b_live_heat.sql` and the vocabulary v4 are applied to the hosted project; types regenerated. Arrow, EKL and Demo were not touched by any test.
+
+#### Choices I made where the docs were silent
+1. **Reader tolerance:** one wrong letter for a 5-letter word, two for 6 letters or more, only when exactly one block is the clear winner (the plan's own vector "dubble" needs two).
+2. **A judge stays on the last finished heat** until the next one starts, so the Impression step is never snatched away.
+3. **Hold / Shift** return the new plan straight to the page, so the head page shows them without a reload.
+
+#### Not done / not verified
+- **Realtime could not be tested through the sandbox browser** (it cannot open the WebSocket). It is verified from Node against the hosted project; the phones also poll every 5 seconds if Realtime is down. Please check "two judge phones see each attempt within a second" on the preview.
+- Not seen on a real iPhone or in sun. Speech recognition depends on the browser (Chrome Android yes; iPhone Safari partly).
+- Publishing, the score table, re-open, Re-run heat, practice heat: 5c.
+- Sensor data has no screens (by design).
+
+#### How to test on the preview (laptop and two phones, Demo event)
+See the click-through at the end of the pull request description.

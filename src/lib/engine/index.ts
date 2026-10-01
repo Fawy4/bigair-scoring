@@ -2,3 +2,4 @@
 export * from "./scoring";
 export * from "./ladder";
 export * from "./schedule";
+export * from "./tricks";

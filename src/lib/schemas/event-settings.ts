@@ -19,8 +19,10 @@ export const EventSettingsSchema = z.looseObject({
   readyCallMin: z.number().int().min(0).max(120).default(10),
   /** How often public pages ask for new scores. */
   livePollSec: z.number().int().min(3).max(60).default(7),
-  /** How long judges may still enter marks after a heat ends. */
+  /** No longer read (since 5b a judge's scores lock at Submit or at review); kept so older events still parse. */
   judgeGraceSec: z.number().int().min(0).max(3600).default(180),
+  /** Heats that may run (or be paused) at the same time in this event. */
+  maxRunningHeats: z.number().int().min(1).max(5).default(1),
   judgesMayLogAttempts: z.boolean().default(false),
   /** Show the wind-call banner on public pages and the big screen (Phase 5 adds the calls themselves). */
   windCallBanner: z.boolean().default(true),

@@ -14,6 +14,8 @@ import { ScoringModelSchema } from "@/lib/schemas/scoring-model";
 import { FORMAT_NULLABLE, mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { issuesToMap } from "@/lib/form/path";
 import { copy } from "@/lib/ui-copy";
+import { DivisionLiveSchema, type DivisionLive } from "@/lib/schemas/division-live";
+import { isDefaultLayout, parseLayout } from "@/lib/trick-base/layout";
 
 const E = copy.divisions.errors;
 import type { createClient } from "@/lib/supabase/server";
@@ -92,7 +94,7 @@ export async function duplicateDivision(divisionId: string): Promise<Ok<{ id: st
   const { supabase } = await getOrgContext();
   const { data: src } = await supabase
     .from("divisions")
-    .select("event_id, name, scoring_model_id, scoring_overrides, format_template_id, format_params, description, identification, trick_base")
+    .select("event_id, name, scoring_model_id, scoring_overrides, format_template_id, format_params, description, identification, trick_base, live_settings")
     .eq("id", divisionId)
     .maybeSingle();
   if (!src) return { ok: false, error: E.notFound };
@@ -111,6 +113,7 @@ export async function duplicateDivision(divisionId: string): Promise<Ok<{ id: st
       description: src.description,
       identification: src.identification,
       trick_base: src.trick_base,
+      live_settings: src.live_settings,
     }) // the judges (panel) are not copied: each division has its own panel, chosen in the Officials step
     .select("id")
     .single();
@@ -250,20 +253,40 @@ export async function saveDivisionDescription(divisionId: string, text: string):
 
 const BlockId = z.string().regex(/^(direction|multiplier|base|addon|grab_landing):[a-z0-9_]{1,80}$/);
 
-/** The blocks the organiser unticked for one division. Once a heat has started a block can be ticked again but never unticked. */
-export async function saveTrickBase(divisionId: string, disabled: string[]): Promise<Ok<object> | Fail> {
+/**
+ * The blocks the organiser unticked for one division, and how the spotter's screen is laid out (docs/08 §1G-5). Once a heat has started a block can be
+ * ticked again but never unticked; the layout can change at any time. A layout with nothing set is stored as nothing.
+ */
+export async function saveTrickBase(divisionId: string, disabled: string[], layout?: unknown): Promise<Ok<object> | Fail> {
   const T = copy.trickBase.errors;
   if (!uuid.safeParse(divisionId).success) return { ok: false, error: E.notFound };
   const ids = z.array(BlockId).max(500).safeParse(disabled);
   if (!ids.success) return { ok: false, error: T.failed };
+  const parsedLayout = layout === undefined ? null : parseLayout(layout);
+  const value: Record<string, unknown> = { disabled: [...new Set(ids.data)].sort() };
+  if (parsedLayout && !isDefaultLayout(parsedLayout)) value.layout = parsedLayout;
   const { supabase } = await getOrgContext();
   const d = await eventOf(supabase, divisionId);
   if (!d) return { ok: false, error: E.notFound };
-  const { data, error } = await supabase.from("divisions").update({ trick_base: { disabled: [...new Set(ids.data)].sort() } as never }).eq("id", divisionId).select("id");
+  const { data, error } = await supabase.from("divisions").update({ trick_base: value as never }).eq("id", divisionId).select("id");
   if (error) return { ok: false, error: error.message.includes("TRICK_BASE_LOCKED") ? T.locked : T.failed };
   if (!data?.length) return { ok: false, error: T.failed };
   refresh(d.event_id);
   return { ok: true };
+}
+
+/** What a division's live screens show: percentages of the maximum (off unless asked for) and the parts of the heat-end summary card. */
+export async function saveLiveSettings(divisionId: string, settings: unknown): Promise<Ok<{ settings: DivisionLive }> | Fail> {
+  if (!uuid.safeParse(divisionId).success) return { ok: false, error: E.notFound };
+  const parsed = DivisionLiveSchema.safeParse(settings);
+  if (!parsed.success) return { ok: false, error: E.failed };
+  const { supabase } = await getOrgContext();
+  const d = await eventOf(supabase, divisionId);
+  if (!d) return { ok: false, error: E.notFound };
+  const { data, error } = await supabase.from("divisions").update({ live_settings: parsed.data as never }).eq("id", divisionId).select("id");
+  if (error || !data?.length) return { ok: false, error: E.failed };
+  refresh(d.event_id);
+  return { ok: true, settings: parsed.data };
 }
 
 /** "+ Add block": a local name in the event's own vocabulary, proposed to the master base. Allowed at any time (adding never removes anything). */

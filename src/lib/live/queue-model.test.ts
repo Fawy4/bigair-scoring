@@ -50,3 +50,22 @@ describe("the queue", () => {
     expect(queueView([], null)).toMatchObject({ current: null, waiting: 0, history: [] });
   });
 });
+
+describe("an attempt picked from a rider's sheet", () => {
+  const items = [
+    { id: "a", status: "landed" as const, score: null },
+    { id: "b", status: "landed" as const, score: null },
+    { id: "c", status: "landed" as const, score: 7 },
+  ];
+  it("an unscored one jumps the queue without being called a correction", () => {
+    const v = queueView(items, "b");
+    expect(v.current?.id).toBe("b");
+    expect(v.correcting).toBe(false);
+    expect(v.waitingIds).toEqual(["a"]);
+  });
+  it("a scored one comes back as a correction", () => {
+    const v = queueView(items, "c");
+    expect(v.current?.id).toBe("c");
+    expect(v.correcting).toBe(true);
+  });
+});
