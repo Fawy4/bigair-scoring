@@ -86,6 +86,9 @@ export function AttemptLogger({
   const [raw, setRaw] = useState<{ method: "text" | "speech"; text: string } | null>(null);
   const [typed, setTyped] = useState("");
   const [listening, setListening] = useState(false);
+  // only known in the browser: deciding it while rendering would not match what the server drew
+  const [micSupported, setMicSupported] = useState(false);
+  useEffect(() => setMicSupported(speechSupported()), []);
   const [micNote, setMicNote] = useState<string | null>(null);
   const [showOthers, setShowOthers] = useState(false);
   const [logged, setLogged] = useState<{ text: string; key: string; at: number } | null>(null);
@@ -157,7 +160,7 @@ export function AttemptLogger({
     value: typed,
     onChange: setTyped,
     onRead: () => readText(typed, "text"),
-    micSupported: speechSupported(),
+    micSupported,
     listening,
     micNote,
     onMic: () => {

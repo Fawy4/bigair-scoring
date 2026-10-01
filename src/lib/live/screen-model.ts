@@ -3,7 +3,7 @@ import { riderLabelModel, type LabelModel } from "@/lib/identification/rider-lab
 import { blocksFromVocabulary, type VocabularyJson } from "@/lib/trick-base";
 import { parseLayout, resolveLayout, type FamilyView } from "@/lib/trick-base/layout";
 import type { PendingAttempt } from "./pending";
-import type { AttemptRow, HeatRow, LiveContext, LiveDivisionContext, SlotRow } from "./types";
+import type { AttemptRow, LiveContext, LiveDivisionContext, SlotRow } from "./types";
 
 export interface HeatRider {
   entryId: string;

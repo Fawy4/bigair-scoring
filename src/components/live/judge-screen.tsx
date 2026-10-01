@@ -78,7 +78,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const heat = live.heat;
   const division = ctx.divisions.find((d) => d.id === heat?.division_id);
   const model = division?.model;
-  const scale = model?.trick.scale ?? { min: 0, max: 10, step: 0.1 };
+  const scale = useMemo(() => model?.trick.scale ?? { min: 0, max: 10, step: 0.1 }, [model]);
   const entry = model?.trick.entry ?? "single";
   const impression = model?.heat.impression ?? null;
   const max = division?.maxAttempts ?? null;
