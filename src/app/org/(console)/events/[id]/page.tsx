@@ -20,7 +20,7 @@ const T = copy.dashboard;
 export default async function EventDashboard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase } = await getOrgContext();
-  const { data: event } = await supabase.from("events").select("id, name, slug, status, timezone, start_date, end_date, location").eq("id", id).maybeSingle();
+  const { data: event } = await supabase.from("events").select("id, name, slug, status, timezone, start_date, end_date, location, settings").eq("id", id).maybeSingle();
   if (!event) notFound();
   const tz = event.timezone || "Africa/Cairo";
   const today = todayIn(tz, Date.now());
@@ -38,7 +38,7 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
   let finish: string | null = null;
   if (todays) {
     try {
-      const { plan, defaults } = rowToPlan(todays);
+      const { plan, defaults } = rowToPlan(todays, parseEventSettings(event.settings).readyCallMin);
       const t = computeTimetable(plan, model.lives, { timezone: tz, eventDay: today, defaults, now: new Date().toISOString() });
       rows = t.rows;
       finish = t.finish;
@@ -116,7 +116,7 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
         )}
       </section>
 
-      <WindCallControl eventId={id} bannerOn={parseEventSettings((await supabase.from("events").select("settings").eq("id", id).single()).data?.settings).windCallBanner} />
+      <WindCallControl eventId={id} bannerOn={parseEventSettings(event.settings).windCallBanner} />
 
       <section className="flex flex-col gap-3" aria-label={T.shareHeading}>
         <h2 className="text-xl font-extrabold">{T.shareHeading}</h2>

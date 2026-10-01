@@ -2520,6 +2520,7 @@ export type Database = {
         Args: { p_entries: string[]; p_heat: string; p_reason: string }
         Returns: undefined
       }
+      get_live_heat_for_server: { Args: { p_heat: string }; Returns: Json }
       get_public_draw: { Args: { p_event: string }; Returns: Json }
       get_public_event: {
         Args: { p_slug: string }

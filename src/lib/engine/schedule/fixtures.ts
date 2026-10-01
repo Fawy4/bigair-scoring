@@ -26,7 +26,7 @@ export const plan = (id: string): SchedulePlan => {
 /** ISO instant for a wall-clock time in Cairo on the event day. */
 export const at = (hhmm: string, eventDay = DAY) => toIso(localToUtc(eventDay, hhmm, TZ));
 
-export const opts = (now?: string): TimetableOptions => ({ timezone: TZ, eventDay: DAY, defaults: day.defaults, ...(now ? { now } : {}) });
+export const opts = (now?: string): TimetableOptions => ({ timezone: TZ, eventDay: DAY, defaults: { ...day.defaults, readyCallMin: 15 }, ...(now ? { now } : {}) });
 
 /** One HeatLive per distinct heat across all plans; a round's "Final" is the last heat of its round. */
 export function allHeats(): HeatLive[] {

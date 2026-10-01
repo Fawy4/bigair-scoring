@@ -5,24 +5,29 @@ describe("stored plans", () => {
   const row = { id: "p1", event_id: "e", day: "2026-10-03", name: "Plan A", items: [{ id: "r1", kind: "heat", heatId: "h1", durationMin: 10 }], anchors: { r1: "10:00" }, actual_starts: {}, hold: null, defaults: { breakAfterHeatMin: 2 }, active: true };
 
   it("a row becomes a checked plan with defaults filled in", () => {
-    const { plan, day, defaults } = rowToPlan(row);
+    const { plan, day, defaults } = rowToPlan(row, 15);
     expect(plan).toMatchObject({ id: "p1", name: "Plan A", active: true, anchors: { r1: "10:00" } });
     expect(day).toBe("2026-10-03");
     expect(defaults).toEqual({ breakAfterHeatMin: 2, breakAfterRoundMin: 5, readyCallMin: 15 });
   });
 
   it("a damaged plan says so instead of turning into an empty one", () => {
-    expect(() => rowToPlan({ ...row, anchors: { ghost: "10:00" } })).toThrow(/damaged/);
-    expect(() => rowToPlan({ ...row, anchors: { r1: "25:99" } })).toThrow(/damaged/);
+    expect(() => rowToPlan({ ...row, anchors: { ghost: "10:00" } }, 15)).toThrow(/damaged/);
+    expect(() => rowToPlan({ ...row, anchors: { r1: "25:99" } }, 15)).toThrow(/damaged/);
   });
 
   it("the plan goes back to its row without the day and the flags", () => {
-    expect(planToRow(rowToPlan(row).plan)).toEqual({ name: "Plan A", items: row.items, anchors: row.anchors, actual_starts: {}, hold: null });
+    expect(planToRow(rowToPlan(row, 15).plan)).toEqual({ name: "Plan A", items: row.items, anchors: row.anchors, actual_starts: {}, hold: null });
+  });
+
+  it("the ready call is the event's one setting, not something stored on the run order: a stored value is ignored", () => {
+    expect(defaultsOf({ breakAfterHeatMin: 2, readyCallMin: 5 }, 20)).toEqual({ breakAfterHeatMin: 2, breakAfterRoundMin: 5, readyCallMin: 20 });
+    expect(rowToPlan({ ...row, defaults: { readyCallMin: 5 } }, 12).defaults.readyCallMin).toBe(12);
   });
 
   it("defaults fall back for anything unreadable", () => {
-    expect(defaultsOf(null)).toEqual({ breakAfterHeatMin: 3, breakAfterRoundMin: 5, readyCallMin: 15 });
-    expect(defaultsOf({ breakAfterHeatMin: "x" })).toEqual({ breakAfterHeatMin: 3, breakAfterRoundMin: 5, readyCallMin: 15 });
+    expect(defaultsOf(null, 15)).toEqual({ breakAfterHeatMin: 3, breakAfterRoundMin: 5, readyCallMin: 15 });
+    expect(defaultsOf({ breakAfterHeatMin: "x" }, 15)).toEqual({ breakAfterHeatMin: 3, breakAfterRoundMin: 5, readyCallMin: 15 });
   });
 });
 

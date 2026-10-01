@@ -24,8 +24,8 @@ export const EventSettingsSchema = z.looseObject({
   publicResultsOnPublish: z.boolean().default(false),
   /** The final's result stays hidden until the organiser releases it (podium). Uses heats.publish_hold. */
   holdFinalResult: z.boolean().default(false),
-  /** Minutes before a heat that riders are called to the ready area. */
-  readyCallMin: z.number().int().min(0).max(120).default(10),
+  /** Minutes before a heat that riders are called to the ready area. The one place this is set: the run order, the timetables and the rider pages all read it. */
+  readyCallMin: z.number().int().min(0).max(120).default(15),
   /** How often public pages ask for new scores. */
   livePollSec: z.number().int().min(3).max(60).default(7),
   /** Seconds each page of the big screen stays up before the next one (live heat, timetable, last results, sponsors). */

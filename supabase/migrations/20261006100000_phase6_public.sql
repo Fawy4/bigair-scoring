@@ -108,7 +108,7 @@ begin
     'branding', jsonb_build_object('logoUrl', ev.branding ->> 'logoUrl', 'sponsors', coalesce(ev.branding -> 'sponsors', '[]'::jsonb)),
     'settings', jsonb_build_object(
       'windCallBanner', v_banner,
-      'readyCallMin', coalesce((ev.settings ->> 'readyCallMin')::int, 10),
+      'readyCallMin', coalesce((ev.settings ->> 'readyCallMin')::int, 15),
       'livePollSec', coalesce((ev.settings ->> 'livePollSec')::int, 7),
       'screenRotateSec', coalesce((ev.settings ->> 'screenRotateSec')::int, 20),
       'externalLeaderboards', coalesce(ev.settings -> 'externalLeaderboards', '[]'::jsonb),
@@ -134,7 +134,7 @@ begin
   return jsonb_build_object(
     'allowed', true, 'server_now', now(), 'timezone', ev.timezone,
     'poll_sec', coalesce((ev.settings ->> 'livePollSec')::int, 7),
-    'ready_call_min', coalesce((ev.settings ->> 'readyCallMin')::int, 10),
+    'ready_call_min', coalesce((ev.settings ->> 'readyCallMin')::int, 15),
     'plans', coalesce((select jsonb_agg(jsonb_build_object('id', p.id, 'day', p.day, 'name', p.name, 'items', p.items, 'anchors', p.anchors,
                 'actual_starts', p.actual_starts, 'hold', p.hold, 'defaults', p.defaults) order by p.day, p.created_at)
               from public.schedule_plans p where p.event_id = p_event and p.active), '[]'::jsonb),

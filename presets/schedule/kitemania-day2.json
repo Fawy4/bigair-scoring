@@ -2,7 +2,7 @@
   "_comment": "Re-expression of the owner's 'Kitemania Day 2 Timetable' spreadsheet (Sheet1) as three schedule plans. In the app, items reference heatId; here they use heatRef {division, round, heat} so the test fixture can resolve them after generating the draws. Expected computed times are in docs/08-TEST-SCENARIOS.md section 3.",
   "eventDay": "2026-10-03",
   "timezone": "Africa/Cairo",
-  "defaults": { "breakAfterHeatMin": 3, "breakAfterRoundMin": 5, "readyCallMin": 15 },
+  "defaults": { "breakAfterHeatMin": 3, "breakAfterRoundMin": 5 },
   "plans": [
     {
       "id": "main",

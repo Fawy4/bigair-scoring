@@ -193,4 +193,5 @@ Written in words. Where a row refines earlier text in this file, this section wi
 - **`wind_calls`**: status also allows `clear`; `set_wind_call(event, status, message)` for the head judge or an organiser (audited as `wind_call_set`, message up to 140 letters). The public site shows the newest call unless it is `clear` or the event's banner switch is off.
 - **Visitors cannot select from `heat_slots`** any more (the 5c column grant is gone); seats reach them only through the functions above.
 - **Event settings** added: `screenRotateSec` (5 to 120, default 20) and `externalLeaderboards` (title, https url, embed; up to six).
-
+- **Live view split** (`20261006100200_live_scores_server_only.sql`): `get_live_heat_for_server(heat)` is the full live view (attempts, scores by seat number, Impression scores, penalties), executable by the service role only. `get_public_live_heat(heat)` calls it and removes `scores`, `impressions` and `penalties`, so a visitor never receives a judge's score. The public pages work totals out on the server.
+- **Ready call** (`20261006100300_ready_call_one_setting.sql`): `events.settings.readyCallMin` (default 15) is the only ready call; `schedule_plans.defaults` no longer holds it. The public functions fall back to 15.

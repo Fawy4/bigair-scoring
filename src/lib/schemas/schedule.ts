@@ -48,7 +48,6 @@ export const RunItemSchema = z.union([RunHeatItemSchema, RunBreakItemSchema, Run
 export const ScheduleDefaultsSchema = z.object({
   breakAfterHeatMin: z.number().min(0).default(3),
   breakAfterRoundMin: z.number().min(0).default(5),
-  readyCallMin: z.number().min(0).default(15),
 });
 
 export const SchedulePlanSchema = z
@@ -114,7 +113,8 @@ export type HeatRef = z.infer<typeof HeatRefSchema>;
 export type RunItem = z.infer<typeof RunItemSchema>;
 export type RunHeatItem = z.infer<typeof RunHeatItemSchema>;
 export type RunBreakItem = z.infer<typeof RunBreakItemSchema>;
-export type ScheduleDefaults = z.infer<typeof ScheduleDefaultsSchema>;
+/** What the timetable engine reads: the run order's own breaks plus the event's one "Ready call" setting (it is no longer stored on the run order). */
+export type ScheduleDefaults = z.infer<typeof ScheduleDefaultsSchema> & { readyCallMin: number };
 export type SchedulePlan = z.infer<typeof SchedulePlanSchema>;
 export type ScheduleDay = z.infer<typeof ScheduleDaySchema>;
 

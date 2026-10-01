@@ -114,7 +114,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
   });
 
   const plans = (planRows ?? []).map((r) => {
-    const dp = rowToPlan(r as unknown as PlanRow);
+    const dp = rowToPlan(r as unknown as PlanRow, settings.readyCallMin);
     return { id: r.id, day: r.day, name: r.name, plan: dp.plan, defaults: dp.defaults, updatedAt: r.updated_at };
   });
 
@@ -128,7 +128,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
   for (const l of model.lives) heatMeta[l.heatId] = { roundLast: Boolean(l.roundLast), ...(l.breakAfterHeatMin !== undefined ? { breakAfterHeatMin: l.breakAfterHeatMin } : {}), ...(l.breakAfterRoundMin !== undefined ? { breakAfterRoundMin: l.breakAfterRoundMin } : {}) };
 
   return {
-    event: { id: event.id, name: event.name, slug: event.slug, timezone: event.timezone, judgesMayLogAttempts: settings.judgesMayLogAttempts, maxRunningHeats: settings.maxRunningHeats, isSimulation: Boolean(event.is_simulation) },
+    event: { id: event.id, name: event.name, slug: event.slug, timezone: event.timezone, judgesMayLogAttempts: settings.judgesMayLogAttempts, maxRunningHeats: settings.maxRunningHeats, isSimulation: Boolean(event.is_simulation), readyCallMin: settings.readyCallMin },
     viewer,
     divisions,
     rounds: roundRows ?? [],

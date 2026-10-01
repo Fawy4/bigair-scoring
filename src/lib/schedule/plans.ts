@@ -21,13 +21,14 @@ export interface DayPlan {
   defaults: ScheduleDefaults;
 }
 
-export function defaultsOf(json: unknown): ScheduleDefaults {
+/** The run order's breaks plus the event's Ready call (minutes before a heat): one setting, on the Event step. */
+export function defaultsOf(json: unknown, readyCallMin: number): ScheduleDefaults {
   const r = ScheduleDefaultsSchema.safeParse(json ?? {});
-  return r.success ? r.data : ScheduleDefaultsSchema.parse({});
+  return { ...(r.success ? r.data : ScheduleDefaultsSchema.parse({})), readyCallMin };
 }
 
 /** A stored plan, checked. A plan that does not parse (hand-edited data) is reported, not silently emptied. */
-export function rowToPlan(row: PlanRow): DayPlan {
+export function rowToPlan(row: PlanRow, readyCallMin: number): DayPlan {
   const parsed = SchedulePlanSchema.safeParse({
     id: row.id,
     name: row.name,
@@ -38,8 +39,11 @@ export function rowToPlan(row: PlanRow): DayPlan {
     ...(row.hold ? { hold: row.hold } : {}),
   });
   if (!parsed.success) throw new Error(`The plan "${row.name}" is damaged: ${parsed.error.issues[0]?.message ?? "unknown problem"}`);
-  return { plan: parsed.data, day: row.day, defaults: defaultsOf(row.defaults) };
+  return { plan: parsed.data, day: row.day, defaults: defaultsOf(row.defaults, readyCallMin) };
 }
+
+/** Just the plan (items, pins, hold) for code that does not work out times. */
+export const planOfRow = (row: PlanRow): SchedulePlan => rowToPlan(row, 0).plan;
 
 export function planToRow(plan: SchedulePlan): { name: string; items: unknown; anchors: unknown; actual_starts: unknown; hold: unknown } {
   return { name: plan.name, items: plan.items, anchors: plan.anchors, actual_starts: plan.actualStarts, hold: plan.hold ?? null };

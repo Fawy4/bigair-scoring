@@ -225,7 +225,7 @@ describe("the rider page", () => {
   const res = results(heats);
   const tabs = buildHeatTabs(res, site(), rules());
   const tt: PublicTimetable = {
-    allowed: true, server_now: "2026-10-10T06:00:00Z", timezone: "Africa/Cairo", poll_sec: 7, ready_call_min: 10,
+    allowed: true, server_now: "2026-10-10T06:00:00Z", timezone: "Africa/Cairo", poll_sec: 7, ready_call_min: 15,
     plans: [{ id: "p", day: "2026-10-10", name: "Main", items: [{ id: "i1", kind: "heat", heatId: "h1" }, { id: "i2", kind: "heat", heatId: "h2" }], anchors: { i1: "10:00" }, actual_starts: {}, hold: null, defaults: { breakAfterHeatMin: 2, breakAfterRoundMin: 3, readyCallMin: 15 } }],
     divisions: [{ id: "d1", name: "Pro Men", sort_order: 1 }], rounds: [{ id: "r1", division_id: "d1", name: "Round 1", short_name: "R1", sort_order: 1 }],
     heats: ["h1", "h2"].map((id, i) => ({ id, division_id: "d1", round_id: "r1", number: i + 1, suffix: null, name: null, status: i === 0 ? "published" : "scheduled", effective_status: "scheduled", held: false, started_at: i === 0 ? "2026-10-10T07:00:00Z" : null, ended_at: i === 0 ? "2026-10-10T07:10:00Z" : null, paused_at: null, paused_total_sec: 0, duration_sec: 600, warm_up_sec: 0, rerun_of: null, round_last: false, break_after_heat_min: 2, break_after_round_min: 3 })),

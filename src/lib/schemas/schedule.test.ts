@@ -11,7 +11,7 @@ describe("Schedule schema", () => {
     expect(day.timezone).toBe("Africa/Cairo");
     expect(day.plans.map((p) => p.id)).toEqual(["main", "plan-a-bad-wind", "plan-a-good-wind"]);
     expect(day.plans.filter((p) => p.active)).toHaveLength(1);
-    expect(day.defaults).toEqual({ breakAfterHeatMin: 3, breakAfterRoundMin: 5, readyCallMin: 15 });
+    expect(day.defaults).toEqual({ breakAfterHeatMin: 3, breakAfterRoundMin: 5 }); // the ready call is the event's one setting, not part of a run order
   });
 
   it("rejects two active plans", () => {

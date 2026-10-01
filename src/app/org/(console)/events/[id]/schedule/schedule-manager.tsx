@@ -92,7 +92,7 @@ function RowShell({ id, problem, children }: { id: string; problem?: string; chi
 }
 
 export function ScheduleManager(props: ScheduleProps) {
-  const { eventId, timezone, days, today, lives, infos } = props;
+  const { eventId, timezone, days, today, lives, infos, readyCallMin } = props;
   const [plans, setPlans] = useState<PlanRow[]>(props.plans);
   const [day, setDay] = useState(days.includes(today) ? today : days[0]);
   const [planId, setPlanId] = useState<string | null>(null);
@@ -115,11 +115,11 @@ export function ScheduleManager(props: ScheduleProps) {
   const parsed = useMemo(() => {
     if (!currentRow) return null;
     try {
-      return rowToPlan(currentRow);
+      return rowToPlan(currentRow, readyCallMin);
     } catch (e) {
       return { error: (e as Error).message } as const;
     }
-  }, [currentRow]);
+  }, [currentRow, readyCallMin]);
   const ok = parsed && !("error" in parsed) ? parsed : null;
   const plan = ok?.plan ?? null;
   const isToday = day === today;

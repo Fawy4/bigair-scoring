@@ -78,7 +78,7 @@ export function buildPublicTimetable(t: PublicTimetable | null, nowIso: string):
   const plans: ActivePlan[] = [];
   for (const p of t.plans) {
     try {
-      const { plan, day, defaults } = rowToPlan({ ...p, event_id: "", active: true });
+      const { plan, day, defaults } = rowToPlan({ ...p, event_id: "", active: true }, t.ready_call_min);
       plans.push({ id: p.id, day, plan, defaults, updatedAt: "" });
     } catch {
       /* a damaged plan is not shown to the public */

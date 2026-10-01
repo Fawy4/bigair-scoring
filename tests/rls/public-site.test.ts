@@ -137,6 +137,7 @@ describe.skipIf(!ENV_OK)("Public site functions (hosted development project)", (
     expect(text).not.toContain("entrants");
     expect(text).not.toContain("seedOrder");
     expect(typeof t.server_now).toBe("string");
+    expect(t.ready_call_min).toBe(12); // the Event step's one setting, set earlier in this file
   });
 
   // ---------------------------------------------------------------- results, holds, masks

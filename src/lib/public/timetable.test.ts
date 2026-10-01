@@ -32,7 +32,7 @@ function payload(heats: TimetableHeat[], plan: Record<string, unknown> = {}): Pu
     server_now: "2026-10-10T06:00:00Z",
     timezone: "Africa/Cairo",
     poll_sec: 7,
-    ready_call_min: 10,
+    ready_call_min: 15,
     plans: [
       {
         id: "p1",
@@ -42,7 +42,7 @@ function payload(heats: TimetableHeat[], plan: Record<string, unknown> = {}): Pu
         anchors: { i1: "10:00" },
         actual_starts: {},
         hold: null,
-        defaults: { breakAfterHeatMin: 2, breakAfterRoundMin: 3, readyCallMin: 15 },
+        defaults: { breakAfterHeatMin: 2, breakAfterRoundMin: 3, readyCallMin: 99 }, // a value stored on the run order is ignored
         ...plan,
       },
     ],
@@ -65,6 +65,11 @@ describe("the public timetable", () => {
     expect(t.now).toBeNull();
     expect(t.upNext.map((r) => r.heat)).toEqual(["Heat 1", "Heat 2"]);
     expect(t.heatsLeft).toBe(3);
+  });
+
+  it("the ready call comes from the event's setting, not from the run order: 20 minutes before 10:00 is 09:40", () => {
+    const t = buildPublicTimetable({ ...payload([heat(1), heat(2)]), ready_call_min: 20 }, at("09:00"));
+    expect(t.rows[0].readyCall).toBe("09:40");
   });
 
   it("a running heat is live and exact; the heat after it moves with the real start; finished heats are done", () => {

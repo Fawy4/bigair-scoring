@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createAnonClient } from "@/lib/supabase/anon";
+import { createServiceClient } from "@/lib/supabase/service";
 import type { PublicDrawPayload, PublicLiveHeat, PublicResults, PublicRules, PublicSite, PublicTimetable } from "./types";
 
 /**
@@ -23,4 +24,17 @@ export const loadTimetable = cache(async (eventId: string) => allowed(await call
 export const loadResults = cache(async (eventId: string) => allowed(await call<PublicResults | { allowed: false }>("get_public_results", { p_event: eventId })) as PublicResults | null);
 export const loadDraw = cache(async (eventId: string) => allowed(await call<PublicDrawPayload | { allowed: false }>("get_public_draw", { p_event: eventId })) as PublicDrawPayload | null);
 export const loadRules = cache(async (eventId: string) => allowed(await call<PublicRules | { allowed: false }>("get_public_rules", { p_event: eventId })) as PublicRules | null);
-export const loadLive = cache(async (heatId: string) => allowed(await call<PublicLiveHeat>("get_public_live_heat", { p_heat: heatId })) as PublicLiveHeat | null);
+/**
+ * The live view of a heat WITH the panel's scores by seat number, for the server only: the pages work the totals out here and send the browser nothing but the
+ * panel's results. A visitor calling `get_public_live_heat` gets no scores at all. The same rules decide whether it is shown (the database answers "not allowed"
+ * for a heat the public may not follow live). Null when the server has no service key or the heat may not be shown.
+ */
+export const loadLive = cache(async (heatId: string): Promise<PublicLiveHeat | null> => {
+  try {
+    const { data, error } = await createServiceClient().rpc("get_live_heat_for_server" as never, { p_heat: heatId } as never);
+    if (error || !data) return null;
+    return allowed(data as PublicLiveHeat);
+  } catch {
+    return null;
+  }
+});
