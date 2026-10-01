@@ -98,7 +98,7 @@ test("organiser: settings, then the Event step", async ({ page }) => {
   await expect(results).not.toBeChecked();
   await expect(hold).toBeChecked();
   await expect(page.getByTestId("event-code")).toHaveText(`arrow-big-air-${org.run}`);
-  await expect(page.getByRole("navigation", { name: "Organiser" })).toBeVisible();
+  await expect(page.getByTestId("step-rail")).toBeVisible();
 
   // the choices are stored in the existing settings fields
   const { data: saved } = await org.db.from("events").select("settings").eq("slug", `arrow-big-air-${org.run}`).single();
@@ -122,18 +122,20 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
     .single();
   expect(error).toBeNull();
   const eventId = ev!.id;
-  const missingInRail = () => page.getByLabel("What is missing in 2. Divisions"); // the left rail on a laptop
+  const divisionsRail = () => page.getByTestId("rail-divisions"); // the left rail on a laptop: a state word and one line of reason
 
   await org.signIn(page, `/org/events/${eventId}/divisions`);
   await expect(page.getByRole("heading", { name: "Step 2: Divisions" })).toBeVisible();
   await expect(page.getByTestId("lock-banner")).toHaveText("Editable until the first heat of this division starts; after that, unlock with a reason (saved).");
-  await expect(missingInRail().getByText("Add at least one division")).toBeVisible();
+  await expect(divisionsRail()).toContainText("Add at least one division");
+  await expect(divisionsRail()).toHaveAttribute("data-state", "not_started");
 
   // add, and the rail follows
   await field("New division name").fill("Pro Men");
   await page.getByRole("button", { name: "+ Add division" }).click();
   await expect(page.getByTestId("division-card")).toHaveCount(1);
-  await expect(missingInRail().getByText("Pro Men: choose how it is scored.")).toBeVisible();
+  await expect(divisionsRail()).toContainText("Pro Men: choose how it is scored.");
+  await expect(divisionsRail()).toHaveAttribute("data-state", "attention");
 
   // Scoring: the legacy preset gives the owner's example sentence
   await field("Scoring preset").selectOption({ label: "Legacy (previous app): single score 0-10 per trick, best 3 + Variety 0-10, 7 attempts" });
@@ -454,7 +456,7 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await page.getByLabel("New name for Final").press("Enter");
   await page.getByRole("button", { name: "Save format for Pro Men" }).click();
   await expect(page.getByText("Format saved for Pro Men").first()).toBeVisible();
-  await expect(page.getByLabel("What is missing in 2. Divisions")).toHaveCount(0); // nothing missing any more
+  await expect(divisionsRail()).toHaveAttribute("data-state", "done"); // nothing missing any more
   const { data: fmt } = await org.db.from("divisions").select("format_params").eq("event_id", eventId).single();
   expect(fmt!.format_params).toMatchObject({ roundDurationMin: { R1: 9, F: 20 }, roundNames: { F: "Grand final" } });
   expect(JSON.stringify(fmt!.format_params)).not.toContain("SF");
