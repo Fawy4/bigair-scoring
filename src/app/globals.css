@@ -238,3 +238,65 @@ body:has(.print-sheet) {
   font-weight: 800;
   background: #fff;
 }
+
+/* ---- Official screens (judge, spotter, head judge) and /design: the beach themes (docs/06 §00, Phase 5a).
+   The hex values are the same ones as src/lib/live/theme-tokens.ts; a test fails if they differ.
+   .beach-day is the default, .beach-dark is switchable per device. Sizes: docs/06 §00.2. */
+.beach-day {
+  --beach-bg: #ffffff;
+  --beach-surface: #f2f2f2;
+  --beach-ink: #111111;
+  --beach-muted: #3b3b3b;
+  --beach-border: #111111;
+  --beach-focus: #0b2e8a;
+  --beach-live: #14532d;
+  --beach-pending: #1e3a8a;
+  --beach-failed: #9f1239;
+  --beach-crash: #991b1b;
+  --beach-outlier: #7c3f00;
+  --beach-missing: #404040;
+  --beach-selected: #0b2e8a;
+  --beach-on-selected: #ffffff;
+  --beach-on-crash: #ffffff;
+  color-scheme: light;
+}
+.beach-dark {
+  --beach-bg: #0a0a0a;
+  --beach-surface: #1c1c1c;
+  --beach-ink: #fafafa;
+  --beach-muted: #d4d4d4;
+  --beach-border: #fafafa;
+  --beach-focus: #9ec5ff;
+  --beach-live: #86efac;
+  --beach-pending: #9ec5ff;
+  --beach-failed: #fda4af;
+  --beach-crash: #fca5a5;
+  --beach-outlier: #fcd34d;
+  --beach-missing: #c4c4c4;
+  --beach-selected: #9ec5ff;
+  --beach-on-selected: #0a0a0a;
+  --beach-on-crash: #0a0a0a;
+  color-scheme: dark;
+}
+.beach-day,
+.beach-dark {
+  background: var(--beach-bg);
+  color: var(--beach-ink);
+  font-weight: 600;
+  /* base sizes (docs/06 §00.2) as variables the components read */
+  --pad-button-min: 56px;
+  --pad-gap: 8px;
+  --pad-digit: 1.75rem; /* 28 px */
+  --rider-name: 1.25rem; /* 20 px */
+  --timer-size: 3.5rem; /* 56 px, above the 48 px floor */
+  --tap-min: 48px;
+}
+.beach-day :focus-visible,
+.beach-dark :focus-visible {
+  outline: 4px solid var(--beach-focus);
+  outline-offset: 2px;
+}
+/* the Rider label has a fixed white body; on a dark page its frame takes the page ink so a Black Lycra is still outlined against the page */
+.beach-dark [data-testid="rider-label"] {
+  border-color: var(--beach-border);
+}
