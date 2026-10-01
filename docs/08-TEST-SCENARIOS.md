@@ -200,6 +200,21 @@ Main plan; hold set at 15:30 during Pros R1 Heat 3 → Heat 3 keeps its actual s
 ### 3F — Plan switch
 Switching the active plan from Main to "Good wind" after Women's heats have actual starts keeps those actual starts (matched by heatId) and re-flows the rest.
 
+## 3G. Warm-up and run order (Phase 4b; `3g-warmup.test.ts`, `3h-run-order.test.ts`)
+- Knockout, 24 riders, riders per heat 3 / 3 / 3, 1 advances, final of 2: **4 rounds of 8, 4, 2 and 1 heats = 15 heats**; Round 2 shows "1st H1 · 1st H2" in its first heat.
+- Warm-up 5, heat 10, breaks 2, first heat pinned at 10:00: row 1 warm-up 09:55 · start 10:00 · end 10:10; row 2 warm-up 10:12 · start 10:17; heat k starts 10:00 + 17 × (k − 1); the 15th heat starts 13:58 and ends **14:08**; 253 minutes from the first warm-up, "about 4 h". Warm-up 0 gives every value of §3 above, unchanged.
+- A pin on a row is "not before": a late previous heat pushes the row and a warning says so. An explicit break row replaces the automatic break and the warm-up follows it. A per-row break replaces the automatic one.
+- Rebuilding the docs/04 §7.3 day only with the editing functions (add heats, lengths, breaks, pins) gives §3A (finish 16:53), §3B (12:20) and §3C (13:33).
+- Duplicate plan copies rows, pins and lengths, is not active and has nothing started; exactly one plan per day is active; the active plan cannot be deleted; switching mid-day keeps finished heats where they ran (§3F).
+
+## 2H. Draw editing and the custom ladder (Phase 4b; `4a-draw-edit.test.ts`, `4b-custom-ladder.test.ts`)
+- A swap exchanges two riders and marks both heats as changed by hand; moving to an empty seat leaves the old seat empty ("Heat 1 has an empty seat"); placing a rider who already has a seat gives "Amr is in two heats of Round 1", never an error.
+- An extra heat in Round 1 of the 24-rider Knockout: "Round 1 expects 24 riders, 27 placed", "Round 2 expects 9 riders, 8 placed". Taking Heat 2 out renumbers the heats behind it and empties the seats that waited for it.
+- A heat that has started or finished refuses every change except a rename.
+- Custom ladder faults and recommendations: every message in docs/04 decision 37 is a test. "24 riders, 21 seats — 3 riders have no heat", "Round 2 receives 8 riders but has 6 seats — 2 riders have nowhere to go", "24 riders → 8 heats of 3, or 6 of 4", "8 winners arrive in Round 2 → 4 heats of 2, or 2 heats of 4", "Round 3 has 4 heats of 1 — merge them?".
+- The hand-built 24-rider ladder (rounds of 8, 4, 2 and 1 heats, seeds as the generated draw dealt them, "fill the remaining seats" for the rest) equals the generated one: same rounds, heats, seats, numbers and lengths, and the same winners reach the same heats. "Ladder complete — 15 heats, 24 riders, every place accounted for".
+- Property: any ladder with no red fault (200 knockout-style, 60 second-chance, 400 randomly edited and repaired ladders) runs from the first heat to the final with every rider placed exactly once in the first round and every rider placed at the end.
+
 ## 5. Rider identification chips (`presets/identification/schemes.json`)
 - `vests-per-heat`: slot 2 of any heat → chip primary text "YELLOW" with hex `#facc15`; secondary shows name and nationality; `heat_slots.vest_colour = "yellow"`.
 - `fixed-lycra-per-rider`: two entries with `identifiers.vest_colour = "red"` seeded into the same heat → `expandFormat` returns a warning naming that heat; the draw still generates.

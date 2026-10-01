@@ -22,6 +22,8 @@ const RunHeatItemSchema = z
     heatId: z.string().min(1).optional(),
     heatRef: HeatRefSchema.optional(),
     durationMin: z.number().positive().optional(),
+    /** Warm-up before this heat in minutes; absent = the division's (per round) setting. The competition timer is only `durationMin`. */
+    warmUpMin: z.number().min(0).optional(),
     breakAfterMin: z.number().min(0).optional(),
   })
   .refine((i) => Boolean(i.heatId) !== Boolean(i.heatRef), {

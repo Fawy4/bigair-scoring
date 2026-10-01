@@ -10,6 +10,8 @@ export default defineConfig({
   globalTeardown: "./e2e/global-teardown.ts",
   // a first visit to a page compiles it in dev mode, which can take longer than the 5 s default
   expect: { timeout: 15_000 },
+  // a test that signs in, saves twice and reloads needs more than the 30 s default when the database is far away (e.g. a cloud sandbox)
+  timeout: 90_000,
   use: {
     baseURL,
     // Optional: use a pre-installed Chromium instead of the one Playwright downloads.

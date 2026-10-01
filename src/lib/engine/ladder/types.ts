@@ -60,11 +60,15 @@ export interface Slot {
   /** DNS = withdrawn rider or walkover: the slot exists but nobody rides it. */
   modifier?: LadderModifier;
   history?: HistoryEntry[];
+  /** Placed by hand (Phase 4b): results never overwrite this seat and a regenerate leaves it alone. */
+  manual?: boolean;
 }
 
 export interface DrawHeat {
-  /** `${roundId}-H${index}` */
+  /** `${roundId}-H${index}`. Renumbered when a heat is added or taken out of a round before any heat has started. */
   id: string;
+  /** Never changes once the heat exists (Phase 4b): the stored heat, the run order and the audit trail follow it through renumbering. */
+  uid?: string;
   round: string;
   /** 1-based index inside the round. */
   index: number;
@@ -75,6 +79,8 @@ export interface DrawHeat {
   name?: string;
   slots: Slot[];
   durationMin: number;
+  /** Warm-up before the heat in minutes (Phase 4b). The heat's competition timer is only `durationMin`. */
+  warmUpMin?: number;
   breakAfterHeatMin: number;
   breakAfterRoundMin: number;
   /** Last heat of its round that actually rides (drives `breakAfterRoundMin`). */
@@ -106,6 +112,15 @@ export interface DrawRound {
   heats: DrawHeat[];
   /** Slots hold real riders (true) or placeholders (false). */
   seeded: boolean;
+  /**
+   * Every seat names its own source (a place of an earlier heat, or a rider put there by hand) instead of being dealt by the round's
+   * rule. Custom ladders and hand-arranged rounds work like this: a published result fills the seat that names it.
+   */
+  explicit?: boolean;
+  /** The organiser changed this round's structure by hand (added or removed a heat or seat, put a place in a seat); a regenerate asks first. */
+  arranged?: boolean;
+  /** The smallest and largest heat the generator made for this round; the whole-ladder check warns outside them. */
+  limits?: { min: number; max: number };
   /** Organiser pressed "Seed now": missing places became walkovers. */
   seededNow: boolean;
   arrivals: Arrival[];

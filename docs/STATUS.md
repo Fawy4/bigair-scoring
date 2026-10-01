@@ -391,3 +391,55 @@ The owner decided that the target / minimum / maximum rule with the 1 v 1 fallba
 - Moving a rider between several divisions by drag is not built (enter them in each division).
 - Email confirmation of registrations (Phase 7) and showing rider photos to officials (Phase 5: the bucket already lets the organisation read them) are not built.
 - I could not open the Vercel preview from here. Everything below was run locally against the hosted development project.
+
+## Phase 4b – Draw, hands-on editing, custom ladder builder, run order and timetable (branch `phase-4b-draw-timetable`)
+
+### Step 0: the run on main before any change
+- typecheck and lint clean; `npm test` 802 passed; `npm run test:rls` 200 passed; `npm run test:e2e:prod` 3 passed.
+- Playwright on main: **51 passed, 1 skipped, in two passes, not one uninterrupted run** (I am saying so plainly). The first pass had 6 failures: they all passed on their own once the per-test limit was 90 s instead of 30 s (this sandbox is far from the database; the fix is in `playwright.config.ts`). A second pass lost 4 tests because the dev server was stopped by the sandbox; those passed when re-run. Nothing on main's code was red.
+
+### Done
+- **Draw step** per division: Generate draw (confirmed riders only), rounds as columns, heats as cards, Rider labels and placeholders ("1st H1", "1st R2 H3"), Regenerate (one confirmation, refused once a heat has started or while locked, offers to keep hand-arranged heats), Lock draw / Unlock with a written reason (audited), Print / PDF.
+- **Hands-on editing**: drag on a desktop; tap a rider, tap the seat, "Move here" or "Swap with …"; hand-place a rider in any seat including a placeholder; put a place in a seat; clear a seat; add or take out seats, heats and rounds; rename. Checks after every change warn and never block. Every change is one audited server call; started or finished heats change only by name.
+- **Custom ladder** (eighth card on the Format tab): whiteboard builder, dropdowns that grey out used places and say where they went, "1st →" gesture, checker beside (below on a phone) with red faults, amber recommendations and one-tap fixes, "Start from Knockout and edit", save as an organisation format (JSON round trip), **Apply to draw** saves, sets the division's format and draws.
+- **Warm-up** before each heat in the division's timing, per round override, shown as its own part of the timetable row; the format preview states the total time.
+- **Run order & timetable** per event day: unscheduled heats left, run order right, drag or move up / down, breaks and notes, tap a start to pin it, per-row length and break, projected finish and heats left, Duplicate plan, Activate, Hold / Resume at / Shift, PDF (print layout) and PNG in the Division / Session / Start / Duration / End / Break layout.
+- **Dashboard** at `/org/events/<id>`: today's timetable, now and next, what is missing, share cards with link, Copy and QR.
+- Database: migration `20261003100000` applied to the hosted project with `npm run db:apply`; types regenerated. The stored draw is hidden from the public role and writable only through `save_division_draw` / `lock_division_draw` / `unlock_division_draw` / `set_draw_walkover`; guards refuse seat changes on a locked draw or a started heat; `activate_schedule_plan`; plan changes audited. `seed:presets`: 24 unchanged, nothing new to publish (no preset file changed).
+
+### Test evidence
+- `npm run typecheck` clean, `npm run lint` clean, `npm run test:e2e:prod` 3 passed.
+- `npm test`: **77 files, 929 tests passed** (was 802). New: draw editing, custom ladder (every fault and recommendation, hand-built 24-rider knockout equals the generated one, JSON round trip, property tests over 660 generated or edited ladders), warm-up and timetable cascade against the docs/08 values, run-order editing, export rows, heat model, plans, wizard.
+- `npm run test:rls`: **215 passed** (200 before; 15 new in `tests/rls/draw-timetable.test.ts`: only the organisation's organisers save, lock, unlock and edit plans, a locked draw refuses seat changes, unlock needs a reason, started heats are never rearranged, audit rows, the public cannot read the draw). One older test that wrote the draw directly now uses the functions.
+- Playwright: final full run **53 passed, 1 skipped, 1 failed**; the one failure (the Format tab's "everything in view" check) was my new eighth card pushing the diagram off screen, fixed by laying the cards in two columns, and that spec passes on its own. New specs in `e2e/draw-timetable.spec.ts` (3 walk-throughs). All test organisations are removed by the ledger; Arrow, EKL and Demo were never touched.
+
+### Choices I made (please confirm or change)
+1. **Warm-up sits after the break**: a heat starts (previous end + break + warm-up) after the previous one; a pin is on the heat's Start. That gives 253 minutes for your 15 heats, "about 4 h". If you meant warm-up to overlap the break, it is one line in the timetable engine.
+2. **Regenerate on a locked draw is refused** (unlock with a reason first) and needs **one** confirmation, not a typed one; this differs from docs/06 decision 14 (recorded).
+3. **All heats of a round send the same place to the same round** in the custom builder (1st of every Round 1 heat goes to the same round). "Places that go on" is one number per round.
+4. **A 1 v 1 round under a minimum of 3** shows red until you tap "Allow heats of 2 in this round" (the round's own minimum).
+5. **Regenerate keeping hand-arranged heats** keeps heats of the first round; other arranged structure is listed as "could not keep".
+6. **Heat numbers** follow the ladder until a heat starts; after that they never change and a new heat takes the next number.
+7. The Knockout preset's per-round lengths are 10 / 10 / 12 / 15; to get "5 + 10" for every heat set the Semi-finals and Final lengths to 10 in "Heat length per round".
+8. The old "Build my own ladder…" button is replaced by the Custom ladder card; older saved custom formats still open in their round editor.
+9. Signed-in users of other organisations can read the stored draw of a **published** event (names are public there anyway); drafts stay private.
+
+### Owner's decisions on the choices (1 Oct 2026)
+- Accepted as built: warm-up after the break; regenerate refused while locked with one confirmation (docs/06 decision 14 updated); choices 3–6 and 8 of the list above (one place per rank per round, "Allow heats of 2", keep only first-round heats on regenerate, heat numbers stable once a heat starts, Custom ladder card replaces "Build my own ladder…").
+- Changed: the Knockout preset's heat length is now **10 minutes in every round** (preset version 4, seeded and published; existing divisions keep the version they use).
+
+### Two fixes from the owner's click-through (1 Oct 2026)
+- **Custom ladder builder follows "Preview with N riders".** The box is never locked. Round 1 seats, the checker ("24 riders, 21 seats — 3 riders have no heat") and the recommendations all use that number while you design; the division's real riders come first, placeholders ("Rider 23") fill the rest. "Apply to draw" uses the division's real confirmed riders and says what differs ("Designed for 24, the division has 22 — 2 seats will be empty"; or "… 2 riders will have no seat" the other way round). It warns, it never blocks.
+- **Print / PDF of the draw is one page you can send on WhatsApp.** A4 landscape, the whole ladder scaled to fit; rounds are named columns, heats are boxes with the heat number and, when the active run order has one, the start time ("Times are estimates" is printed then). Lycra colours print as the real colour and as its name (white and black outlined), forced to print. Event logo, name, division, date at the top. A round of more than 8 heats is spread over columns of at most 8 and the draw goes onto two pages (big rounds on page 1, the rest on page 2). **Export PNG** draws the same page (one picture per page). Proof: the PDF made without "background graphics" still holds the palette's red, yellow and blue fills.
+- Choice made without asking you: when there is no run order, no times and no "Times are estimates" line are printed.
+
+### Owed for Phase 6 (owner, 1 Oct 2026)
+- **The stored draw of a published event must be readable only through the public pages.** Today any signed-in user can read `divisions.draw` of a published event (the public role cannot). In Phase 6 the public pages must serve only what is meant to be shown, and drafts and unpublished rounds must never be visible to other organisations. Keep for now; do not forget.
+
+### Not done / not verified
+- Start / Hold / Shift for the head judge and the live timer are Phase 5; the organiser's live buttons exist now.
+- The Vercel preview could not be opened from here; everything ran locally against the hosted development project.
+- The public timetable, bracket and join pages are Phase 6.
+
+### How to test on the preview
+See the pull request description.

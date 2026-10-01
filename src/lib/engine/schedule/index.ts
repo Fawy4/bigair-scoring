@@ -4,3 +4,30 @@ export { localToUtc, utcToLocalHHMM, addMinutes, tzOffsetMs, toIso } from "./tim
 export { computeTimetable } from "./timetable";
 export { startHold, resumeHold, shift, activatePlan, type HeatLookup } from "./actions";
 export { resolveHeatRefs } from "./resolve";
+export {
+  addHeatToPlan,
+  addHeatsToPlan,
+  addBreak,
+  addNote,
+  removeItem,
+  moveItem,
+  nudgeItem,
+  setPin,
+  setDuration,
+  setBreakAfter,
+  setWarmUp,
+  renameItem,
+  unscheduledHeats,
+  duplicatePlan,
+  activate,
+  deletePlan,
+  changeHeatLength,
+  lengthText,
+  timetableExportRows,
+  ladderTime,
+  aboutHours,
+  RunOrderError,
+  type HeatInfo,
+  type UnscheduledGroup,
+  type ExportRow,
+} from "./run-order";

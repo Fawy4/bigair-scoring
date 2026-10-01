@@ -14,7 +14,11 @@ export function WizardRail({ eventId, eventName, status, steps }: { eventId: str
 
   return (
     <aside className="no-print md:sticky md:top-4 md:w-64 md:shrink-0" aria-label={copy.wizard.railLabel}>
-      <p className="text-xl font-extrabold">{eventName}</p>
+      <p className="text-xl font-extrabold">
+        <Link href={`/org/events/${eventId}`} className="underline" data-testid="rail-dashboard">
+          {eventName}
+        </Link>
+      </p>
       <p className="mb-3 font-semibold">{copy.wizard.status(status)}</p>
 
       {/* Tablet and phone: one step picker */}

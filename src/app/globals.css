@@ -170,3 +170,71 @@
     page-break-inside: avoid;
   }
 }
+
+/* The printed draw (one A4 landscape page for WhatsApp): colours are forced to print, the page has no browser header or footer. */
+@page ladder {
+  size: A4 landscape;
+  margin: 0;
+}
+.print-exact,
+.print-sheet,
+.print-sheet * {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.print-sheet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8mm;
+}
+/* the whole document is "ladder" paper while it shows the sheet, so no empty page of another size comes before it */
+body:has(.print-sheet) {
+  page: ladder;
+}
+.print-sheet-page {
+  box-shadow: 0 0 0 2px #111;
+}
+@media print {
+  .print-sheet {
+    display: block;
+    gap: 0;
+  }
+  .print-sheet-page {
+    /* a hair under 210 mm: a page exactly as tall as the paper can spill an empty second page */
+    height: 209.5mm !important;
+    box-shadow: none;
+    break-after: page;
+    page-break-after: always;
+  }
+  .print-sheet-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+  .org-console:has(.print-sheet) {
+    min-height: 0;
+    display: block;
+  }
+  .print-root {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    gap: 0 !important;
+  }
+  .org-console:has(.print-sheet) > div {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+}
+
+/* small labels on seats and heats ("changed by hand", "started"): text, never colour alone */
+.badge-note {
+  display: inline-block;
+  border: 2px solid #111;
+  border-radius: 9999px;
+  padding: 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: #fff;
+}

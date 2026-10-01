@@ -31,6 +31,10 @@ export interface DivisionRow {
   hasHeats: boolean;
   /** A heat has started and nobody unlocked the rules. */
   locked: boolean;
+  /** The division's confirmed riders in seed order (the custom ladder builder names seats after them). */
+  riders: Array<{ id: string; name: string }>;
+  /** The draw is locked (Draw step). */
+  drawLocked: boolean;
 }
 
 /** The categories the division's scoring model names (for the Trick base panel). */
@@ -89,7 +93,7 @@ export function DivisionsManager({
     start(async () => {
       const res = await addDivision(eventId, newName);
       if (!res.ok) return fail(res.error);
-      setDivisions((ds) => [...ds, { id: res.id, name: newName.trim(), sort_order: res.sortOrder, scoring_model_id: null, scoring_overrides: {}, format_template_id: null, format_params: {}, description: null, identification: null, trickBase: {}, started: false, hasHeats: false, locked: false }]);
+      setDivisions((ds) => [...ds, { id: res.id, name: newName.trim(), sort_order: res.sortOrder, scoring_model_id: null, scoring_overrides: {}, format_template_id: null, format_params: {}, description: null, identification: null, trickBase: {}, started: false, hasHeats: false, locked: false, riders: [], drawLocked: false }]);
       setOpenId(res.id);
       setNewName("");
       toast({ title: copy.divisions.added });
@@ -112,7 +116,7 @@ export function DivisionsManager({
       const res = await duplicateDivision(id);
       if (!res.ok) return fail(res.error);
       const src = divisions.find((d) => d.id === id)!;
-      setDivisions((ds) => [...ds, { ...src, id: res.id, name: res.name, sort_order: Math.max(...ds.map((d) => d.sort_order)) + 1, started: false, hasHeats: false, locked: false }]);
+      setDivisions((ds) => [...ds, { ...src, id: res.id, name: res.name, sort_order: Math.max(...ds.map((d) => d.sort_order)) + 1, started: false, hasHeats: false, locked: false, riders: [], drawLocked: false }]);
       setOpenId(res.id);
       toast({ title: copy.divisions.duplicated(res.name) });
       router.refresh();
@@ -243,6 +247,7 @@ export function DivisionsManager({
                   {tab === "scoring" ? (
                     <RulesPanel
                       key={`s-${d.id}`}
+                      eventId={eventId}
                       kind="scoring_model"
                       division={d}
                       presets={scoring}
@@ -281,6 +286,7 @@ export function DivisionsManager({
                   ) : (
                     <RulesPanel
                       key={`f-${d.id}`}
+                      eventId={eventId}
                       kind="format_template"
                       division={d}
                       presets={formats}

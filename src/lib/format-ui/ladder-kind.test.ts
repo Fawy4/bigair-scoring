@@ -102,16 +102,16 @@ describe("ladder type choice", () => {
 
     it("the text preview, the diagram and the totals follow the override (breaks do not)", () => {
       const plain = previewFormat(parseFormatTemplate(knock()), 14);
-      const custom = previewFormat(parseFormatTemplate(withRoundLength(withRoundLength(knock(), "R1", 9, 10), "F", 20, 15)), 14);
+      const custom = previewFormat(parseFormatTemplate(withRoundLength(withRoundLength(knock(), "R1", 9, 10), "F", 20, 10)), 14);
       expect(plain.ladder[0].summary).toBe("4 heats · 3–4 riders · 10 min");
-      expect(custom.ladder.map((c) => c.summary)).toEqual(["4 heats · 3–4 riders · 9 min", "2 heats · 4 riders · 12 min", "1 heat · 4 riders · 20 min"]);
-      expect(custom.rounds.map((r) => r.heatMin)).toEqual(["9", "12", "20"]);
-      expect(custom.ridingMinutes).toBe(plain.ridingMinutes - 4 * 1 + 5); // R1: 4 heats × 1 min less, F: 1 heat × 5 min more
+      expect(custom.ladder.map((c) => c.summary)).toEqual(["4 heats · 3–4 riders · 9 min", "2 heats · 4 riders · 10 min", "1 heat · 4 riders · 20 min"]);
+      expect(custom.rounds.map((r) => r.heatMin)).toEqual(["9", "10", "20"]);
+      expect(custom.ridingMinutes).toBe(plain.ridingMinutes - 4 * 1 + 10); // R1: 4 heats × 1 min less, F: 1 heat × 10 min more
       expect(custom.sentence).toBe(plain.sentence); // same shape, only lengths differ
     });
 
     it("switching the ladder type clears per-round lengths (round ids differ between ladder types)", () => {
-      const pools = withLadderKind(withRoundLength(knock(), "SF", 30, 12), "pools");
+      const pools = withLadderKind(withRoundLength(knock(), "SF", 30, 10), "pools");
       expect(pools.roundDurationMin).toBeUndefined();
       expect(previewFormat(parseFormatTemplate(pools), 23).ok).toBe(true);
     });

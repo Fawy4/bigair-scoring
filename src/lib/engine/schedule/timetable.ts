@@ -58,6 +58,7 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
       pinned: pin !== undefined,
     };
     const duration = item.kind === "note" ? 0 : (item.durationMin ?? live?.durationMin);
+    const warmUp = item.kind === "heat" ? (item.warmUpMin ?? live?.warmUpMin ?? 0) : 0;
     if (duration === undefined) throw new Error(`Heat "${item.id}" has no duration (set durationMin on the item or the round).`);
 
     const emit = (
@@ -68,6 +69,9 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
       rows.push({
         ...base,
         durationMin: duration,
+        warmUpMin: warmUp,
+        warmUpStartUtc: heatRow && startMs !== null ? toIso(startMs - warmUp * MIN) : null,
+        warmUpStart: heatRow && startMs !== null ? hhmm(startMs - warmUp * MIN) : null,
         startUtc: startMs === null ? null : toIso(startMs),
         endUtc: row.end === null ? null : toIso(row.end),
         start: startMs === null ? null : hhmm(startMs),
@@ -133,8 +137,9 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
     }
 
     // ── un-started: projected
-    const earliest = prevEnd === null ? null : prevEnd + (item.kind === "break" ? 0 : prevBreak) * MIN;
-    const candidates = [earliest, pin, now].filter((x): x is number => x !== undefined && x !== null);
+    // the warm-up happens after the break, so the heat starts (break + warm-up) after the previous one ends; nothing is projected into the past
+    const earliest = prevEnd === null ? null : prevEnd + ((item.kind === "break" ? 0 : prevBreak) + warmUp) * MIN;
+    const candidates = [earliest, pin, now === undefined ? undefined : now + warmUp * MIN].filter((x): x is number => x !== undefined && x !== null);
     if (candidates.length === 0 || (earliest === null && pin === undefined && now === undefined)) {
       warnings.push("No start time yet: pin the first item of the plan.");
       emit({ start: null, end: null, breakAfter: isLastRow ? null : breakAfter(), status: "est", reason: "Needs an anchor (pinned start time)" });
@@ -151,7 +156,7 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
     else if (pushedByPrevious) reason = `Pinned "not before ${pinHhmm}", pushed to ${hhmm(start)} because the previous heat ends ${hhmm(prevEnd!)} + ${prevBreak} min break`;
     else if (now !== undefined && start === now && (earliest === null || earliest < now)) reason = `Not before now (${hhmm(now)}): nothing runs in the past`;
     else if (item.kind === "break") reason = `Follows the previous heat directly (${hhmm(prevEnd!)}); a break item replaces the automatic break`;
-    else reason = `Previous ends ${hhmm(prevEnd!)} + ${prevBreak} min break`;
+    else reason = `Previous ends ${hhmm(prevEnd!)} + ${prevBreak} min break${warmUp > 0 ? ` + ${warmUp} min warm-up` : ""}`;
 
     let status: RowStatus = pinnedHere ? "pinned" : "est";
     if (item.kind === "heat" && !nextMarked) {
@@ -168,6 +173,7 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
   const finishUtc = complete ? timed.reduce((m, r) => (Date.parse(r.endUtc!) > Date.parse(m) ? r.endUtc! : m), timed[0].endUtc!) : null;
   return {
     rows,
+    heatsLeft: rows.filter((r) => r.kind === "heat" && r.status !== "done").length,
     finishUtc,
     finish: finishUtc ? hhmm(Date.parse(finishUtc)) : null,
     warnings: rows.flatMap((r) => r.warnings.map((w) => `${r.label}: ${w}`)),

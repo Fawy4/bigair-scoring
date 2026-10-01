@@ -1,4 +1,5 @@
 import { expandFormat, minHeatsPerRider, type DivisionDraw, type Entrant } from "@/lib/engine/ladder";
+import { aboutHours, ladderTime } from "@/lib/engine/schedule";
 import type { FormatTemplate } from "@/lib/schemas/format-template";
 import { copy } from "@/lib/ui-copy";
 
@@ -57,6 +58,8 @@ export interface FormatPreview {
   minHeatsPerRider: number;
   /** Riding time only, without breaks. */
   ridingMinutes: number;
+  /** "15 heats · 5 + 10 min · about 4 h with 2-minute breaks": warm-up, heat length and breaks all counted. */
+  timeSentence: string;
   warnings: string[];
 }
 
@@ -117,7 +120,7 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
   try {
     draw = expandFormat(template, entrants);
   } catch (e) {
-    return { riders: riderCount, ok: false, sentence: t.cannotRun(riderCount, (e as Error).message), finalNote: "", rounds: [], ladder: [], totalHeats: 0, minHeatsPerRider: 0, ridingMinutes: 0, warnings: [] };
+    return { riders: riderCount, ok: false, sentence: t.cannotRun(riderCount, (e as Error).message), finalNote: "", rounds: [], ladder: [], totalHeats: 0, minHeatsPerRider: 0, ridingMinutes: 0, timeSentence: "", warnings: [] };
   }
 
   const rounds: RoundPreview[] = draw.rounds.map((r) => {
@@ -139,6 +142,8 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
   const parts = rounds.map((r) => (r.heats === 0 ? t.partAdvancing(r.shortName, r.byes) : t.partHeats(r.shortName, r.heats, range(r.minSize, r.maxSize), r.byes)));
   const totalHeats = rounds.reduce((s, r) => s + r.heats, 0);
   const ridingMinutes = rounds.reduce((s, r) => s + r.minutes, 0);
+  const riding = draw.rounds.flatMap((r) => r.heats.filter((h) => !h.bye));
+  const timeSentence = riding.length ? timeText(riding) : "";
 
   const ladder: LadderColumn[] = draw.rounds.map((r, i) => ({
     id: r.id,
@@ -167,6 +172,18 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
     totalHeats,
     minHeatsPerRider: minHeatsPerRider(draw),
     ridingMinutes,
+    timeSentence,
     warnings: draw.warnings.map((w) => w.message + (w.suggestion ? ` ${w.suggestion}` : "")),
   };
+}
+
+/** "15 heats · 5 + 10 min · about 4 h with 2-minute breaks" from the heats the draw really makes. */
+export function timeText(heats: Array<{ warmUpMin?: number; durationMin: number; breakAfterHeatMin: number; breakAfterRoundMin: number; roundLast: boolean }>): string {
+  const list = heats.map((h) => ({ warmUpMin: h.warmUpMin ?? 0, durationMin: h.durationMin, breakAfterMin: h.roundLast ? h.breakAfterRoundMin : h.breakAfterHeatMin }));
+  const total = ladderTime(list);
+  const span = (xs: number[]) => (Math.min(...xs) === Math.max(...xs) ? String(xs[0]) : `${Math.min(...xs)}–${Math.max(...xs)}`);
+  const warm = list.some((h) => h.warmUpMin > 0) ? span(list.map((h) => h.warmUpMin)) : "";
+  const gaps = list.slice(0, -1).map((h) => h.breakAfterMin);
+  const breaks = gaps.length ? copy.formatSimple.breaksText(Math.min(...gaps), Math.max(...gaps)) : "";
+  return copy.formatSimple.totalTime(total.heats, warm, span(list.map((h) => h.durationMin)), aboutHours(total.totalMin), breaks);
 }

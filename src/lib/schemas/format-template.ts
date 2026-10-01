@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { copy } from "@/lib/ui-copy";
+import { CustomLadderSchema } from "./custom-ladder";
 
 const MIN_ABOVE_TARGET = copy.formatSimple.minAboveTarget;
 const MAX_BELOW_TARGET = copy.formatSimple.maxBelowTarget;
@@ -63,6 +64,8 @@ export const RoundSpecSchema = z.object({
   maxHeatSize: z.number().int().min(1).max(10).optional(),
   /** Falls back to the template's `timing.defaultHeatMin`. */
   durationMin: z.number().positive().optional(),
+  /** Warm-up before each heat of this round in minutes; falls back to the template's `timing.warmUpBeforeHeatMin`. */
+  warmUpMin: z.number().min(0).optional(),
   breakAfterHeatMin: z.number().min(0).optional(),
   breakAfterRoundMin: z.number().min(0).optional(),
   entrantsFrom: z.array(EntrantSourceSchema).min(1).default([{ type: "seeds" }]),
@@ -220,9 +223,13 @@ export const FormatTemplateSchema = z
       defaultHeatMin: z.number().positive(),
       defaultBreakAfterHeatMin: z.number().min(0),
       defaultBreakAfterRoundMin: z.number().min(0),
+      /** Warm-up before each heat in minutes (default 0). The timetable shows it as its own segment; the heat's timer is only the heat length. */
+      warmUpBeforeHeatMin: z.number().min(0).default(0),
     }),
-    kind: z.enum(["fixed", "generator"]),
+    /** "ladder" = a custom ladder drawn seat by seat (the builder); "fixed" = rounds with rules; "generator" = made for any field size. */
+    kind: z.enum(["fixed", "generator", "ladder"]),
     rounds: z.array(RoundSpecSchema).min(1).optional(),
+    ladder: CustomLadderSchema.optional(),
     generator: GeneratorSchema.optional(),
     placings: z
       .object({
@@ -232,6 +239,8 @@ export const FormatTemplateSchema = z
       .prefault({}),
     /** Generated ladders only: heat length per round id (e.g. { R1: 10, F: 15 }); other rounds keep the generator's length. Breaks stay global. */
     roundDurationMin: z.record(z.string().min(1), z.number().positive()).optional(),
+    /** Generated ladders only: warm-up before each heat per round id; other rounds keep `timing.warmUpBeforeHeatMin`. */
+    roundWarmUpMin: z.record(z.string().min(1), z.number().min(0)).optional(),
     /** Hidden from the format menus (kept for saved events and tests). Fixed templates that the preview cannot describe are hidden. */
     hidden: z.boolean().optional(),
     /** The organiser's own names for rounds, keyed by round id (blank = the default). They survive regeneration. */
@@ -246,10 +255,18 @@ export const FormatTemplateSchema = z
     if (t.entrants.max !== null && t.entrants.max < t.entrants.min) {
       ctx.addIssue({ code: "custom", message: "entrants.max must not be smaller than entrants.min", path: ["entrants", "max"] });
     }
+    if (t.roundWarmUpMin && t.kind !== "generator") {
+      ctx.addIssue({ code: "custom", message: "a warm-up per round only applies to a generated ladder (a custom ladder sets it on each round)", path: ["roundWarmUpMin"] });
+    }
     if (t.roundDurationMin && t.kind !== "generator") {
       ctx.addIssue({ code: "custom", message: "a heat length per round only applies to a generated ladder (a custom ladder sets it on each round)", path: ["roundDurationMin"] });
     }
-    if (t.kind === "fixed") {
+    if (t.kind !== "ladder" && t.ladder) ctx.addIssue({ code: "custom", message: "only a custom ladder template carries a `ladder`", path: ["ladder"] });
+    if (t.kind === "ladder") {
+      if (!t.ladder) ctx.addIssue({ code: "custom", message: "a custom ladder template needs its `ladder`", path: ["ladder"] });
+      if (t.generator) ctx.addIssue({ code: "custom", message: "a custom ladder template must not have a `generator`", path: ["generator"] });
+      if (t.rounds) ctx.addIssue({ code: "custom", message: "a custom ladder template must not list `rounds`", path: ["rounds"] });
+    } else if (t.kind === "fixed") {
       if (!t.rounds) ctx.addIssue({ code: "custom", message: "a fixed template needs `rounds`", path: ["rounds"] });
       if (t.generator) ctx.addIssue({ code: "custom", message: "a fixed template must not have a `generator`", path: ["generator"] });
     } else {

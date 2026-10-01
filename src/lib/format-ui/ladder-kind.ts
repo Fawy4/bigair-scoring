@@ -2,8 +2,8 @@ import { effectiveMaxHeatSize, effectiveMinHeatSize } from "@/lib/engine/ladder/
 import { GeneratorSchema } from "@/lib/schemas/format-template";
 
 /** The seven ladder types the organiser chooses from; "custom" is a format with its own rounds. */
-export type LadderKind = "knockout" | "second_chance" | "double_elimination" | "qualifying" | "pools" | "round_robin" | "single_final" | "custom";
-export type GeneratedKind = Exclude<LadderKind, "custom">;
+export type LadderKind = "knockout" | "second_chance" | "double_elimination" | "qualifying" | "pools" | "round_robin" | "single_final" | "custom" | "ladder";
+export type GeneratedKind = Exclude<LadderKind, "custom" | "ladder">;
 
 /** The order of the cards on the Format tab. */
 export const KINDS: GeneratedKind[] = ["knockout", "second_chance", "double_elimination", "qualifying", "pools", "round_robin", "single_final"];
@@ -42,6 +42,7 @@ export const AT_LEAST_TWO: Record<GeneratedKind, boolean> = {
 
 export function ladderKindOf(working: unknown): LadderKind {
   const w = working as { kind?: string; generator?: { type?: string } } | null;
+  if (w?.kind === "ladder") return "ladder";
   if (w?.kind !== "generator") return "custom";
   return (Object.entries(GENERATOR).find(([, g]) => g === w.generator?.type)?.[0] as LadderKind | undefined) ?? "custom";
 }
@@ -68,6 +69,35 @@ export function withRoundLength(working: Record<string, unknown>, roundId: strin
   return Object.keys(current).length > 0 ? { ...rest, roundDurationMin: current } : rest;
 }
 
+/** The division's warm-up before each heat (minutes, default 0), stored in the format's timing. */
+export function withWarmUp(working: Record<string, unknown>, minutes: number | ""): Record<string, unknown> {
+  const timing = { ...((working.timing as Record<string, unknown> | undefined) ?? {}) };
+  if (minutes === "") delete timing.warmUpBeforeHeatMin;
+  else timing.warmUpBeforeHeatMin = minutes;
+  return { ...working, timing };
+}
+
+export const warmUpOf = (working: Record<string, unknown>): number => {
+  const v = (working.timing as { warmUpBeforeHeatMin?: unknown } | undefined)?.warmUpBeforeHeatMin;
+  return typeof v === "number" ? v : 0;
+};
+
+/** One round's own warm-up; a value equal to the single warm-up clears the override (only real differences are stored). */
+export function withRoundWarmUp(working: Record<string, unknown>, roundId: string, minutes: number | "", defaultMin: number): Record<string, unknown> {
+  const current = { ...((working.roundWarmUpMin as Record<string, number> | undefined) ?? {}) };
+  if (minutes === "" || minutes === defaultMin) delete current[roundId];
+  else current[roundId] = minutes;
+  const { roundWarmUpMin: _old, ...rest } = working;
+  void _old;
+  return Object.keys(current).length > 0 ? { ...rest, roundWarmUpMin: current } : rest;
+}
+
+export function withoutRoundWarmUps(working: Record<string, unknown>): Record<string, unknown> {
+  const { roundWarmUpMin: _old, ...rest } = working;
+  void _old;
+  return rest;
+}
+
 /** Forget every per-round length: all rounds use the single settings again. */
 export function withoutRoundLengths(working: Record<string, unknown>): Record<string, unknown> {
   const { roundDurationMin: _old, ...rest } = working;
@@ -89,7 +119,7 @@ export const TARGET_KEY: Record<GeneratedKind, "heatSize" | "r1HeatSize" | null>
 /** Target and (effective) minimum and maximum riders per heat of a generated ladder; `explicit` = the organiser named the minimum. */
 export function heatSizes(working: Record<string, unknown>): { target: number; min: number; max: number; explicit: boolean; explicitMax: boolean } | null {
   const kind = ladderKindOf(working);
-  if (kind === "custom") return null;
+  if (kind === "custom" || kind === "ladder") return null;
   const params = ((working.generator as { params?: Record<string, unknown> } | undefined)?.params ?? {}) as Record<string, number | undefined>;
   const key = TARGET_KEY[kind];
   const target = key ? params[key] : undefined;
@@ -114,7 +144,7 @@ function withParams(working: Record<string, unknown>, change: (p: Record<string,
  */
 export function withHeatTarget(working: Record<string, unknown>, target: number | ""): Record<string, unknown> {
   const kind = ladderKindOf(working);
-  if (kind === "custom") return working;
+  if (kind === "custom" || kind === "ladder") return working;
   return withParams(working, (p) => {
     const key = TARGET_KEY[kind];
     if (key) p[key] = target === "" ? undefined : target;
