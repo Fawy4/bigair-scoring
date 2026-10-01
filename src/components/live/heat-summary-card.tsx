@@ -8,7 +8,7 @@ import { copy } from "@/lib/ui-copy";
 export function HeatSummaryCard({ summary }: { summary: HeatSummary }) {
   const T = copy.live.summary;
   return (
-    <section data-testid="heat-summary" aria-label={T.heading} className="flex flex-col gap-1.5 rounded-card border border-beach-line bg-beach-surface p-2.5">
+    <section data-testid="heat-summary" aria-label={T.heading} className="flex flex-col gap-1.5 rounded-card border border-beach-line bg-beach-surface p-2">
       <p data-testid="summary-counts" className="text-body font-semibold">
         {T.counts(summary.attempts, summary.landed, summary.crashed)}
       </p>

@@ -1,89 +1,39 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AttemptCard } from "@/components/live/attempt-card";
-import { HeadControls } from "@/components/live/head-controls";
+import { HeadControlTab } from "@/components/live/head-control-tab";
+import { HeadConsole } from "@/components/live/head-console";
 import { ImpressionCard } from "@/components/live/impression-card";
+import { JudgeQueue } from "@/components/live/judge-queue";
 import { PhoneFrame } from "@/components/live/phone-frame";
-import { RiderSheet } from "@/components/live/rider-sheet";
 import { RiderTile } from "@/components/live/rider-tile";
-import { ScorePad } from "@/components/live/score-pad";
 import { ScreenHeader } from "@/components/live/screen-header";
 import { TrickBuilder, type BuilderSelection } from "@/components/live/trick-builder";
-import { categoryLabel, headPhone, impressionRiders, judgeLive, KOTA, previewBlocks, previewCompose } from "@/lib/live/design-fixtures";
+import { categoryLabel, impressionRiders, judgeQueue, KOTA, previewBlocks, previewCompose } from "@/lib/live/design-fixtures";
 import { formatPadValue } from "@/lib/live/score-pad";
 import type { FamilyKey } from "@/lib/trick-base";
 import { copy } from "@/lib/ui-copy";
+import { cn } from "@/lib/utils";
 
 const S = copy.design.screens;
 const NAMES = copy.design.sections;
 
-/** The judge's phone, as 5b will compose it. Used three times: the default view, Details on, and with a rider's sheet open. */
-function JudgeScreen({ id, note, startDetails = false, startSheet = false }: { id: string; note: string; startDetails?: boolean; startSheet?: boolean }) {
-  const live = useMemo(() => judgeLive(), []);
-  const [details, setDetails] = useState(startDetails);
-  const [sheet, setSheet] = useState(startSheet);
-  const [selected, setSelected] = useState(0);
-  const [score, setScore] = useState<number | null>(null);
-  const [missed, setMissed] = useState(false);
-  const [saved, setSaved] = useState<string | null>(copy.live.saved.line("8.125", "RED", 5));
-  const scale = KOTA.trick.scale;
-  const word = live.riders[0].label.primary.text;
-  return (
-    <PhoneFrame id={id} title={NAMES[id]} note={note}>
-      <ScreenHeader heatName={live.heatName} seat={live.seat} remainingMs={live.remainingMs} details={details} onToggleDetails={() => { setDetails((d) => !d); setSheet(false); }} />
-      <div data-testid="screen-body" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 py-1.5">
-        {details ? (
-          <div data-testid="details-list" className="flex flex-col gap-1.5">
-            {live.details.map((a) => (
-              <AttemptCard key={a.number} compact number={a.number} label={a.label} riderName={a.riderName} trick={a.trick} status={a.status} direction={a.direction} myScoreLabel={a.number === 6 && score !== null ? formatPadValue(score, scale) : a.myScoreLabel} repeat={a.repeat} />
-            ))}
-          </div>
-        ) : (
-          <>
-            <div role="group" aria-label={copy.live.tile.strip} className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${live.riders.length}, minmax(0, 1fr))` }}>
-              {live.riders.map((r, i) => (
-                <RiderTile key={r.id} compact label={r.label} attempts={r.attempts} max={r.max} selected={selected === i} onSelect={() => setSelected(i)} />
-              ))}
-            </div>
-            <AttemptCard
-              number={live.current.number}
-              label={live.current.label}
-              riderName={live.current.riderName}
-              trick={live.current.trick}
-              status="landed"
-              direction={live.current.direction}
-              missed={missed}
-              onOpenRider={() => setSheet(true)}
-              onMissed={() => { setMissed(true); setScore(null); setSaved(copy.live.saved.missed(word, 6)); }}
-              onFlag={() => undefined}
-            >
-              <ScorePad
-                scale={scale}
-                value={score}
-                label={copy.live.criteria.trickScore}
-                caption={<span data-testid="pad-caption" className="block font-semibold text-beach-ink">{saved ?? copy.live.saved.waiting}</span>}
-                onChange={(v) => { setScore(v); setMissed(false); setSaved(copy.live.saved.line(formatPadValue(v, scale), word, 6)); }}
-              />
-            </AttemptCard>
-            <AttemptCard compact number={live.previous.number} label={live.previous.label} riderName={live.previous.riderName} trick={live.previous.trick} status="landed" direction={live.previous.direction} myScoreLabel={live.previous.myScoreLabel} />
-          </>
-        )}
-      </div>
-      {sheet ? <RiderSheet sheet={live.sheet} onClose={() => setSheet(false)} /> : null}
-    </PhoneFrame>
-  );
-}
-
-export const JudgeLive = () => <JudgeScreen id="judge-live" note={S.judgeLive} />;
-export const JudgeDetails = () => <JudgeScreen id="judge-details" note={S.judgeDetails} startDetails />;
-export const JudgeSheet = () => <JudgeScreen id="judge-sheet" note={S.judgeSheet} startSheet />;
+export const JudgeLive = () => (
+  <PhoneFrame id="judge-live" title={NAMES["judge-live"]} note={S.judgeLive}>
+    <JudgeQueue />
+  </PhoneFrame>
+);
+export const JudgeDetails = () => (
+  <PhoneFrame id="judge-details" title={NAMES["judge-details"]} note={S.judgeDetails}>
+    <JudgeQueue startDetails />
+  </PhoneFrame>
+);
 
 const EMPTY: BuilderSelection = { direction: null, multiplier: null, base: null, addons: [] };
 
-/** The spotter's phone: riders with counters, direction, builder, CRASH and Log. */
+/** The spotter's phone: the riders in one row, direction and multiplier, the builder in vertical lists, and CRASH and Log fixed at the bottom. */
 export function SpotterLive() {
-  const live = useMemo(() => judgeLive(), []);
+  const live = useMemo(() => judgeQueue(), []);
   const blocks = useMemo(() => previewBlocks(), []);
   const [selected, setSelected] = useState(0);
   const [sel, setSel] = useState<BuilderSelection>(EMPTY);
@@ -104,17 +54,14 @@ export function SpotterLive() {
   return (
     <PhoneFrame id="spotter-live" title={NAMES["spotter-live"]} note={S.spotterLive}>
       <ScreenHeader heatName={live.heatName} seat="Spotter 1" remainingMs={live.remainingMs} />
-      <div className="flex flex-col gap-1.5 px-3 pt-2">
-        <div role="group" aria-label={copy.live.tile.strip} className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${live.riders.length}, minmax(0, 1fr))` }}>
+      <div className="flex flex-col gap-0.5 px-2 pt-1.5">
+        <div role="group" aria-label={copy.live.tile.strip} className="grid gap-1" style={{ gridTemplateColumns: `repeat(${live.riders.length}, minmax(0, 1fr))` }}>
           {live.riders.map((r, i) => (
             <RiderTile key={r.id} compact label={r.label} attempts={counts[i]} max={r.max} selected={selected === i} onSelect={() => setSelected(i)} />
           ))}
         </div>
-        <p data-testid="spotter-logged" className="min-h-[20px] truncate text-small font-semibold text-beach-ink">
-          {logged ?? copy.live.saved.waiting}
-        </p>
       </div>
-      <TrickBuilder blocks={blocks} selection={sel} onPick={pick} name={composed.name} categoryLabel={categoryLabel(composed.categoryKey)} riderLabelText={word} canLog={!!sel.base} onCrash={done} onLog={done} />
+      <TrickBuilder blocks={blocks} selection={sel} onPick={pick} name={composed.name} categoryLabel={categoryLabel(composed.categoryKey)} riderLabelText={word} status={logged} canLog={!!sel.base} onCrash={done} onLog={done} />
     </PhoneFrame>
   );
 }
@@ -126,17 +73,17 @@ export function JudgeEnd() {
   const [submitted, setSubmitted] = useState(false);
   const [saved, setSaved] = useState<string | null>(copy.live.saved.impression("7.5", "RED"));
   const scale = KOTA.heat.impression!.scale;
-  const live = useMemo(() => judgeLive(), []);
+  const live = useMemo(() => judgeQueue(), []);
   return (
     <PhoneFrame id="judge-end" title={NAMES["judge-end"]} note={S.judgeEnd}>
       <ScreenHeader heatName={live.heatName} seat={live.seat} remainingMs={0} timerState="ended" />
-      <div data-testid="screen-body" className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-2">
+      <div data-testid="screen-body" className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-1.5">
         <ImpressionCard
           riders={riders}
           scale={scale}
           values={values}
           submitted={submitted}
-          caption={<span className="block truncate font-semibold text-beach-ink">{saved ?? copy.live.saved.waiting}</span>}
+          caption={<span className="block font-semibold text-beach-ink">{saved ?? copy.live.saved.waiting}</span>}
           onChange={(id, v) => {
             setValues((p) => ({ ...p, [id]: v }));
             setSaved(copy.live.saved.impression(formatPadValue(v, scale), riders.find((r) => r.id === id)!.label.primary.text));
@@ -148,12 +95,35 @@ export function JudgeEnd() {
   );
 }
 
-/** The head judge's phone: controls only. */
-export function HeadPhone() {
-  const h = useMemo(() => headPhone(), []);
+/** The head judge who also scores: one login, two tabs. Score is exactly a judge's queue; Control has the heat's buttons. */
+function HeadPhone({ id, start }: { id: "head-score" | "head-control"; start: "score" | "control" }) {
+  const [tab, setTab] = useState<"score" | "control">(start);
+  const T = copy.live.tabs;
   return (
-    <PhoneFrame id="head-phone" title={NAMES["head-phone"]} note={S.headPhone}>
-      <HeadControls heatName={h.heatName} state={h.state} remainingMs={h.remainingMs} next={h.next} controls={h.controls} />
+    <PhoneFrame id={id} title={NAMES[id]} note={id === "head-score" ? S.headScore : S.headControl}>
+      <div role="tablist" aria-label={T.label} className="grid grid-cols-2 border-b border-beach-line bg-beach-bg">
+        {(["score", "control"] as const).map((t) => (
+          <button key={t} type="button" role="tab" data-tab={t} aria-selected={tab === t} onClick={() => setTab(t)} className={cn("min-h-tap text-body font-semibold", tab === t ? "border-b-2 border-beach-accent text-beach-ink" : "border-b-2 border-transparent text-beach-muted")}>
+            {t === "score" ? T.score : T.control}
+          </button>
+        ))}
+      </div>
+      {tab === "score" ? <JudgeQueue /> : <HeadControlTab />}
     </PhoneFrame>
+  );
+}
+export const HeadScore = () => <HeadPhone id="head-score" start="score" />;
+export const HeadControl = () => <HeadPhone id="head-control" start="control" />;
+
+/** The laptop console: a working tool in a laptop-wide box that scrolls inside itself on a small screen. */
+export function HeadLaptop() {
+  return (
+    <section id="head-laptop" data-testid="section-head-laptop" className="flex scroll-mt-16 flex-col gap-1">
+      <h2 className="text-heading font-semibold">{NAMES["head-laptop"]}</h2>
+      <p className="text-small font-medium text-beach-muted">{S.headLaptop}</p>
+      <div data-testid="laptop-frame" className="overflow-x-auto rounded-card border border-beach-line bg-beach-bg">
+        <HeadConsole />
+      </div>
+    </section>
   );
 }

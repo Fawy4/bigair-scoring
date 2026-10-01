@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
  */
 export function PhoneFrame({ id, title, note, children }: { id: string; title: string; note: string; children: React.ReactNode }) {
   return (
-    <section id={id} data-testid={`section-${id}`} className="flex scroll-mt-24 flex-col gap-2">
-      <h2 className="text-name font-semibold">{title}</h2>
-      <p className="text-body font-medium text-beach-muted">{note}</p>
+    <section id={id} data-testid={`section-${id}`} className="flex scroll-mt-16 flex-col gap-1">
+      <h2 className="text-heading font-semibold">{title}</h2>
+      <p className="text-small font-medium text-beach-muted">{note}</p>
       <div
         data-testid="phone-frame"
         className={cn(

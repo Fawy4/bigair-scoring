@@ -260,6 +260,12 @@ body:has(.print-sheet) {
   --beach-on-crash: #ffffff;
   --beach-outlier: #7c3f00;
   --beach-missing: #404040;
+  --beach-tint-crash: #f8cfcf;
+  --beach-tint-grey: #e2e5e6;
+  --beach-tint-green0: #6fcf97;
+  --beach-tint-green1: #9be0b6;
+  --beach-tint-green2: #c3edd2;
+  --beach-tint-green3: #e3f6ea;
   color-scheme: light;
 }
 .beach-dark {
@@ -279,22 +285,30 @@ body:has(.print-sheet) {
   --beach-on-crash: #0b0e0f;
   --beach-outlier: #fcd34d;
   --beach-missing: #c4c4c4;
+  --beach-tint-crash: #5a1f1f;
+  --beach-tint-grey: #2a3133;
+  --beach-tint-green0: #165c35;
+  --beach-tint-green1: #134c2c;
+  --beach-tint-green2: #103f24;
+  --beach-tint-green3: #0d331d;
   color-scheme: dark;
 }
 .beach-text-normal {
-  --size-body: 16px;
-  --size-small: 14px;
-  --size-name: 18px;
-  --size-digit: 24px;
-  --size-pad-height: 50px;
+  --size-body: 15px;
+  --size-small: 13px;
+  --size-name: 17px;
+  --size-digit: 19px;
+  --size-pad-height: 46px;
   --size-pad-gap: 6px;
   --size-tap: 44px;
-  --size-timer-slim: 22px;
+  --size-timer-slim: 20px;
   --size-timer-head: 48px;
-  --size-radius: 14px;
+  --size-radius: 12px;
+  --size-readout: 30px;
+  --size-heading: 14px;
 }
 .beach-text-large {
-  --size-body: 18px;
+  --size-body: 17px;
   --size-small: 15px;
   --size-name: 20px;
   --size-digit: 28px;
@@ -304,6 +318,8 @@ body:has(.print-sheet) {
   --size-timer-slim: 24px;
   --size-timer-head: 48px;
   --size-radius: 16px;
+  --size-readout: 40px;
+  --size-heading: 16px;
 }
 .beach-day,
 .beach-dark {

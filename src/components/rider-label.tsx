@@ -2,6 +2,7 @@ import { riderLabelModel, type LabelModel, type LabelRider } from "@/lib/identif
 import { copy } from "@/lib/ui-copy";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
 import { cn } from "@/lib/utils";
+import { labelStyleOfPrimary } from "@/lib/identification/label-style";
 
 /**
  * THE rider label: the same component on every screen (judge, spotter, head judge, public, exports; CLAUDE.md rule 7).
@@ -23,50 +24,44 @@ export function RiderLabel({
   /** A label that is already worked out (the live screens pass this). Without it, `scheme` and `rider` are needed. */
   model?: LabelModel;
   /**
-   * "block" is the organiser look (a block of Lycra colour). "stripe" is the calm look of the official screens: a thick stripe and a dot in the Lycra colour,
-   * the colour word and the name in ink (so they read at 7:1 whatever the Lycra colour), white and black outlined in the page ink.
+   * "block" is the organiser look. "live" is the look of the official screens: it picks its own style from the identification scheme (no manual switch):
+   * a coloured block with the colour word for Lycra, rash-guard and helmet schemes, a number block for bib (and kite) schemes, the name first for name call-out.
    */
-  variant?: "block" | "stripe";
-  /** Stripe only: no frame of its own, because the tile or card around it has one (the selected rider gets the accent border there). */
+  variant?: "block" | "live";
+  /** Live only: no frame of its own, because the tile or card around it has one (the selected rider gets the accent border there). */
   bare?: boolean;
 }) {
   const label = model ?? riderLabelModel(scheme!, rider!);
   const p = label.primary;
-  if (variant === "stripe") {
+  if (variant === "live") {
+    const style = labelStyleOfPrimary(p);
     const name = label.secondary.find((x) => x.key === "name");
     const rest = label.secondary.filter((x) => x.key !== "name");
-    const isColour = p.kind === "colour";
-    const primaryIsName = !isColour && p.text === name?.text;
+    const nameText = style === "name-first" ? p.text : name?.text;
     return (
-      <div data-testid="rider-label" data-variant="stripe" className={cn("flex min-w-0 items-stretch gap-3", !bare && "rounded-card border border-beach-line bg-beach-bg px-3 py-2", className)}>
-        <span
-          aria-hidden
-          data-testid="rider-label-stripe"
-          className="w-[6px] shrink-0 rounded-full"
-          style={{ backgroundColor: p.hex ?? "var(--beach-border)", boxShadow: p.outlined && p.hex ? "inset 0 0 0 1.5px var(--beach-ink)" : undefined }}
-        />
-        <div className="flex min-w-0 flex-col justify-center">
-          <div data-testid="rider-label-primary" className="flex items-center gap-2">
-            {isColour ? (
-              <span
-                aria-hidden
-                data-testid="rider-label-dot"
-                className="size-[18px] shrink-0 rounded-full"
-                style={{ backgroundColor: p.hex, boxShadow: p.outlined ? "inset 0 0 0 2px var(--beach-ink)" : undefined }}
-              />
-            ) : null}
-            <span data-testid="rider-label-text" className={cn("truncate font-semibold text-beach-ink", isColour ? "text-body tracking-wide" : "text-name")}>
-              {p.text}
+      <div data-testid="rider-label" data-variant="live" data-style={style} className={cn("flex min-w-0 items-center gap-2", !bare && "rounded-card border border-beach-line bg-beach-bg p-1.5", className)}>
+        {style === "colour-block" ? (
+          <span
+            data-testid="rider-label-primary"
+            className="shrink-0 rounded-lg px-2 py-0.5 text-name font-semibold leading-tight tracking-wide"
+            style={{ backgroundColor: p.hex, color: p.ink, boxShadow: p.outlined ? "inset 0 0 0 2px var(--beach-ink)" : undefined }}
+          >
+            <span data-testid="rider-label-text">{p.text}</span>
+            {p.usedFallback ? <span className="ml-1 text-small font-medium">{copy.riderLabel.fallback}</span> : null}
+          </span>
+        ) : style === "number-block" ? (
+          <span data-testid="rider-label-primary" className="max-w-[45%] shrink-0 truncate rounded-lg border-2 border-beach-ink bg-beach-surface px-2 py-0.5 text-name font-semibold leading-tight text-beach-ink">
+            <span data-testid="rider-label-text">{p.text}</span>
+          </span>
+        ) : null}
+        <span className="flex min-w-0 flex-col leading-tight">
+          {nameText ? (
+            <span data-testid={style === "name-first" ? "rider-label-primary" : undefined} className="truncate text-name font-semibold text-beach-ink">
+              {style === "name-first" ? <span data-testid="rider-label-text">{nameText}</span> : nameText}
             </span>
-            {isColour && p.usedFallback ? <span className="text-small font-medium text-beach-muted">{copy.riderLabel.fallback}</span> : null}
-          </div>
-          {name && !primaryIsName ? <span className="truncate text-name font-semibold text-beach-ink">{name.text}</span> : null}
-          {rest.map((x) => (
-            <span key={x.key + x.text} className="truncate text-small font-medium text-beach-muted">
-              {x.text}
-            </span>
-          ))}
-        </div>
+          ) : null}
+          {rest.length ? <span className="truncate text-small font-medium text-beach-muted">{rest.map((x) => x.text).join(" · ")}</span> : null}
+        </span>
       </div>
     );
   }

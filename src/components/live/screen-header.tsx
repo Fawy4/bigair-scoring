@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * The slim header of the judge and spotter screens: the small timer, the sync pill and a "Details" toggle, then one muted line with the heat and the seat.
- * The timer is small and out of the way (never between the rider strip and the pad). The Details toggle switches the whole screen to the detailed view.
+ * The timer is small and out of the way (never between the first card and the pad). The Details toggle switches the whole screen to the detailed view.
  */
 export function ScreenHeader({
   heatName,
@@ -28,7 +28,7 @@ export function ScreenHeader({
   onToggleDetails?: () => void;
 }) {
   return (
-    <header data-testid="screen-header" className="flex flex-col gap-0.5 border-b border-beach-line bg-beach-bg px-3 pb-1.5 pt-1">
+    <header data-testid="screen-header" className="flex flex-col border-b border-beach-line bg-beach-bg px-2 pb-1 pt-0.5">
       <div className="flex min-h-tap items-center justify-between gap-2">
         <HeatTimer remainingMs={remainingMs} state={timerState} />
         {details !== undefined ? (

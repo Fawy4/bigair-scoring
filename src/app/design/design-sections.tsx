@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { ConnectionBadge } from "@/components/live/connection-badge";
 import { CriteriaRows } from "@/components/live/criteria-rows";
-import { HeadMatrix } from "@/components/live/head-matrix";
 import { HeatTimer } from "@/components/live/heat-timer";
 import { ResultRow } from "@/components/live/result-row";
 import { RiderTile } from "@/components/live/rider-tile";
@@ -12,29 +11,30 @@ import { RiderLabel } from "@/components/rider-label";
 import { judgeTrickScore } from "@/lib/engine/scoring";
 import { riderLabelModel } from "@/lib/identification/rider-label";
 import type { ArrowScheme } from "@/lib/live/arrow-loader";
-import { FIXTURE_SCHEMES, KOTA, labelRiders, matrixMain, matrixStates, resultRows, tileRiders } from "@/lib/live/design-fixtures";
+import { FIXTURE_SCHEMES, KOTA, labelRiders, resultRows, tileRiders } from "@/lib/live/design-fixtures";
+import { ATTEMPT_DISPLAYS } from "@/lib/live/result-shading";
 import { formatCell } from "@/lib/live/matrix-model";
 import { formatPadValue } from "@/lib/live/score-pad";
 import { LARGE, NORMAL } from "@/lib/live/size-tokens";
 import { copy } from "@/lib/ui-copy";
-import { HeadPhone, JudgeDetails, JudgeEnd, JudgeLive, JudgeSheet, SpotterLive } from "./screens";
+import { HeadControl, HeadLaptop, HeadScore, JudgeDetails, JudgeEnd, JudgeLive, SpotterLive } from "./screens";
 
-export const SCREEN_IDS = ["judge-live", "judge-details", "judge-sheet", "spotter-live", "judge-end", "head-phone"] as const;
-export const PART_IDS = ["labels", "status", "criteria", "result", "matrix", "sizes"] as const;
+export const SCREEN_IDS = ["judge-live", "judge-details", "spotter-live", "judge-end", "head-score", "head-control", "head-laptop"] as const;
+export const PART_IDS = ["result", "labels", "status", "criteria", "sizes"] as const;
 export const SECTION_IDS = [...SCREEN_IDS, ...PART_IDS] as const;
 
 function Part({ id, title, intro, children }: { id: string; title: string; intro: string; children: React.ReactNode }) {
   return (
-    <section id={id} data-testid={`section-${id}`} className="flex scroll-mt-24 flex-col gap-3">
-      <h2 className="border-b border-beach-line pb-1 text-name font-semibold">{title}</h2>
-      <p className="text-body font-medium text-beach-muted">{intro}</p>
+    <section id={id} data-testid={`section-${id}`} className="flex scroll-mt-16 flex-col gap-2">
+      <h2 className="text-heading font-semibold">{title}</h2>
+      <p className="text-small font-medium text-beach-muted">{intro}</p>
       {children}
     </section>
   );
 }
 
-const sub = "text-body font-semibold";
-const card = "flex flex-col gap-3 rounded-card border border-beach-line bg-beach-surface p-3";
+const sub = "text-heading font-semibold text-beach-muted";
+const card = "flex flex-col gap-2 rounded-card border border-beach-line bg-beach-surface p-2";
 
 function LabelsPart({ arrow }: { arrow: ArrowScheme | null }) {
   const riders = useMemo(() => labelRiders(), []);
@@ -45,7 +45,7 @@ function LabelsPart({ arrow }: { arrow: ArrowScheme | null }) {
   const show = (scheme: typeof lycra, which: number[]) => (
     <div className="flex flex-col items-stretch gap-2">
       {which.map((i) => (
-        <RiderLabel key={i} model={riderLabelModel(scheme, riders[i])} variant="stripe" />
+        <RiderLabel key={i} model={riderLabelModel(scheme, riders[i])} variant="live" />
       ))}
     </div>
   );
@@ -131,41 +131,26 @@ function ResultPart() {
   const [showPercent, setShowPercent] = useState(false);
   return (
     <Part id="result" title={copy.design.sections.result} intro={copy.design.result.intro}>
-      <label className="flex min-h-tap items-center gap-3 rounded-card border border-beach-line bg-beach-surface px-3 py-2 text-body font-semibold">
-        <input type="checkbox" checked={showPercent} onChange={(e) => setShowPercent(e.target.checked)} className="size-6 accent-[var(--beach-accent)]" />
+      <p className="text-small font-semibold">
+        {copy.design.result.settingLabel}: <span className="font-medium text-beach-muted">{copy.design.result.settingNote}</span>
+      </p>
+      {ATTEMPT_DISPLAYS.map((mode) => (
+        <div key={mode} className="flex flex-col gap-1" data-testid={`result-mode-${mode}`}>
+          <h3 className={sub}>{copy.design.result.modes[mode]}</h3>
+          <ResultRow row={rows[0]} display={mode} showPercent={showPercent} />
+        </div>
+      ))}
+      <h3 className={sub}>{copy.design.result.modes.trick_score}</h3>
+      {rows.slice(1).map((r) => (
+        <ResultRow key={r.id} row={r} showPercent={showPercent} />
+      ))}
+      <label className="flex min-h-tap items-center gap-2 rounded-card border border-beach-line bg-beach-surface px-2 py-1 text-body font-semibold">
+        <input type="checkbox" checked={showPercent} onChange={(e) => setShowPercent(e.target.checked)} className="size-5 accent-[var(--beach-accent)]" />
         <span>
           {copy.design.result.showPercent}
           <span className="block text-small font-medium text-beach-muted">{copy.design.result.percentNote}</span>
         </span>
       </label>
-      {rows.map((r) => (
-        <ResultRow key={r.id} row={r} showPercent={showPercent} />
-      ))}
-    </Part>
-  );
-}
-
-function MatrixPart() {
-  const main = useMemo(() => matrixMain(), []);
-  const states = useMemo(() => matrixStates(), []);
-  const legend = copy.live.matrix.legend;
-  return (
-    <Part id="matrix" title={copy.design.sections.matrix} intro={copy.design.matrix.intro}>
-      <p data-testid="matrix-phone-note" className="rounded-card border border-dashed border-beach-line p-3 text-body font-medium text-beach-muted">
-        {copy.design.matrix.phoneNote}
-      </p>
-      <h3 className={sub}>{copy.design.matrix.mainHeading}</h3>
-      <HeadMatrix model={main} />
-      <h3 className={sub}>{copy.design.matrix.statesHeading}</h3>
-      <HeadMatrix model={states} />
-      <h3 className={sub}>{copy.live.matrix.legendHeading}</h3>
-      <ul className="flex flex-col gap-1 text-body font-medium">
-        {Object.entries(legend).map(([k, text]) => (
-          <li key={k}>
-            <span className="font-semibold">{k === "scored" ? "7.75" : copy.live.matrix[k as "missing"]}</span> — {text}
-          </li>
-        ))}
-      </ul>
     </Part>
   );
 }
@@ -176,7 +161,9 @@ function SizesPart() {
   const px = (n: number) => `${n} px`;
   return (
     <Part id="sizes" title={copy.design.sections.sizes} intro={copy.design.sizes.intro}>
-      <ul className="list-disc space-y-1 pl-6 text-body font-medium">
+      <ul className="list-disc space-y-0.5 pl-5 text-body font-medium">
+        <li>{row(W.readout, px(NORMAL.readout), px(LARGE.readout))}</li>
+        <li>{row(W.heading, px(NORMAL.heading), px(LARGE.heading))}</li>
         <li>{row(W.body, px(NORMAL.body), px(LARGE.body))}</li>
         <li>{row(W.small, px(NORMAL.small), px(LARGE.small))}</li>
         <li>{row(W.name, px(NORMAL.name), px(LARGE.name))}</li>
@@ -195,22 +182,18 @@ function SizesPart() {
 export function DesignSections({ arrow }: { arrow: ArrowScheme | null }) {
   return (
     <>
-      <div className="flex flex-col gap-2">
-        <h2 className="text-name font-semibold">{copy.design.groups.screens}</h2>
-        <p className="text-body font-medium text-beach-muted">{copy.design.screens.intro}</p>
-      </div>
+      <p className="text-small font-medium text-beach-muted">{copy.design.screens.intro}</p>
       <JudgeLive />
       <JudgeDetails />
-      <JudgeSheet />
       <SpotterLive />
       <JudgeEnd />
-      <HeadPhone />
-      <h2 className="text-name font-semibold">{copy.design.groups.parts}</h2>
+      <HeadScore />
+      <HeadControl />
+      <HeadLaptop />
+      <ResultPart />
       <LabelsPart arrow={arrow} />
       <StatusPart />
       <CriteriaPart />
-      <ResultPart />
-      <MatrixPart />
       <SizesPart />
     </>
   );

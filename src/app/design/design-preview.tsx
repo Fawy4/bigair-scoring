@@ -28,7 +28,7 @@ export function DesignPreview({ arrow }: { arrow: ArrowScheme | null }) {
   return (
     <div id="top" data-testid="design-root" data-theme={theme} data-text={textSize} className={cn(theme === "dark" ? "beach-dark" : "beach-day", textSize === "large" ? "beach-text-large" : "beach-text-normal", "min-h-screen")}>
       <header className="beach-text-normal sticky top-0 z-30 border-b border-beach-line bg-beach-bg">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-1.5 px-2 py-1.5">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-1.5 px-2 py-1.5">
           <ThemeSwitch theme={theme} onChange={setTheme} />
           <TextSizeSwitch size={textSize} onChange={setTextSize} />
           <details ref={menu} className="relative" data-testid="design-menu">
@@ -51,13 +51,13 @@ export function DesignPreview({ arrow }: { arrow: ArrowScheme | null }) {
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-3xl flex-col gap-8 px-3 pb-24 pt-4">
+      <main className="mx-auto flex max-w-5xl flex-col gap-5 px-3 pb-16 pt-2">
         <div>
-          <h1 data-testid="not-live" className="rounded-card border border-beach-line bg-beach-surface p-3 text-digit font-semibold leading-tight">
+          <h1 data-testid="not-live" className="text-heading font-semibold leading-tight">
             {copy.design.notLive}
           </h1>
-          <p className="mt-3 text-body font-medium">{copy.design.intro}</p>
-          <p className="mt-1 text-small font-medium text-beach-muted">{copy.design.settingsNote}</p>
+          <p className="mt-1 text-small font-medium text-beach-muted">{copy.design.intro}</p>
+          <p className="text-small font-medium text-beach-muted">{copy.design.settingsNote}</p>
         </div>
         <DesignSections arrow={arrow} />
         <a href="#top" className="flex min-h-tap items-center justify-center rounded-xl border border-beach-border text-body font-semibold underline">

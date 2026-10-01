@@ -39,11 +39,11 @@ export function ImpressionCard({
   const rider = riders.find((r) => r.id === active) ?? riders[0];
   const done = riders.filter((r) => values[r.id] !== null && values[r.id] !== undefined).length;
   const complete = done === riders.length;
-  const button = "inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-5 text-body font-semibold";
+  const button = "inline-flex min-h-tap items-center justify-center gap-2 rounded-xl border px-5 text-body font-semibold";
   return (
-    <div data-testid="impression-card" className="flex flex-col gap-3">
+    <div data-testid="impression-card" className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-small font-semibold">{T.heading}</h3>
+        <h3 className="text-heading font-semibold">{T.heading}</h3>
         <span data-testid="impression-progress" className="shrink-0 whitespace-nowrap rounded-full border border-beach-line bg-beach-surface px-3 py-0.5 text-small font-semibold tabular-nums">
           {T.progress(done, riders.length)}
         </span>
@@ -59,7 +59,7 @@ export function ImpressionCard({
           );
         })}
       </div>
-      <section data-testid="impression-rider" data-rider={rider.id} className="flex flex-col gap-2">
+      <section data-testid="impression-rider" data-rider={rider.id} className="flex flex-col gap-1.5">
         <HeatSummaryCard summary={rider.summary} />
         <ScorePad scale={scale} value={values[rider.id] ?? null} onChange={(v) => onChange(rider.id, v)} label={T.heading} caption={caption} disabled={submitted} />
       </section>
