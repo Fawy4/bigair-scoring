@@ -143,11 +143,11 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
       expect((await mark("j1", f.ids.attH1, 8.0, 2)).error).toBeNull();
       for (const c of ["j3", "spotter", "announcer", "revoked", "bJudge", "anon"] as const) expect(failed(await mark(c, f.ids.attH1, 6)), c).not.toBe("");
     });
-    it("marks are refused before the heat starts and after the grace period, allowed inside the grace period", async () => {
+    it("marks are refused before the heat starts; allowed while it runs and after it ended, however long ago, until the judge submits (the grace period is gone)", async () => {
       expect(failed(await mark("j1", f.ids.attH2, 6))).not.toBe("");   // scheduled
-      expect(failed(await mark("j1", f.ids.attH3, 6))).not.toBe("");   // ended long ago
-      expect(failed(await mark("j1", f.ids.attH5, 6))).not.toBe("");   // timer expired past grace
-      expect((await mark("j1", f.ids.attH4, 6)).error).toBeNull();     // timer expired 50 s ago, grace 180 s
+      expect((await mark("j1", f.ids.attH3, 6)).error).toBeNull();     // ended long ago: still open, the lock is Submit or review
+      expect((await mark("j1", f.ids.attH5, 6)).error).toBeNull();     // timer expired long ago
+      expect((await mark("j1", f.ids.attH4, 6)).error).toBeNull();     // timer expired 50 s ago
     });
     it("a judge cannot write a mark in another judge's name or delete marks", async () => {
       const spoof = await f.clients.j1.from("trick_scores").insert({ attempt_id: f.ids.attH1, judge_seat_id: f.ids.seat_j2, score: 1, client_key: uuid(), client_rev: 1 });
@@ -168,11 +168,11 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
       expect(Number(after.data![0].score)).toBe(7.5);
       expect(after.data![0].version).toBeGreaterThan(data![0].version);
     });
-    it("impression marks are only accepted once the heat has ended (inside the grace period)", async () => {
+    it("impression marks are only accepted once the heat has ended", async () => {
       const imp = (heat: string) => f.clients.j1.rpc("submit_impression", { p_heat: heat, p_entry: f.ids.e1, p_value: 7, p_client_key: uuid(), p_client_rev: 1 });
       expect(failed(await imp(f.ids.H1))).not.toBe("");   // still running
       expect((await imp(f.ids.H4)).error).toBeNull();     // timer ended 50 s ago
-      expect(failed(await imp(f.ids.H5))).not.toBe("");   // past grace
+      expect((await imp(f.ids.H5)).error).toBeNull();     // timer ended long ago: open until the judge submits
     });
     it("every change to a mark is audited with the seat that made it", async () => {
       const { data } = await f.s.from("audit_log").select("actor_seat_id,action,table_name").eq("event_id", f.ids.evA1).eq("table_name", "trick_scores").eq("actor_seat_id", f.ids.seat_j1);
@@ -252,22 +252,29 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
   // ------------------------------------------------------------------ heat state machine
   describe("the heat timer and state machine (server time is truth)", () => {
     it("Start records the server time; a client-supplied start time is ignored", async () => {
-      const r = await f.clients.head.from("heats").update({ status: "running", started_at: "2020-01-01T00:00:00Z" }).eq("id", f.ids.H6).select("status,started_at").single();
+      // the heat functions check the draw, the panel and the one-running-heat rule: make the shared fixture eligible
+      await f.s.from("divisions").update({ draw_locked_at: new Date().toISOString() }).eq("id", f.ids.divA1);
+      await f.s.from("scoring_models").update({ json: { heat: { duplicateWindowSec: 20 }, panel: { minJudges: 2 } } }).eq("id", f.ids.modelA1);
+      await f.s.from("events").update({ settings: { publicLiveScores: "live", maxRunningHeats: 9 } }).eq("id", f.ids.evA1);
+      const forged = await f.clients.head.from("heats").update({ started_at: "2020-01-01T00:00:00Z" }).eq("id", f.ids.H6);
+      expect(forged.error).toBeNull();
+      const r = await f.clients.head.rpc("start_heat", { p_heat: f.ids.H6 });
       expect(r.error).toBeNull();
-      expect(Math.abs(Date.now() - new Date(r.data!.started_at).getTime())).toBeLessThan(60_000);
+      expect(Math.abs(Date.now() - new Date((r.data as { started_at: string }).started_at).getTime())).toBeLessThan(60_000);
     });
     it("pause and resume accumulate paused time on the server", async () => {
-      const p = await f.clients.head.from("heats").update({ status: "paused" }).eq("id", f.ids.H6).select("status,paused_at").single();
-      expect(p.data!.paused_at).not.toBeNull();
-      const r = await f.clients.head.from("heats").update({ status: "running" }).eq("id", f.ids.H6).select("status,paused_at,paused_total_sec").single();
-      expect(r.data!.paused_at).toBeNull();
-      expect(r.data!.paused_total_sec).toBeGreaterThanOrEqual(0);
+      const p = await f.clients.head.rpc("pause_heat", { p_heat: f.ids.H6 });
+      expect((p.data as { paused_at: string }).paused_at).not.toBeNull();
+      const r = await f.clients.head.rpc("resume_heat", { p_heat: f.ids.H6 });
+      expect((r.data as { paused_at: string | null }).paused_at).toBeNull();
+      expect((r.data as { paused_total_sec: number }).paused_total_sec).toBeGreaterThanOrEqual(0);
     });
-    it("only the server can publish; illegal jumps are refused; spotters and judges cannot touch heats", async () => {
+    it("only the server can publish; illegal jumps are refused; spotters and judges cannot touch heats; nobody edits a heat's status by hand", async () => {
       expect(failed(await f.clients.head.from("heats").update({ status: "published" }).eq("id", f.ids.H6))).not.toBe("");
       expect(failed(await f.clients.head.from("heats").update({ status: "scheduled" }).eq("id", f.ids.H6))).not.toBe("");
-      for (const c of ["spotter", "j1", "announcer"] as const) expect(((await f.clients[c].from("heats").update({ status: "ended" }).eq("id", f.ids.H6).select()).data ?? []).length, c).toBe(0);
-      expect((await f.clients.head.from("heats").update({ status: "ended" }).eq("id", f.ids.H6)).error).toBeNull();
+      expect(failed(await f.clients.head.from("heats").update({ status: "ended" }).eq("id", f.ids.H6))).toContain("USE_HEAT_FUNCTIONS");
+      for (const c of ["spotter", "j1", "announcer"] as const) expect(failed(await f.clients[c].rpc("end_heat", { p_heat: f.ids.H6 })), c).toContain("NOT_ALLOWED");
+      expect((await f.clients.head.rpc("end_heat", { p_heat: f.ids.H6 })).error).toBeNull();
     });
     it("the head judge cannot edit the event or its divisions", async () => {
       expect(((await f.clients.head.from("divisions").update({ name: "x" }).eq("id", f.ids.divA1).select()).data ?? []).length).toBe(0);
