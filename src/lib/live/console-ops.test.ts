@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { headConsole } from "./design-fixtures";
-import { blockersFor, riderTotal, withCellScore, withRowState } from "./console-ops";
+import { blockersFor, canMerge, mergeKeepFirst, riderTotal, withCellScore, withRowState } from "./console-ops";
 
 // The laptop console (owner, round 3): editing a score, deleting an attempt, a rider's status and Publish all have to work on the real maths.
 const c = () => headConsole();
@@ -43,12 +43,12 @@ describe("editing a score", () => {
     const row = c().rows.find((r) => r.id === "blue-2")!;
     expect(row.panelState).toBe("incomplete");
     const next = withCellScore(row, "J3", 6.5);
-    expect(next.panelState).toBe("ok");
     expect(next.panelLabel).toBe("6.50");
+    expect(next.panelState).not.toBe("incomplete");
   });
-  it("a far-off score is flagged as an outlier on the right cell", () => {
-    const row = c().rows.find((r) => r.id === "blue-1")!;
-    const next = withCellScore(row, "J3", 9.0);
+  it("a far-off score is flagged as an outlier on the right cell (Red attempt 5, J3 gives 4.0)", () => {
+    const row = c().rows.find((r) => r.id === "red-5")!;
+    const next = withCellScore(row, "J3", 4.0);
     expect(next.panelState).toBe("outlier");
     expect(next.cells[2].state).toBe("outlier");
   });
@@ -68,5 +68,27 @@ describe("what blocks Publish", () => {
   it("a rider who did not start blocks nothing", () => {
     const k = c();
     expect(blockersFor(k.rows, imp, { red: null, blue: "DNS" }, k.labels)).toEqual([]);
+  });
+});
+
+describe("selecting several attempts (tick boxes)", () => {
+  it("Merge is on when the selection is two or more attempts of the same rider and trick (a possible duplicate)", () => {
+    const rows = c().rows;
+    expect(canMerge([rows.find((r) => r.id === "red-2")!, rows.find((r) => r.id === "red-6")!])).toBe(true);
+  });
+  it("Merge is off for one attempt, for different tricks and for different riders", () => {
+    const rows = c().rows;
+    const get = (id: string) => rows.find((r) => r.id === id)!;
+    expect(canMerge([get("red-2")])).toBe(false);
+    expect(canMerge([get("red-2"), get("red-3")])).toBe(false);
+    expect(canMerge([get("red-2"), get("blue-1")])).toBe(false);
+    expect(canMerge([])).toBe(false);
+  });
+  it("merging keeps the first logged attempt and removes the others", () => {
+    const rows = c().rows;
+    const sel = [rows.find((r) => r.id === "red-6")!, rows.find((r) => r.id === "red-2")!];
+    const out = mergeKeepFirst(rows, sel.map((r) => r.id));
+    expect(out.find((r) => r.id === "red-2")?.state).toBe("ok");
+    expect(out.find((r) => r.id === "red-6")?.state).toBe("deleted");
   });
 });

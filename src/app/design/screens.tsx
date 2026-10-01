@@ -57,7 +57,7 @@ export function SpotterLive() {
       <div className="flex flex-col gap-0.5 px-2 pt-1.5">
         <div role="group" aria-label={copy.live.tile.strip} className="grid gap-1" style={{ gridTemplateColumns: `repeat(${live.riders.length}, minmax(0, 1fr))` }}>
           {live.riders.map((r, i) => (
-            <RiderTile key={r.id} compact label={r.label} attempts={counts[i]} max={r.max} selected={selected === i} onSelect={() => setSelected(i)} />
+            <RiderTile key={r.id} compact lockWhenOut label={r.label} attempts={counts[i]} max={r.max} selected={selected === i} onSelect={() => setSelected(i)} />
           ))}
         </div>
       </div>

@@ -4,15 +4,14 @@ import { useMemo, useState } from "react";
 import { ConnectionBadge } from "@/components/live/connection-badge";
 import { CriteriaRows } from "@/components/live/criteria-rows";
 import { HeatTimer } from "@/components/live/heat-timer";
-import { ResultRow } from "@/components/live/result-row";
+import { PublicResults } from "@/components/live/public-results";
 import { RiderTile } from "@/components/live/rider-tile";
 import { SavedBanner } from "@/components/live/saved-banner";
 import { RiderLabel } from "@/components/rider-label";
 import { judgeTrickScore } from "@/lib/engine/scoring";
 import { riderLabelModel } from "@/lib/identification/rider-label";
 import type { ArrowScheme } from "@/lib/live/arrow-loader";
-import { FIXTURE_SCHEMES, KOTA, labelRiders, resultRows, tileRiders } from "@/lib/live/design-fixtures";
-import { ATTEMPT_DISPLAYS } from "@/lib/live/result-shading";
+import { FIXTURE_SCHEMES, KOTA, labelRiders, tileRiders } from "@/lib/live/design-fixtures";
 import { formatCell } from "@/lib/live/matrix-model";
 import { formatPadValue } from "@/lib/live/score-pad";
 import { LARGE, NORMAL } from "@/lib/live/size-tokens";
@@ -127,30 +126,9 @@ function CriteriaPart() {
 }
 
 function ResultPart() {
-  const rows = useMemo(() => resultRows(), []);
-  const [showPercent, setShowPercent] = useState(false);
   return (
     <Part id="result" title={copy.design.sections.result} intro={copy.design.result.intro}>
-      <p className="text-small font-semibold">
-        {copy.design.result.settingLabel}: <span className="font-medium text-beach-muted">{copy.design.result.settingNote}</span>
-      </p>
-      {ATTEMPT_DISPLAYS.map((mode) => (
-        <div key={mode} className="flex flex-col gap-1" data-testid={`result-mode-${mode}`}>
-          <h3 className={sub}>{copy.design.result.modes[mode]}</h3>
-          <ResultRow row={rows[0]} display={mode} showPercent={showPercent} />
-        </div>
-      ))}
-      <h3 className={sub}>{copy.design.result.modes.trick_score}</h3>
-      {rows.slice(1).map((r) => (
-        <ResultRow key={r.id} row={r} showPercent={showPercent} />
-      ))}
-      <label className="flex min-h-tap items-center gap-2 rounded-card border border-beach-line bg-beach-surface px-2 py-1 text-body font-semibold">
-        <input type="checkbox" checked={showPercent} onChange={(e) => setShowPercent(e.target.checked)} className="size-5 accent-[var(--beach-accent)]" />
-        <span>
-          {copy.design.result.showPercent}
-          <span className="block text-small font-medium text-beach-muted">{copy.design.result.percentNote}</span>
-        </span>
-      </label>
+      <PublicResults />
     </Part>
   );
 }
@@ -163,6 +141,9 @@ function SizesPart() {
     <Part id="sizes" title={copy.design.sections.sizes} intro={copy.design.sizes.intro}>
       <ul className="list-disc space-y-0.5 pl-5 text-body font-medium">
         <li>{row(W.readout, px(NORMAL.readout), px(LARGE.readout))}</li>
+        <li>{row(W.row, px(NORMAL.row), px(LARGE.row))}</li>
+        <li>{row(W.composed, px(NORMAL.composed), px(LARGE.composed))}</li>
+        <li>{row(W.bar, px(NORMAL.bar), px(LARGE.bar))}</li>
         <li>{row(W.heading, px(NORMAL.heading), px(LARGE.heading))}</li>
         <li>{row(W.body, px(NORMAL.body), px(LARGE.body))}</li>
         <li>{row(W.small, px(NORMAL.small), px(LARGE.small))}</li>

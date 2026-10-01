@@ -262,10 +262,15 @@ body:has(.print-sheet) {
   --beach-missing: #404040;
   --beach-tint-crash: #f8cfcf;
   --beach-tint-grey: #e2e5e6;
-  --beach-tint-green0: #6fcf97;
-  --beach-tint-green1: #9be0b6;
-  --beach-tint-green2: #c3edd2;
-  --beach-tint-green3: #e3f6ea;
+  --beach-tint-grade0: #f3dc6b;
+  --beach-tint-grade1: #d6e275;
+  --beach-tint-grade2: #b4e08a;
+  --beach-tint-grade3: #8fd79a;
+  --beach-tint-grade4: #6fcf97;
+  --beach-tint-dist0: #b7e8c6;
+  --beach-tint-dist1: #f3e27a;
+  --beach-tint-dist2: #f6b86b;
+  --beach-tint-dist3: #f29a9a;
   color-scheme: light;
 }
 .beach-dark {
@@ -287,13 +292,35 @@ body:has(.print-sheet) {
   --beach-missing: #c4c4c4;
   --beach-tint-crash: #5a1f1f;
   --beach-tint-grey: #2a3133;
-  --beach-tint-green0: #165c35;
-  --beach-tint-green1: #134c2c;
-  --beach-tint-green2: #103f24;
-  --beach-tint-green3: #0d331d;
+  --beach-tint-grade0: #5a4a0c;
+  --beach-tint-grade1: #4a5410;
+  --beach-tint-grade2: #38581a;
+  --beach-tint-grade3: #265a27;
+  --beach-tint-grade4: #165c35;
+  --beach-tint-dist0: #165c35;
+  --beach-tint-dist1: #5a4a0c;
+  --beach-tint-dist2: #6b3a0e;
+  --beach-tint-dist3: #6b1f1f;
   color-scheme: dark;
 }
 .beach-text-normal {
+  --size-body: 14px;
+  --size-small: 12px;
+  --size-name: 15px;
+  --size-digit: 16px;
+  --size-pad-height: 38px;
+  --size-pad-gap: 4px;
+  --size-tap: 36px;
+  --size-timer-slim: 18px;
+  --size-timer-head: 48px;
+  --size-radius: 10px;
+  --size-readout: 26px;
+  --size-heading: 12px;
+  --size-row: 38px;
+  --size-composed: 15px;
+  --size-bar: 44px;
+}
+.beach-text-large {
   --size-body: 15px;
   --size-small: 13px;
   --size-name: 17px;
@@ -306,20 +333,9 @@ body:has(.print-sheet) {
   --size-radius: 12px;
   --size-readout: 30px;
   --size-heading: 14px;
-}
-.beach-text-large {
-  --size-body: 17px;
-  --size-small: 15px;
-  --size-name: 20px;
-  --size-digit: 28px;
-  --size-pad-height: 56px;
-  --size-pad-gap: 8px;
-  --size-tap: 48px;
-  --size-timer-slim: 24px;
-  --size-timer-head: 48px;
-  --size-radius: 16px;
-  --size-readout: 40px;
-  --size-heading: 16px;
+  --size-row: 44px;
+  --size-composed: 17px;
+  --size-bar: 48px;
 }
 .beach-day,
 .beach-dark {

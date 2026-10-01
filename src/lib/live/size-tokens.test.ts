@@ -14,17 +14,14 @@ describe("Normal text size stays inside the owner's ranges", () => {
     expect(NORMAL.timerSlim).toBeLessThan(NORMAL.timerHead);
   });
   it("the selected score is the only large number: bigger than every other size on the screen", () => {
-    for (const k of ["body", "small", "name", "digit", "heading", "timerSlim"] as const) expect(NORMAL.readout).toBeGreaterThan(NORMAL[k]);
+    for (const k of ["body", "small", "name", "digit", "heading", "timerSlim", "composed"] as const) expect(NORMAL.readout).toBeGreaterThan(NORMAL[k]);
   });
+  it("buttons are never smaller than a pad button's height", () => expect(NORMAL.tap).toBeLessThanOrEqual(NORMAL.padHeight));
 });
 
-describe("Large is roughly the sizes of the first preview", () => {
-  it("pad buttons 56, gaps 8, digits 28, rider names 20, the selected score 40", () => {
-    expect(LARGE.readout).toBe(40);
-    expect(LARGE.padHeight).toBe(56);
-    expect(LARGE.padGap).toBe(8);
-    expect(LARGE.digit).toBe(28);
-    expect(LARGE.name).toBe(20);
+describe("Large is what Normal was before round 4", () => {
+  it("pad buttons 46 with 6 px gaps, digits 19, rider names 17, the selected score 30, buttons 44", () => {
+    expect([LARGE.padHeight, LARGE.padGap, LARGE.digit, LARGE.name, LARGE.readout, LARGE.tap]).toEqual([46, 6, 19, 17, 30, 44]);
   });
   it("is never smaller than Normal, anywhere", () => {
     for (const k of Object.keys(NORMAL) as Array<keyof typeof NORMAL>) expect(LARGE[k], k).toBeGreaterThanOrEqual(NORMAL[k]);

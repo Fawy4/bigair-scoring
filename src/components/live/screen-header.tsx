@@ -1,7 +1,7 @@
 import { HeatTimer, type TimerState } from "./heat-timer";
 import { ConnectionBadge, type ConnectionStatus } from "./connection-badge";
+import { Chip } from "./chip";
 import { copy } from "@/lib/ui-copy";
-import { cn } from "@/lib/utils";
 
 /**
  * The slim header of the judge and spotter screens: the small timer, the sync pill and a "Details" toggle, then one muted line with the heat and the seat.
@@ -28,19 +28,13 @@ export function ScreenHeader({
   onToggleDetails?: () => void;
 }) {
   return (
-    <header data-testid="screen-header" className="flex flex-col border-b border-beach-line bg-beach-bg px-2 pb-1 pt-0.5">
+    <header data-testid="screen-header" className="flex flex-col border-b border-beach-line bg-beach-bg px-2 pb-0.5 pt-0.5">
       <div className="flex min-h-tap items-center justify-between gap-2">
         <HeatTimer remainingMs={remainingMs} state={timerState} />
         {details !== undefined ? (
-          <button
-            type="button"
-            data-testid="details-toggle"
-            aria-pressed={details}
-            onClick={onToggleDetails}
-            className={cn("min-h-tap rounded-xl border px-3 text-body font-semibold", details ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}
-          >
+          <Chip data-testid="details-toggle" pressed={details} onClick={onToggleDetails}>
             {details ? copy.live.header.detailsOn : copy.live.header.details}
-          </button>
+          </Chip>
         ) : null}
       </div>
       <div className="flex items-center justify-between gap-2">

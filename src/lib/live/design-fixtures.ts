@@ -2,6 +2,7 @@ import vocabularyJson from "../../../presets/tricks/big-air-vocabulary.json";
 import kotaJson from "../../../presets/scoring/kota-best3-impression.json";
 import { computeHeat, judgeTrickScore, roundHalfUp, normaliseTrickName } from "@/lib/engine/scoring";
 import type { Attempt, AttemptResult, HeatResult, RiderInput } from "@/lib/engine/scoring";
+import { bestInk } from "@/lib/identification/label-style";
 import { riderLabelModel, type LabelModel, type LabelRider } from "@/lib/identification/rider-label";
 import { builtInSchemes, type IdentificationScheme } from "@/lib/schemas/identification";
 import { parseScoringModel, type ScoringModel } from "@/lib/schemas/scoring-model";
@@ -495,10 +496,10 @@ export interface ConsoleRow extends MatrixRow {
 /** Red (docs/08 §1A) plus a possible duplicate of attempt 2 logged by a second spotter, and two attempts of Blue whose Impression score Judge 2 still owes. */
 export function headConsole() {
   const blueLabel = lycraLabel("Noor Haddad", "blue");
-  const flatMarks = (v: number) => JUDGE_IDS.map((judgeId) => ({ judgeId, value: flat(v) }));
   const blueAttempts: Attempt[] = [
-    { seq: 1, status: "landed", trickName: "Backroll", direction: "left", marks: flatMarks(7.0) },
-    { seq: 2, status: "landed", trickName: "Frontroll", direction: "right", marks: flatMarks(6.5).filter((m) => m.judgeId !== "J3") },
+    // the judges disagree: panel scores stay 7.0 and 6.5, but the cells show the distance colours (red / green / orange and yellow / yellow)
+    { seq: 1, status: "landed", trickName: "Backroll", direction: "left", marks: [{ judgeId: "J1", value: flat(3.5) }, { judgeId: "J2", value: flat(8.5) }, { judgeId: "J3", value: flat(9.0) }] },
+    { seq: 2, status: "landed", trickName: "Frontroll", direction: "right", marks: [{ judgeId: "J1", value: flat(4.8) }, { judgeId: "J2", value: flat(8.2) }] },
   ];
   const impression = { red: [7.5, 7.0, 8.0], blue: [6.0, null, 6.0] } as Record<string, Array<number | null>>;
   const result = heatOf([
@@ -518,4 +519,134 @@ export function headConsole() {
   ];
   const owes = result.publishBlockers.flatMap((b) => (b.type === "impression_missing" ? [{ judge: nameOfJudge(b.judge), rider: (b.rider === "Blue" ? blueLabel : RED_LABEL).primary.text }] : []));
   return { judgeIds: [...JUDGE_IDS], rows, totals, owes, impression, blueLabel, labels: { red: "RED", blue: "BLUE" } as Record<string, string>, heatName: "Pro Men · R1 · Heat 3", remaining: formatClock(330_000) };
+}
+
+// ---- Public results: the heat summary and the ladder
+export interface PublicBox {
+  seq: number;
+  trick: string;
+  status: "landed" | "crashed";
+  counted: boolean;
+  score: number | null;
+  scoreLabel: string | null;
+}
+export interface PublicRider {
+  place: number;
+  label: LabelModel;
+  hex: string;
+  totalLabel: string;
+  formula: string | null;
+  status: "ok" | "DNS";
+  boxes: PublicBox[];
+}
+export interface PublicHeat {
+  id: string;
+  name: string;
+  status: "complete" | "live" | "scheduled";
+  /** The cap per rider (shown as "7 attempts per rider"); null when the heat has no cap. */
+  attemptsPerRider: number | null;
+  trickCount: number;
+  riders: PublicRider[];
+  /** Every counted score of the heat, for the yellow-to-green grading across the heat. */
+  countedScores: number[];
+}
+
+interface Spec {
+  name: string;
+  colour: string;
+  tricks: Array<[string, number | null]>;
+  impression: number;
+}
+
+/** A made-up heat run through the real engine: every judge gives the same score; best three count; the Impression score is the same from every judge. */
+function madeUpHeat(id: string, name: string, status: PublicHeat["status"], cap: number | null, specs: Spec[]): PublicHeat {
+  const colourHex = (c: string) => FIXTURE_SCHEMES[0].palette.find((p) => p.key === c)!.hex;
+  const riders: RiderInput[] = specs.map((s) => ({
+    riderId: s.name,
+    attempts: s.tricks.map(([trick, v], i): Attempt => (v === null ? { seq: i + 1, status: "crashed", trickName: trick, marks: [] } : { seq: i + 1, status: "landed", trickName: trick, marks: JUDGE_IDS.map((judgeId) => ({ judgeId, value: flat(v) })) })),
+    impressionMarks: impressionMarks([s.impression, s.impression, s.impression]),
+  }));
+  const result = heatOf(riders);
+  const out = result.ranking.map((rk): PublicRider => {
+    const r = result.riders.find((x) => x.riderId === rk.riderId)!;
+    const spec = specs.find((s) => s.name === rk.riderId)!;
+    const countedSeqs = new Set(r.counted.map((c) => c.attemptSeq));
+    return {
+      place: rk.place,
+      label: labelOf(spec.name, spec.colour),
+      hex: colourHex(spec.colour),
+      totalLabel: r.totalLabel,
+      formula: copy.live.result.formula(r.totalLabel, two(r.components.tricks), KOTA.heat.impression?.label ?? "", two(r.components.impression)),
+      status: "ok",
+      boxes: r.allAttempts.map((a) => ({ seq: a.seq, trick: a.trickName ?? "", status: a.status, counted: countedSeqs.has(a.seq), score: a.panel?.score ?? null, scoreLabel: a.panel?.score == null ? null : two(a.panel.score) })),
+    };
+  });
+  return { id, name, status, attemptsPerRider: cap, trickCount: out.reduce((n, r) => n + r.boxes.length, 0), riders: out, countedScores: out.flatMap((r) => r.boxes.filter((b) => b.counted && b.score !== null).map((b) => b.score as number)) };
+}
+
+/** Four heats for the public tabs. Heat 3 is the docs/08 §1A heat (Red 31.54); the others are made up and run through the engine. */
+export function publicHeats(): PublicHeat[] {
+  const h3rows = resultRows();
+  const colour: Record<string, string> = { Red: "red", Blue: "blue", Green: "green" };
+  const hex = (c: string) => FIXTURE_SCHEMES[0].palette.find((p) => p.key === c)!.hex;
+  const heat3: PublicHeat = {
+    id: "h3",
+    name: "Heat 3",
+    status: "complete",
+    attemptsPerRider: 7,
+    trickCount: h3rows.reduce((n, r) => n + r.attempts.length, 0),
+    riders: h3rows.map((r) => ({
+      place: r.place,
+      label: r.label,
+      hex: hex(colour[r.id]),
+      totalLabel: r.totalLabel,
+      formula: r.formula,
+      status: r.status,
+      boxes: r.attempts.map((a) => ({ seq: a.seq, trick: a.trick, status: a.status, counted: a.counted, score: a.scoreLabel === null ? null : Number(a.scoreLabel), scoreLabel: a.scoreLabel })),
+    })),
+    countedScores: h3rows.flatMap((r) => r.attempts.filter((a) => a.counted && a.scoreLabel !== null).map((a) => Number(a.scoreLabel))),
+  };
+  return [
+    madeUpHeat("h1", "Heat 1", "complete", 7, [
+      { name: "Noor Haddad", colour: "pink", tricks: [["Backroll", 7.0], ["Frontroll", 6.5], ["Kiteloop", 6.0], ["Megaloop", null], ["Double loop", 5.5]], impression: 6.5 },
+      { name: "Mia Costa", colour: "blue", tricks: [["Kiteloop", 6.5], ["Backroll", 6.0], ["Frontroll", 5.0], ["Handle pass", 5.5]], impression: 5.5 },
+      { name: "Lena Vogt", colour: "yellow", tricks: [["Backroll", 5.0], ["Kiteloop", null], ["Frontroll", 4.5]], impression: 5.0 },
+    ]),
+    madeUpHeat("h2", "Heat 2", "complete", 7, [
+      { name: "Omar Fathy", colour: "yellow", tricks: [["Double loop", 8.0], ["Backroll", 7.5], ["Megaloop", 7.0], ["Frontroll", 6.0]], impression: 7.0 },
+      { name: "Tariq Boulos", colour: "blue", tricks: [["Kiteloop", 5.5], ["Backroll", null], ["Frontroll", 5.0]], impression: 4.5 },
+    ]),
+    heat3,
+    madeUpHeat("h4", "Heat 4", "live", 7, [
+      { name: "Lena Vogt", colour: "yellow", tricks: [["Double loop", 5.3], ["Backroll", 4.5], ["Kiteloop", 3.7], ["Frontroll", 3.3], ["Straight jump", 1.8], ["Megaloop", null], ["Backroll", null]], impression: 4.7 },
+      { name: "Noor Haddad", colour: "blue", tricks: [["Backroll", 4.3], ["Kiteloop", 2.8], ["Frontroll", 2.7], ["Handle pass", 2.3], ["Megaloop", null], ["Double loop", null], ["Backroll", null]], impression: 3.3 },
+      { name: "Mia Costa", colour: "pink", tricks: [["Kiteloop", 3.7], ["Backroll", 2.2], ["Frontroll", 2.0], ["Straight jump", 2.0], ["Megaloop", null], ["Double loop", null], ["Backroll", null]], impression: 2.2 },
+    ]),
+  ];
+}
+
+export interface LadderRider {
+  name: string;
+  hex: string;
+  ink: string;
+  totalLabel: string;
+  placeholder: boolean;
+}
+export interface LadderHeat {
+  name: string;
+  status: "complete" | "live" | "scheduled";
+  riders: LadderRider[];
+}
+/** The ladder (bracket) view: rounds of heat cards, each rider on a row in their Lycra colour with their total; later seats wait as "1st H1". */
+export function ladderView(): { rounds: Array<{ name: string; heats: LadderHeat[] }> } {
+  const heats = publicHeats();
+  const toRider = (r: PublicRider): LadderRider => ({ name: r.label.secondary.find((x) => x.key === "name")?.text ?? r.label.primary.text, hex: r.hex, ink: bestInk(r.hex), totalLabel: r.totalLabel, placeholder: false });
+  const wait = (name: string): LadderRider => ({ name, hex: "#d5dadc", ink: "#111111", totalLabel: copy.live.result.noTotal, placeholder: true });
+  const winner = (h: PublicHeat): LadderRider => ({ ...toRider(h.riders[0]), totalLabel: copy.live.result.noTotal });
+  return {
+    rounds: [
+      { name: "Round 1", heats: [{ name: "Heat 1", status: "complete", riders: heats[0].riders.map(toRider) }, { name: "Heat 2", status: "complete", riders: heats[1].riders.map(toRider) }] },
+      { name: "Finals", heats: [{ name: "Heat 3", status: "scheduled", riders: [winner(heats[0]), winner(heats[1])] }, { name: "Heat 4", status: "scheduled", riders: [wait("2nd Heat 1"), wait("2nd Heat 2")] }] },
+    ],
+  };
 }

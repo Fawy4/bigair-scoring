@@ -72,3 +72,13 @@ export function snapToStep(value: number, scale: Scale): number {
 export function formatPadValue(value: number, scale: Scale): string {
   return value.toFixed(decimalsOf(scale.step));
 }
+
+export type PadParse = PadCheck | { ok: false; reason: "empty" };
+
+/** A typed score (numeric keyboard): a comma counts as the decimal sign. It passes the same step and range check as a tap. */
+export function parsePadInput(text: string, scale: Scale): PadParse {
+  const t = text.trim().replace(",", ".");
+  if (t === "") return { ok: false, reason: "empty" };
+  if (!/^-?\d*\.?\d*$/.test(t) || t === "." || t === "-") return { ok: false, reason: "not_a_number" };
+  return isAllowed(Number(t), scale);
+}

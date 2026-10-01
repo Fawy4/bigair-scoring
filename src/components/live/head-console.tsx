@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { MoreVertical } from "lucide-react";
+import { Chip } from "./chip";
 import { HeadMatrix } from "./head-matrix";
 import { Pill } from "./pill";
 import { ScorePad } from "./score-pad";
 import { RiderLabel } from "@/components/rider-label";
-import { blockersFor, riderTotal, withCellScore, withRowState, type RiderStatus } from "@/lib/live/console-ops";
+import { outlierTolerance } from "@/lib/live/cell-tone";
+import { blockersFor, canMerge, mergeKeepFirst, riderTotal, withCellScore, withRowState, type RiderStatus } from "@/lib/live/console-ops";
 import { headConsole, KOTA, type ConsoleRow } from "@/lib/live/design-fixtures";
 import { nextHeatState } from "@/lib/live/head-state";
 import { formatCell } from "@/lib/live/matrix-model";
@@ -28,6 +30,8 @@ type Dialog =
   | { kind: "edit"; rowId: string }
   | { kind: "add" }
   | { kind: "status"; riderKey: string; status: Exclude<RiderStatus, null> }
+  | { kind: "bulkDelete" }
+  | { kind: "bulkMerge" }
   | { kind: "impression" }
   | { kind: "override" }
   | { kind: "rerun" }
@@ -87,7 +91,9 @@ export function HeadConsole() {
   const [menu, setMenu] = useState<Menu>({ kind: "attempt", rowId: "red-6" });
   const [dialog, setDialog] = useState<Dialog>(null);
   const [audit, setAudit] = useState<string[]>([]);
+  const [selection, setSelection] = useState<string[]>([]);
 
+  const picked = rows.filter((r) => selection.includes(r.id) && r.state !== "deleted");
   const blockers = blockersFor(rows, impression, status, k.labels);
   const owes = blockers.length === 0 ? [] : k.owes.filter((o) => impression.blue.some((v) => v === null) && o.rider === "BLUE");
   const rowById = (id: string) => rows.find((r) => r.id === id)!;
@@ -150,13 +156,13 @@ export function HeadConsole() {
       </Modal>
     );
   }
-  function SimpleDialog({ title, apply, what, text }: { title: string; apply: () => void; what: string; text?: React.ReactNode }) {
+  function SimpleDialog({ title, apply, what, text, saveLabel }: { title: string; apply: () => void; what: string; text?: React.ReactNode; saveLabel?: string }) {
     const [reason, setReason] = useState("");
     return (
       <Modal title={title} onClose={close}>
         {text}
         <Reason value={reason} onChange={setReason} />
-        <Footer canSave={reason.trim().length > 0} onSave={() => { apply(); done(what, reason.trim()); }} onCancel={close} saveLabel={title} />
+        <Footer canSave={reason.trim().length > 0} onSave={() => { apply(); done(what, reason.trim()); }} onCancel={close} saveLabel={saveLabel ?? title} />
       </Modal>
     );
   }
@@ -288,7 +294,7 @@ export function HeadConsole() {
       ];
 
   return (
-    <div data-testid="head-console" data-heat={heat} className="relative flex min-w-[56rem] flex-col gap-2 p-2">
+    <div data-testid="head-console" data-heat={heat} className="relative flex min-w-[52rem] flex-col gap-2 p-2">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-name font-semibold">{k.heatName}</p>
         <Pill tone={heat === "published" ? "live" : "outlier"}>{cancelled ? "Cancelled" : heat === "published" ? C.published : H.stateWord.ended}</Pill>
@@ -327,13 +333,28 @@ export function HeadConsole() {
         <p className="text-small font-medium text-beach-muted">{C.tap}</p>
       )}
 
-      <div className="grid grid-cols-[minmax(0,1fr)_15rem] items-start gap-2">
+      {picked.length > 0 ? (
+        <div data-testid="selection-bar" className="flex flex-wrap items-center gap-1.5 rounded-card border border-beach-accent bg-beach-surface p-1.5">
+          <span className="text-body font-semibold">{C.selected(picked.length)}</span>
+          <Chip data-testid="merge-selected" variant={canMerge(picked) ? "accent" : "muted"} disabled={!canMerge(picked)} onClick={() => setDialog({ kind: "bulkMerge" })}>
+            {C.mergeSelected}
+          </Chip>
+          <Chip data-testid="delete-selected" onClick={() => setDialog({ kind: "bulkDelete" })}>
+            {C.deleteSelected}
+          </Chip>
+          <Chip onClick={() => setSelection([])}>{C.clearSelection}</Chip>
+        </div>
+      ) : null}
+      <p className="text-small font-medium text-beach-muted">{C.toleranceNote(String(outlierTolerance(KOTA)))}</p>
+      <div className="grid grid-cols-[minmax(0,1fr)_13.5rem] items-start gap-2">
         <HeadMatrix
           model={{ judgeIds: k.judgeIds, rows }}
           actions={{
             onCell: (r, judgeId) => setDialog({ kind: "cell", rowId: r.id, judgeId }),
             onAttempt: (r) => setMenu({ kind: "attempt", rowId: r.id }),
             onRider: (r) => setMenu({ kind: "rider", riderKey: (r as ConsoleRow).riderKey }),
+            selected: selection,
+            onSelect: (r) => setSelection((all) => (all.includes(r.id) ? all.filter((x) => x !== r.id) : [...all, r.id])),
           }}
         />
         <aside className="flex flex-col gap-2">
@@ -399,6 +420,29 @@ export function HeadConsole() {
               ))}
             </ul>
           }
+        />
+      ) : null}
+      {dialog?.kind === "bulkDelete" ? (
+        <SimpleDialog
+          title={C.deleteSelectedTitle(picked.length)}
+          saveLabel={C.deleteSelected}
+          what={`${C.delete}: ${picked.map((r) => `${r.label.primary.text} ${r.seq}`).join(", ")}`}
+          apply={() => {
+            const ids = picked.map((r) => r.id);
+            setRows((all) => all.map((r) => (ids.includes(r.id) ? withRowState(r, "deleted") : r)));
+            setSelection([]);
+          }}
+        />
+      ) : null}
+      {dialog?.kind === "bulkMerge" ? (
+        <SimpleDialog
+          title={C.merge}
+          what={`${C.merge}: ${picked.map((r) => `${r.label.primary.text} ${r.seq}`).join(" + ")}`}
+          text={<p className="text-body font-medium">{C.mergeSelectedNote}</p>}
+          apply={() => {
+            setRows((all) => mergeKeepFirst(all, picked.map((r) => r.id)));
+            setSelection([]);
+          }}
         />
       ) : null}
       {dialog?.kind === "impression" ? <ImpressionDialog /> : null}

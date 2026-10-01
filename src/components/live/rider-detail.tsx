@@ -19,7 +19,7 @@ export function RiderDetail({ sheet }: { sheet: RiderSheetModel }) {
       </p>
       <ol className="flex flex-col divide-y divide-beach-line rounded-xl border border-beach-line bg-beach-bg">
         {[...sheet.attempts].reverse().map((a) => (
-          <li key={a.seq} data-counted={a.counted} className={cn("flex items-center justify-between gap-2 px-2 py-1", a.counted && "bg-beach-tint-green2")}>
+          <li key={a.seq} data-counted={a.counted} className={cn("flex items-center justify-between gap-2 px-2 py-1", a.counted && "bg-beach-tint-grade3")}>
             <span className="min-w-0 truncate text-body font-medium">
               {copy.live.result.attemptLine(a.seq, a.trick)}
               <span className="ml-1.5 text-small text-beach-muted">{a.direction === "left" ? copy.live.summary.left : a.direction === "right" ? copy.live.summary.right : ""}</span>

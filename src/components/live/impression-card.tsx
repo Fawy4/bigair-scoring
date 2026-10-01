@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check } from "lucide-react";
+import { Chip } from "./chip";
 import { HeatSummaryCard } from "./heat-summary-card";
 import { RiderTile } from "./rider-tile";
 import { ScorePad } from "./score-pad";
@@ -9,7 +10,6 @@ import { formatPadValue } from "@/lib/live/score-pad";
 import type { ImpressionRider } from "@/lib/live/design-fixtures";
 import type { Scale } from "@/lib/schemas/scoring-model";
 import { copy } from "@/lib/ui-copy";
-import { cn } from "@/lib/utils";
 
 /**
  * The judge's step after the heat: one Impression / Variety score per rider. The riders are the strip at the top (a tick once scored); the chosen
@@ -39,12 +39,11 @@ export function ImpressionCard({
   const rider = riders.find((r) => r.id === active) ?? riders[0];
   const done = riders.filter((r) => values[r.id] !== null && values[r.id] !== undefined).length;
   const complete = done === riders.length;
-  const button = "inline-flex min-h-tap items-center justify-center gap-2 rounded-xl border px-5 text-body font-semibold";
   return (
-    <div data-testid="impression-card" className="flex flex-col gap-2">
+    <div data-testid="impression-card" className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-heading font-semibold">{T.heading}</h3>
-        <span data-testid="impression-progress" className="shrink-0 whitespace-nowrap rounded-full border border-beach-line bg-beach-surface px-3 py-0.5 text-small font-semibold tabular-nums">
+        <span data-testid="impression-progress" className="shrink-0 whitespace-nowrap rounded-full border border-beach-line bg-beach-surface px-2 py-0 text-small font-semibold tabular-nums">
           {T.progress(done, riders.length)}
         </span>
       </div>
@@ -64,27 +63,25 @@ export function ImpressionCard({
         <ScorePad scale={scale} value={values[rider.id] ?? null} onChange={(v) => onChange(rider.id, v)} label={T.heading} caption={caption} disabled={submitted} />
       </section>
       {submitted ? (
-        <p data-testid="submitted-note" className="rounded-xl border border-beach-live bg-beach-surface p-3 text-body font-semibold">
+        <p data-testid="submitted-note" className="rounded-lg border border-beach-live bg-beach-surface px-2 py-1 text-body font-semibold">
           {T.submitted}
         </p>
       ) : confirming ? (
-        <div role="alertdialog" aria-label={T.confirm} className="flex flex-col gap-2 rounded-card border border-beach-border bg-beach-surface p-3">
-          <p className="text-body font-semibold">{T.confirm}</p>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className={cn(button, "border-beach-accent bg-beach-accent text-beach-on-accent")} onClick={() => { setConfirming(false); onSubmit(); }}>
+        <div role="alertdialog" aria-label={T.confirm} className="flex items-center justify-between gap-2 rounded-lg border border-beach-border bg-beach-surface px-2 py-1">
+          <p className="min-w-0 text-body font-semibold">{T.confirm}</p>
+          <span className="flex shrink-0 gap-1">
+            <Chip variant="accent" onClick={() => { setConfirming(false); onSubmit(); }}>
               {T.confirmYes}
-            </button>
-            <button type="button" className={cn(button, "border-beach-border bg-beach-bg text-beach-ink")} onClick={() => setConfirming(false)}>
-              {T.confirmNo}
-            </button>
-          </div>
+            </Chip>
+            <Chip onClick={() => setConfirming(false)}>{T.confirmNo}</Chip>
+          </span>
         </div>
       ) : (
-        <div className="flex flex-col gap-1">
-          <button type="button" disabled={!complete} onClick={() => setConfirming(true)} className={cn(button, complete ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-dashed border-beach-line bg-beach-surface text-beach-muted")}>
+        <div className="flex items-center justify-between gap-2">
+          <p className="min-w-0 text-small font-medium text-beach-muted">{complete ? "" : T.submitWaiting}</p>
+          <Chip variant={complete ? "accent" : "muted"} disabled={!complete} onClick={() => setConfirming(true)}>
             {T.submit}
-          </button>
-          {!complete ? <p className="text-small font-medium text-beach-muted">{T.submitWaiting}</p> : null}
+          </Chip>
         </div>
       )}
     </div>

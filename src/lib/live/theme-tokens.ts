@@ -43,11 +43,17 @@ export interface BeachTokens {
   tintCrash: string;
   /** Result rows: a trick that did not count is grey. */
   tintGrey: string;
-  /** Result rows: counted tricks are green, shade 0 (the highest counted trick) the strongest, shade 3 (the lowest counted) the lightest. Text on them is ink. */
-  tintGreen0: string;
-  tintGreen1: string;
-  tintGreen2: string;
-  tintGreen3: string;
+  /** Public heat summary: counted scores graded across the heat, grade 0 the yellowest (the lowest counted score) to grade 4 the greenest (the highest). Text on them is ink. */
+  tintGrade0: string;
+  tintGrade1: string;
+  tintGrade2: string;
+  tintGrade3: string;
+  tintGrade4: string;
+  /** Head judge's table: a judge's score by its distance from the panel score: within tolerance (0, green), then yellow (1), orange (2), red (3). Text on them is ink. */
+  tintDist0: string;
+  tintDist1: string;
+  tintDist2: string;
+  tintDist3: string;
 }
 
 export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
@@ -70,10 +76,15 @@ export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
     missing: "#404040",
     tintCrash: "#f8cfcf",
     tintGrey: "#e2e5e6",
-    tintGreen0: "#6fcf97",
-    tintGreen1: "#9be0b6",
-    tintGreen2: "#c3edd2",
-    tintGreen3: "#e3f6ea",
+    tintGrade0: "#f3dc6b",
+    tintGrade1: "#d6e275",
+    tintGrade2: "#b4e08a",
+    tintGrade3: "#8fd79a",
+    tintGrade4: "#6fcf97",
+    tintDist0: "#b7e8c6",
+    tintDist1: "#f3e27a",
+    tintDist2: "#f6b86b",
+    tintDist3: "#f29a9a",
   },
   dark: {
     bg: "#0b0e0f",
@@ -94,10 +105,15 @@ export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
     missing: "#c4c4c4",
     tintCrash: "#5a1f1f",
     tintGrey: "#2a3133",
-    tintGreen0: "#165c35",
-    tintGreen1: "#134c2c",
-    tintGreen2: "#103f24",
-    tintGreen3: "#0d331d",
+    tintGrade0: "#5a4a0c",
+    tintGrade1: "#4a5410",
+    tintGrade2: "#38581a",
+    tintGrade3: "#265a27",
+    tintGrade4: "#165c35",
+    tintDist0: "#165c35",
+    tintDist1: "#5a4a0c",
+    tintDist2: "#6b3a0e",
+    tintDist3: "#6b1f1f",
   },
 };
 
@@ -126,10 +142,15 @@ export const TEXT_PAIRS: ReadonlyArray<readonly [TokenName, TokenName]> = [
   ["ink", "tintCrash"],
   ["ink", "tintGrey"],
   ["muted", "tintGrey"],
-  ["ink", "tintGreen0"],
-  ["ink", "tintGreen1"],
-  ["ink", "tintGreen2"],
-  ["ink", "tintGreen3"],
+  ["ink", "tintGrade0"],
+  ["ink", "tintGrade1"],
+  ["ink", "tintGrade2"],
+  ["ink", "tintGrade3"],
+  ["ink", "tintGrade4"],
+  ["ink", "tintDist0"],
+  ["ink", "tintDist1"],
+  ["ink", "tintDist2"],
+  ["ink", "tintDist3"],
 ];
 
 /** WCAG relative luminance of a #rrggbb colour. */

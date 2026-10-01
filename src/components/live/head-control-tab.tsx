@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { CircleOff, Clock, FastForward, Pause, Play, RotateCcw, Send, Square, Undo2, Wind } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { HeatTimer } from "./heat-timer";
+import { Chip } from "./chip";
 import { ConnectionBadge } from "./connection-badge";
 import { Pill } from "./pill";
 import { RiderLabel } from "@/components/rider-label";
@@ -11,7 +12,6 @@ import { formatClock } from "@/lib/live/timer";
 import { headPhone } from "@/lib/live/design-fixtures";
 import { controlsFor, nextHeatState, type ControlId, type HeatState } from "@/lib/live/head-state";
 import { copy } from "@/lib/ui-copy";
-import { cn } from "@/lib/utils";
 
 const ICON: Record<ControlId, LucideIcon> = { start: Play, pause: Pause, resume: Play, end: Square, hold: Wind, resumeAt: Clock, shift5: FastForward, shift10: FastForward, publish: Send, cancel: CircleOff, rerun: RotateCcw, reopen: Undo2 };
 
@@ -41,9 +41,9 @@ export function HeadControlTab() {
         <p className="min-w-0 truncate text-small font-semibold">{h.heatName}</p>
         <span className="flex items-center gap-1.5">
           <ConnectionBadge status="synced" />
-          <button type="button" data-testid="details-toggle" aria-pressed={details} onClick={() => setDetails((d) => !d)} className={cn("min-h-tap rounded-xl border px-3 text-body font-semibold", details ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}>
+          <Chip data-testid="details-toggle" pressed={details} onClick={() => setDetails((d) => !d)}>
             {details ? copy.live.header.detailsOn : copy.live.header.details}
-          </button>
+          </Chip>
         </span>
       </div>
       {details ? (
@@ -86,27 +86,12 @@ export function HeadControlTab() {
             )}
           </div>
           <p className="text-small font-medium text-beach-muted">{T.next(h.next.heat, h.next.time)}</p>
-          <div className="grid grid-cols-2 gap-1.5">
-            {controls.map((c) => {
-              const Icon = ICON[c.id];
-              const primary = c.id === "start" || c.id === "publish";
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  data-control={c.id}
-                  disabled={!c.enabled}
-                  onClick={() => press(c.id)}
-                  className={cn(
-                    "inline-flex min-h-tap items-center justify-center gap-1.5 rounded-xl border px-2 text-body font-semibold",
-                    !c.enabled ? "border-beach-line bg-beach-surface text-beach-muted" : primary ? "border-beach-accent bg-beach-accent text-beach-on-accent" : c.id === "cancel" ? "border-beach-crash bg-beach-bg text-beach-ink" : "border-beach-border bg-beach-bg text-beach-ink",
-                  )}
-                >
-                  <Icon aria-hidden className="size-5" />
-                  {label[c.id]}
-                </button>
-              );
-            })}
+          <div className="flex flex-wrap gap-1.5">
+            {controls.map((c) => (
+              <Chip key={c.id} data-control={c.id} icon={ICON[c.id]} variant={!c.enabled ? "muted" : c.id === "start" || c.id === "publish" ? "accent" : c.id === "cancel" ? "danger" : "plain"} disabled={!c.enabled} onClick={() => press(c.id)}>
+                {label[c.id]}
+              </Chip>
+            ))}
           </div>
           <p className="text-small font-medium text-beach-muted">{T.noReset}</p>
         </>
@@ -117,23 +102,20 @@ export function HeadControlTab() {
           <label htmlFor="head-reason" className="text-small font-medium text-beach-muted">
             {copy.live.console.reason}
           </label>
-          <input id="head-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={copy.live.console.reasonPlaceholder} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink" />
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              type="button"
+          <input id="head-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={copy.live.console.reasonPlaceholder} className="min-h-tap rounded-lg border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink" />
+          <div className="flex gap-1.5">
+            <Chip
+              variant={reason.trim() ? "accent" : "muted"}
               disabled={!reason.trim()}
               onClick={() => {
                 setAsking(null);
                 setReason("");
                 if (asking === "cancel") setState("scheduled");
               }}
-              className={cn("min-h-tap rounded-xl border px-2 text-body font-semibold", reason.trim() ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-line bg-beach-bg text-beach-muted")}
             >
               {copy.live.console.save}
-            </button>
-            <button type="button" onClick={() => { setAsking(null); setReason(""); }} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body font-semibold">
-              {copy.live.console.cancel}
-            </button>
+            </Chip>
+            <Chip onClick={() => { setAsking(null); setReason(""); }}>{copy.live.console.cancel}</Chip>
           </div>
         </div>
       ) : null}

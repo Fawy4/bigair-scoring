@@ -82,3 +82,16 @@ export function blockersFor(rows: ConsoleRow[], impression: Record<string, Array
   }
   return out;
 }
+
+const norm = (t: string) => t.trim().toLowerCase().replace(/\s+/g, " ");
+
+/** Merge is on for two or more attempts of the same rider and the same trick: a possible duplicate. */
+export function canMerge(rows: ConsoleRow[]): boolean {
+  return rows.length >= 2 && rows.every((r) => r.riderKey === rows[0].riderKey && norm(r.trick) === norm(rows[0].trick));
+}
+
+/** Merging keeps the first logged attempt (the earliest in the table) and removes the others (the owner's default, decision 10). */
+export function mergeKeepFirst(rows: ConsoleRow[], ids: string[]): ConsoleRow[] {
+  const keep = rows.find((r) => ids.includes(r.id));
+  return rows.map((r) => (!keep || !ids.includes(r.id) ? r : r.id === keep.id ? withRowState(r, "ok") : withRowState(r, "deleted")));
+}

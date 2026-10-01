@@ -1,10 +1,15 @@
-import { Copy, EyeOff, Flame, MoreVertical, Minus, Trash2, TriangleAlert, UserX } from "lucide-react";
+import { Copy, EyeOff, Flame, MoreVertical, Minus, Trash2, UserX } from "lucide-react";
 import { RiderLabel } from "@/components/rider-label";
+import { cellTone, outlierTolerance } from "@/lib/live/cell-tone";
+import { KOTA } from "@/lib/live/design-fixtures";
 import type { CellState, MatrixCell, MatrixModel, MatrixRow } from "@/lib/live/matrix-model";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
 const T = copy.live.matrix;
+// a judge's score by its distance from the panel score: within tolerance green, then yellow, orange, red (literal class names for Tailwind)
+const DIST = ["bg-beach-tint-dist0", "bg-beach-tint-dist1", "bg-beach-tint-dist2", "bg-beach-tint-dist3"];
+const TOLERANCE = outlierTolerance(KOTA);
 
 type Row = MatrixRow & { riderKey?: string };
 
@@ -15,26 +20,31 @@ export interface MatrixActions {
   onAttempt?: (row: Row) => void;
   /** Tap the rider: their menu (DNS, DNF, DSQ, Interference). */
   onRider?: (row: Row) => void;
+  /** Tick boxes left of the attempt number: select several attempts (Merge duplicates, Delete). */
+  selected?: string[];
+  onSelect?: (row: Row) => void;
 }
 
 /** One cell: the score, or a word with an icon. Never colour alone, and struck through where the score does not count. */
-function Cell({ cell, onTap, label }: { cell: MatrixCell; onTap?: () => void; label: string }) {
+function Cell({ cell, panel, onTap, label }: { cell: MatrixCell; panel: number | null; onTap?: () => void; label: string }) {
   const view: Record<CellState, { word: string | null; Icon: typeof Minus | null; cls: string }> = {
-    scored: { word: null, Icon: null, cls: "border-beach-line bg-beach-bg text-beach-ink" },
+    scored: { word: null, Icon: null, cls: "border-beach-line text-beach-ink" },
     missing: { word: T.missing, Icon: Minus, cls: "border-dashed border-beach-missing bg-beach-surface text-beach-missing" },
     missed: { word: T.missed, Icon: EyeOff, cls: "border-beach-missing bg-beach-surface italic text-beach-missing" },
     absent: { word: T.absent, Icon: UserX, cls: "border-beach-missing bg-beach-surface text-beach-missing" },
-    outlier: { word: T.outlier, Icon: TriangleAlert, cls: "border-2 border-beach-outlier bg-beach-bg text-beach-outlier" },
+    outlier: { word: null, Icon: null, cls: "border-beach-line text-beach-ink" },
     crash: { word: T.crash, Icon: Flame, cls: "border-beach-crash bg-beach-tint-crash text-beach-ink" },
     deleted: { word: T.deleted, Icon: Trash2, cls: "border-beach-missing bg-beach-surface text-beach-missing" },
     duplicate: { word: T.duplicate, Icon: Copy, cls: "border-beach-outlier bg-beach-bg text-beach-outlier" },
   };
   const v = view[cell.state];
+  const tone = (cell.state === "scored" || cell.state === "outlier") && cell.value !== null && panel !== null ? cellTone(cell.value, panel, TOLERANCE) : null;
   const editable = onTap && cell.state !== "crash" && cell.state !== "deleted";
-  const cls = cn("flex min-h-tap min-w-[4.5rem] flex-col items-center justify-center rounded-lg border px-1.5 py-0.5 text-body font-semibold tabular-nums", v.cls);
+  const cls = cn("flex min-h-row min-w-[4rem] flex-col items-center justify-center rounded-lg border px-1 py-0 text-body font-semibold leading-tight tabular-nums", v.cls, tone ? DIST[tone.band] : "bg-beach-bg");
   const body = (
     <>
       {cell.state === "scored" || cell.state === "outlier" || cell.state === "deleted" ? <span className={cn(cell.state === "deleted" && "line-through")}>{cell.label}</span> : null}
+      {tone?.delta ? <span data-testid="cell-delta" className="text-small font-semibold">{tone.delta}</span> : null}
       {v.word ? (
         <span className="inline-flex items-center gap-1 text-small font-semibold">
           {v.Icon ? <v.Icon aria-hidden className="size-3.5" /> : null}
@@ -44,11 +54,11 @@ function Cell({ cell, onTap, label }: { cell: MatrixCell; onTap?: () => void; la
     </>
   );
   return editable ? (
-    <button type="button" data-testid="matrix-cell" data-state={cell.state} aria-label={label} onClick={onTap} className={cn(cls, "w-full")}>
+    <button type="button" data-testid="matrix-cell" data-state={cell.state} data-band={tone?.band} aria-label={label} onClick={onTap} className={cn(cls, "w-full")}>
       {body}
     </button>
   ) : (
-    <div data-testid="matrix-cell" data-state={cell.state} className={cls}>
+    <div data-testid="matrix-cell" data-state={cell.state} data-band={tone?.band} className={cls}>
       {body}
     </div>
   );
@@ -58,26 +68,33 @@ function Row({ row, actions }: { row: Row; actions: MatrixActions }) {
   const struck = row.state === "deleted";
   return (
     <tr data-testid="matrix-row" data-row-id={row.id} data-row-state={row.state} className="border-t border-beach-line align-middle">
-      <th scope="row" className="px-1.5 py-1 text-left">
+      <td className="px-1 py-0.5">
+        {actions.onSelect && row.state !== "deleted" ? (
+          <label className="flex min-h-tap min-w-tap cursor-pointer items-center justify-center">
+            <input type="checkbox" data-testid="row-select" aria-label={`${copy.live.console.select} ${T.attempt} ${row.seq} (${row.label.primary.text})`} checked={actions.selected?.includes(row.id) ?? false} onChange={() => actions.onSelect!(row)} className="size-5 accent-[var(--beach-accent)]" />
+          </label>
+        ) : null}
+      </td>
+      <th scope="row" className="px-1 py-0.5 text-left">
         {actions.onAttempt && row.state !== "deleted" ? (
-          <button type="button" data-testid="attempt-menu-button" aria-label={`${T.attempt} ${row.seq}: ${copy.live.console.attemptMenu}`} onClick={() => actions.onAttempt!(row)} className="inline-flex min-h-tap min-w-tap items-center justify-center gap-0.5 rounded-lg border border-beach-border bg-beach-bg text-name font-semibold tabular-nums">
+          <button type="button" data-testid="attempt-menu-button" aria-label={`${T.attempt} ${row.seq}: ${copy.live.console.attemptMenu}`} onClick={() => actions.onAttempt!(row)} className="inline-flex min-h-tap min-w-tap items-center justify-center gap-0.5 rounded-lg border border-beach-border bg-beach-bg text-body font-semibold tabular-nums">
             {row.seq}
             <MoreVertical aria-hidden className="size-4" />
           </button>
         ) : (
-          <span className="text-name font-semibold tabular-nums">{row.seq}</span>
+          <span className="text-body font-semibold tabular-nums">{row.seq}</span>
         )}
       </th>
       <td className="px-1.5 py-1">
         {actions.onRider ? (
-          <button type="button" data-testid="rider-menu-button" aria-label={`${row.label.primary.text}: ${copy.live.console.riderMenu}`} onClick={() => actions.onRider!(row)} className="min-h-tap rounded-lg text-left">
+          <button type="button" data-testid="rider-menu-button" aria-label={`${row.label.primary.text}: ${copy.live.console.riderMenu}`} onClick={() => actions.onRider!(row)} className="min-h-row rounded-lg text-left">
             <RiderLabel model={{ ...row.label, secondary: row.label.secondary.filter((x) => x.key === "name") }} variant="live" bare />
           </button>
         ) : (
           <RiderLabel model={{ ...row.label, secondary: row.label.secondary.filter((x) => x.key === "name") }} variant="live" bare />
         )}
       </td>
-      <td className={cn("min-w-[8rem] px-1.5 py-1 text-body font-medium", (struck || row.status === "crashed") && "line-through")}>
+      <td className={cn("min-w-[6rem] px-1.5 py-1 text-body font-medium", (struck || row.status === "crashed") && "line-through")}>
         {row.trick}
         {row.state === "duplicate" ? (
           <span className="mt-0.5 flex items-center gap-1 text-small font-semibold text-beach-outlier">
@@ -88,7 +105,7 @@ function Row({ row, actions }: { row: Row; actions: MatrixActions }) {
       </td>
       {row.cells.map((c, i) => (
         <td key={c.judgeId} className="px-1 py-1">
-          <Cell cell={c} label={`${T.judge(i + 1)}, ${T.attempt} ${row.seq}: ${c.label}`} onTap={actions.onCell ? () => actions.onCell!(row, c.judgeId) : undefined} />
+          <Cell cell={c} panel={row.panel} label={`${T.judge(i + 1)}, ${T.attempt} ${row.seq}: ${c.label}`} onTap={actions.onCell ? () => actions.onCell!(row, c.judgeId) : undefined} />
         </td>
       ))}
       <td className="px-1.5 py-1 text-right">
@@ -109,9 +126,12 @@ function Row({ row, actions }: { row: Row; actions: MatrixActions }) {
 export function HeadMatrix({ model, actions = {} }: { model: MatrixModel & { rows: Row[] }; actions?: MatrixActions }) {
   return (
     <div data-testid="matrix-scroll" className="overflow-x-auto rounded-card border border-beach-line bg-beach-bg">
-      <table data-testid="head-matrix" className="min-w-[40rem] border-collapse text-beach-ink">
+      <table data-testid="head-matrix" className="min-w-[34rem] border-collapse text-beach-ink">
         <thead>
           <tr className="text-left text-small font-semibold text-beach-muted">
+            <th scope="col" className="px-1 py-1">
+              <span className="sr-only">{copy.live.console.select}</span>
+            </th>
             <th scope="col" className="px-1.5 py-1">
               {T.attempt}
             </th>

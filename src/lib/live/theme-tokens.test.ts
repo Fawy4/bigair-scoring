@@ -23,7 +23,7 @@ describe.each(themes)("%s theme tokens", (_name, t) => {
     expect(failures).toEqual([]);
   });
   it("has every named token", () => {
-    for (const key of ["bg", "surface", "line", "ink", "muted", "border", "focus", "accent", "onAccent", "live", "pending", "failed", "crash", "outlier", "missing", "onCrash", "tintCrash", "tintGrey", "tintGreen0", "tintGreen1", "tintGreen2", "tintGreen3"] as const) {
+    for (const key of ["bg", "surface", "line", "ink", "muted", "border", "focus", "accent", "onAccent", "live", "pending", "failed", "crash", "outlier", "missing", "onCrash", "tintCrash", "tintGrey", "tintGrade0", "tintGrade1", "tintGrade2", "tintGrade3", "tintGrade4", "tintDist0", "tintDist1", "tintDist2", "tintDist3"] as const) {
       expect(t[key]).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
@@ -42,20 +42,20 @@ describe.each(themes)("%s theme tokens", (_name, t) => {
   });
 });
 
-describe("result row tints", () => {
-  it.each(themes)("%s: the four greens run from strongest to lightest and carry ink at 7:1", (_n, t) => {
-    const greens = [t.tintGreen0, t.tintGreen1, t.tintGreen2, t.tintGreen3];
-    expect(new Set(greens).size).toBe(4);
-    for (const g of greens) expect(contrastRatio(t.ink, g)).toBeGreaterThanOrEqual(MIN);
+describe("public heat grades and the head judge's distance colours", () => {
+  it.each(themes)("%s: five grades and four distance bands, all different, all carrying ink at 7:1", (_n, t) => {
+    const grades = [t.tintGrade0, t.tintGrade1, t.tintGrade2, t.tintGrade3, t.tintGrade4];
+    const dist = [t.tintDist0, t.tintDist1, t.tintDist2, t.tintDist3];
+    expect(new Set(grades).size).toBe(5);
+    expect(new Set(dist).size).toBe(4);
+    for (const c of [...grades, ...dist]) expect(contrastRatio(t.ink, c)).toBeGreaterThanOrEqual(MIN);
   });
-  it("in Daylight shade 0 is the darkest green and shade 3 the lightest; in Dark shade 0 is the strongest and shade 3 the dimmest", () => {
+  it("in Daylight grade 0 (yellowest) is lighter than grade 4 (greenest); in Dark it is the other way round, as dark yellow is brighter than dark green", () => {
     const d = BEACH_THEMES.day;
-    expect(relativeLuminance(d.tintGreen0)).toBeLessThan(relativeLuminance(d.tintGreen3));
-    const k = BEACH_THEMES.dark;
-    expect(relativeLuminance(k.tintGreen0)).toBeGreaterThan(relativeLuminance(k.tintGreen3));
+    expect(relativeLuminance(d.tintGrade0)).toBeGreaterThan(relativeLuminance(d.tintGrade4));
   });
   it("crash, not counted and counted do not look alike", () => {
-    for (const t of Object.values(BEACH_THEMES)) expect(new Set([t.tintCrash, t.tintGrey, t.tintGreen1]).size).toBe(3);
+    for (const t of Object.values(BEACH_THEMES)) expect(new Set([t.tintCrash, t.tintGrey, t.tintGrade4]).size).toBe(3);
   });
 });
 

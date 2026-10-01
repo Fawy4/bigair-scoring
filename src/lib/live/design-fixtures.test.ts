@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   blockIdsFor,
+  ladderView,
+  publicHeats,
   headConsole,
   headPhone,
   judgeQueue,
@@ -207,4 +209,52 @@ describe("the spotter builder (preview only; the real composer is built in 5b)",
   });
   it("nothing chosen gives no name", () => expect(previewCompose({ addons: [] }).name).toBe(""));
   it("every block of the vocabulary has an id the builder can use", () => expect(blockIdsFor().length).toBeGreaterThan(30));
+});
+
+describe("public results: the heat summary", () => {
+  const heats = publicHeats();
+  it("has tabs for four heats; Heat 3 is the docs/08 heat with Red first", () => {
+    expect(heats.map((h) => h.name)).toEqual(["Heat 1", "Heat 2", "Heat 3", "Heat 4"]);
+    const h3 = heats[2];
+    expect(h3.riders[0]).toMatchObject({ place: 1, totalLabel: "31.54", formula: "31.54 = tricks 24.04 + Impression 7.50" });
+    expect(h3.riders[0].boxes.map((b) => b.scoreLabel)).toEqual(["7.71", "8.25", "7.29", null, "8.08"]);
+  });
+  it("one row per rider in rank order, boxes in attempt order", () => {
+    for (const h of heats.filter((x) => x.riders.length)) {
+      expect(h.riders.map((r) => r.place)).toEqual([...h.riders.map((r) => r.place)].sort((a, b) => a - b));
+      for (const r of h.riders) expect(r.boxes.map((b) => b.seq)).toEqual([...r.boxes.map((b) => b.seq)].sort((a, b) => a - b));
+    }
+  });
+  it("the heat's counted scores are collected for the grading (Heat 3: 8.25 highest, 7.71 lowest of Red's)", () => {
+    const h3 = heats[2];
+    expect(Math.max(...h3.countedScores)).toBe(8.25);
+    expect(h3.countedScores).toContain(7.71);
+  });
+  it("a heat with seven attempts per rider shows crashes and uncounted tricks too (Heat 4)", () => {
+    const h4 = heats[3];
+    expect(h4.attemptsPerRider).toBe(7);
+    expect(h4.riders[0].boxes).toHaveLength(7);
+    const kinds = new Set(h4.riders.flatMap((r) => r.boxes.map((b) => (b.status === "crashed" ? "crash" : b.counted ? "counted" : "not"))));
+    expect([...kinds].sort()).toEqual(["counted", "crash", "not"]);
+  });
+  it("Heat 4 is not a copy of Heat 3, and every row has a Rider label with the name", () => {
+    expect(heats[3].riders[0].label.secondary.some((x) => x.key === "name")).toBe(true);
+  });
+});
+
+describe("public results: the ladder view", () => {
+  const l = ladderView();
+  it("rounds of heats; each rider is shown in their Lycra colour with their total", () => {
+    expect(l.rounds.map((r) => r.name)).toEqual(["Round 1", "Finals"]);
+    const h = l.rounds[0].heats[0];
+    expect(h.riders.length).toBeGreaterThanOrEqual(2);
+    for (const r of h.riders) {
+      expect(r.hex).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(r.totalLabel).toMatch(/^\d+\.\d{2}$|^—$/);
+    }
+  });
+  it("heats say whether they are complete; the final waits for its riders (a placeholder seat)", () => {
+    expect(l.rounds[0].heats.every((x) => x.status === "complete")).toBe(true);
+    expect(l.rounds[1].heats.some((x) => x.riders.some((r) => r.placeholder))).toBe(true);
+  });
 });

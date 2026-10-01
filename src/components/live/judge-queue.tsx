@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronRight, EyeOff, Flag, Repeat } from "lucide-react";
+import { Chip } from "./chip";
 import { Pill } from "./pill";
 import { RiderDetail } from "./rider-detail";
 import { RiderTile } from "./rider-tile";
@@ -13,10 +14,8 @@ import { formatCell } from "@/lib/live/matrix-model";
 import { queueView } from "@/lib/live/queue-model";
 import { formatPadValue } from "@/lib/live/score-pad";
 import { copy } from "@/lib/ui-copy";
-import { cn } from "@/lib/utils";
 
 const T = copy.live;
-const button = "inline-flex min-h-tap items-center gap-1.5 rounded-xl border border-beach-border bg-beach-bg px-3 text-body font-semibold text-beach-ink";
 const dirWord = (d: QueueAttempt["direction"]) => (d === "left" ? T.summary.left : d === "right" ? T.summary.right : "");
 
 /**
@@ -67,7 +66,7 @@ export function JudgeQueue({ startDetails = false }: { startDetails?: boolean })
         ) : (
           <>
             {cur ? (
-              <article key={cur.id} data-testid="queue-card" data-attempt={cur.id} className="flex animate-in fade-in flex-col gap-1.5 rounded-card border border-beach-line bg-beach-surface p-2 duration-150">
+              <article key={cur.id} data-testid="queue-card" data-attempt={cur.id} className="flex animate-in fade-in flex-col gap-1.5 rounded-card border border-beach-line bg-beach-surface p-1.5 duration-150">
                 <div className="flex items-center justify-between gap-2">
                   <RiderLabel model={cur.label} variant="live" bare />
                   <span className="flex shrink-0 flex-col items-end gap-0.5">
@@ -93,9 +92,7 @@ export function JudgeQueue({ startDetails = false }: { startDetails?: boolean })
                 {view.correcting ? (
                   <p className="flex items-center justify-between gap-2">
                     <Pill tone="outlier">{T.queue.correct(cur.seq)}</Pill>
-                    <button type="button" onClick={() => setEditing(null)} className={button}>
-                      {T.queue.cancelCorrect}
-                    </button>
+                    <Chip onClick={() => setEditing(null)}>{T.queue.cancelCorrect}</Chip>
                   </p>
                 ) : null}
                 <ScorePad
@@ -109,23 +106,24 @@ export function JudgeQueue({ startDetails = false }: { startDetails?: boolean })
                     setScore(cur.id, v);
                   }}
                 />
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Chip
+                    icon={EyeOff}
+                    data-testid="missed-button"
                     onClick={() => {
                       setSaved(T.saved.missed(cur.label.primary.text, cur.seq));
                       setScore(cur.id, "missed");
                     }}
-                    className={button}
                   >
-                    <EyeOff aria-hidden className="size-5" />
                     {T.attempt.missed}
-                  </button>
-                  <button type="button" aria-pressed={flagged} onClick={() => setFlagged((f) => !f)} className={cn(button, flagged && "border-2 border-beach-accent")}>
-                    <Flag aria-hidden className="size-5" />
+                  </Chip>
+                  <Chip icon={Flag} data-testid="flag-button" pressed={flagged} onClick={() => setFlagged((f) => !f)}>
                     {T.attempt.flag}
-                  </button>
+                  </Chip>
                 </div>
+                <p data-testid="queue-help" className="text-small font-medium leading-snug text-beach-muted">
+                  <span className="font-semibold text-beach-ink">{T.attempt.missed}</span>: {T.attempt.missedHelp} · <span className="font-semibold text-beach-ink">{T.attempt.flag}</span>: {T.attempt.flagHelp}
+                </p>
               </article>
             ) : (
               <p data-testid="all-scored" className="rounded-card border border-dashed border-beach-line p-3 text-body font-medium text-beach-muted">
@@ -145,13 +143,13 @@ export function JudgeQueue({ startDetails = false }: { startDetails?: boolean })
                   </span>
                 );
                 return crashed ? (
-                  <li key={h.id} data-testid="history-row" data-status="crashed" className="flex min-h-tap items-center justify-between gap-2 px-2">
+                  <li key={h.id} data-testid="history-row" data-status="crashed" className="flex min-h-row items-center justify-between gap-2 px-2">
                     {left}
                     <Pill tone="crash">{right}</Pill>
                   </li>
                 ) : (
                   <li key={h.id}>
-                    <button type="button" data-testid="history-row" data-attempt={h.id} aria-label={`${T.queue.tapToCorrect}: ${h.label.primary.text} ${h.seq}`} onClick={() => setEditing(h.id)} className="flex min-h-tap w-full items-center justify-between gap-2 px-2 text-left">
+                    <button type="button" data-testid="history-row" data-attempt={h.id} aria-label={`${T.queue.tapToCorrect}: ${h.label.primary.text} ${h.seq}`} onClick={() => setEditing(h.id)} className="flex min-h-row w-full items-center justify-between gap-2 px-2 text-left">
                       {left}
                       <span className="flex shrink-0 items-center gap-1 text-body font-semibold tabular-nums">
                         {right}
