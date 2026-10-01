@@ -584,7 +584,10 @@ On the Demo event, the head console and the Run order step both ended in "Applic
 - **"Heat length per round".** The table's rows now come from one tested function. For every built-in format and every rider count from 1 to 40 it lists exactly the rounds of the preview that have heats, each pre-filled with the heat length. If it ever has no rounds, it says why in one sentence instead of showing nothing.
 
 ### Test evidence
-{{EVIDENCE}}
+- `npm run typecheck` and `npm run lint` clean. `npm test`: **127 files, 1536 tests passed** (main had 123 / 1440). New: the timetable fallback chain and warning rows, draw lengths for every built-in format, the per-round table rows for every format at 1–40 riders, and the boundary-coverage test.
+- `npm run build` succeeds.
+- Playwright (throwaway organisations, removed by the ledger): the new two-division spec `run-order-missing-heat` locks two divisions on the Draw screen, makes a run-order row whose heat is gone, and opens the head console and the Run order step; it passes in dev and on the production build, and **fails on the old engine** with `Heat "r99" has no duration`. Affected suites (organiser, draw-timetable, live-console, live-head): 17 passed, 3 failed on the first parallel run with hosted-database statement timeouts and a redirect timeout under load; run again one at a time, all 3 passed.
+- Migration dry-run on the hosted project (rolled back): trigger and cleanup behave as described; nothing was left behind.
 
 ### Choices I made (please confirm or change)
 1. **A heat with no length takes 0 minutes** and is flagged, rather than guessing a length. The spec defines no event-wide heat length, so none was invented.
