@@ -263,3 +263,28 @@ Written in words. Where a row refines earlier text in this file, this section wi
 | Announcer | Read-only view of the table and the feed. |
 | Sound | Beep at 1:00 and 0:00 only after a "Sound on" tap, switchable on the console. |
 | One confirmation | Delete, Merge, Publish, Re-open, Cancel and Re-run each ask once. |
+
+## 13. Owner notes (30 Sep – 1 Oct 2026), condensed from the owner's handover pack
+
+These are the owner's standing notes (handover pack notes 1a–1e), in short form. Where the decisions logs above give more detail, the logs apply. The Phase 7a plan (`docs/PLAN-phase-7a.md`) is built from these notes.
+
+- **Words.** Rider label (never chip), Lycra colour (never vest), scores (never marks), Impression / Variety score. Never repechage, bye, dingle or man-on-man; say "Second-chance round", "Advances without riding", "1 v 1 heats". Placeholders read "1st H1". Every string lives in `src/lib/ui-copy.ts`, and the banned-words test enforces this.
+- **Visibility.** Nothing reaches riders or spectators before the head judge publishes, unless the division's tick boxes allow it (live scores per heat, results on publish, hold the final).
+- **Settings.** Simple by default with a live example sentence. Advanced sits behind one fold. Every setting has a "?" with an example. Presets are a small "Load…" button.
+- **Formats.** One picker of seven named ladders, each with a one-line explanation and a tag. Riders per heat (target / minimum / maximum) applies to every round. Round and heat names can be edited everywhere. The visual ladder preview recalculates from the rider count. The custom ladder builder's checker warns and never blocks.
+- **Draw and timetable.**
+  - Hand editing warns and never blocks, and every manual change is audited.
+  - The timetable cascades like the owner's spreadsheet: End = Start + length, and the next Start = End + break.
+  - Pins mean "not before".
+  - Plan A / Plan B.
+  - PDF and PNG export use the Division / Session / Start / Duration / End / Break layout.
+  - Each heat has a warm-up before it, shown as its own segment.
+- **Live screens (built in 5a–5c).**
+  - Compact Normal sizes, with a Large option.
+  - The judge screen is a scoring queue.
+  - The Rider label follows the identification scheme and always shows the name.
+  - No percentages on screen.
+  - Result boxes are coloured: crash red, not counted grey, counted graded yellow to green across the heat.
+  - The head judge publishes after review.
+  - Outlier cells are coloured by their distance from the panel score.
+- **Organiser screens.** First drafts until Phase 7a. In the owner's words: "hard to work with; I need to understand what I'm setting up".

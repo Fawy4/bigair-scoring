@@ -1,25 +1,31 @@
 # PLAN — Phase 7a: organiser and admin redesign
 
-> Written 1 Oct 2026, against `main` at `54db9c4` (Phase 5c merged). **Nothing here is built yet.** Every "today" below describes code on that commit.
+> Written 1 Oct 2026, against `main` at `54db9c4` (Phase 5c merged). Updated the same day with the owner's answers. **Nothing here is built yet.** Every "today" below describes code on that commit.
 >
 > Read for this plan: CLAUDE.md, docs/STATUS.md, docs/06 (§00 beach standard, §1–§2 organiser, every decisions log), docs/02, `src/lib/ui-copy.ts`, the `/design` page and its tokens (`src/lib/live/theme-tokens.ts`, `size-tokens.ts`, `globals.css`), and every screen under `/org` and `/admin`.
 >
-> Phase 6 (public pages) is being built in parallel on its own branch. This plan touches nothing under `/e/…`, `/o/…`, `/join`, `/screen/…` or `/legal`, with one exception the owner asked for: the landing page `/` (step 8c, see question Q3).
+> Phase 6 (public pages) is being built in parallel on its own branch. This plan touches nothing under `/e/…`, `/o/…`, `/join`, `/screen/…` or `/legal`, with one exception the owner asked for: the landing page `/`, which ships in its own PR 7a-3 after Phase 6 merges (step 8c).
 
-## Read this first: six problems with the brief
+## Owner's answers (1 Oct 2026) — these decide where the text below differs
 
-These come before the plan because each one changes what gets built.
+The first draft listed six problems with the brief and eleven questions. The owner answered on 1 Oct 2026, and the plan below has been changed to match. The owner notes are now in docs/06 ("Owner notes (30 Sep – 1 Oct 2026)"); notes 1a–1e of the handover pack are condensed there.
 
-1. **The owner notes 1a, 1c, 1d and 1e are not in the repository.** They are not in docs/06, not in any branch and not in any pull request. I treated the brief in the request as note 1e and wrote this plan from it. If notes 1a, 1c or 1d hold rules that are not repeated in the brief, they are missing here. **Before 7a-0 starts, add them to docs/06 (a "Phase 7a decisions log").**
-2. **"Reset event" breaks a rule we already have.** Today an event cannot be *deleted* once a result is published, because "published results and the audit log are permanent" (docs/06, 4a-1c log). Reset wipes published results. The 30-day snapshot and the audit line soften this, but riders and spectators may already have seen those results. Q1 asks how to handle that.
-3. **"Back to the locked draw" cannot be read back from the database.** Every publish writes results and the next heats' riders into `divisions.draw` (`publish_heat_commit` → `update public.divisions set draw = p_draw`). The draw *as it was locked* is not kept anywhere. Reset therefore needs a new column holding a copy taken at lock time. Divisions locked before this change need that copy rebuilt: undo each published heat in reverse order with the engine's own `unpublishHeat`. Re-run heats complicate it further (the draw's id moved to the re-run). Step 8d covers all of this. It is the riskiest part of the phase and the only database change in it.
-4. **Two size rules disagree.** docs/06 decision 17 says organiser controls are ≥ 48 px. The approved `/design` compact Normal uses 36 px taps and 38 px rows. "Dense rows" (item 4) are impossible at 48 px. Q2 asks for a choice. My recommendation: 40 px on a computer and 44 px on a touch screen.
-5. **"On event day the dashboard is the only page" is not literally true.** Starting heats, editing scores and publishing live on the head judge console (`/head/…`), which is a different screen on purpose. That console is fixed in Phase 5 and nobody should rebuild it inside the dashboard. In this plan the dashboard is the only page the organiser *starts from*: Hold, Shift and the wind call work on it directly, and the console and big screen are one tap away. If you meant the console itself embedded in the dashboard, say so (Q6). It is a much larger job.
-6. **"30 minutes alone" needs a measurement, or it is only a slogan.** The plan ends with a timed script (§11) run by someone who has never seen the product, on the preview, with a stopwatch. Without it, "done" cannot be checked.
+| Topic | Decision |
+|---|---|
+| Reset | Allowed on any event. **A written reason (≥ 5 characters) is required when any result was ever shown publicly** (definition in step 8d). The typed web address and one confirmation are always asked. Refused while a heat is running or paused. A dated snapshot of what it wiped is kept for 30 days and the platform owner can restore it. |
+| Locked draw for Reset | The copy is taken **at lock time from now on** (`divisions.draw_at_lock`). **No rebuild script.** A division locked before this change has no copy, and Reset refuses with "Unlock and lock the draw again first" (naming the division). |
+| Sizes | Organiser and admin screens: **40 px controls and rows on a computer, 44 px on touch screens** (`pointer: coarse`); Large gives 48. **The 48 px rule stays for official screens only.** This replaces docs/06 decision 17 for organiser screens. |
+| Landing page `/` | Its own one-hour PR **7a-3 after Phase 6 merges**. Dropping the event list from `/` is confirmed: public event pages are reached by their own links and the organisation page `/o/<org>`. |
+| Wind call | **Phase 6 builds the wind-call setter** (organiser and head judge) on its branch. 7a only places that control on the dashboard. 7a-1 is rebased after Phase 6 merges; nothing is built twice. |
+| Dashboard | The start of event day, with Hold, Shift, the wind call and the links on it; the head judge console is one tap away (not embedded). |
+| Timed test | The 30-minute test with a stranger runs **on Sunday 4 Oct 2026** (§11). |
+| Other questions | The recommendations stand: snapshots deleted on use (no nightly job), Daylight / Dark and Normal / Large in the organiser account menu, every form of "record" banned, the head console never switches division by itself. |
+| Split | **7a-0 and 7a-1 before the event.** Reset + Restore and the head console division picker move into **7a-1**. **7a-2** (tables, Draw and Run order pass, consistency sweep) happens only if 7a-1 is accepted by **Saturday 3 Oct evening**, otherwise after the event. 7a-3 after Phase 6. |
+| Test ids and web addresses | Unchanged, as planned (§1.1–1.2). |
 
-Two smaller facts the plan has to work around:
-- **There is no wind-call screen** (only the banner's on/off switch). The `wind_calls` table and organiser write rights already exist, so step 2 adds the setter without a migration.
-- **There is no big screen yet** (`/screen/…` is not built). The dashboard button stays disabled and says why, until Phase 6 or later builds it.
+Two facts the plan still works around:
+- **There is no big screen yet** (`/screen/…` is not built). The dashboard button stays disabled and says why until it exists.
+- **The wind-call control comes from Phase 6.** If Phase 6 has not merged when 7a-1 is otherwise ready, the dashboard shows the wind-call slot disabled with "The wind call arrives with the public pages", and 7a-1 is rebased onto main once Phase 6 merges to put the real control in. That rebase is the only coupling between the two branches.
 
 ## 0. What exists today, and why it feels hard
 
@@ -46,7 +52,8 @@ Two smaller facts the plan has to work around:
 4. **Tests first** for every pure function (state of a step, readiness, example sentence, number-field width, reset plan). Playwright specs are updated in the same commit as the screen they cover.
 5. **Copy:** every new string goes in `ui-copy.ts`. The banned-words test is extended in step 7, **before** any screen copy is written, so new strings are checked as they are added.
 6. **Each PR ends** with `npm run typecheck && npm run lint && npm test` clean and the summary lines pasted, the e2e specs it touched passing, `docs/STATUS.md` updated, and a "how to test on the preview" list in the PR.
-7. **No new dependencies.** lucide-react, Radix (via shadcn), `qrcode` and `@dnd-kit` are already approved and enough.
+7. **7a-1's first commit writes a "Decisions log – Phase 7a" into docs/06** from the owner's answers at the top of this plan (organiser sizes replace decision 17, the landing page reverses the 4a-1c home-page row, Reset). This keeps the same pattern Phase 5 used.
+8. **No new dependencies.** lucide-react, Radix (via shadcn), `qrcode` and `@dnd-kit` are already approved and enough.
 
 ---
 
@@ -83,7 +90,7 @@ Two smaller facts the plan has to work around:
 **Tests first**
 - `src/lib/org-design/fixtures.test.ts` (above).
 - `src/components/org/number-field.test.ts` — width-from-range function (step 8b).
-- `e2e/design-organiser.spec.ts` — the page loads signed out. At 1440 × 900 the dashboard's readiness list and Now / Next are visible without scrolling. At 390 × 844 the rail turns into the step picker and nothing scrolls sideways. Each status pill has a word (not colour only). Every disabled button has a visible reason. Text contrast is ≥ 7:1 in both themes (reuse the check from `theme-tokens.test.ts`).
+- `e2e/design-organiser.spec.ts` — the page loads signed out. Controls and table rows measure 40 px at 1440 × 900 and 44 px with touch emulation. At 1440 × 900 the dashboard's readiness list and Now / Next are visible without scrolling. At 390 × 844 the rail turns into the step picker and nothing scrolls sideways. Each status pill has a word (not colour only). Every disabled button has a visible reason. Text contrast is ≥ 7:1 in both themes (reuse the check from `theme-tokens.test.ts`).
 
 **Done means (check on the preview)**
 - Open `<preview>/design/organiser` on a laptop and on your phone. Without signing in, you see the seven sections above.
@@ -141,7 +148,7 @@ Table-driven tests: one case per step per state, plus the reason with 1 and 3 mi
    - PINs issued: every active seat has a stored PIN ("2 seats have no PIN — Regenerate PIN"; seats made before PIN encryption show here).
    - All green → "Ready to run" in the accent colour.
 2. **Now / Next.** Running heat with the server-time timer (`use-server-clock`, read-only, 48 px allowed here, as on the head console), the next heat with its estimated start, and the heat after it.
-3. **Wind call.** Red / Amber / Green and an optional message. Writes a `wind_calls` row (organiser insert already allowed by RLS; add an RLS test that confirms it and that an anonymous visitor cannot). The current call is shown as a pill + word.
+3. **Wind call.** The setter Phase 6 builds (organiser and head judge), placed on the dashboard as is. 7a builds no wind-call component, action or test of its own; it only adds an e2e check that the control is present on the dashboard after the rebase. Until Phase 6 merges the slot is disabled with its reason (see the owner's answers).
 4. **Quick actions.** Each button is a server action that already exists:
    - **Hold** / **Resume at…** (`set_plan_hold`).
    - **Shift +5 / +10** (the plan actions in `src/lib/live/plan-actions.ts`, already used by the Run order page).
@@ -155,11 +162,11 @@ Table-driven tests: one case per step per state, plus the reason with 1 and 3 mi
 **Tests first**
 - `src/lib/org/readiness.ts` + `readiness.test.ts`: input = setup counts + seats + plans. Output = ordered checks `{ id, state, sentence, fixHref }`. Cases: empty event, one division short of judges, draw drawn but not locked, two seats without PIN, all green.
 - `setup-counts.ts` gains `seatsWithoutPin` and `confirmedByDivision` (already there as `ridersByDivision`).
-- `e2e/organiser.spec.ts`: the dashboard tests keep their ids (`dashboard`, `dashboard-missing` → now the checklist, `dashboard-now`, `dashboard-next`, `share-join`, `share-public`). New: set a wind call and see it, Hold then Resume on the Demo event, a disabled button shows its reason.
+- `e2e/organiser.spec.ts`: the dashboard tests keep their ids (`dashboard`, `dashboard-missing` → now the checklist, `dashboard-now`, `dashboard-next`, `share-join`, `share-public`). New: the wind-call control is on the dashboard (after the rebase), Hold then Resume on the Demo event, a disabled button shows its reason.
 
 **Done means**
 - On the Demo event the checklist shows each check with a word and a Fix link that opens the right step.
-- Set Amber "Briefing 10:00": the pill shows Amber with the message.
+- The wind call (from Phase 6) sits on the dashboard and works there.
 - Hold → the timetable says held; Resume at 15:00 → times move.
 - With no run order active, Hold is disabled and says why.
 
@@ -198,7 +205,7 @@ Applies to: Event step, Divisions (Scoring, Format, Rider label, Trick base), di
 Riders, officials, organisations (admin), feedback (org and admin), audit, events list.
 
 **`DataTable` behaviour**
-- Rows 40 px (Q2), sticky header, zebra-free, 1 px lines, numbers right-aligned in tabular digits.
+- Rows 40 px on a computer, 44 px on a touch screen, sticky header, zebra-free, 1 px lines, numbers right-aligned in tabular digits.
 - **Search** (name, email, bib) and **filter chips** (division, status, role).
 - **Tick-box column** + a **bulk bar** that appears when something is ticked:
   - Riders: Set status, Move to division, Delete.
@@ -257,7 +264,7 @@ Riders, officials, organisations (admin), feedback (org and admin), audit, event
 
 - All new labels, explanations, examples, reasons, empty states and pill words go in `ui-copy.ts`, in new groups `shell`, `readiness`, `quickActions`, `table`, `reset`, `landing` (rewrite), `headDivision`.
 - **Extend `BANNED`** in `src/lib/ui-copy.test.ts` with `configure|configured|configuring|configuration|entity|entities|record|records|RPC`.
-  - `recorded` is included too: it reads like jargon in "(recorded)" asides. Q8 lets you keep it.
+  - `recorded` is included too (owner, 1 Oct 2026): it reads like jargon in "(recorded)" asides.
   - **Existing strings that will fail and must be rewritten in the same commit** (found today): `ident.kiteFields` ×2 ("Kite details to record"), `divisions.lockBanner` ("(recorded)"), `admin … none` ("Nothing recorded yet"), `riders.declineReason` ("for your own records"), `feedback.exportHelp` ("The date is recorded"), `officials.deleteQuestion` ("stay in the record"), `headLive.pastCapNeedsReason` ("is recorded"), and two admin health strings with "configuration" ("Server configuration", "check the server configuration").
   - Proposed words: "saved", "kept", "Kite details to ask for", "Server settings".
   - The TypeScript type `Record<…>` is not a user string and the test already ignores it. Add a test case that proves it.
@@ -282,7 +289,7 @@ Riders, officials, organisations (admin), feedback (org and admin), audit, event
 - The consistency test (step 6) fails on any `type="number"` outside `number-field.tsx`.
 - **Done means:** on Divisions → Format, "Riders per heat" is a small box with "4" in the middle.
 
-### 8c. The landing page `/` — three doors (separate tiny PR 7a-3, see Q3)
+### 8c. The landing page `/` — three doors (separate tiny PR 7a-3, after Phase 6 merges)
 - Product name (and the platform logo if set), then three equal buttons:
   - **Admin** → `/org/login?next=/admin`.
   - **Organiser** → `/org/login`.
@@ -292,7 +299,7 @@ Riders, officials, organisations (admin), feedback (org and admin), audit, event
 - This **reverses** the 4a-1c decision "the home page lists published events". Write that into docs/06.
 - e2e `smoke.spec.ts` / `admin.spec.ts`: landing shows exactly three links with those names. Tests that expect the events list on `/` are rewritten to use `/o/<slug>`.
 
-### 8d. Reset event (7a-2; its own migration)
+### 8d. Reset event (7a-1, last part; its own migration)
 
 **What it does** (owner's words, made exact):
 - **Wipes, for every heat of the event:**
@@ -309,19 +316,23 @@ Riders, officials, organisations (admin), feedback (org and admin), audit, event
 - **Refused while** any heat is running or paused ("Heat 3 is running. End it first.").
 - **Who:** organisers of the event's organisation and platform owners. Staff only inside "Open as this organiser", as for event delete.
 - **Confirmation:** type the event's web address (slug) exactly, then one confirmation that says what will be wiped, with counts ("12 heats, 214 attempts, 9 published results").
+- **Written reason when results were ever public.** "Ever shown publicly" means any of: a heat of the event was published while not held (`heat_results` rows exist and the heat's `publish_hold` was false at publish or was later released; the audit log has the `set_publish_hold` lines), or a heat ran with public live scores on (`public_live` true, or null with the division's or event's live-scores setting on). The function works this out itself and refuses with `REASON_REQUIRED` when the reason is missing; the screen asks for the reason only in that case. The reason goes into the audit line.
 - **One audit line** `event_reset` with the counts and, for a platform owner, their role.
 - **Snapshot:** every wiped row (and the pre-reset `draw` of each division) goes as JSON into `event_reset_snapshots (id, event_id, taken_at, taken_by, expires_at = taken_at + 30 days, payload jsonb, restored_at)`. RLS: readable by the event's organisers and platform owners, writable only by the functions.
 - **Restore** (platform owner only, /admin → the event's row menu → "Restore results from <date>"):
   - Allowed only while no heat of the event has started since the reset, and before `expires_at`.
   - Puts every row back and writes one audit line `event_reset_restored`.
-  - **Expired snapshots** are deleted by the next reset or restore call, and by `/admin/health` when it loads. No scheduled job needed. Q5 covers the alternative.
+  - **Expired snapshots** are deleted by the next reset or restore call, and by `/admin/health` when it loads. No scheduled job needed (owner, 1 Oct 2026).
 
 **Database (`supabase/migrations/2026100z_phase7a_reset.sql`)**
 - `alter table divisions add column draw_at_lock jsonb`. Hidden from the public role and from other organisations, like `draw`.
 - `lock_division_draw` writes `draw_at_lock := draw`. `unlock_division_draw` clears it. `save_division_draw` while locked is already refused.
-- **Backfill** for divisions locked today: a one-off server script `scripts/backfill-draw-at-lock.ts` (service key). It takes the current `draw` and applies the engine's `unpublishHeat` to every published heat of the division, newest `published_at` first. It writes `draw_at_lock` only if the result has no `downstream_started` conflict, and it logs any division it could not rebuild. Reset refuses those divisions ("Pro Men's locked draw could not be rebuilt — ask the platform owner").
-- `public.reset_event(p_event uuid, p_slug text, p_draws jsonb)` (security definer, all in one transaction):
-  - the checks above;
+- **The copy is only trusted when it was taken before any heat ran.** Unlocking is allowed today even after heats have started (`unlock_division_draw` only asks for a reason), and by then `draw` already holds results and later-round riders. A lock taken at that point would copy the *played* ladder, and Reset would "restore" results. So `lock_division_draw` writes `draw_at_lock` **only when no heat of the division has left `scheduled`** (a cancelled heat that never started does not count). Otherwise it locks as today and leaves the copy empty.
+- **No backfill.** Reset refuses a drawn division with no copy (`DRAW_COPY_MISSING`), with one of two sentences:
+  - no heat of the division has started: "Pro Men: unlock and lock the draw again first" (that takes the copy);
+  - a heat has started: "Pro Men was locked before Reset existed (or re-locked after its first heat), so its starting draw is not known and it cannot be reset." Nothing guesses a draw.
+- `public.reset_event(p_event uuid, p_slug text, p_reason text, p_draws jsonb)` (security definer, all in one transaction):
+  - the checks above (slug, who, no running or paused heat, every drawn division has `draw_at_lock`, reason when results were ever public);
   - the snapshot;
   - the wipes, with the `decisions_append_only` trigger bypassed by a transaction-local setting, as `draw_bypass` does today;
   - the draw reset, then the heat projection rebuilt from `p_draws`;
@@ -333,13 +344,16 @@ Riders, officials, organisations (admin), feedback (org and admin), audit, event
 
 **Tests first**
 - `src/lib/reset/plan.ts` + `plan.test.ts` (pure):
-  - given a locked draw, published heats and re-runs, it produces the target draw, the heat projection and the counts;
-  - unpublishing three published heats of a KOTA 18-rider ladder in reverse order gives back exactly the draw at lock;
+  - given `draw_at_lock`, published heats and re-runs, it produces the target draw, the heat projection and the counts;
+  - the projection of a KOTA 18-rider ladder after three published heats equals the projection of its `draw_at_lock` (Round 1 riders, later seats as placeholders);
   - a re-run maps back to its original;
-  - withdrawals after the lock survive.
+  - withdrawals after the lock survive as DNS walkovers;
+  - a locked division without a copy is reported, not guessed;
+  - `everPublic(...)`: published unheld → true; published held and never released → false; held then released → true; live scores on during a heat → true; nothing published and live scores off → false.
 - `tests/rls/reset.test.ts`:
   - an organiser of another organisation, staff outside impersonation, and anon are refused;
-  - a wrong slug is refused;
+  - a wrong slug is refused; a missing reason is refused only when results were ever public;
+  - a division locked before the migration (`draw_at_lock` null) refuses with `DRAW_COPY_MISSING`; with no heat started, unlock + lock gives a copy and Reset then works; with a heat started, unlock + lock leaves the copy empty and Reset still refuses;
   - a running heat refuses;
   - after reset every listed table is empty for the event, riders, seats and plans are unchanged, and one audit line exists;
   - restore by an owner brings back the exact rows; restore by an organiser is refused; restore after a new heat started is refused; restore after 30 days (`expires_at` set in the past) is refused.
@@ -349,8 +363,10 @@ Riders, officials, organisations (admin), feedback (org and admin), audit, event
 - On a test event, publish a heat, then Reset event: type the address, confirm. The ladder shows Round 1 riders and empty later seats. Riders and officials are still there.
 - In /admin, Restore brings the result back.
 - While a heat is running, Reset is refused with the heat's name.
+- On an event whose results were published publicly, Reset asks for a reason; on a practice event that never published, it does not.
+- On a division locked before this change, Reset says "Unlock and lock the draw again first".
 
-### 8e. Head judge console: one division at a time (7a-2)
+### 8e. Head judge console: one division at a time (7a-1)
 - A **division selector** in the console header: tabs on a laptop, a dropdown on a phone.
 - **Default** = the division with a running or paused heat, else the division of the next heat on the run order.
 - Each tab of a division with a running heat other than the shown one has a **live dot + "Live"** (never colour alone).
@@ -366,7 +382,7 @@ Riders, officials, organisations (admin), feedback (org and admin), audit, event
 
 ---
 
-## 11. The 30-minute acceptance script (end of 7a-2)
+## 11. The 30-minute acceptance script (Sunday 4 Oct 2026, on the 7a-1 preview)
 
 Someone who has never seen the product, alone, on the preview, with a stopwatch:
 1. Sign in → new event "Test Open", Cairo, 2 days.
@@ -377,38 +393,33 @@ Someone who has never seen the product, alone, on the preview, with a stopwatch:
 6. Build today's run order, activate it.
 7. The dashboard reads "Ready to run".
 
-**Pass:** under 30 minutes, without asking anyone. Write down every place they hesitated more than 20 seconds; each one is a bug for 7a-2's last commit. Record the time in STATUS.md.
+**Pass:** under 30 minutes, without asking anyone. Write down every place they hesitated more than 20 seconds; each one goes to the top of 7a-2's list (or a fix PR after the event if 7a-2 is postponed). Write the time in STATUS.md.
 
 ---
 
-## 12. Open questions (my recommendation first)
+## 12. Questions — all answered (1 Oct 2026)
 
-| # | Question | Recommendation |
-|---|---|---|
-| Q1 | Reset wipes results riders and spectators may have seen. Allow it on any event? | **Allow, but** when any result was ever public (published and not held), also ask for a written reason (≥ 5 characters, in the audit line). Simulation events skip the typed address (they are practice). Do not show a public "results were reset" notice. |
-| Q2 | Size on organiser screens: decision 17's 48 px or /design's compact sizes? | **40 px controls and rows on a computer, 44 px on a touch screen** (`@media (pointer: coarse)`), and the Large switch gives 48. Dense tables are impossible at 48 px, and a laptop mouse doesn't need it. Replaces decision 17. |
-| Q3 | The landing page `/` is public, and Phase 6 runs in parallel. Who changes it? | **Its own tiny PR 7a-3, opened after Phase 6 merges**, so the two never edit `src/app/page.tsx` at the same time. If Phase 6 doesn't touch `/`, it can ship with 7a-1. |
-| Q4 | Removing the event list from `/` hides events from people without a link. OK? | **Yes, as asked**, but keep `/o/<org>` as the place to find an organisation's events. The share cards on the dashboard become the main way spectators get the link. |
-| Q5 | Expired reset snapshots: delete on use, or a nightly job? | **Delete on use** (next reset, restore, or /admin/health load). No pg_cron on the free plan. A snapshot can outlive 30 days by a little, but it can never be *restored* after 30 days. |
-| Q6 | Dashboard = launch page (Hold, Shift, wind, links) or the full console inside it? | **Launch page.** The console is a tested working tool. Embedding it doubles the realtime subscriptions on one page and makes a laptop screen too busy. |
-| Q7 | Dark and Large on organiser screens? | **Yes, both in the account menu**, per device, same hooks as /design. Costs almost nothing because the tokens already exist. |
-| Q8 | Ban "recorded" too, or only "record / records"? | **Ban all forms.** "Saved" or "kept" reads better in every current case. |
-| Q9 | Reset on a division locked before 7a, whose locked draw cannot be rebuilt (a downstream conflict)? | **Refuse for that division with a sentence**, and the platform owner can unlock and re-lock it (which takes a fresh copy). Never guess a draw. |
-| Q10 | Head console: auto-switch division when a heat starts elsewhere? | **No.** Live dot only. A head judge reviewing Pro Women should not lose the screen because Pro Men started. |
-| Q11 | Missing owner notes 1a, 1c, 1d | **Paste them into docs/06** before 7a-0. If they conflict with this plan, they win and I amend it. |
+See "Owner's answers" at the top. In short: Q1 reset on any event, reason when results were ever public; Q2 40 / 44 px organiser, 48 px official screens only; Q3 landing in 7a-3 after Phase 6; Q4 event list dropped from `/`; Q5 snapshots deleted on use; Q6 dashboard is the start page, console one tap away; Q7 Dark and Large in the account menu; Q8 every form of "record" banned; Q9 superseded: no rebuild, "Unlock and lock the draw again first"; Q10 no automatic division switch; Q11 owner notes added to docs/06 in this PR.
 
----
+**New open point for the owner — not small.** "Unlock and lock again" only works for a division that has **not run any heat yet**. The first draft of this plan said unlocking is refused after a heat starts; that was wrong (only a reason is asked), and it is exactly why the copy must not be taken after a heat has run. Consequences:
+- **Arrow:** fine, as long as the draws are locked (or unlocked and locked again) after 7a-1 is on main and before the first heat. Recommendation: put that on the event-day checklist in docs/09.
+- **Demo Cup and any practice event already run before 7a-1:** cannot be reset. Those are the events you are most likely to want to reset. Recommendation: rebuild the Demo organisation once after 7a-1 merges (/admin → delete demo, then "Create demo organisation"; the seed does not lock its draws, so lock each division in the Draw step before running a heat, and that lock takes the copy), and create new practice events after 7a-1. If that is not acceptable, the rebuild script from the first draft is the only alternative (about 2 h more, and it adds risk before the event).
 
 ## 13. Session split and hours
 
-| PR | Branch | Contents | Hours |
-|---|---|---|---|
-| **7a-0** | `phase-7a-0-design` | Step 0: `/design/organiser`, the shared org components, fixtures, e2e | 4–5 h |
-| **7a-1** (after 7a-0 is approved) | `phase-7a-1-shell-dashboard` | Step 7 copy + banned words first, then 1 shell and rail, 2 dashboard + wind call, 3 settings pattern on Event / Divisions / org and platform settings, 8a Previous / Next, 8b number fields; e2e updates | 10–13 h |
-| **7a-2** (after 7a-1 merges) | `phase-7a-2-tables-reset` | 4 tables, 5 Draw and Run order, 6 consistency sweep + test, 8d reset + restore (migration, RLS tests, backfill script), 8e head-console division selector, §11 acceptance run | 11–14 h |
-| **7a-3** | `phase-7a-3-landing` | 8c landing page (after Phase 6 merges) | 1 h |
+| PR | Branch | When | Contents | Hours |
+|---|---|---|---|---|
+| **7a-0** | `phase-7a-0-design` | before the event | Step 0: `/design/organiser`, the shared org components, fixtures, e2e | 4–5 h |
+| **7a-1** (after 7a-0 is approved) | `phase-7a-1-shell-dashboard` | before the event; accepted by Sat 3 Oct evening | In this order: 7 copy + banned words; 1 shell and rail; 2 dashboard (wind-call slot from Phase 6); 3 settings pattern on Event / Divisions / organisation and platform settings; 8a Previous / Next; 8b number fields; 8e head console division picker; 8d Reset + Restore (migration, RLS tests) last. e2e updates throughout | 16–20 h |
+| **7a-2** | `phase-7a-2-tables` | only if 7a-1 is accepted by Sat 3 Oct evening, otherwise after the event | 4 tables, 5 Draw and Run order, 6 consistency sweep + test, fixes from the Sunday test | 7–9 h |
+| **7a-3** | `phase-7a-3-landing` | after Phase 6 merges | 8c landing page | 1 h |
 
-If 7a-2 runs long, **reset (8d) moves to its own PR 7a-2b**: it is the only database change and the one that needs the most careful review. The biggest risk to the hours is the e2e updates (about 1 000 locator calls on these screens), not the components. Keeping test ids stable (§1.1) is what keeps it in budget.
+**The risk in this split, said plainly.** 7a-1 grew from 10–13 h to 16–20 h, and it now carries the phase's only database change two days before the event. To keep that safe:
+- Reset is built **last** in 7a-1, in its own commits, behind the existing pattern (one database function, RLS tests). If 7a-1 is otherwise done and Reset is not green by Friday 2 Oct evening, Reset moves to its own PR **7a-1b** and 7a-1 ships without it. The rest of 7a-1 never waits for it.
+- The migration only adds a column, a table and functions, and changes `lock_division_draw` / `unlock_division_draw` to also write the copy. It changes no existing data, so it cannot break a running event; `test:rls` runs in full before merge.
+- The head console picker touches a live screen. Its default rule is a pure tested function and "All divisions" keeps today's behaviour for organisers, so a head judge who ignores the picker sees what they see today, filtered to the running heat's division.
+
+The biggest risk to the hours is still the e2e updates (about 1 000 locator calls on these screens), which is why test ids and web addresses stay unchanged (§1.1–1.2).
 
 ## 14. Leave alone (it is fine)
 
