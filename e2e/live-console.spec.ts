@@ -24,6 +24,11 @@ async function open(browser: import("@playwright/test").Browser, key: Parameters
   await w.signInAs(page, key, path);
   return page;
 }
+/** The console shows one division at a time (Phase 7a): pick the one with the heat to work on. */
+const showDivision = async (page: Page, name: string) => {
+  if ((page.viewportSize()?.width ?? 1500) < 900) await page.getByTestId("division-select").selectOption({ label: name });
+  else await page.getByTestId("division-tabs").getByRole("tab", { name: new RegExp(name) }).click();
+};
 const laptop = (browser: import("@playwright/test").Browser, path: string) => open(browser, "head", path, { width: 1500, height: 1000 });
 const log = async (spotter: Page, trick: [string, string]) => {
   await spotter.locator(`[data-block="${trick[0]}"]`).click();
@@ -138,6 +143,7 @@ test("Publish is blocked until the second judge submits, then publishes; the win
   const ladder = await addLadder(w);
   const { heat, entries } = await endedLadderHeat(ladder, ["j1", "j3"]);
   const head = await laptop(browser, `/head/${w.eventId}`);
+  await showDivision(head, "Ladder");
   await head.locator(`[data-testid="order-row"][data-heat="${heat}"]`).click({ timeout: 40_000 });
   await expect(rows(head)).toHaveCount(3, { timeout: 40_000 });
 
@@ -156,6 +162,7 @@ test("Publish is blocked until the second judge submits, then publishes; the win
 
   // a second laptop presses Publish at the same moment: one result, not two
   const head2 = await laptop(browser, `/head/${w.eventId}`);
+  await showDivision(head2, "Ladder");
   await head2.locator(`[data-testid="order-row"][data-heat="${heat}"]`).click({ timeout: 40_000 });
   await expect(rows(head2)).toHaveCount(3, { timeout: 40_000 });
   await head2.getByTestId("publish").click();
@@ -201,6 +208,7 @@ test("on a phone the Control tab has Publish and Re-open, and Details holds the 
   const ladder = await addLadder(w);
   const { heat } = await endedLadderHeat(ladder, ["j1"]);
   const phone = await open(browser, "head", `/head/${w.eventId}`);
+  await showDivision(phone, "Ladder");
   await phone.locator(`[data-testid="order-row"][data-heat="${heat}"]`).click({ timeout: 40_000 });
   await expect(phone.getByTestId("publish")).toBeEnabled({ timeout: 40_000 });
   await expect(phone.getByTestId("reopen")).toBeDisabled();
@@ -259,6 +267,7 @@ test("visibility: the head judge's per-heat live switch, and a held result stays
   const ladder = await addLadder(w);
   const { heat } = await endedLadderHeat(ladder, ["j1", "j2", "j3"]);
   const head = await laptop(browser, `/head/${w.eventId}`);
+  await showDivision(head, "Ladder");
   await head.locator(`[data-testid="order-row"][data-heat="${heat}"]`).click({ timeout: 40_000 });
   await expect(head.getByTestId("live-follow")).toHaveAttribute("aria-pressed", "true", { timeout: 40_000 });
   await head.getByTestId("live-on").click();
