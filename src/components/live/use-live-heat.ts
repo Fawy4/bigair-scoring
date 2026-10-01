@@ -1,0 +1,183 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
+import { pickCurrentHeat, type HeatPhase } from "@/lib/live/current-heat";
+import {
+  ATTEMPT_COLUMNS,
+  FLAG_COLUMNS,
+  HEAT_COLUMNS,
+  IMPRESSION_COLUMNS,
+  SCORE_COLUMNS,
+  SHEET_COLUMNS,
+  SLOT_COLUMNS,
+  type AttemptRow,
+  type FlagRow,
+  type HeatRow,
+  type ImpressionRow,
+  type LiveContext,
+  type ScoreRow,
+  type SheetRow,
+  type SlotRow,
+} from "@/lib/live/types";
+
+type Row = { id: string; updated_at?: string };
+
+/** A newer copy of a row replaces an older one; an older copy never replaces a newer one. */
+export function upsertRow<T extends Row>(list: T[], row: T): T[] {
+  const i = list.findIndex((x) => x.id === row.id);
+  if (i < 0) return [...list, row];
+  if (list[i].updated_at && row.updated_at && list[i].updated_at! > row.updated_at) return list;
+  const next = [...list];
+  next[i] = row;
+  return next;
+}
+
+interface Snapshot {
+  slots: SlotRow[];
+  attempts: AttemptRow[];
+  scores: ScoreRow[];
+  impressions: ImpressionRow[];
+  flags: FlagRow[];
+  sheets: SheetRow[];
+}
+const EMPTY: Snapshot = { slots: [], attempts: [], scores: [], impressions: [], flags: [], sheets: [] };
+
+export interface LiveHeatState extends Snapshot {
+  heats: HeatRow[];
+  heat: HeatRow | null;
+  phase: HeatPhase;
+  /** The realtime channels are up. */
+  connected: boolean;
+  /** Heats whose sheet this seat has submitted (it only knows its own sheets). */
+  submittedHeatIds: Set<string>;
+  refresh: () => Promise<void>;
+}
+
+/**
+ * The live heat for an official's phone (docs/PLAN-phase-5 steps 2 and 7). It follows the running heat by itself (or the pinned one), subscribes to the
+ * event's heats and to the chosen heat's attempts, scores, impressions, seats, flags and sheets, and on every (re)connection refetches the snapshot first
+ * and then applies the stream, so nothing is lost across a dropped connection. `nowServer` is the server-clock "now" for the screen's timer.
+ */
+export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServer: number, pinnedHeatId?: string | null): LiveHeatState {
+  const [heats, setHeats] = useState<HeatRow[]>(ctx.heats);
+  const [snap, setSnap] = useState<Snapshot>(EMPTY);
+  const [heatsUp, setHeatsUp] = useState(false);
+  const [heatUp, setHeatUp] = useState(false);
+  const viewer = ctx.viewer;
+  const role = viewer.kind === "seat" ? viewer.role : "organiser";
+  const seatId = viewer.kind === "seat" ? viewer.seatId : undefined;
+
+  const panels = useMemo(() => ctx.divisions.map((d) => ({ divisionId: d.id, seatIds: d.panelSeatIds })), [ctx.divisions]);
+  const submittedHeatIds = useMemo(() => new Set(snap.sheets.filter((s) => s.judge_seat_id === seatId && s.submitted_at && (!s.reopened_at || s.submitted_at > s.reopened_at)).map((s) => s.heat_id)), [snap.sheets, seatId]);
+  // the heats whose sheets we know about are only the current one's; remember submitted heats across heats
+  const submittedMemory = useRef(new Set<string>());
+  for (const id of submittedHeatIds) submittedMemory.current.add(id);
+
+  const { heat, phase } = useMemo(
+    () => pickCurrentHeat({ heats, panels, viewer: { role: role as "judge" | "head" | "spotter" | "announcer" | "organiser", seatId }, nowServer, pinnedId: pinnedHeatId, submittedHeatIds: submittedMemory.current }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [heats, panels, role, seatId, nowServer, pinnedHeatId, submittedHeatIds],
+  );
+  const heatId = heat?.id ?? null;
+
+  // ---- the event's heats
+  const refreshHeats = useCallback(async () => {
+    const { data } = await supabase.from("heats").select(HEAT_COLUMNS).eq("event_id", ctx.event.id);
+    if (data) setHeats(data as unknown as HeatRow[]);
+  }, [supabase, ctx.event.id]);
+  useEffect(() => {
+    const ch = supabase
+      .channel(`heats-${ctx.event.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "heats", filter: `event_id=eq.${ctx.event.id}` }, (p) => {
+        if (p.eventType === "DELETE") setHeats((l) => l.filter((h) => h.id !== (p.old as Row).id));
+        else setHeats((l) => upsertRow(l, p.new as unknown as HeatRow));
+      })
+      .subscribe((status) => {
+        setHeatsUp(status === "SUBSCRIBED");
+        if (status === "SUBSCRIBED") void refreshHeats();
+      });
+    return () => void supabase.removeChannel(ch);
+  }, [supabase, ctx.event.id, refreshHeats]);
+
+  // ---- the chosen heat
+  const fetchSnapshot = useCallback(
+    async (id: string) => {
+      const q = (table: string, cols: string) => supabase.from(table).select(cols).eq("heat_id", id);
+      const [slots, attempts, scores, impressions, flags, sheets] = await Promise.all([
+        q("heat_slots", SLOT_COLUMNS),
+        q("trick_attempts", ATTEMPT_COLUMNS),
+        q("trick_scores", SCORE_COLUMNS),
+        q("impression_scores", IMPRESSION_COLUMNS),
+        q("attempt_flags", FLAG_COLUMNS),
+        q("judge_sheets", SHEET_COLUMNS),
+      ]);
+      setSnap({
+        slots: (slots.data ?? []) as unknown as SlotRow[],
+        attempts: (attempts.data ?? []) as unknown as AttemptRow[],
+        scores: (scores.data ?? []) as unknown as ScoreRow[],
+        impressions: (impressions.data ?? []) as unknown as ImpressionRow[],
+        flags: (flags.data ?? []) as unknown as FlagRow[],
+        sheets: (sheets.data ?? []) as unknown as SheetRow[],
+      });
+    },
+    [supabase],
+  );
+  const refresh = useCallback(async () => {
+    await refreshHeats();
+    if (heatId) await fetchSnapshot(heatId);
+  }, [refreshHeats, fetchSnapshot, heatId]);
+
+  useEffect(() => {
+    if (!heatId) {
+      setSnap(EMPTY);
+      setHeatUp(true);
+      return;
+    }
+    setSnap(EMPTY);
+    setHeatUp(false);
+    let live = true;
+    const tables: Array<[string, keyof Snapshot]> = [
+      ["heat_slots", "slots"],
+      ["trick_attempts", "attempts"],
+      ["trick_scores", "scores"],
+      ["impression_scores", "impressions"],
+      ["attempt_flags", "flags"],
+      ["judge_sheets", "sheets"],
+    ];
+    let ch: RealtimeChannel = supabase.channel(`heat-${heatId}`);
+    for (const [table, key] of tables) {
+      ch = ch.on("postgres_changes", { event: "*", schema: "public", table, filter: `heat_id=eq.${heatId}` }, (p) => {
+        if (!live) return;
+        setSnap((s) => ({
+          ...s,
+          [key]: p.eventType === "DELETE" ? (s[key] as Row[]).filter((r) => r.id !== (p.old as Row).id) : upsertRow(s[key] as Row[], p.new as unknown as Row),
+        }));
+      });
+    }
+    ch.subscribe((status) => {
+      if (!live) return;
+      setHeatUp(status === "SUBSCRIBED");
+      if (status === "SUBSCRIBED") void fetchSnapshot(heatId);
+    });
+    void fetchSnapshot(heatId);
+    return () => {
+      live = false;
+      void supabase.removeChannel(ch);
+    };
+  }, [supabase, heatId, fetchSnapshot]);
+
+  // a safety net: while a channel is down, ask again every 15 seconds, and when the phone comes back online
+  const up = heatsUp && heatUp;
+  useEffect(() => {
+    const again = () => void refresh();
+    window.addEventListener("online", again);
+    const t = up ? null : setInterval(again, 15_000);
+    return () => {
+      window.removeEventListener("online", again);
+      if (t) clearInterval(t);
+    };
+  }, [up, refresh]);
+
+  return { heats, heat, phase, ...snap, connected: up && (typeof navigator === "undefined" || navigator.onLine), submittedHeatIds: submittedMemory.current, refresh };
+}
