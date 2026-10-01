@@ -566,3 +566,33 @@ One pull request holds steps 4, 5, 6 and the rest of step 7 (the Re-run heat but
 
 #### How to test on the preview
 See the click-through at the end of the pull request description.
+
+## Phase 7a – organiser and admin redesign
+
+Plan: `docs/PLAN-phase-7a.md`. The owner's answers of 1 Oct 2026 are in its top table. The owner notes are in docs/06 §13.
+
+**Hard rule (owner, 1 Oct 2026):** 7a-1 ships before the event **only if the owner accepts it by Saturday 3 Oct 2026 evening**. Otherwise it waits until after the event, and the event runs on the current screens. Nothing from 7a reaches `main` before the event without that acceptance.
+
+| PR | Branch | When | Contents | Planned hours | Actual hours |
+|---|---|---|---|---|---|
+| **7a-0** | `phase-7a-0-design` | before the event | `/design/organiser` preview, shared organiser components | 4–5 h | – |
+| **7a-1** | `phase-7a-1-shell-dashboard` | before the event, only if accepted by Sat 3 Oct evening | copy and banned words, shell and rail, dashboard (wind call from Phase 6), settings pattern, Previous / Next, number fields, head console division picker, then Reset + Restore last in its own commits | 16–20 h | – |
+| **7a-1b** | `phase-7a-1b-reset` | only if Reset is not green by Fri 2 Oct evening | Reset + Restore split out of 7a-1; the rest of 7a-1 ships without it | (inside 7a-1) | – |
+| **7a-2** | `phase-7a-2-tables` | only if 7a-1 is accepted by Sat 3 Oct evening, otherwise after the event | tables, Draw and Run order pass, consistency sweep, fixes from the Sunday test | 7–9 h | – |
+| **7a-3** | `phase-7a-3-landing` | after Phase 6 merges | landing page `/` with three doors | 1 h | – |
+
+Safeguards accepted by the owner:
+- Reset is built last, in its own commits.
+- If Reset is not green by Friday evening it moves to 7a-1b.
+- The database change is additive only (a column, a table and functions; no existing data changed).
+
+Test ids and web addresses stay unchanged.
+
+Event-day steps if 7a-1 is live are in docs/09 §A.6:
+- lock draws after 7a-1, before the first heat;
+- recreate Demo and lock its draws.
+
+The 30-minute test with a stranger runs on Sunday 4 Oct 2026.
+
+### Status
+- Plan ready to merge (PR "Phase 7a – organiser design plan"). Nothing built yet.

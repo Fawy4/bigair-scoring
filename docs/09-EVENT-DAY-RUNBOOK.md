@@ -9,6 +9,9 @@
 4. **Riders**: approve self-registrations, add walk-ins, set seeds (ranking or random), print the start list.
 5. **Officials**: create seats (Judge 1–3, Head Judge, Spotter, Announcer); print the PIN/QR cards; test one phone join.
 6. **Draw**: generate per division; sanity-check heat sizes; print bracket PDF.
+   - **If Phase 7a-1 is live (it has Reset event):** lock each division's draw only *after* 7a-1 is on main and *before* that division's first heat. If a draw was locked earlier, unlock it (with a reason) and lock it again while no heat of that division has started. Only a lock taken before any heat ran keeps the starting draw that Reset returns to. A division that has run a heat without such a lock can never be reset (docs/PLAN-phase-7a.md, step 8d).
+   - **Demo, once, after 7a-1 merges:** in /admin delete the Demo organisation and press "Create demo organisation", then lock each Demo division in the Draw step before running any practice heat. Demo Cup, as it is today, cannot be reset.
+   - If 7a-1 did not ship before the event, skip both: the event runs on the current screens and there is no Reset.
 7. **Run order & timetable**: build Plan A (expected start) and Plan B (late wind); set the first anchor; export PDF/PNG → WhatsApp group + noticeboard.
 8. **Backups**: export a CSV of entries; print **paper judge sheets** (Phase 7 export) — one per heat per judge — and blank spares.
 9. **Devices**: judges' phones charged, brightness max, "add to home screen" done, auto-lock off; one power bank per judge; head judge on a laptop/tablet with a hotspot as backup; big screen laptop tested with `/screen/arrow-gouna`.
@@ -53,4 +56,4 @@
 Export results CSV/PDF per division; export the audit log; post final placings and Highest Jump; keep the event as a template ("Duplicate event") for the next one; note what to change in the presets.
 
 ## H. One-page checklist (print)
-☐ DB awake ☐ Event created & branded ☐ Divisions + presets ☐ Riders approved & seeded ☐ Officials PIN cards ☐ Draw generated & printed ☐ Plan A/B timetable exported ☐ Paper sheets printed ☐ Devices charged/installed ☐ Big screen tested ☐ Briefings done ☐ First anchor set ☐ Hotspot ready ☐ Exports after event
+☐ DB awake ☐ Event created & branded ☐ Divisions + presets ☐ Riders approved & seeded ☐ Officials PIN cards ☐ Draw generated & printed ☐ (7a-1 live) Draws locked after 7a-1, before the first heat ☐ (7a-1 live) Demo recreated and its draws locked ☐ Plan A/B timetable exported ☐ Paper sheets printed ☐ Devices charged/installed ☐ Big screen tested ☐ Briefings done ☐ First anchor set ☐ Hotspot ready ☐ Exports after event
