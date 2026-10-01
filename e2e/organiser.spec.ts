@@ -123,6 +123,18 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   expect(error).toBeNull();
   const eventId = ev!.id;
   const divisionsRail = () => page.getByTestId("rail-divisions"); // the left rail on a laptop: a state word and one line of reason
+  // the quiet "Load…" menu of a settings panel (presets), and the "More settings" fold
+  const loadFrom = async (name: string | RegExp) => {
+    await page.getByTestId("load-menu").getByRole("button", { name: "Load…" }).click();
+    await page.getByRole("menuitem", { name }).click();
+  };
+  const openMore = async () => {
+    const toggle = page.getByTestId("advanced-toggle");
+    if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  };
+  const openPresetTools = async () => {
+    if ((await page.getByTestId("preset-tools").count()) === 0) await page.getByRole("button", { name: "Save as preset…" }).click();
+  };
 
   await org.signIn(page, `/org/events/${eventId}/divisions`);
   await expect(page.getByRole("heading", { name: "Step 2: Divisions" })).toBeVisible();
@@ -138,7 +150,7 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(divisionsRail()).toHaveAttribute("data-state", "attention");
 
   // Scoring: the legacy preset gives the owner's example sentence
-  await field("Scoring preset").selectOption({ label: "Legacy (previous app): single score 0-10 per trick, best 3 + Variety 0-10, 7 attempts" });
+  await loadFrom(/^Legacy \(previous app\)/);
   await expect(page.getByTestId("model-sentence")).toHaveText("Best 3 of 7 attempts + Variety 0–10, 3 judges averaged");
 
   // Simple mode shows only what the default needs
@@ -173,15 +185,15 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   expect(JSON.stringify(saved!.scoring_overrides).length).toBeLessThan(400);
 
   // "?" help on a Simple setting: tap to open, with an example
-  await page.getByRole("button", { name: "Help: How the judges’ scores are combined" }).click();
+  await page.getByRole("button", { name: "About “How the judges’ scores are combined”" }).click();
   await expect(page.getByRole("note").filter({ hasText: "Example: Plain average of 3 judges" })).toBeVisible();
 
-  // Show all settings: the Simple fields stay where they are, every other field appears below them
-  await page.getByRole("checkbox", { name: "Show all settings" }).check();
+  // More settings: the Simple fields stay where they are, every other field appears below them, and the sentence stays in view
+  await openMore();
   for (const label of ["Best tricks that count (N)", "Attempts allowed per rider per heat (M)", "Number of judges", "How the judges’ scores are combined"]) {
     await expect(field(label), `Simple field still visible: ${label}`).toBeVisible();
   }
-  await expect(page.getByRole("checkbox", { name: "Judges also give an Impression / Variety score for each rider" })).toBeVisible();
+  await expect(page.getByRole("switch", { name: "Judges also give an Impression / Variety score for each rider" })).toBeVisible();
   await expect(page.getByTestId("panel-sentence")).toBeVisible();
   await expect(page.getByText("Tie-breakers, in order")).toBeVisible(); // the advanced part is there too
   await page.getByText("Counting and heat total", { exact: true }).click();
@@ -195,15 +207,17 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await field("Weights for the counted tricks, best first").fill("1, 0.75, 0.5");
 
   // save as a preset, division switches to it
+  await openPresetTools();
   await field("Save these settings as a new preset").fill("Arrow best 2");
   await page.getByRole("button", { name: "Save as new preset" }).click();
   await expect(page.getByText("Preset “Arrow best 2” saved; Pro Men now uses it").first()).toBeVisible();
-  await expect(field("Scoring preset")).toContainText("Arrow best 2");
+  await page.getByTestId("load-menu").getByRole("button", { name: "Load…" }).click();
+  await expect(page.getByRole("menuitem", { name: "Arrow best 2" })).toBeVisible();
+  await page.keyboard.press("Escape");
   const { data: presetRow } = await org.db.from("scoring_models").select("key, version").eq("organisation_id", org.orgId).single();
   expect(presetRow).toMatchObject({ key: "arrow-best-2", version: 1 });
 
   // editing the saved preset creates version 2 and leaves version 1 alone
-  await page.getByRole("checkbox", { name: "Show all settings" }).uncheck();
   await field("Attempts allowed per rider per heat (M)").fill("6");
   await page.getByRole("button", { name: "Save as new version of “Arrow best 2”" }).click();
   await expect(page.getByText("as version 2").first()).toBeVisible();
@@ -232,10 +246,10 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await page.getByRole("button", { name: "Import pasted JSON" }).click();
   await expect(page.getByText("Imported “Imported OK” as a new preset").first()).toBeVisible();
 
-  // Format tab: ONE picker. No separate "Start from a format" list; a small "Load a saved format…" button instead.
+  // Format tab: ONE picker. No separate "Start from a format" list; a small "Load…" menu in the panel header instead.
   await page.getByRole("tab", { name: "Format" }).click();
   await expect(page.getByLabel("Start from a format")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Load a saved format…", exact: true })).toBeVisible();
+  await expect(page.getByTestId("load-menu").getByRole("button", { name: "Load…" })).toBeVisible();
   const kinds = ["Knockout", "Knockout with a second chance", "Double elimination", "Qualifying heats + finals", "Pools to a final", "Round robin", "Single final"];
   for (const k of kinds) await expect(page.getByRole("radio", { name: k, exact: true }), `card: ${k}`).toBeVisible();
   const explanations: Record<string, string> = {
@@ -250,9 +264,9 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   // compact cards: one line each (name + tag); nothing is chosen yet, so no explanation is printed; every card has a "?" with it
   await expect(page.getByTestId("kind-explain")).toHaveCount(0);
   for (const [name, text] of Object.entries(explanations)) {
-    await page.getByRole("button", { name: `Help: ${name}`, exact: true }).click();
+    await page.getByRole("button", { name: `About “${name}”`, exact: true }).click();
     await expect(page.getByRole("note").filter({ hasText: text })).toBeVisible();
-    await page.getByRole("button", { name: `Help: ${name}`, exact: true }).click(); // close it again
+    await page.getByRole("button", { name: `About “${name}”`, exact: true }).click(); // close it again
   }
 
   // a tag under each card says how many heats a rider is guaranteed
@@ -273,7 +287,7 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await page.getByRole("radio", { name: "Knockout", exact: true }).check();
   await expect(page.getByTestId("kind-explain")).toHaveCount(1); // under the selected card only
   await expect(page.getByTestId("kind-explain")).toHaveText(explanations["Knockout"]);
-  await expect(page.getByRole("checkbox", { name: "Show all settings" })).not.toBeChecked();
+  await expect(page.getByTestId("advanced-toggle")).toHaveAttribute("aria-expanded", "false");
   for (const label of ["Riders per heat (target)", "Minimum per heat", "Maximum per heat", "How many advance", "Final size", "Preview with"]) {
     await expect(field(label), `Simple: ${label}`).toBeVisible();
   }
@@ -321,9 +335,9 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(page.getByTestId("format-preview")).toContainText("With 14 riders: R1 4 heats of 3–4");
   await expect(page.getByTestId("ladder-round").first().getByTestId("ladder-heat")).toHaveText([/R1 H1: 3 riders/, /Youth heat: 3 riders/, /R1 H3: 4 riders/, /R1 H4: 4 riders/]);
   await expect(page.getByTestId("ladder-round").nth(1).getByTestId("ladder-from").first()).toContainText("1st H1");
-  await page.getByRole("button", { name: "Help: Minimum per heat" }).click();
+  await page.getByRole("button", { name: "About “Minimum per heat”" }).click();
   await expect(page.getByRole("note").filter({ hasText: "Minimum per heat — the system will never make a heat smaller than this" })).toBeVisible();
-  await page.getByRole("button", { name: "Help: Maximum per heat" }).click();
+  await page.getByRole("button", { name: "About “Maximum per heat”" }).click();
   await expect(page.getByRole("note").filter({ hasText: "Maximum per heat — the system will never make a heat bigger than this" })).toBeVisible();
   await field("Minimum per heat").fill("2");
   await field("Maximum per heat").fill("3");
@@ -407,8 +421,9 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(page.getByTestId("ladder-round")).toHaveCount(4);
   await field("Points table").fill("10, 6, 3, 1");
   await expect(page.getByTestId("ladder-round")).toHaveCount(4);
-  await page.getByRole("button", { name: "Help: Points table" }).click();
-  await expect(page.getByRole("note").filter({ hasText: "Points for 1st, 2nd, 3rd … place in a heat" })).toBeVisible();
+  await page.getByRole("button", { name: "About “Points table”" }).click();
+  await expect(page.getByTestId("setting-fs-points-table")).toContainText("Points for 1st, 2nd, 3rd … place in a heat");
+  await expect(page.getByTestId("setting-fs-points-table").getByRole("note")).toContainText("Example: 4, 3, 2, 1");
 
   await page.getByRole("radio", { name: "Single final" }).check();
   await expect(page.getByText("Everyone rides one heat: there is nothing to set.")).toBeVisible();
@@ -419,7 +434,7 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
 
   // Show all settings keeps every Simple field on screen, with the advanced ones (heat lengths, breaks, flag-out) added below
   await page.getByRole("radio", { name: "Knockout with a second chance" }).check();
-  await page.getByRole("checkbox", { name: "Show all settings" }).check();
+  await openMore();
   const screenText = await page.locator("body").innerText();
   expect(screenText).not.toMatch(/\b(byes?|repechage|dingle|man-on-man)\b/i);
   expect(screenText).not.toMatch(/\b(winners?|losers?)['’]?\s+bracket\b/i);
@@ -432,7 +447,7 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await page.getByText("Default timing (minutes)", { exact: true }).click(); // the advanced part: breaks and the single heat lengths
   await expect(field("Break after each heat")).toBeVisible();
   await expect(page.getByText("Flag-out", { exact: true })).toBeVisible();
-  await page.getByRole("checkbox", { name: "Show all settings" }).uncheck();
+  await page.getByTestId("advanced-toggle").click(); // fold it again
   await expect(page.getByText("Flag-out", { exact: true })).toHaveCount(0);
 
   // heat length per round: pre-filled from the ladder's own lengths, optional override, diagram in sync, breaks untouched
@@ -472,12 +487,12 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(page.getByTestId("ladder-diagram")).toContainText("best 6 of all heats → F");
 
   // the hidden fixed templates are not offered anywhere in the menus
-  await page.getByRole("button", { name: "Load a saved format…", exact: true }).click();
-  const offered = await page.getByLabel("Saved formats").locator("option").allTextContents();
+  await page.getByTestId("load-menu").getByRole("button", { name: "Load…" }).click();
+  const offered = await page.getByRole("menuitem").allTextContents();
   expect(offered.join(" | ")).not.toMatch(/megaloop/i);
   expect(offered.join(" | ")).toMatch(/Double elimination/);
   expect(offered.join(" | ")).toMatch(/Round robin/);
-  await page.getByLabel("Saved formats").selectOption({ label: offered.find((o) => /Single final/.test(o))! });
+  await page.getByRole("menuitem", { name: offered.find((o) => /Single final/.test(o))! }).click();
   await expect(page.getByRole("radio", { name: "Single final" })).toBeChecked();
 
   // custom ladder: the whiteboard builder (the full walk-through is in draw-timetable.spec.ts)
@@ -504,7 +519,9 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   const { data: round } = await org.db.from("rounds").insert({ division_id: div!.id, sort_order: 1, name: "Round 1", short_name: "R1", spec: {} }).select("id").single();
   await org.db.from("heats").insert({ round_id: round!.id, division_id: div!.id, event_id: eventId, number: 1, duration_sec: 600, status: "running", started_at: new Date().toISOString() });
   await page.reload();
-  await expect(page.getByText("Scoring and format are locked").first()).toBeVisible(); // the first division opens by itself
+  await expect(page.getByText("Scoring and format are locked").first()).toBeVisible();
+  await expect(page.getByTestId("load-menu")).toHaveCount(0);
+  await expect(page.getByText("Unlock the rules first to load a different set.").first()).toBeVisible(); // the first division opens by itself
   await expect(page.getByRole("button", { name: /Save scoring for/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Delete" })).toBeDisabled(); // it has heats
   await page.getByLabel("Reason for unlocking").fill("Wrong heat length entered");

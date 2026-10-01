@@ -67,3 +67,8 @@ export function Button({ variant = "secondary", icon: Icon, iconOnly, href, targ
     </span>
   );
 }
+
+/** Props that disable a Button and give its reason, or nothing: `<Button {...disabledWhen(pending && "Working…")}>`. */
+export function disabledWhen(reason: string | false | null | undefined): { disabled: true; disabledReason: string } | Record<string, never> {
+  return reason ? { disabled: true as const, disabledReason: reason } : {};
+}

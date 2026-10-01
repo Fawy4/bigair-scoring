@@ -12,6 +12,8 @@ const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 export interface Help {
   text: string;
   example?: string;
+  /** A one-line version for under a setting's label, when `text` is longer than a line. */
+  line?: string;
 }
 
 export const copy = {
@@ -323,6 +325,13 @@ export const copy = {
     } as Record<string, string>,
   },
 
+  formatSentence: {
+    heats: (n: number) => `heats of ${n}`,
+    advance: (n: number) => `top ${n} advance`,
+    final: (n: number) => `final of ${n}`,
+    tail: (riders: number, rounds: number, time: string) => `${riders} ${plural(riders, "rider", "riders")}: ${rounds} ${plural(rounds, "round", "rounds")}, about ${time}`,
+  },
+
   readiness: {
     divisions: { none: "No divisions yet" },
     riders: { ok: (d: string, n: number) => `${d}: ${n} ${plural(n, "rider", "riders")} confirmed`, none: (d: string) => `${d}: no riders confirmed` },
@@ -586,6 +595,11 @@ export const copy = {
   },
 
   rules: {
+    loadLocked: "Unlock the rules first to load a different set.",
+    unlockNeedsReason: "Write a reason of at least 5 characters first.",
+    saveInvalid: "Fix the problems listed above first.",
+    presetNeedsName: "Give the preset a name of at least 2 characters first.",
+    pasteEmpty: "Paste the text first.",
     ladderDefaultName: "My ladder",
     ladderFrom: (name: string) => `From ${name}`,
     startFromMissing: "That format is not available to start from.",
@@ -642,8 +656,11 @@ export const copy = {
     impression: "Judges also give an Impression / Variety score for each rider",
     impressionName: "Name of the score",
     impressionLow: "Lowest",
-    impressionHigh: "Highest",
+    impressionHigh: "Highest Impression score",
     impressionStep: "Step",
+    noLimitOn: "No limit",
+    noLimitOff: "Limited to",
+    impressionUnit: "points",
     defaultImpressionLabel: "Variety",
     seatsNote: "Which seats judge which division is set in the Officials step (next release).",
   },
@@ -784,7 +801,11 @@ export const copy = {
     breakRound: "Break after the round (minutes)",
     perRound: {
       heading: "Heat length per round",
-      note: "Pre-filled from the heat lengths above. Change a row to give that round its own length; breaks stay the same for every round. The rounds listed are those of the preview below.",
+      note: (base?: number) => `One row for each round of the preview. Each box is filled with that round’s heat length now. Change a box to give that round its own length; leave a box blank to use the division’s heat length${base ? ` (${base} min)` : ""}. Breaks stay the same for every round.`,
+      colRound: "Round",
+      colLength: "Heat length (min)",
+      colWarmUp: "Warm-up (min)",
+      emptyInvalid: "The rounds cannot be listed yet because the format has a problem (see the notice below). Fix it and the table fills in.",
       row: (short: string, name: string) => `${short} · ${name}`,
       rowLabel: (short: string) => `Heat length: ${short} (minutes)`,
       empty: "No rounds to list yet: the preview cannot run with the current settings. Check the number in \"Preview with\" and the ladder settings.",
@@ -2975,12 +2996,12 @@ export const help: Record<string, Help> = {
   "scoring.impressionRange": { text: "The lowest and highest score, and the smallest step on the score pad.", example: "0 to 10 in steps of 0.5" },
   "format.type": { text: "Choose how riders move from round to round. The rounds are created for you from the number of riders.", example: "Knockout: heats of 4, top 2 go through." },
   "format.preset": { text: "Start from a ready-made format. Changing the ladder type below replaces its rounds.", example: "Single elimination — heats of 4, top 2 advance" },
-  "format.heatSize": { text: "How many riders each heat should have. Some heats can be one rider bigger.", example: "4" },
-  "format.minHeat": { text: "Minimum per heat — the system will never make a heat smaller than this. It picks the number of heats so every heat holds between the minimum and the maximum, as close to the target as it can.", example: "Target 3, minimum 3, maximum 4: 14 riders make heats of 3, 3, 4 and 4" },
-  "format.maxHeat": { text: "Maximum per heat — the system will never make a heat bigger than this (unless the minimum makes it impossible to keep to both).", example: "Target 3, minimum 2, maximum 3: 14 riders make heats of 2, 3, 3, 3 and 3" },
+  "format.heatSize": { text: "How many riders each heat should have. Some heats can be one rider bigger.", example: "With 4, a field of 16 riders makes four heats of 4." },
+  "format.minHeat": { line: "The smallest heat the system will make.", text: "Minimum per heat — the system will never make a heat smaller than this. It picks the number of heats so every heat holds between the minimum and the maximum, as close to the target as it can.", example: "Target 3, minimum 3, maximum 4: 14 riders make heats of 3, 3, 4 and 4" },
+  "format.maxHeat": { line: "The biggest heat the system will make.", text: "Maximum per heat — the system will never make a heat bigger than this (unless the minimum makes it impossible to keep to both).", example: "Target 3, minimum 2, maximum 3: 14 riders make heats of 2, 3, 3, 3 and 3" },
   "format.secondChancePlaces": { text: "Who gets a second chance after Round 1. Leave it as everyone so that nobody is out after one heat; set a number to send only the next few places, the others are out.", example: "Everyone who did not win; or 2 = 2nd and 3rd only, 4th is out" },
   "format.advance": { text: "How many riders from each heat go on to the next round.", example: "2 of 4" },
-  "format.finalSize": { text: "How many riders ride the final.", example: "4" },
+  "format.finalSize": { text: "How many riders ride the final.", example: "With 4, the best four riders of the last round ride the final." },
   "format.finalists": { text: "After every pool has ridden, all heat scores are ranked together and this many riders go to the final.", example: "Best 6 of 23 riders" },
   "format.load": { text: "Pre-fills the choices below with a format that you or the app saved earlier. You can still change every number.", example: "Arrow launch: knockout with a second chance" },
   "format.smallFinal": { text: "How many of the next best riders ride a Small final; 0 = no Small final. Riders after them keep their qualifying rank.", example: "Best 4 to the Final, next 4 to the Small final" },

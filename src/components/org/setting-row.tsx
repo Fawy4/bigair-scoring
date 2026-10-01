@@ -13,12 +13,14 @@ interface SettingRowProps {
   explanation: string;
   /** The sentence the "?" opens: an example in real numbers. */
   example: string;
+  /** When the one line under the label is a short version, the full sentence goes here and opens with the example. */
+  detail?: string;
   /** The control (a NumberField, SelectField, Toggle …). */
   children: ReactNode;
 }
 
 /** Label, one line of explanation, a "?" that opens one example, and the control. On a laptop the control sits at the right; on a phone it goes under. */
-export function SettingRow({ id, label, explanation, example, children }: SettingRowProps) {
+export function SettingRow({ id, label, explanation, example, detail, children }: SettingRowProps) {
   const [open, setOpen] = useState(false);
   const noteId = useId();
   const laptop = useShellLayout() === "laptop";
@@ -45,7 +47,7 @@ export function SettingRow({ id, label, explanation, example, children }: Settin
       </div>
       {open ? (
         <p id={noteId} role="note" data-testid="setting-example" className="mt-1 rounded-[8px] border border-beach-line bg-beach-surface px-3 py-2 text-body font-medium">
-          {orgCopy.settings.example(example)}
+          {detail ? `${detail} ` : ""}{orgCopy.settings.example(example)}
         </p>
       ) : null}
     </div>

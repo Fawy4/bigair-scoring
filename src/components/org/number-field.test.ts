@@ -13,6 +13,10 @@ describe("number field width", () => {
   });
   it("two decimals add three characters (a point and two digits)", () => expect(numberFieldChars({ min: 0, max: 9, step: 0.25 })).toBe(4));
   it("the larger of the two ends decides the digits", () => expect(numberFieldChars({ min: -100, max: 9 })).toBe(4));
+  it("a placeholder word such as “auto” keeps the empty box wide enough for it", () => {
+    expect(numberFieldChars({ min: 1, max: 9, minChars: 4 })).toBe(4);
+    expect(numberFieldChars({ min: 1, max: 99999, minChars: 4 })).toBe(5);
+  });
   it("reads decimals from the step", () => {
     expect(decimalsOf(1)).toBe(0);
     expect(decimalsOf(0.5)).toBe(1);
