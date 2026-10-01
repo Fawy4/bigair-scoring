@@ -20,7 +20,7 @@ import { friendlyMessage, schemaToNodes } from "@/lib/schema-form/nodes";
 import { describeScoringModel } from "@/lib/scoring-ui/describe";
 import { diffOverrides, FORMAT_NULLABLE, mergeOverrides, sameOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { copy, FORMAT_HIDDEN, FORMAT_LABELS, help, SCORING_HIDDEN, SCORING_LABELS } from "@/lib/ui-copy";
-import { expandFormat, drawToLadder, ladderTemplate, LadderConvertError, newLadder, type CustomLadder, type Entrant } from "@/lib/engine/ladder";
+import { expandFormat, drawToLadder, designDifference, ladderTemplate, LadderConvertError, newLadder, previewRiders, type CustomLadder, type Entrant } from "@/lib/engine/ladder";
 import { generateDraw } from "../draw/actions";
 import { importPreset, savePreset, saveDivisionRules, unlockRules } from "./actions";
 import type { DivisionRow } from "./divisions-manager";
@@ -85,7 +85,7 @@ export function RulesPanel({
   const [custom, setCustom] = useState(false); // an unsaved custom ladder
   const [showAll, setShowAll] = useState(false);
   const [showLoad, setShowLoad] = useState(false);
-  const [riders, setRiders] = useState(14);
+  const [riders, setRiders] = useState(division.riders.length || 14);
   const [message, setMessage] = useState<Message>(null);
   const [presetName, setPresetName] = useState("");
   const [reason, setReason] = useState("");
@@ -122,8 +122,10 @@ export function RulesPanel({
   const preview = useMemo(() => (template ? previewFormat(template, riders) : null), [template, riders]);
   const isFixed = !scoring && ladderKindOf(working) === "custom";
   const isLadder = !scoring && ladderKindOf(working) === "ladder";
-  // the riders the ladder is built for: the division's confirmed riders, or placeholders while none are entered
-  const builderRiders = useMemo(() => (division.riders.length > 0 ? division.riders : Array.from({ length: riders }, (_, i) => ({ id: `p${i + 1}`, name: `Rider ${i + 1}` }))), [division.riders, riders]);
+  // the riders the ladder is designed for: as many as the "Preview with" number says (the division's real riders first, placeholders after)
+  const builderRiders = useMemo(() => previewRiders(division.riders, riders), [division.riders, riders]);
+  // what "Apply to draw" does differently from the design (the draw always uses the division's real confirmed riders)
+  const difference = useMemo(() => designDifference(riders, division.riders.length), [riders, division.riders.length]);
   // the single settings' heat length of every round of the preview (without the per-round overrides)
   const defaultLengths = useMemo(() => {
     if (!template || isFixed) return new Map<string, number>();
@@ -202,7 +204,7 @@ export function RulesPanel({
       onDivisionChange({ format_template_id: id, format_params: {} });
       const drawn = await generateDraw(division.id, false);
       if (!drawn.ok) return setMessage({ kind: "error", text: drawn.error });
-      toast({ title: copy.builder.applied(division.name) });
+      toast({ title: copy.builder.applied(division.name), ...(difference ? { description: copy.builder.difference(difference) } : {}) });
       router.push(`/org/events/${eventId}/draw?division=${division.id}`);
     });
   }
@@ -435,7 +437,7 @@ export function RulesPanel({
             <div className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center gap-3">
                 <FieldLabel htmlFor={`riders-${division.id}`} text={copy.formatSimple.previewWith} help={help["format.preview"]} />
-                <input id={`riders-${division.id}`} type="number" min={1} max={200} value={riders} disabled={division.riders.length > 0} onChange={(e) => setRiders(Math.max(1, Math.min(200, Number(e.target.value) || 1)))} className="w-24" />
+                <input id={`riders-${division.id}`} type="number" min={1} max={200} value={riders} onChange={(e) => setRiders(Math.max(1, Math.min(200, Number(e.target.value) || 1)))} className="w-24" />
                 <span className="font-bold">{copy.formatSimple.riders}</span>
               </div>
               <WarmUpField working={working as Record<string, unknown>} onChange={setValue} readOnly={locked} />
@@ -443,7 +445,7 @@ export function RulesPanel({
                 ladder={(working as { ladder: CustomLadder }).ladder}
                 onChange={(l) => setValue({ ...(working as Record<string, unknown>), ladder: l })}
                 riders={builderRiders}
-                planning={division.riders.length === 0}
+                confirmedCount={division.riders.length}
                 readOnly={locked}
                 startFromOptions={KINDS.map((k) => ({ kind: k, label: copy.formatSimple.types[k].title }))}
                 onStartFrom={startFrom}
@@ -469,6 +471,11 @@ export function RulesPanel({
                       </button>
                     )}
                     {!complete ? <p className="text-sm font-semibold">{copy.builder.applyBlocked}</p> : division.riders.length === 0 ? <p className="text-sm font-semibold">{copy.builder.applyNoRiders}</p> : null}
+                    {difference && division.riders.length > 0 ? (
+                      <p className="text-sm font-bold" data-testid="apply-difference">
+                        {copy.builder.difference(difference)}
+                      </p>
+                    ) : null}
                   </div>
                 )}
               </LadderBuilder>

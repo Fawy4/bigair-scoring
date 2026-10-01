@@ -12,3 +12,4 @@ export { applyDrawEdit, checkDraw, arrangedParts, regenerateKeeping, ridersInRou
 export * from "./custom-ladder";
 export { checkLadder, applyFix, fillSeats, addNeededHeats, trimSeats, allowSize, suggestSplits, describeSplit, planNewHeats, limitsOf, neededSeats, type Fault, type Fix, type FixId, type Recommendation, type LadderCheck, type RiderRef } from "./custom-ladder-check";
 export { ladderToDraw, drawToLadder, ladderTemplate, LadderConvertError } from "./custom-ladder-draw";
+export { previewRiders, designDifference, isPreviewRider, type DesignDifference } from "./custom-ladder-preview";

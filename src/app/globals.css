@@ -171,6 +171,51 @@
   }
 }
 
+/* The printed draw (one A4 landscape page for WhatsApp): colours are forced to print, the page has no browser header or footer. */
+@page ladder {
+  size: A4 landscape;
+  margin: 0;
+}
+.print-exact,
+.print-sheet,
+.print-sheet * {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.print-sheet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8mm;
+}
+.print-sheet-page {
+  page: ladder;
+  box-shadow: 0 0 0 2px #111;
+}
+@media print {
+  .print-sheet {
+    display: block;
+    gap: 0;
+  }
+  .print-sheet-page {
+    box-shadow: none;
+    break-after: page;
+    page-break-after: always;
+  }
+  .print-sheet-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+  .org-console:has(.print-sheet) {
+    min-height: 0;
+  }
+  .org-console:has(.print-sheet) > div {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+}
+
 /* small labels on seats and heats ("changed by hand", "started"): text, never colour alone */
 .badge-note {
   display: inline-block;

@@ -10,6 +10,7 @@ import {
   checkLadder,
   clearSeat,
   heatName,
+  isPreviewRider,
   moveRound,
   placeOptions,
   removeHeat,
@@ -145,7 +146,7 @@ function SeatBox({
       const seedCount = Math.max(riders.length, current.type === "seed" ? current.seed : 0);
       return {
         seeds: Array.from({ length: seedCount }, (_, i) => ({ key: `seed:${i + 1}`, label: T.seedOption(i + 1, riders[i]?.name) })),
-        riders: riders.map((r) => ({ key: `rider:${r.id}`, label: r.name })),
+        riders: riders.filter((r) => !isPreviewRider(r.id)).map((r) => ({ key: `rider:${r.id}`, label: r.name })),
         places: [],
       };
     }
@@ -243,8 +244,8 @@ export interface BuilderProps {
   ladder: CustomLadder;
   onChange: (l: CustomLadder) => void;
   riders: readonly RiderRef[];
-  /** True when the division has no confirmed riders yet and the builder plans with placeholders. */
-  planning: boolean;
+  /** The division's real confirmed riders (the builder itself designs for `riders`, which follows the preview number). */
+  confirmedCount: number;
   readOnly?: boolean;
   startFromOptions: Array<{ kind: string; label: string }>;
   onStartFrom: (kind: string) => void;
@@ -254,7 +255,7 @@ export interface BuilderProps {
 }
 
 /** The whiteboard: "+ Add round" → "+ Add heat" → seats as boxes, every seat a dropdown, with the checker beside (below on a phone). */
-export function LadderBuilder({ ladder, onChange, riders, planning, readOnly, startFromOptions, onStartFrom, startFromError, children }: BuilderProps) {
+export function LadderBuilder({ ladder, onChange, riders, confirmedCount, readOnly, startFromOptions, onStartFrom, startFromError, children }: BuilderProps) {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState<PlaceRef | null>(null);
   const [startKind, setStartKind] = useState(startFromOptions[0]?.kind ?? "");
@@ -321,7 +322,7 @@ export function LadderBuilder({ ladder, onChange, riders, planning, readOnly, st
         <p className="max-w-md text-sm font-semibold">{T.numbersNote}</p>
       </div>
       {startFromError ? <p className="field-error">{copy.common.problem(startFromError)}</p> : null}
-      {planning ? <p className="font-semibold">{T.planning(riders.length)}</p> : <p className="font-semibold">{T.ridersKnown(riders.length)}</p>}
+      <p className="font-semibold" data-testid="designing-for">{confirmedCount === 0 ? T.planning(riders.length) : T.ridersKnown(riders.length, confirmedCount)}</p>
       {error ? (
         <p role="alert" className="field-error">
           {copy.common.problem(error)}

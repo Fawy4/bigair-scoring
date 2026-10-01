@@ -849,8 +849,18 @@ export const copy = {
     droppedNote: (names: string) => `Could not keep: ${names} (they no longer fit).`,
     print: "Print / PDF",
     printNow: "Print or save as PDF",
-    printHelp: "In the print window choose “Save as PDF” to get a file.",
+    printHelp: "One A4 page, landscape, in colour. In the print window choose “Save as PDF” to get a file, or use Export PNG for a picture.",
     printTitle: (event: string, division: string) => `${event} — ${division}`,
+    sheet: {
+      estimates: "Times are estimates",
+      page: (index: number, of: number) => `Page ${index} of ${of}`,
+      part: (index: number, of: number) => `${index} of ${of}`,
+      date: (iso: string) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date(`${iso}T12:00:00Z`)),
+      exportPng: "Export PNG",
+      pngDone: "Picture saved. Send it on WhatsApp.",
+      pngFailed: "The picture could not be made. Use Print / PDF instead.",
+      fileName: (division: string) => `draw-${division.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "division"}.png`,
+    },
     checksLabel: "Checks of the whole ladder",
     checksHeading: "Checks",
     checksOk: "Nothing to warn about: every rider has a seat and every heat is the right size.",
@@ -910,8 +920,14 @@ export const copy = {
     startFrom: (name: string) => `Start from ${name} and edit`,
     startFromQuestion: "Replace the ladder you are building with this format?",
     startFromYes: "Yes, replace it",
-    planning: (n: number) => `No confirmed riders yet: planning with ${n} ${plural(n, "rider", "riders")} (the preview number above).`,
-    ridersKnown: (n: number) => `${n} confirmed ${plural(n, "rider", "riders")} in this division.`,
+    planning: (n: number) => `No confirmed riders yet: designing for ${n} ${plural(n, "rider", "riders")} (the preview number above).`,
+    ridersKnown: (designed: number, real: number) =>
+      designed === real
+        ? `Designing for ${designed} ${plural(designed, "rider", "riders")}: the division has ${real} confirmed.`
+        : `Designing for ${designed} ${plural(designed, "rider", "riders")} (the preview number above); the division has ${real} confirmed.`,
+    difference: (d: { designed: number; real: number; emptySeats: number; ridersWithoutSeat: number }) =>
+      `Designed for ${d.designed}, the division has ${d.real} — ` +
+      (d.emptySeats > 0 ? `${d.emptySeats} ${plural(d.emptySeats, "seat", "seats")} will be empty.` : `${d.ridersWithoutSeat} ${plural(d.ridersWithoutSeat, "rider", "riders")} will have no seat.`),
     failed: "That did not work. Nothing was changed.",
     sending: (place: string, heat: string) => `Sending ${place} of ${heat}: tap “Put here” on the seat that takes it.`,
     empty: "Nothing here yet. Use “+ Add round”, or start from a format above and edit it.",

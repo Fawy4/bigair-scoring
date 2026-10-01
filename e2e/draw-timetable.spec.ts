@@ -14,15 +14,15 @@ let slug = "";
 const pad = (n: number) => String(n).padStart(2, "0");
 const hhmm = (m: number) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 
-async function makeDivision(name: string, formatOverrides: object | null = {}) {
+async function makeDivision(name: string, formatOverrides: object | null = {}, riderCount = 24, sortOrder = 1) {
   const { data: fmt } = await org.db.from("format_templates").select("id, version").is("organisation_id", null).eq("key", "heats4-top2-single-elim").order("version", { ascending: false }).limit(1).single();
   const { data: model } = await org.db.from("scoring_models").select("id").is("organisation_id", null).limit(1).single();
   const { data: div } = await org.db
     .from("divisions")
-    .insert({ event_id: eventId, name, sort_order: 1, scoring_model_id: model!.id, ...(formatOverrides === null ? {} : { format_template_id: fmt!.id, format_params: formatOverrides as never }) })
+    .insert({ event_id: eventId, name, sort_order: sortOrder, scoring_model_id: model!.id, ...(formatOverrides === null ? {} : { format_template_id: fmt!.id, format_params: formatOverrides as never }) })
     .select("id")
     .single();
-  const { data: riders } = await org.db.from("riders").insert(Array.from({ length: 24 }, (_, i) => ({ organisation_id: org.orgId, first_name: `Rider${pad(i + 1)}`, last_name: "Test" }))).select("id, first_name");
+  const { data: riders } = await org.db.from("riders").insert(Array.from({ length: riderCount }, (_, i) => ({ organisation_id: org.orgId, first_name: `Rider${pad(i + 1)}`, last_name: "Test" }))).select("id, first_name");
   const sorted = riders!.sort((a, b) => a.first_name.localeCompare(b.first_name));
   await org.db.from("entries").insert(sorted.map((r, i) => ({ event_id: eventId, division_id: div!.id, rider_id: r.id, seed: i + 1, status: "confirmed", source: "manual" })));
   return div!.id;
@@ -324,6 +324,15 @@ test("Warm-up, run order and timetable: warm-up 5 + heat 10, breaks of 2, pin th
   writeFileSync(`${process.env.TMPDIR ?? "/tmp"}/e2e-timetable-${org.run}.pdf`, pdf);
   expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
 
+  // the printed draw shows each heat's start time from the active run order, and says the times are estimates
+  await page.goto(`/org/events/${eventId}/draw/print?division=${divisionId}`);
+  await expect(page.getByTestId("print-page")).toHaveCount(1);
+  await expect(page.getByTestId("print-heat")).toHaveCount(15);
+  await expect(page.getByTestId("print-heat-time")).toHaveCount(15);
+  await expect(page.getByTestId("print-heat-time").first()).toHaveText("10:00");
+  await expect(page.getByTestId("print-heat-time").nth(1)).toHaveText("10:17");
+  await expect(page.getByTestId("print-page")).toContainText("Times are estimates");
+
   // the dashboard: missing list, share cards with link and QR
   await page.goto(`/org/events/${eventId}`);
   await expect(page.getByTestId("dashboard")).toBeVisible();
@@ -331,4 +340,145 @@ test("Warm-up, run order and timetable: warm-up 5 + heat 10, breaks of 2, pin th
   await expect(page.getByTestId("share-public-link")).toHaveText(new RegExp(`/e/${slug}$`));
   await expect(page.getByTestId("share-join").getByRole("img")).toBeVisible();
   await expect(page.getByTestId("dashboard-missing")).toContainText("No judge seats yet.");
+});
+
+test("Custom ladder: the builder follows the Preview with number; Apply to draw uses the real riders and says what differs", async ({ page }) => {
+  test.setTimeout(240_000);
+  divisionId = await makeDivision("Pro Men", null, 22);
+  await org.signIn(page, `/org/events/${eventId}/divisions`);
+  await page.getByRole("tab", { name: "Format" }).click();
+  await page.getByRole("radio", { name: "Custom ladder" }).check();
+  const builder = page.getByTestId("ladder-builder");
+  await expect(builder).toBeVisible();
+  const preview = page.getByLabel("Preview with", { exact: true });
+  // the box is never locked, even though the division has confirmed riders; it starts at the division's 22
+  await expect(preview).toBeEnabled();
+  await expect(preview).toHaveValue("22");
+  await expect(page.getByTestId("designing-for")).toHaveText("Designing for 22 riders: the division has 22 confirmed.");
+
+  await page.locator("#lb-min").fill("3");
+  await page.locator("#lb-max").fill("3");
+  await page.getByRole("button", { name: "+ Add round" }).click();
+  for (let i = 0; i < 7; i++) await builder.getByRole("button", { name: "+ Add heat" }).click();
+  // 7 heats of 3 = 21 seats
+  await preview.fill("24");
+  await expect(page.getByTestId("designing-for")).toHaveText("Designing for 24 riders (the preview number above); the division has 22 confirmed.");
+  await expect(page.getByTestId("ladder-fault").filter({ hasText: "24 riders, 21 seats — 3 riders have no heat." })).toBeVisible();
+  await expect(page.getByTestId("ladder-recommendation").first()).toContainText("24 riders");
+  await preview.fill("20");
+  await expect(page.getByTestId("ladder-fault").filter({ hasText: "20 riders, 21 seats — 1 seat has no rider." })).toBeVisible();
+  await expect(page.getByTestId("ladder-fault").filter({ hasText: "24 riders" })).toHaveCount(0);
+
+  // design for 24: one more heat, the remaining seats filled in order; the ladder is complete
+  await preview.fill("24");
+  await builder.getByRole("button", { name: "+ Add heat" }).click();
+  await page.getByTestId("ladder-fix").filter({ hasText: "Fill the remaining seats in order" }).first().click();
+  await expect(page.getByTestId("ladder-status")).toContainText("Ladder complete — 8 heats, 24 riders");
+  // seeds 23 and 24 exist in the design but nobody holds them yet: the dropdown names real riders only
+  await expect(page.getByTestId("apply-difference")).toHaveText("Designed for 24, the division has 22 — 2 seats will be empty.");
+
+  await page.getByRole("button", { name: "Apply to draw" }).click();
+  await expect(page).toHaveURL(new RegExp(`/org/events/${eventId}/draw\\?division=`));
+  // the draw has all 24 seats of the design, 22 with a rider and 2 empty
+  await expect(page.getByTestId("seat")).toHaveCount(24);
+  await expect(page.getByTestId("empty-seat")).toHaveCount(2);
+});
+
+const lycraSettings = () => {
+  const file = JSON.parse(readFileSync("presets/identification/schemes.json", "utf8")) as { palette: unknown; schemes: Array<{ id: string }> };
+  const scheme = { ...file.schemes.find((s) => s.id === "vests-per-heat")!, palette: file.palette };
+  return { identification: { scheme, basedOn: "vests-per-heat", allowDivisionOverride: false } };
+};
+
+/** Number of pages and the first page's size in points, read from the PDF bytes. */
+function pdfFacts(pdf: Buffer) {
+  const text = pdf.toString("latin1");
+  const pages = (text.match(/\/Type\s*\/Page[^s]/g) ?? []).length;
+  const box = text.match(/\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/);
+  return { pages, width: Number(box?.[1]), height: Number(box?.[2]) };
+}
+
+test("Print / PDF and PNG of the draw: one landscape page, lycra colours as colour and as words, logo, event, division, date; two pages only for a round of more than 8 heats", async ({ page }) => {
+  test.setTimeout(300_000);
+  await org.db.from("events").update({ settings: lycraSettings() as never, branding: { logoUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%23111'/></svg>" } as never }).eq("id", eventId);
+  divisionId = await makeDivision("Pro Men", KNOCKOUT_24);
+  await org.signIn(page, drawUrl());
+  await page.getByRole("button", { name: "Generate draw" }).click();
+  await expect(page.getByTestId("draw-count")).toHaveText("4 rounds, 15 heats");
+
+  // the Draw step links to the print page
+  const printUrl = `/org/events/${eventId}/draw/print?division=${divisionId}`;
+  await page.goto(printUrl);
+  await expect(page.getByTestId("print-page")).toHaveCount(1);
+  await expect(page.getByTestId("print-title")).toHaveText(`E2E Draw ${org.run}`);
+  await expect(page.getByTestId("print-subtitle")).toHaveText("Pro Men · Sat, 10 Oct 2026");
+  await expect(page.getByTestId("print-page").locator("img").first()).toBeVisible();
+  await expect(page.getByTestId("print-round").locator("h2")).toHaveText(["Round 1", "Round 2", "Semi-finals", "Final"]);
+  await expect(page.getByTestId("print-heat")).toHaveCount(15);
+  await expect(page.getByTestId("print-heat-title").first()).toHaveText("Heat 1");
+  // no run order yet: no times, no "estimates" line
+  await expect(page.getByTestId("print-heat-time")).toHaveCount(0);
+
+  // every Round 1 seat: the real lycra colour AND its name as text
+  const tags = page.getByTestId("print-tag");
+  await expect(tags).toHaveCount(24);
+  const first = tags.first();
+  await expect(first).toHaveText("RED");
+  await expect(first).toHaveAttribute("data-hex", /^#[0-9a-f]{6}$/i);
+  for (const name of ["RED", "YELLOW", "BLUE"]) await expect(tags.filter({ hasText: name }).first()).toBeVisible();
+
+  // colours are forced to print: print media, exact colour adjustment, a real background colour
+  await page.emulateMedia({ media: "print" });
+  const style = await first.evaluate((el) => {
+    const c = getComputedStyle(el) as CSSStyleDeclaration & { printColorAdjust?: string };
+    return { adjust: c.printColorAdjust ?? c.getPropertyValue("print-color-adjust") ?? c.getPropertyValue("-webkit-print-color-adjust"), background: c.backgroundColor };
+  });
+  expect(style.adjust).toBe("exact");
+  expect(style.background).not.toBe("rgba(0, 0, 0, 0)");
+  expect(style.background).not.toBe("rgb(255, 255, 255)");
+  // the whole ladder is inside one A4 landscape page (297 × 210 mm)
+  const fit = await page.getByTestId("print-ladder").evaluate((el) => {
+    const pageEl = el.closest("[data-testid=print-page]")!.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    return { top: r.top - pageEl.top, left: r.left - pageEl.left, right: pageEl.right - r.right, bottom: pageEl.bottom - r.bottom, pageW: pageEl.width, pageH: pageEl.height };
+  });
+  expect(fit.top).toBeGreaterThanOrEqual(0);
+  expect(fit.left).toBeGreaterThanOrEqual(0);
+  expect(fit.right).toBeGreaterThanOrEqual(0);
+  expect(fit.bottom).toBeGreaterThanOrEqual(0);
+  expect(Math.abs(fit.pageW / fit.pageH - 297 / 210)).toBeLessThan(0.01);
+  // the PDF: one landscape A4 page, the colours still there without "background graphics"
+  const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: false });
+  const facts = pdfFacts(pdf);
+  expect(facts.pages).toBe(1);
+  expect(facts.width).toBeGreaterThan(facts.height);
+  expect(Math.abs(facts.width - 841.89)).toBeLessThan(2);
+  writeFileSync(`${process.env.TMPDIR ?? "/tmp"}/e2e-draw-${org.run}.pdf`, pdf);
+  await page.emulateMedia({ media: "screen" });
+
+  // PNG of the same page
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByTestId("export-png").click()]);
+  expect(download.suggestedFilename()).toBe("draw-pro-men.png");
+  const png = readFileSync((await download.path())!);
+  expect(png.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([2376, 1680]);
+  expect(png.length).toBeGreaterThan(20_000);
+
+  // a round of more than 8 heats: two pages, in the PDF and as two pictures
+  const big = await makeDivision("Open", KNOCKOUT_24, 30, 2);
+  await page.goto(`/org/events/${eventId}/draw?division=${big}`);
+  await page.getByRole("button", { name: "Generate draw" }).click();
+  await expect(page.getByTestId("draw-count")).toContainText("heats");
+  await page.goto(`/org/events/${eventId}/draw/print?division=${big}`);
+  await expect(page.getByTestId("print-page")).toHaveCount(2);
+  await expect(page.getByTestId("print-page").first()).toContainText("Page 1 of 2");
+  await page.emulateMedia({ media: "print" });
+  const pdf2 = await page.pdf({ preferCSSPageSize: true });
+  expect(pdfFacts(pdf2).pages).toBe(2);
+  await page.emulateMedia({ media: "screen" });
+  const downloads: string[] = [];
+  page.on("download", (d) => downloads.push(d.suggestedFilename()));
+  await page.getByTestId("export-png").click();
+  await expect.poll(() => downloads.length).toBe(2);
+  expect(downloads.sort()).toEqual(["draw-open-1.png", "draw-open-2.png"]);
 });
