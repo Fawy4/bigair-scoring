@@ -52,6 +52,8 @@ export interface LiveHeatState extends Snapshot {
   /** Heats whose sheet this seat has submitted (it only knows its own sheets). */
   submittedHeatIds: Set<string>;
   refresh: () => Promise<void>;
+  /** Puts a row the server has just returned (our own attempt, score, impression, flag or sheet) into the list at once, without waiting for the stream. */
+  apply: (key: "attempts" | "scores" | "impressions" | "flags" | "sheets", row: { id: string; heat_id?: string; updated_at?: string }) => void;
 }
 
 /**
@@ -167,17 +169,25 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
     };
   }, [supabase, heatId, fetchSnapshot]);
 
-  // a safety net: while a channel is down, ask again every 15 seconds, and when the phone comes back online
+  // a safety net: while a channel is down, ask again every 5 seconds, and when the phone comes back online
   const up = heatsUp && heatUp;
   useEffect(() => {
     const again = () => void refresh();
     window.addEventListener("online", again);
-    const t = up ? null : setInterval(again, 15_000);
+    const t = up ? null : setInterval(again, 5_000);
     return () => {
       window.removeEventListener("online", again);
       if (t) clearInterval(t);
     };
   }, [up, refresh]);
 
-  return { heats, heat, phase, ...snap, connected: up && (typeof navigator === "undefined" || navigator.onLine), submittedHeatIds: submittedMemory.current, refresh };
+  const apply = useCallback<LiveHeatState["apply"]>(
+    (key, row) => {
+      if (row.heat_id && heatId && row.heat_id !== heatId) return;
+      setSnap((s) => ({ ...s, [key]: upsertRow(s[key] as Row[], row as unknown as Row) }));
+    },
+    [heatId],
+  );
+
+  return { heats, heat, phase, ...snap, apply, connected: up && (typeof navigator === "undefined" || navigator.onLine), submittedHeatIds: submittedMemory.current, refresh };
 }

@@ -246,6 +246,9 @@ test("spotter: riders in one row, a row for Left / Right, a row for the multipli
   await f.getByTestId("log-button").click();
   await expect(name).toContainText("Logged — RED — attempt 7");
   await expect(f.getByTestId("rider-tile-counter").first()).toHaveText(/^7 \/ 7/);
+  // Red is out of attempts now: CRASH and Log are off for Red; another rider can still be logged
+  await expect(f.getByTestId("crash-button")).toBeDisabled();
+  await f.getByTestId("rider-tile").nth(1).click();
   await f.getByTestId("crash-button").click();
   await expect(f.getByRole("alertdialog")).toBeVisible();
   await f.getByRole("button", { name: "Cancel" }).click();

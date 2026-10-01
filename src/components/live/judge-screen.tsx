@@ -66,7 +66,10 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const live = useLiveHeat(supabase, ctx, nowServer, pinnedHeatId);
   const viewer = ctx.viewer.kind === "seat" ? ctx.viewer : null;
   const seatId = viewer?.seatId ?? "";
-  const q = useSendQueue(supabase, clock.now, `judge-${ctx.event.id}-${seatId}`, online && live.connected);
+  const q = useSendQueue(supabase, clock.now, `judge-${ctx.event.id}-${seatId}`, online && live.connected, (kind, row) => {
+    const key = kind === "attempt" ? "attempts" : kind === "trick_score" ? "scores" : kind === "impression" ? "impressions" : "flags";
+    live.apply(key, row as never);
+  });
   const [saved, setSaved] = useState<string | null>(null);
   const [flagged, setFlagged] = useState<Set<string | number>>(new Set());
   const [tab, setTab] = useState<"impression" | "review">("impression");

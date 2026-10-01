@@ -45,7 +45,7 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
   const live = useLiveHeat(supabase, ctx, nowServer, pinnedHeatId);
   const viewer = ctx.viewer.kind === "seat" ? ctx.viewer : null;
   const seatId = viewer?.seatId ?? "organiser";
-  const q = useSendQueue(supabase, clock.now, `spot-${ctx.event.id}-${seatId}`, online && live.connected);
+  const q = useSendQueue(supabase, clock.now, `spot-${ctx.event.id}-${seatId}`, online && live.connected, (kind, row) => kind === "attempt" && live.apply("attempts", row as never));
   const [feedOpen, setFeedOpen] = useState(false);
   const [notices, setNotices] = useState<Notice[]>([]);
 
