@@ -110,6 +110,12 @@ Goal: the owner approves the look on a phone outdoors before any live screen exi
   - A sticky Daylight / Dark switch.
   - "Approve" is outside the app. The owner replies on the PR.
 
+**Revised after the owner's outdoor test on an iPhone 14 (1 Oct 2026)** — the rest of this step is read with these changes, which replace the earlier sizes and look:
+- **Focus.** The judge's default view is a slim header, the rider strip and the current attempt with its whole pad (the top of the previous card peeks). The spotter's is the rider strip with counters, Left / Right, the builder, CRASH and Log. The timer is small (22 px) in the header; 48 px only on the head console and the big screen. A rider's sheet (tap the name) and a "Details" toggle hold everything else.
+- **Fit and sizes.** Normal (default): body 16, names 18, digits 24, status words 14, pad buttons 50 tall with 6 px gaps, other buttons 44. Large (per device, next to the theme switch): roughly the first preview's sizes. Weight 700 only on the selected score. Contrast stays 7:1. Tokens: `src/lib/live/theme-tokens.ts` and `size-tokens.ts`.
+- **Look.** One accent (deep teal) for selection, the primary button and progress; status pills with icon and word; the Rider label is a stripe, a dot and the colour word in ink (`RiderLabel variant="stripe"`), replacing the white nameplate.
+- **Content.** `/design` opens with six full-screen mocks (Judge — live heat; Details on; rider sheet open; Spotter — live heat; Judge — heat end; Head judge — phone), then the parts. No percentages on any screen. Tic-tac moved to Add-ons (master vocabulary v3).
+
 **Database:** none.
 
 **Tests first:**
@@ -243,6 +249,13 @@ Test vectors:
   - Between heats it shows "Next: Pro Men · R1 · Heat 3 — est. 15:23", computed with `computeTimetable`.
 - **Builder:** `trick-builder.tsx` from 5a, now wired.
   - It reads the master vocabulary, the event's own blocks and `divisions.trick_base` (loaders in `src/lib/org/trick-vocabulary.ts`), then `enabledBlocks`.
+- **Spotter layout per division (owner decision, 1 Oct 2026; built in 5b).** The organiser configures what the spotter sees, per division, in the **Trick base** panel, before each event, for the expected rider level and conditions:
+  - the **order of the families** (Direction, Multiplier, Base trick, Add-ons, Grabs & landings);
+  - the **order of the blocks** within a family;
+  - a block can be **moved to another family** (Tic-tac was moved from Base trick to Add-ons in the master vocabulary for exactly this reason);
+  - **favourites** pinned to the top of the spotter's list;
+  - **"+ Add block"** into any family.
+  The spotter screen renders that layout, nothing else is hard-coded. 5b decides where it is stored (an extension of `divisions.trick_base`, which today holds only the unticked blocks) and must say what moving a block between a single-choice family (Direction, Multiplier, Base) and a toggle family (Add-ons, Grabs) does to naming and category; that is a question to put to the owner before building. Not built in 5a.
 - **Speech.** `src/lib/live/speech.ts` wraps `SpeechRecognition` / `webkitSpeechRecognition` and is feature-detected. The mic button is hidden where the browser has no speech recognition, and the text field stays (the keyboard's dictation key works there).
   - Typed or spoken text → `parseTrickText` → shown back as blocks to confirm (`speech.confirmBeforeLog`). Unmatched words show as "Free text — head judge will check".
 - **CRASH.** One confirmation (rule 00.3), then `add_attempt` with `status = 'crashed'` and the intended trick. Judges never score a crashed attempt (owner, §11.7). The scoring model decides 0 or not counted (`trick.crash`).
@@ -302,10 +315,9 @@ Test vectors:
 
 `src/lib/engine/scoring/summary.ts`: `heatSummary(riderAttempts, myScores, vocab)`. It returns:
 - attempts · landed · crashed
-- different tricks and repeats ×n
+- repeats ×n
 - left / right counts
-- families used
-- landed tricks sorted by my score, each with my score
+- landed tricks sorted by my score, each with its direction and my score; repeats ×n (no families, no rotation analysis)
 
 Tests use the docs/08 §1F legacy vector (5 landed, 2 crashed, "7 / 7").
 
@@ -316,7 +328,9 @@ Repeat badge: from `repeatIndexes` plus this judge's earlier score.
 ### Files
 
 - **Route.** `src/app/judge/[eventId]/page.tsx` and `judge-screen.tsx`, using `use-live-heat`.
-- **Header.** Heat name, `heat-timer`, `connection-badge`, seat name, `theme-switch`.
+- **Default view (owner, 1 Oct 2026).** A slim header (`heat-timer` small, `connection-badge`, "Details" toggle, heat and seat on one muted line), the rider strip of 3 to 4 riders, the current attempt with its whole pad, and the top of the previous card. No scrolling on an iPhone 14. Tapping a rider's name opens **that rider's sheet** (`rider-sheet.tsx`: attempts landed or crashed, my scores, which tricks count, left and right counts, the attempt counter; one tap closes it). The **Details** toggle switches the whole screen to every attempt card (trick names, status pills, repeat badges) and back. The mocks on `/design` are the reference.
+- **Percentages.** No screen shows a percentage of the maximum. Totals and the formula are in words ("31.54 = tricks 24.04 + Impression 7.50", the second name being the scoring model's own). The percentage stays in the engine and in exports. New division setting `liveSettings.showPercentOfMax` (default off), "Show scores as % of maximum", under Advanced in the Divisions step, with a "?". It overlaps the scoring model's existing `heat.total.display` field; 5b settles which one wins before building (the KOTA preset has `display: both`).
+- **Header.** See the default view above. The Daylight / Dark and Normal / Large switches live in the settings of the screen, not in the slim header.
 - **Rider strip.** `rider-tile` with "n / max" and the grey out-of-attempts state.
   - Tapping a tile adds an attempt only when `judgesMayLogAttempts` is on.
 - **Attempt cards.** Newest on top, from `trick_attempts`.
@@ -640,6 +654,10 @@ These are decisions now. The steps above already follow them. 5b copies them int
 | 12 | Out of scope | Wind calls go to Phase 6 with the public banner. Highest Jump metres come after the event | §13 |
 | 12a | Re-run heat (changed the same day) | A one-button "Re-run heat" in 5c: head judge or organiser, one confirmation, reason required; cancels the heat and creates "Heat 3 re-run" (3R) with the same riders, seats, lycras and timing; later seats follow it; the draw stays locked; it goes right after the live heat in the run order; one audit line; riders can be left out. The manual five-step path stays as the fallback | Step 4 |
 | 13 | Riders left out of a re-run | Marked Disqualified or Did not start and ranked last in the re-run (DSQ below DNS). No third option. An injured rider who was clearly ahead is handled by not re-running: end the heat and publish what was scored | Step 4 |
+| 14 | Focus and fit (iPhone 14 test, 1 Oct 2026) | Judge default view = slim header, rider strip, current attempt with whole pad; spotter default = strip, direction, builder, CRASH, Log; timer small except on the head console and big screen; rider sheet and Details toggle for the rest; Normal / Large text size per device; weight 700 only on the selected score | Steps 0, 2, 3 |
+| 15 | Look | Calm sports-app look; one accent (deep teal) for selection, primary button and progress; status pills with icon and word; Rider label is a stripe, a dot and the colour word in ink | Step 0 |
+| 16 | No percentages | None on screen; totals and the formula in words; kept in engine and exports; division setting "Show scores as % of maximum" under Advanced, off by default | Step 3 |
+| 17 | Spotter layout per division | Order of families and blocks, blocks movable between families, favourites on top, "+ Add block" into any family, all in the Trick base panel; the spotter renders it | Step 2 |
 | A | Head console on a phone | Below 900 px nothing is refused. Controls, rider totals and the blocker list are shown; only the matrix asks for a tablet or laptop | Step 4 |
 | B | Timer sounds | A short beep and vibration at 1:00 and 0:00. On by default on the head console, optional on judge phones, switchable per device | Step 1 |
 | C | PR split | 5a, 5b, 5c, with the 5b-1 / 5b-2 fallback. The hours go into STATUS.md when 5a starts | §10 |
