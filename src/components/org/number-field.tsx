@@ -15,6 +15,10 @@ interface NumberFieldProps extends NumberRange {
   onClear?: () => void;
   placeholder?: string;
   disabled?: boolean;
+  /** "blur": the value is passed on when the box is left (or Enter is pressed), not on every key: for boxes that save at once. */
+  commit?: "change" | "blur";
+  /** false: a number outside min and max is passed on as typed (the form's own checks report it); min and max then only size the box. */
+  clamp?: boolean;
   /** Where the digits sit in the box. The owner asked for right-aligned; centred is the plan's first draft, shown beside it for comparison. */
   align?: "end" | "center";
   /** A word after the box ("min", "judges"). */
@@ -26,12 +30,12 @@ interface NumberFieldProps extends NumberRange {
  * A number box as wide as its largest value, never full width. Opens the number keypad on a phone and shows tabular digits.
  * While you type, a half-typed or empty box is left alone; leaving the box puts back the last good number, kept inside the allowed range.
  */
-export function NumberField({ label, value, onChange, onClear, placeholder, disabled, min = 0, max, step = 1, align = "end", unit, id }: NumberFieldProps) {
+export function NumberField({ label, value, onChange, onClear, placeholder, disabled, commit = "change", clamp = true, min = 0, max, step = 1, align = "end", unit, id }: NumberFieldProps) {
   const [draft, setDraft] = useState<string | null>(null);
   const decimals = decimalsOf(step);
   const finish = () => {
     if (draft !== null && draft.trim() !== "" && Number.isFinite(Number(draft))) {
-      const clamped = Math.min(max, Math.max(min, Number(draft)));
+      const clamped = clamp ? Math.min(max, Math.max(min, Number(draft))) : Number(draft);
       if (clamped !== value) onChange(clamped);
     } else if (draft !== null && draft.trim() === "" && onClear && value !== null) onClear();
     setDraft(null);
@@ -52,9 +56,13 @@ export function NumberField({ label, value, onChange, onClear, placeholder, disa
         disabled={disabled}
         onChange={(e) => {
           setDraft(e.target.value);
+          if (commit === "blur") return;
           if (e.target.value.trim() === "" && onClear) return;
           const n = Number(e.target.value);
-          if (e.target.value.trim() !== "" && Number.isFinite(n) && n >= min && n <= max) onChange(n);
+          if (e.target.value.trim() !== "" && Number.isFinite(n) && (!clamp || (n >= min && n <= max))) onChange(n);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         }}
         onBlur={finish}
         style={{ width: numberFieldWidth({ min, max, step, minChars: placeholder?.length }) }}

@@ -340,7 +340,8 @@ test("Warm-up, run order and timetable: warm-up 5 + heat 10, breaks of 2, pin th
   await expect(page.getByTestId("share-join-link")).toHaveText(new RegExp(`/e/${slug}/join$`));
   await expect(page.getByTestId("share-public-link")).toHaveText(new RegExp(`/e/${slug}$`));
   await expect(page.getByTestId("share-join").getByRole("img")).toBeVisible();
-  await expect(page.getByTestId("dashboard-missing")).toContainText("No judge seats yet.");
+  await expect(page.getByTestId("dashboard-missing")).toContainText("Pro Men: 0 of 1 judges");
+  await expect(page.getByTestId("dashboard-missing")).toContainText("No seats yet");
 });
 
 test("Custom ladder: the builder follows the Preview with number; Apply to draw uses the real riders and says what differs", async ({ page }) => {

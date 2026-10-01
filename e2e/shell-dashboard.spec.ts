@@ -115,6 +115,34 @@ test("Hold, Resume at and Shift work from the dashboard; without a run order the
   await w.db.from("schedule_plans").update({ active: true }).eq("id", w.planId);
 });
 
+test("Previous and Next at the foot of every step: Next saves the Event form first, and stays with the error when it cannot", async ({ page }) => {
+  test.setTimeout(180_000);
+  await w.org.signIn(page, `/org/events/${w.eventId}/event`);
+  const footer = page.getByTestId("step-footer");
+  await expect(footer.getByRole("link", { name: /Previous/ })).toHaveCount(0); // the first step has only Next
+  // an empty name cannot be saved: Next stays on the Event step and says why
+  await page.getByLabel("Event name", { exact: true }).fill("");
+  await footer.getByRole("link", { name: "Next: Divisions" }).click();
+  await expect(page).toHaveURL(new RegExp(`/event$`));
+  await expect(page.getByRole("alert").first()).toBeVisible();
+  // a new name is saved by Next, then the Divisions step opens
+  await page.getByLabel("Event name", { exact: true }).fill(`Next Cup ${w.org.run}`);
+  await footer.getByRole("link", { name: "Next: Divisions" }).click();
+  await expect(page).toHaveURL(new RegExp(`/divisions$`));
+  await expect.poll(async () => (await w.db.from("events").select("name").eq("id", w.eventId).single()).data?.name).toBe(`Next Cup ${w.org.run}`);
+  // Next, Next, Next, Next: Riders, Officials, Draw, Run order
+  for (const [next, url] of [["Riders", "riders"], ["Officials", "officials"], ["Draw", "draw"], ["Run order", "schedule"]] as const) {
+    await page.getByTestId("step-footer").getByRole("link", { name: `Next: ${next}` }).click();
+    await expect(page).toHaveURL(new RegExp(`/${url}$`));
+  }
+  await page.getByTestId("step-footer").getByRole("link", { name: "Next: Go live" }).click();
+  await expect(page).toHaveURL(new RegExp(`/org/events/${w.eventId}$`));
+  // Go live has only Previous
+  await expect(page.getByTestId("step-footer").getByRole("link", { name: /Next/ })).toHaveCount(0);
+  await page.getByTestId("step-footer").getByRole("link", { name: "Previous: Run order" }).click();
+  await expect(page).toHaveURL(new RegExp(`/schedule$`));
+});
+
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
   test("the rail becomes the step picker with the state words, and nothing scrolls sideways", async ({ page }) => {

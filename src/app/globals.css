@@ -189,6 +189,16 @@
   }
   .org-ui {
     background: #fff !important;
+    min-height: 0 !important;
+  }
+  .org-ui [data-testid="app-shell"],
+  .org-ui [data-testid="app-shell"] > div {
+    display: block !important;
+    min-height: 0 !important;
+  }
+  .org-ui main {
+    padding: 0 !important;
+    gap: 0 !important;
   }
   .org-console > header,
   .org-console > footer,
