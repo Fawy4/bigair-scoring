@@ -105,19 +105,25 @@ export function CellDialog({ model, attemptId, seatId, judgeNo, who, current, on
 }
 
 // ---------------------------------------------------------------- a judge's Impression / Variety score typed in from paper
-export function ImpressionDialog({ model, heatId, entryId, seatId, judgeNo, who, onClose, onDone }: { model: ScoringModel; heatId: string; entryId: string; seatId: string; judgeNo: number; who: string; onClose: () => void; onDone: () => void }) {
+export function ImpressionDialog({ model, heatId, seatId, judgeNo, riders, first, onClose, onDone }: { model: ScoringModel; heatId: string; seatId: string; judgeNo: number; riders: Array<{ id: string; word: string }>; first: string; onClose: () => void; onDone: () => void }) {
   const [reason, setReason] = useState("");
+  const [entry, setEntry] = useState(first);
   const [value, setValue] = useState<number | null>(null);
   const { error, pending, run } = useRun(onDone);
   const scale = model.heat.impression?.scale;
   if (!scale) return null;
   return (
     <Modal screen title={C.enterImpression} onClose={onClose}>
-      <p className="text-body font-medium text-beach-muted">{`${copy.live.matrix.judge(judgeNo)} · ${who}`}</p>
+      <p className="text-body font-medium text-beach-muted">{copy.live.matrix.judge(judgeNo)}</p>
+      {riders.length > 1 ? (
+        <Choice label={C.rider} value={entry} onChange={setEntry} options={riders.map((r) => [r.id, r.word] as [string, string])} />
+      ) : (
+        <p className="text-body font-semibold">{riders[0]?.word}</p>
+      )}
       <ScorePad scale={scale} value={value} label={copy.live.impression.heading} onChange={setValue} />
       <Reason value={reason} onChange={setReason} />
       <ErrorLine error={error} />
-      <Footer canSave={!pending && value !== null && reason.trim().length >= 3} saveLabel={pending ? H.working : C.save} onCancel={onClose} onSave={() => run(() => headSetImpression({ heatId, entryId, seatId, value: value as number, reason }))} />
+      <Footer canSave={!pending && value !== null && reason.trim().length >= 3} saveLabel={pending ? H.working : C.save} onCancel={onClose} onSave={() => run(() => headSetImpression({ heatId, entryId: entry, seatId, value: value as number, reason }))} />
     </Modal>
   );
 }

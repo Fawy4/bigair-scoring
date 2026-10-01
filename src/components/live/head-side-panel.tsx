@@ -42,8 +42,9 @@ export function HeadSidePanel({ supabase, eventId, heat, live, head, wordFor, no
       .eq("event_id", eventId)
       .or(`after->>heat_id.eq.${heat.id},before->>heat_id.eq.${heat.id},row_id.eq.${heat.id}`)
       .order("at", { ascending: false })
-      .limit(40);
-    if (data) setAudit(data as unknown as AuditRow[]);
+      .limit(120);
+    // only changes somebody made on purpose have a name of their own; the rest (every score a judge saves) is not worth a line here
+    if (data) setAudit((data as unknown as AuditRow[]).filter((r) => !["insert", "update", "delete"].includes(r.action)).slice(0, 30));
   }, [supabase, eventId, heat.id]);
 
   useEffect(() => {

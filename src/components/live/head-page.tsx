@@ -40,7 +40,7 @@ function useWide(): boolean {
 
 export function HeadRoot({ ctx }: { ctx: LiveContext }) {
   return (
-    <LiveShell soundDefault>
+    <LiveShell soundDefault wide>
       <HeadPage ctx={ctx} />
     </LiveShell>
   );
@@ -119,11 +119,14 @@ function HeadPage({ ctx }: { ctx: LiveContext }) {
     });
   }, [division, fresh, riders, live.slots, live.attempts, live.scores, live.impressions, live.penalties, live.decisions, live.flags, live.sheets, wordFor]);
 
+  // Impression / Variety scores open when the heat has ended: until then nothing is owed and nothing blocks Publish
+  const closing = shown ? shown.status === "ended" || shown.status === "under_review" || (shown.status === "running" && remaining <= 0) : false;
+  const blockerItems = closing && head ? head.checklist.items : [];
   const onChanged = useCallback(() => {
     void live.refresh();
     setRefreshKey((k) => k + 1);
   }, [live]);
-  const review: ReviewProps | undefined = head ? { items: head.checklist.items, canOverride: head.checklist.canOverride, onChooseOrder: setTieFor, onChanged } : undefined;
+  const review: ReviewProps | undefined = head ? { items: blockerItems, canOverride: head.checklist.canOverride, onChooseOrder: setTieFor, onChanged } : undefined;
 
   const totalsList = (
     <section data-testid="rider-totals" aria-label={H.totalsHeading} className="flex flex-col gap-1.5">
@@ -160,8 +163,8 @@ function HeadPage({ ctx }: { ctx: LiveContext }) {
   // phone: the blocker list and the ties, in words
   const blockers = head ? (
     <section data-testid="phone-blockers" aria-label={H.blockersHeading} className="flex flex-col gap-1">
-      <h2 className="text-heading font-semibold text-beach-muted">{head.checklist.items.length ? H.blockersHeading : H.nothingBlocks}</h2>
-      {head.checklist.items.map((b) => (
+      <h2 className="text-heading font-semibold text-beach-muted">{blockerItems.length ? H.blockersHeading : H.nothingBlocks}</h2>
+      {blockerItems.map((b) => (
         <p key={b.text} className="rounded-lg border border-beach-outlier bg-beach-bg px-2 py-0.5 text-body font-medium">
           {b.text}
         </p>

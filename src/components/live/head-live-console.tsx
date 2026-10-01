@@ -73,6 +73,10 @@ export function HeadLiveConsole({
   const model = division.model;
   const rows = head.matrix.rows;
   const open = editable(heat.status);
+  // Impression / Variety scores open when the heat has ended: until then nothing is owed and nothing blocks Publish
+  const closing = heat.status === "ended" || heat.status === "under_review";
+  const owes = closing ? head.owes : [];
+  const blockerItems = closing ? head.checklist.items : [];
   const cap = model.heat.maxAttemptsPerRider;
   const counts = useMemo(() => {
     const m = new Map<string, number>();
@@ -166,7 +170,7 @@ export function HeadLiveConsole({
       ) : null}
       <p className="text-small font-medium text-beach-muted">{C.toleranceNote(String(outlierTolerance(model)))}</p>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_14rem] items-start gap-2">
+      <div className="grid items-start gap-2 min-[1700px]:grid-cols-[minmax(0,1fr)_14rem]">
         <HeadMatrix
           tolerance={outlierTolerance(model)}
           model={{ judgeIds: head.matrix.judgeIds, rows }}
@@ -182,7 +186,7 @@ export function HeadLiveConsole({
               : {}
           }
         />
-        <aside className="flex flex-col gap-2">
+        <aside className="grid gap-2 sm:grid-cols-2 min-[1700px]:grid-cols-1">
           <section className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={C.totals}>
             <h3 className="text-heading font-semibold text-beach-muted">{C.totals}</h3>
             {head.totals.map((t) => {
@@ -208,19 +212,24 @@ export function HeadLiveConsole({
             })}
           </section>
 
-          <div data-testid="owes" className="flex flex-col gap-1 rounded-xl border border-beach-line bg-beach-bg px-2 py-1 text-body font-medium">
-            {head.owes.length === 0 ? <span>{C.noneOwed}</span> : null}
-            {head.owes.map((o) => (
-              <div key={`${o.seatId}-${o.entryId}`} className="flex flex-col gap-0.5">
-                <span>{C.owes(copy.live.matrix.judge(o.judgeNo), wordFor(o.entryId))}</span>
-                {open ? (
-                  <button type="button" data-testid="enter-impression" onClick={() => setDialog({ kind: "impression", seatId: o.seatId, entryId: o.entryId })} className={plain}>
-                    {C.enterImpression}
-                  </button>
-                ) : null}
-              </div>
-            ))}
-          </div>
+          {closing ? (
+            <div data-testid="owes" className="flex flex-col gap-1 rounded-xl border border-beach-line bg-beach-bg px-2 py-1 text-body font-medium">
+              {owes.length === 0 ? <span>{C.noneOwed}</span> : null}
+              {[...new Set(owes.map((o) => o.seatId))].map((seatId) => {
+                const mine = owes.filter((o) => o.seatId === seatId);
+                return (
+                  <div key={seatId} data-testid="owes-judge" className="flex flex-col gap-0.5">
+                    <span>{C.owes(copy.live.matrix.judge(mine[0].judgeNo), mine.map((o) => wordFor(o.entryId)).join(", "))}</span>
+                    {open ? (
+                      <button type="button" data-testid="enter-impression" onClick={() => setDialog({ kind: "impression", seatId, entryId: mine[0].entryId })} className={plain}>
+                        {C.enterImpression}
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
 
           {head.ties.length > 0 ? (
             <section data-testid="ties" aria-label={H.tiesHeading} className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2">
@@ -239,8 +248,8 @@ export function HeadLiveConsole({
           ) : null}
 
           <section data-testid="blockers" className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={H.blockersHeading}>
-            <h3 className="text-heading font-semibold text-beach-muted">{head.checklist.items.length ? C.publishBlocked : H.nothingBlocks}</h3>
-            {head.checklist.items.map((b) => (
+            <h3 className="text-heading font-semibold text-beach-muted">{blockerItems.length ? C.publishBlocked : H.nothingBlocks}</h3>
+            {blockerItems.map((b) => (
               <p key={b.text} className="rounded-lg border border-beach-outlier bg-beach-bg px-2 py-0.5 text-body font-medium">
                 {b.text}
               </p>
@@ -294,7 +303,16 @@ export function HeadLiveConsole({
       {dialog?.kind === "add" ? <AddAttemptDialog heatId={heat.id} riders={riders} counts={counts} cap={cap} role={role} hasActiveHead={hasActiveHead} wordFor={wordFor} onClose={close} onDone={done} /> : null}
       {dialog?.kind === "status" ? <StatusDialog heatId={heat.id} entryId={dialog.entryId} who={wordFor(dialog.entryId)} status={dialog.status} penaltyId={dialog.penaltyId} onClose={close} onDone={done} /> : null}
       {dialog?.kind === "impression" ? (
-        <ImpressionDialog model={model} heatId={heat.id} entryId={dialog.entryId} seatId={dialog.seatId} judgeNo={head.matrix.judgeIds.indexOf(dialog.seatId) + 1} who={wordFor(dialog.entryId)} onClose={close} onDone={done} />
+        <ImpressionDialog
+          model={model}
+          heatId={heat.id}
+          seatId={dialog.seatId}
+          judgeNo={head.matrix.judgeIds.indexOf(dialog.seatId) + 1}
+          riders={owes.filter((o) => o.seatId === dialog.seatId).map((o) => ({ id: o.entryId, word: wordFor(o.entryId) }))}
+          first={dialog.entryId}
+          onClose={close}
+          onDone={done}
+        />
       ) : null}
       {dialog?.kind === "tie" ? <TieDialog heatId={heat.id} riders={dialog.riders.map((id) => ({ id, word: wordFor(id) }))} onClose={close} onDone={done} /> : null}
       {dialog?.kind === "flagOut" && division.flagOut ? (

@@ -43,7 +43,7 @@ export function Footer({ canSave, onSave, onCancel, saveLabel = C.save }: { canS
       <button type="button" data-testid="dialog-save" disabled={!canSave} onClick={onSave} className={canSave ? primary : off}>
         {saveLabel}
       </button>
-      <button type="button" onClick={onCancel} className={plain}>
+      <button type="button" data-testid="dialog-cancel" onClick={onCancel} className={plain}>
         {C.cancel}
       </button>
     </div>
