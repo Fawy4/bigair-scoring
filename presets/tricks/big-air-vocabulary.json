@@ -1,5 +1,5 @@
 {
-  "_comment": "Spotter trick-builder vocabulary (editable per event). A trick = direction + optional multiplier + base trick + any number of modifiers. The builder composes the display name from namingTemplate and derives the scoring category from categoryPrecedence (highest-precedence category present among base + modifiers). Aliases are used to parse typed text and speech (fuzzy, case-insensitive). Each modifier has a family: addon or grab_landing (the two last families of the organiser's Trick base). STARTER LIST - review with the head judge before the event; add local trick names freely.",
+  "_comment": "Spotter trick-builder vocabulary (editable per event). A trick = an optional direction followed by blocks in the order the spotter taps them (base tricks, add-ons and grabs combine and repeat freely). A multiplier belongs to one block: base tricks and any block with takesMultiplier (Late rotations) take one. The name is that sequence (namingTemplate); the scoring category is the highest-precedence category among all the blocks (categoryPrecedence). Aliases are used to parse typed text and speech (fuzzy, case-insensitive). Each modifier has a family: addon or grab_landing (the two last families of the organiser's Trick base). STARTER LIST - review with the head judge before the event; add local trick names freely.",
   "directions": [
     { "key": "left", "label": "Left", "aliases": ["L", "port", "going left"] },
     { "key": "right", "label": "Right", "aliases": ["R", "starboard", "going right"] }
@@ -32,7 +32,8 @@
     { "key": "board_spin", "family": "addon", "label": "Board spin", "category": "board_off", "aliases": ["spin the board", "board flip"] },
     { "key": "handle_pass", "family": "addon", "label": "Handle pass", "category": "handle_pass", "aliases": ["handle", "HP", "pass"] },
     { "key": "kiteloop_mod", "family": "addon", "label": "+ Kiteloop", "category": "kiteloop", "aliases": ["with loop", "with kiteloop", "KL"] },
-    { "key": "late", "family": "addon", "label": "Late", "category": null, "aliases": ["late rotation"] },
+    { "key": "late", "family": "addon", "label": "Late", "category": null, "aliases": [] },
+    { "key": "late_rotations", "family": "addon", "label": "Late rotations", "category": null, "takesMultiplier": true, "aliases": ["late rotation", "rotations on the way down", "tornado"] },
     { "key": "tic_tac", "family": "addon", "label": "Tic-tac", "category": null, "aliases": ["tictac", "tic tac"] },
     { "key": "grab", "family": "grab_landing", "label": "Grab", "category": null, "aliases": ["indy", "tail grab", "nose grab", "melon", "mute", "stalefish", "method"], "variants": ["Indy", "Tail", "Nose", "Melon", "Mute", "Stalefish", "Method"] },
     { "key": "blind_landing", "family": "grab_landing", "label": "Blind landing", "category": null, "aliases": ["to blind", "blind"] },
@@ -40,14 +41,15 @@
     { "key": "downloop", "family": "grab_landing", "label": "Downloop landing", "category": null, "aliases": ["down loop", "downloop"] }
   ],
   "categoryPrecedence": ["handle_pass", "board_off", "kiteloop", "rotation", "other"],
-  "namingTemplate": "{direction} {multiplier} {base} {modifiers}",
+  "namingTemplate": "{direction} then each block in tap order, written with its multiplier before it",
   "hideMultiplierWhen": "x1",
   "examples": [
     "Left \u00d72 Backroll Board-off Handle pass",
     "Right Kiteloop Late backroll",
     "Left Contra loop Board-off",
     "Right Double loop",
-    "Left Frontroll (crash)"
+    "Left Frontroll (crash)",
+    "Left Backroll Kiteloop Board-off Tic-tac \u00d74 Late rotations"
   ],
   "speech": {
     "_comment": "Speech input uses the browser's speech recognition where available (Chrome/Android; Safari iOS with webkit prefix); otherwise the phone keyboard's dictation key into the text field. Recognised text is tokenised and fuzzy-matched against aliases; unmatched words are kept as free text and flagged for the head judge.",

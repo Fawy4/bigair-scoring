@@ -345,6 +345,7 @@ export function categoryLabel(key: string | null): string {
 
 // ---- The judge's phone: a scoring queue
 export interface QueueAttempt extends QueueItem {
+  id: number;
   riderKey: string;
   riderName: string;
   label: LabelModel;

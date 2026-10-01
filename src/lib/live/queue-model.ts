@@ -4,7 +4,7 @@
  * (tap it to correct). Pure: the screen only draws what this says.
  */
 export interface QueueItem {
-  id: number;
+  id: string | number;
   status: "landed" | "crashed";
   /** The judge's own score; "missed" counts as an answer; null = not scored yet. */
   score: number | "missed" | null;
@@ -15,12 +15,12 @@ export interface QueueView<T extends QueueItem> {
   current: T | null;
   correcting: boolean;
   waiting: number;
-  waitingIds: number[];
+  waitingIds: Array<string | number>;
   /** Scored, missed and crashed attempts, newest first (without the card being corrected). */
   history: T[];
 }
 
-export function queueView<T extends QueueItem>(items: T[], editing: number | null): QueueView<T> {
+export function queueView<T extends QueueItem>(items: T[], editing: string | number | null): QueueView<T> {
   const answered = (i: T) => i.status === "crashed" || i.score !== null;
   const edited = editing === null ? undefined : items.find((i) => i.id === editing && i.status === "landed" && i.score !== null);
   const unscored = items.filter((i) => i.status === "landed" && i.score === null);

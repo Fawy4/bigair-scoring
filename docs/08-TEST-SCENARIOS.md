@@ -90,11 +90,11 @@ KOTA preset. Red counted 8.6, 8.0, 7.2 + impression 7.4 → 31.20. Blue counted 
 | nothing at all | "" | none |
 Two spotters who tap the same blocks in a different order log two different tricks (repeat detection compares the normalised name, so "Left Backroll Handle pass Board-off" is not a repeat of "Left Backroll Board-off Handle pass"). Tapping a multiplier after a block sets it on that block; a multiplier tapped before any block, or after a block that cannot take one (Board-off), waits and goes on the next block that can. Only base tricks and blocks marked `takesMultiplier` (Late rotations) take one.
 
-**1G-4 Trick reader** (`engine/tricks/parse.ts`), the same ordered sequence from typed or spoken text. Lower-case, tokens, longest alias first, then edit distance ≤ 1 for tokens of 5 letters or more (one clear winner only).
+**1G-4 Trick reader** (`engine/tricks/parse.ts`), the same ordered sequence from typed or spoken text. Lower-case, tokens, longest alias first, then a word of 5 letters may have one wrong letter and a word of 6 or more two (insert, delete or change), and only when exactly one block is the clear winner. (The plan said "edit distance ≤ 1", but its own vector "dubble" → "double" is two edits; the vector is authoritative.)
 - "left double backroll board off handle" → direction left; Backroll ×2, Board-off, Handle pass; nothing unmatched; name "Left ×2 Backroll Board-off Handle pass"; `handle_pass`.
 - "right mega" → Right Megaloop; `kiteloop`.
 - "left banana jump" → direction left; no block; unmatched ["banana jump"]; `needsReview`. **Rule (owner, 1 Oct 2026):** a word the vocabulary does not know, standing right next to a block that was found only through a nickname (not the block's own name) such as "jump", is not guessed: the whole phrase goes in as free text. Direction, multipliers and blocks elsewhere in the text are still read.
-- "left dubble backroll" → Left ×2 Backroll (edit distance 1 on "double").
+- "left dubble backroll" → Left ×2 Backroll ("dubble" is two edits from "double").
 - With `modifier:board_off` unticked, "left backroll board off" → Backroll; unmatched ["board off"]; `needsReview`. A word of an unticked block is known: it never voids a neighbour.
 - "right backroll handle pass board off" → Right Backroll Handle pass Board-off (text order is kept).
 - "left backroll kiteloop board off tic tac four late rotations" → Left Backroll Kiteloop Board-off Tic-tac ×4 Late rotations; `board_off`.

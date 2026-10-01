@@ -10,3 +10,4 @@ export { normaliseTrickName, repeatIndexes, type RepeatInfo, flagPossibleDuplica
 export { computeHeat, computeRider, maxRawFor } from "./heat";
 export { rankHeat, compareTied } from "./rank";
 export { explain } from "./explain";
+export * from "./summary";
