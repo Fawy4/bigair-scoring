@@ -1,35 +1,32 @@
 import { CircleCheck, Clock, TriangleAlert, WifiOff } from "lucide-react";
+import { Pill } from "./pill";
 import { copy } from "@/lib/ui-copy";
-import { cn } from "@/lib/utils";
 
 export type ConnectionStatus = "synced" | "pending" | "offline" | "failed";
 
-/** Sync state: always an icon AND a word (docs/06 §00.5). "Failed" is a button that tries again. */
+/** Sync state: a small pill with an icon AND a word (docs/06 §00.5). "Failed" is a button that tries again. */
 export function ConnectionBadge({ status, pending = 0, onRetry }: { status: ConnectionStatus; pending?: number; onRetry?: () => void }) {
   const T = copy.live.connection;
   const view = {
-    synced: { text: T.synced, Icon: CircleCheck, tone: "text-beach-live" },
-    pending: { text: T.pending(pending), Icon: Clock, tone: "text-beach-pending" },
-    offline: { text: T.offline, Icon: WifiOff, tone: "text-beach-missing" },
-    failed: { text: T.failed, Icon: TriangleAlert, tone: "text-beach-failed" },
+    synced: { text: T.synced, icon: CircleCheck, tone: "live" as const },
+    pending: { text: T.pending(pending), icon: Clock, tone: "pending" as const },
+    offline: { text: T.offline, icon: WifiOff, tone: "missing" as const },
+    failed: { text: T.failed, icon: TriangleAlert, tone: "failed" as const },
   }[status];
-  const body = (
-    <>
-      <view.Icon aria-hidden className="size-6 shrink-0" />
-      <span>{view.text}</span>
-    </>
-  );
-  const cls = cn("inline-flex min-h-tap items-center gap-2 rounded-full border-2 border-current bg-beach-surface px-4 text-lg font-extrabold", view.tone);
   if (status === "failed") {
     return (
-      <button type="button" data-testid="connection-badge" data-status={status} onClick={onRetry} className={cls}>
-        {body}
+      <button type="button" data-testid="connection-badge" data-status={status} onClick={onRetry} className="inline-flex min-h-tap items-center">
+        <Pill icon={view.icon} tone={view.tone} className="min-h-[34px]">
+          {view.text}
+        </Pill>
       </button>
     );
   }
   return (
-    <span data-testid="connection-badge" data-status={status} role="status" className={cls}>
-      {body}
+    <span data-testid="connection-badge" data-status={status} role="status" className="inline-flex">
+      <Pill icon={view.icon} tone={view.tone}>
+        {view.text}
+      </Pill>
     </span>
   );
 }
