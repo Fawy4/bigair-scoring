@@ -4,6 +4,7 @@ import { getOrgContext } from "@/lib/org/context";
 import { buildHeatModel, type DivisionRowDb, type HeatRowDb, type RoundRowDb } from "@/lib/schedule/model";
 import { eventDays, todayIn, type PlanRow } from "@/lib/schedule/plans";
 import { parseEventBranding, parseEventSettings } from "@/lib/schemas/event-settings";
+import { PartBoundary } from "@/components/part-boundary";
 import { copy } from "@/lib/ui-copy";
 import { ScheduleManager } from "./schedule-manager";
 
@@ -44,18 +45,20 @@ export default async function ScheduleStepPage({ params }: { params: Promise<{ i
     <main className="flex flex-col gap-6">
       <h1 className="text-3xl font-extrabold">{copy.runOrder.stepHeading}</h1>
       <p className="font-semibold">{copy.runOrder.intro}</p>
-      <ScheduleManager
-        eventId={id}
-        eventName={event.name}
-        timezone={tz}
-        days={days.length ? days : [today]}
-        today={today}
-        logoUrl={branding.logoUrl ?? null}
-        readyCallMin={typeof settings.readyCallMin === "number" ? settings.readyCallMin : 15}
-        infos={model.infos}
-        lives={model.lives}
-        plans={(plans ?? []) as PlanRow[]}
-      />
+      <PartBoundary what={copy.crash.parts.runOrder}>
+        <ScheduleManager
+          eventId={id}
+          eventName={event.name}
+          timezone={tz}
+          days={days.length ? days : [today]}
+          today={today}
+          logoUrl={branding.logoUrl ?? null}
+          readyCallMin={typeof settings.readyCallMin === "number" ? settings.readyCallMin : 15}
+          infos={model.infos}
+          lives={model.lives}
+          plans={(plans ?? []) as PlanRow[]}
+        />
+      </PartBoundary>
     </main>
   );
 }

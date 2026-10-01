@@ -259,13 +259,14 @@ export interface ExportRow {
 /** The noticeboard layout: Division / Session / Start / Duration / End / Break (plus Warm-up when any heat has one). */
 export function timetableExportRows(t: Timetable): { showWarmUp: boolean; rows: ExportRow[] } {
   const showWarmUp = t.rows.some((r) => r.kind === "heat" && r.warmUpMin > 0);
-  const rows = t.rows.map<ExportRow>((r) => ({
+  // a row whose heat is gone is not printed on a noticeboard; a heat with no length prints without one
+  const rows = t.rows.filter((r) => r.issue !== "no-heat").map<ExportRow>((r) => ({
     kind: r.kind,
     division: r.kind === "heat" ? (r.division ?? "") : "",
     session: r.kind === "heat" ? [r.round, r.heat].filter(Boolean).join(" · ") : r.label,
     warmUp: r.kind === "heat" && r.warmUpStart && r.warmUpMin > 0 ? r.warmUpStart : "",
     start: r.start ?? "",
-    duration: r.kind === "note" ? "" : String(r.durationMin),
+    duration: r.kind === "note" || r.issue === "no-length" ? "" : String(r.durationMin),
     end: r.kind === "note" ? "" : (r.end ?? ""),
     break: r.breakAfterMin === null || r.kind !== "heat" ? "" : String(r.breakAfterMin),
   }));

@@ -120,16 +120,19 @@ describe("3A break items and notes (Decision 12)", () => {
 });
 
 describe("3A input checks", () => {
-  it("refuses an unresolved heatRef", () => {
+  it("an unresolved heatRef becomes a warning row, never an exception", () => {
     const p = JSON.parse(JSON.stringify(plan("main")));
     delete p.items[0].heatId;
-    expect(() => computeTimetable(p, allHeats(), opts())).toThrow(/no heatId/);
+    const t = computeTimetable(p, allHeats(), opts());
+    expect(t.rows[0].warnings[0]).toMatch(/not linked to a heat/);
   });
 
-  it("refuses a heat with no duration anywhere", () => {
+  it("a heat with no length anywhere becomes a warning row, never an exception (more in 3j)", () => {
     const p = JSON.parse(JSON.stringify(plan("main")));
     delete p.items[0].durationMin;
-    expect(() => computeTimetable(p, allHeats(), opts())).toThrow(/no duration/);
+    const heats = allHeats().map((h) => ({ ...h, durationMin: undefined }));
+    const t = computeTimetable(p, heats, opts());
+    expect(t.rows[0].warnings).toContain("No heat length — set it in Divisions → Format");
   });
 
   it("uses the round's duration and breaks when the run item has none", () => {
