@@ -16,16 +16,16 @@ export async function mkDivision(
   o: { name: string; seats: string[]; locked?: boolean; model?: object; overrides?: object; riders?: number },
 ): Promise<LiveDivision> {
   const s = f.s;
-  const must = <T>(r: { data: T | null; error: { message: string } | null }, what: string): T => {
+  const must = (r: { data: unknown; error: { message: string } | null }, what: string): { id: string } => {
     if (r.error || !r.data) throw new Error(`${what}: ${r.error?.message}`);
-    return r.data;
+    return r.data as { id: string };
   };
-  const panel = must(await s.from("panels").insert({ event_id: f.ids.evA1, name: `P ${o.name}` }).select("id").single(), "panel").id as string;
+  const panel = must(await s.from("panels").insert({ event_id: f.ids.evA1, name: `P ${o.name}` }).select("id").single(), "panel").id;
   let i = 0;
   for (const key of o.seats) must(await s.from("panel_members").insert({ panel_id: panel, judge_seat_id: f.ids[`seat_${key}`], seat_no: ++i }).select("id").single(), "panel member");
   let modelId: string | null = null;
   if (o.model) {
-    modelId = must(await s.from("scoring_models").insert({ organisation_id: f.ids.orgA, key: `lv-${randomUUID().slice(0, 8)}`, name: `M ${o.name}`, version: 1, json: o.model as never, content_hash: randomUUID() }).select("id").single(), "model").id as string;
+    modelId = must(await s.from("scoring_models").insert({ organisation_id: f.ids.orgA, key: `lv-${randomUUID().slice(0, 8)}`, name: `M ${o.name}`, version: 1, json: o.model as never, content_hash: randomUUID() }).select("id").single(), "model").id;
   }
   const div = must(
     await s
@@ -34,12 +34,12 @@ export async function mkDivision(
       .select("id")
       .single(),
     "division",
-  ).id as string;
+  ).id;
   if (o.locked !== false) must(await s.from("divisions").update({ draw_locked_at: new Date().toISOString() }).eq("id", div).select("id").single(), "lock");
-  const round = must(await s.from("rounds").insert({ division_id: div, sort_order: 1, name: "Round 1", short_name: "R1", spec: {} }).select("id").single(), "round").id as string;
+  const round = must(await s.from("rounds").insert({ division_id: div, sort_order: 1, name: "Round 1", short_name: "R1", spec: {} }).select("id").single(), "round").id;
   const entries: string[] = [];
   for (let n = 1; n <= (o.riders ?? 3); n++) {
-    const rider = must(await s.from("riders").insert({ organisation_id: f.ids.orgA, first_name: `L${n}`, last_name: o.name }).select("id").single(), "rider").id as string;
+    const rider = must(await s.from("riders").insert({ organisation_id: f.ids.orgA, first_name: `L${n}`, last_name: o.name }).select("id").single(), "rider").id;
     entries.push(must(await s.from("entries").insert({ division_id: div, rider_id: rider, seed: n, status: "confirmed", source: "manual" }).select("id").single(), "entry").id as string);
   }
   return { div, round, panel, entries };
@@ -55,7 +55,7 @@ export async function mkHeat(f: Fixture, d: LiveDivision, patch: object = {}, o:
     const { error: e } = await f.s.from("heat_slots").insert({ heat_id: data.id, position: p, entry_id: hole ? null : d.entries[p - 1], ...(hole ? { source: { from: "1st R1 H1" } } : {}) });
     if (e) throw new Error(`slot: ${e.message}`);
   }
-  return data.id as string;
+  return data.id;
 }
 
 export const ago = (sec: number): string => new Date(Date.now() - sec * 1000).toISOString();

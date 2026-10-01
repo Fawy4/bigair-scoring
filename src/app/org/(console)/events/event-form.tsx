@@ -263,9 +263,9 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
             {showError("settings.livePollSec")}
           </div>
           <div className={field}>
-            <FieldLabel htmlFor="ev-grace" text={T.grace} help={help["event.grace"]} />
-            <input id="ev-grace" type="number" min={0} max={3600} value={num(form.settings.judgeGraceSec)} onChange={(e) => set(["settings", "judgeGraceSec"], numeric(e.target.value))} />
-            {showError("settings.judgeGraceSec")}
+            <FieldLabel htmlFor="ev-max-running" text={T.maxRunning} help={help["event.maxRunning"]} />
+            <input id="ev-max-running" type="number" min={1} max={5} value={num(form.settings.maxRunningHeats)} onChange={(e) => set(["settings", "maxRunningHeats"], numeric(e.target.value))} />
+            {showError("settings.maxRunningHeats")}
           </div>
         </div>
         <span className="flex items-start gap-2">
