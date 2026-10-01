@@ -139,6 +139,14 @@ describe("the send queue", () => {
     expect(sent).toEqual(["score:a1", "k9"]);
   });
 
+  it("an attempt that has not left the phone can be taken back; one that has cannot", async () => {
+    const { q } = make(() => ({ ok: false, network: true }));
+    q.enqueue({ kind: "attempt", key: "u1", clientKey: "u1", payload: {} });
+    expect(q.cancel("u1")).toBe(true);
+    expect(q.list()).toHaveLength(0);
+    expect(q.cancel("u1")).toBe(false);
+  });
+
   it("attempts are never merged: two taps are two attempts", () => {
     const { q } = make(() => ({ ok: true }));
     q.enqueue({ kind: "attempt", key: "x1", clientKey: "x1", payload: {} });

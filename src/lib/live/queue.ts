@@ -177,6 +177,15 @@ export class SendQueue {
     return Math.max(0, Math.min(...waiting.map((i) => i.nextAt)) - this.o.now());
   }
 
+  /** Takes an item back before it has been sent (Undo on a spotter's phone that has not reached the server yet). False when it already left. */
+  cancel(clientKey: string): boolean {
+    const item = this.items.find((i) => i.clientKey === clientKey);
+    if (!item || item.state === "synced" || this.inFlight.has(clientKey)) return false;
+    this.items = this.items.filter((i) => i !== item);
+    this.changed();
+    return true;
+  }
+
   /** "Failed — tap to retry". */
   retryFailed(): void {
     for (const i of this.items) if (i.state === "failed") Object.assign(i, { state: "pending", tries: 0, nextAt: 0 });

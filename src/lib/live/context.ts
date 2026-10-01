@@ -5,6 +5,7 @@ import { cleanIdentifiers } from "@/lib/riders/identifiers";
 import { toEntrantIdentifiers } from "@/lib/draw/entrants";
 import { loadEventBlocks, loadMasterVocabulary } from "@/lib/org/trick-vocabulary";
 import { rowToPlan, type PlanRow } from "@/lib/schedule/plans";
+import { buildHeatModel, type HeatRowDb } from "@/lib/schedule/model";
 import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { parseDivisionLive } from "@/lib/schemas/division-live";
 import { defaultScheme } from "@/lib/schemas/identification";
@@ -53,7 +54,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
   }
 
   const [{ data: divisionRows }, { data: roundRows }, { data: heatRows }, { data: panelRows }, { data: entryRows }, { data: planRows }, master, localBlocks] = await Promise.all([
-    db.from("divisions").select("id, name, sort_order, scoring_model_id, scoring_overrides, trick_base, live_settings, identification, panel_id").eq("event_id", eventId).order("sort_order"),
+    db.from("divisions").select("id, name, sort_order, scoring_model_id, scoring_overrides, trick_base, live_settings, identification, panel_id, draw").eq("event_id", eventId).order("sort_order"),
     db.from("rounds").select("id, division_id, name, short_name, sort_order").eq("event_id", eventId),
     db.from("heats").select(HEAT_COLUMNS).eq("event_id", eventId),
     db.from("panel_members").select("panel_id, judge_seat_id").eq("event_id", eventId),
@@ -106,8 +107,17 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
 
   const plans = (planRows ?? []).map((r) => {
     const dp = rowToPlan(r as unknown as PlanRow);
-    return { id: r.id, day: r.day, name: r.name, plan: dp.plan, updatedAt: r.updated_at };
+    return { id: r.id, day: r.day, name: r.name, plan: dp.plan, defaults: dp.defaults, updatedAt: r.updated_at };
   });
+
+  // breaks and "last heat of its round" come from the stored draw; only these small numbers go to the phone, not the draw itself
+  const model = buildHeatModel(
+    (divisionRows ?? []).map((d) => ({ id: d.id, name: d.name, sort_order: d.sort_order, draw: d.draw })),
+    (roundRows ?? []).map((r) => ({ id: r.id, division_id: r.division_id, name: r.name, short_name: r.short_name, sort_order: r.sort_order })),
+    (heatRows ?? []) as unknown as HeatRowDb[],
+  );
+  const heatMeta: LiveContext["heatMeta"] = {};
+  for (const l of model.lives) heatMeta[l.heatId] = { roundLast: Boolean(l.roundLast), ...(l.breakAfterHeatMin !== undefined ? { breakAfterHeatMin: l.breakAfterHeatMin } : {}), ...(l.breakAfterRoundMin !== undefined ? { breakAfterRoundMin: l.breakAfterRoundMin } : {}) };
 
   return {
     event: { id: event.id, name: event.name, slug: event.slug, timezone: event.timezone, judgesMayLogAttempts: settings.judgesMayLogAttempts, maxRunningHeats: settings.maxRunningHeats },
@@ -119,5 +129,6 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
     vocabulary: master?.vocabulary ?? null,
     localBlocks,
     plans,
+    heatMeta,
   };
 }

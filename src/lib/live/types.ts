@@ -4,6 +4,8 @@ import type { ScoringModel } from "@/lib/schemas/scoring-model";
 import type { DivisionLive } from "@/lib/schemas/division-live";
 import type { LocalBlock, VocabularyJson } from "@/lib/trick-base";
 import type { LabelRider } from "@/lib/identification/rider-label";
+import type { ScheduleDefaults } from "@/lib/schemas/schedule";
+import type { HeatMeta } from "./run-order";
 
 /** Rows as the live screens read them (named columns only: hashes are never readable). */
 export interface HeatRow {
@@ -135,5 +137,7 @@ export interface LiveContext {
   vocabulary: VocabularyJson | null;
   localBlocks: LocalBlock[];
   /** The active run order of the event (all days), for "Next: …". */
-  plans: Array<{ id: string; day: string; name: string; plan: SchedulePlan; updatedAt: string }>;
+  plans: Array<{ id: string; day: string; name: string; plan: SchedulePlan; defaults: ScheduleDefaults; updatedAt: string }>;
+  /** Breaks and last-heat-of-round per heat (from the stored draw), for the estimated start times. */
+  heatMeta: Record<string, HeatMeta>;
 }

@@ -1,14 +1,18 @@
 import vocabularyJson from "../../../presets/tricks/big-air-vocabulary.json";
 import kotaJson from "../../../presets/scoring/kota-best3-impression.json";
-import { computeHeat, judgeTrickScore, roundHalfUp, normaliseTrickName } from "@/lib/engine/scoring";
+import { computeHeat, heatSummary, judgeTrickScore, roundHalfUp, type SummaryAttempt } from "@/lib/engine/scoring";
 import type { Attempt, AttemptResult, HeatResult, RiderInput } from "@/lib/engine/scoring";
 import { bestInk } from "@/lib/identification/label-style";
 import { riderLabelModel, type LabelModel, type LabelRider } from "@/lib/identification/rider-label";
 import { builtInSchemes, type IdentificationScheme } from "@/lib/schemas/identification";
 import { parseScoringModel, type ScoringModel } from "@/lib/schemas/scoring-model";
+import { buildTrickVocab } from "@/lib/engine/tricks";
 import { blockId, blocksFromVocabulary, type Block, type VocabularyJson } from "@/lib/trick-base";
+import { defaultLayout, resolveLayout } from "@/lib/trick-base/layout";
 import { copy } from "@/lib/ui-copy";
 import type { QueueItem } from "./queue-model";
+import type { LiveRider, RiderSheetModel, SheetAttempt } from "./view-types";
+export type { LiveRider, RiderSheetModel, SheetAttempt } from "./view-types";
 import { formatClock } from "./timer";
 import { formatCell, type CellState, type MatrixCell, type MatrixModel, type MatrixRow, type PanelState } from "./matrix-model";
 
@@ -237,22 +241,8 @@ export function matrixStates(): MatrixModel {
 }
 
 // ---- The impression step
-export interface SummaryTrick {
-  seq: number;
-  trick: string;
-  direction: "left" | "right" | null;
-  scoreLabel: string;
-}
-/** The compact heat-end card: counts, left and right, repeats, and the landed tricks with the judge's own scores. No rotation analysis. */
-export interface HeatSummary {
-  attempts: number;
-  landed: number;
-  crashed: number;
-  repeats: number;
-  left: number;
-  right: number;
-  landedList: SummaryTrick[];
-}
+export type { HeatSummary, SummaryTrick } from "@/lib/engine/scoring/summary";
+import type { HeatSummary } from "@/lib/engine/scoring/summary";
 export interface ImpressionRider {
   id: string;
   label: LabelModel;
@@ -261,26 +251,15 @@ export interface ImpressionRider {
   initialValue: number | null;
 }
 
-/** The numbers on the summary card. Preview only: the engine's heatSummary() is written in 5b and replaces this. */
+/** The numbers on the summary card: the real `heatSummary` of the engine, fed with Judge 1's own scores. */
 function summarise(attempts: Attempt[], judgeId = "J1"): HeatSummary {
-  const landed = attempts.filter((a) => a.status === "landed");
-  const names = landed.map((a) => normaliseTrickName(a.trickName ?? ""));
-  const mine = landed
-    .map((a) => {
-      const m = a.marks.find((x) => x.judgeId === judgeId)?.value;
-      const score = typeof m === "object" ? judgeTrickScore(KOTA, m).score : 0;
-      return { seq: a.seq, trick: a.trickName ?? "", direction: a.direction ?? null, score };
-    })
-    .sort((x, y) => y.score - x.score || x.seq - y.seq);
-  return {
-    attempts: attempts.length,
-    landed: landed.length,
-    crashed: attempts.length - landed.length,
-    repeats: names.length - new Set(names).size,
-    left: landed.filter((a) => a.direction === "left").length,
-    right: landed.filter((a) => a.direction === "right").length,
-    landedList: mine.map((x) => ({ seq: x.seq, trick: x.trick, direction: x.direction, scoreLabel: formatCell(x.score) })),
-  };
+  const mine: Record<string, number | null> = {};
+  const rows: SummaryAttempt[] = attempts.map((a) => {
+    const m = a.marks.find((x) => x.judgeId === judgeId)?.value;
+    mine[`a${a.seq}`] = typeof m === "object" ? judgeTrickScore(KOTA, m).score : null;
+    return { id: `a${a.seq}`, seq: a.seq, status: a.status, trickName: a.trickName ?? null, direction: a.direction ?? null };
+  });
+  return heatSummary(rows, mine, formatCell);
 }
 
 export function impressionRiders(): ImpressionRider[] {
@@ -312,30 +291,14 @@ export function blockIdsFor(): string[] {
   return previewBlocks().map(blockId);
 }
 
-export interface PreviewParts {
-  direction?: string | null;
-  multiplier?: string | null;
-  base?: string | null;
-  /** Add-ons and grabs, in any order. */
-  addons: string[];
+/** The master vocabulary as the real composer and reader take it. */
+export function previewVocab() {
+  return buildTrickVocab(VOCAB);
 }
 
-/**
- * The name and category for the builder's preview. Preview only: the real composer and parser (src/lib/engine/tricks) are built in 5b.
- * Rules shown here, from docs/08 §1F: the template is "{direction} {multiplier} {base} {modifiers}", "×1" is hidden,
- * add-ons are written in vocabulary order (not tap order), and the category is the first of the precedence list present.
- */
-export function previewCompose(parts: PreviewParts): { name: string; categoryKey: string | null } {
-  const blocks = previewBlocks();
-  const find = (family: string, key?: string | null) => (key ? blocks.find((b) => b.family === family && b.key === key) : undefined);
-  const dir = find("direction", parts.direction);
-  const mult = parts.multiplier === VOCAB.hideMultiplierWhen ? undefined : find("multiplier", parts.multiplier);
-  const base = find("base", parts.base);
-  const mods = blocks.filter((b) => (b.family === "addon" || b.family === "grab_landing") && parts.addons.includes(b.key));
-  const name = [dir?.label, mult?.label, base?.label, ...mods.map((m) => m.label)].filter(Boolean).join(" ");
-  const present = new Set([base?.category, ...mods.map((m) => m.category)].filter((c): c is string => Boolean(c)));
-  const categoryKey = VOCAB.categoryPrecedence.find((k) => present.has(k)) ?? null;
-  return { name, categoryKey };
+/** The spotter's blocks in the default layout (the vocabulary's own order); the real screen uses the division's layout. */
+export function previewView() {
+  return resolveLayout(previewBlocks(), [], defaultLayout());
 }
 
 /** Category word for the builder (from the copy file's existing labels). */
@@ -354,28 +317,6 @@ export interface QueueAttempt extends QueueItem {
   trick: string;
   direction: "left" | "right" | null;
   repeat?: { nth: string; previous: string };
-}
-export interface SheetAttempt {
-  seq: number;
-  trick: string;
-  direction: "left" | "right" | null;
-  status: "landed" | "crashed" | "pending";
-  myScoreLabel: string | null;
-  counted: boolean;
-}
-export interface RiderSheetModel {
-  name: string;
-  label: LabelModel;
-  attempts: SheetAttempt[];
-  left: number;
-  right: number;
-  counter: string;
-}
-export interface LiveRider {
-  id: string;
-  label: LabelModel;
-  attempts: number;
-  max: number;
 }
 
 const lycraLabel = (name: string, colour: string) => riderLabelModel(FIXTURE_SCHEMES[0], { name, nationality: "EG", slotColour: colour });

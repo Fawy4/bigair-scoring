@@ -6,12 +6,10 @@ import { HeadConsole } from "@/components/live/head-console";
 import { ImpressionCard } from "@/components/live/impression-card";
 import { JudgeQueue } from "@/components/live/judge-queue";
 import { PhoneFrame } from "@/components/live/phone-frame";
-import { RiderTile } from "@/components/live/rider-tile";
 import { ScreenHeader } from "@/components/live/screen-header";
-import { TrickBuilder, type BuilderSelection } from "@/components/live/trick-builder";
-import { categoryLabel, impressionRiders, judgeQueue, KOTA, previewBlocks, previewCompose } from "@/lib/live/design-fixtures";
+import { AttemptLogger, enabledIdsOf } from "@/components/live/attempt-logger";
+import { categoryLabel, impressionRiders, judgeQueue, KOTA, previewVocab, previewView } from "@/lib/live/design-fixtures";
 import { formatPadValue } from "@/lib/live/score-pad";
-import type { FamilyKey } from "@/lib/trick-base";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
@@ -29,39 +27,29 @@ export const JudgeDetails = () => (
   </PhoneFrame>
 );
 
-const EMPTY: BuilderSelection = { direction: null, multiplier: null, base: null, addons: [] };
-
-/** The spotter's phone: the riders in one row, direction and multiplier, the builder in vertical lists, and CRASH and Log fixed at the bottom. */
+/** The spotter's phone: the riders in one row, direction and multiplier, the builder in vertical lists, and CRASH and Log fixed at the bottom. The real builder and composer; nothing is saved. */
 export function SpotterLive() {
   const live = useMemo(() => judgeQueue(), []);
-  const blocks = useMemo(() => previewBlocks(), []);
-  const [selected, setSelected] = useState(0);
-  const [sel, setSel] = useState<BuilderSelection>(EMPTY);
-  const [logged, setLogged] = useState<string | null>(null);
+  const vocab = useMemo(() => previewVocab(), []);
+  const view = useMemo(() => previewView(), []);
+  const enabled = useMemo(() => enabledIdsOf(view), [view]);
   const [counts, setCounts] = useState(live.riders.map((r) => r.attempts));
-  const composed = previewCompose(sel);
-  const word = live.riders[selected].label.primary.text;
-  const pick = (family: FamilyKey, key: string) =>
-    setSel((s) => {
-      if (family === "direction" || family === "multiplier" || family === "base") return { ...s, [family]: s[family] === key ? null : key };
-      return { ...s, addons: s.addons.includes(key) ? s.addons.filter((k) => k !== key) : [...s.addons, key] };
-    });
-  const done = () => {
-    setLogged(copy.live.saved.logged(word, counts[selected] + 1));
-    setCounts((c) => c.map((n, i) => (i === selected ? Math.min(n + 1, live.riders[i].max) : n)));
-    setSel(EMPTY);
-  };
   return (
     <PhoneFrame id="spotter-live" title={NAMES["spotter-live"]} note={S.spotterLive}>
       <ScreenHeader heatName={live.heatName} seat="Spotter 1" remainingMs={live.remainingMs} />
-      <div className="flex flex-col gap-0.5 px-2 pt-1.5">
-        <div role="group" aria-label={copy.live.tile.strip} className="grid gap-1" style={{ gridTemplateColumns: `repeat(${live.riders.length}, minmax(0, 1fr))` }}>
-          {live.riders.map((r, i) => (
-            <RiderTile key={r.id} compact lockWhenOut label={r.label} attempts={counts[i]} max={r.max} selected={selected === i} onSelect={() => setSelected(i)} />
-          ))}
-        </div>
-      </div>
-      <TrickBuilder blocks={blocks} selection={sel} onPick={pick} name={composed.name} categoryLabel={categoryLabel(composed.categoryKey)} riderLabelText={word} status={logged} canLog={!!sel.base} onCrash={done} onLog={done} />
+      <AttemptLogger
+        riders={live.riders.map((r, i) => ({ id: r.id, label: r.label, attempts: counts[i], max: r.max }))}
+        vocab={vocab}
+        view={view}
+        enabledIds={enabled}
+        canLog
+        categoryLabelOf={categoryLabel}
+        onLog={(id) => {
+          setCounts((c) => c.map((n, i) => (live.riders[i].id === id ? Math.min(n + 1, live.riders[i].max) : n)));
+          return `preview-${Date.now()}`;
+        }}
+        onUndo={() => {}}
+      />
     </PhoneFrame>
   );
 }
