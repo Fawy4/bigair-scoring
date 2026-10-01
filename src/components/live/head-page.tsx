@@ -5,6 +5,7 @@ import { AnnouncerView } from "./announcer-view";
 import { HeadLiveConsole } from "./head-live-console";
 import { TieDialog } from "./head-dialogs";
 import { HeadSidePanel } from "./head-side-panel";
+import { DivisionSelector } from "./division-selector";
 import { HeatControl, type ReviewProps } from "./heat-control";
 import { JudgeScreen } from "./judge-screen";
 import { useEndAtZero, useTimerSound, useWakeLock } from "./live-hooks";
@@ -15,11 +16,12 @@ import { useLiveHeat } from "./use-live-heat";
 import { useServerClock, useTick } from "./use-server-clock";
 import { SeatHeartbeat } from "@/app/seat/heartbeat";
 import { RiderLabel } from "@/components/rider-label";
+import { chooseDivision, liveDivisionIds } from "@/lib/live/division-pick";
 import { buildHeadModel } from "@/lib/live/head-model";
 import { nextHeat } from "@/lib/live/next-heat";
 import { activePlanFor, heatTitle, livesFor, timetableOptions } from "@/lib/live/run-order";
 import { ridersForHeat } from "@/lib/live/screen-model";
-import { remainingMs } from "@/lib/live/timer";
+import { effectiveStatus, remainingMs } from "@/lib/live/timer";
 import type { LiveContext } from "@/lib/live/types";
 import { softWord } from "@/lib/live/words";
 import { createClient } from "@/lib/supabase/browser";
@@ -85,12 +87,55 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [plan?.id, plan?.updatedAt, live.heats, Math.floor(nowServer / 15_000)],
   );
-  const shownId = selected ?? live.heat?.id ?? upcoming?.heatId ?? live.heats.find((h) => h.status === "scheduled")?.id ?? null;
+  // ---- one division at a time (Phase 7a, 8e). The choice is made once on arrival, remembered on this device, and never changed by a heat starting elsewhere.
+  const canSeeAll = viewer.kind === "organiser";
+  const storeKey = `bigair.head-division.${ctx.event.id}`;
+  const effHeats = useMemo(
+    () => live.heats.map((h) => ({ id: h.id, division_id: h.division_id, status: effectiveStatus({ status: h.status, durationSec: h.duration_sec, startedAt: h.started_at, pausedAt: h.paused_at, pausedTotalSec: h.paused_total_sec }, nowServer) })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [live.heats, Math.floor(nowServer / 1000)],
+  );
+  const upcomingDivisionId = upcoming ? (live.heats.find((h) => h.id === upcoming.heatId)?.division_id ?? null) : null;
+  const [picked, setPicked] = useState<string | null>(null);
+  const readStored = (): string | null => {
+    try {
+      return window.localStorage.getItem(storeKey);
+    } catch {
+      return null;
+    }
+  };
+  useEffect(() => {
+    if (picked === null) setPicked(chooseDivision({ divisions: ctx.divisions, heats: effHeats, upcomingDivisionId, stored: readStored(), canSeeAll }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- decided once, on arrival
+  }, [picked]);
+  const pickId = picked ?? chooseDivision({ divisions: ctx.divisions, heats: effHeats, upcomingDivisionId, stored: null, canSeeAll });
+  const chooseDiv = (id: string) => {
+    setPicked(id);
+    setSelected(null);
+    try {
+      window.localStorage.setItem(storeKey, id);
+    } catch {
+      /* not remembered; still works until the page closes */
+    }
+  };
+  const inPick = (heatId: string | undefined | null) => pickId === "all" || (heatId ? live.heats.find((h) => h.id === heatId)?.division_id === pickId : false);
+  const upcomingHere = useMemo(
+    () => (pickId !== "all" && plan ? nextHeat(plan.plan, livesFor(ctx, live.heats, ctx.heatMeta), timetableOptions(plan, ctx.event.timezone, nowServer), (id) => inPick(id)) : upcoming),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pickId, plan?.id, plan?.updatedAt, live.heats, Math.floor(nowServer / 15_000)],
+  );
+  const hereHeat = (status: string) => effHeats.find((h) => h.status === status && inPick(h.id))?.id;
+  const shownId =
+    pickId === "all"
+      ? (selected ?? live.heat?.id ?? upcoming?.heatId ?? live.heats.find((h) => h.status === "scheduled")?.id ?? null)
+      : ((selected && inPick(selected) ? selected : null) ?? hereHeat("running") ?? hereHeat("paused") ?? upcomingHere?.heatId ?? live.heats.find((h) => h.status === "scheduled" && inPick(h.id))?.id ?? null);
   const shown = live.heats.find((h) => h.id === shownId) ?? null;
   useEffect(() => {
     // the per-heat stream follows the shown heat once there is one
-    if (!selected && shownId && !live.heat) setSelected(shownId);
-  }, [selected, shownId, live.heat]);
+    if (pickId === "all") {
+      if (!selected && shownId && !live.heat) setSelected(shownId);
+    } else if (shownId && shownId !== selected) setSelected(shownId);
+  }, [selected, shownId, live.heat, pickId]);
 
   const division = ctx.divisions.find((d) => d.id === shown?.division_id);
   const remaining = shown ? remainingMs({ status: shown.status, durationSec: shown.duration_sec, startedAt: shown.started_at, pausedAt: shown.paused_at, pausedTotalSec: shown.paused_total_sec }, nowServer) : 0;
@@ -190,7 +235,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
     <div className="flex flex-col gap-3">
       {!announcer ? <WindCallControl eventId={ctx.event.id} /> : null}
       <PartBoundary what={copy.crash.parts.timetable}>
-        <HeatControl ctx={ctx} heats={live.heats} selectedId={shownId} onSelect={setSelected} nowServer={nowServer} plans={live.plans} onPlanChanged={live.applyPlan} review={review} />
+        <HeatControl ctx={ctx} heats={live.heats} divisionId={pickId === "all" ? null : pickId} selectedId={shownId} onSelect={setSelected} nowServer={nowServer} plans={live.plans} onPlanChanged={live.applyPlan} review={review} />
       </PartBoundary>
       {!wide ? (
         <>
@@ -215,6 +260,9 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
     <header className="border-b border-beach-line px-3 py-2">
       <h1 className="text-name font-semibold">{shown ? heatTitle(ctx, shown) : ctx.event.name}</h1>
       <p className="text-small font-medium text-beach-muted">{[ctx.event.name, viewer.name].join(" · ")}</p>
+      <div className="mt-2">
+        <DivisionSelector divisions={ctx.divisions} value={pickId} liveIds={liveDivisionIds(effHeats)} canSeeAll={canSeeAll} wide={wide} onChange={chooseDiv} />
+      </div>
     </header>
   );
 

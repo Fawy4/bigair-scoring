@@ -11,10 +11,10 @@ export interface NextHeat {
 }
 
 /** The first heat row that has not started, from the active plan (docs/08 §1G-13). Between heats the spotter and judge read "Next: … — est. 15:23". */
-export function nextHeat(plan: SchedulePlan | null, heats: HeatLive[], opts: TimetableOptions): NextHeat | null {
+export function nextHeat(plan: SchedulePlan | null, heats: HeatLive[], opts: TimetableOptions, only?: (heatId: string) => boolean): NextHeat | null {
   if (!plan) return null;
   const table = computeTimetable(plan, heats, opts);
-  const row = table.rows.find((r) => r.kind === "heat" && (r.status === "next" || r.status === "est" || r.status === "held" || r.status === "pinned"));
+  const row = table.rows.find((r) => r.kind === "heat" && (!only || (r.heatId ? only(r.heatId) : false)) && (r.status === "next" || r.status === "est" || r.status === "held" || r.status === "pinned"));
   if (!row || !row.heatId) return null;
   return { heatId: row.heatId, title: [row.division, row.round, row.heat].filter(Boolean).join(" · "), startsAt: row.start, held: row.status === "held" };
 }

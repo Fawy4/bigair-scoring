@@ -68,7 +68,7 @@ export interface ReviewProps {
  * of the selected heat: Start (with its refusals in plain words), Pause, Resume, End, Hold, Resume at, Shift, Cancel. Every press is a server action that
  * uses the database's own clock; the screen only shows what the database answered.
  */
-export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans, onPlanChanged, review }: { ctx: LiveContext; heats: HeatRow[]; selectedId: string | null; onSelect: (id: string) => void; nowServer: number; plans: ActivePlan[]; onPlanChanged?: (planId: string, hold: Json | null, anchors: Json) => void; review?: ReviewProps }) {
+export function HeatControl({ ctx, heats, divisionId, selectedId, onSelect, nowServer, plans, onPlanChanged, review }: { ctx: LiveContext; heats: HeatRow[]; /** Show only this division's heats in the list (the timetable still counts all of them); null = every division. */ divisionId?: string | null; selectedId: string | null; onSelect: (id: string) => void; nowServer: number; plans: ActivePlan[]; onPlanChanged?: (planId: string, hold: Json | null, anchors: Json) => void; review?: ReviewProps }) {
   const settings = useLiveSettings();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
@@ -82,7 +82,7 @@ export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans
   const table = useMemo(() => (plan ? computeTimetable(plan.plan, lives, timetableOptions(plan, ctx.event.timezone, nowServer)) : null), [plan, lives, ctx.event.timezone, Math.floor(nowServer / 5000)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   type OrderEntry = { heat: HeatRow; time: string | null; held: boolean; problem?: string } | { heat?: undefined; gone: string; problem: string };
-  const order: OrderEntry[] = useMemo(() => {
+  const allOrder: OrderEntry[] = useMemo(() => {
     if (table) {
       const listed: OrderEntry[] = table.rows
         .filter((r) => r.kind === "heat")
@@ -99,6 +99,7 @@ export function HeatControl({ ctx, heats, selectedId, onSelect, nowServer, plans
       .sort((a, b) => (divisionOrder.get(a.division_id) ?? 0) - (divisionOrder.get(b.division_id) ?? 0) || a.number - b.number)
       .map((heat): OrderEntry => ({ heat, time: null, held: false }));
   }, [table, heats, ctx.divisions]);
+  const order = useMemo(() => (divisionId ? allOrder.filter((e) => e.heat && e.heat.division_id === divisionId) : allOrder), [allOrder, divisionId]);
 
   const selected = heats.find((h) => h.id === selectedId) ?? null;
   const state = selected ? stateOf(selected, nowServer) : null;
