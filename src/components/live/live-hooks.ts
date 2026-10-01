@@ -45,7 +45,8 @@ export function useWakeLock(active: boolean): void {
 export function useEndAtZero(supabase: SupabaseClient, heatId: string | null, timeUp: boolean, status: string | undefined, enabled = true): void {
   useEffect(() => {
     if (!enabled || !heatId || !timeUp || status !== "running") return;
-    const call = () => void supabase.rpc("end_heat_if_due", { p_heat: heatId });
+    // a Supabase call only goes out when it is awaited (or .then is called), so `void` would send nothing
+    const call = () => void Promise.resolve(supabase.rpc("end_heat_if_due", { p_heat: heatId })).catch(() => {});
     call();
     const t = setInterval(call, 3000);
     return () => clearInterval(t);

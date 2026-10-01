@@ -8,7 +8,7 @@ export function SeatHeartbeat() {
   useEffect(() => {
     const supabase = createClient();
     const beat = () => {
-      if (document.visibilityState === "visible") void supabase.rpc("touch_seat");
+      if (document.visibilityState === "visible") void Promise.resolve(supabase.rpc("touch_seat")).catch(() => {}); // awaited, or the call is never sent
     };
     beat();
     const t = setInterval(beat, 30_000);

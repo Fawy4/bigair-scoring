@@ -4,7 +4,7 @@ import { createOrganiser } from "./organiser";
 
 /**
  * A throwaway live event for the browser tests (Phase 5b): an organiser, a published event in Cairo with the Lycra-per-heat scheme, one division with the
- * KOTA scoring model (7 attempts a rider, 3 judges), a locked draw with two heats of four riders, a run order for today, and a seat with its own login for
+ * Legacy Variety scoring model (single score in steps of 0.5, 7 attempts a rider, 3 judges; `model: "kota-best3-impression"` scores by criteria), a locked draw with two heats of four riders, a run order for today, and a seat with its own login for
  * three judges, a head judge and a spotter. Everything hangs off one throwaway organisation, which the ledger removes (Arrow, EKL and Demo are never touched).
  */
 export type SeatKey = "j1" | "j2" | "j3" | "head" | "spotter" | "spotter2";
@@ -19,7 +19,7 @@ const SEATS: Array<[SeatKey, string, "judge" | "head" | "spotter"]> = [
 const COLOURS = ["red", "blue", "yellow", "green"];
 const NAMES = ["Sam Rivera", "Noor Haddad", "Lena Vogt", "Mia Costa"];
 
-export async function createLiveWorld(opts: { headScores?: boolean; maxRunning?: number } = {}) {
+export async function createLiveWorld(opts: { headScores?: boolean; maxRunning?: number; model?: string } = {}) {
   const org = await createOrganiser();
   const db = org.db;
   const must = <T extends { id: string }>(r: { data: T | null; error: { message: string } | null }, what: string): T => {
@@ -46,7 +46,7 @@ export async function createLiveWorld(opts: { headScores?: boolean; maxRunning?:
       .single(),
     "event",
   );
-  const { data: model } = await db.from("scoring_models").select("id").is("organisation_id", null).eq("key", "kota-best3-impression").order("version", { ascending: false }).limit(1).single();
+  const { data: model } = await db.from("scoring_models").select("id").is("organisation_id", null).eq("key", opts.model ?? "legacy-kol-best3-variety").order("version", { ascending: false }).limit(1).single();
   const panel = must(await db.from("panels").insert({ event_id: event.id, name: "Panel 1" }).select("id").single(), "panel");
   const division = must(
     await db
