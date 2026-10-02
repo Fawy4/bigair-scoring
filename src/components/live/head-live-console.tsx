@@ -19,6 +19,8 @@ import { outlierTolerance } from "@/lib/live/cell-tone";
 import { canMerge } from "@/lib/live/console-ops";
 import type { HeadModel } from "@/lib/live/head-model";
 import type { FixTarget } from "@/lib/live/publish-checklist";
+import { impressionStatus } from "@/lib/live/impression-status";
+import { formatCell } from "@/lib/live/matrix-model";
 import { judgeWordOf } from "@/lib/live/judge-names";
 import { orderRows, readTableOrder, writeTableOrder, type TableOrder } from "@/lib/live/matrix-order";
 import { heatTitle } from "@/lib/live/run-order";
@@ -112,6 +114,8 @@ export function HeadLiveConsole({
   const closing = heat.status === "ended" || heat.status === "under_review";
   const owes = closing ? head.owes : [];
   const blockerItems = closing ? head.checklist.items : [];
+  // each judge's Impression / Variety scores, rider by rider (Polish 2, item 5)
+  const impressions = useMemo(() => impressionStatus({ panelSeatIds: head.matrix.judgeIds, slots: live.slots.filter((s) => s.heat_id === heat.id), impressions: live.impressions.filter((i) => i.heat_id === heat.id) }), [head.matrix.judgeIds, live.slots, live.impressions, heat.id]);
   const cap = model.heat.maxAttemptsPerRider;
   const counts = useMemo(() => {
     const m = new Map<string, number>();
@@ -323,23 +327,37 @@ export function HeadLiveConsole({
           })}
         </section>
 
-        {closing ? (
-          <div data-testid="owes" className="flex flex-col gap-1 rounded-xl border border-beach-line bg-beach-bg px-2 py-1 text-body font-medium">
-            {owes.length === 0 ? <span>{C.noneOwed}</span> : null}
-            {[...new Set(owes.map((o) => o.seatId))].map((seatId) => {
-              const mine = owes.filter((o) => o.seatId === seatId);
-              return (
-                <div key={seatId} data-testid="owes-judge" className="flex flex-col gap-0.5">
-                  <span>{C.owes(mine[0].judge, mine.map((o) => wordFor(o.entryId)).join(", "))}</span>
-                  {open ? (
-                    <button type="button" data-testid="enter-impression" onClick={() => setDialog({ kind: "impression", seatId, entryId: mine[0].entryId })} className={plain}>
-                      {C.enterImpression}
-                    </button>
-                  ) : null}
+        {closing && model.heat.impression ? (
+          <section data-testid="owes" aria-label={H.impressionsHeading} className="flex flex-col gap-1.5 rounded-card border border-beach-line bg-beach-surface p-2">
+            <h3 className="text-heading font-semibold text-beach-muted">{H.impressionsHeading}</h3>
+            {owes.length === 0 ? <p className="text-small font-medium text-beach-muted">{C.noneOwed}</p> : null}
+            {impressions.map((j) => (
+              <div key={j.seatId} data-testid="owes-judge" data-seat={j.seatId} data-missing={j.missing} className="flex flex-col gap-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-body font-semibold">{judgeWord(j.seatId)}</span>
+                  <Pill tone={j.missing ? "pending" : "live"}>{j.missing ? H.impressionsMissing(j.missing) : H.impressionsAllIn}</Pill>
                 </div>
-              );
-            })}
-          </div>
+                <ul className="flex flex-wrap gap-1">
+                  {j.cells.map((cell) => (
+                    <li
+                      key={cell.entryId}
+                      data-testid="impression-cell"
+                      data-rider={cell.entryId}
+                      data-state={cell.state}
+                      className={cn("rounded-lg border px-1.5 text-small font-semibold tabular-nums", cell.state === "missing" ? "border-dashed border-beach-outlier" : "border-beach-line")}
+                    >
+                      {H.impressionCell(wordFor(cell.entryId), cell.state === "done" ? `${H.sheetDone} ${formatCell(cell.value as number)}` : cell.state === "absent" ? H.sheetAbsent : H.sheetMissing)}
+                    </li>
+                  ))}
+                </ul>
+                {open ? (
+                  <button type="button" data-testid="enter-impression" onClick={() => setDialog({ kind: "impression", seatId: j.seatId, entryId: j.cells.find((c) => c.state === "missing")?.entryId ?? j.cells[0]?.entryId ?? "" })} className={plain}>
+                    {H.sheetOpen(judgeWord(j.seatId))}
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </section>
         ) : null}
 
         {head.ties.length > 0 ? (
@@ -424,7 +442,7 @@ export function HeadLiveConsole({
           heatId={heat.id}
           seatId={dialog.seatId}
           judge={judgeWord(dialog.seatId)}
-          riders={owes.filter((o) => o.seatId === dialog.seatId).map((o) => ({ id: o.entryId, word: wordFor(o.entryId) }))}
+          riders={(impressions.find((j) => j.seatId === dialog.seatId)?.cells ?? []).map((cell) => ({ id: cell.entryId, word: wordFor(cell.entryId), now: { state: cell.state, value: cell.value } }))}
           first={dialog.entryId}
           onClose={close}
           onDone={done}

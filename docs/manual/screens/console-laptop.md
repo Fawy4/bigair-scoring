@@ -55,7 +55,7 @@ The head judge (the head judge seat, or an organiser of the event — an organis
 | **Heat menu** → **Reset this heat…** | Back to not started with the same riders; what it held is kept for the audit. See [Resets and undo](../resets-and-undo.md#ru-heat). |
 | **Judges** | Each judge: Live, “Not seen for 40 s”, “Not connected”; Submitted / Not submitted. |
 | **Open flags** | Judges' flags (“That was a crash”, “That was a landing”, “Wrong rider”, “Duplicate”, “Other”) with **Resolve**. |
-| **Owes Impression score** | Who has not given which rider an Impression / Variety score; **Enter their Impression score** types it for them (for example from a paper sheet). |
+| **Impression / Variety scores** | After the heat has ended, one block per judge: “all in” or “3 missing”, and each rider with **done 7.50**, **missing** or **Absent**, so you see at a glance what holds the panel back. **Enter ‹judge›'s sheet** types that judge's scores for them (for example from a paper sheet). |
 | **Rider totals** and **Ties** | Provisional totals with the formula in words; how each tie is broken. |
 | **Public** | **Release result** / **Hold result back…** for a held result (the final when “Hold the final’s result” is on, or every result when results are not shown on publish). |
 
