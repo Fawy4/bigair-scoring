@@ -8,6 +8,7 @@ import { encryptPin, tryPinKey } from "../src/lib/officials/pin-crypto";
 import { parseFormatTemplate } from "../src/lib/schemas/format-template";
 import { builtInSchemes } from "../src/lib/schemas/identification";
 import { expect, test } from "./base";
+import { record } from "./cleanup";
 import { createOrganiser } from "./organiser";
 
 /**
@@ -240,7 +241,7 @@ test("manual screenshots", async ({ page, context, browser }) => {
     const { data: me } = await db.auth.admin.listUsers({ perPage: 1000 });
     const ownerId = me.users.find((u) => u.email === org.email)?.id;
     await db.from("feedback_notes").insert({ organisation_id: org.orgId, author_user_id: ownerId!, author_role: "organiser", event_id: event.id, page: `/org/events/${event.id}/schedule`, page_label: "Run order step", body: "The lunch break should move with the wind hold.", tag: "idea", organisation_name: "Gouna Big Air (sample)", event_name: "Gouna Big Air (sample)" } as never);
-    for (const [url, name] of [[`/admin?q=${encodeURIComponent("Gouna Big Air")}`, "admin-organisations"], [`/admin/organisations/${org.orgId}`, "admin-organisation"], [`/admin/organisations/${org.orgId}#invite-h`, "admin-invite"], ["/admin/presets", "admin-presets"], ["/admin/tricks", "admin-tricks"], ["/admin/settings", "admin-settings"], [`/admin/feedback?event=${event.id}`, "admin-feedback"], ["/admin/health", "admin-health"]] as const) {
+    for (const [url, name] of [[`/admin?q=${encodeURIComponent("Gouna Big Air")}`, "admin-organisations"], [`/admin/organisations/${org.orgId}`, "admin-organisation"], [`/admin/organisations/${org.orgId}#invite-h`, "admin-invite"], ["/admin/settings", "admin-settings"], [`/admin/feedback?event=${event.id}`, "admin-feedback"], ["/admin/health", "admin-health"]] as const) {
       await open(page, url);
       await page.waitForLoadState("networkidle").catch(() => undefined);
       if (name === "admin-invite") await page.locator("#invite-h").scrollIntoViewIfNeeded().catch(() => undefined);
@@ -343,5 +344,85 @@ test("manual screenshots", async ({ page, context, browser }) => {
       for (const r of data ?? []) if (r.virtual_user) await db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
     }
     await org.cleanup();
+  }
+});
+
+/**
+ * The trick base pages (Master presets, the editor, its publish step, a family card, and an event's Trick base tab with "Update to latest"). Its own
+ * throwaway organisation; it publishes one master version for the pictures and removes it (and the ledger is the backstop). `npm run manual:shots`
+ * runs it with the rest; `npm run manual:shots -- -g "trick base"` runs it alone.
+ */
+test("manual screenshots: trick base", async ({ page }) => {
+  test.setTimeout(10 * 60_000);
+  mkdirSync(OUT, { recursive: true });
+  const org = await createOrganiser({ platformAdmin: "owner" });
+  const db = org.db;
+  const mine: string[] = [];
+  const top = async () => (await db.from("trick_vocabularies").select("id, version").is("organisation_id", null).is("event_id", null).eq("key", "big-air-vocabulary").order("version", { ascending: false }).limit(1).single()).data!;
+  const start = (await top()).version;
+  const track = async () => {
+    const { data } = await db.from("trick_vocabularies").select("id").is("organisation_id", null).is("event_id", null).eq("key", "big-air-vocabulary").gt("version", start);
+    for (const r of data ?? []) if (!mine.includes(r.id)) {
+      mine.push(r.id);
+      record({ trickVersionId: r.id });
+    }
+  };
+  try {
+    const { data: event } = await db.from("events").insert({ organisation_id: org.orgId, name: "Gouna Big Air", slug: `gouna-tricks-${org.run}`, status: "draft", timezone: "Africa/Cairo" }).select("id").single();
+    await db.from("divisions").insert({ event_id: event!.id, name: "Pro Men", sort_order: 1 });
+    await db.from("trick_vocabularies").insert({ organisation_id: org.orgId, event_id: event!.id, key: "event-additions", json: { blocks: [{ family: "base", key: "local_sloth_roll", label: "Sloth roll", category: "rotation", status: "proposed" }] }, content_hash: "x" });
+
+    await org.signIn(page, "/admin/presets");
+    await page.getByTestId("open-trick-base").waitFor();
+    await shot(page, "admin-presets", LAPTOP, 1200);
+
+    await open(page, "/admin/presets/trick-base");
+    await page.getByTestId("trick-editor").waitFor();
+    await shot(page, "admin-trick-base", LAPTOP, 1500);
+    await shot(page, "admin-trick-base", PHONE, 1500);
+
+    // the owner's walk-through: rename, alias, move, add with aliases, retire
+    await page.setViewportSize(LAPTOP);
+    await page.getByTestId("label-base:megaloop").fill("Mega loop");
+    await page.getByTestId("alias-input-base:megaloop").fill("megaboost");
+    await page.getByTestId("alias-input-base:megaloop").press("Enter");
+    await page.getByTestId("moveto-addon:tic_tac").selectOption({ label: "Grabs & landings" });
+    await page.getByTestId("add-block-name-base").fill("Tornado");
+    await page.getByTestId("add-block-base").click();
+    await page.getByTestId("alias-input-base:tornado").fill("tornado roll");
+    await page.getByTestId("alias-input-base:tornado").press("Enter");
+    await page.getByTestId("save-draft").click();
+    await page.getByTestId("validation").waitFor(); // "tornado" is still an alias of Late rotations
+    await page.getByTestId("validation").scrollIntoViewIfNeeded();
+    await page.screenshot({ path: path.join(OUT, "admin-trick-base-validation-1280.png") });
+    await page.getByTestId("alias-addon:late_rotations-tornado").getByRole("button").click();
+    await page.getByTestId("retire-base:heart_attack").click();
+    // close-ups: the sticky Save bar and the Note button would sit over them
+    await page.addStyleTag({ content: "[data-testid=editor-actions], [data-testid=note-button], nextjs-portal { visibility: hidden !important; }" });
+    const card = page.getByTestId("family-card-base");
+    await card.scrollIntoViewIfNeeded();
+    await card.screenshot({ path: path.join(OUT, "admin-trick-base-family-1280.png") });
+    await page.getByTestId("naming").screenshot({ path: path.join(OUT, "admin-trick-base-naming-1280.png") });
+    await page.addStyleTag({ content: "[data-testid=editor-actions] { visibility: visible !important; }" });
+    await page.getByTestId("save-draft").click();
+    await expect(page.getByTestId("editor-status")).toContainText("(draft, not published)");
+    await track();
+    await page.getByTestId("publish").click();
+    await page.getByTestId("publish-diff").waitFor();
+    await page.getByTestId("publish-diff").screenshot({ path: path.join(OUT, "admin-trick-base-publish-1280.png") });
+    await page.getByTestId("confirm-publish").click();
+    await expect(page.getByTestId("editor-status")).toContainText("(published)");
+    await page.getByTestId("history").scrollIntoViewIfNeeded();
+    await page.getByTestId("history").screenshot({ path: path.join(OUT, "admin-trick-base-history-1280.png") });
+
+    // the organiser's Trick base tab: the event is still on the older version
+    await open(page, `/org/events/${event!.id}/divisions`);
+    await page.getByRole("tab", { name: "Trick base" }).click();
+    await page.getByTestId("update-summary").waitFor();
+    await shot(page, "org-divisions-trickbase", LAPTOP, 1200);
+  } finally {
+    await track();
+    await org.cleanup();
+    if (mine.length) await db.from("trick_vocabularies").delete().in("id", mine);
   }
 });

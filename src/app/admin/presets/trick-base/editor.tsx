@@ -552,7 +552,7 @@ export function TrickBaseEditor({
       )}
 
       {readOnly ? null : (
-        <div className="sticky top-0 z-10 flex flex-wrap items-start gap-2 border-b border-beach-line bg-beach-bg py-2">
+        <div className="sticky top-0 z-10 flex flex-wrap items-start gap-2 border-b border-beach-line bg-beach-bg py-2" data-testid="editor-actions">
           <Button variant="primary" data-testid="save-draft" {...disabledWhen((pending && C.working) || (!dirty && C.noChanges))} onClick={save}>
             {C.save}
           </Button>
