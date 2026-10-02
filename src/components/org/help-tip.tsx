@@ -2,6 +2,8 @@
 
 import { useId, useState } from "react";
 import { orgCopy } from "@/lib/ui-copy";
+import { LearnMore } from "@/components/manual/learn-more";
+import { settingHref } from "@/lib/manual/settings-lookup";
 
 /** A “?” that opens one sentence and an example under it, for a label that is not a SettingRow (a ladder card, a table heading). A tap, never a long-press. */
 export function HelpTip({ what, text, example }: { what: string; text: string; example?: string }) {
@@ -16,6 +18,7 @@ export function HelpTip({ what, text, example }: { what: string; text: string; e
         <span id={id} role="note" data-testid="setting-example" className="mb-1 rounded-[8px] border border-beach-line bg-beach-surface px-3 py-2 text-body font-medium">
           {text}
           {example ? ` ${orgCopy.settings.example(example)}` : ""}
+          <LearnMore href={settingHref(text)} what={what} />
         </span>
       ) : null}
     </span>

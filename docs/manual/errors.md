@@ -1,0 +1,785 @@
+# Errors and refusals (appendix)
+
+Every refusal and error sentence the product can show, word for word, with where it appears, what it means and how to fix it; then every database code.
+
+Last checked: 2 Oct 2026 · Product version 0.9.0
+
+**How to use it.** Find the sentence you see (use the search box at the top of Help, or follow the **Learn more** link that the organiser screens put after a refusal). A value the product fills in is written as ‹name›, for example “‹heat› is running. End it first.” stands for “Heat 3 is running. End it first.” The [troubleshooting page](troubleshooting.md) lists the same sentences alphabetically, and the problems that have no sentence (a grey button, a blank page, wrong times).
+
+**Where this page comes from.** The sentences are read from `src/lib/ui-copy.ts`, the meanings and fixes from `scripts/manual/error-notes.ts`, and the codes from `supabase/migrations`. `npm run manual:generate` writes the tables below; a unit test fails when a sentence or a code is missing here. Do not edit the tables by hand.
+
+## Sentences, by screen {#errors-sentences}
+
+<!-- generated:sentences:start -->
+### Feedback notes
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-feedback-dictateunavailable} “Dictation is not available in this browser: use the microphone key on your keyboard.” | Note button and Feedback lists | The note could not be saved or exported. | Follow the sentence. |
+| {#err-feedback-screenshottoobig} “That image is over 5 MB. Try a smaller one.” | Note button and Feedback lists | The note could not be saved or exported. | Follow the sentence. |
+| {#err-feedback-screenshotnotimage} “Only PNG, JPEG or WebP images can be attached.” | Note button and Feedback lists | The note could not be saved or exported. | Follow the sentence. |
+| {#err-feedback-failed} “The note could not be saved. Try again.” | Note button and Feedback lists | The note could not be saved or exported. | Follow the sentence. |
+| {#err-feedback-exportcopyfailed} “Could not copy: use Download instead.” | Note button and Feedback lists | The note could not be saved or exported. | Follow the sentence. |
+| {#err-feedback-exportnone} “There are no open notes to export.” | Note button and Feedback lists | The note could not be saved or exported. | Follow the sentence. |
+| {#err-feedback-exportowneronly} “Only platform owners can export.” | Note button and Feedback lists | Only the platform owner exports notes. | Follow the sentence. |
+| {#err-feedback-errors-toolong} “That note is too long (4000 characters at most).” | Note button and Feedback lists | The note could not be saved or exported. | Follow the sentence. |
+| {#err-feedback-errors-empty} “Write something first.” | Note button and Feedback lists | The note could not be saved or exported. | Follow the sentence. |
+| {#err-feedback-errors-notallowed} “You do not have permission to do that.” | Note button and Feedback lists | The note could not be saved or exported. | Follow the sentence. |
+
+### Grey buttons on the head console
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-controlwhy-noplan} “No active run order — create one in Run order & timetable.” | Under a grey button on the head console (laptop and phone) | Hold, Resume at and Shift are grey: no run order is active for today. | Run order step → pick today → Activate this plan. |
+| {#err-controlwhy-start} “Only a heat that has not started can be started.” | Under a grey button on the head console (laptop and phone) | Start heat is grey: the selected heat has started already. | Pick the next heat in the run order. |
+| {#err-controlwhy-startcancelled} “A cancelled heat cannot be started. Re-run it instead.” | Under a grey button on the head console (laptop and phone) | Start heat is grey on a cancelled heat. | Heat menu → Re-run heat. |
+| {#err-controlwhy-rerundone} “This heat has already been re-run.” | Under a grey button on the head console (laptop and phone) | Re-run is grey: done once already. | Do what the sentence says, or pick another heat in the run order. |
+| {#err-controlwhy-pause} “Only a running heat can be paused.” | Under a grey button on the head console (laptop and phone) | Pause is grey: the heat is not running. | Do what the sentence says, or pick another heat in the run order. |
+| {#err-controlwhy-resume} “Only a paused heat can be resumed.” | Under a grey button on the head console (laptop and phone) | Resume is grey: the heat is not paused. | Do what the sentence says, or pick another heat in the run order. |
+| {#err-controlwhy-end} “Only a running or paused heat can be ended.” | Under a grey button on the head console (laptop and phone) | End heat is grey: the heat is not running or paused. | Do what the sentence says, or pick another heat in the run order. |
+| {#err-controlwhy-live} “Available while a heat is running or paused.” | Under a grey button on the head console (laptop and phone) | The live-scores switch works only during a heat. | Do what the sentence says, or pick another heat in the run order. |
+| {#err-controlwhy-cancel} “Available while the heat is running, paused, ended or under review.” | Under a grey button on the head console (laptop and phone) | Cancel heat is grey before the heat starts or after it is published. | Do what the sentence says, or pick another heat in the run order. |
+| {#err-controlwhy-rerunpublished} “Re-open the heat instead.” | Under a grey button on the head console (laptop and phone) | Re-run is grey on a published heat. | Re-open the heat, correct it, Publish again. |
+| {#err-controlwhy-publish} “Available once the heat has ended.” | Under a grey button on the head console (laptop and phone) | Publish is grey until the heat has ended. | Press End heat (or wait for the clock). |
+| {#err-controlwhy-reopen} “Only a published heat can be re-opened.” | Under a grey button on the head console (laptop and phone) | Re-open is grey: the heat is not published. | Do what the sentence says, or pick another heat in the run order. |
+| {#err-controlwhy-blockers} “‹n› things to fix first (see Details)” | Under a grey button on the head console (laptop and phone) | Publish is grey: the listed things block it. | Open Details (phone) or read “Before you publish” (laptop); fix them or Publish with a reason. |
+
+### Head console
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-heatcontrol-noplan} “No run order is active for today, so the heats are listed by division.” | Head console run-order list | The console lists heats by division because no run order is active for today. | Run order step → pick today → Activate this plan. |
+| {#err-headv2-notnext} “Not the next heat in the run order — ‹next› was next” | Head console top bar | You pressed Start on a heat that is not next in the active run order. | Start anyway (the timetable re-flows) or Don’t start. |
+| {#err-headv2-breaknone-no-plan} “No countdown: there is no active run order.” | Head console top bar | The console explains why the countdown or the start is not as expected. | Run order step → Activate this plan for today. |
+| {#err-headv2-breaknone-nothing-next} “No countdown: no heat is left in the run order.” | Head console top bar | The console explains why the countdown or the start is not as expected. | Follow the sentence. |
+| {#err-headv2-breaknone-no-time} “No countdown: the next heat has no start time yet.” | Head console top bar | The console explains why the countdown or the start is not as expected. | Run order step → pin a start time on the first row. |
+| {#err-publish-nomodel} “This division has no usable scoring rules, so it cannot be published.” | Head console → Publish | Publish refused. | Divisions → the division → Scoring tab → choose a preset → Save. |
+| {#err-publish-downstream} “‹names› has already started — this correction would change who rides in it. Nothing was changed.” | Head console → Publish | Re-publishing would change who rides in a later heat that has already started. | Leave the result, or reset the later heat first. |
+| {#err-headlive-publishnooverride} “A tie is settled by choosing the order, never by a reason.” | Head console dialogs | The head console needs a decision or a reason first. | Press Choose order and set the order of the tied riders. |
+| {#err-headlive-agreementwait} “Shown once the heat has ended.” | Head console dialogs | The head console needs a decision or a reason first. | Follow the sentence. |
+| {#err-headlive-flagoutundecided} “Two riders are tied at the cut: choose who is flagged out.” | Head console dialogs | The head console needs a decision or a reason first. | Tick the rider to flag out. |
+| {#err-headlive-pastcapneedsreason} “That rider has used every attempt. Adding one more is saved with your reason.” | Head console dialogs | The head console needs a decision or a reason first. | Follow the sentence. |
+| {#err-headlive-pastcapnotallowed} “Only the head judge can add an attempt past the cap.” | Head console dialogs | An organiser or head judge seat is needed to add an attempt past the cap. | Follow the sentence. |
+| {#err-headlive-practicenoheat} “Start a heat first: the feed plays into the running heat.” | Head console dialogs | The head console needs a decision or a reason first. | Start a heat, then Start the practice feed. |
+
+### Head console, judge and spotter (database answers)
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-liveerrors-network} “No connection. It will be sent when the connection is back.” | Head console, judge and spotter screens, Go live quick actions | The phone has no connection. The action waits in the phone's queue and is sent when the connection is back (no duplicates). | Keep the page open; move toward the hotspot. |
+| {#err-liveerrors-unknown} “Something went wrong. Try again.” | Head console, judge and spotter screens, Go live quick actions | An answer the screen does not know. | Nothing was saved. Check the connection and press the button again. If it keeps failing, note the time and tell the owner (the server log names the cause). |
+| {#err-liveerrors-codes-not-allowed} “You are not allowed to do that.” | Head console, judge and spotter screens, Go live quick actions | This login or seat may not do this (wrong role, another event, or the seat was switched off). | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-heat-not-found} “That heat no longer exists.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-heat-not-running} “The heat is not running.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-heat-time-up} “Time is up for this heat.” | Head console, judge and spotter screens, Go live quick actions | The heat's clock reached zero; the server treats it as ended. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-heat-published} “This heat is already published.” | Head console, judge and spotter screens, Go live quick actions | A published heat cannot change. | Head judge: Re-open, correct, Publish again (a new version). |
+| {#err-liveerrors-codes-illegal-heat-transition} “The heat cannot do that in its current state.” | Head console, judge and spotter screens, Go live quick actions | For example Pause on a heat that is not running. | Reload; the buttons show what the heat can do now. |
+| {#err-liveerrors-codes-use-heat-functions} “Use the heat buttons to change a heat.” | Head console, judge and spotter screens, Go live quick actions | A heat's state changes only through Start / Pause / Resume / End / Publish. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-draw-not-locked} “Draw for ‹division› is not locked — lock it in the Draw step” | Head console, judge and spotter screens, Go live quick actions | A heat can start only when its division's draw is locked. | Draw step → Lock draw. |
+| {#err-liveerrors-codes-panel-too-small} “‹division› needs ‹need› judges on its panel and has ‹have› — add judges in the Officials step” | Head console, judge and spotter screens, Go live quick actions | Fewer judges are on the division's panel than its scoring rules need. | Officials → Panels: tick more judges, or lower “Number of judges” in Divisions → Scoring. |
+| {#err-liveerrors-codes-seats-not-filled} “‹n› seats in this heat still wait for a rider — finish the earlier heats first, or fill the seat in the Draw step” | Head console, judge and spotter screens, Go live quick actions | A seat still shows a placeholder such as “1st H1”: the heat that feeds it is not published. | Publish the earlier heat, or place a rider in the seat in the Draw step. |
+| {#err-liveerrors-codes-heat-already-running} “Another heat is already running (‹max› at a time). End it first, or ask the organiser to allow more in the Event step” | Head console, judge and spotter screens, Go live quick actions | The event allows only this many heats running (or paused) at once. | End the other heat, or raise “Heats that can run at the same time” in the Event step. |
+| {#err-liveerrors-codes-reason-required} “A reason is required.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Type a reason; it is written to the audit log. |
+| {#err-liveerrors-codes-override-reason-required} “A reason is required.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Type a reason; it is written to the audit log. |
+| {#err-liveerrors-codes-plan-not-found} “That run order no longer exists.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-plan-not-active} “Only the active run order can be changed.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Run order step → Activate this plan. |
+| {#err-liveerrors-codes-plan-changed} “The run order changed while you were pressing. Press again.” | Head console, judge and spotter screens, Go live quick actions | Two people changed the run order at the same moment. | Press again. |
+| {#err-liveerrors-codes-bad-plan-value} “That time is not valid.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-nothing-to-shift} “Nothing is left to shift: every heat has started.” | Head console, judge and spotter screens, Go live quick actions | Shift moves only heats that have not started. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-not-on-hold} “The run order is not on hold.” | Head console, judge and spotter screens, Go live quick actions | Resume at works only while the run order is on hold. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-on-hold} “The run order is on hold: use Resume at instead of Shift.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Use Resume at (pick the restart time). |
+| {#err-liveerrors-codes-no-active-plan} “There is no active run order for today.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Run order step → pick today → Activate this plan. |
+| {#err-liveerrors-codes-attempt-cap-reached} “That rider is out of attempts.” | Head console, judge and spotter screens, Go live quick actions | The rider used every attempt the division allows. | Only the head judge adds one more, with a reason. |
+| {#err-liveerrors-codes-publish-blocked} “Something still blocks Publish. See the list.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Read “Before you publish”; fix each line, or Publish with a reason (ties must be ordered, never overridden). |
+| {#err-liveerrors-codes-sheets-not-submitted} “‹n› judges have not submitted yet. Give a reason to go on without them.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Wait for the judges' Submit, or Publish with a reason. |
+| {#err-liveerrors-codes-version-conflict} “The result changed while you were pressing. Look at it again.” | Head console, judge and spotter screens, Go live quick actions | Someone published or re-opened the heat at the same moment. | Look at the heat again, then act. |
+| {#err-liveerrors-codes-heat-not-ended} “End the heat before publishing it.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Press End heat first. |
+| {#err-liveerrors-codes-heat-not-editable} “This heat cannot be changed in its current state.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-heat-cancelled} “This heat was cancelled.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Re-run the heat instead (head console). |
+| {#err-liveerrors-codes-heat-already-rerun} “This heat has already been re-run.” | Head console, judge and spotter screens, Go live quick actions | A cancelled heat can be re-run once. | Work on the re-run heat (for example H1R). |
+| {#err-liveerrors-codes-not-on-panel} “That judge is not on this division's panel.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Officials → Panels: tick the judge for the division. |
+| {#err-liveerrors-codes-score-required} “Enter a score.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-score-off-step} “That score is not on the scale's step.” | Head console, judge and spotter screens, Go live quick actions | The scale's step (for example 0.5) does not allow this value. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-score-out-of-range} “That score is outside the scale.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-score-missing-criterion} “Enter every criterion.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-no-impression} “This division's rules have no Impression / Variety score.” | Head console, judge and spotter screens, Go live quick actions | The division's scoring rules have no Impression / Variety score. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-not-same-rider} “Only attempts of the same rider can be merged.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-bad-merge} “Choose two different attempts.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-bad-status} “That is not a valid state for an attempt.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-bad-direction} “Direction is left or right.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-bad-modifier} “That is not a valid status for a rider.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-bad-penalty} “That is not a valid penalty.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-bad-tie} “Choose at least two riders.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-penalty-not-found} “That penalty no longer exists.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-flag-not-found} “That flag no longer exists.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-flag-out-not-available} “This format has no flag-out.” | Head console, judge and spotter screens, Go live quick actions | The format has no flag-out for this round. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-flag-out-too-many} “This format flags out at most ‹n› riders.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-heat-not-started} “This heat has not started. Start it instead.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Press Start heat. |
+| {#err-liveerrors-codes-bad-rerun-name} “That name for the re-run is not valid.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-bad-leave-out} “Choose Disqualified or Did not start for riders who do not ride again.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-bad-plan-items} “The run order changed while you were pressing. Press again.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-not-a-simulation} “Practice heats run only on a simulation event.” | Head console, judge and spotter screens, Go live quick actions | The Practice heat feed plays only on a simulation event. | Use Run as simulation, or tick Simulation event before any heat starts. |
+| {#err-liveerrors-codes-simulation-locked} “A heat of this event has already started, so this can no longer be changed.” | Head console, judge and spotter screens, Go live quick actions | “Simulation event” can be changed only before the first heat starts. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-downstream-started} “A later heat has already started, so this correction would change who rides in it. Nothing was changed.” | Head console, judge and spotter screens, Go live quick actions | The result already filled a seat of a heat that has started; changing it now would change who rode. | Reset or finish the later heat first, or leave the result. |
+| {#err-liveerrors-codes-draw-mismatch} “The stored draw does not match this heat. Nothing was changed.” | Head console, judge and spotter screens, Go live quick actions | The stored draw and this heat disagree (it was changed elsewhere). | Reload the page; if it repeats, tell the owner. |
+| {#err-liveerrors-codes-rider-not-in-heat} “That rider is not in this heat.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-rider-not-riding} “That rider is not riding (did not start, or flagged out).” | Head console, judge and spotter screens, Go live quick actions | The rider is DNS or flagged out. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-attempt-not-found} “That attempt no longer exists.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-client-key-reused} “That tap was already used for another heat.” | Head console, judge and spotter screens, Go live quick actions | A queued tap from an earlier heat was sent again. | Reload the page. |
+| {#err-liveerrors-codes-undo-too-late} “Too late to undo: ask the head judge to delete it.” | Head console, judge and spotter screens, Go live quick actions | Undo works for 10 seconds after logging. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-sheet-locked} “Your sheet is locked. Ask the head judge to reopen it.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Head judge reopens the sheet. |
+| {#err-liveerrors-codes-impression-missing} “‹n› riders have no Impression / Variety score from you yet.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Give each rider an Impression / Variety score, then Submit. |
+| {#err-liveerrors-codes-impression-not-open} “The Impression / Variety score opens when the heat has ended.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Wait for the head judge to end the heat. |
+| {#err-liveerrors-codes-not-scorable} “A crash is not scored.” | Head console, judge and spotter screens, Go live quick actions | A crashed attempt has nothing to score. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-flag-not-applicable} “That flag does not fit this attempt.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-bad-flag} “That flag is not valid.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-entry-not-in-division} “That rider is not in this division.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+| {#err-liveerrors-codes-parent-not-found} “That item no longer exists.” | Head console, judge and spotter screens, Go live quick actions | The database refused the action and said why. | Follow the sentence; the dependency map names what must be true first. |
+
+### Judge and spotter phones
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-live-connection-failed} “Failed — tap to retry” | Judge and spotter screens | A score or attempt failed to send after retries. | Tap the badge to retry. If it still fails, read the sentence; the head judge can type the score on the console. |
+| {#err-live-queue-memoryonly} “This phone cannot keep unsent scores through a reload. Keep this page open until it says Synced.” | Judge and spotter screens | The phone's browser does not keep unsent scores through a reload (private mode or storage blocked). | Keep the page open until Synced; on iPhone use the home-screen app. |
+| {#err-live-builder-micdenied} “The microphone is not allowed on this phone. Type the trick instead.” | Judge and spotter screens | The phone could not do what was asked. | Allow the microphone in the phone's settings, or type the trick. |
+| {#err-live-builder-micfailed} “Could not hear that. Try again or type it.” | Judge and spotter screens | The phone could not do what was asked. | Follow the sentence. |
+| {#err-live-impression-submitwaiting} “Submit is on when every rider has a score” | Judge and spotter screens | Submit is grey until every rider has an Impression / Variety score. | Follow the sentence. |
+| {#err-live-impression-submitted} “Submitted. Ask the head judge to reopen it.” | Judge and spotter screens | The sheet is submitted and locked. | Head judge: console → judge's row → reopen the sheet. |
+| {#err-judge-locked} “Your sheet is locked. Ask the head judge to reopen it.” | Judge screen | The judge submitted the sheet; scores are locked. | Head judge reopens the sheet, or edits the score with a reason on the console. |
+| {#err-judge-reviewlocked} “The head judge has taken this heat into review. Your scores are locked.” | Judge screen | The heat is under review; judges' scores are locked. | Tell the head judge the correction; they edit it on the console with a reason. |
+| {#err-judge-notonpanel} “You are not on the panel of a heat that is running.” | Judge screen | The running heat's division does not have this judge on its panel. | Organiser: Officials → Panels → tick the judge for that division. |
+| {#err-judge-stillsending} “Still sending your scores. Try Submit again when it says Synced.” | Judge screen | The judge's scores cannot be changed or sent right now. | Wait for Synced (check signal), then Submit. |
+| {#err-spotter-paused} “Paused — logging is off until the head judge resumes.” | Spotter screen | The head judge paused the heat. | Follow the sentence. |
+| {#err-spotter-notrunning} “The heat is not running, so nothing can be logged.” | Spotter screen | The heat has not started, ended, or time is up. | Follow the sentence. |
+| {#err-spotter-outofattempts} “‹label› is out of attempts · ‹n› / ‹max›” | Spotter screen | The rider used the division's attempt cap. Their Rider label is grey. | Only the head judge can add one more, with a reason (console → Add attempt). |
+| {#err-spotter-refusedcap} “‹label› is out of attempts (‹max› / ‹max›) — that attempt was not logged” | Spotter screen | The server refused an attempt past the cap (two phones raced, or the phone was stale). | Head judge adds it with a reason if it really happened. |
+| {#err-spotter-refusedother} “Not logged for ‹label›: ‹why›” | Spotter screen | The server refused the attempt; the reason follows the colon. | Follow the sentence. |
+| {#err-spotter-undofailed} “Could not undo: ‹why›” | Spotter screen | Undo works for 10 seconds after logging. | Ask the head judge to delete the attempt. |
+
+### Officials joining
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-join-errors-invalid-pin} “That event code or PIN is not recognised. Check the card you were given and try again.” | Join page (/join or /e/‹event›/join) | The event code or the 6-digit PIN does not match an active seat. | Check the event code (the last part of the event address) and the PIN on the card. The organiser sees every PIN in Officials → Show PIN, or makes a new one with Regenerate PIN. |
+| {#err-join-errors-invalid-token} “This QR code has already been used or has expired. Ask the organiser for a new card, or type your PIN instead.” | Join page (/join or /e/‹event›/join) | A QR card works once; printing the cards again makes the older QR codes stop working. | Type the PIN instead, or print a fresh card (Officials → Print card). |
+| {#err-join-errors-rate-limited} “Too many wrong tries. Wait ten minutes, or ask the organiser for help.” | Join page (/join or /e/‹event›/join) | Too many wrong PINs from this connection. | Wait ten minutes, or let the organiser read the PIN out from Officials → Show PIN. |
+| {#err-join-errors-seat-locked} “This seat is locked to another phone. Ask the organiser to unlock it.” | Join page (/join or /e/‹event›/join) | The seat is held by another phone. | Organiser: Officials → Regenerate PIN for the seat (signs the old phone out), then join with the new PIN. |
+| {#err-join-errors-no-session} “Your phone could not start a session. Check your connection and try again.” | Join page (/join or /e/‹event›/join) | The phone could not start its anonymous session (no signal, or private mode blocks storage). | Check the connection; on iPhone join from the home-screen app, not a private tab. |
+| {#err-join-errors-organiser-session} “This browser is signed in as an organiser. Use another browser or a private window to join as a judge or spotter.” | Join page (/join or /e/‹event›/join) | This browser is signed in as an organiser; a seat needs its own session. | Use another browser or a private window to join as an official. |
+| {#err-join-othererror} “Something went wrong. Please try again.” | Join page (/join or /e/‹event›/join) | An unexpected answer from the server. | Nothing was saved. Check the connection and press the button again. If it keeps failing, note the time and tell the owner (the server log names the cause). |
+| {#err-join-selfadd-errors-event-not-found} “This event is not taking requests.” | Join page (/join or /e/‹event›/join) | The event is not published or not taking requests. | Follow the sentence; the organiser can regenerate a PIN in the Officials step. |
+| {#err-join-selfadd-errors-rate-limited} “Too many tries from this connection. Wait a little and try again.” | Join page (/join or /e/‹event›/join) | Joining with the event code and PIN (or QR card) did not work. | Follow the sentence; the organiser can regenerate a PIN in the Officials step. |
+| {#err-join-selfadd-errors-invalid-name} “Enter your name (2 to 60 characters).” | Join page (/join or /e/‹event›/join) | Joining with the event code and PIN (or QR card) did not work. | Follow the sentence; the organiser can regenerate a PIN in the Officials step. |
+| {#err-join-selfadd-errors-invalid-role} “Choose judge, spotter or announcer.” | Join page (/join or /e/‹event›/join) | Joining with the event code and PIN (or QR card) did not work. | Follow the sentence; the organiser can regenerate a PIN in the Officials step. |
+| {#err-join-selfadd-errors-invalid-phone} “That phone number is too long.” | Join page (/join or /e/‹event›/join) | Joining with the event code and PIN (or QR card) did not work. | Follow the sentence; the organiser can regenerate a PIN in the Officials step. |
+| {#err-join-selfadd-errors-too-many-pending} “Too many people are already waiting. Ask the organiser in person.” | Join page (/join or /e/‹event›/join) | Many requests are already waiting for approval. | Organiser: Officials → Waiting for approval → approve or decline. |
+| {#err-join-selfadd-failed} “That did not work. Nothing was sent; try again in a moment.” | Join page (/join or /e/‹event›/join) | The request did not reach the server. | Nothing was saved. Check the connection and press the button again. If it keeps failing, note the time and tell the owner (the server log names the cause). |
+| {#err-seat-switchedoff} “✖ This seat has been switched off by the organiser.” | Seat page (/seat) | The organiser switched this seat off in the Officials step. | Organiser: Officials → the seat → Switch on. |
+| {#err-seat-noseat} “This phone does not hold a seat yet.” | Seat page (/seat) | This phone has not joined yet, or its seat was regenerated. | Join with the PIN. |
+
+### Organiser sign-in
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-login-linkfailed} “That sign-in link did not work. It may have expired, or it was opened in a different browser than the one you asked from. Ask for a new one below.” | Organiser sign in (/org/login) | The sign-in link expired, was used already, or was opened in a different browser from the one that asked for it. | Ask for a new link and open it on the same phone or computer, in the same browser. |
+| {#err-login-notregistered} “That email address is not registered as an organiser. Ask the owner to add you.” | Organiser sign in (/org/login) | Sign-in is invite-only: this email has no organiser login. | The platform owner invites the address (Admin → organisation → Invite organiser). |
+| {#err-login-toomany} “Too many sign-in emails were requested. Wait a few minutes (up to an hour) and try again.” | Organiser sign in (/org/login) | The hosted email service sends only a few sign-in emails per hour. | Wait up to an hour, or sign in with a password (set one once from the account menu → Set or change password). |
+| {#err-login-couldnotsend} “The sign-in email could not be sent. Check the address and your connection, then try again.” | Organiser sign in (/org/login) | The email service refused or could not be reached. | Follow the sentence. The link must be opened in the same browser that asked for it. |
+| {#err-login-linkexpired} “That sign-in link has already been used or has expired: each link works once, for 24 hours. Ask for a new one below (Forgot password?) or ask the person who invited you to send another.” | Organiser sign in (/org/login) | Each sign-in link works once, for 24 hours; this one was used or is older. | Ask for a new one with “Forgot password?” (once a password is set) or ask the platform owner to send another invitation. |
+| {#err-login-wrongpassword} “That email address and password do not match. Check them and try again, or sign in with a link.” | Organiser sign in (/org/login) | The email and password do not match. | Check them, or use “Sign in with a link instead”. |
+| {#err-login-forgotneedsemail} “Type your email address above first, then press “Forgot password?” again.” | Organiser sign in (/org/login) | Signing in did not work. | Follow the sentence. The link must be opened in the same browser that asked for it. |
+| {#err-login-notanorganiser} “That account is not an organiser. Ask the owner to add you.” | Organiser sign in (/org/login) | The login exists but belongs to no organisation. | The platform owner adds it to an organisation. |
+| {#err-setpassword-tooshort} “Use at least ‹n› characters.” | Set or change password | The password could not be set. | Follow the sentence. |
+| {#err-setpassword-mismatch} “The two passwords are not the same.” | Set or change password | The password could not be set. | Follow the sentence. |
+| {#err-setpassword-couldnotsave} “The password could not be saved. Sign in with a link again, then try once more.” | Set or change password | The sign-in session is too old to change the password. | Sign in with a link again, then set the password. |
+
+### Organiser: Divisions
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-divisions-firstdivision} “This is already the first division.” | Divisions step (step 2) | The ↑ button is grey: this division is already first. | Nothing to fix. |
+| {#err-divisions-lastdivision} “This is already the last division.” | Divisions step (step 2) | The ↓ button is grey: this division is already last. | Nothing to fix. |
+| {#err-divisions-nametooshort} “Type a name of at least 2 letters.” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-hasheats} “This division has heats, so it cannot be deleted.” | Divisions step (step 2) | A division with heats (a draw was made) cannot be deleted: it would delete the draw and any results. | Keep it, or rename it. To start the division again use Reset this division. |
+| {#err-divisions-identification-fixfirst} “Fix the problems listed first.” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-identification-switchoff} “The event does not allow a different scheme per division yet. Tick “Allow a different scheme for individual divisions” in the Event step first.” | Divisions step (step 2) | The division change was refused. | Event step → Rider identification → tick “Allow a different scheme for individual divisions”, Save event, then come back. |
+| {#err-divisions-identification-ownkeptbutoff} “This division has its own scheme saved, but the event’s switch is off, so the event’s scheme is used until you turn it on again.” | Divisions step (step 2) | The division's own scheme is kept but not used while the event's switch is off. | Follow the sentence. |
+| {#err-divisions-identification-errors-invalid} “That scheme is not valid yet.” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-identification-errors-locked} “A heat of this division has started: the Rider label cannot be changed any more.” | Divisions step (step 2) | Once a heat of the division has started, the Rider label is fixed so every screen keeps showing riders the same way. | Follow the sentence. |
+| {#err-divisions-identification-errors-failed} “That did not work. Nothing was changed; try again.” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-errors-namemin} “Give the division a name (at least 2 characters).” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-errors-namemax} “That name is too long (60 characters at most).” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-errors-unknownevent} “Unknown event.” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-errors-notfound} “That division was not found.” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-errors-failed} “That did not work. Nothing was changed; try again.” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-errors-ruleslocked} “Scoring and format are locked because a heat of this division has started. Unlock them with a written reason first.” | Divisions step (step 2) | Scoring and format lock at the first heat of the division so results already entered keep their meaning. | Divisions → the division → “Unlock scoring and format” with a reason of at least 5 characters (written to the audit log). |
+| {#err-divisions-errors-hasheats} “This division already has heats, so it cannot be deleted.” | Divisions step (step 2) | A division with heats cannot be deleted. | Keep it, or use Reset this division. |
+| {#err-divisions-errors-reason} “Write a reason (at least 5 characters).” | Divisions step (step 2) | The division change was refused. | Write at least 5 characters, for example “wind dropped, shorter heats”. |
+| {#err-divisions-errors-notallowed} “You do not have permission to do that.” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-errors-presetnotfound} “That preset was not found.” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-errors-presetinvalid} “The chosen preset is not valid.” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-errors-notvalidtogether} “These settings are not valid together.” | Divisions step (step 2) | The division change was refused. | Read the list of problems above the Save button and fix each one. |
+| {#err-divisions-errors-presetname} “Give the preset a name (2 to 80 characters).” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-errors-presetnotvalid} “The settings are not valid yet, so they cannot be saved as a preset.” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-errors-onlyown} “Only your own presets can get new versions. Use “Save as new preset” for built-in ones.” | Divisions step (step 2) | Built-in presets never change. | Use “Save as new preset”. |
+| {#err-divisions-errors-presetsavefailed} “The preset could not be saved. Nothing was changed; try again.” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-divisions-errors-cannotimport} “This file cannot be imported.” | Divisions step (step 2) | The division change was refused. | Follow the sentence. |
+| {#err-rules-loadlocked} “Unlock the rules first to load a different set.” | Divisions step → Scoring or Format tab | The Load… menu is grey because the rules are locked (a heat has started). | Unlock scoring and format with a reason first. |
+| {#err-rules-unlockneedsreason} “Write a reason of at least 5 characters first.” | Divisions step → Scoring or Format tab | The Unlock button is grey until a reason is typed. | Follow the sentence. |
+| {#err-rules-saveinvalid} “Fix the problems listed above first.” | Divisions step → Scoring or Format tab | The Save button is grey while a setting has a problem. | Follow the sentence. |
+| {#err-rules-presetneedsname} “Give the preset a name of at least 2 characters first.” | Divisions step → Scoring or Format tab | The scoring or format panel needs something first. | Follow the sentence. |
+| {#err-rules-pasteempty} “Paste the text first.” | Divisions step → Scoring or Format tab | The scoring or format panel needs something first. | Follow the sentence. |
+| {#err-rules-startfrommissing} “That format is not available to start from.” | Divisions step → Scoring or Format tab | The scoring or format panel needs something first. | Follow the sentence. |
+| {#err-formatsimple-pointsinvalid} “Write the points for 1st, 2nd, 3rd … separated by commas, e.g. 4, 3, 2, 1” | Divisions step → Format tab | The format's numbers do not fit together. | Change the highlighted number; the preview comes back when the format can run. |
+| {#err-formatsimple-perround-emptyinvalid} “The rounds cannot be listed yet because the format has a problem (see the notice below). Fix it and the table fills in.” | Divisions step → Format tab | The format's numbers do not fit together. | Change the highlighted number; the preview comes back when the format can run. |
+| {#err-formatsimple-perround-empty} “No rounds to list yet: the preview cannot run with the current settings. Check the number in "Preview with" and the ladder settings.” | Divisions step → Format tab | The format's numbers do not fit together. | Change the number in “Preview with” or the ladder settings until the preview shows rounds. |
+| {#err-formatsimple-fixfirst} “Fix the highlighted settings to see the preview.” | Divisions step → Format tab | The format's numbers do not fit together. | Change the highlighted number; the preview comes back when the format can run. |
+| {#err-formatsimple-minabovetarget} “the minimum per heat cannot be more than the target” | Divisions step → Format tab | The format's numbers do not fit together. | Change the highlighted number; the preview comes back when the format can run. |
+| {#err-formatsimple-maxbelowtarget} “the maximum per heat cannot be less than the target” | Divisions step → Format tab | The format's numbers do not fit together. | Change the highlighted number; the preview comes back when the format can run. |
+| {#err-formatsimple-finaleven} “the final takes the same number of riders from each draw, so its size must be even” | Divisions step → Format tab | Double elimination takes the same number of riders from the main and second-chance draws into the final. | Change the highlighted number; the preview comes back when the format can run. |
+| {#err-custombuilder-noriders} “‹name› gets no riders: send at least one place to it.” | Divisions step → Format tab → Custom ladder checker | The ladder you are drawing has a problem the checker found. | Fix the red point it names; then Apply to draw is on. |
+| {#err-custombuilder-sizes} “‹name› receives ‹riders› riders in ‹heats› heats of ‹lo›–‹hi›, but the limits are ‹min› to ‹max› per heat.” | Divisions step → Format tab → Custom ladder checker | The ladder you are drawing has a problem the checker found. | Fix the red point it names; then Apply to draw is on. |
+| {#err-custombuilder-eliminatesnobody} “‹round›: ‹detail›. Send fewer places on, or make the heats bigger.” | Divisions step → Format tab → Custom ladder checker | The ladder you are drawing has a problem the checker found. | Fix the red point it names; then Apply to draw is on. |
+| {#err-custombuilder-lastround} “The last round, ‹name›, has ‹heats› heats: the ladder should end in one heat.” | Divisions step → Format tab → Custom ladder checker | A ladder should end in a single final heat. | Fix the red point it names; then Apply to draw is on. |
+| {#err-ladder-cannotrun} “With ‹n› riders: this format cannot run (‹why›)” | Format preview and Draw step | The format's numbers do not fit this field size (too few riders, or nobody would be knocked out). | Change the number of riders per heat, how many advance, or pick another format. |
+| {#err-builder-failed} “That did not work. Nothing was changed.” | Divisions step → Format tab → Custom ladder | The custom ladder could not be applied to the draw. | Follow the sentence. |
+| {#err-builder-applyblocked} “Fix the red points first.” | Divisions step → Format tab → Custom ladder | Apply to draw is grey while the checker shows red points. | Follow the sentence. |
+| {#err-builder-applynoriders} “Add confirmed riders first (Riders step).” | Divisions step → Format tab → Custom ladder | Apply to draw is grey: no rider is Confirmed. | Follow the sentence. |
+| {#err-builder-drawlocked} “The draw is locked, so it cannot be replaced. Unlock it in the Draw step first.” | Divisions step → Format tab → Custom ladder | The custom ladder could not be applied to the draw. | Draw step → Unlock draw with a reason, then apply. |
+| {#err-builder-drawstarted} “A heat has started, so the draw cannot be replaced.” | Divisions step → Format tab → Custom ladder | A heat has started, so the whole draw cannot be replaced. | Change seats in the Draw step, or Reset this division first. |
+| {#err-presets-notjson} “This file is not valid JSON‹where›. ‹detail›” | Divisions step → Import a JSON file | The file cannot be imported as a scoring preset or format. | Use a file exported with Export as JSON from the same tab. |
+| {#err-presets-toolarge} “This file is larger than ‹kb› KB, which is far more than a ‹noun› needs. Is it the right file?” | Divisions step → Import a JSON file | The file cannot be imported as a scoring preset or format. | Use a file exported with Export as JSON from the same tab. |
+| {#err-presets-notobject} “A ‹noun› file must contain one JSON object (starting with “{”).” | Divisions step → Import a JSON file | The file cannot be imported as a scoring preset or format. | Use a file exported with Export as JSON from the same tab. |
+| {#err-presets-wrongkind} “This looks like a ‹other›, not a ‹noun›. Import it in the matching place.” | Divisions step → Import a JSON file | The file cannot be imported as a scoring preset or format. | Import a scoring file in the Scoring tab and a format file in the Format tab. |
+| {#err-friendly-enternumber} “Enter a number” | Any settings form (More settings) | A field holds a value it cannot take. | Type a value the sentence asks for. |
+| {#err-friendly-needed} “This is needed” | Any settings form (More settings) | A field holds a value it cannot take. | Type a value the sentence asks for. |
+| {#err-friendly-sectionneeded} “This section is needed” | Any settings form (More settings) | A field holds a value it cannot take. | Type a value the sentence asks for. |
+| {#err-friendly-wholenumber} “Enter a whole number” | Any settings form (More settings) | A field holds a value it cannot take. | Type a value the sentence asks for. |
+| {#err-friendly-atleast} “Must be at least ‹n›” | Any settings form (More settings) | A field holds a value it cannot take. | Type a value the sentence asks for. |
+| {#err-friendly-atmost} “Must be at most ‹n›” | Any settings form (More settings) | A field holds a value it cannot take. | Type a value the sentence asks for. |
+| {#err-friendly-pickone} “Pick one of the options” | Any settings form (More settings) | A field holds a value it cannot take. | Type a value the sentence asks for. |
+| {#err-friendly-numberslist} “Type numbers separated by commas, like 1, 0.75, 0.5” | Any settings form (More settings) | A field holds a value it cannot take. | Type a value the sentence asks for. |
+| {#err-friendly-cannotedit} “‹label›: this setting cannot be edited here.” | Any settings form (More settings) | A field holds a value it cannot take. | Type a value the sentence asks for. |
+| {#err-friendly-addcategoriesfirst} “Add trick categories first; limits are set per category.” | Any settings form (More settings) | A field holds a value it cannot take. | Type a value the sentence asks for. |
+| {#err-trickbase-lockednote} “A heat of this division has started: blocks can still be added, but a ticked block cannot be unticked.” | Divisions step → Trick base tab | After the first heat of a division, ticked blocks stay ticked so the spotter's screen does not lose a trick mid-event. | Follow the sentence. |
+| {#err-trickbase-cannotuntick} “A heat has started, so this block cannot be removed any more.” | Divisions step → Trick base tab | The box is grey: a heat has started. | Follow the sentence. |
+| {#err-trickbase-errors-family} “Choose one of the five families.” | Divisions step → Trick base tab | The trick base change was refused. | Follow the sentence. |
+| {#err-trickbase-errors-empty} “Give the block a name.” | Divisions step → Trick base tab | The trick base change was refused. | Follow the sentence. |
+| {#err-trickbase-errors-toolong} “That name is too long (‹n› characters at most).” | Divisions step → Trick base tab | The trick base change was refused. | Follow the sentence. |
+| {#err-trickbase-errors-exists} ““‹l›” already exists in that family.” | Divisions step → Trick base tab | The trick base change was refused. | Follow the sentence. |
+| {#err-trickbase-errors-locked} “A heat has started, so blocks cannot be removed.” | Divisions step → Trick base tab | The trick base change was refused. | Follow the sentence. |
+| {#err-trickbase-errors-failed} “That did not work. Nothing was changed; try again.” | Divisions step → Trick base tab | The trick base change was refused. | Follow the sentence. |
+| {#err-trickbase-errors-novocabulary} “The master trick base could not be found. Ask the owner to seed the presets.” | Divisions step → Trick base tab | The trick base change was refused. | On a computer with the keys: npm run seed:presets. |
+| {#err-trickbase-admin-clash} “The master base already has a block with that name in that family.” | Divisions step → Trick base tab | The trick base change was refused. | Follow the sentence. |
+| {#err-trickbase-admin-owneronly} “Only platform owners can accept a proposal.” | Divisions step → Trick base tab | The trick base change was refused. | Follow the sentence. |
+
+### Organiser: Draw
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-draw-noformat} “Choose a format for this division first (Divisions step, Format tab).” | Draw step (step 5) | Generate draw is grey: the division has no format yet. | Divisions → the division → Format tab → choose a format → Save format. |
+| {#err-draw-noriders} “This division has no confirmed riders yet (Riders step).” | Draw step (step 5) | Generate draw is grey: no rider of the division is Confirmed. | Riders step → set riders to Confirmed (or approve registrations). |
+| {#err-draw-unlockreasonshort} “Write a reason of at least 5 characters.” | Draw step (step 5) | Unlock is grey until the reason has at least 5 characters. | Follow the sentence. |
+| {#err-draw-regeneraterefusedstarted} “A heat has started, so the draw cannot be regenerated.” | Draw step (step 5) | Once a heat of the division has started, the draw can no longer be made again. | Change single seats by hand, or Reset this division (Divisions step) to start the division over. |
+| {#err-draw-regeneraterefusedlocked} “The draw is locked. Unlock it (with a reason) to regenerate.” | Draw step (step 5) | A locked draw cannot be regenerated. | Unlock draw (with a reason), regenerate, lock again. |
+| {#err-draw-startednote} “A heat has started: started and finished heats cannot be changed (you can still rename them), and the draw cannot be regenerated.” | Draw step (step 5) | Heats that started or finished are fixed; later heats can still be changed by hand. | Follow the sentence. |
+| {#err-draw-lockedhelp} “The draw is locked: seats, heats and rounds cannot be changed. Unlock it with a reason if you must.” | Draw step (step 5) | Locked: seats, heats and rounds are frozen; heats can start. | Unlock draw with a reason only if you must change it. |
+| {#err-draw-droppednote} “Could not keep: ‹names› (they no longer fit).” | Draw step (step 5) | Regenerating kept your hand-arranged heats where they still fit; these did not. | Follow the sentence. |
+| {#err-draw-sheet-pngfailed} “The picture could not be made. Use Print / PDF instead.” | Draw step (step 5) | The browser could not make the picture. | Use Print / PDF and choose “Save as PDF”. |
+| {#err-draw-errors-locked} “The draw is locked. Unlock it (with a reason) to change it.” | Draw step (step 5) | The draw could not be made or changed. | Unlock draw (with a reason), change it, lock again. |
+| {#err-draw-errors-started} “A heat has started, so that cannot be changed.” | Draw step (step 5) | A started or finished heat cannot change. | Follow the sentence. |
+| {#err-draw-errors-notallowed} “You are not allowed to change this draw.” | Draw step (step 5) | The draw could not be made or changed. | Follow the sentence. |
+| {#err-draw-errors-noformat} “Choose a format for this division first.” | Draw step (step 5) | The draw could not be made or changed. | Follow the sentence. |
+| {#err-draw-errors-noriders} “There are no confirmed riders to draw.” | Draw step (step 5) | The draw could not be made or changed. | Follow the sentence. |
+| {#err-draw-errors-nodraw} “There is no draw yet.” | Draw step (step 5) | The draw could not be made or changed. | Follow the sentence. |
+| {#err-draw-errors-reasonrequired} “Write a reason of at least 5 characters.” | Draw step (step 5) | The draw could not be made or changed. | Follow the sentence. |
+| {#err-draw-errors-badformat} “The format cannot make a draw: ‹why›” | Draw step (step 5) | The draw could not be made or changed. | Divisions → Format tab: fix the format until its preview shows a ladder for this number of riders. |
+| {#err-draw-errors-failed} “That did not work. Nothing was changed.” | Draw step (step 5) | The draw could not be made or changed. | Follow the sentence. |
+
+### Organiser: event list and Event step
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-eventlifecycle-deleteblocked} “This event has published results (‹n›), so it cannot be deleted: results are permanent. Archive it instead.” | Delete or archive this event (platform owner only) | Published results are permanent. | Archive the event instead (hidden everywhere, nothing deleted). |
+| {#err-eventlifecycle-owneronly} “Only platform owners can delete or archive an event here.” | Delete or archive this event (platform owner only) | Delete and archive are platform-owner actions. | Follow the sentence. An event with published results can only be archived. |
+| {#err-eventlifecycle-errors-not-allowed} “You are not allowed to do this to that event.” | Delete or archive this event (platform owner only) | The event could not be deleted or archived. | Follow the sentence. An event with published results can only be archived. |
+| {#err-eventlifecycle-errors-slug-mismatch} “The web address you typed does not match. Nothing was deleted.” | Delete or archive this event (platform owner only) | The event could not be deleted or archived. | Type the event's web address exactly as shown under the box. |
+| {#err-eventlifecycle-errors-published-results} “This event has published results, so it cannot be deleted. Archive it instead.” | Delete or archive this event (platform owner only) | The event could not be deleted or archived. | Follow the sentence. An event with published results can only be archived. |
+| {#err-eventlifecycle-errors-generic} “That did not work. Nothing was changed; try again.” | Delete or archive this event (platform owner only) | The event could not be deleted or archived. | Follow the sentence. An event with published results can only be archived. |
+| {#err-orghome-noorg} “You are not a member of any organisation yet. Ask the product owner to add you.” | Events list (/org) | This login belongs to no organisation. | The platform owner invites the login as organiser of an organisation (Admin → Organisations → Invite organiser). |
+| {#err-logo-wrongtype} “That file is not a PNG, JPEG or WebP image. Save the logo as one of those and try again.” | Any logo or sponsor picture field | The picture was refused. | Use a PNG, JPEG or WebP file of at most 2 MB. |
+| {#err-logo-toobig} “That image is ‹mb› MB. The limit is 2 MB: export a smaller version and try again.” | Any logo or sponsor picture field | The picture was refused. | Use a PNG, JPEG or WebP file of at most 2 MB. |
+| {#err-logo-empty} “That file is empty.” | Any logo or sponsor picture field | The picture was refused. | Use a PNG, JPEG or WebP file of at most 2 MB. |
+| {#err-logo-uploadfailed} “The image could not be uploaded. Check your connection and try again.” | Any logo or sponsor picture field | The upload did not reach storage. | Check the connection and choose the file again. |
+| {#err-event-understandfirst} “Tick “I understand, change the address” first.” | Event step (step 1) | The event is published; changing its address breaks shared links and QR codes. | Tick “I understand, change the address”, then Save event. |
+| {#err-event-sponsorfirst} “This sponsor is already first.” | Event step (step 1) | The ↑ button is grey because this sponsor is at the top. | Nothing to fix. |
+| {#err-event-sponsorlast} “This sponsor is already last.” | Event step (step 1) | The ↓ button is grey because this sponsor is at the bottom. | Nothing to fix. |
+| {#err-event-simulationlocked} “A heat of this event has already started, so this can no longer be changed.” | Event step (step 1) | “Simulation event” can be switched only before any heat of the event has started. | Use Run as simulation on the Simulator page to rehearse a real event instead. |
+| {#err-event-fixthese} “Some settings need fixing. They are highlighted below.” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-notfound} “That event was not found, or you do not have access to it.” | Event step (step 1) | The event does not exist, or this login is not in its organisation. | Pick the organisation in the switcher at the top, then open the event from the events list. |
+| {#err-event-noorg} “You are not a member of an organisation.” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-savedenied} “The event could not be saved (no permission). Nothing was changed.” | Event step (step 1) | This login may not change the event (another organisation, or no membership). | Fix the highlighted field and press Save event again. |
+| {#err-event-slugtaken} “That web address is already used by another event.” | Event step (step 1) | The Event step could not be saved as it is. | Choose another web address (slug). |
+| {#err-event-notallowedvalue} “One of the values is not allowed. Check the highlighted fields.” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-savefailed} “The event could not be saved. Nothing was changed; try again.” | Event step (step 1) | The Event step could not be saved as it is. | Nothing was saved. Check the connection and press the button again. If it keeps failing, note the time and tell the owner (the server log names the cause). |
+| {#err-event-validation-namemin} “Give the event a name” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-namemax} “That name is too long (100 characters at most)” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-locationmax} “Location is too long” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-pickdate} “Pick a date” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-endbeforestart} “The last day cannot be before the first day” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-closesafterend} “Registration cannot close after the event has ended” | Event step (step 1) | The Event step could not be saved as it is. | Set the closing day on or before the event's last day. |
+| {#err-event-validation-usetime} “Use the form 18:30” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-wholenumber} “Use a whole number” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-maxperdivision} “Use a number from 1 to 500, or leave it empty for no limit” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-closedmessagemax} “The message is too long (300 characters at most)” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-timeneedsdate} “Choose the closing day as well as the time” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-slugmin} “The web address needs at least 2 characters” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-slugmax} “The web address can be at most 60 characters” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-slugchars} “Use only lowercase letters, numbers and hyphens, starting with a letter or number” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-sponsorname} “give the sponsor a name” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-sponsorurl} “a full web address, starting with https://” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-leaderboardtitle} “give the leaderboard a short title (up to 40 letters)” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-leaderboardurl} “a full web address, starting with https://” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-leaderboardsmax} “at most 6 extra leaderboards” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-sponsorsmax} “at most 20 sponsors” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-usedate} “use a date” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-timezone} “Not a known time zone (for example Africa/Cairo)” | Event step (step 1) | The Event step could not be saved as it is. | Pick a time zone from the list, for example Africa/Cairo. |
+| {#err-sluglink-copyfailed} “Could not copy: select the link and copy it by hand.” | Public link copy button | The browser did not allow copying. | Select the link and copy it by hand. |
+
+### Organiser: Go live
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-readiness-pinhint} “Seats made before PINs were stored show here. Open Officials and choose Regenerate PIN.” | Go live checklist | A seat made before PINs were stored has no PIN the screen can show; its phone still joins with the PIN it was given. | Officials step → that seat → Regenerate PIN. |
+| {#err-windcall-banneroffnote} “The banner is switched off in the Event step, so nothing shows on the public pages.” | Wind call control (Go live and head console) | The call is saved but not shown: the banner switch is off. | Event step → tick “Show the wind-call banner…”. |
+| {#err-windcall-errors-bad-wind-status} “Pick red, amber or green.” | Wind call control (Go live and head console) | The wind call was not changed. | Follow the sentence. |
+| {#err-windcall-errors-message-too-long} “Keep the message to 140 letters.” | Wind call control (Go live and head console) | The wind call was not changed. | Follow the sentence. |
+| {#err-windcall-errors-not-allowed} “Only the head judge or an organiser can change the wind call.” | Wind call control (Go live and head console) | The wind call was not changed. | Follow the sentence. |
+| {#err-org-dashboard-alreadyheld} “The run order is already on hold.” | Go live → Quick actions | Hold is grey: the run order is already on hold. | Follow the sentence. |
+| {#err-org-dashboard-notheld} “Nothing is on hold.” | Go live → Quick actions | Resume at… is grey: nothing is on hold. | Follow the sentence. |
+| {#err-org-dashboard-noplantoday} “No run order is active for today. Activate one in Run order.” | Go live → Quick actions | Hold, Resume at… and Shift are grey: no run order is active for today in the event's time zone. | Run order step → choose today's day → Activate this plan. If the plan is for another day, the Go live checklist names both days. |
+| {#err-org-dashboard-shiftheld} “The run order is on hold. Resume it first.” | Go live → Quick actions | Shift is grey while on hold. | Resume at… first, or use Resume at to set the restart time. |
+| {#err-org-dashboard-failed} “Could not do that: ‹why›” | Go live → Quick actions | The server refused the quick action; the reason follows the colon. | Follow the sentence. |
+| {#err-org-dashboard-resetrefused} “‹heat› is running. End it first.” | Go live → Quick actions | A quick action is off or refused. | End the heat (head console), then Reset event… |
+
+### Organiser: Officials
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-officials-shortfall} “‹division› needs ‹need› judges, ‹have› assigned” | Officials step (step 4) | The panel has fewer judges than the division's scoring rules ask for. A warning: heats can start only when the panel is big enough (the head console refuses with PANEL_TOO_SMALL). | Officials → Panels: tick more judges for the division, or lower “Number of judges” in Divisions → Scoring. |
+| {#err-officials-pinunknown} “No PIN on file for this seat (it was made before PINs could be shown). Use Regenerate PIN to make a new one.” | Officials step (step 4) | The seat was made before PINs were stored; the phone already joined still works. | Regenerate PIN (the old PIN stops working and the seat's phones are signed out). |
+| {#err-officials-pincouldnotread} “This PIN could not be read back. Use Regenerate PIN to make a new one.” | Officials step (step 4) | The seat change was refused. | Regenerate PIN. |
+| {#err-officials-printnone} “There is nothing to print yet. Approve or add a seat first.” | Officials step (step 4) | Print cards is grey: no active seat. | Follow the sentence. |
+| {#err-officials-printnopin} “No PIN on file: regenerate it first” | Officials step (step 4) | The seat change was refused. | Regenerate PIN for that seat, then print. |
+| {#err-officials-inheat} “Wait until ‹heat› ends, or end the heat first.” | Officials step (step 4) | Regenerate PIN and some seat changes are off while the seat's heat is running, so a judge is not signed out mid-heat. | Wait until the heat ends. |
+| {#err-officials-panelsnojudges} “Add judge seats first.” | Officials step (step 4) | The seat change was refused. | Add a seat with role Judge first. |
+| {#err-officials-panelsnodivisions} “Add a division first.” | Officials step (step 4) | The seat change was refused. | Follow the sentence. |
+| {#err-officials-errors-notallowed} “You do not have permission to do that.” | Officials step (step 4) | The seat change was refused. | Follow the sentence. |
+| {#err-officials-errors-failed} “That did not work. Nothing was changed; try again.” | Officials step (step 4) | The seat change was refused. | Follow the sentence. |
+| {#err-officials-errors-namerequired} “Give the seat a name (2 to 60 characters).” | Officials step (step 4) | The seat change was refused. | Follow the sentence. |
+| {#err-officials-errors-unknownseat} “That seat was not found.” | Officials step (step 4) | The seat change was refused. | Follow the sentence. |
+| {#err-officials-errors-notpending} “That seat is not waiting for approval.” | Officials step (step 4) | The seat change was refused. | Follow the sentence. |
+| {#err-officials-errors-pininuse} “Could not find a free PIN; try again.” | Officials step (step 4) | The seat change was refused. | Press again: a new random PIN is tried. |
+| {#err-officials-errors-nokey} “PINs cannot be shown or made because the server has no PIN key. Ask the owner to check the server settings (SUPABASE_SERVICE_ROLE_KEY, or SEAT_PIN_KEY). Logging in with PINs already given is not affected.” | Officials step (step 4) | The server is missing the key that protects PINs. | Owner: Admin → Health → Server settings; set SUPABASE_SERVICE_ROLE_KEY (or SEAT_PIN_KEY) on the host and redeploy. |
+| {#err-officials-errors-hasscores} “This seat already gave scores, so it cannot be deleted. Switch it off instead.” | Officials step (step 4) | Scores already given keep the seat. | Switch the seat off instead. |
+
+### Organiser: organisation settings
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-orgsettings-readonly} “Only owners and admins can change these settings. You can look, but not save.” | Organisation settings (/org/settings) | Your role in this organisation is not owner or admin. | Follow the sentence. Only owners and admins of the organisation may save. |
+| {#err-orgsettings-readonlyreason} “Only owners and admins can save these settings.” | Organisation settings (/org/settings) | Your role in this organisation is not owner or admin. | Ask an owner of the organisation, or the platform owner. |
+| {#err-orgsettings-understandfirst} “Tick “I understand, change the address” first.” | Organisation settings (/org/settings) | Changing the address breaks links and printed QR codes already out. | Tick “I understand, change the address”, then Save. |
+| {#err-orgsettings-fixthese} “Some settings need fixing.” | Organisation settings (/org/settings) | The organisation settings could not be saved. | Follow the sentence. Only owners and admins of the organisation may save. |
+| {#err-orgsettings-nomembership} “You are not a member of an organisation.” | Organisation settings (/org/settings) | The organisation settings could not be saved. | Follow the sentence. Only owners and admins of the organisation may save. |
+| {#err-orgsettings-notallowed} “Only owners and admins can change organisation settings.” | Organisation settings (/org/settings) | The organisation settings could not be saved. | Follow the sentence. Only owners and admins of the organisation may save. |
+| {#err-orgsettings-slugtaken} “That web address is already used by another organisation.” | Organisation settings (/org/settings) | The organisation settings could not be saved. | Choose another web address. |
+| {#err-orgsettings-savefailed} “The settings could not be saved. Nothing was changed; try again.” | Organisation settings (/org/settings) | The organisation settings could not be saved. | Follow the sentence. Only owners and admins of the organisation may save. |
+| {#err-orgsettings-savedenied} “The settings could not be saved (no permission). Nothing was changed.” | Organisation settings (/org/settings) | The organisation settings could not be saved. | Follow the sentence. Only owners and admins of the organisation may save. |
+| {#err-orgsettings-validation-slugmax} “The web address can be at most 40 characters” | Organisation settings (/org/settings) | The organisation settings could not be saved. | Follow the sentence. Only owners and admins of the organisation may save. |
+| {#err-orgsettings-validation-namemin} “Give the organisation a name” | Organisation settings (/org/settings) | The organisation settings could not be saved. | Follow the sentence. Only owners and admins of the organisation may save. |
+| {#err-orgsettings-validation-namemax} “That name is too long (80 characters at most)” | Organisation settings (/org/settings) | The organisation settings could not be saved. | Follow the sentence. Only owners and admins of the organisation may save. |
+
+### Organiser: Rider label
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-ident-nametooshort} “Give the preset a name (at least 2 characters).” | Event step → Rider identification, and Divisions → Rider label | The rider identification scheme is not valid yet. | Fix the colour or field the sentence names, then save. |
+| {#err-ident-savefailed} “The preset could not be saved. Try again.” | Event step → Rider identification, and Divisions → Rider label | The rider identification scheme is not valid yet. | Fix the colour or field the sentence names, then save. |
+| {#err-ident-validation-colourkey} “colour key must be lowercase letters, numbers or _” | Event step → Rider identification, and Divisions → Rider label | The rider identification scheme is not valid yet. | Fix the colour or field the sentence names, then save. |
+| {#err-ident-validation-colourname} “give the colour a name (it is always shown as text too)” | Event step → Rider identification, and Divisions → Rider label | The rider identification scheme is not valid yet. | Fix the colour or field the sentence names, then save. |
+| {#err-ident-validation-colourhex} “colour must look like #e11d48” | Event step → Rider identification, and Divisions → Rider label | The rider identification scheme is not valid yet. | Fix the colour or field the sentence names, then save. |
+| {#err-ident-validation-schemename} “give the scheme a name” | Event step → Rider identification, and Divisions → Rider label | The rider identification scheme is not valid yet. | Fix the colour or field the sentence names, then save. |
+| {#err-ident-validation-palettemin} “the palette needs at least one colour” | Event step → Rider identification, and Divisions → Rider label | The rider identification scheme is not valid yet. | Fix the colour or field the sentence names, then save. |
+| {#err-ident-validation-keysunique} “colour keys must be unique (duplicate: ‹d›)” | Event step → Rider identification, and Divisions → Rider label | The rider identification scheme is not valid yet. | Fix the colour or field the sentence names, then save. |
+| {#err-ident-validation-namesunique} “two colours share a name; colours are called out by name, so each needs its own” | Event step → Rider identification, and Divisions → Rider label | The spotter calls colours out by name, so two colours with one name could not be told apart. | Fix the colour or field the sentence names, then save. |
+| {#err-ident-validation-fallbackdiffers} “the fallback must differ from the primary identifier” | Event step → Rider identification, and Divisions → Rider label | The rider identification scheme is not valid yet. | Choose a different fallback, or No fallback. |
+| {#err-ident-validation-invalid} “Invalid identification scheme: ‹detail›” | Event step → Rider identification, and Divisions → Rider label | The rider identification scheme is not valid yet. | Fix the colour or field the sentence names, then save. |
+
+### Organiser: Riders
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-riders-nodivisions} “Add a division first (Step 2), then come back to add riders.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Divisions step → + Add division. |
+| {#err-riders-needtwo} “Needs at least two riders.” | Riders step (step 3) | Shuffle and Sort are grey with fewer than two riders. | Follow the sentence. |
+| {#err-riders-firstrow} “Already first.” | Riders step (step 3) | ↑ is grey: the rider is already first. | Nothing to fix. |
+| {#err-riders-lastrow} “Already last.” | Riders step (step 3) | ↓ is grey: the rider is already last. | Nothing to fix. |
+| {#err-riders-namerequiredhint} “Type a first and a last name.” | Riders step (step 3) | + Add rider is grey until both names are typed. | Follow the sentence. |
+| {#err-riders-seedrepeated} “Seed ‹seed› is given to more than one rider: ‹names›. Press “Sort by seed number” to renumber.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Press “Sort by seed number” to renumber 1, 2, 3… |
+| {#err-riders-indraw} “This rider is already in the draw. Set them to Withdrawn instead of removing them.” | Riders step (step 3) | Removing a rider who has a seat would leave an empty seat in the draw. | Set the rider to Withdrawn. |
+| {#err-riders-drawlocked} “The draw of this division is locked: changing seeds here does not change it.” | Riders step (step 3) | The draw keeps the order it was made with; seeds changed now do not move riders. | To use new seeds: Draw step → Unlock (reason) → Regenerate → Lock (only before the first heat). |
+| {#err-riders-clash-lycra} “Lycra colour ‹colour› is given to more than one rider: ‹names›. Judges could not tell them apart.” | Riders step (step 3) | A warning: two riders share a Lycra colour, so judges could not tell them apart. Nothing is blocked. | Follow the sentence. |
+| {#err-riders-clash-bib} “Bib ‹bib› is used by more than one rider: ‹names›.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-clash-kite} “These riders have almost the same kite: ‹names›.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-clash-rashguard} “Rash guard colour ‹colour› is used by more than one rider: ‹names›.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-clash-name} “Two riders are both called ‹name›. The spotter could not call them out separately.” | Riders step (step 3) | A warning: two riders share a name, so the spotter could not call them out apart. Nothing is blocked. | Add a nickname or a bib number. |
+| {#err-riders-csv-empty} “The file is empty.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-norows} “The file has a header but no riders under it.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-nonamecolumns} “We could not find a “First” and a “Last” column. The columns in the file are: ‹found›.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-toomany} “The file has more than ‹n› riders. Split it into smaller files.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-toomanyvalues} “This row has ‹got› values but the header has ‹columns› columns. Check for a missing quote or an extra comma.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-firstmissing} “First name is missing.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-lastmissing} “Last name is missing.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-bademail} “Email “‹v›” is not an email address.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-repeatedemail} “Email ‹v› is used twice in this file (first on line ‹line›). Each rider needs their own.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-alreadyinorganisation} “Already in your organisation: linked to that rider, nothing is overwritten.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-badseed} “Seed “‹v›” is not a whole number of 1 or more.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-badcolour} “‹column› “‹v›” is not one of the colours for this division (‹names›).” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-badbib} “Bib “‹v›” is too long (20 characters at most).” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-badkitesize} “Kite size “‹v›” is not a number such as 9 or 12.5.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-badphoto} “Photo URL “‹v›” must start with http:// or https://.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-toolong} “‹column› is too long (‹max› characters at most).” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-repeatedseed} “Seed ‹seed› is given to more than one rider: ‹names›. Sort or drag them afterwards.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-csv-repeatedbib} “Bib ‹bib› is given to more than one rider: ‹names›.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-importnothing} “Nothing to import yet.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-importfailed} “The import did not finish. Nothing was half-saved; try again.” | Riders step (step 3) | The import stopped; nothing was half-saved. | Nothing was saved. Check the connection and press the button again. If it keeps failing, note the time and tell the owner (the server log names the cause). |
+| {#err-riders-errors-notallowed} “You do not have permission to do that.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-errors-unknowndivision} “That division was not found.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-errors-failed} “That did not work. Nothing was changed; try again.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-errors-namerequired} “A rider needs a first and a last name.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-errors-bademail} “That is not an email address.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-errors-alreadyindivision} “That rider is already in this division.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+| {#err-riders-errors-emailused} “Another rider in your organisation already has that email address.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Use the rider who already has that email (Add from this organisation’s riders). |
+| {#err-riders-errors-badvalue} “That value is not allowed.” | Riders step (step 3) | The rider change was refused, or the rider list has a problem. | Follow the sentence. |
+
+### Organiser: Run order
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-runorder-noheats} “There are no heats yet. Make each division's draw first.” | Run order & timetable step (step 6) | The Run order lists heats from the draws; no division has a draw yet. | Draw step → Generate draw for each division. |
+| {#err-runorder-goneheat} “A heat that is no longer in the draw” | Run order & timetable step (step 6) | A run-order row points at a heat that a later re-draw removed. It takes no time and is never “next”. | Take the row out with ✕ (or Take row out of the run order), then Add the heats that are missing. |
+| {#err-runorder-errors-namerequired} “Give the plan a name of at least 2 characters.” | Run order & timetable step (step 6) | The run order (plan) could not be changed. | Follow the sentence. |
+| {#err-runorder-errors-nametaken} “Another plan of this day already has that name.” | Run order & timetable step (step 6) | The run order (plan) could not be changed. | Follow the sentence. |
+| {#err-runorder-errors-notallowed} “You are not allowed to change this plan.” | Run order & timetable step (step 6) | The run order (plan) could not be changed. | Follow the sentence. |
+| {#err-runorder-errors-twoactive} “Two plans cannot be active on the same day.” | Run order & timetable step (step 6) | The run order (plan) could not be changed. | Activate the plan you want; the other active plan of that day is switched off by Activate this plan. |
+| {#err-runorder-errors-failed} “That did not work. Nothing was changed.” | Run order & timetable step (step 6) | The run order (plan) could not be changed. | Follow the sentence. |
+| {#err-runorder-errors-unknownheat} “That plan names a heat that is not in this event.” | Run order & timetable step (step 6) | The plan names a heat that is not in this event (it was removed by a re-draw). | Take the row out and add the heat again. |
+| {#err-runorder-errors-notvalid} “The plan is not valid:” | Run order & timetable step (step 6) | The run order (plan) could not be changed. | Follow the sentence. |
+| {#err-runorder-errors-deleteactive} “This plan is active. Activate another plan first.” | Run order & timetable step (step 6) | The run order (plan) could not be changed. | Activate another plan of that day first, then delete this one. |
+
+### Pages that fail
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-crash-heading} “This page could not be shown” | Any live page, organiser step or public page | The page (or part of it) failed while loading; nothing was changed. | Press Try again; use the link back. Send the error reference to the owner if it repeats. |
+| {#err-crash-part} “‹what› could not be shown (‹message›). The rest of the page still works.” | Any live page, organiser step or public page | One part of the page failed (for example the run-order list); the rest of the page works. | Press Try again. If it repeats, send the error reference (or the sentence) to the owner. |
+
+### Platform owner (/admin)
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-admin-owneronly} “Only platform owners can do this. You can look, but not change it.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-not-allowed} “You are not allowed to do this.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-invalid-name} “Give the organisation a name of 2 to 80 characters.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-invalid-slug} “The web address can only use lowercase letters, numbers and hyphens (2 to 40 characters).” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-slug-taken} “That web address is already used by another organisation.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-invalid-timezone} “That time zone is not known.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-not-found} “That organisation no longer exists.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-slug-mismatch} “The web address you typed does not match. Nothing was deleted.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-published-results} “This organisation has published results, so it cannot be deleted. Archive it instead.” | Admin screens (platform owner and staff) | The admin action was refused. | Archive the organisation instead. |
+| {#err-admin-errors-user-not-found} “That login does not exist.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-not-a-member} “That person is not an organiser of this organisation (any more).” | Admin screens (platform owner and staff) | The person was already removed from this organisation (or never was a member). | Reload the organisation page. |
+| {#err-admin-errors-cannot-remove-self} “You cannot remove your own login.” | Admin screens (platform owner and staff) | A platform owner cannot remove their own login from an organisation. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-invalid-role} “That role is not known.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-invalid-url} “That address does not look right.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-heat-running} “A heat of this event is running or paused, so it cannot be moved now. Try again when no heat is running.” | Admin screens (platform owner and staff) | The admin action was refused. | End the running heat, then move the event. |
+| {#err-admin-errors-same-organisation} “The event is already in that organisation.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-target-not-found} “The organisation you chose no longer exists.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-demo-exists} “A demo organisation already exists, so nothing was created.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-presets-missing} “The system presets are not published yet, so the demo cannot be built. Run “npm run seed:presets” first.” | Admin screens (platform owner and staff) | The admin action was refused. | On a computer with the keys: npm run seed:presets. |
+| {#err-admin-errors-generic} “That did not work. Nothing was changed; try again.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-org-loaderror} “The organisations could not be loaded.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-org-logofailed} “The organisation was created, but its logo could not be uploaded. Add it on this page.” | Admin screens (platform owner and staff) | The admin action was refused. | Upload the logo again on the organisation's page. |
+| {#err-admin-org-invitebademail} “That does not look like an email address.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-org-inviteemailfailed-rate-limit} “The e-mail to ‹email› was not sent: this plan allows only ‹n› sign-in e-mails per hour and that limit is used up. The login was created. Send them this link yourself, or invite them again in an hour.” | Admin screens (platform owner and staff) | The hosted e-mail plan sends only 2 sign-in e-mails per hour and they are used up; the login was still made. | Copy the sign-in link shown and send it privately (WhatsApp); it works once, for 24 hours. Or invite again after an hour. |
+| {#err-admin-org-inviteemailfailed-not-authorised} “The e-mail to ‹email› was not sent: the built-in sender of this plan only writes to your own team's addresses. The login was created. Send them this link yourself.” | Admin screens (platform owner and staff) | The built-in e-mail sender of the hosted plan only writes to the project team's own addresses; the login was still made. | Copy the sign-in link shown and send it privately. A custom e-mail sender (SMTP) removes this limit. |
+| {#err-admin-org-inviteemailfailed-other} “The e-mail to ‹email› could not be sent. The login was created. Send them this link yourself.” | Admin screens (platform owner and staff) | The e-mail service refused; the login was still made. | Copy the sign-in link shown and send it privately. |
+| {#err-admin-org-removeself} “That is your own login.” | Admin screens (platform owner and staff) | Remove is grey on your own login. | Another platform owner can remove it. |
+| {#err-admin-org-deleteblocked} “This organisation has published results (‹n›), so it cannot be deleted. Archive it instead: results stay permanent.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-org-owneronlydelete} “Only platform owners can delete an organisation.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-org-movenoothers} “There is no other organisation to move it to.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-org-moveowneronly} “Only platform owners can move an event.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-org-moverunning} “A heat is running or paused: not now.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-crash-heading} “This admin page could not be shown” | Admin screens (platform owner and staff) | An admin page failed on the server. | Press Try again; open Health to check the server settings; search the hosting logs for the error reference. |
+| {#err-admin-partproblem} “Part of this page could not be loaded (‹what›). The rest still works; the details are in the server logs.” | Admin screens (platform owner and staff) | One part of the page could not be read; the rest works. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-demo-drawfailed} “The demo organisation was created, but its draw could not be built. Run “npm run seed:demo” to finish it.” | Admin screens (platform owner and staff) | The admin action was refused. | On a computer with the keys: npm run seed:demo. |
+| {#err-admin-settings-readonlyreason} “Only platform owners can save these settings.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-settings-fixthese} “Some settings need fixing.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-settings-savefailed} “The settings could not be saved. Nothing was changed; try again.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-settings-validation-productname} “The product name can be at most 60 characters” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-settings-validation-logourl} “That logo address must start with https://” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-settings-validation-tagline} “The tagline can be at most 160 characters” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-settings-validation-timezone} “That time zone is not known” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-settings-validation-legal} “That text is too long (20,000 characters at most)” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-presets-notjson} “That text is not valid JSON. Nothing was saved.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-presets-invalid} “That preset is not valid: ‹why›” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-presets-errors-not-found} “That version no longer exists.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-presets-errors-not-newer} “A newer version is already the default, so this older one cannot be published. Save its content as a new version instead.” | Admin screens (platform owner and staff) | The admin action was refused. | Save the content as a new version; that version can be published. |
+| {#err-admin-presets-errors-already-default} “This version is already the default.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-presets-errors-not-allowed} “Only a platform owner can publish presets.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-presets-errors-not-object} “A preset must be a JSON object.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-presets-errors-invalid} “The preset does not match its schema.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-presets-errors-generic} “That did not work. Nothing was changed; try again.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-presets-vocabularymissing} “The vocabulary is missing: ‹parts›.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-health-databasedown} “Database: not reachable” | Admin screens (platform owner and staff) | The server cannot reach the database (free projects pause after about 7 days idle). | Open the Supabase dashboard and press Resume; load the home page once. |
+| {#err-admin-health-realtimeoff} “Realtime: Not connected” | Admin screens (platform owner and staff) | The browser could not open a live connection. Phones fall back to asking every few seconds. | Reload; check the hotspot. Not blocking: screens still update by polling. |
+| {#err-admin-health-loaderror} “The health check could not run.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-health-settingsunreadable} “Platform settings: could not be read, so the built-in values are in use” | Admin screens (platform owner and staff) | The platform settings could not be read, so the built-in name and texts are shown. | Follow the sentence. Most admin changes need the platform owner role. |
+
+### Public pages
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-notfound-eventtitle} “This event isn't public” | Any public address that is not available | The event is private, unpublished, a simulation, archived, or the address is wrong. The page answers 404 on purpose. | Event step → tick “Published” and Save event. A simulation event is never public; an archived event or organisation is hidden. |
+| {#err-notfound-pagetitle} “This page doesn't exist” | Any public address that is not available | No page has this address. | Check the address; start from the home page. |
+| {#err-landing-loaderror} “The event list could not be loaded just now. Try again in a minute.” | Home page | The home page could not read the event list (database asleep or unreachable). | Wait a minute and reload. On the free plan the owner wakes the database before the event. |
+| {#err-landing-codeinvalid} “Type the code from the event's address, for example arrow-launch-2026.” | Home page | The event code box got something that is not an event address. | Type the last part of the event's address, for example arrow-launch-2026. |
+| {#err-publicsite-eventnotfound} “This event is not available.” | Organisation page and event pages | The organisation page has no such public event. | As organiser: Event step → Published; not a simulation; not archived. |
+| {#err-pub-common-notfound} “This event is not on the public site.” | Public event pages | The public site has no event at this address (draft, simulation, archived, or wrong address). | As organiser: check Published, and that the rider is in a locked draw. |
+| {#err-pub-rider-notfound} “This rider is not on the public list.” | Public event pages | That rider is not in a locked draw of a public event, or the address is old. | Lock the division's draw; open the rider from the Results or Ladder page. |
+
+### Resets
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-reset-blocked} “A reset is not possible yet:” | Go live → Reset event… (and Restore in /admin) | The list under it names what stops the reset (for example a division to unlock and lock again). | Follow the sentence. |
+| {#err-reset-needaddress} “Type the web address exactly first.” | Go live → Reset event… (and Restore in /admin) | The confirm button is grey until the event's web address is typed exactly. | Follow the sentence. |
+| {#err-reset-needreason} “Write a reason of at least 5 characters first.” | Go live → Reset event… (and Restore in /admin) | The confirm button is grey: results were public, so a reason is needed. | Follow the sentence. |
+| {#err-reset-errors-not-allowed} “You are not allowed to reset this event.” | Go live → Reset event… (and Restore in /admin) | The reset or restore was refused; nothing was changed. | Follow the sentence. |
+| {#err-reset-errors-slug-mismatch} “That is not the event’s web address. Nothing was changed.” | Go live → Reset event… (and Restore in /admin) | The reset or restore was refused; nothing was changed. | Follow the sentence. |
+| {#err-reset-errors-heat-running} “‹heat› is running. End it first.” | Go live → Reset event… (and Restore in /admin) | The reset or restore was refused; nothing was changed. | End the heat on the head console, then reset. |
+| {#err-reset-errors-reason-required} “A reason of at least 5 characters is needed, because results of this event were shown publicly.” | Go live → Reset event… (and Restore in /admin) | The reset or restore was refused; nothing was changed. | Follow the sentence. |
+| {#err-reset-errors-bad-projection} “The ladders changed while the reset was being prepared. Nothing was changed; try again.” | Go live → Reset event… (and Restore in /admin) | The reset or restore was refused; nothing was changed. | Follow the sentence. |
+| {#err-reset-errors-draw-copy-missing} “A division has no saved starting draw. Nothing was changed.” | Go live → Reset event… (and Restore in /admin) | A division has no saved starting copy (locked before Reset existed). | Follow the sentence. |
+| {#err-reset-errors-failed} “The reset could not be done. Nothing was changed; try again.” | Go live → Reset event… (and Restore in /admin) | The reset or restore was refused; nothing was changed. | Follow the sentence. |
+| {#err-reset-restore-errors-not-allowed} “Only platform owners can restore.” | Go live → Reset event… (and Restore in /admin) | The reset or restore was refused; nothing was changed. | Follow the sentence. |
+| {#err-reset-restore-errors-heat-started} “A heat has started since the reset, so it can no longer be restored.” | Go live → Reset event… (and Restore in /admin) | Restoring would mix with heats run after the reset. | Follow the sentence. |
+| {#err-reset-restore-errors-snapshot-expired} “That copy is older than 30 days and can no longer be restored.” | Go live → Reset event… (and Restore in /admin) | The reset or restore was refused; nothing was changed. | Follow the sentence. |
+| {#err-reset-restore-errors-snapshot-not-found} “That copy no longer exists.” | Go live → Reset event… (and Restore in /admin) | The reset or restore was refused; nothing was changed. | Follow the sentence. |
+| {#err-reset-restore-errors-failed} “The restore could not be done. Nothing was changed.” | Go live → Reset event… (and Restore in /admin) | The reset or restore was refused; nothing was changed. | Follow the sentence. |
+| {#err-reset-rebuildarranged} “A later round was arranged by hand, so its seats cannot be rebuilt from the current draw. Nothing was changed.” | Go live → Reset event… (and Restore in /admin) | A later round has hand-placed seats, so its starting draw cannot be rebuilt. | Follow the sentence. |
+| {#err-reset-copyhasresults} “The saved starting draw already holds results, so it cannot be used to start over.” | Go live → Reset event… (and Restore in /admin) | The reset or restore was refused; nothing was changed. | Follow the sentence. |
+| {#err-reset-copyrelock} “‹division›: unlock and lock the draw again first” | Go live → Reset event… (and Restore in /admin) | The reset or restore was refused; nothing was changed. | Draw step → Unlock draw (reason) → Lock draw, while no heat of the division has started. |
+| {#err-reset-copyunknown} “‹division› was locked before Reset existed (or re-locked after its first heat), so its starting draw is not known and it cannot be reset.” | Go live → Reset event… (and Restore in /admin) | The reset or restore was refused; nothing was changed. | Reset this division (it rebuilds from the current draw), or leave it. |
+| {#err-resetparts-blocked} “A reset is not possible yet:” | Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu) | The reset was refused; nothing was changed. | Follow the sentence. |
+| {#err-resetparts-needreason} “Write a reason of at least 5 characters first.” | Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu) | The reset was refused; nothing was changed. | Follow the sentence. |
+| {#err-resetparts-division-noheats} “This division has no heats yet, so there is nothing to reset.” | Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu) | Reset this division is grey: the division has no heats. | Follow the sentence. |
+| {#err-resetparts-plan-nothing} “There are no actual start times or pins written while the day ran to clear in this run order.” | Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu) | Clear actual times is grey: nothing was written while the day ran. | Follow the sentence. |
+| {#err-resetparts-heat-scheduledwhy} “This heat has not started, so there is nothing to reset.” | Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu) | Reset this heat is grey: the heat never started. | Follow the sentence. |
+| {#err-resetparts-alreadyrerunas} “Already re-run as ‹heat›” | Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu) | Re-run is grey: the cancelled heat already has its re-run (named here). | Work on the re-run heat. |
+| {#err-resetparts-errors-no-draw} “This division has no draw yet, so there is nothing to reset.” | Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu) | The reset was refused; nothing was changed. | Follow the sentence. |
+| {#err-resetparts-errors-heat-not-started} “This heat has not started, so there is nothing to reset.” | Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu) | The reset was refused; nothing was changed. | Follow the sentence. |
+| {#err-resetparts-errors-heat-already-rerun} “This heat was cancelled and already re-run. Reset the re-run instead; the cancelled heat stays as it is.” | Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu) | The reset was refused; nothing was changed. | Reset the re-run heat instead. |
+| {#err-resetparts-errors-downstream-started} “A later heat that depends on this result has already started (‹heat›). Reset that heat first, then this one.” | Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu) | The reset was refused; nothing was changed. | Reset the later heat first, then this one. |
+| {#err-resetparts-errors-draw-changed} “The draw changed while the reset was being prepared. Nothing was changed; try again.” | Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu) | The reset was refused; nothing was changed. | Follow the sentence. |
+| {#err-resetparts-errors-heat-not-found} “That heat is not there any more.” | Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu) | The reset was refused; nothing was changed. | Follow the sentence. |
+| {#err-resetparts-errors-not-allowed} “You are not allowed to do this.” | Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu) | The reset was refused; nothing was changed. | Follow the sentence. |
+
+### Rider registration
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-registration-closeddefault} “Registration is closed for this event.” | Public registration page (/e/‹event›/register) | Registration is switched off, past its closing time, or the event is not published. | Organiser: Event step → Rider registration → Open, closing day in the future; Published ticked. |
+| {#err-registration-fullline} “This division is full. Ask the organiser if you would like to be on a waiting list.” | Public registration page (/e/‹event›/register) | The division reached “Most riders per division”. | Organiser: raise the number in the Event step, or add the rider by hand in Riders. |
+| {#err-registration-archived} “This event is not taking registrations.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+| {#err-registration-nodivisions} “This event has no divisions to register for yet.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+| {#err-registration-notfound} “We could not find that event.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+| {#err-registration-phototoobig} “That photo is still over 2 MB after shrinking. Choose a smaller one.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+| {#err-registration-photonotimage} “Choose a PNG, JPEG or WebP photo.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+| {#err-registration-photofailed} “The photo could not be uploaded. You can register without it and send it to the organiser.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Register without the photo and send it to the organiser. |
+| {#err-registration-ratelimited} “Too many tries from this connection. Please wait a little and try again.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+| {#err-registration-failed} “That did not work. Nothing was sent; try again in a moment.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+| {#err-registration-errors-division} “Choose a division.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+| {#err-registration-errors-first} “Enter your first name.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+| {#err-registration-errors-last} “Enter your last name.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+| {#err-registration-errors-email} “Enter a real email address.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+| {#err-registration-errors-consent} “Tick the box to continue.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+| {#err-registration-errors-toolong} “That is too long (‹n› characters at most).” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+| {#err-registration-errors-field} “Check “‹name›”.” | Public registration page (/e/‹event›/register) | The registration was not sent. | Follow the sentence. |
+
+### Simulator
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-simulator-notsimulation-notdrawn} “‹n› divisions have no locked draw in the copy. Lock their draw on the Draw step of the copy before pressing Start.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Open the copy's Draw step and lock each division's draw before Start. |
+| {#err-simulator-needlock} “‹n› divisions have no locked draw. The simulator plays locked draws only: lock them on the Draw step.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Draw step → Lock draw for each division (of the simulation copy). |
+| {#err-simulator-play-lines-waithead} “‹heat› is waiting for the head judge, who is a real person. Review and publish it on the head console.” | Simulator panel (/org/events/‹id›/simulate) | The head judge seat is set to Real or held by a person, so the simulator waits. | Publish on the head console, or set the head judge to Virtual. |
+| {#err-simulator-play-lines-waitjudges} “‹heat› is waiting for ‹names› (a real person) to submit.” | Simulator panel (/org/events/‹id›/simulate) | A judge seat set to Real has not submitted. | Submit on that phone, or set the judge to Virtual. |
+| {#err-simulator-play-lines-hold} “The run order is on hold. Resume it to carry on.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Resume the run order (Go live → Resume at…, or the scenario button again). |
+| {#err-simulator-play-lines-notready} “‹heat› is not ready: its draw is not locked or a seat has no rider yet.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Lock the division's draw; finish the earlier heats that fill this heat's seats. |
+| {#err-simulator-play-lines-stoppedatblocker} “Stopped at a blocker: ‹text›” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-play-lines-busy} “Another tab is playing this simulation.” | Simulator panel (/org/events/‹id›/simulate) | Auto-play runs in one tab at a time. | Close the other tab, or use it. |
+| {#err-simulator-log-failed} “‹label›: not done. ‹why›” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-log-norunning} “No heat is running.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-log-noriders} “There is nobody to do it to.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-log-nocap} “This division has no attempt cap. Set one in the Divisions step first.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Divisions → Scoring → set “Attempts per rider”. |
+| {#err-simulator-log-nofinal} “The next heat is not the final.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-log-nopublished} “No heat has been published yet.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-log-noplan} “There is no run order yet.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-log-nospotter} “There is no virtual spotter to do it.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-log-noheadseat} “There is no virtual head judge to do it.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-log-nojudge} “There is no virtual judge on this heat's panel.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-reset-running} “‹heat› is running. End it first.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-reset-nobaseline} “This event has no saved locked draw to go back to, because it was played before Reset existed.” | Simulator panel (/org/events/‹id›/simulate) | No copy of the locked draw was saved (the Demo was played before Reset existed). | Use “Wipe and draw again”. |
+| {#err-simulator-reset-rebuildskipped} “Not drawn again (no format, no riders or nothing to draw): ‹names›.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-errors-not-allowed} “You are not allowed to do that.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-errors-not-a-simulation} “This is not a simulation event.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-errors-not-a-copy} “Only a copy made with Run as simulation can be deleted. The Demo is reset, not deleted.” | Simulator panel (/org/events/‹id›/simulate) | Delete is only for copies made with Run as simulation. | Follow the sentence. |
+| {#err-simulator-errors-sim-not-enabled} “The simulator is not set up for this event yet.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-errors-seat-is-real} “A person has that seat.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-errors-seat-not-found} “That seat no longer exists.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-errors-slug-mismatch} “That is not the event's web address.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-errors-heat-running} “‹heat› is running. End it first.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-errors-not-reset} “A heat has started, so the event was not reset.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-errors-source-already-run} “This event has already been run, so it is not a clean starting point. Copy it before its first heat starts, or reset it first.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Copy the event before its first heat, or reset it first. |
+| {#err-simulator-errors-bad-speed} “Choose ×1, ×5, ×10 or ×20.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-errors-bad-state} “That is not a valid state.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-errors-bad-mode} “Choose Virtual or Real.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+| {#err-simulator-errors-no-key} “The server has no key to protect PINs, so fresh PINs cannot be made.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Owner: set SUPABASE_SERVICE_ROLE_KEY (or SEAT_PIN_KEY) on the host. |
+| {#err-simulator-generic} “Something went wrong. Try again.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
+<!-- generated:sentences:end -->
+
+## Database codes {#errors-codes}
+
+The database refuses with a short code (for example `DRAW_NOT_LOCKED: Pro Men`); the screens turn it into a sentence. The server logs and the browser's network panel show the code. Every code any database function can raise is listed here.
+
+<!-- generated:codes:start -->
+| Code | Shown as | What it means |
+|---|---|---|
+| {#code-append-only} `APPEND_ONLY` | the screen's general “That did not work” sentence | Published results and the audit log can never be edited or deleted; only Re-open and Publish again add a new version. |
+| {#code-attempt-cap-reached} `ATTEMPT_CAP_REACHED` | [“That rider is out of attempts.”](#err-liveerrors-codes-attempt-cap-reached) | The rider used every attempt the division allows. |
+| {#code-attempt-not-found} `ATTEMPT_NOT_FOUND` | [“That attempt no longer exists.”](#err-liveerrors-codes-attempt-not-found) | The database refused the action and said why. |
+| {#code-bad-action} `BAD_ACTION` | “That did not work. Nothing was changed.” (Draw step) | The Draw step sent an unknown kind of change. A bug: tell the owner. |
+| {#code-bad-direction} `BAD_DIRECTION` | [“Direction is left or right.”](#err-liveerrors-codes-bad-direction) | The database refused the action and said why. |
+| {#code-bad-entry} `BAD_ENTRY` | “That did not work. Nothing was changed.” (Draw step) | A seat names a rider who is not in the division. |
+| {#code-bad-flag} `BAD_FLAG` | [“That flag is not valid.”](#err-liveerrors-codes-bad-flag) | The database refused the action and said why. |
+| {#code-bad-leave-out} `BAD_LEAVE_OUT` | [“Choose Disqualified or Did not start for riders who do not ride again.”](#err-liveerrors-codes-bad-leave-out) | The database refused the action and said why. |
+| {#code-bad-merge} `BAD_MERGE` | [“Choose two different attempts.”](#err-liveerrors-codes-bad-merge) | The database refused the action and said why. |
+| {#code-bad-mode} `BAD_MODE` | [“Choose Virtual or Real.”](#err-simulator-errors-bad-mode) | The simulator could not do it. |
+| {#code-bad-modifier} `BAD_MODIFIER` | [“That is not a valid status for a rider.”](#err-liveerrors-codes-bad-modifier) | The database refused the action and said why. |
+| {#code-bad-penalty} `BAD_PENALTY` | [“That is not a valid penalty.”](#err-liveerrors-codes-bad-penalty) | The database refused the action and said why. |
+| {#code-bad-plan-items} `BAD_PLAN_ITEMS` | [“The run order changed while you were pressing. Press again.”](#err-liveerrors-codes-bad-plan-items) | The database refused the action and said why. |
+| {#code-bad-plan-value} `BAD_PLAN_VALUE` | [“That time is not valid.”](#err-liveerrors-codes-bad-plan-value) | The database refused the action and said why. |
+| {#code-bad-projection} `BAD_PROJECTION` | [“The ladders changed while the reset was being prepared. Nothing was changed; try again.”](#err-reset-errors-bad-projection) | The reset or restore was refused; nothing was changed. |
+| {#code-bad-rerun-name} `BAD_RERUN_NAME` | [“That name for the re-run is not valid.”](#err-liveerrors-codes-bad-rerun-name) | The database refused the action and said why. |
+| {#code-bad-speed} `BAD_SPEED` | [“Choose ×1, ×5, ×10 or ×20.”](#err-simulator-errors-bad-speed) | The simulator could not do it. |
+| {#code-bad-state} `BAD_STATE` | [“That is not a valid state.”](#err-simulator-errors-bad-state) | The simulator could not do it. |
+| {#code-bad-status} `BAD_STATUS` | [“That is not a valid state for an attempt.”](#err-liveerrors-codes-bad-status) | The database refused the action and said why. |
+| {#code-bad-tie} `BAD_TIE` | [“Choose at least two riders.”](#err-liveerrors-codes-bad-tie) | The database refused the action and said why. |
+| {#code-bad-wind-status} `BAD_WIND_STATUS` | [“Pick red, amber or green.”](#err-windcall-errors-bad-wind-status) | The wind call was not changed. |
+| {#code-cannot-remove-self} `CANNOT_REMOVE_SELF` | [“You cannot remove your own login.”](#err-admin-errors-cannot-remove-self) | A platform owner cannot remove their own login from an organisation. |
+| {#code-client-key-reused} `CLIENT_KEY_REUSED` | [“That tap was already used for another heat.”](#err-liveerrors-codes-client-key-reused) | A queued tap from an earlier heat was sent again. |
+| {#code-demo-exists} `DEMO_EXISTS` | [“A demo organisation already exists, so nothing was created.”](#err-admin-errors-demo-exists) | The admin action was refused. |
+| {#code-division-has-heats} `DIVISION_HAS_HEATS` | “This division already has heats, so it cannot be deleted.” | Deleting a division with heats is refused. |
+| {#code-downstream-started} `DOWNSTREAM_STARTED` | [“A later heat has already started, so this correction would change who rides in it. Nothing was changed.”](#err-liveerrors-codes-downstream-started) · [“A later heat that depends on this result has already started (‹heat›). Reset that heat first, then this one.”](#err-resetparts-errors-downstream-started) | The result already filled a seat of a heat that has started; changing it now would change who rode. |
+| {#code-draw-changed} `DRAW_CHANGED` | [“The draw changed while the reset was being prepared. Nothing was changed; try again.”](#err-resetparts-errors-draw-changed) | The reset was refused; nothing was changed. |
+| {#code-draw-copy-missing} `DRAW_COPY_MISSING` | [“A division has no saved starting draw. Nothing was changed.”](#err-reset-errors-draw-copy-missing) | A division has no saved starting copy (locked before Reset existed). |
+| {#code-draw-function-only} `DRAW_FUNCTION_ONLY` | the Draw step's general sentence | The draw and its lock change only through the Draw step's buttons. |
+| {#code-draw-locked} `DRAW_LOCKED` | “The draw is locked. Unlock it (with a reason) to change it.” | A seat of a locked draw cannot be moved. |
+| {#code-draw-not-locked} `DRAW_NOT_LOCKED` | [“Draw for ‹division› is not locked — lock it in the Draw step”](#err-liveerrors-codes-draw-not-locked) | A heat can start only when its division's draw is locked. |
+| {#code-entry-not-in-division} `ENTRY_NOT_IN_DIVISION` | [“That rider is not in this division.”](#err-liveerrors-codes-entry-not-in-division) | The database refused the action and said why. |
+| {#code-flag-not-applicable} `FLAG_NOT_APPLICABLE` | [“That flag does not fit this attempt.”](#err-liveerrors-codes-flag-not-applicable) | The database refused the action and said why. |
+| {#code-flag-not-found} `FLAG_NOT_FOUND` | [“That flag no longer exists.”](#err-liveerrors-codes-flag-not-found) | The database refused the action and said why. |
+| {#code-flag-out-not-available} `FLAG_OUT_NOT_AVAILABLE` | [“This format has no flag-out.”](#err-liveerrors-codes-flag-out-not-available) | The format has no flag-out for this round. |
+| {#code-flag-out-too-many} `FLAG_OUT_TOO_MANY` | [“This format flags out at most ‹n› riders.”](#err-liveerrors-codes-flag-out-too-many) | The database refused the action and said why. |
+| {#code-heat-already-rerun} `HEAT_ALREADY_RERUN` | [“This heat has already been re-run.”](#err-liveerrors-codes-heat-already-rerun) · [“This heat was cancelled and already re-run. Reset the re-run instead; the cancelled heat stays as it is.”](#err-resetparts-errors-heat-already-rerun) | A cancelled heat can be re-run once. |
+| {#code-heat-already-running} `HEAT_ALREADY_RUNNING` | [“Another heat is already running (‹max› at a time). End it first, or ask the organiser to allow more in the Event step”](#err-liveerrors-codes-heat-already-running) | The event allows only this many heats running (or paused) at once. |
+| {#code-heat-cancelled} `HEAT_CANCELLED` | [“This heat was cancelled.”](#err-liveerrors-codes-heat-cancelled) | The database refused the action and said why. |
+| {#code-heat-not-ended} `HEAT_NOT_ENDED` | [“End the heat before publishing it.”](#err-liveerrors-codes-heat-not-ended) | The database refused the action and said why. |
+| {#code-heat-not-found} `HEAT_NOT_FOUND` | [“That heat no longer exists.”](#err-liveerrors-codes-heat-not-found) · [“That heat is not there any more.”](#err-resetparts-errors-heat-not-found) | The database refused the action and said why. |
+| {#code-heat-not-running} `HEAT_NOT_RUNNING` | [“The heat is not running.”](#err-liveerrors-codes-heat-not-running) | The database refused the action and said why. |
+| {#code-heat-not-started} `HEAT_NOT_STARTED` | [“This heat has not started. Start it instead.”](#err-liveerrors-codes-heat-not-started) · [“This heat has not started, so there is nothing to reset.”](#err-resetparts-errors-heat-not-started) | The database refused the action and said why. |
+| {#code-heat-published} `HEAT_PUBLISHED` | [“This heat is already published.”](#err-liveerrors-codes-heat-published) | A published heat cannot change. |
+| {#code-heat-running} `HEAT_RUNNING` | [“A heat of this event is running or paused, so it cannot be moved now. Try again when no heat is running.”](#err-admin-errors-heat-running) · [“‹heat› is running. End it first.”](#err-simulator-errors-heat-running) · [“‹heat› is running. End it first.”](#err-reset-errors-heat-running) | The admin action was refused. |
+| {#code-heat-started} `HEAT_STARTED` | [“A heat has started since the reset, so it can no longer be restored.”](#err-reset-restore-errors-heat-started) | Restoring would mix with heats run after the reset. |
+| {#code-heat-time-up} `HEAT_TIME_UP` | [“Time is up for this heat.”](#err-liveerrors-codes-heat-time-up) | The heat's clock reached zero; the server treats it as ended. |
+| {#code-illegal-heat-transition} `ILLEGAL_HEAT_TRANSITION` | [“The heat cannot do that in its current state.”](#err-liveerrors-codes-illegal-heat-transition) | For example Pause on a heat that is not running. |
+| {#code-impression-missing} `IMPRESSION_MISSING` | [“‹n› riders have no Impression / Variety score from you yet.”](#err-liveerrors-codes-impression-missing) | The database refused the action and said why. |
+| {#code-impression-not-open} `IMPRESSION_NOT_OPEN` | [“The Impression / Variety score opens when the heat has ended.”](#err-liveerrors-codes-impression-not-open) | The database refused the action and said why. |
+| {#code-invalid-json} `INVALID_JSON` | “The settings could not be saved…” (Platform settings) | A platform setting was not valid. |
+| {#code-invalid-key} `INVALID_KEY` | “The settings could not be saved…” (Platform settings) | An unknown platform setting. |
+| {#code-invalid-kind} `INVALID_KIND` | “That did not work…” (Master presets) | An unknown kind of preset. |
+| {#code-invalid-name} `INVALID_NAME` | [“Enter your name (2 to 60 characters).”](#err-join-selfadd-errors-invalid-name) · [“Give the organisation a name of 2 to 80 characters.”](#err-admin-errors-invalid-name) | Joining with the event code and PIN (or QR card) did not work. |
+| {#code-invalid-order} `INVALID_ORDER` | “That did not work. Nothing was changed; try again.” (Riders) | The new rider order did not list every rider of the division once. |
+| {#code-invalid-role} `INVALID_ROLE` | [“Choose judge, spotter or announcer.”](#err-join-selfadd-errors-invalid-role) · [“That role is not known.”](#err-admin-errors-invalid-role) | Joining with the event code and PIN (or QR card) did not work. |
+| {#code-invalid-rows} `INVALID_ROWS` | “The import did not finish. Nothing was half-saved; try again.” | The rider file reached the server in a shape it does not accept. |
+| {#code-invalid-seats} `INVALID_SEATS` | “That did not work…” (Officials) | “Head judge also scores” was set on a seat that is not a head judge. |
+| {#code-invalid-settings} `INVALID_SETTINGS` | “The settings could not be saved…” (Organisation settings) | An organisation setting was not valid (for example the time zone). |
+| {#code-invalid-slug} `INVALID_SLUG` | [“The web address can only use lowercase letters, numbers and hyphens (2 to 40 characters).”](#err-admin-errors-invalid-slug) | The admin action was refused. |
+| {#code-invalid-status} `INVALID_STATUS` | “That did not work…” (Trick proposals) | An unknown proposal status. |
+| {#code-invalid-timezone} `INVALID_TIMEZONE` | [“That time zone is not known.”](#err-admin-errors-invalid-timezone) | The admin action was refused. |
+| {#code-invalid-url} `INVALID_URL` | [“That address does not look right.”](#err-admin-errors-invalid-url) | The admin action was refused. |
+| {#code-message-too-long} `MESSAGE_TOO_LONG` | [“Keep the message to 140 letters.”](#err-windcall-errors-message-too-long) | The wind call was not changed. |
+| {#code-not-allowed} `NOT_ALLOWED` | [“You are not allowed to do this to that event.”](#err-eventlifecycle-errors-not-allowed) · [“You are not allowed to do this.”](#err-admin-errors-not-allowed) · [“Only a platform owner can publish presets.”](#err-admin-presets-errors-not-allowed) · [“You are not allowed to do that.”](#err-simulator-errors-not-allowed) · [“Only the head judge or an organiser can change the wind call.”](#err-windcall-errors-not-allowed) · [“You are not allowed to do that.”](#err-liveerrors-codes-not-allowed) · [“You are not allowed to reset this event.”](#err-reset-errors-not-allowed) · [“Only platform owners can restore.”](#err-reset-restore-errors-not-allowed) · [“You are not allowed to do this.”](#err-resetparts-errors-not-allowed) | The event could not be deleted or archived. |
+| {#code-not-a-copy} `NOT_A_COPY` | [“Only a copy made with Run as simulation can be deleted. The Demo is reset, not deleted.”](#err-simulator-errors-not-a-copy) | Delete is only for copies made with Run as simulation. |
+| {#code-not-a-member} `NOT_A_MEMBER` | [“That person is not an organiser of this organisation (any more).”](#err-admin-errors-not-a-member) | The person was already removed from this organisation (or never was a member). |
+| {#code-not-a-simulation} `NOT_A_SIMULATION` | [“This is not a simulation event.”](#err-simulator-errors-not-a-simulation) · [“Practice heats run only on a simulation event.”](#err-liveerrors-codes-not-a-simulation) | The simulator could not do it. |
+| {#code-not-found} `NOT_FOUND` | [“That organisation no longer exists.”](#err-admin-errors-not-found) · [“That version no longer exists.”](#err-admin-presets-errors-not-found) | The admin action was refused. |
+| {#code-not-newer} `NOT_NEWER` | [“A newer version is already the default, so this older one cannot be published. Save its content as a new version instead.”](#err-admin-presets-errors-not-newer) | The admin action was refused. |
+| {#code-not-on-panel} `NOT_ON_PANEL` | [“That judge is not on this division's panel.”](#err-liveerrors-codes-not-on-panel) | The database refused the action and said why. |
+| {#code-not-reset} `NOT_RESET` | [“A heat has started, so the event was not reset.”](#err-simulator-errors-not-reset) | The simulator could not do it. |
+| {#code-not-same-rider} `NOT_SAME_RIDER` | [“Only attempts of the same rider can be merged.”](#err-liveerrors-codes-not-same-rider) | The database refused the action and said why. |
+| {#code-not-scorable} `NOT_SCORABLE` | [“A crash is not scored.”](#err-liveerrors-codes-not-scorable) | A crashed attempt has nothing to score. |
+| {#code-not-signed-in} `NOT_SIGNED_IN` | nothing (the seat's “last seen” is not updated) | A phone without a session tried to report that it is alive. |
+| {#code-no-baseline} `NO_BASELINE` | “This event has no saved locked draw to go back to…” (Simulator) | The simulation has no saved starting draw. |
+| {#code-no-draw} `NO_DRAW` | [“This division has no draw yet, so there is nothing to reset.”](#err-resetparts-errors-no-draw) | The reset was refused; nothing was changed. |
+| {#code-override-reason-required} `OVERRIDE_REASON_REQUIRED` | [“A reason is required.”](#err-liveerrors-codes-override-reason-required) | The database refused the action and said why. |
+| {#code-panel-too-small} `PANEL_TOO_SMALL` | [“‹division› needs ‹need› judges on its panel and has ‹have› — add judges in the Officials step”](#err-liveerrors-codes-panel-too-small) | Fewer judges are on the division's panel than its scoring rules need. |
+| {#code-parent-not-found} `PARENT_NOT_FOUND` | [“That item no longer exists.”](#err-liveerrors-codes-parent-not-found) | The database refused the action and said why. |
+| {#code-penalty-not-found} `PENALTY_NOT_FOUND` | [“That penalty no longer exists.”](#err-liveerrors-codes-penalty-not-found) | The database refused the action and said why. |
+| {#code-pin-in-use} `PIN_IN_USE` | “Could not find a free PIN; try again.” | The random PIN was already taken; the screen tries again. |
+| {#code-pin-must-be-6-digits} `PIN_MUST_BE_6_DIGITS` | “That did not work…” (Officials) | A PIN must be six digits. |
+| {#code-plan-changed} `PLAN_CHANGED` | [“The run order changed while you were pressing. Press again.”](#err-liveerrors-codes-plan-changed) | Two people changed the run order at the same moment. |
+| {#code-plan-not-active} `PLAN_NOT_ACTIVE` | [“Only the active run order can be changed.”](#err-liveerrors-codes-plan-not-active) | The database refused the action and said why. |
+| {#code-plan-not-found} `PLAN_NOT_FOUND` | [“That run order no longer exists.”](#err-liveerrors-codes-plan-not-found) | The database refused the action and said why. |
+| {#code-presets-missing} `PRESETS_MISSING` | [“The system presets are not published yet, so the demo cannot be built. Run “npm run seed:presets” first.”](#err-admin-errors-presets-missing) | The admin action was refused. |
+| {#code-published-results} `PUBLISHED_RESULTS` | [“This event has published results, so it cannot be deleted. Archive it instead.”](#err-eventlifecycle-errors-published-results) · [“This organisation has published results, so it cannot be deleted. Archive it instead.”](#err-admin-errors-published-results) | The event could not be deleted or archived. |
+| {#code-reason-required} `REASON_REQUIRED` | [“A reason is required.”](#err-liveerrors-codes-reason-required) · [“A reason of at least 5 characters is needed, because results of this event were shown publicly.”](#err-reset-errors-reason-required) | The database refused the action and said why. |
+| {#code-rider-not-in-heat} `RIDER_NOT_IN_HEAT` | [“That rider is not in this heat.”](#err-liveerrors-codes-rider-not-in-heat) | The database refused the action and said why. |
+| {#code-rider-not-riding} `RIDER_NOT_RIDING` | [“That rider is not riding (did not start, or flagged out).”](#err-liveerrors-codes-rider-not-riding) | The rider is DNS or flagged out. |
+| {#code-rider-other-organisation} `RIDER_OTHER_ORGANISATION` | “That did not work…” (Riders) | A rider of another organisation cannot be entered. |
+| {#code-rules-locked} `RULES_LOCKED` | “Scoring and format are locked because a heat of this division has started…” | The division's rules lock at its first heat. |
+| {#code-same-organisation} `SAME_ORGANISATION` | [“The event is already in that organisation.”](#err-admin-errors-same-organisation) | The admin action was refused. |
+| {#code-score-required} `SCORE_REQUIRED` | [“Enter a score.”](#err-liveerrors-codes-score-required) | The database refused the action and said why. |
+| {#code-seats-not-filled} `SEATS_NOT_FILLED` | [“‹n› seats in this heat still wait for a rider — finish the earlier heats first, or fill the seat in the Draw step”](#err-liveerrors-codes-seats-not-filled) | A seat still shows a placeholder such as “1st H1”: the heat that feeds it is not published. |
+| {#code-seat-is-real} `SEAT_IS_REAL` | [“A person has that seat.”](#err-simulator-errors-seat-is-real) | The simulator could not do it. |
+| {#code-seat-not-found} `SEAT_NOT_FOUND` | [“That seat no longer exists.”](#err-simulator-errors-seat-not-found) | The simulator could not do it. |
+| {#code-sheets-not-submitted} `SHEETS_NOT_SUBMITTED` | [“‹n› judges have not submitted yet. Give a reason to go on without them.”](#err-liveerrors-codes-sheets-not-submitted) | The database refused the action and said why. |
+| {#code-simulation-locked} `SIMULATION_LOCKED` | [“A heat of this event has already started, so this can no longer be changed.”](#err-liveerrors-codes-simulation-locked) | “Simulation event” can be changed only before the first heat starts. |
+| {#code-sim-not-enabled} `SIM_NOT_ENABLED` | [“The simulator is not set up for this event yet.”](#err-simulator-errors-sim-not-enabled) | The simulator could not do it. |
+| {#code-slug-mismatch} `SLUG_MISMATCH` | [“The web address you typed does not match. Nothing was deleted.”](#err-eventlifecycle-errors-slug-mismatch) · [“The web address you typed does not match. Nothing was deleted.”](#err-admin-errors-slug-mismatch) · [“That is not the event's web address.”](#err-simulator-errors-slug-mismatch) · [“That is not the event’s web address. Nothing was changed.”](#err-reset-errors-slug-mismatch) | The event could not be deleted or archived. |
+| {#code-slug-taken} `SLUG_TAKEN` | [“That web address is already used by another organisation.”](#err-admin-errors-slug-taken) | The admin action was refused. |
+| {#code-snapshot-expired} `SNAPSHOT_EXPIRED` | [“That copy is older than 30 days and can no longer be restored.”](#err-reset-restore-errors-snapshot-expired) | The reset or restore was refused; nothing was changed. |
+| {#code-snapshot-not-found} `SNAPSHOT_NOT_FOUND` | [“That copy no longer exists.”](#err-reset-restore-errors-snapshot-not-found) | The reset or restore was refused; nothing was changed. |
+| {#code-source-already-run} `SOURCE_ALREADY_RUN` | [“This event has already been run, so it is not a clean starting point. Copy it before its first heat starts, or reset it first.”](#err-simulator-errors-source-already-run) | The simulator could not do it. |
+| {#code-target-not-found} `TARGET_NOT_FOUND` | [“The organisation you chose no longer exists.”](#err-admin-errors-target-not-found) | The admin action was refused. |
+| {#code-too-many-rows} `TOO_MANY_ROWS` | “The file has more than ‹n› riders…” | The rider file is too long. |
+| {#code-trick-base-invalid} `TRICK_BASE_INVALID` | “That did not work…” (Trick base) | The trick base sent was not in the expected shape. |
+| {#code-trick-base-locked} `TRICK_BASE_LOCKED` | “A heat has started, so blocks cannot be removed.” | A ticked block cannot be unticked after the division's first heat. |
+| {#code-undo-too-late} `UNDO_TOO_LATE` | [“Too late to undo: ask the head judge to delete it.”](#err-liveerrors-codes-undo-too-late) | Undo works for 10 seconds after logging. |
+| {#code-user-not-found} `USER_NOT_FOUND` | [“That login does not exist.”](#err-admin-errors-user-not-found) | The admin action was refused. |
+| {#code-use-heat-functions} `USE_HEAT_FUNCTIONS` | [“Use the heat buttons to change a heat.”](#err-liveerrors-codes-use-heat-functions) | A heat's state changes only through Start / Pause / Resume / End / Publish. |
+| {#code-version-conflict} `VERSION_CONFLICT` | [“The result changed while you were pressing. Look at it again.”](#err-liveerrors-codes-version-conflict) | Someone published or re-opened the heat at the same moment. |
+| {#code-vocabulary-other-organisation} `VOCABULARY_OTHER_ORGANISATION` | “That did not work…” (Trick base) | A trick block belongs to another organisation's event. |
+<!-- generated:codes:end -->

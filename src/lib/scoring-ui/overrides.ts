@@ -74,3 +74,11 @@ export function isEmptyOverrides(o: unknown): boolean {
 export function sameOverrides(a: unknown, b: unknown): boolean {
   return same(a ?? {}, b ?? {});
 }
+
+/**
+ * The saved overrides as the screen compares them: what the saved overrides really change on this base. A stored override that equals the base's own value
+ * (stored by an import, a copy, or when the base later took that value) changes nothing, so it must not make the panel say "Unsaved changes".
+ */
+export function effectiveOverrides(base: unknown, saved: unknown, merged: unknown, nullable: readonly string[] = []): Obj {
+  return isObj(base) && isObj(merged) ? diffOverrides(base, merged, nullable) : isObj(saved) ? (saved as Obj) : {};
+}

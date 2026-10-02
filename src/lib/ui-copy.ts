@@ -720,7 +720,7 @@ export const copy = {
 
   scoringSimple: {
     counting: "Which tricks count?",
-    countingOther: "This preset counts tricks in a different way. Change that under Show all settings.",
+    countingOther: "This preset counts tricks in a different way. Change that under More settings.",
     n: "Best tricks that count (N)",
     attempts: "Attempts allowed per rider per heat (M)",
     noLimit: "No limit on attempts per rider",
@@ -858,7 +858,7 @@ export const copy = {
     secondChanceAll: "Everyone who did not win",
     secondChanceDepth: (n: number) => `${n === 1 ? "2nd place" : n === 2 ? "2nd and 3rd" : `2nd to ${ordinal(n + 1)}`} only; the others are out`,
     tags: { atLeastTwo: "Every rider gets at least 2 heats", canBeOut: "Riders can be out after 1 heat" },
-    heatLengthsMoved: "Heat lengths and breaks are under Show all settings.",
+    heatLengthsMoved: "Heat lengths and breaks are under More settings.",
     minHeats: (n: number) => `Minimum heats per rider: ${n}`,
     advancePerHeat: "How many advance",
     finalSize: "Final size",
@@ -1787,8 +1787,8 @@ export const copy = {
     categoryLabels: { handle_pass: "Handle pass", board_off: "Board-off", kiteloop: "Kiteloop", rotation: "Rotation", other: "Other" } as Record<string, string>,
     categoriesHeading: "Scoring categories from these blocks",
     categoriesNone: "No categories yet: tick at least one base trick.",
-    categoriesNote: "Shown from the highest precedence to the lowest: handle pass, board-off, kiteloop, rotation, other. Per-category counting rules are under Scoring → Show all settings → Trick categories.",
-    notInScoring: (names: string) => `These categories are not in this division’s scoring rules yet: ${names}. Add them under Scoring → Show all settings → Trick categories if you count per category.`,
+    categoriesNote: "Shown from the highest precedence to the lowest: handle pass, board-off, kiteloop, rotation, other. Per-category counting rules are under Scoring → More settings → Trick categories.",
+    notInScoring: (names: string) => `These categories are not in this division’s scoring rules yet: ${names}. Add them under Scoring → More settings → Trick categories if you count per category.`,
     addBlock: "+ Add block",
     addFamily: "Family",
     addName: "Name of the block",
@@ -3463,6 +3463,31 @@ export const copy = {
     summaryVariety: "Repeats (how many times the same trick was landed again)",
     summaryDirections: "Left and right",
     summaryList: "The landed tricks with my scores",
+  },
+  /** The Help section at /help (the product manual in docs/manual) and the "Learn more" links that point into it. */
+  manual: {
+    title: "Help",
+    metaTitle: (product: string) => `${product} — Help`,
+    intro: "The product manual: how to set up and run an event, every screen, every setting, and what to do when something goes wrong.",
+    contents: "Contents",
+    search: "Search the manual",
+    searchPlaceholder: "for example: grey button, Hold, PIN",
+    searchNone: (q: string) => `Nothing in the manual matches “${q}”.`,
+    searchCount: (n: number) => `${n} ${plural(n, "match", "matches")}`,
+    pdf: "Download as PDF",
+    pdfHint: "Opens the print window: choose “Save as PDF”. The whole manual is one file.",
+    version: (v: string) => `Product version ${v}`,
+    learnMore: "Learn more",
+    learnMoreAbout: (what: string) => `Learn more: ${what}`,
+    footerHelp: "Help",
+    backToTop: "Back to the top",
+    groups: { Start: "Start here", Screens: "Screens", Reference: "Reference" } as Record<string, string>,
+    /** The anchors the "Learn more" links point at. A refusal sentence's anchor is made from its place in this file, a setting's "?" from its key. */
+    anchor: {
+      refusal: (path: string) => `err-${path.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase()}`,
+      setting: (key: string) => `set-${key.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase()}`,
+    },
+    href: (anchor: string) => `/help#${anchor}`,
   },
 };
 

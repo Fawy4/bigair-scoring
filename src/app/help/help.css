@@ -1,0 +1,336 @@
+/* The Help section (the product manual): Daylight look from the beach tokens, a contents column on a laptop, one column on a phone, and a print
+   version that is the whole manual with nothing else (the "Download as PDF" button prints this page). */
+.help-root {
+  --h-ink: var(--beach-ink, #111);
+  --h-bg: var(--beach-bg, #fff);
+  --h-surface: var(--beach-surface, #f4f4f5);
+  --h-line: var(--beach-line, #e4e4e7);
+  --h-border: var(--beach-border, #a1a1aa);
+  --h-muted: var(--beach-muted, #52525b);
+  --h-accent: var(--beach-accent, #0f5f5c);
+  --h-on-accent: var(--beach-on-accent, #fff);
+  min-height: 100vh;
+  background: var(--h-bg);
+  color: var(--h-ink);
+  font-size: 16px;
+  line-height: 1.55;
+  font-weight: 450;
+}
+.help-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--h-bg);
+  border-bottom: 1px solid var(--h-line);
+}
+.help-top-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 8px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.help-brand {
+  font-size: 20px;
+  font-weight: 650;
+  text-decoration: none;
+  color: inherit;
+}
+.help-version {
+  font-size: 13px;
+  color: var(--h-muted);
+  font-weight: 550;
+}
+.help-search {
+  position: relative;
+  flex: 1 1 260px;
+  max-width: 520px;
+}
+.help-search input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--h-border);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--h-bg);
+  color: var(--h-ink);
+  font-size: 16px;
+}
+.help-results {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--h-bg);
+  border: 1px solid var(--h-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+  padding: 8px;
+}
+.help-results ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.help-results a {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+.help-results a:hover,
+.help-results a:focus {
+  background: var(--h-surface);
+}
+.help-results-count,
+.help-result-page {
+  font-size: 13px;
+  color: var(--h-muted);
+}
+.help-result-snippet {
+  font-size: 14px;
+}
+.help-pdf {
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--h-accent);
+  background: var(--h-accent);
+  color: var(--h-on-accent);
+  font-weight: 600;
+  padding: 0 14px;
+}
+.help-body {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  padding: 16px;
+}
+@media (min-width: 1024px) {
+  .help-body {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+  .help-toc {
+    position: sticky;
+    top: 64px;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+  }
+}
+.help-toc summary {
+  font-weight: 650;
+  cursor: pointer;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+.help-toc ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+.help-toc ul ul {
+  padding-left: 14px;
+}
+.help-toc a {
+  display: block;
+  padding: 3px 0;
+  color: inherit;
+  text-decoration: none;
+  font-size: 14px;
+}
+.help-toc a:hover {
+  text-decoration: underline;
+}
+.help-toc-heading {
+  margin: 12px 0 4px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--h-muted);
+  font-weight: 650;
+}
+.help-main {
+  min-width: 0;
+}
+.help-intro {
+  color: var(--h-muted);
+  margin: 0 0 16px;
+}
+.help-page {
+  border-top: 2px solid var(--h-line);
+  padding-top: 8px;
+  margin-bottom: 40px;
+}
+.help-page-foot {
+  font-size: 12px;
+  color: var(--h-muted);
+}
+.help-page-foot a {
+  color: inherit;
+}
+.help-md h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 16px 0 8px;
+  line-height: 1.2;
+}
+.help-md h3 {
+  font-size: 21px;
+  font-weight: 650;
+  margin: 24px 0 8px;
+}
+.help-md h4 {
+  font-size: 17px;
+  font-weight: 650;
+  margin: 18px 0 6px;
+}
+.help-md h5 {
+  font-size: 15px;
+  font-weight: 650;
+  margin: 14px 0 4px;
+}
+.help-md :is(h2, h3, h4, h5, tr) {
+  scroll-margin-top: 72px;
+}
+.help-md p,
+.help-md ul,
+.help-md ol {
+  margin: 8px 0;
+}
+.help-md ul,
+.help-md ol {
+  padding-left: 22px;
+}
+.help-md ul {
+  list-style: disc;
+}
+.help-md ol {
+  list-style: decimal;
+}
+.help-md a {
+  color: var(--h-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.help-md code {
+  background: var(--h-surface);
+  border: 1px solid var(--h-line);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+.help-md pre {
+  background: var(--h-surface);
+  border: 1px solid var(--h-line);
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+  font-size: 13px;
+}
+.help-md pre.mermaid {
+  background: var(--h-bg);
+  text-align: center;
+}
+.help-md blockquote {
+  border-left: 4px solid var(--h-accent);
+  margin: 12px 0;
+  padding: 4px 12px;
+  background: var(--h-surface);
+  border-radius: 0 8px 8px 0;
+}
+.help-md img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--h-line);
+  border-radius: 8px;
+  margin: 8px 0 0;
+  display: block;
+}
+.help-md img[src*="-390"] {
+  max-width: 320px;
+}
+.help-md .table-wrap {
+  overflow-x: auto;
+  margin: 12px 0;
+}
+.help-md table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+.help-md th,
+.help-md td {
+  border: 1px solid var(--h-line);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.help-md th {
+  background: var(--h-surface);
+  font-weight: 650;
+}
+.help-md :target,
+.help-md .help-hit {
+  outline: 3px solid var(--h-accent);
+  outline-offset: 2px;
+  background: color-mix(in srgb, var(--h-accent) 10%, transparent);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media print {
+  .help-top,
+  .help-toc,
+  .help-intro,
+  .help-page-foot a {
+    display: none !important;
+  }
+  .help-body {
+    display: block;
+    padding: 0;
+    max-width: none;
+  }
+  .help-root {
+    font-size: 11pt;
+  }
+  .help-page {
+    break-before: page;
+    border-top: none;
+  }
+  .help-page:first-child {
+    break-before: auto;
+  }
+  .help-md :is(h2, h3, h4) {
+    break-after: avoid;
+  }
+  .help-md tr,
+  .help-md img,
+  .help-md pre {
+    break-inside: avoid;
+  }
+  .help-md img {
+    max-height: 18cm;
+    width: auto;
+  }
+  .help-md a {
+    color: inherit;
+  }
+  .help-md .table-wrap {
+    overflow: visible;
+  }
+}

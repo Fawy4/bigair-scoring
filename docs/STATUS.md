@@ -941,3 +941,30 @@ One commit per item. Item 3 (the master trick base editor) is **not** in this pu
 1. Open /admin → an organisation → note the sentence about 2 e-mails an hour; Invite organiser with your own address (or untick the e-mail and copy the link); open the link in a private window: you are in that organisation, nothing else to do. Account → Set a password, sign out, sign in with e-mail + password.
 2. Back in /admin: Remove next to that person, confirm; in the private window reload: you are sent to sign-in. Invite again.
 3. Open an event → Simulate: the panel is in the same look in Daylight and Dark; View as… → Phone → Show PIN.
+## Manual v1 – product manual, Help section, glossary (branch `manual-v1`)
+
+### Done
+- **The manual** in `docs/manual/` (40 pages, Markdown): README (how to read, how to update, the version rule), Quick start (an event in 30 minutes, mirroring the Go live checklist), Dependency map (what must be true before each action, where to fix it, the sentence shown; a Mermaid diagram of the chain), Event day (docs/09 brought up to the built product, organiser and head judge side by side), Troubleshooting (symptoms, then every sentence alphabetically), one page per screen (organiser steps, Go live, organiser access, head console laptop and phone, judge, spotter, announcer, the public pages, big screen, simulator, admin), Settings, Resets and undo, Roles, Glossary, Errors and refusals, Changelog. Every page has a one-line summary and “Last checked: ‹date› · Product version ‹version›”.
+- **Generated, so they cannot drift**: `npm run manual:generate` writes the settings tables (labels, “?” texts, examples, defaults read from the Zod schemas, the values of every built-in preset), the errors appendix (every refusal sentence of `ui-copy.ts`, 530+, with where / meaning / fix from `scripts/manual/error-notes.ts`, and every database code raised by a migration) and the alphabetical sentence index of Troubleshooting.
+- **Help section** at `/help` (public, noindex, a static page built from `docs/manual`): left table of contents, client-side search over every heading, the text under it and every anchored table row, the Mermaid diagram drawn (`mermaid` package, loaded only on /help), pictures served from `docs/manual/img`, **Download as PDF** (loads every picture, then the print window; print styles give one page per manual page).
+- **Learn more**: every “?” on the organiser and admin screens (and the simulator's) opens its row of the settings page; every refusal sentence on the organiser, admin and head judge screens (alerts, field problems, the reason under a grey button, toasts) gets a “Learn more” link to its row of the errors page. Anchors are made by `copy.manual.anchor` in `ui-copy.ts`.
+- **Product version** 0.9.0 (`package.json`), shown on /admin/health, in the home page's footer (with a Help link) and at the top of /help.
+- **Screenshots**: `npm run manual:shots` builds a throwaway organisation on the hosted project (three divisions, 24 riders, officials with PINs, locked draws, Plan A / Plan B), photographs the setup and admin screens, copies the event into a simulation and plays it at ×20 for published heats, photographs the console, judge, spotter, announcer, public pages and big screen at 1280 / 390 px, and removes everything.
+- **Rule** in CLAUDE.md (golden rule 9): every PR that changes a screen, a setting, a sentence or a rule updates the manual pages it touches, retakes their screenshots, and adds a changelog line.
+
+### Tests
+- `src/lib/manual/manual.test.ts`: the renderer; every page's summary and version line; unique anchors; every internal link resolves; every picture exists; house words; search lands “grey” on the Hold row; every refusal sentence and every database code in errors.md; every setting of the scoring, format, event and division-live schemas in settings.md; every “?” opens its own row; the generated tables are up to date.
+- `e2e/help.spec.ts`: /help renders, search, links, pictures, the diagram, the PDF button; a grey button's reason and a “?” on the organiser screens carry Learn more links that resolve.
+
+### Fixed on the way (owner, 2 Oct 2026)
+- The Trick base tab and two Scoring/Format sentences said “Show all settings”; the fold is “More settings”.
+- A division's Scoring or Format tab said “● Unsaved changes” before anything was touched when a stored override equalled the preset's own value (`effectiveOverrides`, with tests).
+- The empty toast area painted a blank strip over the page (bottom right on a laptop: it hid “Opens in a new tab.” on Go live; the top strip on a phone). It is now see-through and lets taps through.
+- docs/09 corrected to the built product.
+
+### Owed (not needed before 8 October, owner 2 Oct 2026)
+- Results export (CSV / PDF per division), audit-log export, “Duplicate event”, printed paper judge sheets.
+
+### Not done / not verified
+- The master trick base editor is being built in its own PR, which updates screens/admin-trick-base.md.
+- Not seen on a real phone, in sun, or on the Vercel preview.

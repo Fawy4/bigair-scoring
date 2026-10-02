@@ -14,10 +14,12 @@ const ToastViewport = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
 >(({ className, ...props }, ref) => {
   const scope = useThemeScope();
+  // the theme scope gives the toasts their colours; the (usually empty) viewport itself must stay see-through and let taps through, or it paints a
+  // blank strip over the page (bottom right on a laptop: it hid “Opens in a new tab.” on Go live; the top on a phone)
   return (
   <ToastPrimitives.Viewport
     ref={ref}
-    className={cn(scope, "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:max-w-[420px] sm:flex-col", className)}
+    className={cn(scope, "pointer-events-none !bg-transparent fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:max-w-[420px] sm:flex-col", className)}
     {...props}
   />
   );
