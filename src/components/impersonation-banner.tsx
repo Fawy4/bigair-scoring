@@ -9,7 +9,7 @@ export function ImpersonationBanner({ orgName, product }: { orgName: string; pro
         <span>
           {copy.layout.viewingAs} {orgName} —{" "}
         </span>
-        <button type="submit" className="btn !min-h-[44px] !border-[#111] !bg-white underline">
+        <button type="submit" className="btn !min-h-[var(--org-ctl)] !border-[#111] !bg-white underline">
           {copy.layout.backToAdmin(product)}
         </button>
       </form>

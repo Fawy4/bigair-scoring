@@ -156,7 +156,7 @@ function SeatBox({
     >
       <div className="flex items-center gap-2">
         {draggable && !readOnly ? (
-          <button type="button" ref={drag.setActivatorNodeRef} className="btn !min-h-[40px] !px-2" aria-label={T.dragSeat(label)} disabled={current.type === "empty"} {...drag.listeners} {...drag.attributes}>
+          <button type="button" ref={drag.setActivatorNodeRef} className="btn !min-h-[var(--org-ctl)] !px-2" aria-label={T.dragSeat(label)} disabled={current.type === "empty"} {...drag.listeners} {...drag.attributes}>
             ⠿
           </button>
         ) : (
@@ -217,7 +217,7 @@ function SeatBox({
         </select>
       </div>
       {eligibleTarget ? (
-        <button type="button" className="btn btn-primary !min-h-[40px]" onClick={onSend}>
+        <button type="button" className="btn btn-primary !min-h-[var(--org-ctl)]" onClick={onSend}>
           {T.putHere}
         </button>
       ) : null}
@@ -343,10 +343,10 @@ export function LadderBuilder({ ladder, onChange, riders, confirmedCount, readOn
                         onBlur={(e) => e.target.value.trim() !== round.name && change(() => renameRound(ladder, round.id, e.target.value))}
                         onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
                       />
-                      <button type="button" className="btn !min-h-[40px] !px-3" disabled={readOnly || ri === 0} aria-label={T.moveRoundLeft(round.name)} onClick={() => change(() => moveRound(ladder, round.id, -1))}>
+                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={readOnly || ri === 0} aria-label={T.moveRoundLeft(round.name)} onClick={() => change(() => moveRound(ladder, round.id, -1))}>
                         ←
                       </button>
-                      <button type="button" className="btn !min-h-[40px] !px-3" disabled={readOnly || ri === ladder.rounds.length - 1} aria-label={T.moveRoundRight(round.name)} onClick={() => change(() => moveRound(ladder, round.id, 1))}>
+                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={readOnly || ri === ladder.rounds.length - 1} aria-label={T.moveRoundRight(round.name)} onClick={() => change(() => moveRound(ladder, round.id, 1))}>
                         →
                       </button>
                     </div>
@@ -379,13 +379,13 @@ export function LadderBuilder({ ladder, onChange, riders, confirmedCount, readOn
                           onBlur={(e) => e.target.value.trim() !== heatName(round, hi + 1) && change(() => renameHeat(ladder, round.id, hi + 1, e.target.value.trim() === `H${hi + 1}` ? "" : e.target.value))}
                           onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
                         />
-                        <button type="button" className="btn !min-h-[40px] !px-3" disabled={readOnly || heat.seats.length <= 0} aria-label={T.fewerSeats(round.name, hi + 1)} onClick={() => change(() => setSeatCount(ladder, round.id, hi + 1, heat.seats.length - 1))}>
+                        <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={readOnly || heat.seats.length <= 0} aria-label={T.fewerSeats(round.name, hi + 1)} onClick={() => change(() => setSeatCount(ladder, round.id, hi + 1, heat.seats.length - 1))}>
                           −
                         </button>
                         <span className="min-w-14 text-center text-sm font-extrabold" data-testid="seat-count">
                           {T.seatCount(heat.seats.length)}
                         </span>
-                        <button type="button" className="btn !min-h-[40px] !px-3" disabled={readOnly || heat.seats.length >= 10} aria-label={T.moreSeats(round.name, hi + 1)} onClick={() => change(() => setSeatCount(ladder, round.id, hi + 1, heat.seats.length + 1))}>
+                        <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={readOnly || heat.seats.length >= 10} aria-label={T.moreSeats(round.name, hi + 1)} onClick={() => change(() => setSeatCount(ladder, round.id, hi + 1, heat.seats.length + 1))}>
                           +
                         </button>
                       </div>
@@ -417,7 +417,7 @@ export function LadderBuilder({ ladder, onChange, riders, confirmedCount, readOn
                             <button
                               key={p}
                               type="button"
-                              className="btn !min-h-[40px]"
+                              className="btn !min-h-[var(--org-ctl)]"
                               disabled={readOnly}
                               aria-pressed={sending?.round === round.id && sending.heat === hi + 1 && sending.place === p + 1}
                               onClick={() => setSending(sending?.round === round.id && sending.heat === hi + 1 && sending.place === p + 1 ? null : { round: round.id, heat: hi + 1, place: p + 1 })}
@@ -483,7 +483,7 @@ export function LadderBuilder({ ladder, onChange, riders, confirmedCount, readOn
 /** A fix with two buttons only when the same fault needs one per kind (the label says which). */
 function FixButton({ fix, onFix, disabled }: { fix: Fix; onFix: (f: Fix) => void; disabled?: boolean }) {
   return (
-    <button type="button" className="btn !min-h-[40px] w-fit" disabled={disabled} onClick={() => onFix(fix)} data-testid="ladder-fix">
+    <button type="button" className="btn !min-h-[var(--org-ctl)] w-fit" disabled={disabled} onClick={() => onFix(fix)} data-testid="ladder-fix">
       {fix.label}
     </button>
   );

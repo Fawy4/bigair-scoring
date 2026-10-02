@@ -3,23 +3,24 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+/** The same buttons as the organiser screens (components/org/button.tsx): the accent fill for the one primary action, a 1 px frame for the rest, text only for the quiet ones. 8 px corners, 40 px high (44 on touch, 48 with Large). */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex min-h-[var(--org-ctl)] items-center justify-center gap-2 whitespace-nowrap rounded-[8px] border px-3 text-body font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:border-dashed disabled:border-beach-border disabled:bg-beach-surface disabled:text-beach-muted",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        default: "border-beach-accent bg-primary text-primary-foreground hover:brightness-110",
+        destructive: "border-beach-crash bg-background text-beach-crash hover:bg-secondary",
+        outline: "border-input bg-background text-foreground hover:bg-secondary",
+        secondary: "border-input bg-background text-foreground hover:bg-secondary",
+        ghost: "border-transparent bg-transparent text-foreground hover:bg-secondary",
+        link: "border-transparent bg-transparent text-foreground underline underline-offset-4",
       },
       size: {
-        default: "h-12 px-4 py-2",
-        sm: "h-10 rounded-md px-3",
-        lg: "h-14 rounded-md px-8",
-        icon: "h-12 w-12",
+        default: "",
+        sm: "px-2.5",
+        lg: "px-5",
+        icon: "min-w-[var(--org-ctl)] px-0",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

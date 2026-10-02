@@ -10,10 +10,10 @@ export function Toaster() {
   return (
     <ToastProvider duration={4000}>
       {toasts.map((t) => (
-        <Toast key={t.id} open onOpenChange={(open) => !open && dismissToast(t.id)} className="border-2 border-[#111]">
+        <Toast key={t.id} open onOpenChange={(open) => !open && dismissToast(t.id)}>
           <div className="grid gap-1">
-            <ToastTitle className="text-base font-bold">{copy.common.toastDone(t.title)}</ToastTitle>
-            {t.description ? <ToastDescription className="text-base font-semibold">{t.description}</ToastDescription> : null}
+            <ToastTitle className="text-body font-semibold">{copy.common.toastDone(t.title)}</ToastTitle>
+            {t.description ? <ToastDescription className="text-body font-medium">{t.description}</ToastDescription> : null}
           </div>
           <ToastClose />
         </Toast>

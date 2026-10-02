@@ -17,7 +17,7 @@ import { fullName, type EntryRow } from "./types";
 const C = copy.riders.columns;
 const th = "border-2 border-[#111] bg-[#eee] p-2 text-left align-bottom";
 const td = "border-2 border-[#111] p-1 align-middle";
-const input = "w-full min-w-[6rem] !min-h-[2.75rem]";
+const input = "w-full min-w-[6rem] !min-h-[var(--org-ctl)]";
 
 /** A cell that saves when the person leaves it (or presses Enter), and only when the value really changed. */
 function Cell({ value, label, onCommit, width, inputMode }: { value: string; label: string; onCommit: (v: string) => void; width?: string; inputMode?: "numeric" | "decimal" | "email" | "tel" }) {
@@ -60,7 +60,7 @@ function Row({ row, index, total, scheme, cols, clashes, handlers, busy, ids }: 
     <tr ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, position: "relative", zIndex: isDragging ? 5 : undefined, background: isDragging ? "#fff8c5" : undefined }} data-testid="rider-row" className={inactive ? "opacity-70" : ""}>
       <td className={td}>
         <div className="flex items-center gap-1">
-          <button type="button" className="btn !min-h-[2.75rem] !px-2" aria-label={copy.riders.drag(name)} {...attributes} {...listeners}>
+          <button type="button" className="btn !min-h-[var(--org-ctl)] !px-2" aria-label={copy.riders.drag(name)} {...attributes} {...listeners}>
             ⠿
           </button>
           <div className="flex flex-col gap-1">
@@ -124,7 +124,7 @@ function Row({ row, index, total, scheme, cols, clashes, handlers, busy, ids }: 
       <td className={td}>
         <select
           aria-label={`${C.status}: ${name}`}
-          className="!min-h-[2.75rem]"
+          className="!min-h-[var(--org-ctl)]"
           value={row.status === "confirmed" || row.status === "withdrawn" || row.status === "no_show" ? row.status : "confirmed"}
           onChange={(e) => handlers.saveEntry(row, { status: e.target.value as "confirmed" | "withdrawn" | "no_show" })}
         >
@@ -158,7 +158,7 @@ function Row({ row, index, total, scheme, cols, clashes, handlers, busy, ids }: 
 
 function ColourSelect({ label, value, palette, onChange }: { label: string; value: string; palette: IdentificationScheme["palette"]; onChange: (v: string) => void }) {
   return (
-    <select aria-label={label} className="!min-h-[2.75rem]" value={value} onChange={(e) => onChange(e.target.value)}>
+    <select aria-label={label} className="!min-h-[var(--org-ctl)]" value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">{copy.riders.pickColour}</option>
       {palette.map((c) => (
         <option key={c.key} value={c.key}>

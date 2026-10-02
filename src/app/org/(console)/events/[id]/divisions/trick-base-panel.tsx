@@ -51,13 +51,13 @@ function BlockRow({
         {block.local || block.proposed ? <span className="rounded border-2 border-[#111] px-1 text-xs font-bold">{block.proposed ? T.proposedTag : T.localTag}</span> : null}
         {favourite ? <span className="text-xs font-bold">{T.favouriteTag}</span> : null}
       </label>
-      <button type="button" className="btn !min-h-[40px] !px-3" aria-label={T.moveUp(block.label)} data-testid={`up-${id}`} disabled={pending} onClick={onUp}>
+      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" aria-label={T.moveUp(block.label)} data-testid={`up-${id}`} disabled={pending} onClick={onUp}>
         ↑
       </button>
-      <button type="button" className="btn !min-h-[40px] !px-3" aria-label={T.moveDown(block.label)} data-testid={`down-${id}`} disabled={pending} onClick={onDown}>
+      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" aria-label={T.moveDown(block.label)} data-testid={`down-${id}`} disabled={pending} onClick={onDown}>
         ↓
       </button>
-      <button type="button" className="btn !min-h-[40px] !px-3" aria-label={T.favourite(block.label)} aria-pressed={favourite} data-testid={`fav-${id}`} disabled={pending} onClick={onFavourite}>
+      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" aria-label={T.favourite(block.label)} aria-pressed={favourite} data-testid={`fav-${id}`} disabled={pending} onClick={onFavourite}>
         {favourite ? "★" : "☆"}
       </button>
       {movable ? (

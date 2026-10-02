@@ -7,17 +7,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: { DEFAULT: "hsl(var(--primary))", foreground: "hsl(var(--primary-foreground))" },
-        secondary: { DEFAULT: "hsl(var(--secondary))", foreground: "hsl(var(--secondary-foreground))" },
-        destructive: { DEFAULT: "hsl(var(--destructive))", foreground: "hsl(var(--destructive-foreground))" },
-        muted: { DEFAULT: "hsl(var(--muted))", foreground: "hsl(var(--muted-foreground))" },
-        accent: { DEFAULT: "hsl(var(--accent))", foreground: "hsl(var(--accent-foreground))" },
-        card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
+        // The shadcn names point at the beach tokens, so a base component and a /design screen can never drift apart.
+        // The card line is the soft 1 px line; a control's frame (input) is the stronger 4.5:1 one; the ring is the focus colour.
+        border: "var(--beach-line)",
+        input: "var(--beach-border)",
+        ring: "var(--beach-focus)",
+        background: "var(--beach-bg)",
+        foreground: "var(--beach-ink)",
+        primary: { DEFAULT: "var(--beach-accent)", foreground: "var(--beach-on-accent)" },
+        secondary: { DEFAULT: "var(--beach-surface)", foreground: "var(--beach-ink)" },
+        destructive: { DEFAULT: "var(--beach-crash)", foreground: "var(--beach-on-crash)" },
+        muted: { DEFAULT: "var(--beach-surface)", foreground: "var(--beach-muted)" },
+        accent: { DEFAULT: "var(--beach-surface)", foreground: "var(--beach-ink)" },
+        card: { DEFAULT: "var(--beach-bg)", foreground: "var(--beach-ink)" },
         // Official screens and /design: the beach themes (see .beach-day / .beach-dark in globals.css)
         beach: {
           bg: "var(--beach-bg)",

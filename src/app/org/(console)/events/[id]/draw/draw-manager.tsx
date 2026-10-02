@@ -416,14 +416,14 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
                 <Rename className="text-xl font-extrabold" label={round.name} value={round.name} disabled={locked} onSave={(name) => apply({ op: "renameRound", roundId: round.id, name })} />
                 {editable ? (
                   <>
-                    <button type="button" className="btn !min-h-[40px]" disabled={pending} onClick={() => apply({ op: "addHeat", roundId: round.id })}>
+                    <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={pending} onClick={() => apply({ op: "addHeat", roundId: round.id })}>
                       {T.addHeat}
                     </button>
-                    <button type="button" className="btn !min-h-[40px]" disabled={pending} onClick={() => apply({ op: "addRound", afterRoundId: round.id })}>
+                    <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={pending} onClick={() => apply({ op: "addRound", afterRoundId: round.id })}>
                       {T.addRoundAfter}
                     </button>
                     {round.heats.length === 0 ? (
-                      <button type="button" className="btn !min-h-[40px]" disabled={pending} onClick={() => apply({ op: "removeRound", roundId: round.id })}>
+                      <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={pending} onClick={() => apply({ op: "removeRound", roundId: round.id })}>
                         {T.removeRound}
                       </button>
                     ) : null}
@@ -435,7 +435,7 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
             renderHeatExtra={(_round, heat) =>
               editable && heat.status === "pending" ? (
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" className="btn !min-h-[40px]" disabled={pending} onClick={() => apply({ op: "addSeat", heatId: heat.id })}>
+                  <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={pending} onClick={() => apply({ op: "addSeat", heatId: heat.id })}>
                     {T.addSeat}
                   </button>
                   <ConfirmButton

@@ -55,12 +55,12 @@ function UnscheduledHeat({ h, onAdd, disabled }: { h: HeatInfo; onAdd: () => voi
   const drag = useDraggable({ id: `u:${h.heatId}`, disabled });
   return (
     <li ref={drag.setNodeRef} className={cn("flex items-center gap-2 rounded-lg border-2 border-[#111] bg-white px-2 py-1", drag.isDragging ? "opacity-40" : "")} data-testid="unscheduled-heat">
-      <button type="button" className="btn !min-h-[40px] !px-2" aria-label={T.dragHeat(h.division, h.heat)} {...drag.listeners} {...drag.attributes} disabled={disabled}>
+      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-2" aria-label={T.dragHeat(h.division, h.heat)} {...drag.listeners} {...drag.attributes} disabled={disabled}>
         ⠿
       </button>
       <span className="min-w-0 flex-1 font-bold">{h.heat}</span>
       <span className="text-sm font-semibold">{T.lengthShort(h.warmUpMin, h.durationMin)}</span>
-      <button type="button" className="btn !min-h-[40px]" disabled={disabled} aria-label={T.addHeatLabel(h.division, h.round, h.heat)} onClick={onAdd}>
+      <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={disabled} aria-label={T.addHeatLabel(h.division, h.round, h.heat)} onClick={onAdd}>
         {T.add}
       </button>
     </li>
@@ -80,7 +80,7 @@ function RowShell({ id, problem, children }: { id: string; problem?: string; chi
       data-testid="run-row"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="btn !min-h-[40px] !px-2" aria-label={T.dragRow} {...drag.listeners} {...drag.attributes}>
+        <button type="button" className="btn !min-h-[var(--org-ctl)] !px-2" aria-label={T.dragRow} {...drag.listeners} {...drag.attributes}>
           ⠿
         </button>
         {children}
@@ -330,7 +330,7 @@ export function ScheduleManager(props: ScheduleProps) {
                     <h3 className="min-w-0 flex-1 font-extrabold">
                       {g.division} · {g.round}
                     </h3>
-                    <button type="button" className="btn !min-h-[40px]" disabled={pending} onClick={() => mutate((p) => addHeatsToPlan(p, g.heats.map((h) => h.heatId)))}>
+                    <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={pending} onClick={() => mutate((p) => addHeatsToPlan(p, g.heats.map((h) => h.heatId)))}>
                       {T.addAll(g.heats.length)}
                     </button>
                   </div>
@@ -392,12 +392,12 @@ export function ScheduleManager(props: ScheduleProps) {
                         pinning === r.itemId ? (
                           <span className="flex items-center gap-1">
                             <input type="time" aria-label={T.pinTimeLabel(idx + 1)} value={pinTime} onChange={(e) => setPinTime(e.target.value)} className="w-32" />
-                            <button type="button" className="btn btn-primary !min-h-[40px]" disabled={!pinTime} onClick={() => { mutate((p) => setPin(p, r.itemId, pinTime, lives)); setPinning(null); }}>{T.pin}</button>
-                            {r.pinned ? <button type="button" className="btn !min-h-[40px]" onClick={() => { mutate((p) => setPin(p, r.itemId, null, lives)); setPinning(null); }}>{T.unpin}</button> : null}
-                            <button type="button" className="btn !min-h-[40px]" onClick={() => setPinning(null)}>{copy.common.cancel}</button>
+                            <button type="button" className="btn btn-primary !min-h-[var(--org-ctl)]" disabled={!pinTime} onClick={() => { mutate((p) => setPin(p, r.itemId, pinTime, lives)); setPinning(null); }}>{T.pin}</button>
+                            {r.pinned ? <button type="button" className="btn !min-h-[var(--org-ctl)]" onClick={() => { mutate((p) => setPin(p, r.itemId, null, lives)); setPinning(null); }}>{T.unpin}</button> : null}
+                            <button type="button" className="btn !min-h-[var(--org-ctl)]" onClick={() => setPinning(null)}>{copy.common.cancel}</button>
                           </span>
                         ) : (
-                          <button type="button" className="btn !min-h-[40px]" disabled={started} aria-label={T.startButton(idx + 1, r.start ?? "–")} data-testid="row-start" onClick={() => { setPinning(r.itemId); setPinTime(r.start ?? ""); }}>
+                          <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={started} aria-label={T.startButton(idx + 1, r.start ?? "–")} data-testid="row-start" onClick={() => { setPinning(r.itemId); setPinTime(r.start ?? ""); }}>
                             {r.pinned ? "📌 " : ""}
                             {r.start ?? "–"}
                           </button>
@@ -419,10 +419,10 @@ export function ScheduleManager(props: ScheduleProps) {
                         </label>
                       ) : null}
                       <span className="text-sm font-extrabold" data-testid="row-status">{T.status[r.status]}</span>
-                      <button type="button" className="btn !min-h-[40px] !px-3" disabled={pending || started || idx === 0} aria-label={T.moveUp(idx + 1)} onClick={() => mutate((p) => nudgeItem(p, r.itemId, -1, lives))}>↑</button>
-                      <button type="button" className="btn !min-h-[40px] !px-3" disabled={pending || started || idx === table.rows.length - 1} aria-label={T.moveDown(idx + 1)} onClick={() => mutate((p) => nudgeItem(p, r.itemId, 1, lives))}>↓</button>
-                      {r.kind === "heat" && !started ? <button type="button" className="btn !min-h-[40px] !px-3" aria-expanded={openRow === r.itemId} onClick={() => setOpenRow(openRow === r.itemId ? null : r.itemId)}>⋯</button> : null}
-                      <button type="button" className="btn !min-h-[40px] !px-3" disabled={pending || started} aria-label={T.removeRow(idx + 1)} onClick={() => mutate((p) => removeItem(p, r.itemId, lives))}>✕</button>
+                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={pending || started || idx === 0} aria-label={T.moveUp(idx + 1)} onClick={() => mutate((p) => nudgeItem(p, r.itemId, -1, lives))}>↑</button>
+                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={pending || started || idx === table.rows.length - 1} aria-label={T.moveDown(idx + 1)} onClick={() => mutate((p) => nudgeItem(p, r.itemId, 1, lives))}>↓</button>
+                      {r.kind === "heat" && !started ? <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" aria-expanded={openRow === r.itemId} onClick={() => setOpenRow(openRow === r.itemId ? null : r.itemId)}>⋯</button> : null}
+                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={pending || started} aria-label={T.removeRow(idx + 1)} onClick={() => mutate((p) => removeItem(p, r.itemId, lives))}>✕</button>
                     </RowShell>
                   );
                 })}

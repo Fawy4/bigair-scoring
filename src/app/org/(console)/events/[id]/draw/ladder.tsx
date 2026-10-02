@@ -105,7 +105,7 @@ function Seat({ draw, scheme, round, heat, index, editable, picked, target, menu
         </div>
       )}
       {canEdit ? (
-        <button type="button" className="btn !min-h-[44px] !px-3" aria-label={T.seatMenu(heatLabel(heat), index + 1)} aria-expanded={sameSeat(menuSeat ?? null, key)} onClick={() => onMenu?.(key)}>
+        <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" aria-label={T.seatMenu(heatLabel(heat), index + 1)} aria-expanded={sameSeat(menuSeat ?? null, key)} onClick={() => onMenu?.(key)}>
           ⋯
         </button>
       ) : null}

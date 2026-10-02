@@ -37,7 +37,7 @@ function EditableName({ text, defaultText, ariaLabel, fieldLabel, onCommit, clas
     <input
       ref={box}
       aria-label={fieldLabel}
-      className="!min-h-[40px] w-40 max-w-full px-2 py-1 text-base font-bold"
+      className="!min-h-[var(--org-ctl)] w-40 max-w-full px-2 py-1 text-base font-bold"
       maxLength={40}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}

@@ -2,180 +2,263 @@
 @tailwind components;
 @tailwind utilities;
 
+/* One look for the whole product (docs/06 §00 and the Phase 7a-2 decisions): the beach tokens further down are the only colours.
+   Everything a screen reads as "primary", "border", "muted" or "ring" (the shadcn names in tailwind.config.ts) points at them, so a base
+   component never needs its own colour. The beach tokens are also set on :root, so a page outside an organiser or official screen
+   (sign-in, join, register) has the same Daylight look; a screen that puts .beach-dark on an element changes it there. */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --primary: 222 47% 11%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 40%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 72% 45%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 88%;
-    --input: 214 32% 88%;
-    --ring: 222 47% 11%;
     --radius: 0.5rem;
+    /* controls and table rows: 40 px on a computer, 44 px on a touch screen; the Large setting makes them 48 px (org-tokens.css) */
+    --org-ctl: 40px;
+    --org-row: 40px;
+  }
+  @media (pointer: coarse) {
+    :root {
+      --org-ctl: 44px;
+      --org-row: 44px;
+    }
   }
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
   }
 }
 
-/* Organiser screens: beach standard on desktop (docs/06 §00 rules 1, 3, 5 and decision 17).
-   Near-black text on white, no light-grey text, weight >= 600, targets >= 48 px. */
+/* ---- Organiser and admin screens: the old markup (raw inputs, selects, tables, the .btn and .panel classes) gets the approved look from here.
+   Element rules only; a Tailwind class on an element still wins (this is a component layer), so the newer components are not affected.
+   1 px frames, 8 px controls, 12 px cards, the accent for the primary button and for focus, ink for text, weight 600 for headings and
+   labels, 500 for the rest. Colours are read from the beach tokens, so Dark works without a second set of rules. */
 @layer components {
   .org-console {
-    --foreground: 0 0% 7%;
-    --muted-foreground: 0 0% 25%;
-    --border: 0 0% 30%;
-    --input: 0 0% 30%;
-    @apply bg-white text-[#111];
+    color: var(--beach-ink);
     font-weight: 500;
   }
-  .org-console h1,
-  .org-console h2,
-  .org-console h3,
-  .org-console label,
-  .org-console th,
-  .org-console legend {
-    font-weight: 700;
+  .org-console h1 {
+    font-size: 20px;
+    line-height: 1.2;
   }
-  .org-console button,
-  .org-console [role="button"],
-  .org-console select,
-  .org-console input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-  .org-console textarea {
-    min-height: 48px;
+  .org-console h2 {
+    font-size: 16px;
+    line-height: 1.25;
   }
-  .org-console input[type="checkbox"],
-  .org-console input[type="radio"] {
-    width: 24px;
-    height: 24px;
-    accent-color: #111;
+  .org-console :is(h3, h4, h5, h6) {
+    font-size: 14px;
+    line-height: 1.3;
   }
-  .org-console input,
-  .org-console select,
-  .org-console textarea {
-    border-width: 2px;
-    border-color: #111;
-    background: #fff;
-    border-radius: 0.375rem;
+  .org-console :is(h1, h2, h3, h4, h5, h6, label, th, legend) {
     font-weight: 600;
   }
+  .org-console :is(button, [role="button"]):not(.help-btn) {
+    min-height: var(--org-ctl);
+  }
+  .org-console :is(select, textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"])) {
+    min-height: var(--org-ctl);
+    border: 1px solid var(--beach-border);
+    border-radius: 8px;
+    background: var(--beach-bg);
+    color: var(--beach-ink);
+    padding: 0 12px;
+    font-weight: 500;
+  }
+  .org-console textarea {
+    padding-block: 8px;
+  }
+  .org-console :is(input, select, textarea)::placeholder {
+    color: var(--beach-muted);
+    opacity: 1;
+  }
+  .org-console :is(input, select, textarea):disabled {
+    border-style: dashed;
+    background: var(--beach-surface);
+    cursor: not-allowed;
+  }
+  /* a number box is as wide as its digits need, never the width of its container; the digits sit at the right */
+  .org-console input[type="number"] {
+    width: 8ch;
+    min-width: var(--org-ctl);
+    max-width: 100%;
+    text-align: right;
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+  @supports (field-sizing: content) {
+    .org-console input[type="number"] {
+      field-sizing: content;
+      width: auto;
+    }
+  }
+  .org-console input[type="number"]::-webkit-inner-spin-button,
+  .org-console input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .org-console :is(input[type="checkbox"], input[type="radio"]) {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    accent-color: var(--beach-accent);
+  }
   .org-console :focus-visible {
-    outline: 3px solid #111;
+    outline: 2px solid var(--beach-focus);
     outline-offset: 2px;
   }
   .org-console .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    min-height: 48px;
-    padding: 0 1rem;
-    border: 2px solid #111;
-    border-radius: 0.375rem;
-    background: #fff;
-    color: #111;
-    font-weight: 700;
+    gap: 8px;
+    min-height: var(--org-ctl);
+    padding: 0 12px;
+    border: 1px solid var(--beach-border);
+    border-radius: 8px;
+    background: var(--beach-bg);
+    color: var(--beach-ink);
+    font-size: var(--size-body, 14px);
+    font-weight: 600;
     cursor: pointer;
   }
   .org-console .btn:hover:not(:disabled) {
-    background: #eee;
+    background: var(--beach-surface);
   }
   .org-console .btn-primary {
-    background: #111;
-    color: #fff;
+    border-color: var(--beach-accent);
+    background: var(--beach-accent);
+    color: var(--beach-on-accent);
   }
   .org-console .btn-primary:hover:not(:disabled) {
-    background: #333;
+    background: var(--beach-accent);
+    filter: brightness(1.12);
   }
   .org-console .btn-danger {
-    border-color: #9b1c1c;
-    color: #9b1c1c;
+    border-color: var(--beach-crash);
+    color: var(--beach-crash);
   }
+  /* a disabled control is never faded to light grey: full-strength text, a dashed frame, a flat fill */
   .org-console .btn:disabled {
-    opacity: 0.5;
+    border-style: dashed;
+    border-color: var(--beach-border);
+    background: var(--beach-surface);
+    color: var(--beach-muted);
     cursor: not-allowed;
   }
   .org-console .field-error {
-    color: #9b1c1c;
-    font-weight: 700;
+    color: var(--beach-failed);
+    font-weight: 600;
   }
   .org-console .panel {
-    border: 2px solid #111;
-    border-radius: 0.5rem;
-    padding: 1rem;
-    background: #fff;
+    border: 1px solid var(--beach-line);
+    border-radius: 12px;
+    padding: 16px;
+    background: var(--beach-bg);
+  }
+  .org-console table {
+    border-collapse: collapse;
+  }
+  .org-console th {
+    color: var(--beach-muted);
+    text-align: left;
+  }
+  .org-console :is(th, td) {
+    border-color: var(--beach-line);
   }
 }
 
-/* "?" help buttons and their notes (tap to open; never long-press). */
+/* "?" help buttons and their notes (tap to open; never long-press): the same small circle as the HelpTip of the new screens. */
 @layer components {
   .org-console .help-btn {
+    position: relative;
+    isolation: isolate;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 48px;
-    min-height: 48px;
-    border: 2px solid #111;
-    border-radius: 9999px;
-    background: #fff;
-    color: #111;
-    font-weight: 800;
-    font-size: 1.125rem;
+    width: var(--org-ctl);
+    height: var(--org-ctl);
+    min-width: var(--org-ctl);
+    min-height: var(--org-ctl);
+    border: 0;
+    background: transparent;
+    color: var(--beach-ink);
+    font-size: var(--size-small, 12px);
+    font-weight: 600;
     cursor: pointer;
   }
+  /* the tap area is the full control height; the circle you see is 24 px */
+  .org-console .help-btn::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    left: 50%;
+    top: 50%;
+    width: 24px;
+    height: 24px;
+    transform: translate(-50%, -50%);
+    border: 1px solid var(--beach-border);
+    border-radius: 9999px;
+    background: var(--beach-bg);
+  }
   .org-console .help-btn[aria-expanded="true"] {
-    background: #111;
-    color: #fff;
+    color: var(--beach-on-accent);
+  }
+  .org-console .help-btn[aria-expanded="true"]::before {
+    border-color: var(--beach-accent);
+    background: var(--beach-accent);
   }
   .org-console .help-note {
     display: block;
-    border-left: 6px solid #111;
-    background: #f1f1f1;
-    padding: 0.75rem 1rem;
-    font-weight: 600;
+    border: 1px solid var(--beach-line);
+    border-radius: 8px;
+    background: var(--beach-surface);
+    padding: 8px 12px;
+    font-weight: 500;
     max-width: 44rem;
   }
 }
 
-/* New-look parts inside a screen that still has the old look (Phase 7a): the old rules above must not reach them.
-   Wrap new-look content in `.org-new`; controls keep the organiser size (--org-ctl), 1 px frames and the beach colours. */
-@layer components {
-  .org-console .org-new :is(h1, h2, h3, label, th, legend) {
-    font-weight: 600;
-  }
-  .org-console .org-new :is(button, [role="button"], select) {
-    min-height: var(--org-ctl, 40px);
-  }
-  .org-console .org-new input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-  .org-console .org-new textarea {
-    min-height: var(--org-ctl, 40px);
-    border-width: 1px;
-    border-color: var(--beach-border, #475569);
-    border-radius: 8px;
-    background: transparent;
-    font-weight: 600;
-  }
-  .org-console .org-new select {
-    border-width: 1px;
-    border-color: var(--beach-border, #475569);
-    border-radius: 8px;
-    background: transparent;
-    font-weight: 600;
-  }
-  .org-console .org-new :focus-visible {
-    outline: 3px solid var(--beach-accent, #0f766e);
-    outline-offset: 2px;
-  }
+/* Old utility classes still in the older screens, brought to the approved look until each screen is rewritten.
+   Not in a layer, so they win over the Tailwind utilities of the same name. Only inside .org-legacy (the organiser and admin page area). */
+.org-legacy :is(.font-bold, .font-extrabold, .font-black) {
+  font-weight: 600;
+}
+/* a paragraph is body text: regular weight, whatever an older screen put on it */
+.org-legacy p:is(.font-semibold, .font-bold, .font-extrabold, .font-black) {
+  font-weight: 500;
+}
+.org-legacy :is(.text-3xl, .text-2xl, .text-xl) {
+  font-size: 18px;
+  line-height: 1.25;
+}
+.org-legacy .text-lg {
+  font-size: var(--size-name, 15px);
+  line-height: 1.3;
+}
+.org-legacy .text-base,
+.org-legacy .text-sm {
+  font-size: var(--size-body, 14px);
+}
+.org-legacy .text-xs {
+  font-size: var(--size-small, 12px);
+}
+.org-legacy .border-2,
+.org-legacy .border-4 {
+  border-width: 1px;
+}
+.org-legacy :is(.border-t-2, .border-b-2) {
+  border-top-width: 1px;
+}
+.org-legacy [class~="border-[#111]"] {
+  border-color: var(--beach-line);
+}
+.org-legacy .btn.w-full {
+  width: auto;
+}
+.org-legacy .rounded-lg,
+.org-legacy .rounded-xl {
+  border-radius: 12px;
+}
+.org-legacy :is(.rounded, .rounded-md) {
+  border-radius: 8px;
 }
 
 /* Printing (start lists, official cards): only the page's own content, no header, footer, rail or buttons. */
@@ -244,7 +327,7 @@ body:has(.print-sheet) {
   page: ladder;
 }
 .print-sheet-page {
-  box-shadow: 0 0 0 2px #111;
+  box-shadow: 0 0 0 1px #111;
 }
 @media print {
   .print-sheet {
@@ -282,18 +365,20 @@ body:has(.print-sheet) {
 /* small labels on seats and heats ("changed by hand", "started"): text, never colour alone */
 .badge-note {
   display: inline-block;
-  border: 2px solid #111;
+  border: 1px solid var(--beach-border, #5f6970);
   border-radius: 9999px;
   padding: 0 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 800;
-  background: #fff;
+  font-size: var(--size-small, 12px);
+  font-weight: 600;
+  background: var(--beach-bg, #fff);
+  color: var(--beach-ink, #111);
 }
 
 /* ---- Official screens (judge, spotter, head judge) and /design: the beach themes and text sizes (docs/06 §00, Phase 5a).
    The hex values are the ones in src/lib/live/theme-tokens.ts and the sizes those in size-tokens.ts; tests fail if they differ.
    .beach-day is the default, .beach-dark is switchable per device; .beach-text-normal is the default, .beach-text-large a per-device switch.
    One accent (deep teal) for the selected state, the primary button and progress; text stays ink. Cards: 1 px soft line, no shadow. */
+:root,
 .beach-day {
   --beach-bg: #ffffff;
   --beach-surface: #f4f6f6;
@@ -354,6 +439,7 @@ body:has(.print-sheet) {
   --beach-tint-dist3: #6b1f1f;
   color-scheme: dark;
 }
+:root,
 .beach-text-normal {
   --size-body: 14px;
   --size-small: 12px;
