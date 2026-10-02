@@ -54,7 +54,7 @@ async function shot(page: Page, name: string, size: { width: number; height: num
 async function open(page: Page, url: string) {
   for (let i = 0; ; i++) {
     try {
-      await page.goto(url);
+      await page.goto(url, { timeout: 90_000 });
       return;
     } catch (e) {
       if (i >= 4) throw e;
