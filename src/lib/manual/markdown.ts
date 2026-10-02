@@ -58,6 +58,7 @@ export function plainText(md: string): string {
     .replace(/`([^`]*)`/g, "$1")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/(^|[^\w])_([^_]+)_(?=$|[^\w])/g, "$1$2")
+    .replace(/(^|[^\w*])\*([^*\s][^*]*?)\*(?=$|[^\w*])/g, "$1$2")
     .replace(/<br\s*\/?>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -84,6 +85,7 @@ function inline(md: string, opts: RenderOptions, links: string[], images: string
   });
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/(^|[^\w])_([^_]+)_(?=$|[^\w])/g, "$1<em>$2</em>");
+  s = s.replace(/(^|[^\w*])\*([^*\s][^*]*?)\*(?=$|[^\w*])/g, "$1<em>$2</em>");
   s = s.replace(/&lt;br\s*\/?&gt;/g, "<br />");
   return s.replace(/\u0000(\d+)\u0000/g, (_, i: string) => codes[Number(i)]);
 }

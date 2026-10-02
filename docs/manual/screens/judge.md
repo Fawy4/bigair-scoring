@@ -9,7 +9,7 @@ Last checked: 2 Oct 2026 · Product version 0.9.0
 Judges watch the water, not the phone. Each attempt the spotter logs arrives as the next card within about a second; one tap scores it and the next card slides in. Scores are sent through a queue on the phone: with no signal they wait (“Pending ‹n›”) and are sent when the signal is back, without duplicates (“Synced”). The screen opens the heat of the judge's panel by itself.
 
 ![Judge screen during a heat](../img/judge-390.png)
-*judge-390.png — the queue card with the Rider label, the score pad, Missed and Flag, the history below.*
+*judge-390.png — the queue card with the Rider label, the score pad, Missed and Flag. (The badge reads “Offline” in this picture only because the browser of the screenshot machine reports no network; on a phone with signal it reads “Synced”.)*
 
 ## Controls {#ju-controls}
 

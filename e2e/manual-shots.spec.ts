@@ -38,13 +38,28 @@ const SEATS: Array<[string, "judge" | "head" | "spotter" | "announcer"]> = [
   ["Judge 1 · Amr", "judge"], ["Judge 2 · Laura", "judge"], ["Judge 3 · Sven", "judge"], ["Head judge · Nadia", "head"], ["Spotter · Hamdy", "spotter"], ["Announcer · Max", "announcer"],
 ];
 
-async function shot(page: Page, name: string, size: { width: number; height: number }, settle = 600) {
+async function shot(page: Page, name: string, size: { width: number; height: number }, settle = 600, hideNote = false) {
   await page.setViewportSize(size);
   await page.waitForLoadState("domcontentloaded");
   await page.waitForTimeout(settle);
   // the development server's own badge is not part of the product
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" }).catch(() => undefined);
+  // officials never see the organiser's Note button; it shows here only because an organiser holds the seat
+  if (hideNote) await page.addStyleTag({ content: "[data-testid=note-button] { display: none !important; }" }).catch(() => undefined);
   await page.screenshot({ path: path.join(OUT, `${name}-${size.width}.png`) });
+}
+
+/** The development server restarts itself when it runs low on memory: a page that fails to load is asked for again. */
+async function open(page: Page, url: string) {
+  for (let i = 0; ; i++) {
+    try {
+      await page.goto(url);
+      return;
+    } catch (e) {
+      if (i >= 4) throw e;
+      await page.waitForTimeout(8000);
+    }
+  }
 }
 
 test.skip(process.env.MANUAL_SHOTS !== "1", "run with npm run manual:shots");
@@ -162,12 +177,12 @@ test("manual screenshots", async ({ page, context, browser }) => {
     await shot(page, "org-events", LAPTOP);
     const base = `/org/events/${event.id}`;
     for (const [step, name] of [["event", "org-event"], ["riders", "org-riders"], ["officials", "org-officials"], ["draw", "org-draw"], ["schedule", "org-run-order"], ["", "org-go-live"]] as const) {
-      await page.goto(`${base}/${step}`);
+      await open(page, `${base}/${step}`);
       await page.waitForLoadState("networkidle").catch(() => undefined);
       await shot(page, name, LAPTOP, 1200);
       await shot(page, name, PHONE, 1200);
     }
-    await page.goto(`${base}/divisions`);
+    await open(page, `${base}/divisions`);
     await page.waitForLoadState("networkidle").catch(() => undefined);
     await page.setViewportSize(LAPTOP);
     // the first division's settings, scrolled so its tabs are at the top
@@ -191,13 +206,13 @@ test("manual screenshots", async ({ page, context, browser }) => {
     // signed-out pages: sign-in, the event's join tab and registration, the home page
     const visitor = await browser.newContext({ viewport: PHONE });
     const v = await visitor.newPage();
-    await v.goto("/org/login");
+    await open(v, "/org/login");
     await shot(v, "org-login", PHONE);
-    await v.goto(`/e/${slug}/join`);
+    await open(v, `/e/${slug}/join`);
     await shot(v, "public-join", PHONE, 1200);
-    await v.goto(`/e/${slug}/register`);
+    await open(v, `/e/${slug}/register`);
     await shot(v, "public-register", PHONE, 1200);
-    await v.goto("/");
+    await open(v, "/");
     await shot(v, "public-home", PHONE, 1500);
     await visitor.close();
 
@@ -206,7 +221,7 @@ test("manual screenshots", async ({ page, context, browser }) => {
     const ownerId = me.users.find((u) => u.email === org.email)?.id;
     await db.from("feedback_notes").insert({ organisation_id: org.orgId, author_user_id: ownerId!, author_role: "organiser", event_id: event.id, page: `/org/events/${event.id}/schedule`, page_label: "Run order step", body: "The lunch break should move with the wind hold.", tag: "idea", organisation_name: "Gouna Big Air (sample)", event_name: "Gouna Big Air (sample)" } as never);
     for (const [url, name] of [[`/admin?q=${encodeURIComponent("Gouna Big Air")}`, "admin-organisations"], ["/admin/presets", "admin-presets"], ["/admin/tricks", "admin-tricks"], ["/admin/settings", "admin-settings"], [`/admin/feedback?event=${event.id}`, "admin-feedback"], ["/admin/health", "admin-health"]] as const) {
-      await page.goto(url);
+      await open(page, url);
       await page.waitForLoadState("networkidle").catch(() => undefined);
       if (name === "admin-organisations") {
         const search = page.getByRole("searchbox").first();
@@ -217,7 +232,7 @@ test("manual screenshots", async ({ page, context, browser }) => {
 
     // ---------------------------------------------------------------- the simulation: results to show
     await page.setViewportSize(LAPTOP);
-    await page.goto(`${base}/simulate`);
+    await open(page, `${base}/simulate`);
     await page.getByTestId("clone-name").fill("Gouna Big Air (simulation)").catch(() => undefined);
     await page.getByTestId("run-as-simulation-button").click();
     await expect(page.getByTestId("clone-done")).toBeVisible({ timeout: 120_000 });
@@ -229,55 +244,54 @@ test("manual screenshots", async ({ page, context, browser }) => {
     await page.getByTestId("sim-speed-20").click();
     await page.getByTestId("sim-start").click();
     await expect(page.getByTestId("stat-heats")).toHaveText(/^([4-9]|\d\d) of \d+ heats published/, { timeout: 25 * 60_000 });
-    await page.getByTestId("sim-stop").click();
-    await expect(page.getByTestId("sim-state")).toHaveAttribute("data-state", "stopped");
+    // the next heat at normal speed (a speed change applies to heats that start afterwards): wait until it is on the water
+    await page.getByTestId("sim-speed-1").click();
+    const runningFull = async () => {
+      const { data } = await db.from("heats").select("id, duration_sec").eq("event_id", simId).eq("status", "running");
+      return (data ?? []).find((h) => h.duration_sec >= 300)?.id ?? null;
+    };
+    await expect.poll(runningFull, { timeout: 8 * 60_000, intervals: [3000] }).not.toBeNull();
+    const liveHeat = (await runningFull())!;
     await shot(page, "simulator", LAPTOP, 800);
 
-    // a heat on the water at normal speed, judge 1 held by this login: the judge's queue, the console, the public live page
-    await page.getByTestId("sim-speed-1").click();
+    // the virtual spotter logs a few attempts of the heat on the water; the head judge console and the announcer view
+    await expect
+      .poll(async () => (await db.from("trick_attempts").select("id", { count: "exact", head: true }).eq("heat_id", liveHeat)).count ?? 0, { timeout: 6 * 60_000, intervals: [5000] })
+      .toBeGreaterThan(5);
+    const head = await context.newPage();
+    await open(head, `/head/${simId}`);
+    await shot(head, "console-laptop", LAPTOP, 4000);
+    await shot(head, "console-phone", PHONE, 3000);
+    await open(head, `/head/${simId}?mode=announcer`);
+    await shot(head, "announcer", LAPTOP, 3000);
+
+    // judge 1 held by this login (the simulator steps aside for that seat): the judge's queue fills as the virtual spotter logs
     const { data: simSeatRows } = await db.from("judge_seats").select("id, name, role").eq("event_id", simId);
     const simSeats = (simSeatRows ?? []) as Array<{ id: string; name: string; role: string }>;
     const judge1 = simSeats.find((s) => s.role === "judge")!;
     const spotter = simSeats.find((s) => s.role === "spotter")!;
     const simTab = page;
     const judgeTab = await context.newPage();
-    await judgeTab.goto(`/org/events/${simId}/simulate/view?as=seat&seat=${judge1.id}`);
+    await open(judgeTab, `/org/events/${simId}/simulate/view?as=seat&seat=${judge1.id}`);
     await simTab.bringToFront();
-    await simTab.getByTestId("sim-start").click();
-    await expect(simTab.getByTestId("stat-attempts")).toHaveText(/^\d+ attempts/);
-    // wait until the virtual spotter has logged a few attempts of the running heat
-    await expect
-      .poll(async () => {
-        const { data: running } = await db.from("heats").select("id").eq("event_id", simId).eq("status", "running").maybeSingle();
-        if (!running) return 0;
-        const { count } = await db.from("trick_attempts").select("id", { count: "exact", head: true }).eq("heat_id", running.id);
-        return count ?? 0;
-      }, { timeout: 6 * 60_000, intervals: [5000] })
-      .toBeGreaterThan(5);
     await judgeTab.bringToFront();
-    await judgeTab.reload();
-    await shot(judgeTab, "judge", PHONE, 3000);
+    await expect(judgeTab.getByText(/waiting|Attempt/).first()).toBeVisible({ timeout: 60_000 });
+    await shot(judgeTab, "judge", PHONE, 3000, true);
 
-    const head = await context.newPage();
-    await head.goto(`/head/${simId}`);
-    await shot(head, "console-laptop", LAPTOP, 4000);
-    await shot(head, "console-phone", PHONE, 3000);
-    await head.goto(`/head/${simId}?mode=announcer`);
-    await shot(head, "announcer", LAPTOP, 3000);
 
     // the public pages of the simulation, for this login only (the View as door switches the preview on)
     const pub = await context.newPage();
-    await pub.goto(`/org/events/${simId}/simulate/view?as=live`);
-    await shot(pub, "public-live", PHONE, 2500);
-    await pub.goto(`/e/${simSlug}`);
-    await shot(pub, "public-event", PHONE, 2000);
-    await shot(pub, "public-event", LAPTOP, 2000);
-    await pub.goto(`/screen/${simSlug}`);
-    await shot(pub, "big-screen", LAPTOP, 2500);
+    await open(pub, `/org/events/${simId}/simulate/view?as=live`);
+    await shot(pub, "public-live", PHONE, 2500, true);
+    await open(pub, `/e/${simSlug}`);
+    await shot(pub, "public-event", PHONE, 2000, true);
+    await shot(pub, "public-event", LAPTOP, 2000, true);
+    await open(pub, `/screen/${simSlug}`);
+    await shot(pub, "big-screen", LAPTOP, 2500, true);
 
     // the spotter's screen: this login takes the spotter seat (judge 1 goes back to the simulator)
-    await judgeTab.goto(`/org/events/${simId}/simulate/view?as=seat&seat=${spotter.id}`);
-    await shot(judgeTab, "spotter", PHONE, 3000);
+    await open(judgeTab, `/org/events/${simId}/simulate/view?as=seat&seat=${spotter.id}`);
+    await shot(judgeTab, "spotter", PHONE, 3000, true);
     await judgeTab.close();
 
     // stop, end the heat that is on, and look at the published results
@@ -290,13 +304,13 @@ test("manual screenshots", async ({ page, context, browser }) => {
       [`/e/${simSlug}/placings`, "public-placings", [PHONE]],
       [`/e/${simSlug}/rules`, "public-rules", [PHONE]],
     ] as const) {
-      await pub.goto(url);
-      for (const size of sizes) await shot(pub, name, size, 2000);
+      await open(pub, url);
+      for (const size of sizes) await shot(pub, name, size, 2000, true);
     }
     const { data: published } = await db.from("heat_results").select("entry_id").eq("event_id", simId).eq("place", 1).limit(1).maybeSingle();
     if (published) {
-      await pub.goto(`/e/${simSlug}/riders/${published.entry_id}`);
-      await shot(pub, "public-rider", PHONE, 2000);
+      await open(pub, `/e/${simSlug}/riders/${published.entry_id}`);
+      await shot(pub, "public-rider", PHONE, 2000, true);
     }
   } finally {
     for (const id of simIds) {

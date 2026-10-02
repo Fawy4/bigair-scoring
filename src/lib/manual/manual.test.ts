@@ -25,13 +25,14 @@ describe("the Markdown renderer", () => {
   const opts = { idPrefix: "p--", link: (h: string) => `L:${h}`, image: (s: string) => `I:${s}` };
   it("renders headings with ids, fixed ids, tables with row anchors, lists, code, images and mermaid", () => {
     const r = renderMarkdown(
-      ["# Title", "", "## Hold / Resume {#dep-hold}", "Text with **bold**, _italic_, `code|x` and [a link](x.md#y).", "", "| A | B |", "|---|---|", "| {#row-1} one | two \\| three |", "", "- item", "  - nested", "", "![alt](img/a.png)", "", "```mermaid", "flowchart TD", "  A --> B", "```"].join("\n"),
+      ["# Title", "", "## Hold / Resume {#dep-hold}", "Text with **bold**, _italic_, *also italic*, `code|x` and [a link](x.md#y).", "", "| A | B |", "|---|---|", "| {#row-1} one | two \\| three |", "", "- item", "  - nested", "", "![alt](img/a.png)", "", "```mermaid", "flowchart TD", "  A --> B", "```"].join("\n"),
       opts,
     );
     expect(r.headings.map((h) => h.id)).toEqual(["p--title", "dep-hold"]);
     expect(r.html).toContain('<h3 id="dep-hold">');
     expect(r.html).toContain("<strong>bold</strong>");
     expect(r.html).toContain("<em>italic</em>");
+    expect(r.html).toContain("<em>also italic</em>");
     expect(r.html).toContain("<code>code|x</code>");
     expect(r.html).toContain('<tr id="row-1"><td>one</td><td>two | three</td></tr>');
     expect(r.html).toContain("<ul><li>nested</li></ul>");

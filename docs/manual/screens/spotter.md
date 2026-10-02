@@ -9,7 +9,7 @@ Last checked: 2 Oct 2026 · Product version 0.9.0
 What the spotter logs is what the judges score: each attempt appears on every judge's phone within about a second. The screen opens the running heat by itself and shows the next heat between heats.
 
 ![Spotter screen during a heat](../img/spotter-390.png)
-*spotter-390.png — riders in one row, direction, multipliers, base tricks, add-ons and grabs, CRASH and Log fixed at the bottom.*
+*spotter-390.png — riders in one row with attempts used, direction, multipliers, base tricks, add-ons and grabs, CRASH and Log fixed at the bottom. (“Offline”: the browser of the screenshot machine reports no network.)*
 
 ## Controls {#sp-controls}
 
