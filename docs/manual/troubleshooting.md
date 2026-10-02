@@ -96,6 +96,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “at most 6 extra leaderboards” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-leaderboardsmax) |
 | “Available once the heat has ended.” | Press End heat (or wait for the clock). | [Grey buttons on the head console](errors.md#err-controlwhy-publish) |
 | “Available while a heat is running or paused.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-live) |
+| “Available while a heat is running, paused or waiting to be published.” | Start the auto-play; the button turns on when a heat starts. | [Simulator](errors.md#err-simulator-skip-why) |
 | “Available while the heat is running, paused, ended or under review.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-cancel) |
 | “Base trick “‹label›” needs a scoring category.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-baseneedscategory) |
 | “Bib ‹bib› is given to more than one rider: ‹names›.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-repeatedbib) |
@@ -204,6 +205,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “No countdown: the next heat has no start time yet.” | Run order step → pin a start time on the first row. | [Head console](errors.md#err-headv2-breaknone-no-time) |
 | “No countdown: there is no active run order.” | Run order step → Activate this plan for today. | [Head console](errors.md#err-headv2-breaknone-no-plan) |
 | “No heat has been published yet.” | Follow the sentence. | [Simulator](errors.md#err-simulator-log-nopublished) |
+| “No heat is on the water, so there is nothing to skip. Start the auto-play first.” | Press Start (or Run the whole event) and skip once a heat is on the water. | [Simulator](errors.md#err-simulator-skip-noheat) |
 | “No heat is running.” | Follow the sentence. | [Simulator](errors.md#err-simulator-log-norunning) |
 | “No PIN on file for this seat (it was made before PINs could be shown). Use Regenerate PIN to make a new one.” | Regenerate PIN (the old PIN stops working and the seat's phones are signed out). | [Organiser: Officials](errors.md#err-officials-pinunknown) |
 | “No PIN on file: regenerate it first” | Regenerate PIN for that seat, then print. | [Organiser: Officials](errors.md#err-officials-printnopin) |

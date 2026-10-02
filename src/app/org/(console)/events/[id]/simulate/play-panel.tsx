@@ -1,14 +1,14 @@
 "use client";
 
 import React from "react";
-import { Binoculars, Gavel, Pause, Play, ShieldCheck, Square } from "lucide-react";
+import { Binoculars, FastForward, Gavel, Pause, Play, ShieldCheck, SkipForward, Square } from "lucide-react";
 import { Banner } from "@/components/ui/banner";
 import { Pill } from "@/components/live/pill";
 import { SPEEDS, SPREADS, JUDGE_MODES } from "@/lib/simulator/config";
 import type { SeatView, SimStatus } from "@/lib/simulator/types";
 import { heldWords } from "@/lib/simulator/view-hold";
 import { copy } from "@/lib/ui-copy";
-import { saveSettings, setPlayState, setSeatMode, setSpeed } from "./actions";
+import { runWholeEvent, saveSettings, setPlayState, setSeatMode, setSpeed, skipToEndOfHeat } from "./actions";
 import { Card, Choice, Field } from "./parts";
 import type { useSim } from "./use-sim";
 
@@ -28,6 +28,9 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
   const { status, line, act, pending } = sim;
   const state = status.control.state;
   const stateWord = state === "playing" ? T.play.statePlaying : state === "paused" ? T.play.statePaused : T.play.stateStopped;
+  const now = status.now.status;
+  const canSkip = now === "running" || now === "paused" || now === "ended" || now === "under_review";
+  const whole = status.control.config.wholeEvent;
   return (
     <section role="toolbar" aria-label={T.toolbarLabel} data-testid="sim-toolbar" className="flex flex-col gap-3 rounded-card border border-beach-line bg-beach-bg p-4">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
@@ -54,6 +57,12 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
             <Choice icon={Square} data-testid="sim-stop" disabled={pending || state === "stopped"} onClick={() => void act(() => setPlayState(eventId, "stopped"))}>
               {T.play.stop}
             </Choice>
+            <Choice icon={SkipForward} data-testid="sim-skip-end" title={canSkip ? T.skip.help.text : T.skip.why} disabled={pending || !canSkip} onClick={() => void act(() => skipToEndOfHeat(eventId), (r) => r.text)}>
+              {T.skip.button}
+            </Choice>
+            <Choice icon={FastForward} data-testid="sim-whole-event" pressed={whole} title={T.whole.help.text} disabled={pending || (whole && state === "playing")} onClick={() => void act(() => runWholeEvent(eventId))}>
+              {T.whole.button}
+            </Choice>
             <Pill tone={state === "playing" ? "live" : state === "paused" ? "pending" : "missing"} icon={state === "playing" ? Play : state === "paused" ? Pause : Square}>
               <span data-testid="sim-state" data-state={state}>
                 {stateWord}
@@ -70,6 +79,16 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
       <p data-testid="sim-line" role="status" className="text-name font-semibold">
         {line}
       </p>
+      {whole && state !== "stopped" ? (
+        <p data-testid="sim-whole-on" className="text-small font-medium text-beach-muted">
+          {T.play.lines.whole}
+        </p>
+      ) : null}
+      {!canSkip ? (
+        <p data-testid="sim-skip-why" className="text-small font-medium text-beach-muted">
+          {T.skip.why}
+        </p>
+      ) : null}
       {status.control.blocker ? (
         <Banner tone="danger" data-testid="sim-blocker">
           {T.play.lines.stoppedAtBlocker(status.control.blocker)}

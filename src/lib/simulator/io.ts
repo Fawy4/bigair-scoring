@@ -1,4 +1,5 @@
 import { parseSimConfig, type SimConfig } from "./config";
+import { eventOrder } from "./event-order";
 import type { SimDb, Snapshot } from "./snapshot";
 
 /** One line in the simulator's log: the running commentary (info, heat, blocker) and the checklist (scenario, scenario_failed). Never fails the caller. */
@@ -22,4 +23,10 @@ export async function readRunOrder(db: SimDb, snap: Pick<Snapshot, "eventId" | "
   if (!plan) return { heatIds: null, hold: false, planId: null, planName: null };
   const items = (Array.isArray(plan.items) ? plan.items : []) as Array<{ kind?: string; heatId?: string }>;
   return { heatIds: items.flatMap((i) => (i.kind === "heat" && i.heatId ? [i.heatId] : [])), hold: Boolean(plan.hold), planId: plan.id, planName: plan.name };
+}
+
+/** "Run the whole event": every day's active run order in day order; the heats of a plan on hold are held. */
+export async function readEventOrder(db: SimDb, eventId: string): Promise<{ heatIds: string[] | null; held: Set<string> }> {
+  const { data } = await db.service.from("schedule_plans").select("day, items, hold, active").eq("event_id", eventId).eq("active", true);
+  return eventOrder(data ?? []);
 }

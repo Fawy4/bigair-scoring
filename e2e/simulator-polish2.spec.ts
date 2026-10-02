@@ -1,11 +1,13 @@
 import { expect, test } from "./base";
-import { createLiveWorld, type LiveWorld } from "./live-world";
+import { addLadder, createLiveWorld, type LiveWorld } from "./live-world";
 import type { Page } from "@playwright/test";
 
 /**
  * Polish 2 on the simulator, each test on its own throwaway organisation (the Demo, Arrow and EKL are never touched):
  *   item 2 — View as Judge, then back to virtual (closing the tab, or "Give back"), leaves the simulator scoring; the panel shows who holds each seat.
  *   item 3 — the simulator's Pause pauses the heat on the console ("Paused by the simulator"); Resume resumes both; Stop leaves the heat paused.
+ *   item 7 — "Skip to end of heat" ends the heat now and the virtual head judge publishes it; "Run the whole event" plays both days' run orders until the
+ *            final is published.
  */
 async function removeSimulatorUsers(w: LiveWorld, eventIds: string[]) {
   for (const id of eventIds) {
@@ -27,12 +29,12 @@ async function makeSimulation(page: Page, w: LiveWorld): Promise<string> {
 /** Speed, then Start. A click that lands before the panel is live is pressed again. */
 async function startAt(page: Page, speed: 1 | 5 | 10 | 20) {
   await expect(async () => {
-    await page.getByTestId(`sim-speed-${speed}`).click();
-    await expect(page.getByTestId(`sim-speed-${speed}`)).toHaveAttribute("aria-pressed", "true", { timeout: 5_000 });
+    await page.getByTestId(`sim-speed-${speed}`).click({ timeout: 5_000 });
+    await expect(page.getByTestId(`sim-speed-${speed}`)).toHaveAttribute("aria-pressed", "true", { timeout: 10_000 });
   }).toPass({ timeout: 60_000 });
   await expect(async () => {
-    await page.getByTestId("sim-start").click();
-    await expect(page.getByTestId("sim-state")).toHaveAttribute("data-state", "playing", { timeout: 5_000 });
+    if ((await page.getByTestId("sim-state").getAttribute("data-state")) !== "playing") await page.getByTestId("sim-start").click({ timeout: 5_000 });
+    await expect(page.getByTestId("sim-state")).toHaveAttribute("data-state", "playing", { timeout: 10_000 });
   }).toPass({ timeout: 60_000 });
 }
 
@@ -122,6 +124,68 @@ test("item 3: simulator Pause pauses the heat clock on the console; Resume resum
     await expect(head.getByTestId("selected-heat")).toHaveAttribute("data-state", "paused", { timeout: 30_000 });
     await expect(head.getByTestId("paused-by")).toHaveText("Paused by the simulator");
     await head.close();
+  } finally {
+    await removeSimulatorUsers(w, simIds);
+    await w.cleanup();
+  }
+});
+
+test("item 7: Skip to end of heat ends the heat with the attempts so far; the virtual judges finish and the virtual head judge publishes it", async ({ page }) => {
+  test.setTimeout(600_000);
+  const w = await createLiveWorld();
+  const simIds: string[] = [];
+  try {
+    const simId = await makeSimulation(page, w);
+    simIds.push(simId);
+    // nothing on the water yet: the button is off and says why
+    await expect(page.getByTestId("sim-skip-end")).toBeDisabled();
+    await expect(page.getByTestId("sim-skip-why")).toHaveText("Available while a heat is running, paused or waiting to be published.");
+    await startAt(page, 1); // ×1: ten minutes a heat, so only the skip can end it in time
+    const live = async () => (await w.db.from("heats").select("id, status").eq("event_id", simId).in("status", ["running", "paused"]).maybeSingle()).data;
+    await expect.poll(async () => (await live())?.status, { timeout: 120_000 }).toBe("running");
+    const heatId = (await live())!.id as string;
+    await expect.poll(async () => (await w.db.from("trick_attempts").select("id", { count: "exact", head: true }).eq("heat_id", heatId)).count ?? 0, { timeout: 120_000 }).toBeGreaterThan(0);
+    await page.getByTestId("sim-skip-end").click();
+    await expect.poll(async () => (await w.db.from("heats").select("status").eq("id", heatId).single()).data!.status, { timeout: 120_000 }).toBe("published");
+    await expect(page.getByTestId("sim-log")).toContainText("Skipped to the end of");
+    // every virtual judge submitted, and nobody published past a blocker
+    const sheets = (await w.db.from("judge_sheets").select("submitted_at").eq("heat_id", heatId)).data ?? [];
+    expect(sheets.filter((x) => x.submitted_at)).toHaveLength(3);
+    expect((await w.db.from("audit_log").select("id").eq("row_id", heatId).eq("action", "publish_override")).data ?? []).toHaveLength(0);
+    await page.getByTestId("sim-stop").click();
+  } finally {
+    await removeSimulatorUsers(w, simIds);
+    await w.cleanup();
+  }
+});
+
+test("item 7: Run the whole event plays Saturday's and Sunday's run orders, every division and round, until the final is published", async ({ page }) => {
+  test.setTimeout(1_200_000);
+  const w = await createLiveWorld();
+  const simIds: string[] = [];
+  try {
+    const ladder = await addLadder(w);
+    // the ladder runs on the next day, in its own run order
+    const tomorrow = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" }).format(new Date(Date.now() + 86_400_000));
+    await w.db.from("events").update({ end_date: tomorrow }).eq("id", w.eventId);
+    await w.db.from("schedule_plans").insert({ event_id: w.eventId, day: tomorrow, name: "Sunday", active: true, items: Object.values(ladder.heats).map((id, i) => ({ id: `s${i}`, kind: "heat", heatId: id })) as never, anchors: {} as never });
+    const simId = await makeSimulation(page, w);
+    simIds.push(simId);
+    const total = (await w.db.from("heats").select("id", { count: "exact", head: true }).eq("event_id", simId)).count ?? 0;
+    expect(total).toBe(5);
+    await expect(async () => {
+      await page.getByTestId("sim-speed-20").click();
+      await expect(page.getByTestId("sim-speed-20")).toHaveAttribute("aria-pressed", "true", { timeout: 5_000 });
+    }).toPass({ timeout: 60_000 });
+    await page.getByTestId("sim-whole-event").click();
+    await expect(page.getByTestId("sim-state")).toHaveAttribute("data-state", "playing", { timeout: 30_000 });
+    await expect(page.getByTestId("sim-whole-on")).toBeVisible();
+    await expect(page.getByTestId("stat-heats")).toHaveText(new RegExp(`^${total} of ${total} heats published`), { timeout: 1_080_000 });
+    await expect(page.getByTestId("sim-state")).toHaveAttribute("data-state", "stopped", { timeout: 60_000 });
+    await expect(page.getByTestId("sim-log")).toContainText("The whole event is published");
+    // the final has the winners of the two ladder heats
+    const final = (await w.db.from("heats").select("id, status").eq("event_id", simId).eq("division_id", (await w.db.from("divisions").select("id").eq("event_id", simId).eq("name", "Ladder").single()).data!.id).order("created_at")).data ?? [];
+    expect(final.every((h) => h.status === "published")).toBe(true);
   } finally {
     await removeSimulatorUsers(w, simIds);
     await w.cleanup();

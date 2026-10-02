@@ -36,6 +36,8 @@ export const SimConfigSchema = z.object({
   windHeld: z.boolean().default(false),
   /** The final's result was held back by the scenario and waits to be released. */
   finalHeldHeat: z.string().nullable().default(null),
+  /** "Run the whole event": every day's run order in turn, until every heat (the finals too) is published (Polish 2, item 7). */
+  wholeEvent: z.boolean().default(false),
 });
 export type SimConfig = z.infer<typeof SimConfigSchema>;
 

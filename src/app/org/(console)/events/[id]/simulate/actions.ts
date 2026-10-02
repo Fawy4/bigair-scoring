@@ -14,7 +14,7 @@ import { logLine, updateConfig } from "@/lib/simulator/io";
 import { pressScenario, reviveJudge } from "@/lib/simulator/scenario-runner";
 import { forgetContext, type SimDb } from "@/lib/simulator/snapshot";
 import { loadSimStatus, type StatusResult } from "@/lib/simulator/status";
-import { simTick, type TickResult } from "@/lib/simulator/tick";
+import { simTick, skipToEnd, type TickResult } from "@/lib/simulator/tick";
 import type { SeatRole } from "@/lib/simulator/types";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -103,6 +103,11 @@ export async function setSpeed(eventId: string, speed: number): Promise<Done> {
 
 export async function setPlayState(eventId: string, state: "playing" | "paused" | "stopped"): Promise<Done> {
   return wrap(eventId, async (db) => {
+    // Start after Stop plays the day; Resume after Pause carries on in whichever mode it was (the day, or the whole event)
+    if (state === "playing") {
+      const { data } = await db.service.from("sim_control").select("state").eq("event_id", eventId).maybeSingle();
+      if (data?.state === "stopped") await updateConfig(db, eventId, (c) => ({ ...c, wholeEvent: false }));
+    }
     const { error } = await db.user.rpc("sim_set", { p_event: eventId, p_patch: { state, ...(state === "stopped" ? { blocker: null } : {}) } });
     if (error) return bad(simErrorSentence(error.message));
     // the heat clock lives in the database: Pause and Stop pause the heat on the water too, Start / Resume resumes the heats the simulator paused (Polish 2, item 3)
@@ -115,6 +120,26 @@ export async function setPlayState(eventId: string, state: "playing" | "paused" 
       if ((paused.data ?? 0) > 0) await logLine(db, eventId, "info", null, T.play.heatPaused);
     }
     return { ok: true };
+  });
+}
+
+/** "Run the whole event": every day's run order in turn until the finals are published, at the chosen speed (Polish 2, item 7). */
+export async function runWholeEvent(eventId: string): Promise<Done> {
+  return wrap(eventId, async (db) => {
+    await updateConfig(db, eventId, (c) => ({ ...c, wholeEvent: true }));
+    const { error } = await db.user.rpc("sim_set", { p_event: eventId, p_patch: { state: "playing", blocker: null } });
+    if (error) return bad(simErrorSentence(error.message));
+    await db.user.rpc("sim_resume_heats", { p_event: eventId });
+    await logLine(db, eventId, "info", null, T.log.wholeStarted);
+    return { ok: true };
+  });
+}
+
+/** "Skip to end of heat": ends the heat now; the virtual judges finish; the virtual head judge publishes if nothing blocks (Polish 2, item 7). */
+export async function skipToEndOfHeat(eventId: string): Promise<Done<{ text: string }>> {
+  return wrap(eventId, async (db) => {
+    const r = await skipToEnd(db, eventId);
+    return r.ok ? { ok: true, text: r.text } : bad(r.message);
   });
 }
 
