@@ -9,25 +9,25 @@ export function AdminSwitch({ product, orgName, active }: { product: string; org
   const adminLabel = copy.layout.productAdmin(product);
   const orgLabel = orgName ? copy.layout.organiserView(orgName) : copy.layout.organiserViewNoOrg;
   return (
-    <div role="group" aria-label={copy.layout.switchLabel} className="flex flex-wrap items-center gap-2 rounded-md border-2 border-[#111] p-1">
+    <div role="group" aria-label={copy.layout.switchLabel} className="flex flex-wrap items-center gap-2 rounded-md border border-beach-line p-1">
       {active === "admin" ? (
-        <span aria-current="page" className="rounded bg-[#111] px-3 py-2 text-sm font-extrabold text-white">
+        <span aria-current="page" className="rounded bg-beach-ink px-3 py-2 text-sm font-semibold text-beach-on-accent">
           {adminLabel}
         </span>
       ) : (
-        <Link href="/admin" className="rounded px-3 py-2 text-sm font-bold underline">
+        <Link href="/admin" className="rounded px-3 py-2 text-sm font-semibold underline">
           {adminLabel}
         </Link>
       )}
-      <span aria-hidden="true" className="font-extrabold">
+      <span aria-hidden="true" className="font-semibold">
         ↔
       </span>
       {active === "organiser" ? (
-        <span aria-current="page" className="rounded bg-[#111] px-3 py-2 text-sm font-extrabold text-white">
+        <span aria-current="page" className="rounded bg-beach-ink px-3 py-2 text-sm font-semibold text-beach-on-accent">
           {orgLabel}
         </span>
       ) : (
-        <Link href="/org" className="rounded px-3 py-2 text-sm font-bold underline">
+        <Link href="/org" className="rounded px-3 py-2 text-sm font-semibold underline">
           {orgLabel}
         </Link>
       )}

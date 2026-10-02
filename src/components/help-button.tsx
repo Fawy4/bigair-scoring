@@ -34,7 +34,7 @@ export function FieldLabel({ htmlFor, text, help, as = "label" }: { htmlFor?: st
   return (
     <>
       <span className="flex items-start gap-2">
-        {as === "label" ? <label htmlFor={htmlFor}>{text}</label> : <span className="text-base font-bold">{text}</span>}
+        {as === "label" ? <label htmlFor={htmlFor}>{text}</label> : <span className="text-body font-semibold">{text}</span>}
         {help ? (
           <button type="button" className="help-btn" aria-label={copy.common.helpLabel(text)} aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
             {copy.common.helpButton}

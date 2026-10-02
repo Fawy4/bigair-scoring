@@ -22,14 +22,14 @@ export function PresetEditor({ kind, presetKey, isOwner, versions, baseVersion, 
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-3" aria-labelledby="versions-h">
-        <h2 id="versions-h" className="text-2xl font-extrabold">
+        <h2 id="versions-h" className="text-2xl font-semibold">
           {c.versionsHeading}
         </h2>
         <table className="w-full border-collapse">
           <thead>
             <tr>
               {[c.versionColumns.version, c.versionColumns.status, c.versionColumns.created, c.versionColumns.actions].map((h) => (
-                <th key={h} className="border-2 border-[#111] bg-[#eee] p-2 text-left">
+                <th key={h} className="border border-beach-line bg-beach-surface p-2 text-left">
                   {h}
                 </th>
               ))}
@@ -40,13 +40,13 @@ export function PresetEditor({ kind, presetKey, isOwner, versions, baseVersion, 
               const can = canPublish(versions, v.id);
               return (
                 <tr key={v.id}>
-                  <td className="border-2 border-[#111] p-2 font-bold">v{v.version}</td>
-                  <td className="border-2 border-[#111] p-2">
+                  <td className="border border-beach-line p-2 font-semibold">v{v.version}</td>
+                  <td className="border border-beach-line p-2">
                     {v.published_at ? `✔ ${c.published}` : `✎ ${c.draft}`}
                     {current?.id === v.id ? ` · ${c.isDefault}` : ""}
                   </td>
-                  <td className="border-2 border-[#111] p-2">{v.createdLabel}</td>
-                  <td className="border-2 border-[#111] p-2">
+                  <td className="border border-beach-line p-2">{v.createdLabel}</td>
+                  <td className="border border-beach-line p-2">
                     {!v.published_at && isOwner && can.ok ? (
                       <ConfirmButton
                         label={c.publish}

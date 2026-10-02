@@ -49,17 +49,17 @@ export function CardsSheet({ eventId, seatId }: { eventId: string; seatId: strin
       {cards.length === 0 ? <p className="panel font-semibold">{T.printNone}</p> : null}
       <div className="grid gap-4 print:grid-cols-2 md:grid-cols-2" data-testid="cards">
         {cards.map((c) => (
-          <article key={c.seatId} className="print-card flex flex-col gap-3 rounded-lg border-4 border-[#111] bg-white p-5" data-testid="card">
-            <p className="text-xl font-extrabold">{T.printCardEvent(eventName)}</p>
-            <p className="text-3xl font-extrabold">{c.seatName}</p>
-            <p className="text-xl font-bold">{T.printCardRole(T.roles[c.role] ?? c.role)}</p>
-            <p className="text-sm font-bold uppercase tracking-wide">{T.printCardPin}</p>
+          <article key={c.seatId} className="print-card flex flex-col gap-3 rounded-lg border border-beach-line bg-beach-bg p-5" data-testid="card">
+            <p className="text-xl font-semibold">{T.printCardEvent(eventName)}</p>
+            <p className="text-3xl font-semibold">{c.seatName}</p>
+            <p className="text-xl font-semibold">{T.printCardRole(T.roles[c.role] ?? c.role)}</p>
+            <p className="text-sm font-semibold uppercase tracking-wide">{T.printCardPin}</p>
             {c.pin ? (
-              <p className="font-mono text-6xl font-extrabold tracking-[0.25em]" data-testid="card-pin">
+              <p className="font-mono text-6xl font-semibold tracking-[0.25em]" data-testid="card-pin">
                 {c.pin}
               </p>
             ) : (
-              <p className="font-bold" data-testid="card-no-pin">
+              <p className="font-semibold" data-testid="card-no-pin">
                 {T.printNoPin}
               </p>
             )}

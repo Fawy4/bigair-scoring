@@ -232,3 +232,21 @@ export async function prepareCards(eventId: string, seatId: string | null): Prom
   }
   return { ok: true, eventName: event.name, joinUrl: joinAddress(origin, event.slug), cards };
 }
+
+/** The ticked seats on or off in one step. Each seat is checked on its own; the first that fails stops the rest and is reported. */
+export async function setSeatsActive(seatIds: string[], active: boolean): Promise<Result> {
+  for (const id of seatIds.slice(0, 200)) {
+    const r = await updateSeat(id, { active });
+    if (!r.ok) return r;
+  }
+  return { ok: true };
+}
+
+/** The ticked seats deleted in one step (a seat that has scores stays and is reported). */
+export async function deleteSeats(seatIds: string[]): Promise<Result> {
+  for (const id of seatIds.slice(0, 200)) {
+    const r = await deleteSeat(id);
+    if (!r.ok) return r;
+  }
+  return { ok: true };
+}

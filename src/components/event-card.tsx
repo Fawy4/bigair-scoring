@@ -15,8 +15,8 @@ export interface PublicEvent {
 /** One published event: its name, then "Organisation · Location · Date". Live and finished events say so in words. */
 export function EventCard({ event, organisation }: { event: PublicEvent; organisation: string | null }) {
   return (
-    <Link href={`/e/${event.slug}`} className="block rounded-lg border-2 border-[#111] p-3 hover:bg-[#eee]">
-      <span className="block text-xl font-bold">{event.name}</span>
+    <Link href={`/e/${event.slug}`} className="block rounded-lg border border-beach-line p-3 hover:bg-beach-surface">
+      <span className="block text-xl font-semibold">{event.name}</span>
       <span className="block text-base font-semibold">
         {eventLabel({ organisation, location: event.location, startDate: event.start_date, endDate: event.end_date })}
         {event.status === "live" ? copy.landing.live : event.status === "complete" ? copy.landing.finished : ""}

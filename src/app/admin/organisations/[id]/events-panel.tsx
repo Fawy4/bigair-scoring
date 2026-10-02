@@ -12,8 +12,8 @@ import { moveEvent } from "../../actions";
 import { restoreReset } from "@/app/org/(console)/events/[id]/reset-actions";
 
 const c = copy.admin.org;
-const th = "border-2 border-[#111] bg-[#eee] p-2 text-left";
-const td = "border-2 border-[#111] p-2 align-top";
+const th = "border border-beach-line bg-beach-surface p-2 text-left";
+const td = "border border-beach-line p-2 align-top";
 
 interface EventRow {
   id: string;
@@ -33,7 +33,7 @@ interface EventRow {
 export function EventsPanel({ orgName, events, others, isOwner }: { orgName: string; events: EventRow[]; others: { id: string; name: string }[]; isOwner: boolean }) {
   return (
     <section className="flex flex-col gap-3" aria-labelledby="events-h">
-      <h2 id="events-h" className="text-2xl font-extrabold">
+      <h2 id="events-h" className="text-2xl font-semibold">
         {c.eventsHeading}
       </h2>
       {events.length === 0 ? (
@@ -54,7 +54,7 @@ export function EventsPanel({ orgName, events, others, isOwner }: { orgName: str
             <tbody>
               {events.map((e) => (
                 <tr key={e.id}>
-                  <td className={`${td} font-bold`}>{e.name}</td>
+                  <td className={`${td} font-semibold`}>{e.name}</td>
                   <td className={td}>
                     <SlugLink slug={e.slug} />
                   </td>
@@ -106,7 +106,7 @@ function MoveEvent({ event, orgName, others }: { event: EventRow; orgName: strin
           ))}
         </select>
       </div>
-      {event.running ? <p className="text-sm font-bold">{c.moveRunning}</p> : null}
+      {event.running ? <p className="text-sm font-semibold">{c.moveRunning}</p> : null}
       <ConfirmButton
         label={c.moveButton}
         question={c.moveQuestion(event.name, orgName, to?.name ?? "")}

@@ -38,6 +38,8 @@ export async function loadSetupCounts(supabase: SupabaseClient<Database>, eventI
     locked: (divs ?? []).filter((d) => d.draw_locked_at).map((d) => d.id),
     activePlan: activePlans.length > 0,
     activePlanToday: activePlans.some((p) => p.day === today),
+    today,
+    activePlanDays: [...new Set(activePlans.map((p) => p.day))].sort(),
     planCount: (plans ?? []).length,
     seatCount: (seats ?? []).length,
     seatsWithoutPin,

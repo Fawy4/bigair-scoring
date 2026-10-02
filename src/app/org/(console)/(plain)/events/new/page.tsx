@@ -14,7 +14,7 @@ export default async function NewEventPage() {
   return (
     <main className="flex min-w-0 flex-col gap-4">
       <h1 className="text-[20px] font-semibold leading-tight">{copy.event.newHeading(current.name)}</h1>
-      <p className="text-body font-medium text-beach-muted">{copy.event.newIntro}</p>
+      <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.event.newIntro}</p>
       <EventForm
         initial={{ id: null, organisationId: current.id, status: "draft", values: blankEventValues(current.settings.defaultTimezone), savedSlug: null }}
         timeZones={knownTimeZones()}

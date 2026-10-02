@@ -12,11 +12,11 @@ export default async function NewOrganisationPage() {
   const { defaultTimezone } = await getPlatformSettings();
   return (
     <main className="flex max-w-2xl flex-col gap-6">
-      <Link href="/admin" className="font-bold underline">
+      <Link href="/admin" className="font-semibold underline">
         {copy.admin.org.backToList}
       </Link>
-      <h1 className="text-3xl font-extrabold">{copy.admin.org.createHeading}</h1>
-      <p className="text-lg font-semibold">{copy.admin.org.createIntro}</p>
+      <h1>{copy.admin.org.createHeading}</h1>
+      <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.admin.org.createIntro}</p>
       <CreateOrganisationForm timeZones={knownTimeZones()} defaultTimezone={defaultTimezone} />
     </main>
   );

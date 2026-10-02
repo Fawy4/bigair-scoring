@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clockIn, defaultsOf, eventDays, planToRow, rowToPlan, todayIn } from "./plans";
+import { clockIn, defaultsOf, eventDays, heatsRanOn, planToRow, rowToPlan, shortDay, todayIn } from "./plans";
 
 describe("stored plans", () => {
   const row = { id: "p1", event_id: "e", day: "2026-10-03", name: "Plan A", items: [{ id: "r1", kind: "heat", heatId: "h1", durationMin: 10 }], anchors: { r1: "10:00" }, actual_starts: {}, hold: null, defaults: { breakAfterHeatMin: 2 }, active: true };
@@ -44,5 +44,23 @@ describe("event days", () => {
     expect(todayIn("Africa/Cairo", at)).toBe("2026-10-04");
     expect(clockIn("Africa/Cairo", at)).toBe("01:30");
     expect(todayIn("UTC", at)).toBe("2026-10-03");
+  });
+});
+
+describe("short day names and the days heats already ran", () => {
+  it("shortDay writes a day the way the owner reads it", () => {
+    expect(shortDay("2026-10-02")).toBe("Fri 2 Oct");
+    expect(shortDay("2026-10-16")).toBe("Fri 16 Oct");
+  });
+  it("heatsRanOn lists the event-time-zone days on which the plan's heats really started, oldest first", () => {
+    const lives = [
+      { heatId: "h1", startedAt: "2026-10-02T09:05:00Z" },
+      { heatId: "h2", startedAt: "2026-10-02T21:30:00Z" }, // 00:30 on 3 Oct in Cairo (UTC+3)
+      { heatId: "h3", startedAt: null },
+      { heatId: "h4", startedAt: "2026-10-09T08:00:00Z" }, // not in this plan
+    ];
+    expect(heatsRanOn(["h1", "h2", "h3"], lives, "Africa/Cairo")).toEqual(["2026-10-02", "2026-10-03"]);
+    expect(heatsRanOn(["h3"], lives, "Africa/Cairo")).toEqual([]);
+    expect(heatsRanOn([], lives, "Africa/Cairo")).toEqual([]);
   });
 });

@@ -111,7 +111,7 @@ export function IdentificationEditor({
 
   return (
     <fieldset className="panel flex flex-col gap-5">
-      <legend className="px-1 text-xl font-extrabold">{division ? T.divisionHeading : T.heading}</legend>
+      <legend className="px-1 text-xl font-semibold">{division ? T.divisionHeading : T.heading}</legend>
       <p className="font-semibold">{division ? T.divisionIntro : T.intro}</p>
 
       {hideLycraQuestion ? null : (
@@ -119,11 +119,11 @@ export function IdentificationEditor({
           <legend>
             <FieldLabel as="span" text={T.lycraQuestion} help={help["ident.lycraQuestion"]} />
           </legend>
-          <label className="flex items-center gap-3 font-bold">
+          <label className="flex items-center gap-3 font-semibold">
             <input type="radio" name="lycras" checked={lycras} onChange={() => answerLycras(true)} />
             {T.lycraYes}
           </label>
-          <label className="flex items-center gap-3 font-bold">
+          <label className="flex items-center gap-3 font-semibold">
             <input type="radio" name="lycras" checked={isName} onChange={() => answerLycras(false)} />
             {T.lycraNo}
           </label>
@@ -262,7 +262,7 @@ export function IdentificationEditor({
 
       {division ? null : (
         <span className="flex items-start gap-2">
-          <label className="flex items-center gap-3 font-bold">
+          <label className="flex items-center gap-3 font-semibold">
             <input type="checkbox" checked={value.allowDivisionOverride} onChange={(e) => onChange({ ...value, allowDivisionOverride: e.target.checked })} />
             {T.allowOverride}
           </label>
@@ -270,7 +270,7 @@ export function IdentificationEditor({
       )}
 
       <div className="flex flex-wrap items-center gap-4" aria-live="polite">
-        <span className="text-base font-bold">{T.preview}</span>
+        <span className="text-base font-semibold">{T.preview}</span>
         <RiderLabel scheme={s} rider={SAMPLE} size="lg" />
         <span className="font-semibold">
           {T.previewCallout} <strong>{callout}</strong>
@@ -285,7 +285,7 @@ export function IdentificationEditor({
         </ul>
       ) : null}
 
-      <div className="flex flex-wrap items-end gap-3 border-t-2 border-[#111] pt-4">
+      <div className="flex flex-wrap items-end gap-3 border-t border-beach-line pt-4">
         <div className="flex flex-col gap-1">
           <FieldLabel htmlFor="ident-save-name" text={T.saveName} help={help["ident.savePreset"]} />
           <input id="ident-save-name" value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder={T.presetName} className="w-64" />

@@ -26,34 +26,36 @@
   }
 }
 
+/* Specificity note: Tailwind 3 does not use native cascade layers, so these element rules are wrapped in :where(...) to stay at element
+   specificity; a Tailwind class on an element (a transparent frame, a width, a weight) always wins over them. */
 /* ---- Organiser and admin screens: the old markup (raw inputs, selects, tables, the .btn and .panel classes) gets the approved look from here.
    Element rules only; a Tailwind class on an element still wins (this is a component layer), so the newer components are not affected.
    1 px frames, 8 px controls, 12 px cards, the accent for the primary button and for focus, ink for text, weight 600 for headings and
    labels, 500 for the rest. Colours are read from the beach tokens, so Dark works without a second set of rules. */
 @layer components {
-  .org-console {
+  :where(.org-console) {
     color: var(--beach-ink);
     font-weight: 500;
   }
-  .org-console h1 {
+  :where(.org-console) h1 {
     font-size: 20px;
     line-height: 1.2;
   }
-  .org-console h2 {
+  :where(.org-console) h2 {
     font-size: 16px;
     line-height: 1.25;
   }
-  .org-console :is(h3, h4, h5, h6) {
+  :where(.org-console) :is(h3, h4, h5, h6) {
     font-size: 14px;
     line-height: 1.3;
   }
-  .org-console :is(h1, h2, h3, h4, h5, h6, label, th, legend) {
+  :where(.org-console) :is(h1, h2, h3, h4, h5, h6, label, th, legend) {
     font-weight: 600;
   }
-  .org-console :is(button, [role="button"]):not(.help-btn) {
+  :where(.org-console :is(button, [role="button"]):not(.help-btn)) {
     min-height: var(--org-ctl);
   }
-  .org-console :is(select, textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"])) {
+  :where(.org-console :is(select, textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]))) {
     min-height: var(--org-ctl);
     border: 1px solid var(--beach-border);
     border-radius: 8px;
@@ -62,20 +64,20 @@
     padding: 0 12px;
     font-weight: 500;
   }
-  .org-console textarea {
+  :where(.org-console) textarea {
     padding-block: 8px;
   }
-  .org-console :is(input, select, textarea)::placeholder {
+  :where(.org-console) :is(input, select, textarea)::placeholder {
     color: var(--beach-muted);
     opacity: 1;
   }
-  .org-console :is(input, select, textarea):disabled {
+  :where(.org-console) :is(input, select, textarea):disabled {
     border-style: dashed;
     background: var(--beach-surface);
     cursor: not-allowed;
   }
   /* a number box is as wide as its digits need, never the width of its container; the digits sit at the right */
-  .org-console input[type="number"] {
+  :where(.org-console) input[type="number"] {
     width: 8ch;
     min-width: var(--org-ctl);
     max-width: 100%;
@@ -84,27 +86,27 @@
     -moz-appearance: textfield;
   }
   @supports (field-sizing: content) {
-    .org-console input[type="number"] {
+    :where(.org-console) input[type="number"] {
       field-sizing: content;
       width: auto;
     }
   }
-  .org-console input[type="number"]::-webkit-inner-spin-button,
-  .org-console input[type="number"]::-webkit-outer-spin-button {
+  :where(.org-console) input[type="number"]::-webkit-inner-spin-button,
+  :where(.org-console) input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
-  .org-console :is(input[type="checkbox"], input[type="radio"]) {
+  :where(.org-console) :is(input[type="checkbox"], input[type="radio"]) {
     width: 20px;
     height: 20px;
     flex: none;
     accent-color: var(--beach-accent);
   }
-  .org-console :focus-visible {
+  :where(.org-console) :focus-visible {
     outline: 2px solid var(--beach-focus);
     outline-offset: 2px;
   }
-  .org-console .btn {
+  :where(.org-console) .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -119,55 +121,60 @@
     font-weight: 600;
     cursor: pointer;
   }
-  .org-console .btn:hover:not(:disabled) {
+  :where(.org-console) .btn:hover:not(:disabled) {
     background: var(--beach-surface);
   }
-  .org-console .btn-primary {
+  :where(.org-console) .btn-primary {
     border-color: var(--beach-accent);
     background: var(--beach-accent);
     color: var(--beach-on-accent);
   }
-  .org-console .btn-primary:hover:not(:disabled) {
+  :where(.org-console) .btn-primary:hover:not(:disabled) {
     background: var(--beach-accent);
     filter: brightness(1.12);
   }
-  .org-console .btn-danger {
+  :where(.org-console) .btn-danger {
     border-color: var(--beach-crash);
     color: var(--beach-crash);
   }
   /* a disabled control is never faded to light grey: full-strength text, a dashed frame, a flat fill */
-  .org-console .btn:disabled {
+  :where(.org-console) .btn:disabled {
     border-style: dashed;
     border-color: var(--beach-border);
     background: var(--beach-surface);
     color: var(--beach-muted);
     cursor: not-allowed;
   }
-  .org-console .field-error {
+  :where(.org-console) .btn-danger-solid {
+    border-color: var(--beach-crash);
+    background: var(--beach-crash);
+    color: var(--beach-on-crash);
+  }
+  :where(.org-console) .field-error {
     color: var(--beach-failed);
     font-weight: 600;
   }
-  .org-console .panel {
+  :where(.org-console) .panel {
     border: 1px solid var(--beach-line);
     border-radius: 12px;
     padding: 16px;
     background: var(--beach-bg);
   }
-  .org-console table {
+  :where(.org-console) table {
     border-collapse: collapse;
   }
-  .org-console th {
+  :where(.org-console) th {
     color: var(--beach-muted);
     text-align: left;
   }
-  .org-console :is(th, td) {
+  :where(.org-console) :is(th, td) {
     border-color: var(--beach-line);
   }
 }
 
 /* "?" help buttons and their notes (tap to open; never long-press): the same small circle as the HelpTip of the new screens. */
 @layer components {
-  .org-console .help-btn {
+  :where(.org-console) .help-btn {
     position: relative;
     isolation: isolate;
     display: inline-flex;
@@ -185,7 +192,7 @@
     cursor: pointer;
   }
   /* the tap area is the full control height; the circle you see is 24 px */
-  .org-console .help-btn::before {
+  :where(.org-console) .help-btn::before {
     content: "";
     position: absolute;
     z-index: -1;
@@ -198,14 +205,14 @@
     border-radius: 9999px;
     background: var(--beach-bg);
   }
-  .org-console .help-btn[aria-expanded="true"] {
+  :where(.org-console) .help-btn[aria-expanded="true"] {
     color: var(--beach-on-accent);
   }
-  .org-console .help-btn[aria-expanded="true"]::before {
+  :where(.org-console) .help-btn[aria-expanded="true"]::before {
     border-color: var(--beach-accent);
     background: var(--beach-accent);
   }
-  .org-console .help-note {
+  :where(.org-console) .help-note {
     display: block;
     border: 1px solid var(--beach-line);
     border-radius: 8px;

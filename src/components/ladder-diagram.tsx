@@ -37,7 +37,7 @@ function EditableName({ text, defaultText, ariaLabel, fieldLabel, onCommit, clas
     <input
       ref={box}
       aria-label={fieldLabel}
-      className="!min-h-[var(--org-ctl)] w-40 max-w-full px-2 py-1 text-base font-bold"
+      className="!min-h-[var(--org-ctl)] w-40 max-w-full px-2 py-1 text-base font-semibold"
       maxLength={40}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
@@ -72,7 +72,7 @@ export function LadderDiagram({
   const editable = Boolean(onRenameRound || onRenameHeat);
   return (
     <figure data-testid="ladder-diagram" aria-label={copy.ladder.label} className="flex flex-col gap-2">
-      <figcaption className="flex flex-wrap items-center gap-2 text-base font-extrabold">
+      <figcaption className="flex flex-wrap items-center gap-2 text-base font-semibold">
         <span>
           {copy.ladder.label}: {copy.ladder.title(columns.length, heats)}
         </span>
@@ -82,11 +82,11 @@ export function LadderDiagram({
       <ol className="flex items-stretch gap-2 overflow-x-auto pb-2">
         {columns.map((c, i) => (
           <li key={c.id} className="flex items-stretch gap-2">
-            <div className="flex min-w-40 flex-col gap-2 rounded-lg border-2 border-[#111] p-2" data-testid="ladder-round">
-              <p className="flex flex-wrap items-baseline gap-1 text-base font-extrabold">
+            <div className="flex min-w-40 flex-col gap-2 rounded-lg border border-beach-line p-2" data-testid="ladder-round">
+              <p className="flex flex-wrap items-baseline gap-1 text-base font-semibold">
                 {c.shortName.length > 4 ? null : <span>{c.shortName} ·</span>}
                 {onRenameRound ? (
-                  <EditableName text={c.name} defaultText={c.defaultName} ariaLabel={copy.formatSimple.renameRound(c.name)} fieldLabel={copy.formatSimple.renameField(c.name)} onCommit={(n) => onRenameRound(c.id, n)} className="font-extrabold" />
+                  <EditableName text={c.name} defaultText={c.defaultName} ariaLabel={copy.formatSimple.renameRound(c.name)} fieldLabel={copy.formatSimple.renameField(c.name)} onCommit={(n) => onRenameRound(c.id, n)} className="font-semibold" />
                 ) : (
                   <span className="font-semibold">{c.name}</span>
                 )}
@@ -94,10 +94,10 @@ export function LadderDiagram({
               <p className="text-sm font-semibold">{c.summary}</p>
               <ul className="flex flex-col gap-1">
                 {c.heats.map((h) => (
-                  <li key={h.id} className="rounded border-2 border-[#111] px-2 py-1" data-testid="ladder-heat">
-                    <span className="flex flex-wrap items-baseline gap-1 text-base font-bold">
+                  <li key={h.id} className="rounded border border-beach-line px-2 py-1" data-testid="ladder-heat">
+                    <span className="flex flex-wrap items-baseline gap-1 text-base font-semibold">
                       {onRenameHeat ? (
-                        <EditableName text={h.name} defaultText={h.defaultName} ariaLabel={copy.formatSimple.renameHeat(h.name)} fieldLabel={copy.formatSimple.renameField(h.name)} onCommit={(n) => onRenameHeat(h.id, n)} className="font-bold" />
+                        <EditableName text={h.name} defaultText={h.defaultName} ariaLabel={copy.formatSimple.renameHeat(h.name)} fieldLabel={copy.formatSimple.renameField(h.name)} onCommit={(n) => onRenameHeat(h.id, n)} className="font-semibold" />
                       ) : (
                         <span>{h.name}</span>
                       )}
@@ -111,7 +111,7 @@ export function LadderDiagram({
                   </li>
                 ))}
               </ul>
-              <ul className="mt-auto flex flex-col gap-0.5 border-t-2 border-[#111] pt-2 text-sm font-bold">
+              <ul className="mt-auto flex flex-col gap-0.5 border-t border-beach-line pt-2 text-sm font-semibold">
                 {c.routes.map((r) => (
                   <li key={r}>{r}</li>
                 ))}
@@ -123,7 +123,7 @@ export function LadderDiagram({
               ) : null}
             </div>
             {i < columns.length - 1 ? (
-              <span aria-hidden className="flex items-center text-2xl font-extrabold">
+              <span aria-hidden className="flex items-center text-2xl font-semibold">
                 {copy.ladder.arrow}
               </span>
             ) : null}

@@ -72,6 +72,15 @@ describe("readiness checklist", () => {
     expect(readiness({ eventId: EVENT, divisions: divs, counts: counts({ activePlanToday: false }) }).checks.find((x) => x.id === "run-order")).toMatchObject({ state: "attention", sentence: "No run order is active for today" });
   });
 
+  it("run order for another day names both dates: today and the day of the active plan", () => {
+    const c = counts({ activePlanToday: false, today: "2026-10-02", activePlanDays: ["2026-10-16"] });
+    expect(readiness({ eventId: EVENT, divisions: divs, counts: c }).checks.find((x) => x.id === "run-order")).toMatchObject({ state: "attention", sentence: "No run order is active for today, Fri 2 Oct — the active plan is for Fri 16 Oct", fixHref: `/org/events/${EVENT}/schedule` });
+    const two = counts({ activePlanToday: false, today: "2026-10-02", activePlanDays: ["2026-10-16", "2026-10-17"] });
+    expect(readiness({ eventId: EVENT, divisions: divs, counts: two }).checks.find((x) => x.id === "run-order")!.sentence).toBe("No run order is active for today, Fri 2 Oct — the active plans are for Fri 16 Oct and Sat 17 Oct");
+    const none = counts({ activePlan: false, activePlanToday: false, today: "2026-10-02", activePlanDays: [], planCount: 2 });
+    expect(readiness({ eventId: EVENT, divisions: divs, counts: none }).checks.find((x) => x.id === "run-order")!.sentence).toBe("No run order is active for today, Fri 2 Oct — no plan is active yet");
+  });
+
   it("two seats without a PIN (seats made before PIN storage)", () => {
     const c = readiness({ eventId: EVENT, divisions: divs, counts: counts({ seatsWithoutPin: 2 }) }).checks.find((x) => x.id === "pins")!;
     expect(c).toMatchObject({ state: "attention", sentence: "2 seats have no PIN", fixHref: `/org/events/${EVENT}/officials` });

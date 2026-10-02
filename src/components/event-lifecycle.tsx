@@ -41,9 +41,9 @@ export function EventLifecycle({
 
   return (
     <div className={`flex flex-col gap-4 ${compact ? "min-w-64" : ""}`}>
-      <div className="flex flex-col gap-2">
-        {compact ? null : <h3 className="text-xl font-extrabold">{c.archiveHeading}</h3>}
-        <p className="font-semibold">{archived ? c.restoreText : c.archiveText}</p>
+      <div className="flex flex-col items-start gap-2">
+        {compact ? null : <h3>{c.archiveHeading}</h3>}
+        <p className="max-w-[70ch] text-body font-medium text-beach-muted">{archived ? c.restoreText : c.archiveText}</p>
         <ConfirmButton
           label={archived ? c.restoreButton : c.archiveButton}
           question={archived ? c.restoreQuestion(eventName) : c.archiveQuestion(eventName)}
@@ -63,14 +63,14 @@ export function EventLifecycle({
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        {compact ? null : <h3 className="text-xl font-extrabold">{c.deleteHeading}</h3>}
-        <p className="font-semibold">{c.deleteText}</p>
-        {blocked ? <p className="panel font-bold">{blocked}</p> : null}
+      <div className="flex flex-col items-start gap-2">
+        {compact ? null : <h3>{c.deleteHeading}</h3>}
+        <p className="max-w-[70ch] text-body font-medium text-beach-muted">{c.deleteText}</p>
+        {blocked ? <p className="panel text-body font-semibold">{blocked}</p> : null}
         <div className="flex flex-col gap-1">
           <FieldLabel htmlFor={inputId} text={c.deleteTyped} />
-          <input id={inputId} value={typed} onChange={(e) => setTyped(e.target.value)} disabled={Boolean(blocked) || pending} autoComplete="off" spellCheck={false} autoCapitalize="none" />
-          <p className="text-sm font-semibold">{c.deleteTypedHint(slug)}</p>
+          <input id={inputId} value={typed} onChange={(e) => setTyped(e.target.value)} disabled={Boolean(blocked) || pending} autoComplete="off" spellCheck={false} autoCapitalize="none" className="max-w-sm" />
+          <p className="text-small font-medium text-beach-muted">{c.deleteTypedHint(slug)}</p>
         </div>
         <ConfirmButton
           danger

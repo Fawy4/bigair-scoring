@@ -133,7 +133,7 @@ test("rider page: next heat with an estimate and the ready call, their heats, re
   await expect(page.getByTestId("rider-share").getByTestId("share-whatsapp")).toHaveAttribute("href", /wa\.me/);
   await expect(page.getByTestId("rider-heats").getByTestId("rider-heat")).toHaveCount(2);
   await page.goto(url("/riders/00000000-0000-0000-0000-000000000000"));
-  await expect(page.getByText("This page could not be found")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This page doesn't exist" })).toBeVisible(); // a public event, an unknown rider: the page does not exist
 });
 
 test("rules: generated in plain words for each division, with the Lycra legend", async ({ page }) => {
@@ -271,6 +271,12 @@ test("an event that is a simulation, a draft or archived is not on the public si
     expect(res?.status(), p).toBe(404);
   }
   expect((await page.goto(`/screen/${w.slug}`))?.status()).toBe(404);
+  // the answer is a page of the product, in the design system, with a way home: not the black default 404
+  await page.goto(url());
+  await expect(page.getByRole("heading", { name: "This event isn't public" })).toBeVisible();
+  await expect(page.getByTestId("not-found")).toHaveClass(/beach-day/);
+  await page.getByRole("link", { name: "Back to the home page" }).click();
+  await expect(page).toHaveURL(/\/$/);
   expect((await page.goto(`/o/${org!.slug}`))?.status()).toBe(404);
   await page.goto("/");
   await expect(page.getByText(`E2E Live ${w.org.run}`)).toHaveCount(0);

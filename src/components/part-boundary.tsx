@@ -24,9 +24,9 @@ export class PartBoundary extends Component<{ what: string; children: ReactNode 
     const { error } = this.state;
     if (!error) return this.props.children;
     return (
-      <div role="alert" data-testid="part-error" className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-[#111] bg-[#fde68a] p-3 text-[#111]">
-        <p className="min-w-0 flex-1 basis-64 text-base font-bold">{C.part(this.props.what, error.message || "unknown")}</p>
-        <button type="button" onClick={() => this.setState({ error: null })} className="min-h-[56px] rounded-xl border-2 border-[#111] bg-white px-4 font-bold">
+      <div role="alert" data-testid="part-error" className="flex flex-wrap items-center gap-3 rounded-xl border border-beach-line bg-beach-tint-grade0 p-3 text-beach-ink">
+        <p className="min-w-0 flex-1 basis-64 text-base font-semibold">{C.part(this.props.what, error.message || "unknown")}</p>
+        <button type="button" onClick={() => this.setState({ error: null })} className="min-h-[56px] rounded-xl border border-beach-line bg-beach-bg px-4 font-semibold">
           {C.partRetry}
         </button>
       </div>

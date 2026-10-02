@@ -83,7 +83,7 @@ export function SchemaForm({
           const anyError = Object.keys(errors).some((k) => k === f.key || k.startsWith(`${f.key}.`));
           return isSection(f) ? (
             <details key={f.key} className="panel" open={anyError || undefined}>
-              <summary className="cursor-pointer text-lg font-extrabold">
+              <summary className="cursor-pointer text-lg font-semibold">
                 {f.label}
                 {anyError ? <span className="field-error"> {copy.common.needsAttention}</span> : null}
               </summary>
@@ -109,7 +109,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
   switch (node.kind) {
     case "object":
       return (
-        <div className={bare ? "flex flex-col gap-4" : "flex flex-col gap-3 rounded-lg border-2 border-[#111] p-3"}>
+        <div className={bare ? "flex flex-col gap-4" : "flex flex-col gap-3 rounded-lg border border-beach-line p-3"}>
           {bare ? null : <FieldLabel as="span" text={node.label} help={node.help ? { text: node.help, example: node.example } : undefined} />}
           {node.fields.filter((f) => !ctx.hiddenPaths?.includes(f.pattern.join("."))).map((f) => (
             <div key={f.key} className="flex flex-col gap-1">
@@ -227,7 +227,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
           {bare ? null : <FieldLabel as="span" text={node.label} help={node.help ? { text: node.help, example: node.example } : undefined} />}
           {entries.map(([k, v]) => (
             <div key={k} className="flex flex-wrap items-center gap-2">
-              <span className="min-w-32 font-bold">{k}</span>
+              <span className="min-w-32 font-semibold">{k}</span>
               <NumberField label={`${node.label}: ${k}`} min={1} max={999} value={typeof v === "number" ? v : null} onChange={(n) => ctx.set([...path, k], n)} onClear={() => ctx.set([...path, k], "")} />
               <button type="button" className="btn btn-danger" onClick={() => ctx.remove([...path, k])}>
                 {copy.common.remove}
@@ -270,7 +270,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
               </option>
             ))}
           </select>
-          <div className="flex flex-col gap-3 rounded-lg border-2 border-[#111] p-3">
+          <div className="flex flex-col gap-3 rounded-lg border border-beach-line p-3">
             {variant.node.fields.filter((f) => !ctx.hiddenPaths?.includes(f.pattern.join("."))).map((f) => (
               <div key={f.key} className="flex flex-col gap-1">
                 <FieldView node={f} path={[...path, f.key]} ctx={ctx} />
@@ -288,7 +288,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
       return (
         <div className="flex flex-col gap-3">
           <span className="flex items-start gap-2">
-            <label className="flex items-center gap-3 font-bold">
+            <label className="flex items-center gap-3 font-semibold">
               <input type="checkbox" checked={on} onChange={(e) => (e.target.checked ? set(defaultValueFor(node.inner)) : node.absent ? ctx.remove(path) : set(null))} />
               {on ? copy.friendly.use(node.label) : copy.friendly.offLabel(node.label, node.off)}
             </label>
@@ -305,7 +305,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
       return (
         <div className="flex flex-col gap-2">
           <span className="flex items-start gap-2">
-            <label className="flex items-center gap-3 font-bold">
+            <label className="flex items-center gap-3 font-semibold">
               <input type="checkbox" checked={isConst} onChange={(e) => set(e.target.checked ? node.constValue : defaultValueFor(node.inner))} />
               {copy.friendly.offLabel(node.label, node.off)}
             </label>
@@ -359,7 +359,7 @@ function ListView({ node, path, ctx, value, bare }: { node: Extract<FieldNode, {
         const itemPath = [...path, i];
         const simple = item.kind === "string" || item.kind === "enum";
         return (
-          <div key={i} className={simple ? "flex flex-wrap items-end gap-2" : "flex flex-col gap-3 rounded-lg border-2 border-[#111] p-3"}>
+          <div key={i} className={simple ? "flex flex-wrap items-end gap-2" : "flex flex-col gap-3 rounded-lg border border-beach-line p-3"}>
             <div className={simple ? "min-w-48 flex-1" : ""}>
               <FieldView node={{ ...item, label: `${singular} ${i + 1}`, help: undefined }} path={itemPath} ctx={ctx} bare />
             </div>

@@ -59,7 +59,7 @@ const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ([
 function NumberBox({ id, label, value, min, max, onCommit, disabled, className }: { id: string; label: string; value: number | undefined; min: number; max: number; onCommit: (n: number) => void; disabled?: boolean; className?: string }) {
   return (
     <div className={cn("flex flex-col gap-1", className)}>
-      <label htmlFor={id} className="text-sm font-bold">
+      <label htmlFor={id} className="text-sm font-semibold">
         {label}
       </label>
       <NumberField id={id} label={label} min={min} max={max} step={max > 20 ? 0.5 : 1} value={value ?? null} disabled={disabled} onChange={onCommit} />
@@ -148,10 +148,10 @@ function SeatBox({
       }}
       data-testid="builder-seat"
       className={cn(
-        "flex flex-col gap-1 rounded-lg border-2 border-[#111] bg-white p-2",
+        "flex flex-col gap-1 rounded-lg border border-beach-line bg-beach-bg p-2",
         current.type === "empty" ? "border-dashed" : "",
-        drop.isOver ? "bg-[#e5e7eb]" : "",
-        eligibleTarget ? "outline outline-4 outline-offset-2 outline-[#2563eb]" : "",
+        drop.isOver ? "bg-beach-surface" : "",
+        eligibleTarget ? "outline outline-4 outline-offset-2 outline-beach-accent" : "",
       )}
     >
       <div className="flex items-center gap-2">
@@ -160,7 +160,7 @@ function SeatBox({
             ⠿
           </button>
         ) : (
-          <span className="w-6 shrink-0 text-center text-sm font-extrabold" aria-hidden>
+          <span className="w-6 shrink-0 text-center text-sm font-semibold" aria-hidden>
             {seat + 1}
           </span>
         )}
@@ -281,7 +281,7 @@ export function LadderBuilder({ ladder, onChange, riders, confirmedCount, readOn
           {T.addRound}
         </button>
         <div className="flex flex-col gap-1">
-          <label htmlFor="start-from" className="text-sm font-bold">
+          <label htmlFor="start-from" className="text-sm font-semibold">
             {T.startFromLabel}
           </label>
           <select id="start-from" value={startKind} onChange={(e) => setStartKind(e.target.value)} disabled={readOnly}>
@@ -314,8 +314,8 @@ export function LadderBuilder({ ladder, onChange, riders, confirmedCount, readOn
         </p>
       ) : null}
       {sending ? (
-        <div role="status" className="panel flex flex-wrap items-center gap-3 !bg-[#bfdbfe]" data-testid="sending-bar">
-          <span className="font-bold">{T.sending(ordinal(sending.place), `H${sending.heat}`)}</span>
+        <div role="status" className="panel flex flex-wrap items-center gap-3 !bg-beach-surface" data-testid="sending-bar">
+          <span className="font-semibold">{T.sending(ordinal(sending.place), `H${sending.heat}`)}</span>
           <button type="button" className="btn" onClick={() => setSending(null)}>
             {copy.common.cancel}
           </button>
@@ -330,12 +330,12 @@ export function LadderBuilder({ ladder, onChange, riders, confirmedCount, readOn
               const isFinal = round.id === finalId;
               const faults = faultsByRound(round.id);
               return (
-                <section key={round.id} className="flex w-80 shrink-0 flex-col gap-2 rounded-xl border-2 border-[#111] bg-[#f9fafb] p-2" aria-label={round.name} data-testid="builder-round" data-round={round.id}>
+                <section key={round.id} className="flex w-80 shrink-0 flex-col gap-2 rounded-xl border border-beach-line bg-beach-surface p-2" aria-label={round.name} data-testid="builder-round" data-round={round.id}>
                   <header className="flex flex-col gap-2">
                     <div className="flex items-center gap-2">
                       <input
                         aria-label={T.roundName(ri + 1)}
-                        className="min-w-0 flex-1 !text-lg !font-extrabold"
+                        className="min-w-0 flex-1 !text-lg !font-semibold"
                         defaultValue={round.name}
                         key={round.name}
                         disabled={readOnly}
@@ -351,11 +351,11 @@ export function LadderBuilder({ ladder, onChange, riders, confirmedCount, readOn
                       </button>
                     </div>
                     <div className="flex flex-wrap items-end gap-3">
-                      {!isFinal ? <NumberBox id={`adv-${round.id}`} label={T.advanceLabel} value={round.advance} min={0} max={10} disabled={readOnly} onCommit={(n) => change(() => setAdvance(ladder, round.id, n))} /> : <span className="text-sm font-bold">{T.finalNote}</span>}
-                      <span className="text-sm font-bold">{faults > 0 ? T.roundFaults(faults) : T.roundOk}</span>
+                      {!isFinal ? <NumberBox id={`adv-${round.id}`} label={T.advanceLabel} value={round.advance} min={0} max={10} disabled={readOnly} onCommit={(n) => change(() => setAdvance(ladder, round.id, n))} /> : <span className="text-sm font-semibold">{T.finalNote}</span>}
+                      <span className="text-sm font-semibold">{faults > 0 ? T.roundFaults(faults) : T.roundOk}</span>
                     </div>
                     <details>
-                      <summary className="cursor-pointer text-sm font-bold">{T.roundSettings}</summary>
+                      <summary className="cursor-pointer text-sm font-semibold">{T.roundSettings}</summary>
                       <div className="mt-2 flex flex-wrap gap-3">
                         <NumberBox id={`min-${round.id}`} label={T.minLabel} value={round.minHeatSize ?? ladder.minHeatSize} min={1} max={10} disabled={readOnly} onCommit={(n) => change(() => setLimits(ladder, { minHeatSize: n }, round.id))} />
                         <NumberBox id={`max-${round.id}`} label={T.maxLabel} value={round.maxHeatSize ?? ladder.maxHeatSize} min={1} max={10} disabled={readOnly} onCommit={(n) => change(() => setLimits(ladder, { maxHeatSize: n }, round.id))} />
@@ -367,11 +367,11 @@ export function LadderBuilder({ ladder, onChange, riders, confirmedCount, readOn
                   </header>
 
                   {round.heats.map((heat, hi) => (
-                    <article key={hi} className="flex flex-col gap-2 rounded-lg border-2 border-[#111] bg-white p-2" data-testid="builder-heat" aria-label={`${round.name} ${heatName(round, hi + 1)}`}>
+                    <article key={hi} className="flex flex-col gap-2 rounded-lg border border-beach-line bg-beach-bg p-2" data-testid="builder-heat" aria-label={`${round.name} ${heatName(round, hi + 1)}`}>
                       <div className="flex items-center gap-2">
                         <input
                           aria-label={T.heatName(round.name, hi + 1)}
-                          className="min-w-0 flex-1 !font-extrabold"
+                          className="min-w-0 flex-1 !font-semibold"
                           defaultValue={heatName(round, hi + 1)}
                           key={heatName(round, hi + 1)}
                           disabled={readOnly}
@@ -382,7 +382,7 @@ export function LadderBuilder({ ladder, onChange, riders, confirmedCount, readOn
                         <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={readOnly || heat.seats.length <= 0} aria-label={T.fewerSeats(round.name, hi + 1)} onClick={() => change(() => setSeatCount(ladder, round.id, hi + 1, heat.seats.length - 1))}>
                           −
                         </button>
-                        <span className="min-w-14 text-center text-sm font-extrabold" data-testid="seat-count">
+                        <span className="min-w-14 text-center text-sm font-semibold" data-testid="seat-count">
                           {T.seatCount(heat.seats.length)}
                         </span>
                         <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={readOnly || heat.seats.length >= 10} aria-label={T.moreSeats(round.name, hi + 1)} onClick={() => change(() => setSeatCount(ladder, round.id, hi + 1, heat.seats.length + 1))}>
@@ -440,9 +440,9 @@ export function LadderBuilder({ ladder, onChange, riders, confirmedCount, readOn
         </DndContext>
 
         <aside className="flex flex-col gap-3 lg:sticky lg:top-4 lg:self-start" aria-label={T.checkerLabel} data-testid="ladder-checker">
-          <div className={cn("panel flex flex-col gap-2", check.complete ? "!border-[#166534]" : "")}>
-            <h3 className="text-lg font-extrabold">{T.checkerHeading}</h3>
-            <p className="font-bold" role="status" data-testid="ladder-status">
+          <div className={cn("panel flex flex-col gap-2", check.complete ? "!border-beach-live" : "")}>
+            <h3 className="text-lg font-semibold">{T.checkerHeading}</h3>
+            <p className="font-semibold" role="status" data-testid="ladder-status">
               {check.complete ? `✔ ${check.status}` : check.status}
             </p>
             {check.faults.length > 0 ? (
@@ -460,7 +460,7 @@ export function LadderBuilder({ ladder, onChange, riders, confirmedCount, readOn
             ) : null}
             {check.recommendations.length > 0 ? (
               <>
-                <h4 className="mt-1 font-extrabold">{T.recommendationsHeading}</h4>
+                <h4 className="mt-1 font-semibold">{T.recommendationsHeading}</h4>
                 <ul className="flex flex-col gap-1" aria-label={T.recommendationsLabel}>
                   {check.recommendations.map((r, i) => (
                     <li key={`${r.code}-${i}`} className="font-semibold" data-testid="ladder-recommendation">

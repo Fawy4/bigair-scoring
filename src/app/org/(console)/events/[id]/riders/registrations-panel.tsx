@@ -18,19 +18,19 @@ export function RegistrationsPanel({ entries }: { entries: EntryRow[] }) {
 
   return (
     <section className="panel flex flex-col gap-3" aria-labelledby="regs-h" data-testid="registrations-panel">
-      <h2 id="regs-h" className="text-xl font-extrabold">
+      <h2 id="regs-h" className="text-xl font-semibold">
         {T.registrationsHeading}
       </h2>
-      {waiting.length === 0 ? <p className="font-semibold">{T.registrationsNone}</p> : <p className="font-bold">{T.registrationsWaiting(waiting.length)}</p>}
+      {waiting.length === 0 ? <p className="font-semibold">{T.registrationsNone}</p> : <p className="font-semibold">{T.registrationsWaiting(waiting.length)}</p>}
       {error ? <p role="alert" className="field-error">{copy.common.problem(error)}</p> : null}
       <ul className="flex flex-col gap-3">
         {waiting.map((e) => (
-          <li key={e.id} className="flex flex-col gap-2 rounded-lg border-2 border-[#111] p-3" data-testid="registration">
+          <li key={e.id} className="flex flex-col gap-2 rounded-lg border border-beach-line p-3" data-testid="registration">
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-              <span className="text-lg font-extrabold">{fullName(e)}</span>
+              <span className="text-lg font-semibold">{fullName(e)}</span>
               <span className="font-semibold">{[e.nationality, e.email, e.phone, e.sponsor].filter(Boolean).join(" · ")}</span>
               {e.photoLink ? (
-                <a href={e.photoLink} target="_blank" rel="noopener noreferrer" className="font-bold underline">
+                <a href={e.photoLink} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
                   {copy.registration.photo}
                 </a>
               ) : null}
@@ -43,7 +43,7 @@ export function RegistrationsPanel({ entries }: { entries: EntryRow[] }) {
             ) : null}
             {declining === e.id ? (
               <div role="group" aria-label={T.decline} className="flex flex-col gap-2">
-                <label htmlFor={`reason-${e.id}`} className="font-bold">
+                <label htmlFor={`reason-${e.id}`} className="font-semibold">
                   {T.declineReason}
                 </label>
                 <input id={`reason-${e.id}`} value={reason} onChange={(ev) => setReason(ev.target.value)} maxLength={300} className="max-w-md" />
@@ -71,11 +71,11 @@ export function RegistrationsPanel({ entries }: { entries: EntryRow[] }) {
       </ul>
       {declined.length > 0 ? (
         <details>
-          <summary className="cursor-pointer font-bold">{T.declinedHeading(declined.length)}</summary>
+          <summary className="cursor-pointer font-semibold">{T.declinedHeading(declined.length)}</summary>
           <ul className="mt-2 flex flex-col gap-2">
             {declined.map((e) => (
               <li key={e.id} className="flex flex-wrap items-center gap-3 font-semibold">
-                <span className="font-bold">{fullName(e)}</span>
+                <span className="font-semibold">{fullName(e)}</span>
                 {e.declineReason ? <span>{e.declineReason}</span> : null}
                 <button type="button" className="btn" disabled={pending} onClick={() => run(() => decideRegistration(e.id, "approve"), T.approved)}>
                   {T.approve}

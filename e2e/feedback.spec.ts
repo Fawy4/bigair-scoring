@@ -119,7 +119,7 @@ test("an organiser sees the Note button and a reduced list of their own notes; n
     await expect(page.getByRole("button", { name: "Set as done" })).toHaveCount(0);
     await expect(page.getByTestId("export-button")).toHaveCount(0);
     await page.goto("/admin/feedback");
-    await expect(page.getByText("This page could not be found")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "This page doesn't exist" })).toBeVisible();
 
     // a visitor who is not signed in gets no button, on any public page
     const v = await visitor.newPage();

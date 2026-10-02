@@ -43,7 +43,7 @@ export function SettingRow({ id, label, explanation, example, detail, children }
           </div>
           <p className="text-small font-medium text-beach-muted">{explanation}</p>
         </div>
-        <div className="shrink-0">{children}</div>
+        <div className={laptop ? "shrink-0" : "w-full min-w-0 max-w-full"}>{children}</div>
       </div>
       {open ? (
         <p id={noteId} role="note" data-testid="setting-example" className="mt-1 rounded-[8px] border border-beach-line bg-beach-surface px-3 py-2 text-body font-medium">

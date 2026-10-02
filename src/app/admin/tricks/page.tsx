@@ -12,7 +12,7 @@ export default async function TrickProposalsPage() {
   const T = copy.trickBase.admin;
   return (
     <main className="flex flex-col gap-4">
-      <h1 className="text-3xl font-extrabold">{T.heading}</h1>
+      <h1>{T.heading}</h1>
       <p className="max-w-3xl text-lg font-semibold">{T.intro}</p>
       {(data ?? []).length === 0 ? (
         <p className="panel font-semibold" data-testid="no-proposals">

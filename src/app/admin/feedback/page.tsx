@@ -15,8 +15,8 @@ export default async function AdminFeedbackPage({ searchParams }: { searchParams
   const { notes, pages, events } = await loadNotes(supabase, filters);
   return (
     <main className="flex flex-col gap-4">
-      <h1 className="text-3xl font-extrabold">{copy.feedback.adminHeading}</h1>
-      <p className="max-w-3xl text-lg font-semibold">{copy.feedback.listIntro}</p>
+      <h1>{copy.feedback.adminHeading}</h1>
+      <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.feedback.listIntro}</p>
       {role === "owner" ? <ExportPanel /> : null}
       <NotesFilters action="/admin/feedback" values={filters} pages={pages} events={events} />
       <NotesList notes={notes} canManage={role === "owner"} />

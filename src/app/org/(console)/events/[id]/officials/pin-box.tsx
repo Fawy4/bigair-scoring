@@ -33,12 +33,12 @@ export function PinBox({ issued, eventName, onClose }: { issued: IssuedPin; even
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-lg border-4 border-[#111] bg-white p-5" aria-labelledby="pin-box-h" data-testid="pin-box">
-      <h2 id="pin-box-h" className="text-2xl font-extrabold">
+    <section className="flex flex-col gap-4 rounded-lg border border-beach-line bg-beach-bg p-5" aria-labelledby="pin-box-h" data-testid="pin-box">
+      <h2 id="pin-box-h" className="text-2xl font-semibold">
         {T.pinBoxHeading(issued.seatName)}
       </h2>
       <p className="font-semibold">{T.roles[issued.role] ?? issued.role}</p>
-      <p className="select-all text-center font-mono text-6xl font-extrabold tracking-[0.3em]" data-testid="pin-digits" aria-label={`PIN ${issued.pin.split("").join(" ")}`}>
+      <p className="select-all text-center font-mono text-6xl font-semibold tracking-[0.3em]" data-testid="pin-digits" aria-label={`PIN ${issued.pin.split("").join(" ")}`}>
         {issued.pin}
       </p>
       <p className="font-semibold">{T.pinBoxNote}</p>

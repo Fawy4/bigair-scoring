@@ -19,7 +19,7 @@ export function OrganisationRiders({ divisionId, orgRiders, entries }: { divisio
 
   return (
     <section className="panel flex flex-col gap-3" aria-labelledby="org-riders-h">
-      <h2 id="org-riders-h" className="text-xl font-extrabold">
+      <h2 id="org-riders-h" className="text-xl font-semibold">
         {T.organisationHeading}
       </h2>
       <p className="font-semibold">{T.organisationHelp}</p>
@@ -27,7 +27,7 @@ export function OrganisationRiders({ divisionId, orgRiders, entries }: { divisio
         <p className="font-semibold">{T.organisationNone}</p>
       ) : (
         <>
-          <label htmlFor="org-rider-search" className="font-bold">
+          <label htmlFor="org-rider-search" className="font-semibold">
             {T.organisationFilter}
           </label>
           <input id="org-rider-search" value={query} onChange={(e) => setQuery(e.target.value)} className="max-w-sm" />
@@ -40,7 +40,7 @@ export function OrganisationRiders({ divisionId, orgRiders, entries }: { divisio
                     checked={picked.has(r.id)}
                     onChange={(e) => setPicked((p) => { const n = new Set(p); if (e.target.checked) n.add(r.id); else n.delete(r.id); return n; })}
                   />
-                  <span className="font-bold">{fullName(r)}</span>
+                  <span className="font-semibold">{fullName(r)}</span>
                   <span>{[r.nationality, r.email].filter(Boolean).join(" · ")}</span>
                 </label>
               </li>

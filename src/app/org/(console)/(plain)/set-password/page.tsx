@@ -11,7 +11,7 @@ export default async function SetPasswordPage() {
   const change = Boolean(passwordIsSet);
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4">
-      <h1 className="text-2xl font-extrabold">{change ? copy.setPassword.changeTitle : copy.setPassword.title}</h1>
+      <h1 className="text-2xl font-semibold">{change ? copy.setPassword.changeTitle : copy.setPassword.title}</h1>
       <p className="font-semibold">{change ? copy.setPassword.changeIntro : copy.setPassword.intro}</p>
       <SetPasswordForm changing={change} />
     </div>

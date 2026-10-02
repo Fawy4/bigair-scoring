@@ -37,7 +37,7 @@ test("an organiser gets a plain 404 on every admin page and never sees the admin
   for (const path of ["/admin", "/admin/settings", "/admin/presets", "/admin/audit", "/admin/health", "/admin/organisations/new"]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(404);
-    await expect(page.getByText("This page could not be found")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "This page doesn't exist" })).toBeVisible();
   }
 });
 

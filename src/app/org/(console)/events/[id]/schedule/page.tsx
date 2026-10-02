@@ -26,7 +26,7 @@ export default async function ScheduleStepPage({ params }: { params: Promise<{ i
   if ((heats ?? []).length === 0) {
     return (
       <main className="flex max-w-4xl flex-col gap-4">
-        <h1 className="text-3xl font-extrabold">{copy.runOrder.stepHeading}</h1>
+        <h1>{copy.runOrder.stepHeading}</h1>
         <p className="panel text-lg font-semibold">{copy.runOrder.noHeats}</p>
         <Link href={`/org/events/${id}/draw`} className="btn btn-primary w-fit">
           {copy.wizard.steps.draw}
@@ -43,8 +43,8 @@ export default async function ScheduleStepPage({ params }: { params: Promise<{ i
   const today = todayIn(tz, Date.now());
   return (
     <main className="flex flex-col gap-6">
-      <h1 className="text-3xl font-extrabold">{copy.runOrder.stepHeading}</h1>
-      <p className="font-semibold">{copy.runOrder.intro}</p>
+      <h1>{copy.runOrder.stepHeading}</h1>
+      <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.runOrder.intro}</p>
       <PartBoundary what={copy.crash.parts.runOrder}>
         <ScheduleManager
           eventId={id}
@@ -52,6 +52,7 @@ export default async function ScheduleStepPage({ params }: { params: Promise<{ i
           timezone={tz}
           days={days.length ? days : [today]}
           today={today}
+          serverNow={new Date().toISOString()}
           logoUrl={branding.logoUrl ?? null}
           readyCallMin={settings.readyCallMin}
           infos={model.infos}

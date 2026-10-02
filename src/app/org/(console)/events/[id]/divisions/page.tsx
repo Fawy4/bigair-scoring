@@ -7,6 +7,7 @@ import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { defaultScheme } from "@/lib/schemas/identification";
 import type { PresetRow } from "@/lib/presets/options";
 import { copy } from "@/lib/ui-copy";
+import { LockNotice } from "./lock-notice";
 import { DivisionsManager, type DivisionRow } from "./divisions-manager";
 
 export const metadata = { title: copy.wizard.steps.divisions };
@@ -59,12 +60,12 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
   const schemes = await loadIdentificationSchemes(supabase, event.organisation_id);
   const [master, localBlocks] = await Promise.all([loadMasterVocabulary(supabase), loadEventBlocks(supabase, id)]);
   return (
-    <main className="flex max-w-4xl flex-col gap-6">
-      <h1 className="text-3xl font-extrabold">{copy.divisions.stepHeading}</h1>
-      <p className="font-semibold">{copy.divisions.intro}</p>
-      <p className="panel font-bold" role="note" data-testid="lock-banner">
-        {copy.divisions.lockBanner}
-      </p>
+    <main className="flex max-w-4xl flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h1>{copy.divisions.stepHeading}</h1>
+        <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.divisions.intro}</p>
+      </div>
+      <LockNotice />
       <DivisionsManager
         eventId={id}
         organisationId={event.organisation_id}

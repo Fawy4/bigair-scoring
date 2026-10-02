@@ -25,7 +25,7 @@ export function RenamePanel({ orgId, name: initial }: { orgId: string; name: str
   const router = useRouter();
   return (
     <section className="flex flex-col gap-3" aria-labelledby="rename-h">
-      <h2 id="rename-h" className="text-2xl font-extrabold">
+      <h2 id="rename-h" className="text-2xl font-semibold">
         {c.renameHeading}
       </h2>
       <form
@@ -62,7 +62,7 @@ export function LogoPanel({ orgId, logoUrl }: { orgId: string; logoUrl: string |
   const [error, setError] = useState<string | null>(null);
   return (
     <section className="flex flex-col gap-3" aria-labelledby="logo-h">
-      <h2 id="logo-h" className="text-2xl font-extrabold">
+      <h2 id="logo-h" className="text-2xl font-semibold">
         {c.logoHeading}
       </h2>
       <LogoField
@@ -94,7 +94,7 @@ export function InvitePanel({ orgId }: { orgId: string }) {
 
   return (
     <section className="flex flex-col gap-3" aria-labelledby="invite-h">
-      <h2 id="invite-h" className="text-2xl font-extrabold">
+      <h2 id="invite-h" className="text-2xl font-semibold">
         {c.inviteHeading}
       </h2>
       <p className="font-semibold">{c.inviteIntro}</p>
@@ -119,7 +119,7 @@ export function InvitePanel({ orgId }: { orgId: string }) {
           <input id="invite-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={pending} autoComplete="off" required />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="flex items-center gap-3 font-bold">
+          <label className="flex items-center gap-3 font-semibold">
             <input type="checkbox" checked={send} onChange={(e) => setSend(e.target.checked)} disabled={pending} />
             {c.inviteSend}
           </label>
@@ -134,13 +134,13 @@ export function InvitePanel({ orgId }: { orgId: string }) {
       {result && !result.ok ? <Problem text={result.error} /> : null}
       {result && result.ok ? (
         <div className="panel flex flex-col gap-3" role="status">
-          <p className="text-lg font-bold">
+          <p className="text-lg font-semibold">
             {result.emailSent ? c.inviteSent(result.email) : result.emailFailed ? c.inviteEmailFailed(result.email) : c.inviteLinkOnly(result.email)}
           </p>
           {result.link ? (
             <div className="flex flex-col gap-2">
-              <p className="text-lg font-extrabold">{c.linkHeading}</p>
-              <label htmlFor="invite-link" className="font-bold">
+              <p className="text-lg font-semibold">{c.linkHeading}</p>
+              <label htmlFor="invite-link" className="font-semibold">
                 {c.linkLabel}
               </label>
               <input id="invite-link" readOnly value={result.link} onFocus={(e) => e.currentTarget.select()} />
@@ -159,7 +159,7 @@ export function InvitePanel({ orgId }: { orgId: string }) {
                 >
                   {c.copy}
                 </button>
-                {copied ? <span className="font-bold">{c.copied}</span> : null}
+                {copied ? <span className="font-semibold">{c.copied}</span> : null}
               </div>
               <p className="text-sm font-semibold">{c.linkWarning}</p>
             </div>
@@ -176,7 +176,7 @@ export function ArchivePanel({ orgId, name, archived }: { orgId: string; name: s
   const router = useRouter();
   return (
     <section className="flex flex-col gap-3" aria-labelledby="archive-h">
-      <h2 id="archive-h" className="text-2xl font-extrabold">
+      <h2 id="archive-h" className="text-2xl font-semibold">
         {c.archiveHeading}
       </h2>
       <p className="font-semibold">{archived ? c.restoreText : c.archiveText}</p>
@@ -210,12 +210,12 @@ export function DeletePanel({ orgId, name, slug, blocked, isOwner }: { orgId: st
   const allowed = isOwner && !blocked;
   return (
     <section className="flex flex-col gap-3" aria-labelledby="delete-h">
-      <h2 id="delete-h" className="text-2xl font-extrabold">
+      <h2 id="delete-h" className="text-2xl font-semibold">
         {c.deleteHeading}
       </h2>
       <p className="font-semibold">{c.deleteText}</p>
-      {blocked ? <p className="panel font-bold">{blocked}</p> : null}
-      {!isOwner ? <p className="panel font-bold">{c.ownerOnlyDelete}</p> : null}
+      {blocked ? <p className="panel font-semibold">{blocked}</p> : null}
+      {!isOwner ? <p className="panel font-semibold">{c.ownerOnlyDelete}</p> : null}
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="delete-typed" text={c.deleteTyped} />
         <input id="delete-typed" value={typed} onChange={(e) => setTyped(e.target.value)} disabled={!allowed || pending} autoComplete="off" spellCheck={false} autoCapitalize="none" />

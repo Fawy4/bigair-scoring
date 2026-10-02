@@ -9,8 +9,8 @@ import { copy } from "@/lib/ui-copy";
 import { updateNote } from "./manage-actions";
 
 const T = copy.feedback;
-const th = "border-2 border-[#111] bg-[#eee] p-2 text-left";
-const td = "border-2 border-[#111] p-2 align-top";
+const th = "border border-beach-line bg-beach-surface p-2 text-left";
+const td = "border border-beach-line p-2 align-top";
 
 /** The notes as a table; the owner can also change a note's kind and mark it done or open again. */
 export function NotesList({ notes, canManage }: { notes: NoteRow[]; canManage: boolean }) {
@@ -53,7 +53,7 @@ export function NotesList({ notes, canManage }: { notes: NoteRow[]; canManage: b
                 <td className={td}>
                   <p className="max-w-md whitespace-pre-wrap font-semibold">{n.body}</p>
                   {n.screenshotUrl ? (
-                    <a href={n.screenshotUrl} target="_blank" rel="noopener noreferrer" className="font-bold underline">
+                    <a href={n.screenshotUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
                       {T.screenshotLink}
                     </a>
                   ) : null}
@@ -71,7 +71,7 @@ export function NotesList({ notes, canManage }: { notes: NoteRow[]; canManage: b
                     T.tags[n.tag]
                   )}
                 </td>
-                <td className={`${td} font-bold`}>{T.statuses[n.status]}</td>
+                <td className={`${td} font-semibold`}>{T.statuses[n.status]}</td>
                 <td className={td}>{[n.pageLabel, n.organisationName, n.eventName, n.divisionName, n.heatLabel].filter(Boolean).join(" · ")}</td>
                 <td className={td}>{T.roles[n.role] ?? n.role}</td>
                 <td className={td}>{n.createdAt.slice(0, 10)}</td>

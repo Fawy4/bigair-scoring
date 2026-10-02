@@ -16,7 +16,7 @@ export function DemoPanel() {
   const router = useRouter();
   return (
     <section className="panel flex flex-col gap-3" aria-labelledby="demo-h">
-      <h2 id="demo-h" className="text-2xl font-extrabold">
+      <h2 id="demo-h" className="text-2xl font-semibold">
         {c.heading}
       </h2>
       <p className="font-semibold">{c.text}</p>
