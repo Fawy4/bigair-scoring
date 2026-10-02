@@ -301,11 +301,13 @@ const familyLabel = (m: MasterModel, id: string) => familyOfBlock(m, id)?.label 
 
 /**
  * Everything wrong with a draft, one sentence each (docs/08 §1I-2). `base` is the version the draft started from: when two blocks share a word, the
- * sentence is about the one the draft changed and names the block that already had it.
+ * sentence is about the one the draft changed and names the block that already had it. A word two blocks already shared in `base` does not block a save
+ * (the reader settles it, base tricks first); it is listed in `warnings` so the owner can tidy it up.
  */
-export function validateModel(m: MasterModel, published: Set<string>, base?: MasterModel): string[] {
+export function checkModel(m: MasterModel, published: Set<string>, base?: MasterModel): { errors: string[]; warnings: string[] } {
   const E = copy.trickEditor.errors;
   const out: string[] = [];
+  const warnings: string[] = [];
   const shown = m.families.flatMap((f) => f.blocks).map((id) => m.blocks[id]).filter(Boolean);
 
   if (m.families.some((f) => !f.label.trim())) out.push(E.emptyFamily);
@@ -336,7 +338,9 @@ export function validateModel(m: MasterModel, published: Set<string>, base?: Mas
     }
     if (first.block.id === w.block.id || reported.has(w.text)) continue;
     reported.add(w.text);
-    out.push(first.kind === "alias" ? E.aliasTaken(w.text, first.block.label) : E.nameTaken(w.text, first.block.label));
+    const sentence = first.kind === "alias" ? E.aliasTaken(w.text, first.block.label) : E.nameTaken(w.text, first.block.label);
+    if (unchanged(first) && unchanged(w)) warnings.push(E.alreadyShared(sentence));
+    else out.push(sentence);
   }
 
   for (const b of shown) {
@@ -351,8 +355,11 @@ export function validateModel(m: MasterModel, published: Set<string>, base?: Mas
   const naming = checkNamingTemplate(m.namingTemplate);
   if (naming) out.push(naming.code === "missing_blocks" ? E.namingMissingBlocks : E.namingUnknown(naming.part));
   if (m.hideMultiplierWhen && !shown.some((b) => b.home === "multiplier" && b.key === m.hideMultiplierWhen)) out.push(E.hideNotMultiplier);
-  return out;
+  return { errors: out, warnings };
 }
+
+/** The sentences that block a save (see checkModel). */
+export const validateModel = (m: MasterModel, published: Set<string>, base?: MasterModel): string[] => checkModel(m, published, base).errors;
 
 // ---------------------------------------------------------------------------------------------------------------------------------------- diff
 

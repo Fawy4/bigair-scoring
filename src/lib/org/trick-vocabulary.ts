@@ -28,3 +28,23 @@ export async function loadEventBlocks(supabase: SupabaseClient<Database>, eventI
   const blocks = (data?.[0]?.json as { blocks?: unknown } | undefined)?.blocks;
   return Array.isArray(blocks) ? (blocks as LocalBlock[]).filter((b) => b && typeof b.key === "string" && typeof b.label === "string" && typeof b.family === "string") : [];
 }
+
+/** One master version, published or not (drafts are readable by platform admins only, through row security). */
+export async function loadVocabularyVersion(supabase: SupabaseClient<Database>, version: number): Promise<VocabularyJson | null> {
+  const { data } = await supabase.from("trick_vocabularies").select("json").is("organisation_id", null).is("event_id", null).eq("key", MASTER_VOCABULARY_KEY).eq("version", version).limit(1);
+  const v = data?.[0]?.json as unknown as VocabularyJson | undefined;
+  return v && Array.isArray(v.baseTricks) && Array.isArray(v.modifiers) ? v : null;
+}
+
+/**
+ * The master version this event uses (it keeps it until an organiser presses "Update to latest"), and the newest published version.
+ * An event without a version (made before versions were kept) uses the newest one.
+ */
+export async function loadEventVocabulary(supabase: SupabaseClient<Database>, eventId: string): Promise<{ vocabulary: VocabularyJson; version: number; latest: number } | null> {
+  const [{ data: ev }, latest] = await Promise.all([supabase.from("events").select("trick_vocabulary_version").eq("id", eventId).maybeSingle(), loadMasterVocabulary(supabase)]);
+  if (!latest) return null;
+  const pinned = ev?.trick_vocabulary_version ?? null;
+  if (pinned === null || pinned === latest.version) return { vocabulary: latest.vocabulary, version: latest.version, latest: latest.version };
+  const own = await loadVocabularyVersion(supabase, pinned);
+  return own ? { vocabulary: own, version: pinned, latest: latest.version } : { vocabulary: latest.vocabulary, version: latest.version, latest: latest.version };
+}

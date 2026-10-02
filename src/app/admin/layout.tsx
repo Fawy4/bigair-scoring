@@ -17,8 +17,7 @@ export async function generateMetadata() {
 const N = copy.admin.nav;
 const PLACES = [
   { href: "/admin", label: N.organisations, prefixes: ["/admin/organisations"] },
-  { href: "/admin/presets", label: N.presets, prefixes: ["/admin/presets"] },
-  { href: "/admin/tricks", label: N.tricks, prefixes: ["/admin/tricks"] },
+  { href: "/admin/presets", label: N.presets, prefixes: ["/admin/presets", "/admin/tricks"] },
   { href: "/admin/feedback", label: N.feedback, prefixes: ["/admin/feedback"] },
   { href: "/admin/audit", label: N.audit, prefixes: ["/admin/audit"] },
   { href: "/admin/health", label: N.health, prefixes: ["/admin/health"] },

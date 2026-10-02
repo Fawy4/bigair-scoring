@@ -8,8 +8,8 @@ import { asNewPreset, importFormatTemplate, importScoringModel, type PresetKind 
 import type { PresetRow } from "@/lib/presets/options";
 import { FormatTemplateSchema } from "@/lib/schemas/format-template";
 import { IdentificationSchemeSchema } from "@/lib/schemas/identification";
-import { EVENT_VOCABULARY_KEY, loadEventBlocks, loadMasterVocabulary } from "@/lib/org/trick-vocabulary";
-import { addLocalBlock, FAMILIES, type BuiltInFamily, type LocalBlock } from "@/lib/trick-base";
+import { EVENT_VOCABULARY_KEY, loadEventBlocks, loadEventVocabulary } from "@/lib/org/trick-vocabulary";
+import { addLocalBlock, FAMILIES, familiesOf, type BuiltInFamily, type LocalBlock } from "@/lib/trick-base";
 import { ScoringModelSchema } from "@/lib/schemas/scoring-model";
 import { FORMAT_NULLABLE, mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { issuesToMap } from "@/lib/form/path";
@@ -254,20 +254,24 @@ export async function saveDivisionDescription(divisionId: string, text: string):
 const BlockId = z.string().regex(/^(direction|multiplier|base|addon|grab_landing):[a-z0-9_]{1,80}$/);
 
 /**
- * The blocks the organiser unticked for one division, and how the spotter's screen is laid out (docs/08 §1G-5). Once a heat has started a block can be
- * ticked again but never unticked; the layout can change at any time. A layout with nothing set is stored as nothing.
+ * The blocks the organiser unticked for one division, the blocks the master base has off by default that they ticked (`enabled`, docs/08 §1I-5), and how
+ * the spotter's screen is laid out (docs/08 §1G-5). Once a heat has started a block can be ticked again but never unticked; the layout can change at any
+ * time. A layout with nothing set, or an empty `enabled`, is stored as nothing.
  */
-export async function saveTrickBase(divisionId: string, disabled: string[], layout?: unknown): Promise<Ok<object> | Fail> {
+export async function saveTrickBase(divisionId: string, disabled: string[], layout?: unknown, enabled: string[] = []): Promise<Ok<object> | Fail> {
   const T = copy.trickBase.errors;
   if (!uuid.safeParse(divisionId).success) return { ok: false, error: E.notFound };
   const ids = z.array(BlockId).max(500).safeParse(disabled);
-  if (!ids.success) return { ok: false, error: T.failed };
-  const parsedLayout = layout === undefined ? null : parseLayout(layout);
-  const value: Record<string, unknown> = { disabled: [...new Set(ids.data)].sort() };
-  if (parsedLayout && !isDefaultLayout(parsedLayout)) value.layout = parsedLayout;
+  const on = z.array(BlockId).max(500).safeParse(enabled);
+  if (!ids.success || !on.success) return { ok: false, error: T.failed };
   const { supabase } = await getOrgContext();
   const d = await eventOf(supabase, divisionId);
   if (!d) return { ok: false, error: E.notFound };
+  const keys = familiesOf((await loadEventVocabulary(supabase, d.event_id))?.vocabulary).map((f) => f.key); // the families of the version this event uses
+  const parsedLayout = layout === undefined ? null : parseLayout(layout, keys);
+  const value: Record<string, unknown> = { disabled: [...new Set(ids.data)].sort() };
+  if (on.data.length) value.enabled = [...new Set(on.data)].sort();
+  if (parsedLayout && !isDefaultLayout(parsedLayout, keys)) value.layout = parsedLayout;
   const { data, error } = await supabase.from("divisions").update({ trick_base: value as never }).eq("id", divisionId).select("id");
   if (error) return { ok: false, error: error.message.includes("TRICK_BASE_LOCKED") ? T.locked : T.failed };
   if (!data?.length) return { ok: false, error: T.failed };
@@ -296,7 +300,7 @@ export async function addTrickBlock(eventId: string, input: { family: BuiltInFam
   const { supabase } = await getOrgContext();
   const { data: event } = await supabase.from("events").select("id, organisation_id").eq("id", eventId).maybeSingle();
   if (!event) return { ok: false, error: E.notFound };
-  const master = await loadMasterVocabulary(supabase);
+  const master = await loadEventVocabulary(supabase, eventId); // the version this event uses
   if (!master) return { ok: false, error: T.noVocabulary };
   const existing = await loadEventBlocks(supabase, eventId);
   const category = typeof input.category === "string" && /^[a-z0-9_]{1,40}$/.test(input.category) ? input.category : null;

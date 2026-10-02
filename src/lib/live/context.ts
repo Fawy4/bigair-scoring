@@ -3,7 +3,7 @@ import { divisionScheme } from "@/lib/identification/division-scheme";
 import { effectiveScheme } from "@/lib/identification/effective";
 import { cleanIdentifiers } from "@/lib/riders/identifiers";
 import { toEntrantIdentifiers } from "@/lib/draw/entrants";
-import { loadEventBlocks, loadMasterVocabulary } from "@/lib/org/trick-vocabulary";
+import { loadEventBlocks, loadEventVocabulary } from "@/lib/org/trick-vocabulary";
 import { rowToPlan, type PlanRow } from "@/lib/schedule/plans";
 import { buildHeatModel, type HeatRowDb } from "@/lib/schedule/model";
 import { parseEventSettings } from "@/lib/schemas/event-settings";
@@ -11,7 +11,7 @@ import { parseDivisionLive } from "@/lib/schemas/division-live";
 import { defaultScheme } from "@/lib/schemas/identification";
 import { mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { createClient } from "@/lib/supabase/server";
-import { parseTrickBase } from "@/lib/trick-base";
+import { blocksFromVocabulary, effectiveDisabled, parseTrickBase } from "@/lib/trick-base";
 import { HEAT_COLUMNS, type HeatRow, type LiveContext, type LiveDivisionContext, type LiveRiderInfo, type SeatRole } from "./types";
 
 type Db = Awaited<ReturnType<typeof createClient>>;
@@ -67,7 +67,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
     db.from("panel_members").select("panel_id, judge_seat_id, seat_no").eq("event_id", eventId).order("seat_no"),
     db.from("v_entries").select("id, division_id, status, identifiers, first_name, last_name, nationality, sponsor, photo_url").eq("event_id", eventId),
     db.from("schedule_plans").select(PLAN_COLUMNS).eq("event_id", eventId).eq("active", true),
-    loadMasterVocabulary(db),
+    loadEventVocabulary(db, eventId),
     loadEventBlocks(db, eventId),
   ]);
 
@@ -75,6 +75,8 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
   const { data: modelRows } = modelIds.length ? await db.from("scoring_models").select("id, json").in("id", modelIds) : { data: [] as Array<{ id: string; json: unknown }> };
   const eventIdentification = settings.identification ? { scheme: settings.identification.scheme, allowDivisionOverride: settings.identification.allowDivisionOverride } : { scheme: defaultScheme(), allowDivisionOverride: false };
 
+  // off on the spotter: unticked, retired in the master base, or off by default and never ticked (docs/08 §1I-5)
+  const allBlocks = master ? blocksFromVocabulary(master.vocabulary, localBlocks) : [];
   const divisions: LiveDivisionContext[] = [];
   for (const d of divisionRows ?? []) {
     const base = (modelRows ?? []).find((m) => m.id === d.scoring_model_id)?.json;
@@ -92,7 +94,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
       sortOrder: d.sort_order,
       model,
       scheme: effectiveScheme(eventIdentification, own ? { scheme: own } : null),
-      trickBase: { disabled: tb.disabled, layout: tb.layout ?? null },
+      trickBase: { disabled: effectiveDisabled(allBlocks, tb), layout: tb.layout ?? null },
       live: parseDivisionLive(d.live_settings),
       flagOut: flagOutOf(d.draw),
       panelSeatIds: (panelRows ?? []).filter((p) => p.panel_id === d.panel_id).map((p) => p.judge_seat_id),

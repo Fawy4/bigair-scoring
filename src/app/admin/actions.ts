@@ -18,8 +18,6 @@ import { canonicalHash } from "@/lib/presets/plan";
 import { drawDemoEvent } from "@/lib/demo/draw";
 import { OrgNameSchema, OrgSlugSchema, TimeZoneSchema } from "@/lib/schemas/org-settings";
 import { findUserByEmail } from "@/lib/supabase/admin-users";
-import { loadMasterVocabulary, MASTER_VOCABULARY_KEY } from "@/lib/org/trick-vocabulary";
-import { addBlockToVocabulary, type BuiltInFamily } from "@/lib/trick-base";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Json } from "@/lib/supabase/database.types";
 import { copy } from "@/lib/ui-copy";
@@ -289,48 +287,6 @@ export async function moveEvent(eventId: string, targetOrgId: string): Promise<{
   if (error) return fail(error.message);
   revalidatePath("/", "layout");
   return { ok: true, summary: data as unknown as MoveSummary };
-}
-
-// ------------------------------------------------------------------ trick base proposals
-
-/** The owner accepts an event's proposed block: it becomes part of the master trick base (a new published version) for every event. */
-export async function acceptTrickProposal(input: { eventId: string; family: string; key: string }): Promise<{ ok: true; label: string } | Failure> {
-  const T = copy.trickBase.admin;
-  const { supabase, role } = await requireAdmin();
-  if (role !== "owner") return { ok: false, error: T.ownerOnly };
-  const parsed = z.object({ eventId: z.string().uuid(), family: z.string().max(20), key: z.string().regex(/^[a-z0-9_]{1,80}$/) }).safeParse(input);
-  if (!parsed.success) return { ok: false, error: copy.admin.errors.generic };
-  const { data: list } = await supabase.rpc("admin_trick_proposals");
-  const proposal = (list ?? []).find((p) => p.event_id === parsed.data.eventId && p.family === parsed.data.family && p.key === parsed.data.key);
-  if (!proposal) return { ok: false, error: copy.admin.errors.generic };
-
-  const master = await loadMasterVocabulary(supabase);
-  if (!master) return { ok: false, error: copy.trickBase.errors.noVocabulary };
-  const added = addBlockToVocabulary(master.vocabulary, { family: proposal.family as BuiltInFamily, key: proposal.key, label: proposal.label, category: proposal.category, status: "proposed" });
-  if (!added.ok) return { ok: false, error: added.error };
-  const valid = validateMasterPreset("trick_vocabulary", added.vocabulary);
-  if (!valid.ok) return { ok: false, error: valid.message };
-
-  const { data: id, error } = await supabase.rpc("admin_create_preset_version", { p_kind: "trick_vocabulary", p_key: MASTER_VOCABULARY_KEY, p_name: "Big Air trick vocabulary", p_json: added.vocabulary as unknown as Json, p_hash: canonicalHash(added.vocabulary) });
-  if (error || !id) return fail(error?.message);
-  const published = await supabase.rpc("admin_publish_preset", { p_kind: "trick_vocabulary", p_id: id });
-  if (published.error) return fail(published.error.message);
-  const marked = await supabase.rpc("admin_set_proposal_status", { p_event: parsed.data.eventId, p_family: parsed.data.family, p_key: parsed.data.key, p_status: "accepted" });
-  if (marked.error) return fail(marked.error.message);
-  revalidatePath("/admin/tricks");
-  return { ok: true, label: proposal.label };
-}
-
-/** The owner says "not now": the block stays in that event only. */
-export async function dismissTrickProposal(input: { eventId: string; family: string; key: string }): Promise<{ ok: true } | Failure> {
-  const { supabase, role } = await requireAdmin();
-  if (role !== "owner") return { ok: false, error: copy.trickBase.admin.ownerOnly };
-  const parsed = z.object({ eventId: z.string().uuid(), family: z.string().max(20), key: z.string().regex(/^[a-z0-9_]{1,80}$/) }).safeParse(input);
-  if (!parsed.success) return { ok: false, error: copy.admin.errors.generic };
-  const { error } = await supabase.rpc("admin_set_proposal_status", { p_event: parsed.data.eventId, p_family: parsed.data.family, p_key: parsed.data.key, p_status: "declined" });
-  if (error) return fail(error.message);
-  revalidatePath("/admin/tricks");
-  return { ok: true };
 }
 
 // ------------------------------------------------------------------ feedback notes

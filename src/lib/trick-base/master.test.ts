@@ -8,6 +8,7 @@ import {
   addAlias,
   addBlock,
   addFamily,
+  checkModel,
   diffModels,
   liveExample,
   moveBlock,
@@ -53,8 +54,9 @@ describe("reading the master base into the editor", () => {
 });
 
 describe("validation on save, in words (docs/08 §1I-2)", () => {
-  it("the published base has one duplicate alias: KL", () => {
-    expect(validateModel(fresh(), new Set(), fresh())).toEqual(["“kl” is already an alias of Kiteloop."]);
+  it("a word two blocks already shared in the published base (KL) does not block a save; it is listed to tidy up", () => {
+    expect(checkModel(fresh(), new Set(), fresh())).toEqual({ errors: [], warnings: ["Already so in the published version (not blocking; base tricks are read first): “kl” is already an alias of Kiteloop."] });
+    expect(validateModel(fresh(), new Set())).toEqual(["“kl” is already an alias of Kiteloop."]); // with nothing to compare, every shared word counts
     expect(validateModel(clean(), new Set())).toEqual([]);
   });
 
