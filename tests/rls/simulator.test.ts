@@ -243,6 +243,33 @@ describe.skipIf(!ENV_OK)("Simulator (hosted development project)", () => {
     expect(codeOf(await org.rpc("sim_release_stale_views", { p_event: f.ids.evA1, p_silent_sec: 90, p_leave_grace_sec: 6 }))).toContain("NOT_A_SIMULATION");
   });
 
+  it("Polish 2: the simulator's Pause pauses the heat clock (marked 'simulator'); Resume resumes only what it paused; the console's own Resume clears the mark", async () => {
+    const org = f.clients.orgA;
+    const row = async () => (await f.s.from("heats").select("status, paused_reason, paused_at").eq("id", simHeat).single()).data!;
+    // a heat on the water with plenty of time left
+    await f.s.from("heats").update({ status: "running", started_at: new Date().toISOString(), paused_at: null, paused_total_sec: 0, duration_sec: 600, ended_at: null }).eq("id", simHeat);
+    expect(codeOf(await f.clients.orgB.rpc("sim_pause_heats", { p_event: sim }))).toContain("NOT_ALLOWED");
+    expect(codeOf(await f.clients.head.rpc("sim_pause_heats", { p_event: sim }))).toContain("NOT_ALLOWED");
+    expect(codeOf(await org.rpc("sim_pause_heats", { p_event: f.ids.evA1 }))).toContain("NOT_A_SIMULATION");
+    expect((await org.rpc("sim_pause_heats", { p_event: sim })).data).toBe(1);
+    expect(await row()).toMatchObject({ status: "paused", paused_reason: "simulator" });
+    expect((await row()).paused_at).not.toBeNull();
+    // nobody sets or clears the mark by hand
+    await org.from("heats").update({ paused_reason: null } as never).eq("id", simHeat);
+    expect((await row()).paused_reason).toBe("simulator");
+    expect((await org.rpc("sim_resume_heats", { p_event: sim })).data).toBe(1);
+    expect(await row()).toMatchObject({ status: "running", paused_reason: null });
+    // the head judge's own pause is theirs: the simulator's Resume leaves it
+    expect(codeOf(await org.rpc("pause_heat", { p_heat: simHeat }))).toBe("");
+    expect((await org.rpc("sim_resume_heats", { p_event: sim })).data).toBe(0);
+    expect(await row()).toMatchObject({ status: "paused", paused_reason: null });
+    expect(codeOf(await org.rpc("resume_heat", { p_heat: simHeat }))).toBe("");
+    // paused by the simulator, resumed on the console: the mark goes with it
+    await org.rpc("sim_pause_heats", { p_event: sim });
+    expect(codeOf(await org.rpc("resume_heat", { p_heat: simHeat }))).toBe("");
+    expect(await row()).toMatchObject({ status: "running", paused_reason: null });
+  });
+
   it("Reset is the general one: a copy has the draw copy it needs; refused while a heat runs; then the simulator's own leftovers go and the panel starts again", async () => {
     // the copy of a locked division carries the draw it was locked with, so the general Reset can return to it
     const preview = await f.clients.orgA.rpc("reset_event_preview", { p_event: sim });

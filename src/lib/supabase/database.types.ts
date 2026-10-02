@@ -869,6 +869,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -896,6 +897,7 @@ export type Database = {
           number: number
           number_suffix?: string | null
           paused_at?: string | null
+          paused_reason?: string | null
           paused_total_sec?: number
           public_live?: boolean | null
           publish_hold?: boolean
@@ -923,6 +925,7 @@ export type Database = {
           number?: number
           number_suffix?: string | null
           paused_at?: string | null
+          paused_reason?: string | null
           paused_total_sec?: number
           public_live?: boolean | null
           publish_hold?: boolean
@@ -2672,6 +2675,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -2816,6 +2820,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -2852,6 +2857,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -3047,6 +3053,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -3162,6 +3169,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -3297,6 +3305,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -3333,6 +3342,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -3411,6 +3421,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -3616,6 +3627,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      sim_pause_heats: { Args: { p_event: string }; Returns: number }
       sim_rebuild: {
         Args: { p_event: string; p_slug_confirm: string }
         Returns: Json
@@ -3628,6 +3640,7 @@ export type Database = {
         }
         Returns: string[]
       }
+      sim_resume_heats: { Args: { p_event: string }; Returns: number }
       sim_set: {
         Args: { p_event: string; p_patch: Json }
         Returns: {
@@ -3763,6 +3776,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean

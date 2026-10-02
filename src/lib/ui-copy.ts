@@ -2857,9 +2857,11 @@ export const copy = {
       stop: "Stop",
       stateStopped: "Stopped",
       statePlaying: "Playing",
+      statePlayingResumed: "Playing: the heat clock runs again.",
+      heatPaused: "The heat on the water is paused too: the console says “Paused by the simulator”.",
       statePaused: "Paused",
       tabNote: "Auto-play runs while this page is open. If you close it, the simulation waits where it is.",
-      help: { text: "Start plays the day: heats start in run order, virtual spotters log attempts, virtual judges score, the virtual head judge publishes. Pause holds everything where it is; Stop ends auto-play.", example: "Press Start at ×10 and watch Round 1 publish heat after heat." } as Help,
+      help: { text: "Start plays the day: heats start in run order, virtual spotters log attempts, virtual judges score, the virtual head judge publishes. Pause holds everything where it is, the heat clock included (the console says “Paused by the simulator”); Resume starts both again. Stop ends auto-play and leaves the heat paused.", example: "Press Start at ×10 and watch Round 1 publish heat after heat." } as Help,
       lines: {
         idle: "Press Start to play the day.",
         starting: (heat: string) => `Starting ${heat}.`,
@@ -3237,6 +3239,7 @@ export const copy = {
   },
   heatControl: {
     heading: "Run the heat",
+    pausedBySimulator: "Paused by the simulator",
     rowProblem: (text: string) => `⚠ ${text}`,
     goneRow: "Removed heat",
     runOrder: "Run order",

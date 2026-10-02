@@ -105,7 +105,15 @@ export async function setPlayState(eventId: string, state: "playing" | "paused" 
   return wrap(eventId, async (db) => {
     const { error } = await db.user.rpc("sim_set", { p_event: eventId, p_patch: { state, ...(state === "stopped" ? { blocker: null } : {}) } });
     if (error) return bad(simErrorSentence(error.message));
-    if (state === "playing") await logLine(db, eventId, "info", null, T.play.statePlaying);
+    // the heat clock lives in the database: Pause and Stop pause the heat on the water too, Start / Resume resumes the heats the simulator paused (Polish 2, item 3)
+    if (state === "playing") {
+      const resumed = await db.user.rpc("sim_resume_heats", { p_event: eventId });
+      await logLine(db, eventId, "info", null, (resumed.data ?? 0) > 0 ? T.play.statePlayingResumed : T.play.statePlaying);
+    } else {
+      const paused = await db.user.rpc("sim_pause_heats", { p_event: eventId });
+      if (paused.error) return bad(simErrorSentence(paused.error.message));
+      if ((paused.data ?? 0) > 0) await logLine(db, eventId, "info", null, T.play.heatPaused);
+    }
     return { ok: true };
   });
 }

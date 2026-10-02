@@ -421,7 +421,7 @@ Event → **Simulate** (simulation events only). See [the Simulator screen](scre
 | Setting | What it does (the “?” text) | Example | Default |
 |---|---|---|---|
 | {#set-simulator-speed} **Speed** | A heat's length is divided by this when it starts. The judges' and spotters' phones, the head console and the public page all read the shorter length. | A 10 minute heat at ×10 lasts 1 minute. | — |
-| {#set-simulator-play} **Auto-play** | Start plays the day: heats start in run order, virtual spotters log attempts, virtual judges score, the virtual head judge publishes. Pause holds everything where it is; Stop ends auto-play. | Press Start at ×10 and watch Round 1 publish heat after heat. | — |
+| {#set-simulator-play} **Auto-play** | Start plays the day: heats start in run order, virtual spotters log attempts, virtual judges score, the virtual head judge publishes. Pause holds everything where it is, the heat clock included (the console says “Paused by the simulator”); Resume starts both again. Stop ends auto-play and leaves the heat paused. | Press Start at ×10 and watch Round 1 publish heat after heat. | — |
 | {#set-simulator-roles} **Who plays** | Virtual: the simulator plays this seat. Real: a phone joins with the PIN and the simulator leaves the seat alone, so you can score or spot next to the virtual people. | Set Judge 1 to Real, join from your phone with its PIN, and score alongside Judges 2 and 3. | — |
 | {#set-simulator-attempts} **Attempts per rider per heat** | How many attempts each rider logs in a heat. The division's cap always wins. | 5, with a cap of 7, logs 5. | — |
 | {#set-simulator-crashes} **Crashes** | The share of attempts that crash. | 20 % is about one in five. | — |
