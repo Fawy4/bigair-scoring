@@ -812,3 +812,20 @@ See the click-through at the end of the pull request description.
 - Playwright (throwaway organisations, removed by the ledger): new `shell-dashboard` (5), `event-reset` (2); updated `organiser`, `division-identification`, `draw-timetable`, `riders`, `admin`, `password-login`, `officials`, `registration`, `phase4a2-basics`. After the rebase onto main (Phase 6 merged), `join.spec`, `shell-dashboard`, `event-reset` and `organiser` pass; one `shell-dashboard` test is timing-sensitive and passed on re-run. Several first-run timeouts were hosted-database load.
 
 **How to test (laptop, then phone)** — see the pull request description.
+
+## Simulator – auto-play, scenarios and View as (branch `simulator`, 2 Oct 2026)
+
+### Done
+- **Run as simulation** (`clone_event_as_simulation`), the **control panel** at `/org/events/<id>/simulate`, **speed** ×1/×5/×10/×20 (server-side, the heat's length is divided at start), **Start / Pause / Stop**, **virtual or real** per seat, **virtual spotters, judges and head judge** through add_attempt / submit_trick_score / submit_impression / submit_sheet / the publish path, **11 scenario buttons**, **View as…**, the **checklist** with the last run's numbers and a link to the Feedback notes, **Reset** and **Delete**. Words are in `copy.simulator`; the decisions are in docs/06 (Decisions log – Simulator).
+- Migrations `20261009100000_simulator`, `20261009100100_simulator_stats` applied to the hosted project with `npm run db:apply`; types regenerated. The clone function was patched on the hosted project twice after the browser run found two bugs (a DELETE without WHERE, which the hosted API refuses; a locked division with no stored draw); the migration file holds the fixed version.
+- Tests: unit (config, clock, attempt generator respects the cap and the trick base, judge spread and modes, scenarios and checklist, run order, View as links, preview cookie), `tests/rls/simulator.test.ts` (11: every function refused on a non-simulation event and for non-organisers, a copy never public but previewable by its organiser, virtual seats act through the same functions, fast clock, View as, Reset, delete), `e2e/simulator.spec.ts`.
+
+### Not done / to know
+- **One Reset.** The panel's Reset calls 7a-1's general Reset (`resetEvent`), then `sim_after_reset` for the simulator's own leftovers. A copy takes its `draw_at_lock` when it is made. "Wipe and draw again" (`sim_rebuild`) remains only for a simulation event with no draw copy (the Demo). The simulation-only Reset and the "save the starting point" button were removed (migration `20261009100200`); `sim_baseline` now keeps only the run order the copy started with (so a Plan B made by a scenario goes on Reset).
+- **Auto-play needs the panel tab open.** There is no background worker. Each tick makes many round trips to the database, so from a distant machine two heats at ×20 took about 2.5 minutes.
+- **The Demo has no saved starting point** (it was played before the simulator existed): the panel offers "Wipe and draw again". I did not touch the Demo, Arrow or EKL; all tests use throwaway organisations.
+- **A seat cannot be viewed from a second seat at once** with one sign-in (by design, see the decisions log).
+- Not run on Vercel or on a phone from here.
+
+### How to test
+See the click-through at the end of the pull request description.

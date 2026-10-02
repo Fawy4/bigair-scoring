@@ -13,6 +13,7 @@ test("Event step: seconds per big-screen page and outside leaderboards are saved
       .select("id")
       .single();
     await org.signIn(page, `/org/events/${ev!.id}/event`);
+    await page.getByTestId("advanced-toggle").click(); // these settings are behind "More settings"
     const field = (label: string) => page.getByLabel(label, { exact: true });
     await field("Big screen: seconds per page").fill("12");
     await page.getByRole("button", { name: "+ Add leaderboard" }).click();

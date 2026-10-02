@@ -25,7 +25,7 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
         rows.map((r) => `${r.table_name.padEnd(20)} ${String(r.rls_enabled).padEnd(6)} ${String(r.policy_count).padEnd(3)} ${String(r.anon_can_select).padEnd(6)} ${String(r.anon_can_write).padEnd(6)} ${r.authenticated_can_write}`).join("\n"));
       expect(rows.length).toBeGreaterThanOrEqual(26);
       expect(rows.filter((r) => !r.rls_enabled)).toEqual([]);
-      const serviceOnly = ["join_attempts", "form_attempts"];
+      const serviceOnly = ["join_attempts", "form_attempts", "sim_clock", "sim_baseline"];
       expect(rows.filter((r) => r.policy_count === 0 && !serviceOnly.includes(r.table_name))).toEqual([]);
       expect(rows.filter((r) => r.anon_can_write)).toEqual([]);
       expect(rows.find((r) => r.table_name === "join_attempts")).toMatchObject({ anon_can_select: false, authenticated_can_write: false });

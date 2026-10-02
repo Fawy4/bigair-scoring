@@ -1,5 +1,8 @@
 import { cache } from "react";
+import { cookies } from "next/headers";
+import { previewMatches, SIM_PREVIEW_COOKIE } from "@/lib/simulator/preview";
 import { createAnonClient } from "@/lib/supabase/anon";
+import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { PublicDrawPayload, PublicLiveHeat, PublicResults, PublicRules, PublicSite, PublicTimetable } from "./types";
 
@@ -8,7 +11,12 @@ import type { PublicDrawPayload, PublicLiveHeat, PublicResults, PublicRules, Pub
  * its metadata share one answer. Null means "not public" (draft, simulation, archived, unknown): the page says not found.
  */
 const call = async <T>(fn: string, args: Record<string, unknown>): Promise<T | null> => {
-  const { data, error } = await createAnonClient().rpc(fn as never, args as never);
+  // The one exception to "as a visitor": the preview of a simulation event for its own signed-in organiser (docs/06 decisions log, simulator). The cookie names the
+  // event; the database still decides (only an organiser of that simulation event gets anything), so any other event reads exactly as before.
+  const jar = await cookies();
+  const preview = previewMatches(jar.get(SIM_PREVIEW_COOKIE)?.value, { slug: typeof args.p_slug === "string" ? args.p_slug : undefined, eventId: typeof args.p_event === "string" ? args.p_event : undefined });
+  const db = preview ? await createClient() : createAnonClient();
+  const { data, error } = await db.rpc(fn as never, args as never);
   if (error || !data) return null;
   return data as T;
 };
@@ -31,6 +39,12 @@ export const loadRules = cache(async (eventId: string) => allowed(await call<Pub
  */
 export const loadLive = cache(async (heatId: string): Promise<PublicLiveHeat | null> => {
   try {
+    // the preview of a simulation event: its organiser asks for the same live view through a function that checks the event is theirs
+    const jar = await cookies();
+    if (jar.get(SIM_PREVIEW_COOKIE)) {
+      const { data } = await (await createClient()).rpc("sim_live_heat", { p_heat: heatId });
+      if (data && (data as { allowed?: boolean }).allowed) return data as unknown as PublicLiveHeat;
+    }
     const { data, error } = await createServiceClient().rpc("get_live_heat_for_server" as never, { p_heat: heatId } as never);
     if (error || !data) return null;
     return allowed(data as PublicLiveHeat);
