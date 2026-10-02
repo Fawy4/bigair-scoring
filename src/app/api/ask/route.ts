@@ -11,6 +11,7 @@ import { buildAskPrompt, requestParams } from "@/lib/ask/prompt";
 import { askedLastHour, ipHash, organisationBudget, serverFacts, writeLog, type AskLogRow } from "@/lib/ask/server";
 import { ASK_CONTENT_TYPE, encodeEvent, findCitation } from "@/lib/ask/stream";
 import { ORG_COOKIE } from "@/lib/org/context";
+import { PRODUCT_VERSION } from "@/lib/product-version";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { copy } from "@/lib/ui-copy";
@@ -66,7 +67,8 @@ export async function POST(request: Request) {
 
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return json(400, { error: parsed.error.issues[0]?.message ?? E.empty });
-  const ctx = sanitizeAskContext(parsed.data.context);
+  // the version is the server's own, not the page's
+  const ctx = { ...sanitizeAskContext(parsed.data.context), productVersion: PRODUCT_VERSION };
   const question = parsed.data.question;
 
   const { supabase, service, user, access } = await who(ctx.eventId);

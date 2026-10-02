@@ -1,3 +1,4 @@
+import { AskLauncher } from "@/components/ask/ask-launcher";
 import { ClockText } from "@/components/clock-text";
 import { HeatTimer, type TimerState } from "./heat-timer";
 import { ConnectionBadge, type ConnectionStatus } from "./connection-badge";
@@ -5,7 +6,7 @@ import { Chip } from "./chip";
 import { copy } from "@/lib/ui-copy";
 
 /**
- * The slim header of the judge and spotter screens: the small timer, the sync pill and a "Details" toggle, then one muted line with the heat and the seat.
+ * The slim header of the judge and spotter screens: the small timer, the sync pill, Ask (when Ask Sendbook is on) and a "Details" toggle, then one muted line with the heat and the seat.
  * The timer is small and out of the way (never between the first card and the pad). The Details toggle switches the whole screen to the detailed view.
  */
 export function ScreenHeader({
@@ -46,11 +47,14 @@ export function ScreenHeader({
           {showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className="text-name font-semibold">{copy.live.header.between}</span>}
           {clock ? <ClockText timezone={clock.timezone} nowMs={clock.nowMs} /> : null}
         </div>
-        {details !== undefined ? (
-          <Chip data-testid="details-toggle" pressed={details} onClick={onToggleDetails}>
-            {details ? (detailsLabels?.on ?? copy.live.header.detailsOn) : (detailsLabels?.off ?? copy.live.header.details)}
-          </Chip>
-        ) : null}
+        <div className="flex items-center gap-1.5">
+          <AskLauncher variant="beach" />
+          {details !== undefined ? (
+            <Chip data-testid="details-toggle" pressed={details} onClick={onToggleDetails}>
+              {details ? (detailsLabels?.on ?? copy.live.header.detailsOn) : (detailsLabels?.off ?? copy.live.header.details)}
+            </Chip>
+          ) : null}
+        </div>
       </div>
       <div className="flex items-center justify-between gap-2">
         <p className="min-w-0 truncate text-small font-medium text-beach-muted">{copy.live.header.heatLine(heatName, seat)}</p>

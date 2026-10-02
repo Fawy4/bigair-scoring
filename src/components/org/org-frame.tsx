@@ -8,6 +8,7 @@ import { useBeachTextSize, useBeachTheme } from "@/components/live/theme-switch"
 import { BEACH_THEMES } from "@/lib/live/theme-tokens";
 import { copy, orgCopy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
+import { AskLauncher } from "@/components/ask/ask-launcher";
 import { AppShell, type ShellEvent } from "./app-shell";
 import { ShellLayoutProvider, useViewportLayout } from "./layout-context";
 import { runNextGuard } from "./next-guard";
@@ -138,6 +139,7 @@ export function OrgFrame({ productName, email, passwordIsSet, organisations, cur
           currentOrganisationId={current?.id ?? ""}
           orgSwitcher={switcher}
           event={event}
+          ask={(l) => <AskLauncher variant="org" withHelp compact={l === "phone"} />}
           steps={steps}
           activeStep={active}
           onStep={(key) => {

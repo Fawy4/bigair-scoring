@@ -27,6 +27,7 @@ import type { LiveContext } from "@/lib/live/types";
 import { softWord } from "@/lib/live/words";
 import { createClient } from "@/lib/supabase/browser";
 import { PartBoundary } from "@/components/part-boundary";
+import { AskLauncher } from "@/components/ask/ask-launcher";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
@@ -265,11 +266,16 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   );
 
   const header = (
-    <header className="border-b border-beach-line px-3 py-2">
-      <h1 className="whitespace-normal break-words text-name font-semibold">{shown ? heatTitle(ctx, shown) : ctx.event.name}</h1>
-      <p className="text-small font-medium text-beach-muted">{[ctx.event.name, viewer.name].join(" · ")}</p>
+    <header className="flex items-start justify-between gap-2 border-b border-beach-line px-3 py-2">
+      <div className="min-w-0">
+        <h1 className="whitespace-normal break-words text-name font-semibold">{shown ? heatTitle(ctx, shown) : ctx.event.name}</h1>
+        <p className="text-small font-medium text-beach-muted">{[ctx.event.name, viewer.name].join(" · ")}</p>
+      </div>
+      <AskLauncher variant="beach" />
     </header>
   );
+  // Ask Sendbook reads which heat and division the console shows
+  const askMarks = { "data-ask-heat": shownId ?? undefined, "data-ask-division": divisionId ?? undefined };
 
   const tieDialog =
     tieFor && shown ? (
@@ -309,7 +315,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
         {tab === "score" ? (
           <JudgeScreen ctx={ctx} pinnedHeatId={null} />
         ) : (
-          <div data-testid="screen-body" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-2">
+          <div data-testid="screen-body" {...askMarks} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-2">
             {header}
             {controlColumn}
           </div>
@@ -320,7 +326,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   }
   if (!wide) {
     return (
-      <div data-testid="head-page" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <div data-testid="head-page" {...askMarks} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
         {header}
         <div className="flex flex-col gap-3 px-3 py-2">{controlColumn}</div>
@@ -331,13 +337,16 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
 
   const liveElsewhere = c.liveHeat && c.liveHeat.id !== shownId ? c.liveHeat : null;
   return (
-    <div data-testid="head-page" data-layout="wide" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+    <div data-testid="head-page" data-layout="wide" {...askMarks} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
       <header data-testid="top-bar" className="sticky top-0 z-10 flex flex-col gap-1.5 border-b border-beach-line bg-beach-bg px-3 py-2">
         <h1 className="sr-only">{T.title}</h1>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <DivisionTabs divisions={ctx.divisionTabs} divisionId={divisionId} liveIds={liveIds} onPick={pickDivision} />
-          <p className="text-small font-medium text-beach-muted">{[ctx.event.name, viewer.name].join(" · ")}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-small font-medium text-beach-muted">{[ctx.event.name, viewer.name].join(" · ")}</p>
+            <AskLauncher variant="beach" withHelp />
+          </div>
         </div>
         {liveElsewhere ? (
           <button type="button" data-testid="live-elsewhere" onClick={() => selectHeat(liveElsewhere.id)} className="inline-flex min-h-tap flex-wrap items-center gap-2 self-start rounded-xl border border-beach-live bg-beach-bg px-3 text-left text-body font-semibold">

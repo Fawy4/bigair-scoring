@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { forgetRefusals, noteRefusal } from "@/lib/ask/collect";
 import { refusalFor } from "@/lib/manual/refusals";
 import { copy } from "@/lib/ui-copy";
 
@@ -48,7 +49,7 @@ function scan(roots: Element[]) {
     root.querySelectorAll(SELECTOR).forEach((el) => candidates.add(el));
   }
   candidates.forEach((el) => {
-    if (el.closest("[data-no-learn-more], .help-root, input, textarea, select, button, a")) return;
+    if (el.closest("[data-no-learn-more], [data-no-ask], .help-root, input, textarea, select, button, a")) return;
     const words = wordsOf(el);
     if (seen.get(el) === words) return;
     seen.set(el, words);
@@ -63,7 +64,12 @@ function scan(roots: Element[]) {
     existing?.remove();
     found.push({ el, anchor: hit.anchor });
   });
-  for (const f of found) if (!found.some((o) => o !== f && f.el.contains(o.el))) link(f.el, f.anchor);
+  for (const f of found)
+    if (!found.some((o) => o !== f && f.el.contains(o.el))) {
+      link(f.el, f.anchor);
+      // Ask Sendbook sends the latest one as "the last refusal sentence shown on this page"
+      noteRefusal(wordsOf(f.el));
+    }
 }
 
 /**
@@ -73,6 +79,7 @@ function scan(roots: Element[]) {
 export function RefusalLinks() {
   useEffect(() => {
     seen = new WeakMap();
+    forgetRefusals();
     // only what changed is checked again (a ticking clock changes one text, not the page)
     let pending = new Set<Element>();
     let queued = false;

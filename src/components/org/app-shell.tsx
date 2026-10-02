@@ -49,6 +49,8 @@ export interface AppShellProps {
   };
   /** The "Note" button of the top bar; the real app has the floating note button instead. */
   showNote?: boolean;
+  /** Help and Ask Sendbook, before the account menu (the real frame passes them; the design preview does not). */
+  ask?: (layout: ShellLayout) => ReactNode;
   children: ReactNode;
   /** Previous / Next at the foot of the step. */
   footer?: ReactNode;
@@ -132,8 +134,8 @@ function EventName({ event }: { event: ShellEvent }) {
   );
 }
 
-/** The top bar: product name, organisation switcher, event name and dates, state, public link with its QR code, a note button and the account menu. 48 px on a laptop. */
-function TopBar({ layout, productName, organisations, currentOrganisationId, event, account, productHref, orgSwitcher, showNote = true }: Pick<AppShellProps, "layout" | "productName" | "organisations" | "currentOrganisationId" | "event" | "account" | "productHref" | "orgSwitcher" | "showNote">) {
+/** The top bar: product name, organisation switcher, event name and dates, state, public link with its QR code, a note button, Help and Ask, and the account menu. 48 px on a laptop. */
+function TopBar({ layout, productName, organisations, currentOrganisationId, event, account, productHref, orgSwitcher, showNote = true, ask }: Pick<AppShellProps, "layout" | "productName" | "organisations" | "currentOrganisationId" | "event" | "account" | "productHref" | "orgSwitcher" | "showNote" | "ask">) {
   const phone = layout === "phone";
   const current = organisations.find((o) => o.id === currentOrganisationId) ?? organisations[0];
   const switcher =
@@ -210,6 +212,7 @@ function TopBar({ layout, productName, organisations, currentOrganisationId, eve
           </div>
         )}
         {event ? <PublicLinkMenu url={event.publicUrl} iconOnly /> : null}
+        {ask?.(layout)}
         {accountMenu}
       </header>
     );
@@ -237,6 +240,7 @@ function TopBar({ layout, productName, organisations, currentOrganisationId, eve
             {orgCopy.shell.note}
           </Button>
         ) : null}
+        {ask?.(layout)}
         {accountMenu}
       </div>
     </header>
