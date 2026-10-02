@@ -7,7 +7,7 @@ export interface SearchHit {
   snippet: string;
 }
 
-const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "");
+export const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "");
 
 /** Every word of the query must appear in the heading or its text; a hit in the heading ranks first. A short piece of text around the first match is the snippet. */
 export function searchManual(entries: readonly SearchEntry[], query: string, limit = 30): SearchHit[] {

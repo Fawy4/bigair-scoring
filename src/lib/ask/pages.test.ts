@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { loadManual } from "@/lib/manual/load";
-import { CORE_PAGES, pickPages, questionWords } from "./pages";
+import { askManual } from "./manual";
+import { CORE_PAGES, pageForRoute, pickPages, questionWords } from "./pages";
 
 // Ask Sendbook: which manual pages go with a question. The /help search index decides; the dependency map and the errors page always go.
-const manual = loadManual();
+const manual = askManual();
 
 describe("pickPages", () => {
   it("always includes the two core pages, first", () => {
@@ -42,6 +42,22 @@ describe("pickPages", () => {
     const extra = pages.slice(2).reduce((n, p) => n + p.source.length, 0);
     expect(extra).toBeLessThanOrEqual(20_000);
     expect(pages.slice(0, 2).map((p) => p.file)).toEqual([...CORE_PAGES]);
+  });
+});
+
+describe("the page of the screen the person is on", () => {
+  it("knows the console, the officials' screens and the organiser steps", () => {
+    expect(pageForRoute("/head/11111111-1111-4111-8111-111111111111")).toBe("screens/console-laptop.md");
+    expect(pageForRoute("/judge/x")).toBe("screens/judge.md");
+    expect(pageForRoute("/spot/x?heat=y")).toBe("screens/spotter.md");
+    expect(pageForRoute("/org/events/x/schedule")).toBe("screens/organiser-run-order.md");
+    expect(pageForRoute("/org/events/x")).toBe("screens/organiser-go-live.md");
+    expect(pageForRoute("/admin/ask")).toBe("ask-sendbook.md");
+    expect(pageForRoute("/somewhere")).toBeNull();
+  });
+  it("goes first among the picked pages, after the core pages", () => {
+    const files = pickPages(manual, "zzzz", { route: "/judge/x" }).map((p) => p.file);
+    expect(files).toEqual(["dependencies.md", "errors.md", "screens/judge.md"]);
   });
 });
 
