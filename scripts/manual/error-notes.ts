@@ -69,6 +69,7 @@ export const SECTIONS: Record<string, Section> = {
   resetParts: { title: "Resets", where: "Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu)", meaning: "The reset was refused; nothing was changed.", fix: "Follow the sentence." },
   headLive: { title: "Head console", where: "Head console dialogs", meaning: "The head console needs a decision or a reason first.", fix: "Follow the sentence." },
   controlWhy: { title: "Grey buttons on the head console", where: "Under a grey button on the head console (laptop and phone)", meaning: "The button is off in this heat state.", fix: "Do what the sentence says, or pick another heat in the run order." },
+  ask: { title: "Ask Sendbook", where: "The Ask panel (Ask button in the top bar)", meaning: "Ask Sendbook did not answer this question.", fix: "Follow the sentence. The manual at /help answers the same questions." },
   dashboard: { title: "Organiser: Go live", where: "Go live → Quick actions", meaning: "A quick action is off or refused.", fix: "Follow the sentence." },
 };
 
@@ -188,6 +189,19 @@ export const NOTES: Record<string, Note> = {
   "admin.org.removeSelf": { m: "Remove is grey on your own login.", f: "Another platform owner can remove it." },
   "admin.errors.NOT_A_MEMBER": { m: "The person was already removed from this organisation (or never was a member).", f: "Reload the organisation page." },
   "admin.errors.CANNOT_REMOVE_SELF": { m: "A platform owner cannot remove their own login from an organisation." },
+  "admin.errors.BUDGET_INVALID": { w: "Admin → organisation → Ask Sendbook this month", m: "The monthly Ask budget was not a whole number from 0 to 1 000 000 000.", f: "Type the number of tokens without spaces or dots, e.g. 2000000. 0 switches Ask off for the organisation." },
+  // ---- Ask Sendbook
+  "ask.errors.noKey": { m: "The server has no ANTHROPIC_API_KEY, so Ask Sendbook is off (the Ask button is normally hidden then).", f: "Platform owner: add ANTHROPIC_API_KEY in Vercel → Settings → Environment Variables and redeploy; Health shows whether it exists." },
+  "ask.errors.signedOut": { m: "Only signed-in organisers, the platform owner and officials joined with their PIN can ask.", f: "Sign in (organisers) or join with the PIN (officials)." },
+  "ask.errors.noSeat": { m: "This phone's session is not bound to an active seat of the event the screen belongs to (another event, a seat switched off, or a PIN regenerated).", f: "Join the event again with the PIN on the join page." },
+  "ask.errors.notAllowed": { m: "The screen belongs to an event of another organisation.", f: "Open one of your own events and ask there." },
+  "ask.errors.paused": { m: "The organisation has used its monthly Ask budget. Ask is a soft stop: it starts again on the 1st of next month (UTC).", f: "Use Help (/help). The platform owner can raise the budget on the organisation's admin page." },
+  "ask.errors.tooMany": { m: "One person may ask 30 questions an hour (ASK_SENDBOOK_HOURLY_LIMIT changes it).", f: "Wait a few minutes, or search the manual at /help." },
+  "ask.errors.empty": { m: "The question box was empty." },
+  "ask.errors.tooLong": { m: "Questions are limited to 2 000 characters.", f: "Ask one thing at a time." },
+  "ask.errors.failed": { m: "The model did not answer (no connection, a time-out, or both models failed). Nothing was counted against the budget except what was used.", f: "Ask again. If it keeps failing, the platform owner checks Health and the server log." },
+  "ask.errors.ratingFailed": { m: "The thumbs could not be saved (connection, or the answer belongs to another session).", f: "Press it again; if the page was reloaded, the verdict can no longer be given for that answer." },
+  "ask.errors.ratedAlready": { m: "Each answer takes one verdict.", f: "Leave a Note if there is more to say." },
   "admin.org.logoFailed": { f: "Upload the logo again on the organisation's page." },
   "admin.crash.heading": { m: "An admin page failed on the server.", f: "Press Try again; open Health to check the server settings; search the hosting logs for the error reference." },
   "admin.partProblem": { m: "One part of the page could not be read; the rest works." },
