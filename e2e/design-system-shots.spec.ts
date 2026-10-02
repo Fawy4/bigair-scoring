@@ -90,9 +90,9 @@ for (const vp of VIEWPORTS) {
       const problems: string[] = [];
       // the simulator panel asks the server for its status every few seconds, so it is never "network idle": wait for the panel itself instead
       const open = async (name: string, path: string) => {
-        if (name !== "event-simulate") return page.goto(path, { waitUntil: "networkidle" });
+        if (!name.startsWith("event-simulate")) return page.goto(path, { waitUntil: "networkidle" });
         await page.goto(path, { waitUntil: "load" });
-        await page.getByTestId("sim-console").waitFor();
+        await page.getByTestId(name === "event-simulate" ? "sim-console" : "run-as-simulation").waitFor();
         await page.waitForTimeout(1500);
       };
       // measuring and photographing are two passes: a full-page capture changes a phone context (it stops matching "touch"), which would skew everything measured after it
