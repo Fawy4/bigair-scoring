@@ -829,3 +829,40 @@ See the click-through at the end of the pull request description.
 
 ### How to test
 See the click-through at the end of the pull request description.
+
+
+## Fix – reset per section (branch `fix-reset-visibility`)
+
+One pull request, "Fix – reset per section". Reset is no longer only on the Go live dashboard: each part of the event has its own reset, with one confirmation and one audit line. The whole-event Reset on the dashboard is as 7a-1 built it, except for the rebuild rule below.
+
+### What it does
+- **Reset this division** (Divisions step, on each division's card). All its heats back to not started; attempts, scores, penalties, flags, judge sheets, tie decisions, published results and actual times wiped; re-run heats removed; the draw back to the saved starting copy. Other divisions are not touched. One confirmation that shows the counts; a written reason (5+ characters) only if something of the division was ever shown publicly. Audit line `division_reset` with the counts.
+- **Clear actual times** (Run order step, per plan). Clears the plan's actual starts (breaks) and every pin except the first one in run order, so the day re-flows from it. Audit line `plan_actuals_cleared` with before and after. The button stays, off, with a sentence when there is nothing to clear.
+- **Reset this heat** (head console, "Heat menu" next to Cancel heat and Re-run). Back to not started with the same riders in the same seats. Allowed on ended, under-review, cancelled and published heats, and on a re-run heat. Its attempts, scores, penalties, sheets and published results are moved to a kept record (`heat_reset_records`, readable by organisers and the head seat) and no longer count. A published (or re-opened) result is taken out of the draw with the same ladder function Publish uses, and the next round's seat it had filled goes back to its placeholder. Refused when a later heat that depends on it has started (the heats are named). Audit line `heat_reset`. Head judge and organiser may use it.
+- **Already re-run label.** On a cancelled heat that has its re-run, the Re-run button now reads "Already re-run as H1R" (off) instead of hiding the reason; its sentence moved into the button.
+- **No saved copy: rebuild.** A division locked before Reset existed, or re-locked after its first heat, has no saved starting copy. Reset this division and the whole-event Reset no longer refuse it: the starting draw is rebuilt from the current draw (Round 1 keeps the seats it has, every later seat is back to its placeholder, "1st H1"; re-run heats removed). The confirmation says "this is a rebuild, not the saved copy". The event Reset's audit line lists the rebuilt divisions. This replaces 7a-1's "a reset is not possible yet" list.
+- **Every reset is refused while any heat of the event is running or paused**, and names it ("Heat 3 is running. End it first."). The refusal shows in the confirmation, the button stays where it is.
+
+### Choices I made (please confirm or change)
+1. **Pins.** Pins and organiser anchors are the same thing in the stored run order, so "clear pins" keeps only the first one in run order (the day's start) and clears the rest, including a lunch time the organiser pinned by hand. The confirmation shows how many will go.
+2. **Actual ends.** The plan stores no actual ends; heats keep their own real start and end. Clear actual times therefore does not touch heats that already ran (the screen says so and points to Reset this heat / division). A wind **hold** is left as it is (Resume ends it).
+3. **A cancelled heat that has its re-run cannot be reset** (it would put the same riders in two heats). The menu says "Reset the re-run instead". A cancelled heat without a re-run can be reset.
+4. **Marks of a reset heat.** DNS stays on a seat; DSQ stays only on a re-run (it was set when the re-run was made); DNF and interference marks go with the heat's records.
+5. **No Restore for these three.** The whole-event Reset keeps its 30-day copy and platform-owner Restore. A division or heat reset keeps what it wiped only as audit counts (division) or the kept record (heat); a division reset cannot be undone from the screen.
+6. **One migration on the shared hosted project:** `20261010100000_reset_per_section.sql` (new table, new functions, and `reset_event` replaced to accept a rebuild; `event_ever_public` now asks the new per-heat function). The number is not `20261009…` because the Simulator session already used it. `src/lib/supabase/database.types.ts` was regenerated from the hosted project, so it also contains the Simulator's tables.
+
+### Test evidence
+- `npm run typecheck`, `npm run lint` clean. `npm test`: 148 files, 1735 tests passed (new: rebuild and heat-reset planning in `src/lib/reset/plan.test.ts`, the heat-menu rule in `head-state.test.ts`).
+- RLS (`npm run test:rls`, hosted dev project): new `tests/rls/reset-sections.test.ts`, 24 tests: for each reset the organiser is allowed; judge, spotter, the head seat (division and run order), and another organisation are refused; a running or paused heat is refused and named; plus rebuild, reason rule, other division untouched, re-run removal, published heat taken back with its next-round seat, a later heat started refused, cancelled with and without re-run, re-run heat reset, the kept record readable only by organiser and head seat. `tests/rls/reset.test.ts` (7a-1, 13 tests) passes; its one test about "no copy is refused" now says "no copy is rebuilt".
+- Playwright (throwaway organisations): new `e2e/reset-sections.spec.ts`, 6 tests: run a heat, reset it from the console, see it not started; "Already re-run as H1R" and the menu refusing the cancelled heat; reset a division (rebuild note, other division untouched); a running heat refuses it and the button stays; Clear actual times; Reset event from the dashboard for a division with no copy. `e2e/event-reset.spec.ts` updated for the rebuild.
+
+### Not done / not verified
+- Not seen on a real phone or in the sun; checked in Chromium on a laptop width. The heat menu on the phone layout is the same component, not clicked through on a phone.
+- The Reset button on the Go live dashboard was not moved or restyled (owner: it is fine as it is).
+- Two reds that belong to other sessions may still show in the full RLS run (`sim_*` tables in the table coverage list).
+
+### How to test on the preview
+1. Divisions step: on a division that has played heats, "Reset this division…" → read the counts and the rebuild/copy note → confirm → its heats show "Not started"; another division is unchanged.
+2. Run order step: pin a time with +1 min or Shift on the dashboard, then "Clear actual times" → only the first pin stays.
+3. Head console: end a heat, "Heat menu" → "Reset this heat…" → confirm → the heat is "Not started" with the same riders. Cancel a heat and re-run it: the button reads "Already re-run as H1R".
+4. Start a heat and try any reset: each says which heat is running and how to fix it.

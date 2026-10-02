@@ -10,6 +10,10 @@ import { planOfRow, type PlanRow } from "@/lib/schedule/plans";
 import type { RunItem } from "@/lib/schemas/schedule";
 import { insertRerunItem, rerunName } from "./rerun";
 import { parseScoringModel, type ScoringModel } from "@/lib/schemas/scoring-model";
+import { applyHeatStatuses } from "@/lib/draw/entrants";
+import type { DivisionDraw } from "@/lib/engine/ladder";
+import { heatResetPlan } from "@/lib/reset/plan";
+import { copy } from "@/lib/ui-copy";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Json } from "@/lib/supabase/database.types";
@@ -278,4 +282,67 @@ export async function practiceAdd(input: { heatId: string; entryId: string; tric
     p_status: input.status,
   });
   return error ? from(error) : { ok: true };
+}
+
+// ------------------------------------------------------------------ Reset this heat (head console, heat menu)
+
+/** The reset's own sentences first (running heat, already re-run, a later heat started…), then the console's usual ones. */
+const resetFrom = (error: { message: string }): Failure => {
+  const { code, detail } = parseError(error.message);
+  const mine = code ? (copy.resetParts.errors as Record<string, string | ((x: string) => string)>)[code] : undefined;
+  if (typeof mine === "function") return { ok: false, code, message: mine(detail ?? "") };
+  if (typeof mine === "string") return { ok: false, code, message: mine };
+  if (code === "HEAT_RUNNING") return { ok: false, code, message: copy.reset.errors.HEAT_RUNNING(detail ?? "") };
+  if (code === "REASON_REQUIRED") return { ok: false, code, message: copy.reset.errors.REASON_REQUIRED };
+  return from(error);
+};
+
+export interface HeatResetPreview {
+  status: string;
+  counts: { attempts: number; scores: number; published_results: number };
+  running: string | null;
+  everPublic: boolean;
+  alreadyRerun: boolean;
+  isRerun: boolean;
+}
+
+/** What "Reset this heat" would do, from the database. */
+export async function previewResetHeat(heatId: string): Promise<{ ok: true; preview: HeatResetPreview } | Failure> {
+  if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
+  const db = await createClient();
+  const { data, error } = await db.rpc("reset_heat_preview", { p_heat: heatId });
+  if (error || !data) return error ? resetFrom(error) : fail("HEAT_NOT_FOUND");
+  const d = data as unknown as { status: string; counts: HeatResetPreview["counts"]; running: string | null; ever_public: boolean; already_rerun: boolean; is_rerun: boolean };
+  return { ok: true, preview: { status: d.status, counts: d.counts, running: d.running, everPublic: d.ever_public, alreadyRerun: d.already_rerun, isRerun: d.is_rerun } };
+}
+
+/**
+ * Reset this heat: back to not started with the same seats; its attempts and scores move to a record kept for the audit. A published (or re-opened) result is taken
+ * out of the draw with the same ladder function Publish uses, and the next round's seats it filled go back to their placeholders; a later heat that depends on it and has
+ * started refuses the reset. The database checks everything again and writes it in one transaction with one audit line.
+ */
+export async function resetHeat(input: { heatId: string; reason?: string }): Promise<{ ok: true; counts: { attempts: number; scores: number; published_results: number } } | Failure> {
+  if (!uuid.safeParse(input.heatId).success) return fail("HEAT_NOT_FOUND");
+  const db = await createClient();
+  const { data: heat } = await db.from("heats").select("id, division_id, draw_uid").eq("id", input.heatId).maybeSingle();
+  if (!heat) return fail("HEAT_NOT_FOUND");
+  const [{ data: division }, { data: siblings }] = await Promise.all([
+    db.from("divisions").select("draw").eq("id", heat.division_id).maybeSingle(),
+    db.from("heats").select("draw_uid, status, started_at").eq("division_id", heat.division_id),
+  ]);
+  const draw = (division?.draw ?? null) as DivisionDraw | null;
+  let p_draw: DivisionDraw | null = null;
+  let p_seats: unknown[] = [];
+  if (draw && heat.draw_uid) {
+    const drawHeat = draw.rounds.flatMap((r) => r.heats).find((h) => (h.uid ?? h.id) === heat.draw_uid);
+    if (drawHeat && draw.results?.[drawHeat.id]) {
+      const plan = heatResetPlan(applyHeatStatuses(draw, siblings ?? []), heat.draw_uid);
+      if (!plan.ok) return { ok: false, code: "DOWNSTREAM_STARTED", message: copy.resetParts.errors.DOWNSTREAM_STARTED(plan.heats.join(", ")) };
+      p_draw = plan.draw;
+      p_seats = plan.seats;
+    }
+  }
+  const { data, error } = await db.rpc("reset_heat", { p_heat: input.heatId, p_reason: input.reason?.trim() ?? "", p_before: (p_draw ? draw : null) as never, p_draw: p_draw as never, p_seats: p_seats as never });
+  if (error) return resetFrom(error);
+  return { ok: true, counts: data as unknown as { attempts: number; scores: number; published_results: number } };
 }

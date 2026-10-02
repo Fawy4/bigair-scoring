@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { controlsFor, nextHeatState, type ControlId } from "./head-state";
+import { controlsFor, nextHeatState, resetHeatControl, type ControlId } from "./head-state";
 
 // The head judge's Control tab (owner, round 3). There is no timer reset: the equivalent is Cancel heat with a reason, or Re-run heat.
 const on = (state: Parameters<typeof controlsFor>[0], blockers = 0) => controlsFor(state, blockers).filter((c) => c.enabled).map((c) => c.id);
@@ -95,5 +95,22 @@ describe("1H-13 why a control is off", () => {
   });
   it("a heat that has not started cannot be re-run", () => {
     expect(reason("scheduled", "rerun").enabled).toBe(false);
+  });
+});
+
+describe("Reset this heat in the heat menu", () => {
+  it("is on for ended, under-review, cancelled and published heats", () => {
+    for (const state of ["ended", "under_review", "cancelled", "published"] as const) expect(resetHeatControl(state, false).enabled, state).toBe(true);
+  });
+  it("is off, with a sentence, for a heat not started and a heat on the water", () => {
+    for (const state of ["scheduled", "running", "paused"] as const) {
+      const r = resetHeatControl(state, false);
+      expect(r.enabled, state).toBe(false);
+      expect(r.reason).toBeTruthy();
+    }
+  });
+  it("a cancelled heat that was already re-run is off and points to the re-run; the re-run itself can be reset", () => {
+    expect(resetHeatControl("cancelled", true)).toMatchObject({ enabled: false, reason: expect.stringMatching(/re-run/i) });
+    expect(resetHeatControl("ended", false).enabled).toBe(true);
   });
 });

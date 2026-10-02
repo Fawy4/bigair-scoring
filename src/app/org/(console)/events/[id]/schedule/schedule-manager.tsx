@@ -1,5 +1,6 @@
 "use client";
 
+import { ClearActualsButton } from "../reset-buttons";
 import { NumberField } from "@/components/org/number-field";
 import { DndContext, pointerWithin, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import Link from "next/link";
@@ -90,6 +91,15 @@ function RowShell({ id, problem, children }: { id: string; problem?: string; chi
       ) : null}
     </li>
   );
+}
+
+/** What "Clear actual times" would clear: the plan's actual starts, and every pin but the first one in run order. */
+function actualsOf(row: PlanRow): { actualStarts: number; pins: number } {
+  const items = (Array.isArray(row.items) ? row.items : []) as Array<{ id?: string }>;
+  const anchors = (row.anchors ?? {}) as Record<string, unknown>;
+  const pinned = Object.keys(anchors).length;
+  const hasFirst = items.some((i) => i.id !== undefined && i.id in anchors);
+  return { actualStarts: Object.keys((row.actual_starts ?? {}) as Record<string, unknown>).length, pins: Math.max(0, pinned - (hasFirst ? 1 : 0)) };
 }
 
 export function ScheduleManager(props: ScheduleProps) {
@@ -257,6 +267,12 @@ export function ScheduleManager(props: ScheduleProps) {
           <ConfirmButton label={T.deletePlan} question={T.deleteQuestion(currentRow.name)} confirmLabel={T.deleteYes} cancelLabel={copy.common.cancel} danger pending={pending} onConfirm={() => act(() => deletePlanAction(currentRow.id), () => { setPlans((ps) => ps.filter((p) => p.id !== currentRow.id)); setPlanId(null); })} />
         ) : null}
       </div>
+
+      {currentRow ? (
+        <div className="panel flex flex-wrap items-start gap-3" data-testid="plan-actuals">
+          <ClearActualsButton planId={currentRow.id} planName={currentRow.name} {...actualsOf(currentRow)} />
+        </div>
+      ) : null}
 
       {currentRow ? (
         <div className="panel flex flex-wrap items-end gap-3">

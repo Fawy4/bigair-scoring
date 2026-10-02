@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Footer, Modal, plain, Reason } from "./console-parts";
-import { decideTie, publishHeat, reopenHeat, rerunHeat, setPublishHold, type PublishResult } from "@/lib/live/head-actions";
+import { decideTie, previewResetHeat, publishHeat, reopenHeat, rerunHeat, resetHeat, setPublishHold, type HeatResetPreview, type PublishResult } from "@/lib/live/head-actions";
 import type { ChecklistItem } from "@/lib/live/publish-checklist";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
@@ -223,6 +223,68 @@ export function HoldDialog({ heatId, title, onClose, onDone }: { heatId: string;
           start(async () => {
             const r = await setPublishHold(heatId, true, reason);
             if (r.ok) onDone();
+            else setError(r.message);
+          })
+        }
+      />
+    </Modal>
+  );
+}
+
+/** Reset this heat: what is kept and what changes, a reason when the heat was ever shown publicly, one confirmation. A refusal stays on screen with the fix. */
+export function ResetHeatDialog({ heatId, title, onClose, onDone }: { heatId: string; title: string; onClose: () => void; onDone: (text: string) => void }) {
+  const R = copy.resetParts;
+  const [preview, setPreview] = useState<HeatResetPreview | null>(null);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  useEffect(() => {
+    let alive = true;
+    void previewResetHeat(heatId).then((r) => {
+      if (!alive) return;
+      if (r.ok) setPreview(r.preview);
+      else setError(r.message);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [heatId]);
+  const blocker = preview?.running ? copy.reset.errors.HEAT_RUNNING(preview.running) : null;
+  const needReason = Boolean(preview?.everPublic && reason.trim().length < 5);
+  return (
+    <Modal screen title={R.heat.title(title)} onClose={onClose}>
+      <p className="text-body font-medium">{R.heat.intro}</p>
+      {!preview && !error ? <p className="text-body font-medium text-beach-muted">{R.loading}</p> : null}
+      {preview ? (
+        <p data-testid="reset-heat-line" className="text-body font-semibold">
+          {R.heat.wipes(preview.counts.attempts, preview.counts.scores, preview.counts.published_results)}
+        </p>
+      ) : null}
+      {blocker ? (
+        <p role="alert" data-testid="reset-heat-blocked" className="rounded-lg border border-beach-failed bg-beach-surface px-2 py-1 text-body font-semibold">
+          {blocker}
+        </p>
+      ) : null}
+      {preview?.everPublic ? (
+        <>
+          <p className="text-small font-medium text-beach-muted">{R.reasonWhy}</p>
+          <Reason value={reason} onChange={setReason} />
+        </>
+      ) : null}
+      {error ? (
+        <p role="alert" data-testid="dialog-error" className="rounded-lg border border-beach-failed bg-beach-surface px-2 py-1 text-body font-semibold">
+          {error}
+        </p>
+      ) : null}
+      <Footer
+        canSave={Boolean(preview) && !blocker && !needReason && !pending}
+        saveLabel={pending ? R.working : R.heat.confirm}
+        onCancel={onClose}
+        onSave={() =>
+          start(async () => {
+            setError(null);
+            const r = await resetHeat({ heatId, reason: preview?.everPublic ? reason : undefined });
+            if (r.ok) onDone(R.heat.done(title));
             else setError(r.message);
           })
         }

@@ -26,7 +26,7 @@ export function stateOf(h: HeatRow, nowServer: number): HeatState {
 export type OrderItem = { heat: HeatRow; time: string | null; held: boolean; problem?: string };
 export type GoneItem = { gone: string; problem: string };
 export type TimerState = "running" | "paused" | "ended" | "held";
-export type DialogKind = "publish" | "reopen" | "rerun" | "hold" | null;
+export type DialogKind = "publish" | "reopen" | "rerun" | "hold" | "reset" | null;
 
 /**
  * Everything the head judge's console does to a heat, in one place, so the laptop layout and the phone's Control tab are two arrangements of the same

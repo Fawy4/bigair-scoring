@@ -18,14 +18,16 @@ test("Reset: says what blocks it, asks for the address, asks for a reason only b
   const firstLadderHeat = Object.values(ladder.heats)[0];
   await w.org.signIn(page, `/org/events/${w.eventId}`);
 
-  // a division locked before Reset existed has no saved starting draw: it is named, with what to do
+  // a division locked before Reset existed has no saved starting draw: it is named, and Reset says it will rebuild it from the current draw (it no longer refuses)
   await page.getByTestId("reset-open").click();
   const panel = page.getByTestId("reset-panel");
-  await expect(panel).toContainText("Ladder: unlock and lock the draw again first");
-  await expect(page.getByTestId("reset-confirm")).toBeDisabled();
+  await expect(page.getByTestId("reset-rebuild-note")).toContainText("Ladder");
+  await expect(page.getByTestId("reset-rebuild-note")).toContainText("a rebuild, not the saved copy");
+  await expect(panel).not.toContainText("A reset is not possible yet");
+  await expect(page.getByTestId("reset-confirm")).toBeDisabled(); // still needs the web address
   await page.getByRole("button", { name: "Cancel" }).click();
 
-  // the lock takes the copy (what unlock and lock again does): now Reset is possible
+  // the lock takes the copy (what unlock and lock again does): the note goes away
   const { data: dv } = await w.db.from("divisions").select("draw").eq("id", ladder.divisionId).single();
   await w.db.from("divisions").update({ draw_at_lock: dv!.draw as never }).eq("id", ladder.divisionId);
 
