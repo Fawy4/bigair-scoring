@@ -173,6 +173,11 @@ for (const vp of VIEWPORTS) {
         await owner.signIn(page, "/admin");
         for (const [name, path] of adminPages(w.org.orgId)) await pass(name, path);
       }
+      if (only) {
+        await context.close();
+        expect(problems, problems.join("\n")).toEqual([]);
+        return;
+      }
       // a platform owner inside an organisation: the slim strip (a fresh context: the full-page captures above leave a phone context changed)
       await context.close();
       const second = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, hasTouch: vp.touch, isMobile: vp.touch, deviceScaleFactor: 1 });
