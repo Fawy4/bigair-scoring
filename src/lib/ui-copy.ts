@@ -2833,12 +2833,6 @@ export const copy = {
     copyUnknown: (division: string) => `${division} was locked before Reset existed (or re-locked after its first heat), so its starting draw is not known and it cannot be reset.`,
   },
 
-  headDivision: {
-    label: "Division",
-    all: "All divisions",
-    live: "Live",
-  },
-
   headLive: {
     publishTitle: (heat: string) => `Publish ${heat}`,
     publishAsk: "Publish this result? The ladder fills the next heats' seats with it.",

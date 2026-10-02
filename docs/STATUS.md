@@ -745,7 +745,6 @@ See the click-through at the end of the pull request description.
 - **Heat length per round** is now a table: one row per round of the preview, each box pre-filled, with a note that a blank uses the division's heat length; if it ever has no rows it says why (including when the format has a problem).
 - **Previous / Next** at the foot of every step (Go live has only Previous). On the Event step Next saves the form first and stays with the error if it cannot.
 - **Number boxes** (every one outside the official practice panel) are as wide as their largest value, digits at the right; a test fails if a screen draws its own.
-- **Head judge console** shows one division at a time (tabs on a laptop, a drop-down on a phone), starting on the running or paused division, else the next heat's; remembered per device; a heat starting elsewhere only puts "Live" on that division's tab. Organisers also get "All divisions".
 - **Reset event and Restore** (own commits). Migrations `20261008100000_phase7a_reset.sql` and `20261008100100_phase7a_reset_purge.sql`, applied to the hosted project with `npm run db:apply`; types regenerated. See the "Choices" below.
 
 **Choices I made (please confirm or change)**
@@ -760,7 +759,8 @@ See the click-through at the end of the pull request description.
 **Not done / not verified**
 - **Wind call and big screen:** PR #14 merged; rebased onto main. The dashboard now holds Phase 6's wind-call control (as is) and the Big screen link (`/screen/<address>`, new tab). The greyed placeholders remain only in the design preview.
 - **Owed (decided 2 Oct 2026):** a rider who withdraws after the lock does not become a DNS walkover in the stored draw. Reset restores exactly the locked draw; late withdrawals as walkovers are not needed before the event.
-- **Overlap with Console v2:** this PR contains a head-console division picker (`head-page.tsx`, `heat-control.tsx`, `next-heat.ts`, `division-selector.tsx`). Console v2 owns the console selector; reconcile when either merges.
+- **Head console division picker: not in this PR.** The owner decided (2 Oct 2026) that Console v2 owns the console division selector, so it was removed from 7a-1; the head console is untouched here.
+- **Two red tests belong to other sessions' in-progress database changes on the shared project, and are left alone:** `rls.test.ts` table coverage lists `sim_baseline` and `sim_clock` (Simulator), and `rerun.test.ts` expects `HEAT_CANCELLED` where the database now answers `HEAT_ALREADY_RERUN` (Console v2). Neither is defined by a migration in this branch.
 - Trick base tab, the division's live-screen settings (inside More settings) and the Rider label editor's inner fields are not restyled; tables, Draw and Run order, the consistency sweep and the "one primary button per screen" test are 7a-2.
 - Every disabled control on the new screens explains itself; legacy screens still have plain disabled buttons (7a-2).
 - Not seen on a real phone or in the sun; checked in Chromium at 390 and 1440 px.
@@ -768,7 +768,7 @@ See the click-through at the end of the pull request description.
 
 **Test evidence**
 - `npm run typecheck` and `npm run lint` clean. `npm test`: 140 files, 1633 tests passed (main had 131 / 1574).
-- RLS (`npm run test:rls`, hosted dev project): new `tests/rls/reset.test.ts` 13 tests pass. Full run: 308 of 310 pass. The two failures are `rls.test.ts` "public live scores…" and `live-visibility.test.ts` "a held final leaks nowhere": they expect the old public live view, which Phase 6's migration (already applied to the shared project, PR #14) changed; PR #14's branch updates those tests. Not caused by this PR.
-- Playwright (throwaway organisations, removed by the ledger): new `shell-dashboard` (5), `live-division` (2), `event-reset` (2); updated `organiser`, `division-identification`, `draw-timetable`, `riders`, `admin`, `password-login`, `officials`, `registration`, `phase4a2-basics`, `live-console`. Final runs all green, except `join.spec` (2 tests, the public /join page, which this PR does not touch; PR #14 says they are stale). In the first big run several tests timed out on the hosted database under load; run again they passed.
+- RLS (`npm run test:rls`, hosted dev project): new `tests/rls/reset.test.ts` 13 tests pass; with Phase 6 merged, the two public-view tests that were red now pass. The two remaining reds belong to other sessions (see above).
+- Playwright (throwaway organisations, removed by the ledger): new `shell-dashboard` (5), `event-reset` (2); updated `organiser`, `division-identification`, `draw-timetable`, `riders`, `admin`, `password-login`, `officials`, `registration`, `phase4a2-basics`. After the rebase onto main (Phase 6 merged), `join.spec`, `shell-dashboard`, `event-reset` and `organiser` pass; one `shell-dashboard` test is timing-sensitive and passed on re-run. Several first-run timeouts were hosted-database load.
 
 **How to test (laptop, then phone)** — see the pull request description.
