@@ -157,7 +157,7 @@ export const copy = {
     organiserView: (org: string) => `Organiser view (${org})`,
     organiserViewNoOrg: "Organiser view",
     viewingAs: "Viewing as",
-    backToAdmin: (product: string) => `back to ${product} admin`,
+    backToAdmin: "Back to admin",
     ending: "Going back…",
     archivedNotice: "This organisation is archived: it is hidden from the public site. Its data is kept.",
   },

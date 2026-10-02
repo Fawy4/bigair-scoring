@@ -105,11 +105,12 @@ test("the owner runs the platform: create, invite, rename, open as organiser, ar
   await row.getByRole("button", { name: "Open as this organiser" }).click();
   await expect(page).toHaveURL(/\/org$/);
   const banner = page.getByRole("status").filter({ hasText: "Viewing as" });
-  await expect(banner).toContainText(`Viewing as E2E Renamed ${admin.run} — back to`);
+  await expect(banner).toContainText(`Viewing as E2E Renamed ${admin.run}`);
+  await expect(banner.getByRole("button", { name: "Back to admin" })).toBeVisible();
   await expect(page.getByRole("heading", { name: `E2E Renamed ${admin.run}: events` })).toBeVisible();
   await page.goto("/org/settings"); // the banner stays on every organiser screen
   await expect(banner).toBeVisible();
-  await banner.getByRole("button", { name: /back to .* admin/ }).click();
+  await banner.getByRole("button", { name: "Back to admin" }).click();
   await expect(page).toHaveURL(/\/admin$/);
   await page.goto("/org");
   await expect(page.getByRole("status").filter({ hasText: "Viewing as" })).toHaveCount(0);

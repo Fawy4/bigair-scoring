@@ -19,7 +19,7 @@ export async function OrgChrome({ children, event, steps }: { children: React.Re
       organisations={orgs.map((o) => ({ id: o.id, name: o.name }))}
       currentOrganisationId={current?.id ?? null}
       isPlatformAdmin={Boolean(platformRole)}
-      banner={impersonating ? <ImpersonationBanner orgName={impersonating.name} product={productName} /> : null}
+      banner={impersonating ? <ImpersonationBanner orgName={impersonating.name} /> : null}
       switchOrganisation={switchOrganisation}
       signOutAction="/auth/signout"
       event={event}
