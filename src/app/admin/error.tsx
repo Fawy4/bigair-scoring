@@ -12,9 +12,9 @@ export default function AdminError({ error, reset }: { error: Error & { digest?:
   const c = copy.admin.crash;
   return (
     <main role="alert" className="panel flex max-w-2xl flex-col gap-4">
-      <h1 className="text-3xl font-extrabold">{c.heading}</h1>
+      <h1>{c.heading}</h1>
       <p className="text-lg font-semibold">{c.text}</p>
-      <p className="text-lg font-bold">{error.digest ? c.reference(error.digest) : c.noReference}</p>
+      <p className="text-lg font-semibold">{error.digest ? c.reference(error.digest) : c.noReference}</p>
       <p className="font-semibold">{c.hint}</p>
       <div className="flex flex-wrap gap-3">
         <button type="button" className="btn btn-primary" onClick={reset}>

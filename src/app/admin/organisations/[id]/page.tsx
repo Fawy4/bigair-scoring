@@ -10,8 +10,8 @@ import { ArchivePanel, DeletePanel, InvitePanel, LogoPanel, RenamePanel } from "
 import { EventsPanel } from "./events-panel";
 import { formatEventDates } from "@/lib/platform/event-label";
 
-const th = "border-2 border-[#111] bg-[#eee] p-2 text-left";
-const td = "border-2 border-[#111] p-2";
+const th = "border border-beach-line bg-beach-surface p-2 text-left";
+const td = "border border-beach-line p-2";
 
 export default async function OrganisationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,11 +33,11 @@ export default async function OrganisationPage({ params }: { params: Promise<{ i
 
   return (
     <main className="flex max-w-3xl flex-col gap-8">
-      <Link href="/admin" className="font-bold underline">
+      <Link href="/admin" className="font-semibold underline">
         {c.backToList}
       </Link>
       <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-extrabold">{org.name}</h1>
+        <h1>{org.name}</h1>
         <p className="text-lg font-semibold">
           /{org.slug} · {org.plan} · <span aria-hidden="true">{status === "active" ? "●" : "⏸"}</span> <span>{c.status[status]}</span>
         </p>
@@ -52,7 +52,7 @@ export default async function OrganisationPage({ params }: { params: Promise<{ i
       </header>
 
       <section className="flex flex-col gap-3" aria-labelledby="members-h">
-        <h2 id="members-h" className="text-2xl font-extrabold">
+        <h2 id="members-h" className="text-2xl font-semibold">
           {c.membersHeading}
         </h2>
         {(members ?? []).length === 0 ? (

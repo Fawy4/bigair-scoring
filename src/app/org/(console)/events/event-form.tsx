@@ -9,6 +9,8 @@ import { registerNextGuard } from "@/components/org/next-guard";
 import { NumberField } from "@/components/org/number-field";
 import { SettingRow } from "@/components/org/setting-row";
 import { SettingsPanel } from "@/components/org/settings-panel";
+import { SummaryCard } from "@/components/org/summary-card";
+import { useShellLayout } from "@/components/org/layout-context";
 import { EVENT_ADVANCED } from "@/lib/settings/simple-fields";
 import { eventSentence } from "@/lib/org/event-sentence";
 import { usesLycras } from "@/lib/schemas/identification";
@@ -34,6 +36,7 @@ export interface EventFormInitial {
 
 export function EventForm({ initial, timeZones, schemes }: { initial: EventFormInitial; timeZones: string[]; schemes: IdentificationScheme[] }) {
   const router = useRouter();
+  const laptop = useShellLayout() === "laptop";
   const [form, setForm] = useState<EventFormValues>(initial.values);
   const [published, setPublished] = useState(initial.status === "published");
   const [slugTouched, setSlugTouched] = useState(initial.id !== null);
@@ -406,29 +409,41 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
     </div>
   );
 
+  const visibility = canPublishToggle ? (
+    <section className="org-new flex flex-col gap-1 rounded-card border border-beach-line p-4">
+      <h3 className="text-[14px] font-semibold">{T.visibility}</h3>
+      <label className="flex min-h-[var(--org-ctl)] items-center gap-3 text-body font-semibold">
+        <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
+        {T.published}
+      </label>
+      <p className="text-body font-medium text-beach-muted">{T.draftNote}</p>
+    </section>
+  ) : (
+    <p className="rounded-card border border-beach-line p-4 text-body font-semibold">{T.otherStatus(initial.status)}</p>
+  );
+
   return (
     <form
       className="flex min-w-0 flex-col gap-4"
       aria-label={T.formLabel}
+      data-layout={laptop ? "two-columns" : "one-column"}
       onSubmit={(e) => {
         e.preventDefault();
         save();
       }}
     >
-      <SettingsPanel testId="event-panel" sentenceTestId="event-sentence" title={T.basics} sentence={sentence} simple={simple} advanced={advanced} advancedCount={EVENT_ADVANCED.length} storageKey="bigair.org-more-event" footer={footer} />
-
-      {canPublishToggle ? (
-        <section className="org-new flex flex-col gap-1 rounded-card border border-beach-line p-4">
-          <h3 className="text-[14px] font-semibold">{T.visibility}</h3>
-          <label className="flex min-h-[var(--org-ctl)] items-center gap-3 text-body font-semibold">
-            <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
-            {T.published}
-          </label>
-          <p className="text-body font-medium text-beach-muted">{T.draftNote}</p>
-        </section>
-      ) : (
-        <p className="rounded-card border border-beach-line p-4 text-body font-semibold">{T.otherStatus(initial.status)}</p>
-      )}
+      <div className={laptop ? "grid grid-cols-[minmax(0,1fr)_320px] items-start gap-4" : "flex flex-col gap-4"}>
+        {laptop ? null : <SummaryCard sentence={sentence} testId="event-sentence" />}
+        <SettingsPanel testId="event-panel" title={T.basics} sentence={sentence} sentenceElsewhere simple={simple} advanced={advanced} advancedCount={EVENT_ADVANCED.length} storageKey="bigair.org-more-event" footer={footer} />
+        {laptop ? (
+          <div className="sticky top-[calc(var(--org-sticky-top,0px)+16px)] flex flex-col gap-4" data-testid="event-aside">
+            <SummaryCard sentence={sentence} testId="event-sentence" />
+            {visibility}
+          </div>
+        ) : (
+          visibility
+        )}
+      </div>
 
       {serverError ? (
         <p role="alert" className="rounded-card border border-beach-border p-4 text-body font-semibold text-beach-crash">

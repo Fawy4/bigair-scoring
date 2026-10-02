@@ -129,12 +129,13 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
       connection={badge.status}
       pending={badge.pending}
       onRetry={() => q.queue.retryFailed()}
+      clock={{ timezone: ctx.event.timezone, nowMs: nowServer }}
       details={feedOpen}
       detailsLabels={{ off: T.feed, on: T.feedOn }}
       onToggleDetails={() => setFeedOpen((v) => !v)}
     />
   ) : (
-    <ScreenHeader heatName={ctx.event.name} seat={viewer?.name ?? ""} remainingMs={0} showTimer={false} connection={badge.status} pending={badge.pending} onRetry={() => q.queue.retryFailed()} details={feedOpen} detailsLabels={{ off: T.feed, on: T.feedOn }} onToggleDetails={() => setFeedOpen((v) => !v)} />
+    <ScreenHeader heatName={ctx.event.name} seat={viewer?.name ?? ""} remainingMs={0} showTimer={false} connection={badge.status} pending={badge.pending} onRetry={() => q.queue.retryFailed()} clock={{ timezone: ctx.event.timezone, nowMs: nowServer }} details={feedOpen} detailsLabels={{ off: T.feed, on: T.feedOn }} onToggleDetails={() => setFeedOpen((v) => !v)} />
   );
 
   const noticeList =

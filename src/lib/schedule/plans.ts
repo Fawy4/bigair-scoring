@@ -74,3 +74,18 @@ export function todayIn(timeZone: string, now: number): string {
 
 /** The clock time now in the event's time zone, "HH:MM". */
 export const clockIn = (timeZone: string, now: number) => utcToLocalHHMM(now, timeZone);
+
+/** "Fri 2 Oct": a day (YYYY-MM-DD) the way people write it on the run-order and Go live screens. */
+export function shortDay(iso: string): string {
+  const d = new Date(`${iso}T12:00:00Z`);
+  const f = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", ...o }).format(d);
+  return `${f({ weekday: "short" })} ${f({ day: "numeric" })} ${f({ month: "short" })}`;
+}
+
+/** The days (in the event's time zone, oldest first) on which any of these heats really started. Empty while none has. */
+export function heatsRanOn(heatIds: readonly string[], lives: ReadonlyArray<{ heatId: string; startedAt?: string | null }>, timeZone: string): string[] {
+  const wanted = new Set(heatIds);
+  const days = new Set<string>();
+  for (const l of lives) if (l.startedAt && wanted.has(l.heatId)) days.add(todayIn(timeZone, Date.parse(l.startedAt)));
+  return [...days].sort();
+}

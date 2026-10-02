@@ -6,11 +6,11 @@ const T = copy.feedback;
 /** Filters by kind, status, screen and event: a plain form that reloads the page with the choices in the address. */
 export function NotesFilters({ action, values, pages, events }: { action: string; values: { tag?: string; status?: string; page?: string; event?: string }; pages: string[]; events: string[] }) {
   const select = (name: string, label: string, options: Array<[string, string]>, value?: string) => (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={`f-${name}`} className="font-bold">
+    <div className="flex min-w-0 max-w-full flex-col gap-1">
+      <label htmlFor={`f-${name}`} className="font-semibold">
         {label}
       </label>
-      <select id={`f-${name}`} name={name} defaultValue={value ?? ""}>
+      <select id={`f-${name}`} name={name} defaultValue={value ?? ""} className="max-w-full">
         <option value="">{T.filters.all}</option>
         {options.map(([v, l]) => (
           <option key={v} value={v}>

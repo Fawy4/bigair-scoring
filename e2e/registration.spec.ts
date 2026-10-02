@@ -200,10 +200,10 @@ test("public registration: closed shows the organiser's message, full says ask t
     // archived and draft events are not found
     await org.db.from("events").update({ archived_at: new Date().toISOString() }).eq("id", eventId);
     await p.goto(`/e/${slug}/register`);
-    await expect(p.getByText("This page could not be found")).toBeVisible();
+    await expect(p.getByRole("heading", { name: "This event isn't public" })).toBeVisible();
     await org.db.from("events").update({ archived_at: null, status: "draft" }).eq("id", eventId);
     await p.goto(`/e/${slug}/register`);
-    await expect(p.getByText("This page could not be found")).toBeVisible();
+    await expect(p.getByRole("heading", { name: "This event isn't public" })).toBeVisible();
   } finally {
     await phone.close();
     await org.cleanup();

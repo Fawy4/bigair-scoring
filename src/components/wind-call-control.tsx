@@ -65,7 +65,7 @@ export function WindCallControl({ eventId, bannerOn = true }: { eventId: string;
             aria-checked={pick === s}
             data-testid={`wind-${s}`}
             onClick={() => setPick(s)}
-            className={`min-h-[44px] rounded-xl border-2 px-3 text-sm font-semibold ${pick === s ? "border-current" : "border-current/30"}`}
+            className={`min-h-[44px] rounded-xl border px-3 text-sm font-semibold ${pick === s ? "border-current" : "border-current/30"}`}
           >
             <span aria-hidden className="mr-2 inline-block size-3 rounded-full align-middle" style={{ background: SWATCH[s] }} />
             {T.states[s]}
@@ -74,13 +74,13 @@ export function WindCallControl({ eventId, bannerOn = true }: { eventId: string;
       </div>
       <label className="flex flex-col gap-1 text-sm font-semibold">
         {T.message}
-        <input value={message} maxLength={140} onChange={(e) => setMessage(e.target.value)} placeholder={T.messagePlaceholder} className="min-h-[44px] rounded-lg border-2 border-current/40 bg-transparent px-2 font-medium" />
+        <input value={message} maxLength={140} onChange={(e) => setMessage(e.target.value)} placeholder={T.messagePlaceholder} className="min-h-[44px] rounded-lg border border-current/40 bg-transparent px-2 font-medium" />
       </label>
       <div className="flex flex-wrap gap-2">
-        <button type="button" data-testid="wind-set" disabled={busy} onClick={() => send(pick)} className="min-h-[44px] rounded-xl border-2 border-current px-4 text-sm font-semibold">
+        <button type="button" data-testid="wind-set" disabled={busy} onClick={() => send(pick)} className="min-h-[44px] rounded-xl border border-current px-4 text-sm font-semibold">
           {busy ? T.setting : T.set}
         </button>
-        <button type="button" data-testid="wind-clear" disabled={busy || !current} onClick={() => send("clear")} className="min-h-[44px] rounded-xl border-2 border-current/40 px-4 text-sm font-semibold">
+        <button type="button" data-testid="wind-clear" disabled={busy || !current} onClick={() => send("clear")} className="min-h-[44px] rounded-xl border border-current/40 px-4 text-sm font-semibold">
           {T.clear}
         </button>
       </div>

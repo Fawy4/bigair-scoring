@@ -181,3 +181,23 @@ export async function removeEntry(entryId: string): Promise<Result> {
   if (error) return fail(error.code === "23503" ? copy.riders.inDraw : dbError(error));
   return data?.length ? { ok: true } : fail(T.notAllowed);
 }
+
+/** The ticked riders' status in one step (taking part / withdrawn / no-show). */
+export async function setEntriesStatus(entryIds: string[], status: "confirmed" | "withdrawn" | "no_show"): Promise<Result<{ changed: number }>> {
+  const ids = z.array(Uuid).min(1).max(500).safeParse(entryIds);
+  if (!ids.success || !["confirmed", "withdrawn", "no_show"].includes(status)) return fail(T.failed);
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("entries").update({ status }).in("id", ids.data).select("id");
+  if (error) return fail(dbError(error));
+  return data?.length ? { ok: true, changed: data.length } : fail(T.notAllowed);
+}
+
+/** Takes the ticked riders out of the division. All or none: one rider already in a heat stops the whole step. */
+export async function removeEntries(entryIds: string[]): Promise<Result<{ removed: number }>> {
+  const ids = z.array(Uuid).min(1).max(500).safeParse(entryIds);
+  if (!ids.success) return fail(T.failed);
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("entries").delete().in("id", ids.data).select("id");
+  if (error) return fail(error.code === "23503" ? copy.riders.inDraw : dbError(error));
+  return data?.length ? { ok: true, removed: data.length } : fail(T.notAllowed);
+}

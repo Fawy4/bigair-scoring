@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { runLine, shortHeat, shortRound, shortTitle } from "./run-line";
 
-// Console v2 §1: one short line per heat in the run order, never truncated: "R1 · H2 · 14:05 · Ended".
+// One line per heat in the run order, never truncated: "R1 · H2 · planned 14:05 · started 14:11 · Ended", or "R1 · H3 · est. 14:35" before it starts.
 const h = (number: number, extra: Partial<{ name: string | null; number_suffix: string | null; started_at: string | null }> = {}) => ({ name: null, number, number_suffix: null, started_at: null, ...extra });
 const r1 = { name: "Round 1", short_name: "R1" };
 
@@ -26,8 +26,14 @@ describe("short names", () => {
 
 describe("one line of the run order", () => {
   const base = { round: r1, startedHhmm: null, estimatedHhmm: null, held: false, statusWord: null };
-  it("a heat that has ended: round, heat, the time it started, the state", () => {
-    expect(runLine({ ...base, heat: h(2, { started_at: "2026-10-03T11:05:00Z" }), startedHhmm: "14:05", statusWord: "Ended" })).toBe("R1 · H2 · 14:05 · Ended");
+  it("a heat that has started carries both times: planned in the plan as written, started for real", () => {
+    expect(runLine({ ...base, heat: h(2, { started_at: "2026-10-03T11:11:00Z" }), startedHhmm: "14:11", plannedHhmm: "14:05", statusWord: "Ended" })).toBe("R1 · H2 · planned 14:05 · started 14:11 · Ended");
+  });
+  it("without a planned time (a heat outside the run order) it says when it started", () => {
+    expect(runLine({ ...base, heat: h(2, { started_at: "2026-10-03T11:05:00Z" }), startedHhmm: "14:05", statusWord: "Ended" })).toBe("R1 · H2 · started 14:05 · Ended");
+  });
+  it("a heat that has not started shows only the estimate, even when the plan said another time", () => {
+    expect(runLine({ ...base, heat: h(3), plannedHhmm: "14:20", estimatedHhmm: "14:35" })).toBe("R1 · H3 · est. 14:35");
   });
   it("a heat not started yet shows the run order's estimate, marked as one", () => {
     expect(runLine({ ...base, heat: h(3), estimatedHhmm: "14:20" })).toBe("R1 · H3 · est. 14:20");
@@ -39,10 +45,10 @@ describe("one line of the run order", () => {
   it("a re-run reads H3R and keeps its state word", () => {
     expect(runLine({ ...base, heat: h(3, { number_suffix: "R", name: "Heat 3 re-run" }), estimatedHhmm: "14:40", statusWord: "Cancelled" })).toBe("R1 · H3R · est. 14:40 · Cancelled");
   });
-  it("is short: a normal line is under 26 characters and even the longest (a second re-run, under review) under 36, so the narrow column never needs more than two lines", () => {
-    const normal = runLine({ ...base, heat: h(2, { started_at: "x" }), startedHhmm: "14:05", statusWord: "Ended" });
-    const longest = runLine({ ...base, heat: h(12, { number_suffix: "R2", name: "Heat 12 re-run 2", started_at: "x" }), startedHhmm: "14:05", statusWord: "Under review" });
-    expect(normal.length).toBeLessThan(26);
-    expect(longest.length).toBeLessThan(36);
+  it("stays short enough to wrap on two lines of the narrow column: a normal started line under 50 characters, the longest (second re-run, under review) under 66", () => {
+    const normal = runLine({ ...base, heat: h(2, { started_at: "x" }), startedHhmm: "14:11", plannedHhmm: "14:05", statusWord: "Ended" });
+    const longest = runLine({ ...base, heat: h(12, { number_suffix: "R2", name: "Heat 12 re-run 2", started_at: "x" }), startedHhmm: "14:11", plannedHhmm: "14:05", statusWord: "Under review" });
+    expect(normal.length).toBeLessThan(50);
+    expect(longest.length).toBeLessThan(66);
   });
 });

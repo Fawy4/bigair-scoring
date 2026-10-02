@@ -27,7 +27,13 @@ import {
   type HeatInfo,
   type HeatLive,
 } from "@/lib/engine/schedule";
-import { clockIn, rowToPlan, type PlanRow } from "@/lib/schedule/plans";
+import { clockIn, heatsRanOn, rowToPlan, shortDay, type PlanRow } from "@/lib/schedule/plans";
+import { driftOf, plannedTimetable } from "@/lib/schedule/drift";
+import { ClockText } from "@/components/clock-text";
+import { DriftBadge } from "@/components/drift-badge";
+import { Banner } from "@/components/ui/banner";
+import { Check } from "lucide-react";
+import { Pill } from "@/components/live/pill";
 import { drawTimetablePng } from "@/lib/schedule/export-png";
 import type { SchedulePlan } from "@/lib/schemas/schedule";
 import { toast } from "@/hooks/use-toast";
@@ -44,6 +50,8 @@ export interface ScheduleProps {
   timezone: string;
   days: string[];
   today: string;
+  /** The server's time when the page was made: the clock keeps its own offset from it. */
+  serverNow: string;
   logoUrl: string | null;
   readyCallMin: number;
   infos: HeatInfo[];
@@ -54,13 +62,13 @@ export interface ScheduleProps {
 function UnscheduledHeat({ h, onAdd, disabled }: { h: HeatInfo; onAdd: () => void; disabled: boolean }) {
   const drag = useDraggable({ id: `u:${h.heatId}`, disabled });
   return (
-    <li ref={drag.setNodeRef} className={cn("flex items-center gap-2 rounded-lg border-2 border-[#111] bg-white px-2 py-1", drag.isDragging ? "opacity-40" : "")} data-testid="unscheduled-heat">
-      <button type="button" className="btn !min-h-[40px] !px-2" aria-label={T.dragHeat(h.division, h.heat)} {...drag.listeners} {...drag.attributes} disabled={disabled}>
+    <li ref={drag.setNodeRef} className={cn("flex items-center gap-2 rounded-lg border border-beach-line bg-beach-bg px-2 py-1", drag.isDragging ? "opacity-40" : "")} data-testid="unscheduled-heat">
+      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-2" aria-label={T.dragHeat(h.division, h.heat)} {...drag.listeners} {...drag.attributes} disabled={disabled}>
         ⠿
       </button>
-      <span className="min-w-0 flex-1 font-bold">{h.heat}</span>
+      <span className="min-w-0 flex-1 font-semibold">{h.heat}</span>
       <span className="text-sm font-semibold">{T.lengthShort(h.warmUpMin, h.durationMin)}</span>
-      <button type="button" className="btn !min-h-[40px]" disabled={disabled} aria-label={T.addHeatLabel(h.division, h.round, h.heat)} onClick={onAdd}>
+      <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={disabled} aria-label={T.addHeatLabel(h.division, h.round, h.heat)} onClick={onAdd}>
         {T.add}
       </button>
     </li>
@@ -76,17 +84,17 @@ function RowShell({ id, problem, children }: { id: string; problem?: string; chi
         drop.setNodeRef(el);
         drag.setNodeRef(el);
       }}
-      className={cn("flex flex-col gap-1 rounded-lg border-2 border-[#111] bg-white p-2", drop.isOver ? "bg-[#e5e7eb]" : "", drag.isDragging ? "opacity-40" : "")}
+      className={cn("flex flex-col gap-1 rounded-lg border border-beach-line bg-beach-bg p-2", drop.isOver ? "bg-beach-surface" : "", drag.isDragging ? "opacity-40" : "")}
       data-testid="run-row"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="btn !min-h-[40px] !px-2" aria-label={T.dragRow} {...drag.listeners} {...drag.attributes}>
+        <button type="button" className="btn !min-h-[var(--org-ctl)] !px-2" aria-label={T.dragRow} {...drag.listeners} {...drag.attributes}>
           ⠿
         </button>
         {children}
       </div>
       {problem ? (
-        <p role="note" className="rounded border-2 border-[#111] bg-[#fde68a] px-2 py-1 text-sm font-bold" data-testid="row-problem">
+        <p role="note" className="rounded border border-beach-line bg-beach-tint-grade0 px-2 py-1 text-sm font-semibold" data-testid="row-problem">
           {T.rowProblem(problem)}
         </p>
       ) : null}
@@ -133,6 +141,8 @@ export function ScheduleManager(props: ScheduleProps) {
     return computeTimetable(ok.plan, lives, { timezone, eventDay: day, defaults: ok.defaults, ...(now !== undefined ? { now: new Date(now).toISOString() } : {}) });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `now` is read when the plan changes, not every render
   }, [ok, lives, timezone, day]);
+  // today's plan only: how far the next heat that has not started is from where the plan as written put it
+  const drift = useMemo(() => (ok && table && isToday ? driftOf(plannedTimetable(ok.plan, lives, { timezone, eventDay: day, defaults: ok.defaults }), table) : null), [ok, table, isToday, lives, timezone, day]);
   const startedIds = useMemo(() => new Set(lives.filter((l) => l.startedAt).map((l) => l.heatId)), [lives]);
   const infoById = useMemo(() => new Map(infos.map((i) => [i.heatId, i])), [infos]);
   const groups = plan ? unscheduledHeats(infos, plan) : [];
@@ -203,6 +213,7 @@ export function ScheduleManager(props: ScheduleProps) {
     toast({ title: T.pngDone });
   }
 
+  const ranOn = plan ? heatsRanOn(plan.items.flatMap((i) => (i.kind === "heat" && i.heatId ? [i.heatId] : [])), lives, timezone) : [];
   const liveStarted = (itemId: string) => {
     const item = plan?.items.find((i) => i.id === itemId);
     return item?.kind === "heat" && startedIds.has(item.heatId!);
@@ -210,86 +221,87 @@ export function ScheduleManager(props: ScheduleProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="panel flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="day-pick" className="font-bold">
-            {T.dayPick}
-          </label>
-          <select id="day-pick" value={day} onChange={(e) => { setDay(e.target.value); setPlanId(null); }}>
-            {days.map((d) => (
-              <option key={d} value={d}>
-                {T.dayLabel(d)}
-              </option>
-            ))}
-          </select>
-        </div>
-        {dayPlans.length > 0 ? (
+      <section aria-label={T.plansLabel} className="flex flex-col gap-3 rounded-card border border-beach-line p-3" data-testid="plan-tools">
+      <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
-            <label htmlFor="plan-pick" className="font-bold">
-              {T.planPick}
+            <label htmlFor="day-pick" className="text-small font-semibold">
+              {T.dayPick}
             </label>
-            <select id="plan-pick" value={currentRow?.id ?? ""} onChange={(e) => setPlanId(e.target.value)}>
-              {dayPlans.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                  {p.active ? ` (${T.activeTag})` : ""}
+            <select id="day-pick" value={day} onChange={(e) => { setDay(e.target.value); setPlanId(null); }}>
+              {days.map((d) => (
+                <option key={d} value={d}>
+                  {T.dayLabel(d)}
                 </option>
               ))}
             </select>
           </div>
-        ) : null}
-        {currentRow && !currentRow.active ? (
-          <ConfirmButton
-            label={T.activate}
-            question={T.activateQuestion(currentRow.name)}
-            confirmLabel={T.activateYes}
-            cancelLabel={copy.common.cancel}
-            pending={pending}
-            onConfirm={() =>
-              act(() => activatePlan(currentRow.id), () => {
-                setPlans((ps) => ps.map((p) => (p.day === day ? { ...p, active: p.id === currentRow.id } : p)));
-                toast({ title: T.activated(currentRow.name) });
-              })
-            }
-          />
-        ) : currentRow ? (
-          <span className="font-extrabold">{T.activeTag}</span>
-        ) : null}
-        {currentRow && !currentRow.active ? (
-          <ConfirmButton label={T.deletePlan} question={T.deleteQuestion(currentRow.name)} confirmLabel={T.deleteYes} cancelLabel={copy.common.cancel} danger pending={pending} onConfirm={() => act(() => deletePlanAction(currentRow.id), () => { setPlans((ps) => ps.filter((p) => p.id !== currentRow.id)); setPlanId(null); })} />
-        ) : null}
-      </div>
-
-      {currentRow ? (
-        <div className="panel flex flex-wrap items-start gap-3" data-testid="plan-actuals">
-          <ClearActualsButton planId={currentRow.id} planName={currentRow.name} {...planActuals(currentRow)} />
+          {dayPlans.length > 0 ? (
+            <div className="flex flex-col gap-1">
+              <label htmlFor="plan-pick" className="text-small font-semibold">
+                {T.planPick}
+              </label>
+              <select id="plan-pick" value={currentRow?.id ?? ""} onChange={(e) => setPlanId(e.target.value)}>
+                {dayPlans.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                    {p.active ? ` (${T.activeTag})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          {currentRow && !currentRow.active ? (
+            <ConfirmButton
+              label={T.activate}
+              question={T.activateQuestion(currentRow.name)}
+              confirmLabel={T.activateYes}
+              cancelLabel={copy.common.cancel}
+              pending={pending}
+              onConfirm={() =>
+                act(() => activatePlan(currentRow.id), () => {
+                  setPlans((ps) => ps.map((p) => (p.day === day ? { ...p, active: p.id === currentRow.id } : p)));
+                  toast({ title: T.activated(currentRow.name) });
+                })
+              }
+            />
+          ) : currentRow ? (
+            <Pill icon={Check} tone="live">{T.activeTag}</Pill>
+          ) : null}
+          {currentRow && !currentRow.active ? (
+            <ConfirmButton label={T.deletePlan} question={T.deleteQuestion(currentRow.name)} confirmLabel={T.deleteYes} cancelLabel={copy.common.cancel} danger pending={pending} onConfirm={() => act(() => deletePlanAction(currentRow.id), () => { setPlans((ps) => ps.filter((p) => p.id !== currentRow.id)); setPlanId(null); })} />
+          ) : null}
         </div>
-      ) : null}
 
-      {currentRow ? (
-        <div className="panel flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="dup-name" className="font-bold">
-              {T.duplicateName}
-            </label>
-            <input id="dup-name" value={dupName} onChange={(e) => setDupName(e.target.value)} placeholder={T.duplicatePlaceholder} className="w-72" />
+        {currentRow ? (
+          <div className="flex flex-wrap items-start gap-3" data-testid="plan-actuals">
+            <ClearActualsButton planId={currentRow.id} planName={currentRow.name} {...planActuals(currentRow)} />
           </div>
-          <button type="button" className="btn" disabled={pending || dupName.trim().length < 2} onClick={() => act(() => duplicatePlanAction(currentRow.id, dupName), (r) => { setPlans((ps) => [...ps, r.row]); setPlanId(r.row.id); setDupName(""); toast({ title: T.duplicated(r.row.name) }); })}>
-            {T.duplicate}
+        ) : null}
+        {currentRow ? (
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="dup-name" className="text-small font-semibold">
+                {T.duplicateName}
+              </label>
+              <input id="dup-name" value={dupName} onChange={(e) => setDupName(e.target.value)} placeholder={T.duplicatePlaceholder} className="w-72" />
+            </div>
+            <button type="button" className="btn" disabled={pending || dupName.trim().length < 2} onClick={() => act(() => duplicatePlanAction(currentRow.id, dupName), (r) => { setPlans((ps) => [...ps, r.row]); setPlanId(r.row.id); setDupName(""); toast({ title: T.duplicated(r.row.name) }); })}>
+              {T.duplicate}
+            </button>
+          </div>
+        ) : null}
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="new-plan" className="text-small font-semibold">
+              {T.newPlanName}
+            </label>
+            <input id="new-plan" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={T.newPlanPlaceholder} className="w-72" />
+          </div>
+          <button type="button" className="btn" disabled={pending || newName.trim().length < 2} onClick={() => act(() => createPlan(eventId, day, newName), (r) => { setPlans((ps) => [...ps, r.row]); setPlanId(r.row.id); setNewName(""); })}>
+            {T.newPlan}
           </button>
         </div>
-      ) : null}
-      <div className="panel flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="new-plan" className="font-bold">
-            {T.newPlanName}
-          </label>
-          <input id="new-plan" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={T.newPlanPlaceholder} className="w-72" />
-        </div>
-        <button type="button" className="btn" disabled={pending || newName.trim().length < 2} onClick={() => act(() => createPlan(eventId, day, newName), (r) => { setPlans((ps) => [...ps, r.row]); setPlanId(r.row.id); setNewName(""); })}>
-          {T.newPlan}
-        </button>
-      </div>
+      </section>
 
       {error ? (
         <p role="alert" className="panel field-error" data-testid="run-error">
@@ -301,17 +313,22 @@ export function ScheduleManager(props: ScheduleProps) {
 
       {plan && table ? (
         <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={onDragEnd}>
-          <div className="panel flex flex-wrap items-center gap-x-6 gap-y-2" data-testid="run-header">
-            <span className="text-xl font-extrabold">{plan.name}</span>
-            <span className="text-lg font-bold" data-testid="run-finish">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-card border border-beach-line bg-beach-surface px-4 py-3" data-testid="run-header">
+            <span className="text-[16px] font-semibold">{plan.name}</span>
+            <ClockText timezone={timezone} serverNow={props.serverNow} />
+            <DriftBadge drift={drift} />
+            <span className="text-body font-semibold" data-testid="run-finish">
               {table.finish ? T.finish(table.finish) : T.noFinish}
             </span>
-            <span className="text-lg font-bold" data-testid="run-left">
+            <span className="text-body font-semibold" data-testid="run-left">
               {T.heatsLeft(table.heatsLeft)}
             </span>
             {table.rows.find((r) => r.warmUpStart) ? <span className="font-semibold">{T.firstWarmUp(table.rows.find((r) => r.warmUpStart)!.warmUpStart!)}</span> : null}
-            {plan.hold ? <span className="font-extrabold" data-testid="run-hold">{T.onHold(clockIn(timezone, Date.parse(plan.hold.since)))}</span> : null}
+            {plan.hold ? <span className="font-semibold" data-testid="run-hold">{T.onHold(clockIn(timezone, Date.parse(plan.hold.since)))}</span> : null}
           </div>
+          {ranOn.length > 0 ? (
+            <Banner data-testid="heats-ran-on">{T.heatsRanOn(ranOn.map(shortDay))}</Banner>
+          ) : null}
           {table.warnings.length > 0 ? (
             <ul className="panel list-disc pl-8 font-semibold" aria-label={T.warningsLabel} data-testid="run-warnings">
               {table.warnings.map((w) => (
@@ -322,15 +339,15 @@ export function ScheduleManager(props: ScheduleProps) {
 
           <div className="grid gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
             <section className="flex flex-col gap-3" aria-label={T.leftHeading}>
-              <h2 className="text-xl font-extrabold">{T.leftHeading}</h2>
+              <h2 className="text-xl font-semibold">{T.leftHeading}</h2>
               {groups.length === 0 ? <p className="font-semibold">{T.allScheduled}</p> : null}
               {groups.map((g) => (
                 <div key={`${g.division}|${g.round}`} className="flex flex-col gap-1" data-testid="unscheduled-group">
                   <div className="flex items-center gap-2">
-                    <h3 className="min-w-0 flex-1 font-extrabold">
+                    <h3 className="min-w-0 flex-1 font-semibold">
                       {g.division} · {g.round}
                     </h3>
-                    <button type="button" className="btn !min-h-[40px]" disabled={pending} onClick={() => mutate((p) => addHeatsToPlan(p, g.heats.map((h) => h.heatId)))}>
+                    <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={pending} onClick={() => mutate((p) => addHeatsToPlan(p, g.heats.map((h) => h.heatId)))}>
                       {T.addAll(g.heats.length)}
                     </button>
                   </div>
@@ -344,24 +361,24 @@ export function ScheduleManager(props: ScheduleProps) {
             </section>
 
             <section className="flex min-w-0 flex-col gap-3" aria-label={T.rightHeading}>
-              <h2 className="text-xl font-extrabold">{T.rightHeading}</h2>
+              <h2 className="text-xl font-semibold">{T.rightHeading}</h2>
               <div className="panel flex flex-wrap items-end gap-3">
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="break-label" className="text-sm font-bold">{T.breakLabel}</label>
+                  <label htmlFor="break-label" className="text-sm font-semibold">{T.breakLabel}</label>
                   <input id="break-label" value={breakLabel} onChange={(e) => setBreakLabel(e.target.value)} placeholder={T.breakPlaceholder} className="w-44" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="break-min" className="text-sm font-bold">{T.breakMinutes}</label>
+                  <label htmlFor="break-min" className="text-sm font-semibold">{T.breakMinutes}</label>
                   <NumberField id="break-min" label={T.breakMinutes} min={1} max={999} value={breakMin} onChange={setBreakMin} />
                 </div>
                 <button type="button" className="btn" disabled={pending} onClick={() => mutate((p) => addBreak(p, { label: breakLabel, durationMin: breakMin }))}>{T.addBreak}</button>
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="note-text" className="text-sm font-bold">{T.noteLabel}</label>
+                  <label htmlFor="note-text" className="text-sm font-semibold">{T.noteLabel}</label>
                   <input id="note-text" value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder={T.notePlaceholder} className="w-44" />
                 </div>
                 <button type="button" className="btn" disabled={pending} onClick={() => mutate((p) => addNote(p, noteText))}>{T.addNote}</button>
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="all-breaks" className="text-sm font-bold">{T.allBreaks}</label>
+                  <label htmlFor="all-breaks" className="text-sm font-semibold">{T.allBreaks}</label>
                   <NumberField id="all-breaks" label={T.allBreaks} min={0} max={999} value={allBreaks} onChange={setAllBreaks} />
                 </div>
                 <button type="button" className="btn" disabled={pending} onClick={() => mutate((p) => p.items.reduce((acc, i) => (i.kind === "heat" && !liveStarted(i.id) ? setBreakAfter(acc, i.id, allBreaks, lives) : acc), p))}>{T.applyAllBreaks}</button>
@@ -373,56 +390,56 @@ export function ScheduleManager(props: ScheduleProps) {
                   const started = liveStarted(r.itemId);
                   return (
                     <RowShell key={r.itemId} id={r.itemId} problem={r.issue ? r.warnings[0] : undefined}>
-                      <span className="w-7 text-center font-extrabold" aria-hidden>{idx + 1}</span>
+                      <span className="w-7 text-center font-semibold" aria-hidden>{idx + 1}</span>
                       {r.kind === "heat" ? (
-                        <span className="min-w-0 flex-1 basis-56 font-bold" data-testid="row-label">
+                        <span className="min-w-0 flex-1 basis-56 font-semibold" data-testid="row-label">
                           {[r.division, r.round, r.heat].filter(Boolean).join(" · ") || T.goneHeat}
                         </span>
                       ) : (
                         <input
                           aria-label={T.rowLabel(idx + 1)}
-                          className="min-w-0 flex-1 basis-56 !font-bold"
+                          className="min-w-0 flex-1 basis-56 !font-semibold"
                           defaultValue={r.label}
                           key={r.label}
                           onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== r.label && mutate((p) => renameItem(p, r.itemId, e.target.value))}
                         />
                       )}
-                      {r.kind === "heat" && r.warmUpMin > 0 ? <span className="text-sm font-bold" data-testid="row-warmup">{T.warmUpAt(r.warmUpStart ?? "–")}</span> : null}
+                      {r.kind === "heat" && r.warmUpMin > 0 ? <span className="text-sm font-semibold" data-testid="row-warmup">{T.warmUpAt(r.warmUpStart ?? "–")}</span> : null}
                       {r.kind !== "note" ? (
                         pinning === r.itemId ? (
                           <span className="flex items-center gap-1">
                             <input type="time" aria-label={T.pinTimeLabel(idx + 1)} value={pinTime} onChange={(e) => setPinTime(e.target.value)} className="w-32" />
-                            <button type="button" className="btn btn-primary !min-h-[40px]" disabled={!pinTime} onClick={() => { mutate((p) => setPin(p, r.itemId, pinTime, lives)); setPinning(null); }}>{T.pin}</button>
-                            {r.pinned ? <button type="button" className="btn !min-h-[40px]" onClick={() => { mutate((p) => setPin(p, r.itemId, null, lives)); setPinning(null); }}>{T.unpin}</button> : null}
-                            <button type="button" className="btn !min-h-[40px]" onClick={() => setPinning(null)}>{copy.common.cancel}</button>
+                            <button type="button" className="btn btn-primary !min-h-[var(--org-ctl)]" disabled={!pinTime} onClick={() => { mutate((p) => setPin(p, r.itemId, pinTime, lives)); setPinning(null); }}>{T.pin}</button>
+                            {r.pinned ? <button type="button" className="btn !min-h-[var(--org-ctl)]" onClick={() => { mutate((p) => setPin(p, r.itemId, null, lives)); setPinning(null); }}>{T.unpin}</button> : null}
+                            <button type="button" className="btn !min-h-[var(--org-ctl)]" onClick={() => setPinning(null)}>{copy.common.cancel}</button>
                           </span>
                         ) : (
-                          <button type="button" className="btn !min-h-[40px]" disabled={started} aria-label={T.startButton(idx + 1, r.start ?? "–")} data-testid="row-start" onClick={() => { setPinning(r.itemId); setPinTime(r.start ?? ""); }}>
+                          <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={started} aria-label={T.startButton(idx + 1, r.start ?? "–")} data-testid="row-start" onClick={() => { setPinning(r.itemId); setPinTime(r.start ?? ""); }}>
                             {r.pinned ? "📌 " : ""}
                             {r.start ?? "–"}
                           </button>
                         )
                       ) : (
-                        <span className="font-bold">{r.start ?? "–"}</span>
+                        <span className="font-semibold">{r.start ?? "–"}</span>
                       )}
                       {r.kind !== "note" ? (
-                        <label className="flex items-center gap-1 text-sm font-bold">
+                        <label className="flex items-center gap-1 text-sm font-semibold">
                           {T.durationShort}
                           <NumberField label={T.durationLabel(idx + 1)} min={1} max={999} step={0.5} commit="blur" disabled={started} value={r.durationMin} onChange={(n) => mutate((p) => setDuration(p, r.itemId, n, lives))} />
                         </label>
                       ) : null}
-                      {r.kind !== "note" ? <span className="text-sm font-bold" data-testid="row-end">{T.endAt(r.end ?? "–")}</span> : null}
+                      {r.kind !== "note" ? <span className="text-sm font-semibold" data-testid="row-end">{T.endAt(r.end ?? "–")}</span> : null}
                       {r.kind === "heat" ? (
-                        <label className="flex items-center gap-1 text-sm font-bold">
+                        <label className="flex items-center gap-1 text-sm font-semibold">
                           {T.breakShort}
                           <NumberField label={T.breakAfterLabel(idx + 1)} min={0} max={999} step={0.5} commit="blur" value={r.breakAfterMin ?? null} placeholder={String(r.breakAfterMin ?? "")} onChange={(n) => mutate((p) => setBreakAfter(p, r.itemId, n, lives))} />
                         </label>
                       ) : null}
-                      <span className="text-sm font-extrabold" data-testid="row-status">{T.status[r.status]}</span>
-                      <button type="button" className="btn !min-h-[40px] !px-3" disabled={pending || started || idx === 0} aria-label={T.moveUp(idx + 1)} onClick={() => mutate((p) => nudgeItem(p, r.itemId, -1, lives))}>↑</button>
-                      <button type="button" className="btn !min-h-[40px] !px-3" disabled={pending || started || idx === table.rows.length - 1} aria-label={T.moveDown(idx + 1)} onClick={() => mutate((p) => nudgeItem(p, r.itemId, 1, lives))}>↓</button>
-                      {r.kind === "heat" && !started ? <button type="button" className="btn !min-h-[40px] !px-3" aria-expanded={openRow === r.itemId} onClick={() => setOpenRow(openRow === r.itemId ? null : r.itemId)}>⋯</button> : null}
-                      <button type="button" className="btn !min-h-[40px] !px-3" disabled={pending || started} aria-label={T.removeRow(idx + 1)} onClick={() => mutate((p) => removeItem(p, r.itemId, lives))}>✕</button>
+                      <span className="text-sm font-semibold" data-testid="row-status">{T.status[r.status]}</span>
+                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={pending || started || idx === 0} aria-label={T.moveUp(idx + 1)} onClick={() => mutate((p) => nudgeItem(p, r.itemId, -1, lives))}>↑</button>
+                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={pending || started || idx === table.rows.length - 1} aria-label={T.moveDown(idx + 1)} onClick={() => mutate((p) => nudgeItem(p, r.itemId, 1, lives))}>↓</button>
+                      {r.kind === "heat" && !started ? <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" aria-expanded={openRow === r.itemId} onClick={() => setOpenRow(openRow === r.itemId ? null : r.itemId)}>⋯</button> : null}
+                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={pending || started} aria-label={T.removeRow(idx + 1)} onClick={() => mutate((p) => removeItem(p, r.itemId, lives))}>✕</button>
                     </RowShell>
                   );
                 })}
@@ -432,7 +449,7 @@ export function ScheduleManager(props: ScheduleProps) {
                 const it = plan.items.find((i) => i.id === r.itemId);
                 return (
                   <div key={`x-${r.itemId}`} className="panel flex flex-wrap items-end gap-3">
-                    <label className="flex flex-col gap-1 font-bold">
+                    <label className="flex flex-col gap-1 font-semibold">
                       {T.warmUpRow}
                       <NumberField label={T.warmUpRow} min={0} max={999} step={0.5} commit="blur" value={r.warmUpMin} onChange={(n) => mutate((p) => setWarmUp(p, r.itemId, n, lives))} />
                     </label>
@@ -442,13 +459,13 @@ export function ScheduleManager(props: ScheduleProps) {
               })}
 
               <div className="panel flex flex-col gap-3" data-testid="live-overrides">
-                <h3 className="text-lg font-extrabold">{T.liveHeading}</h3>
+                <h3 className="text-lg font-semibold">{T.liveHeading}</h3>
                 <p className="text-sm font-semibold">{T.liveNote}</p>
                 <div className="flex flex-wrap items-end gap-3">
                   {plan.hold ? (
                     <>
                       <div className="flex flex-col gap-1">
-                        <label htmlFor="resume-at" className="text-sm font-bold">{T.resumeAt}</label>
+                        <label htmlFor="resume-at" className="text-sm font-semibold">{T.resumeAt}</label>
                         <input id="resume-at" type="time" value={resumeAt} onChange={(e) => setResumeAt(e.target.value)} className="w-32" />
                       </div>
                       <button type="button" className="btn btn-primary" disabled={pending || !resumeAt} onClick={() => currentRow && live(() => resumePlanAtAction(currentRow.id, resumeAt))}>{T.resume}</button>

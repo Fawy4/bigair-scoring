@@ -111,7 +111,7 @@ export function CreateOrganisationForm({ timeZones, defaultTimezone }: { timeZon
           {fields.timezone ? <p className="field-error">{copy.common.problem(fields.timezone)}</p> : null}
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-base font-bold">{copy.admin.org.logo}</span>
+          <span className="text-base font-semibold">{copy.admin.org.logo}</span>
           <label className="btn w-fit cursor-pointer">
             {logoName ?? copy.logo.choose}
             <input

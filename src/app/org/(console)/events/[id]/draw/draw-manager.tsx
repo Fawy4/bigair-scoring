@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { ConfirmButton } from "@/components/confirm-button";
+import { Pill } from "@/components/live/pill";
+import { Circle, Lock, Pencil, Printer } from "lucide-react";
+import { Button, disabledWhen } from "@/components/org/button";
+import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import {
   applyDrawEdit,
@@ -67,7 +71,7 @@ function Rename({ value, label, onSave, disabled, className }: { value: string; 
       aria-label={T.renameLabel(label)}
       value={text}
       maxLength={40}
-      className="w-full !text-lg !font-extrabold"
+      className="w-full !text-lg !font-semibold"
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {
@@ -207,93 +211,95 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
 
   return (
     <div className="flex flex-col gap-4">
-      <nav aria-label={T.divisionsLabel} className="flex flex-wrap gap-2">
+      <nav aria-label={T.divisionsLabel} className="flex flex-wrap gap-1 border-b border-beach-line">
         {divisions.map((d) => (
-          <Link key={d.id} href={`/org/events/${eventId}/draw?division=${d.id}`} className={`btn ${d.id === selected.id ? "btn-primary" : ""}`} aria-current={d.id === selected.id ? "page" : undefined}>
+          <Link key={d.id} href={`/org/events/${eventId}/draw?division=${d.id}`} className={cn("-mb-px inline-flex min-h-[var(--org-ctl)] items-center gap-2 border-b-2 px-3 text-body font-semibold", d.id === selected.id ? "border-beach-accent text-beach-ink" : "border-transparent text-beach-muted hover:text-beach-ink")} aria-current={d.id === selected.id ? "page" : undefined}>
             {d.name}
-            <span className="ml-2 text-sm font-bold">{d.locked ? T.tab.locked : d.hasDraw ? T.tab.draft : T.tab.none}</span>
+            <span className="text-small font-medium text-beach-muted">{d.locked ? T.tab.locked : d.hasDraw ? T.tab.draft : T.tab.none}</span>
           </Link>
         ))}
       </nav>
 
-      <div className="panel flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-2xl font-extrabold">{selected.name}</h2>
-          <span className="font-bold" data-testid="draw-status">
-            {!draw ? T.status.none : locked ? T.status.locked : T.status.draft}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h2>{selected.name}</h2>
+          <span data-testid="draw-status" className="inline-flex">
+            <Pill icon={!draw ? Circle : locked ? Lock : Pencil} tone={!draw ? "missing" : locked ? "live" : "outlier"} dashed={!draw}>
+              {!draw ? T.status.none : locked ? T.status.locked : T.status.draft}
+            </Pill>
           </span>
-          <span className="font-semibold">{T.riders(selected.riders)}</span>
-          {selected.formatName ? <span className="font-semibold">{T.format(selected.formatName)}</span> : null}
-          {draw ? <span className="font-semibold" data-testid="draw-count">{T.counts(draw.rounds.length, heats)}</span> : null}
+          <span className="text-body font-medium text-beach-muted">{T.riders(selected.riders)}</span>
+          {selected.formatName ? <span className="text-body font-medium text-beach-muted">{T.format(selected.formatName)}</span> : null}
+          {draw ? <span className="text-body font-medium text-beach-muted" data-testid="draw-count">{T.counts(draw.rounds.length, heats)}</span> : null}
         </div>
         {selected.formatProblem ? <p className="field-error">{copy.common.problem(selected.formatProblem)}</p> : null}
-        {!selected.formatName && !selected.formatProblem ? <p className="font-semibold">{T.noFormat}</p> : null}
-        {selected.riders === 0 ? <p className="font-semibold">{T.noRiders}</p> : null}
+        {!selected.formatName && !selected.formatProblem ? <p className="text-body font-medium text-beach-muted">{T.noFormat}</p> : null}
+        {selected.riders === 0 ? <p className="text-body font-medium text-beach-muted">{T.noRiders}</p> : null}
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div role="toolbar" aria-label={T.toolsLabel} className="flex flex-wrap items-start gap-1">
           {!draw ? (
-            <button type="button" className="btn btn-primary" disabled={pending || !selected.formatName || selected.riders === 0} onClick={() => runGenerate(false)}>
+            <Button variant="primary" {...disabledWhen(pending ? copy.common.saving : !selected.formatName ? T.noFormat : selected.riders === 0 && T.noRiders)} onClick={() => runGenerate(false)}>
               {T.generate}
-            </button>
+            </Button>
           ) : regen ? (
-            <div role="group" aria-label={T.regenerate} className="panel flex flex-col gap-3">
-              <p className="text-lg font-bold">{arranged.heats.length > 0 ? T.regenerateQuestionArranged(arranged.heats.map((h) => h.label)) : T.regenerateQuestion}</p>
-              <div className="flex flex-wrap gap-3">
+            <div role="group" aria-label={T.regenerate} className="flex flex-col gap-2 rounded-card border border-beach-line p-3">
+              <p className="text-body font-semibold">{arranged.heats.length > 0 ? T.regenerateQuestionArranged(arranged.heats.map((h) => h.label)) : T.regenerateQuestion}</p>
+              <div className="flex flex-wrap gap-2">
                 {arranged.heats.length > 0 ? (
                   <>
-                    <button type="button" className="btn btn-primary" disabled={pending} onClick={() => runGenerate(true)}>
+                    <Button variant="primary" {...disabledWhen(pending && copy.common.saving)} onClick={() => runGenerate(true)}>
                       {T.regenerateKeep}
-                    </button>
-                    <button type="button" className="btn btn-danger" disabled={pending} onClick={() => runGenerate(false)}>
+                    </Button>
+                    <Button variant="danger" {...disabledWhen(pending && copy.common.saving)} onClick={() => runGenerate(false)}>
                       {T.regenerateDiscard}
-                    </button>
+                    </Button>
                   </>
                 ) : (
-                  <button type="button" className="btn btn-primary" disabled={pending} onClick={() => runGenerate(false)}>
+                  <Button variant="primary" {...disabledWhen(pending && copy.common.saving)} onClick={() => runGenerate(false)}>
                     {T.regenerateYes}
-                  </button>
+                  </Button>
                 )}
-                <button type="button" className="btn" onClick={() => setRegen(false)}>
+                <Button variant="quiet" onClick={() => setRegen(false)}>
                   {copy.common.cancel}
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
-            <button type="button" className="btn" disabled={pending || locked || selected.started} title={selected.started ? T.regenerateRefusedStarted : locked ? T.regenerateRefusedLocked : undefined} onClick={() => setRegen(true)}>
+            <Button variant="quiet" {...disabledWhen(pending ? copy.common.saving : selected.started ? T.regenerateRefusedStarted : locked && T.regenerateRefusedLocked)} onClick={() => setRegen(true)}>
               {T.regenerate}
-            </button>
+            </Button>
           )}
           {draw && !locked ? (
-            <button type="button" className="btn btn-primary" disabled={pending} onClick={runLock}>
+            <Button variant="primary" {...disabledWhen(pending && copy.common.saving)} onClick={runLock}>
               {T.lock}
-            </button>
+            </Button>
           ) : null}
           {draw && locked && !unlocking ? (
-            <button type="button" className="btn" disabled={pending} onClick={() => setUnlocking(true)}>
+            <Button variant="quiet" {...disabledWhen(pending && copy.common.saving)} onClick={() => setUnlocking(true)}>
               {T.unlock}
-            </button>
+            </Button>
           ) : null}
           {draw ? (
-            <Link className="btn" href={`/org/events/${eventId}/draw/print?division=${selected.id}`} target="_blank">
+            <Button variant="quiet" icon={Printer} href={`/org/events/${eventId}/draw/print?division=${selected.id}`} target="_blank">
               {T.print}
-            </Link>
+            </Button>
           ) : null}
         </div>
-        {selected.started ? <p className="font-semibold">{T.startedNote}</p> : null}
-        {locked && !unlocking ? <p className="font-semibold">{T.lockedHelp}</p> : null}
+        {selected.started ? <p className="text-body font-medium text-beach-muted">{T.startedNote}</p> : null}
+        {locked && !unlocking ? <p className="text-body font-medium text-beach-muted">{T.lockedHelp}</p> : null}
         {unlocking ? (
-          <div role="group" aria-label={T.unlock} className="panel flex flex-col gap-2">
-            <label htmlFor="unlock-reason" className="text-lg font-bold">
+          <div role="group" aria-label={T.unlock} className="flex flex-col gap-2 rounded-card border border-beach-line p-3">
+            <label htmlFor="unlock-reason" className="text-body font-semibold">
               {T.unlockReasonLabel}
             </label>
-            <input id="unlock-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={T.unlockReasonPlaceholder} />
-            <div className="flex flex-wrap gap-3">
-              <button type="button" className="btn btn-primary" disabled={pending || reason.trim().length < 5} onClick={runUnlock}>
+            <input id="unlock-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={T.unlockReasonPlaceholder} className="max-w-xl" />
+            <div className="flex flex-wrap gap-2">
+              <Button variant="primary" {...disabledWhen(pending ? copy.common.saving : reason.trim().length < 5 && T.unlockReasonShort)} onClick={runUnlock}>
                 {T.unlockConfirm}
-              </button>
-              <button type="button" className="btn" onClick={() => { setUnlocking(false); setReason(""); }}>
+              </Button>
+              <Button variant="quiet" onClick={() => { setUnlocking(false); setReason(""); }}>
                 {copy.common.cancel}
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}
@@ -305,38 +311,20 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
         </p>
       ) : null}
       {notice ? (
-        <p role="status" className="panel font-bold" data-testid="draw-notice">
+        <p role="status" className="panel font-semibold" data-testid="draw-notice">
           {notice}
         </p>
       ) : null}
 
       {draw ? (
         <>
-          <div className="panel flex flex-col gap-2" aria-label={T.checksLabel} data-testid="draw-checks">
-            <h3 className="text-lg font-extrabold">{T.checksHeading}</h3>
-            {warnings.length === 0 ? (
-              <p className="font-semibold" data-testid="draw-checks-ok">
-                {T.checksOk}
-              </p>
-            ) : (
-              <ul className="list-disc pl-6 font-semibold">
-                {warnings.map((w, i) => (
-                  <li key={`${i}-${w}`} data-testid="draw-warning">
-                    {w}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <p className="text-sm font-semibold">{T.checksNever}</p>
-          </div>
-
           {picked && pickedName ? (
-            <div role="status" className="panel sticky top-2 z-10 flex flex-wrap items-center gap-3 !border-[#111] !bg-[#fde68a]" data-testid="tap-bar">
+            <div role="status" className="panel sticky top-2 z-10 flex flex-wrap items-center gap-3 !border-beach-line !bg-beach-tint-grade0" data-testid="tap-bar">
               {!target ? (
-                <span className="text-lg font-bold">{T.tapPicked(pickedName)}</span>
+                <span className="text-lg font-semibold">{T.tapPicked(pickedName)}</span>
               ) : (
                 <>
-                  <span className="text-lg font-bold">{targetName ? T.tapSwapQuestion(pickedName, targetName) : T.tapMoveQuestion(pickedName)}</span>
+                  <span className="text-lg font-semibold">{targetName ? T.tapSwapQuestion(pickedName, targetName) : T.tapMoveQuestion(pickedName)}</span>
                   <button type="button" className="btn btn-primary" disabled={pending} onClick={() => apply({ op: "move", from: picked, to: target })}>
                     {targetName ? T.swap(targetName) : T.moveHere}
                   </button>
@@ -350,7 +338,7 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
 
           {menu && menuInfo && menuSlot ? (
             <div role="group" aria-label={T.seatMenuHeading(heatLabel(menuInfo.heat), menu.slot + 1)} className="panel flex flex-col gap-3" data-testid="seat-menu">
-              <h3 className="text-lg font-extrabold">{T.seatMenuHeading(heatLabel(menuInfo.heat), menu.slot + 1)}</h3>
+              <h3 className="text-lg font-semibold">{T.seatMenuHeading(heatLabel(menuInfo.heat), menu.slot + 1)}</h3>
               <div className="flex flex-wrap items-end gap-3">
                 <div className="flex flex-col gap-1">
                   <label htmlFor="menu-rider">{T.placeRider}</label>
@@ -413,17 +401,17 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
             onMove={(from, to) => apply({ op: "move", from, to })}
             renderRoundHeader={(round) => (
               <div className="flex items-center gap-2">
-                <Rename className="text-xl font-extrabold" label={round.name} value={round.name} disabled={locked} onSave={(name) => apply({ op: "renameRound", roundId: round.id, name })} />
+                <Rename className="text-xl font-semibold" label={round.name} value={round.name} disabled={locked} onSave={(name) => apply({ op: "renameRound", roundId: round.id, name })} />
                 {editable ? (
                   <>
-                    <button type="button" className="btn !min-h-[40px]" disabled={pending} onClick={() => apply({ op: "addHeat", roundId: round.id })}>
+                    <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={pending} onClick={() => apply({ op: "addHeat", roundId: round.id })}>
                       {T.addHeat}
                     </button>
-                    <button type="button" className="btn !min-h-[40px]" disabled={pending} onClick={() => apply({ op: "addRound", afterRoundId: round.id })}>
+                    <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={pending} onClick={() => apply({ op: "addRound", afterRoundId: round.id })}>
                       {T.addRoundAfter}
                     </button>
                     {round.heats.length === 0 ? (
-                      <button type="button" className="btn !min-h-[40px]" disabled={pending} onClick={() => apply({ op: "removeRound", roundId: round.id })}>
+                      <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={pending} onClick={() => apply({ op: "removeRound", roundId: round.id })}>
                         {T.removeRound}
                       </button>
                     ) : null}
@@ -435,7 +423,7 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
             renderHeatExtra={(_round, heat) =>
               editable && heat.status === "pending" ? (
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" className="btn !min-h-[40px]" disabled={pending} onClick={() => apply({ op: "addSeat", heatId: heat.id })}>
+                  <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={pending} onClick={() => apply({ op: "addSeat", heatId: heat.id })}>
                     {T.addSeat}
                   </button>
                   <ConfirmButton
@@ -451,9 +439,27 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
               ) : null
             }
           />
+          <div className="panel flex flex-col gap-2" aria-label={T.checksLabel} data-testid="draw-checks">
+            <h3>{T.checksHeading}</h3>
+            {warnings.length === 0 ? (
+              <p className="font-semibold" data-testid="draw-checks-ok">
+                {T.checksOk}
+              </p>
+            ) : (
+              <ul className="list-disc pl-6 font-semibold">
+                {warnings.map((w, i) => (
+                  <li key={`${i}-${w}`} data-testid="draw-warning">
+                    {w}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-sm font-semibold">{T.checksNever}</p>
+          </div>
+
         </>
       ) : (
-        <p className="panel text-lg font-semibold">{T.emptyState}</p>
+        <p className="rounded-card border border-dashed border-beach-border bg-beach-surface p-4 text-body font-semibold">{T.emptyState}</p>
       )}
     </div>
   );

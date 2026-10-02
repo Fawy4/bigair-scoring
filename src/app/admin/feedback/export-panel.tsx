@@ -38,7 +38,7 @@ export function ExportPanel() {
 
   return (
     <section className="panel flex flex-col gap-3" aria-labelledby="export-h" data-testid="export-panel">
-      <h2 id="export-h" className="text-xl font-extrabold">
+      <h2 id="export-h" className="text-xl font-semibold">
         {T.exportHeading}
       </h2>
       <p className="font-semibold">{T.exportHelp}</p>
@@ -64,7 +64,7 @@ export function ExportPanel() {
       {error ? <p role="alert" className="field-error">{copy.common.problem(error)}</p> : null}
       {result ? (
         <div className="flex flex-col gap-3" data-testid="export-result">
-          <p className="font-bold">{result.count === 0 ? T.exportNone : T.exportDone(result.count)}</p>
+          <p className="font-semibold">{result.count === 0 ? T.exportNone : T.exportDone(result.count)}</p>
           <textarea readOnly rows={10} value={result.markdown} aria-label="FEEDBACK.md" className="w-full font-mono" data-testid="export-text" />
           <div className="flex flex-wrap gap-3">
             <button type="button" className="btn btn-primary" onClick={() => download(result.markdown)} data-testid="export-download">
@@ -73,7 +73,7 @@ export function ExportPanel() {
             <button type="button" className="btn" onClick={() => copyText(result.markdown)} data-testid="export-copy">
               {copied === "yes" ? T.exportCopied : T.exportCopy}
             </button>
-            {copied === "no" ? <span role="alert" className="font-bold">{T.exportCopyFailed}</span> : null}
+            {copied === "no" ? <span role="alert" className="font-semibold">{T.exportCopyFailed}</span> : null}
           </div>
         </div>
       ) : null}

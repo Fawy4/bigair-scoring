@@ -32,11 +32,11 @@ export function CsvImport({ divisionId, scheme, orgRiders }: { divisionId: strin
 
   return (
     <section className="panel flex flex-col gap-3" aria-labelledby="csv-h">
-      <h2 id="csv-h" className="text-xl font-extrabold">
+      <h2 id="csv-h" className="text-xl font-semibold">
         {T.importHeading}
       </h2>
       <p className="font-semibold">{T.importHelp}</p>
-      <label htmlFor="csv-text" className="font-bold">
+      <label htmlFor="csv-text" className="font-semibold">
         {T.importPaste}
       </label>
       <textarea id="csv-text" rows={6} className="w-full font-mono" value={text} onChange={(e) => { setText(e.target.value); setResult(null); }} spellCheck={false} />
@@ -61,19 +61,19 @@ export function CsvImport({ divisionId, scheme, orgRiders }: { divisionId: strin
 
       {result ? (
         <div className="flex flex-col gap-3" data-testid="csv-preview-area">
-          <h3 className="text-lg font-extrabold">{T.importPreviewHeading}</h3>
+          <h3 className="text-lg font-semibold">{T.importPreviewHeading}</h3>
           {result.fatal ? (
             <p role="alert" className="field-error" data-testid="csv-fatal">
               {copy.common.problem(result.fatal)}
             </p>
           ) : (
             <>
-              <p className="text-lg font-bold" data-testid="csv-summary">
+              <p className="text-lg font-semibold" data-testid="csv-summary">
                 {T.importSummary(good.length, bad.length)}
               </p>
               {result.unknownColumns.length ? <p className="font-semibold">{T.importUnknown(result.unknownColumns.join(", "))}</p> : null}
               {bad.length ? (
-                <ul className="list-disc pl-6 font-bold" aria-label={T.importProblemsLabel} data-testid="csv-problems">
+                <ul className="list-disc pl-6 font-semibold" aria-label={T.importProblemsLabel} data-testid="csv-problems">
                   {bad.flatMap((r) => r.problems.map((p, i) => <li key={`${r.line}-${i}`} data-testid="csv-problem">{T.importProblemLine(r.line, p)}</li>))}
                 </ul>
               ) : null}
@@ -87,24 +87,24 @@ export function CsvImport({ divisionId, scheme, orgRiders }: { divisionId: strin
                   <thead>
                     <tr>
                       {Object.values(T.previewColumns).map((c) => (
-                        <th key={c} className="border-2 border-[#111] bg-[#eee] p-2 text-left">{c}</th>
+                        <th key={c} className="border border-beach-line bg-beach-surface p-2 text-left">{c}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {result.rows.map((r) => (
                       <tr key={r.line}>
-                        <td className="border-2 border-[#111] p-2">{r.line}</td>
-                        <td className="border-2 border-[#111] p-2 font-bold">{r.rider ? `${r.rider.first} ${r.rider.last}` : "—"}</td>
-                        <td className="border-2 border-[#111] p-2">{r.rider?.seed ?? "—"}</td>
-                        <td className="border-2 border-[#111] p-2">
+                        <td className="border border-beach-line p-2">{r.line}</td>
+                        <td className="border border-beach-line p-2 font-semibold">{r.rider ? `${r.rider.first} ${r.rider.last}` : "—"}</td>
+                        <td className="border border-beach-line p-2">{r.rider?.seed ?? "—"}</td>
+                        <td className="border border-beach-line p-2">
                           {r.rider ? (
                             <RiderLabel scheme={scheme} rider={{ name: "" }} size="sm" model={tableLabel(scheme, { name: `${r.rider.first} ${r.rider.last}`, nationality: r.rider.nationality, sponsor: r.rider.sponsor, photoUrl: r.rider.photoUrl, identifiers: r.rider.identifiers })} />
                           ) : (
                             "—"
                           )}
                         </td>
-                        <td className="border-2 border-[#111] p-2 font-bold">{r.rider ? (r.notes.length ? T.previewNote : T.previewOk) : T.previewBad}</td>
+                        <td className="border border-beach-line p-2 font-semibold">{r.rider ? (r.notes.length ? T.previewNote : T.previewOk) : T.previewBad}</td>
                       </tr>
                     ))}
                   </tbody>

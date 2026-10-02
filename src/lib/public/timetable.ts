@@ -1,6 +1,7 @@
 import { computeTimetable, type HeatLive, type RowStatus } from "@/lib/engine/schedule";
 import { activePlanFor, type ActivePlan } from "@/lib/live/run-order";
 import { rowToPlan, todayIn } from "@/lib/schedule/plans";
+import { driftOf, plannedTimetable, type Drift } from "@/lib/schedule/drift";
 import type { PublicTimetable, TimetableHeat } from "./types";
 
 export type PublicRowState = RowStatus;
@@ -42,6 +43,8 @@ export interface PublicTimetableModel {
   /** The run order is on hold (wind): no times until the head judge resumes. */
   onHold: boolean;
   heatsLeft: number;
+  /** How far today has slipped: the next heat that has not started against the plan as written. Today's plan only. */
+  drift?: Drift | null;
 }
 
 export const heatLabel = (h: Pick<TimetableHeat, "name" | "number" | "suffix">): string => h.name ?? `Heat ${h.number}${h.suffix ?? ""}`;
@@ -126,5 +129,6 @@ export function buildPublicTimetable(t: PublicTimetable | null, nowIso: string):
     finish: table.finish,
     onHold: Boolean(chosen.plan.hold),
     heatsLeft: table.heatsLeft,
+    drift: chosen.day === todayIn(t.timezone, now) ? driftOf(plannedTimetable(chosen.plan, lives, { timezone: t.timezone, eventDay: chosen.day, defaults: chosen.defaults }), table) : null,
   };
 }

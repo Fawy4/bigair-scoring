@@ -400,7 +400,7 @@ export function RulesPanel({
                 {({ complete }) => (
                   <div className="panel flex flex-col gap-3">
                     <div className="flex flex-col gap-1">
-                      <label htmlFor={`lname-${division.id}`} className="font-bold">
+                      <label htmlFor={`lname-${division.id}`} className="font-semibold">
                         {copy.builder.nameLabel}
                       </label>
                       <input id={`lname-${division.id}`} value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder={copy.builder.namePlaceholder} />
@@ -418,7 +418,7 @@ export function RulesPanel({
                     )}
                     {!complete ? <p className="text-sm font-semibold">{copy.builder.applyBlocked}</p> : division.riders.length === 0 ? <p className="text-sm font-semibold">{copy.builder.applyNoRiders}</p> : null}
                     {difference && division.riders.length > 0 ? (
-                      <p className="text-sm font-bold" data-testid="apply-difference">
+                      <p className="text-sm font-semibold" data-testid="apply-difference">
                         {copy.builder.difference(difference)}
                       </p>
                     ) : null}
@@ -531,7 +531,7 @@ export function RulesPanel({
         ) : null}
         {message ? (
           <div role={message.kind === "error" ? "alert" : "status"} className="rounded-[8px] border border-beach-border bg-beach-surface px-3 py-2">
-            <p className={message.kind === "error" ? "field-error" : "font-bold"}>{message.kind === "error" ? copy.common.problem(message.text) : copy.common.toastDone(message.text)}</p>
+            <p className={message.kind === "error" ? "field-error" : "font-semibold"}>{message.kind === "error" ? copy.common.problem(message.text) : copy.common.toastDone(message.text)}</p>
             {message.problems && message.problems.length > 0 ? (
               <ul className="list-disc pl-6 font-semibold">
                 {message.problems.map((p) => (

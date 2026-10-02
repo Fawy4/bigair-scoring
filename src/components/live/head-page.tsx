@@ -287,7 +287,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
     return (
       <div data-testid="head-page" data-layout="announcer" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <SeatHeartbeat />
-        {shown && heatDivision && head ? <AnnouncerView ctx={ctx} heat={shown} division={heatDivision} attempts={live.attempts} riders={riders} head={head} wordFor={wordFor} /> : <p className="px-3 py-2 text-body font-medium text-beach-muted">{H.noHeat}</p>}
+        {shown && heatDivision && head ? <AnnouncerView nowMs={nowServer} ctx={ctx} heat={shown} division={heatDivision} attempts={live.attempts} riders={riders} head={head} wordFor={wordFor} /> : <p className="px-3 py-2 text-body font-medium text-beach-muted">{H.noHeat}</p>}
       </div>
     );
   }

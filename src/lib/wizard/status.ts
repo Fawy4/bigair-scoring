@@ -64,6 +64,9 @@ export interface SetupCounts {
   activePlan?: boolean;
   /** A plan is active for today (event time zone). */
   activePlanToday?: boolean;
+  /** Today in the event time zone, and the days of the active plans (the Go live checklist names both when they differ). */
+  today?: string;
+  activePlanDays?: string[];
   /** All seats of the event, whatever their role or status; and plans of any kind. */
   seatCount?: number;
   planCount?: number;

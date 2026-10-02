@@ -131,3 +131,17 @@ describe("the public timetable", () => {
     expect(t.rows.map((r) => r.heat)).toEqual(["Semi 1", "Heat 2R"]);
   });
 });
+
+describe("running about N minutes late", () => {
+  it("before the first heat the day is on schedule", () => {
+    expect(buildPublicTimetable(payload([heat(1), heat(2)]), at("09:00")).drift).toMatchObject({ state: "on_schedule", minutes: 0 });
+  });
+  it("heat 1 started 6 minutes late: the next heat is about 6 minutes late (plan 10:12, now 10:18)", () => {
+    const t = buildPublicTimetable(payload([heat(1, { status: "running", started_at: at("10:06") }), heat(2), heat(3)]), at("10:07"));
+    expect(t.drift).toMatchObject({ state: "late", minutes: 6, tone: "amber" });
+  });
+  it("no drift once every heat has run", () => {
+    const done = (n: number, from: string, to: string) => heat(n, { status: "published", started_at: at(from), ended_at: at(to) });
+    expect(buildPublicTimetable(payload([done(1, "10:00", "10:10"), done(2, "10:12", "10:22")]), at("10:30")).drift).toBeNull();
+  });
+});

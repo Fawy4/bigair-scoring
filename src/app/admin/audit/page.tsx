@@ -6,8 +6,8 @@ import { copy } from "@/lib/ui-copy";
 
 export const metadata = { title: copy.admin.audit.heading };
 
-const th = "border-2 border-[#111] bg-[#eee] p-2 text-left";
-const td = "border-2 border-[#111] p-2 align-top";
+const th = "border border-beach-line bg-beach-surface p-2 text-left";
+const td = "border border-beach-line p-2 align-top";
 
 export default async function AuditPage({ searchParams }: { searchParams: Promise<{ org?: string; scope?: string }> }) {
   const { supabase } = await requireAdmin();
@@ -23,7 +23,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
   return (
     <main className="flex flex-col gap-6">
-      <h1 className="text-3xl font-extrabold">{c.heading}</h1>
+      <h1>{c.heading}</h1>
       <p className="text-lg font-semibold">{c.intro}</p>
       <form method="get" className="flex flex-wrap items-end gap-4">
         <div className="flex flex-col gap-1">
@@ -67,7 +67,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                 <tr key={r.id}>
                   <td className={td}>{formatWhen(r.at, defaultTimezone)}</td>
                   <td className={td}>{r.actor_email ?? c.system}</td>
-                  <td className={`${td} font-bold`}>{auditLabel(r.action)}</td>
+                  <td className={`${td} font-semibold`}>{auditLabel(r.action)}</td>
                   <td className={td}>{r.organisation_name ?? ""}</td>
                   <td className={td}>{auditDetails({ action: r.action, before: r.before as Record<string, unknown> | null, after: r.after as Record<string, unknown> | null, reason: r.reason })}</td>
                 </tr>

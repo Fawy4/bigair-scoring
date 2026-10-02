@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { panelShortfalls } from "@/lib/officials/panel-check";
 import { copy } from "@/lib/ui-copy";
 import { addSeat, approveSeat, declineSeat, savePanel, type IssuedPin } from "./actions";
+import { Button, disabledWhen } from "@/components/org/button";
+import { OfficialsTable } from "./officials-table";
 import { PinBox } from "./pin-box";
 import { SeatCard, type RiderChoice, type SeatRow } from "./seat-card";
 import { useAction } from "../riders/use-action";
@@ -60,8 +62,8 @@ export function OfficialsManager({ eventId, eventName, seats, panels, riders, co
         </p>
       ) : null}
 
-      <section className="panel flex flex-col gap-3" aria-labelledby="add-seat-h">
-        <h2 id="add-seat-h" className="text-xl font-extrabold">
+      <section className="flex flex-col gap-3 rounded-card border border-beach-line p-4" aria-labelledby="add-seat-h">
+        <h2 id="add-seat-h">
           {T.addHeading}
         </h2>
         <form
@@ -75,13 +77,13 @@ export function OfficialsManager({ eventId, eventName, seats, panels, riders, co
           }}
         >
           <div className="flex flex-col gap-1">
-            <label htmlFor="seat-name" className="font-bold">
+            <label htmlFor="seat-name" className="text-small font-semibold">
               {T.name}
             </label>
             <input id="seat-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={T.namePlaceholder} className="w-64" />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="seat-role" className="font-bold">
+            <label htmlFor="seat-role" className="text-small font-semibold">
               {T.role}
             </label>
             <select id="seat-role" value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
@@ -93,29 +95,29 @@ export function OfficialsManager({ eventId, eventName, seats, panels, riders, co
             </select>
           </div>
           {role === "head" ? (
-            <label className="flex items-center gap-3 font-bold">
+            <label className="flex items-center gap-3 font-semibold">
               <input type="checkbox" checked={headScores} onChange={(e) => setHeadScores(e.target.checked)} />
               {T.headAlsoScores}
             </label>
           ) : null}
-          <button type="submit" className="btn btn-primary" disabled={pending || name.trim().length < 2} data-testid="add-seat">
+          <Button type="submit" variant="secondary" {...disabledWhen(pending ? copy.common.saving : name.trim().length < 2 && copy.divisions.nameTooShort)} data-testid="add-seat">
             {T.add}
-          </button>
+          </Button>
         </form>
         {role === "head" ? <p className="text-sm font-semibold">{T.headAlsoScoresHelp}</p> : null}
       </section>
 
       {pendingSeats.length > 0 ? (
         <section className="panel flex flex-col gap-3" aria-labelledby="pending-h" data-testid="pending-seats">
-          <h2 id="pending-h" className="text-xl font-extrabold">
+          <h2 id="pending-h" className="text-xl font-semibold">
             {T.pendingHeading}
           </h2>
           <ul className="flex flex-col gap-3">
             {pendingSeats.map((s) => (
-              <li key={s.id} className="flex flex-wrap items-center gap-3 rounded-lg border-2 border-[#111] p-3" data-testid="pending-seat">
-                <span className="text-lg font-extrabold">{s.name}</span>
+              <li key={s.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-beach-line p-3" data-testid="pending-seat">
+                <span className="text-lg font-semibold">{s.name}</span>
                 <span className="font-semibold">{T.pendingLine(T.roles[s.role] ?? s.role, s.phone)}</span>
-                <span className="font-bold">{T.statusPending}</span>
+                <span className="font-semibold">{T.statusPending}</span>
                 <button type="button" className="btn btn-primary" disabled={pending} onClick={() => run(() => approveSeat(s.id), undefined, (r) => setIssued(r.issued))}>
                   {T.approve}
                 </button>
@@ -129,17 +131,16 @@ export function OfficialsManager({ eventId, eventName, seats, panels, riders, co
       ) : null}
 
       <section className="flex flex-col gap-3" aria-labelledby="seats-h">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="seats-h" className="text-2xl font-extrabold">
-            {copy.wizard.steps.officials.replace(/^\d+\.\s*/, "")}
-          </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="seats-h">{copy.wizard.steps.officials.replace(/^\d+\.\s*/, "")}</h2>
           {active.length > 0 ? (
-            <a className="btn" href={`/org/events/${eventId}/officials/cards`} target="_blank" rel="noopener noreferrer" data-testid="print-cards">
+            <Button variant="quiet" href={`/org/events/${eventId}/officials/cards`} target="_blank" data-testid="print-cards">
               {T.printAll}
-            </a>
+            </Button>
           ) : null}
         </div>
-        {active.length === 0 ? <p className="panel text-lg font-semibold">{T.noSeats}</p> : null}
+        <OfficialsTable seats={active} now={now} act={act} />
+        {active.length > 0 ? <h3 className="pt-2">{T.cardsHeading}</h3> : null}
         <ul className="flex flex-col gap-3">
           {active.map((s) => (
             <SeatCard key={s.id} seat={s} eventId={eventId} now={now} riders={riders} colours={colours} act={act} onIssued={setIssued} />
@@ -148,7 +149,7 @@ export function OfficialsManager({ eventId, eventName, seats, panels, riders, co
       </section>
 
       <section className="panel flex flex-col gap-3" aria-labelledby="panels-h" data-testid="panels">
-        <h2 id="panels-h" className="text-xl font-extrabold">
+        <h2 id="panels-h" className="text-xl font-semibold">
           {T.panelsHeading}
         </h2>
         <p className="font-semibold">{T.panelsHelp}</p>
@@ -157,9 +158,9 @@ export function OfficialsManager({ eventId, eventName, seats, panels, riders, co
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="border-2 border-[#111] bg-[#eee] p-2 text-left">{T.role}</th>
+                  <th className="border border-beach-line bg-beach-surface p-2 text-left">{T.role}</th>
                   {shown.map((p) => (
-                    <th key={p.id} className="border-2 border-[#111] bg-[#eee] p-2 text-left">
+                    <th key={p.id} className="border border-beach-line bg-beach-surface p-2 text-left">
                       <span className="block">{p.name}</span>
                       <span className="block text-sm font-semibold" data-testid={`panel-count-${p.name}`}>
                         {T.panelCount(p.seatIds.length, p.minJudges)}
@@ -171,13 +172,13 @@ export function OfficialsManager({ eventId, eventName, seats, panels, riders, co
               <tbody>
                 {scorers.map((s) => (
                   <tr key={s.id}>
-                    <th scope="row" className="border-2 border-[#111] p-2 text-left">
+                    <th scope="row" className="border border-beach-line p-2 text-left">
                       {s.name} <span className="font-semibold">({T.roles[s.role]})</span>
                     </th>
                     {shown.map((p) => {
                       const on = p.seatIds.includes(s.id);
                       return (
-                        <td key={p.id} className="border-2 border-[#111] p-2 text-center">
+                        <td key={p.id} className="border border-beach-line p-2 text-center">
                           <input
                             type="checkbox"
                             aria-label={`${s.name}: ${p.name}`}
@@ -200,8 +201,8 @@ export function OfficialsManager({ eventId, eventName, seats, panels, riders, co
           </div>
         )}
         {shortfalls.length > 0 ? (
-          <div role="note" data-testid="panel-warnings" className="rounded-lg border-2 border-[#111] p-3">
-            <p className="font-extrabold">⚠ {T.shortfallHeading}</p>
+          <div role="note" data-testid="panel-warnings" className="rounded-lg border border-beach-line p-3">
+            <p className="font-semibold">⚠ {T.shortfallHeading}</p>
             <ul className="list-disc pl-6 font-semibold">
               {shortfalls.map((w) => (
                 <li key={w}>{w}</li>
@@ -209,7 +210,7 @@ export function OfficialsManager({ eventId, eventName, seats, panels, riders, co
             </ul>
           </div>
         ) : shown.some((p) => p.hasScoringModel) && scorers.length > 0 ? (
-          <p className="font-bold" data-testid="panel-ok">
+          <p className="font-semibold" data-testid="panel-ok">
             {T.panelsOk}
           </p>
         ) : null}

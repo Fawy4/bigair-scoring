@@ -1,3 +1,4 @@
+import { shortDay } from "@/lib/schedule/plans";
 import { copy } from "@/lib/ui-copy";
 import type { SetupCounts } from "@/lib/wizard/status";
 
@@ -63,8 +64,8 @@ export function readiness({ eventId, divisions, counts }: ReadinessInput): Readi
   }
 
   if (counts.activePlanToday) add("run-order", "done", T.runOrder.ok, "schedule");
-  else if (counts.activePlan) add("run-order", "attention", T.runOrder.otherDay, "schedule");
-  else add("run-order", (counts.planCount ?? 0) > 0 ? "attention" : "not_started", (counts.planCount ?? 0) > 0 ? T.runOrder.otherDay : T.runOrder.none, "schedule");
+  else if (counts.activePlan) add("run-order", "attention", counts.today && counts.activePlanDays?.length ? T.runOrder.otherDayNamed(shortDay(counts.today), counts.activePlanDays.map(shortDay)) : T.runOrder.otherDay, "schedule");
+  else add("run-order", (counts.planCount ?? 0) > 0 ? "attention" : "not_started", (counts.planCount ?? 0) > 0 ? (counts.today ? T.runOrder.noneActiveNamed(shortDay(counts.today)) : T.runOrder.otherDay) : T.runOrder.none, "schedule");
 
   const seats = counts.seatCount ?? counts.judgeSeats + counts.pendingSeats;
   const noPin = counts.seatsWithoutPin ?? 0;

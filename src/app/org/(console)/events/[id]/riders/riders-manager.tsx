@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Search, Trash2 } from "lucide-react";
 import { HelpButton } from "@/components/help-button";
+import { Button, disabledWhen } from "@/components/org/button";
+import { EmptyState } from "@/components/org/data-table";
+import { MenuItem, Popover } from "@/components/org/popover";
+import { matchesSearch } from "@/lib/table/search";
 import { identifierColumns } from "@/lib/riders/columns";
 import { findClashes } from "@/lib/riders/duplicates";
 import { newShuffleSeed, shuffleSeeded, sortBySeedNumber } from "@/lib/riders/shuffle";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
-import { copy, help } from "@/lib/ui-copy";
-import { addRider, removeEntry, saveEntry, saveOrder, saveRider } from "./actions";
+import { copy, help, orgCopy } from "@/lib/ui-copy";
+import { addRider, removeEntries, removeEntry, saveEntry, saveOrder, saveRider, setEntriesStatus } from "./actions";
 import { CsvImport } from "./csv-import";
 import { OrganisationRiders } from "./organisation-riders";
 import { RegistrationsPanel } from "./registrations-panel";
@@ -27,9 +32,19 @@ export function RidersManager({ eventId, divisions, selectedId, scheme, schemeIs
   const [showAllColumns, setShowAllColumns] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [optimistic, setOptimistic] = useState<string[] | null>(null);
+  const [query, setQuery] = useState("");
+  const [ticked, setTicked] = useState<Set<string>>(new Set());
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
   useEffect(() => setOptimistic(null), [entries]);
 
   const cols = identifierColumns(scheme, showAllColumns);
+  const toggle = (id: string) =>
+    setTicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const rows = useMemo(() => {
     const listed = entries
       .filter((e) => TAKING_PART.has(e.status))
@@ -39,6 +54,19 @@ export function RidersManager({ eventId, divisions, selectedId, scheme, schemeIs
     return optimistic.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
   }, [entries, optimistic]);
 
+  const visible = useMemo(() => rows.filter((r) => matchesSearch(`${fullName(r)} ${r.nationality ?? ""} ${r.email ?? ""} ${r.sponsor ?? ""} ${Object.values(r.identifiers).filter((v) => typeof v === "string" || typeof v === "number").join(" ")}`, query)), [rows, query]);
+  const present = new Set(rows.map((r) => r.id));
+  const selectedIds = [...ticked].filter((id) => present.has(id));
+  const toggleAll = () =>
+    setTicked((prev) => {
+      const next = new Set(prev);
+      const all = visible.length > 0 && visible.every((r) => next.has(r.id));
+      for (const r of visible) {
+        if (all) next.delete(r.id);
+        else next.add(r.id);
+      }
+      return next;
+    });
   const active = rows.filter((r) => r.status === "confirmed");
   const clashes = useMemo(() => findClashes(scheme, active.map((r) => ({ id: r.id, name: fullName(r), identifiers: r.identifiers }))), [scheme, active]);
   const clashesByRider = useMemo(() => {
@@ -80,7 +108,7 @@ export function RidersManager({ eventId, divisions, selectedId, scheme, schemeIs
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <nav aria-label={T.pickDivision} className="flex flex-wrap gap-2">
         {divisions.map((d) => (
           <Link key={d.id} href={`/org/events/${eventId}/riders?division=${d.id}`} className={`btn ${d.id === selectedId ? "btn-primary" : ""}`} aria-current={d.id === selectedId ? "page" : undefined}>
@@ -88,71 +116,135 @@ export function RidersManager({ eventId, divisions, selectedId, scheme, schemeIs
           </Link>
         ))}
       </nav>
-      <p className="font-semibold" data-testid="scheme-line">
+      <p className="text-body font-medium text-beach-muted" data-testid="scheme-line">
         {T.schemeLine(scheme.name, schemeIsOwn)}
       </p>
-      {selected.drawLocked ? <p className="panel font-bold" role="note">{T.drawLocked}</p> : null}
+      {selected.drawLocked ? <p className="rounded-card border border-beach-line bg-beach-surface px-4 py-2 text-body font-semibold" role="note">{T.drawLocked}</p> : null}
 
       {error ? (
-        <p role="alert" className="panel field-error">
-          {copy.common.problem(error)}{" "}
-          <button type="button" className="btn ml-2" onClick={() => setError(null)}>
+        <p role="alert" className="flex flex-wrap items-center gap-2 rounded-card border border-beach-failed p-3 text-body font-semibold text-beach-failed">
+          {copy.common.problem(error)}
+          <Button variant="quiet" onClick={() => setError(null)}>
             {copy.common.dismiss}
-          </button>
+          </Button>
         </p>
       ) : null}
 
       <RegistrationsPanel entries={entries} />
 
-      <section className="flex flex-col gap-3" aria-labelledby="table-h">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="table-h" className="text-2xl font-extrabold">
-            {T.count(rows.length, active.length)}
-          </h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className="btn" disabled={pending || active.length < 2} onClick={() => shuffle(newShuffleSeed())} data-testid="shuffle">
+      <section className="flex flex-col gap-2" aria-labelledby="table-h">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="table-h">{T.count(rows.length, active.length)}</h2>
+          <div role="group" aria-label={T.toolsLabel} className="flex flex-wrap items-center gap-1">
+            <Button variant="quiet" {...disabledWhen(pending ? copy.common.saving : active.length < 2 && T.needTwo)} onClick={() => shuffle(newShuffleSeed())} data-testid="shuffle">
               {T.shuffle}
-            </button>
+            </Button>
             {selected.shuffleSeed ? (
-              <button type="button" className="btn" disabled={pending || active.length < 2} onClick={() => shuffle(selected.shuffleSeed!)} data-testid="shuffle-repeat">
+              <Button variant="quiet" {...disabledWhen(pending ? copy.common.saving : active.length < 2 && T.needTwo)} onClick={() => shuffle(selected.shuffleSeed!)} data-testid="shuffle-repeat">
                 {T.shuffleAgain}
-              </button>
+              </Button>
             ) : null}
-            <button type="button" className="btn" disabled={pending || rows.length < 2} onClick={sortBySeed} data-testid="sort-by-seed">
+            <Button variant="quiet" {...disabledWhen(pending ? copy.common.saving : rows.length < 2 && T.needTwo)} onClick={sortBySeed} data-testid="sort-by-seed">
               {T.sortBySeed}
-            </button>
-            <a className="btn" href={`/org/events/${eventId}/riders/print?division=${selected.id}`} target="_blank" rel="noopener noreferrer" data-testid="print-start-list">
+            </Button>
+            <Button variant="quiet" href={`/org/events/${eventId}/riders/print?division=${selected.id}`} target="_blank" data-testid="print-start-list">
               {T.printStartList}
-            </a>
+            </Button>
           </div>
         </div>
-        <p className="font-semibold">{T.dragHint}</p>
-        {selected.shuffleSeed ? <p className="font-semibold" data-testid="shuffle-code">{T.shuffleCode(selected.shuffleSeed)}</p> : null}
-        <span className="flex items-center gap-2">
-          <label className="flex items-center gap-3 font-bold">
-            <input type="checkbox" checked={showAllColumns} onChange={(e) => setShowAllColumns(e.target.checked)} />
-            {T.showAllColumns}
-          </label>
-          <HelpButton what={T.showAllColumns} help={help["riders.showAllColumns"]} />
-        </span>
+        <p className="text-body font-medium text-beach-muted">{T.dragHint}</p>
+        {selected.shuffleSeed ? <p className="text-body font-medium text-beach-muted" data-testid="shuffle-code">{T.shuffleCode(selected.shuffleSeed)}</p> : null}
 
         {warnings.length > 0 ? (
-          <div className="panel flex flex-col gap-1" role="note" data-testid="clash-warnings">
-            <p className="font-extrabold">⚠ {T.clash.heading}</p>
-            <ul className="list-disc pl-6 font-semibold">
+          <div className="flex flex-col gap-1 rounded-card border border-beach-outlier p-3" role="note" data-testid="clash-warnings">
+            <p className="text-body font-semibold text-beach-outlier">⚠ {T.clash.heading}</p>
+            <ul className="list-disc pl-6 text-body font-medium">
               {warnings.map((w, i) => (
                 <li key={i}>{w}</li>
               ))}
             </ul>
-            <p className="text-sm font-semibold">{T.clash.note}</p>
+            <p className="text-small font-medium text-beach-muted">{T.clash.note}</p>
           </div>
         ) : null}
 
-        {rows.length === 0 ? <p className="panel text-lg font-semibold">{T.noRiders}</p> : <RidersTable rows={rows} scheme={scheme} cols={cols} clashesByRider={clashesByRider} handlers={handlers} busy={pending} />}
+        {rows.length === 0 ? (
+          <EmptyState title={T.emptyTitle} body={T.emptyBody} />
+        ) : (
+          <div className="rounded-card border border-beach-line bg-beach-bg" data-testid="riders-panel">
+            <div className="flex flex-wrap items-center gap-2 border-b border-beach-line p-2">
+              <label className="relative inline-flex min-w-0 flex-1 basis-56 items-center">
+                <Search aria-hidden className="pointer-events-none absolute left-3 size-4 text-beach-muted" />
+                <input type="search" aria-label={T.search} placeholder={T.search} value={query} onChange={(e) => setQuery(e.target.value)} data-testid="table-search" className="w-full !pl-9" />
+              </label>
+              <span className="flex items-center gap-2">
+                <label className="flex min-h-[var(--org-ctl)] items-center gap-2 text-body font-semibold">
+                  <input type="checkbox" checked={showAllColumns} onChange={(e) => setShowAllColumns(e.target.checked)} />
+                  {T.showAllColumns}
+                </label>
+                <HelpButton what={T.showAllColumns} help={help["riders.showAllColumns"]} />
+              </span>
+            </div>
+            <p aria-live="polite" data-testid="table-count" className="px-3 pt-2 text-small font-medium text-beach-muted">
+              {orgCopy.table.showing(visible.length, rows.length)}
+              {selectedIds.length > 0 ? ` · ${orgCopy.table.selected(selectedIds.length)}` : ""}
+            </p>
+            {selectedIds.length > 0 ? (
+              <div role="region" aria-label={orgCopy.table.bulkLabel} data-testid="bulk-bar" className="mx-2 mt-2 flex flex-wrap items-center gap-2 rounded-[8px] border border-beach-border bg-beach-surface p-2">
+                <span className="px-1 text-body font-semibold">{orgCopy.table.selected(selectedIds.length)}</span>
+                {confirmingRemove ? (
+                  <>
+                    <span className="text-body font-semibold">{T.bulkRemoveQuestion(selectedIds.length)}</span>
+                    <Button
+                      variant="danger"
+                      icon={Trash2}
+                      {...disabledWhen(pending && copy.common.saving)}
+                      onClick={() => {
+                        setConfirmingRemove(false);
+                        run(() => removeEntries(selectedIds), (r) => T.bulkRemoved(r.removed), () => setTicked(new Set()));
+                      }}
+                    >
+                      {T.bulkRemoveYes(selectedIds.length)}
+                    </Button>
+                    <Button variant="quiet" onClick={() => setConfirmingRemove(false)}>
+                      {copy.common.cancel}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Popover label={T.bulkStatus} panelRole="menu" testId="bulk-status">
+                      {(close) =>
+                        (["confirmed", "withdrawn", "no_show"] as const).map((st) => (
+                          <MenuItem
+                            key={st}
+                            onClick={() => {
+                              close();
+                              run(() => setEntriesStatus(selectedIds, st), (r) => T.bulkStatusDone(r.changed));
+                            }}
+                          >
+                            {T.statusOptions[st]}
+                          </MenuItem>
+                        ))
+                      }
+                    </Popover>
+                    <Button variant="danger" icon={Trash2} onClick={() => setConfirmingRemove(true)}>
+                      {T.bulkRemove}
+                    </Button>
+                  </>
+                )}
+                <Button variant="quiet" onClick={() => { setTicked(new Set()); setConfirmingRemove(false); }}>
+                  {orgCopy.table.clear}
+                </Button>
+              </div>
+            ) : null}
+            <div className="mt-2">
+              <RidersTable rows={visible} allIds={rows.map((r) => r.id)} selected={ticked} onToggle={toggle} onToggleAll={toggleAll} noMatch={visible.length === 0 ? orgCopy.table.noMatch(query) : null} scheme={scheme} cols={cols} clashesByRider={clashesByRider} handlers={handlers} busy={pending} />
+            </div>
+          </div>
+        )}
       </section>
 
-      <section className="panel flex flex-col gap-3" aria-labelledby="add-h">
-        <h2 id="add-h" className="text-xl font-extrabold">
+      <section className="flex flex-col gap-3 rounded-card border border-beach-line p-4" aria-labelledby="add-h">
+        <h2 id="add-h">
           {T.addRowHeading}
         </h2>
         <form
@@ -173,16 +265,16 @@ export function RidersManager({ eventId, divisions, selectedId, scheme, schemeIs
             ] as const
           ).map(([key, label, type]) => (
             <div key={key} className="flex flex-col gap-1">
-              <label htmlFor={`new-${key}`} className="font-bold">
+              <label htmlFor={`new-${key}`} className="text-small font-semibold">
                 {label}
               </label>
               <input id={`new-${key}`} type={type} value={form[key]} onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))} />
             </div>
           ))}
           <div className="flex items-end">
-            <button type="submit" className="btn btn-primary" disabled={pending || !form.first.trim() || !form.last.trim()} data-testid="add-rider">
+            <Button type="submit" variant="secondary" {...disabledWhen(pending ? copy.common.saving : (!form.first.trim() || !form.last.trim()) && T.nameRequiredHint)} data-testid="add-rider">
               {T.addRow}
-            </button>
+            </Button>
           </div>
         </form>
       </section>

@@ -12,11 +12,11 @@ export default async function MasterPresetsPage() {
   const c = copy.admin.presets;
   return (
     <main className="flex flex-col gap-8">
-      <h1 className="text-3xl font-extrabold">{c.heading}</h1>
+      <h1>{c.heading}</h1>
       <p className="max-w-3xl text-lg font-semibold">{c.intro}</p>
       {groups.map((g) => (
         <section key={g.kind} className="flex flex-col gap-3" aria-labelledby={`h-${g.kind}`}>
-          <h2 id={`h-${g.kind}`} className="text-2xl font-extrabold">
+          <h2 id={`h-${g.kind}`} className="text-2xl font-semibold">
             {g.label}
           </h2>
           {g.presets.length === 0 ? <p className="font-semibold">{c.none}</p> : null}
@@ -27,7 +27,7 @@ export default async function MasterPresetsPage() {
               return (
                 <li key={p.key} className="panel flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-xl font-bold">{p.name}</p>
+                    <p className="text-xl font-semibold">{p.name}</p>
                     <p className="font-semibold">
                       {p.key} · {def ? c.defaultLine(def.version) : c.noDefault}
                       {drafts.length ? ` · ${c.draftLine(drafts.join(", "))}` : ""}

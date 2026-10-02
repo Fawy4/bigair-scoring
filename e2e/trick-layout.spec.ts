@@ -88,7 +88,7 @@ test("Live screen settings: 'Show scores as % of maximum' is off by default, und
     await page.getByRole("tab", { name: "Scoring" }).click();
     await expect(page.getByTestId("model-sentence")).toBeVisible({ timeout: 40_000 });
     await expect(page.getByTestId("live-settings")).toHaveCount(0); // only under Show all settings
-    await page.getByRole("checkbox", { name: "Show all settings" }).check();
+    await page.getByTestId("advanced-toggle").click(); // the fold called More settings
     const panel = page.getByTestId("live-settings");
     await expect(panel).toBeVisible();
     await expect(panel.getByTestId("show-percent")).not.toBeChecked();

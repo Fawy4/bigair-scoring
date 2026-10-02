@@ -14,8 +14,8 @@ export default async function OrgFeedbackPage({ searchParams }: { searchParams: 
   const { notes, pages, events } = await loadNotes(supabase, filters, { organisationId: current?.id ?? "00000000-0000-0000-0000-000000000000" });
   return (
     <main className="flex flex-col gap-4">
-      <h1 className="text-3xl font-extrabold">{copy.feedback.orgHeading}</h1>
-      <p className="max-w-3xl text-lg font-semibold">{copy.feedback.listIntro}</p>
+      <h1>{copy.feedback.orgHeading}</h1>
+      <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.feedback.listIntro}</p>
       <NotesFilters action="/org/feedback" values={filters} pages={pages} events={events} />
       <NotesList notes={notes} canManage={false} />
     </main>

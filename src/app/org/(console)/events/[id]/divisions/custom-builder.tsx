@@ -28,7 +28,7 @@ export function CustomBuilder({ working, onChange, riders, readOnly }: { working
 
   return (
     <fieldset disabled={readOnly} className="flex flex-col gap-4" data-testid="custom-builder">
-      <legend className="flex items-center gap-2 text-lg font-extrabold">
+      <legend className="flex items-center gap-2 text-lg font-semibold">
         <span>{B.heading}</span>
       </legend>
       <p className="font-semibold">{B.intro}</p>
@@ -49,9 +49,9 @@ export function CustomBuilder({ working, onChange, riders, readOnly }: { working
         );
         const label = r.name ?? r.id;
         return (
-          <section key={r.id} className="flex flex-col gap-3 rounded-lg border-2 border-[#111] p-3" aria-label={B.roundHeading(i + 1, label)} data-testid="custom-round">
+          <section key={r.id} className="flex flex-col gap-3 rounded-lg border border-beach-line p-3" aria-label={B.roundHeading(i + 1, label)} data-testid="custom-round">
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <h3 className="text-lg font-extrabold">{B.roundHeading(i + 1, label)}</h3>
+              <h3 className="text-lg font-semibold">{B.roundHeading(i + 1, label)}</h3>
               {rounds.length > 1 ? (
                 <button type="button" className="btn btn-danger" aria-label={B.remove(label)} onClick={() => set(removeRound(template, r.id))}>
                   {B.removeLabel}
@@ -60,14 +60,14 @@ export function CustomBuilder({ working, onChange, riders, readOnly }: { working
             </div>
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex flex-col gap-1">
-                <label htmlFor={`cb-name-${r.id}`} className="font-bold">
+                <label htmlFor={`cb-name-${r.id}`} className="font-semibold">
                   {B.nameLabel}
                 </label>
                 <input id={`cb-name-${r.id}`} value={r.name ?? ""} className="w-48" onChange={(e) => set(renameRoundField(template, r.id, e.target.value))} />
               </div>
               <div className="flex flex-col gap-1">
-                <span className="font-bold">{B.codeLabel}</span>
-                <span className="min-h-[48px] py-3 font-extrabold">{r.id}</span>
+                <span className="font-semibold">{B.codeLabel}</span>
+                <span className="min-h-[48px] py-3 font-semibold">{r.id}</span>
               </div>
               <div className="flex flex-col gap-1">
                 <FieldLabel htmlFor={`cb-target-${r.id}`} text={copy.formatSimple.ridersPerHeat} help={help["format.heatSize"]} />
@@ -82,7 +82,7 @@ export function CustomBuilder({ working, onChange, riders, readOnly }: { working
                 <NumberBox id={`cb-max-${r.id}`} value={effectiveMaxHeatSize(target, r.maxHeatSize)} onCommit={(v) => set(setRoundSizes(template, r.id, { max: v }))} />
               </div>
             </div>
-            <p className="font-bold" data-testid="advance-count">
+            <p className="font-semibold" data-testid="advance-count">
               {B.advancing(advanceCount(r, laterIds))}
             </p>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -114,7 +114,7 @@ export function CustomBuilder({ working, onChange, riders, readOnly }: { working
         </button>
       </div>
       <div role="status" className="panel flex flex-col gap-1" data-testid="ladder-problems">
-        <p className="font-extrabold">{B.problemsHeading(riders)}</p>
+        <p className="font-semibold">{B.problemsHeading(riders)}</p>
         {problems.length === 0 ? (
           <p className="font-semibold">{B.noProblems(riders)}</p>
         ) : (

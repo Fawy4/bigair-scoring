@@ -26,10 +26,10 @@ export default async function EditPresetPage({ params }: { params: Promise<{ kin
 
   return (
     <main className="flex max-w-4xl flex-col gap-6">
-      <Link href="/admin/presets" className="font-bold underline">
+      <Link href="/admin/presets" className="font-semibold underline">
         {c.back}
       </Link>
-      <h1 className="text-3xl font-extrabold">{c.edit(versions[0].name)}</h1>
+      <h1>{c.edit(versions[0].name)}</h1>
       <p className="text-lg font-semibold">
         {def.label} · {key} · {defaultVersion(versions) ? c.defaultLine(defaultVersion(versions)!.version) : c.noDefault}
       </p>

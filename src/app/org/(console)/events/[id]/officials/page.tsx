@@ -58,8 +58,8 @@ export default async function OfficialsStepPage({ params }: { params: Promise<{ 
   const colours = usesColours && scheme ? scheme.palette.map((c) => ({ key: c.key, label: c.label })) : [];
   return (
     <main className="flex max-w-5xl flex-col gap-6">
-      <h1 className="text-3xl font-extrabold">{copy.officials.stepHeading}</h1>
-      <p className="font-semibold">{copy.officials.intro}</p>
+      <h1>{copy.officials.stepHeading}</h1>
+      <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.officials.intro}</p>
       <OfficialsManager
         eventId={id}
         eventName={event.name}

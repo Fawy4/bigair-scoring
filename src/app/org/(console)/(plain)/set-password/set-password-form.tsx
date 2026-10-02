@@ -26,7 +26,7 @@ export function SetPasswordForm({ changing = false }: { changing?: boolean }) {
   if (state.kind === "saved") {
     return (
       <div role="status" className="panel flex flex-col gap-3">
-        <p className="text-lg font-bold">{changing ? T.changed : T.saved}</p>
+        <p className="text-lg font-semibold">{changing ? T.changed : T.saved}</p>
         <Link href="/org" className="btn btn-primary">
           {T.continue}
         </Link>
@@ -36,13 +36,13 @@ export function SetPasswordForm({ changing = false }: { changing?: boolean }) {
   return (
     <form onSubmit={submit} className="panel flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <label htmlFor="new-password" className="font-bold">
+        <label htmlFor="new-password" className="font-semibold">
           {T.newPassword}
         </label>
         <input id="new-password" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="new-password-again" className="font-bold">
+        <label htmlFor="new-password-again" className="font-semibold">
           {T.again}
         </label>
         <input id="new-password-again" type="password" autoComplete="new-password" required value={again} onChange={(e) => setAgain(e.target.value)} />

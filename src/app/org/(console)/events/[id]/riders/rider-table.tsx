@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
+import { Button, disabledWhen } from "@/components/org/button";
 import { NumberField } from "@/components/org/number-field";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -11,13 +13,14 @@ import type { IdentificationScheme } from "@/lib/schemas/identification";
 import type { IdentifierColumns } from "@/lib/riders/columns";
 import { withIdentifier } from "@/lib/riders/identifiers";
 import { moveRow } from "@/lib/riders/shuffle";
-import { copy } from "@/lib/ui-copy";
+import { copy, orgCopy } from "@/lib/ui-copy";
+import { cn } from "@/lib/utils";
 import { fullName, type EntryRow } from "./types";
 
 const C = copy.riders.columns;
-const th = "border-2 border-[#111] bg-[#eee] p-2 text-left align-bottom";
-const td = "border-2 border-[#111] p-1 align-middle";
-const input = "w-full min-w-[6rem] !min-h-[2.75rem]";
+const th = "sticky top-0 z-10 h-[var(--org-row)] whitespace-nowrap bg-beach-surface px-2 text-left align-middle text-small font-semibold text-beach-muted [box-shadow:inset_0_-1px_0_var(--beach-line)]";
+const td = "px-2 py-1 align-middle [box-shadow:inset_0_-1px_0_var(--beach-line)]";
+const input = "w-full min-w-[6rem] border-transparent bg-transparent hover:border-beach-border focus:border-beach-accent";
 
 /** A cell that saves when the person leaves it (or presses Enter), and only when the value really changed. */
 function Cell({ value, label, onCommit, width, inputMode }: { value: string; label: string; onCommit: (v: string) => void; width?: string; inputMode?: "numeric" | "decimal" | "email" | "tel" }) {
@@ -46,10 +49,11 @@ export interface TableHandlers {
   order: (ids: string[]) => void;
 }
 
-function Row({ row, index, total, scheme, cols, clashes, handlers, busy, ids }: { row: EntryRow; index: number; total: number; scheme: IdentificationScheme; cols: IdentifierColumns; clashes: string[]; handlers: TableHandlers; busy: boolean; ids: string[] }) {
+function Row({ row, selected, onToggle, scheme, cols, clashes, handlers, busy, ids }: { row: EntryRow; selected: boolean; onToggle: () => void; scheme: IdentificationScheme; cols: IdentifierColumns; clashes: string[]; handlers: TableHandlers; busy: boolean; ids: string[] }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row.id });
   const [asking, setAsking] = useState(false);
   const name = fullName(row);
+  const fullIndex = ids.indexOf(row.id);
   const inactive = row.status !== "confirmed";
   const model = tableLabel(scheme, { name, nationality: row.nationality, sponsor: row.sponsor, photoUrl: row.photoLink, identifiers: row.identifiers });
   const patchRider = (p: Parameters<TableHandlers["saveRider"]>[1]) => handlers.saveRider(row, p);
@@ -57,20 +61,17 @@ function Row({ row, index, total, scheme, cols, clashes, handlers, busy, ids }: 
   const palette = scheme.palette;
 
   return (
-    <tr ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, position: "relative", zIndex: isDragging ? 5 : undefined, background: isDragging ? "#fff8c5" : undefined }} data-testid="rider-row" className={inactive ? "opacity-70" : ""}>
+    <tr ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, position: "relative", zIndex: isDragging ? 5 : undefined, background: isDragging ? "var(--beach-tint-grade0)" : undefined }} data-testid="rider-row" data-selected={selected || undefined} className={cn(inactive && "opacity-70", selected && "bg-beach-surface")}>
+      <td className="w-[var(--org-row)] p-0 [box-shadow:inset_0_-1px_0_var(--beach-line)]">
+        <label className="flex h-[var(--org-row)] w-[var(--org-row)] items-center justify-center">
+          <input type="checkbox" aria-label={orgCopy.table.selectRow(name)} checked={selected} onChange={onToggle} />
+        </label>
+      </td>
       <td className={td}>
         <div className="flex items-center gap-1">
-          <button type="button" className="btn !min-h-[2.75rem] !px-2" aria-label={copy.riders.drag(name)} {...attributes} {...listeners}>
-            ⠿
-          </button>
-          <div className="flex flex-col gap-1">
-            <button type="button" className="btn !min-h-[1.5rem] !px-2 !py-0" disabled={busy || index === 0} aria-label={copy.riders.moveUp(name)} onClick={() => handlers.order(moveRow(ids, index, index - 1))}>
-              ↑
-            </button>
-            <button type="button" className="btn !min-h-[1.5rem] !px-2 !py-0" disabled={busy || index === total - 1} aria-label={copy.riders.moveDown(name)} onClick={() => handlers.order(moveRow(ids, index, index + 1))}>
-              ↓
-            </button>
-          </div>
+          <Button variant="quiet" iconOnly icon={GripVertical} aria-label={copy.riders.drag(name)} {...attributes} {...listeners} />
+          <Button variant="quiet" iconOnly icon={ArrowUp} aria-label={copy.riders.moveUp(name)} {...disabledWhen(busy ? copy.common.saving : fullIndex === 0 && copy.riders.firstRow)} onClick={() => handlers.order(moveRow(ids, fullIndex, fullIndex - 1))} />
+          <Button variant="quiet" iconOnly icon={ArrowDown} aria-label={copy.riders.moveDown(name)} {...disabledWhen(busy ? copy.common.saving : fullIndex === ids.length - 1 && copy.riders.lastRow)} onClick={() => handlers.order(moveRow(ids, fullIndex, fullIndex + 1))} />
         </div>
       </td>
       <td className={td}>
@@ -88,7 +89,7 @@ function Row({ row, index, total, scheme, cols, clashes, handlers, busy, ids }: 
         <div className="flex flex-col gap-1">
           <RiderLabel scheme={scheme} rider={{ name }} model={model} size="sm" />
           {clashes.length > 0 ? (
-            <span className="text-sm font-bold" role="note">
+            <span className="text-sm font-semibold" role="note">
               ⚠ {copy.riders.clash.heading}
             </span>
           ) : null}
@@ -124,7 +125,7 @@ function Row({ row, index, total, scheme, cols, clashes, handlers, busy, ids }: 
       <td className={td}>
         <select
           aria-label={`${C.status}: ${name}`}
-          className="!min-h-[2.75rem]"
+          className="!min-h-[var(--org-ctl)]"
           value={row.status === "confirmed" || row.status === "withdrawn" || row.status === "no_show" ? row.status : "confirmed"}
           onChange={(e) => handlers.saveEntry(row, { status: e.target.value as "confirmed" | "withdrawn" | "no_show" })}
         >
@@ -138,7 +139,7 @@ function Row({ row, index, total, scheme, cols, clashes, handlers, busy, ids }: 
       <td className={td}>
         {asking ? (
           <div role="group" aria-label={copy.riders.remove} className="flex flex-col gap-1">
-            <span className="max-w-[14rem] text-sm font-bold">{copy.riders.removeQuestion(name)}</span>
+            <span className="max-w-[14rem] text-sm font-semibold">{copy.riders.removeQuestion(name)}</span>
             <button type="button" className="btn btn-danger" onClick={() => { handlers.remove(row); setAsking(false); }}>
               {copy.riders.removeYes}
             </button>
@@ -147,9 +148,9 @@ function Row({ row, index, total, scheme, cols, clashes, handlers, busy, ids }: 
             </button>
           </div>
         ) : (
-          <button type="button" className="btn" onClick={() => setAsking(true)}>
+          <Button variant="quiet" onClick={() => setAsking(true)}>
             {copy.riders.remove}
-          </button>
+          </Button>
         )}
       </td>
     </tr>
@@ -158,7 +159,7 @@ function Row({ row, index, total, scheme, cols, clashes, handlers, busy, ids }: 
 
 function ColourSelect({ label, value, palette, onChange }: { label: string; value: string; palette: IdentificationScheme["palette"]; onChange: (v: string) => void }) {
   return (
-    <select aria-label={label} className="!min-h-[2.75rem]" value={value} onChange={(e) => onChange(e.target.value)}>
+    <select aria-label={label} className="!min-h-[var(--org-ctl)]" value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">{copy.riders.pickColour}</option>
       {palette.map((c) => (
         <option key={c.key} value={c.key}>
@@ -170,9 +171,11 @@ function ColourSelect({ label, value, palette, onChange }: { label: string; valu
 }
 
 /** The table: drag by the handle, or use the ↑ ↓ buttons. Every change of order renumbers the seeds 1, 2, 3… */
-export function RidersTable({ rows, scheme, cols, clashesByRider, handlers, busy }: { rows: EntryRow[]; scheme: IdentificationScheme; cols: IdentifierColumns; clashesByRider: Map<string, string[]>; handlers: TableHandlers; busy: boolean }) {
+export function RidersTable({ rows, allIds, selected, onToggle, onToggleAll, noMatch, scheme, cols, clashesByRider, handlers, busy }: { rows: EntryRow[]; allIds: string[]; selected: Set<string>; onToggle: (id: string) => void; onToggleAll: () => void; noMatch: string | null; scheme: IdentificationScheme; cols: IdentifierColumns; clashesByRider: Map<string, string[]>; handlers: TableHandlers; busy: boolean }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
-  const ids = rows.map((r) => r.id);
+  const ids = allIds;
+  const shownIds = rows.map((r) => r.id);
+  const allShown = rows.length > 0 && rows.every((r) => selected.has(r.id));
 
   function onDragEnd(e: DragEndEvent) {
     if (!e.over || e.active.id === e.over.id) return;
@@ -182,11 +185,16 @@ export function RidersTable({ rows, scheme, cols, clashesByRider, handlers, busy
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="max-h-[70vh] overflow-auto">
       <DndContext id="riders-dnd" sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <table className="w-full border-collapse" data-testid="riders-table">
+        <table className="w-full border-separate border-spacing-0 text-body" data-testid="riders-table">
           <thead>
             <tr>
+              <th scope="col" className={`${th} w-[var(--org-row)] !p-0`}>
+                <label className="flex h-[var(--org-row)] w-[var(--org-row)] items-center justify-center">
+                  <input type="checkbox" aria-label={orgCopy.table.selectAll} checked={allShown} onChange={onToggleAll} />
+                </label>
+              </th>
               <th className={th}>{C.order}</th>
               <th className={th}>{C.seed}</th>
               <th className={th}>{C.label}</th>
@@ -209,15 +217,16 @@ export function RidersTable({ rows, scheme, cols, clashesByRider, handlers, busy
               <th className={th}>{C.actions}</th>
             </tr>
           </thead>
-          <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          <SortableContext items={shownIds} strategy={verticalListSortingStrategy}>
             <tbody>
-              {rows.map((row, i) => (
-                <Row key={row.id} row={row} index={i} total={rows.length} scheme={scheme} cols={cols} clashes={clashesByRider.get(row.id) ?? []} handlers={handlers} busy={busy} ids={ids} />
+              {rows.map((row) => (
+                <Row key={row.id} row={row} selected={selected.has(row.id)} onToggle={() => onToggle(row.id)} scheme={scheme} cols={cols} clashes={clashesByRider.get(row.id) ?? []} handlers={handlers} busy={busy} ids={ids} />
               ))}
             </tbody>
           </SortableContext>
         </table>
       </DndContext>
+      {noMatch ? <p data-testid="no-match" className="p-4 text-body font-medium text-beach-muted">{noMatch}</p> : null}
     </div>
   );
 }

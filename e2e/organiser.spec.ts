@@ -143,6 +143,7 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
 
   await org.signIn(page, `/org/events/${eventId}/divisions`);
   await expect(page.getByRole("heading", { name: "Step 2: Divisions" })).toBeVisible();
+  await page.getByRole("button", { name: "Help: when the rules lock" }).click(); // the notice is one small pill with a "?"
   await expect(page.getByTestId("lock-banner")).toHaveText("Editable until the first heat of this division starts; after that, unlock with a reason (saved).");
   await expect(divisionsRail()).toContainText("Add at least one division");
   await expect(divisionsRail()).toHaveAttribute("data-state", "not_started");

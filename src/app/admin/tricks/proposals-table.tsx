@@ -8,8 +8,8 @@ import { copy } from "@/lib/ui-copy";
 import { acceptTrickProposal, dismissTrickProposal } from "../actions";
 
 const T = copy.trickBase.admin;
-const th = "border-2 border-[#111] bg-[#eee] p-2 text-left";
-const td = "border-2 border-[#111] p-2 align-top";
+const th = "border border-beach-line bg-beach-surface p-2 text-left";
+const td = "border border-beach-line p-2 align-top";
 
 interface Row {
   eventId: string;
@@ -57,7 +57,7 @@ export function ProposalsTable({ rows, isOwner }: { rows: Row[]; isOwner: boolea
           <tbody>
             {rows.map((r) => (
               <tr key={`${r.eventId}-${r.family}-${r.key}`} data-testid="proposal">
-                <td className={`${td} font-bold`}>{r.label}</td>
+                <td className={`${td} font-semibold`}>{r.label}</td>
                 <td className={td}>{copy.trickBase.families[r.family as keyof typeof copy.trickBase.families] ?? r.family}</td>
                 <td className={td}>{r.eventName}</td>
                 <td className={td}>{r.organisationName}</td>

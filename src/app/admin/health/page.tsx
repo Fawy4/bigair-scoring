@@ -26,9 +26,9 @@ export default async function HealthPage() {
 
   return (
     <main className="flex max-w-2xl flex-col gap-6">
-      <h1 className="text-3xl font-extrabold">{c.heading}</h1>
+      <h1>{c.heading}</h1>
       <p className="text-lg font-semibold">{c.intro}</p>
-      <ul className="flex flex-col gap-3 text-xl font-bold">
+      <ul className="flex flex-col gap-3 text-xl font-semibold">
         <li className="panel">
           <span aria-hidden="true">{up ? "✔ " : "✖ "}</span>
           {up ? c.database : c.databaseDown}
@@ -48,7 +48,7 @@ export default async function HealthPage() {
         </p>
       )}
       <section className="flex flex-col gap-3" aria-labelledby="config-h">
-        <h2 id="config-h" className="text-2xl font-extrabold">
+        <h2 id="config-h" className="text-2xl font-semibold">
           {c.configHeading}
         </h2>
         <p className="font-semibold">{c.configIntro}</p>

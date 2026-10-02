@@ -20,10 +20,13 @@ export function shortTitle(input: { division?: string; round?: { name: string; s
 }
 
 /**
- * One line of the run order: "R1 · H2 · 14:05 · Ended" (started at 14:05) or "R1 · H3 · est. 14:20" (not started). It is never cut short: the row wraps.
- * `time` is the heat's own start when it has started, else the run order's estimate; `held` (wind hold) replaces the estimate with the word "held".
+ * One line of the run order. A heat that has started: "R1 · H2 · planned 14:05 · started 14:11 · Ended"; one that has not: "R1 · H3 · est. 14:35".
+ * `planned` is the time in the plan as written, `started` the real one; `held` (wind hold) replaces the estimate with the word "held". It is never cut short: the row wraps.
  */
-export function runLine(input: { round?: { name: string; short_name: string | null }; heat: Pick<HeatRow, "name" | "number" | "number_suffix" | "started_at">; startedHhmm: string | null; estimatedHhmm: string | null; held: boolean; statusWord: string | null }): string {
-  const time = input.heat.started_at && input.startedHhmm ? H.timeStarted(input.startedHhmm) : input.held ? H.heldWord : input.estimatedHhmm ? H.timeEstimated(input.estimatedHhmm) : null;
-  return H.line([shortRound(input.round), shortHeat(input.heat), time, input.statusWord].filter((x): x is string => Boolean(x)));
+export function runLine(input: { round?: { name: string; short_name: string | null }; heat: Pick<HeatRow, "name" | "number" | "number_suffix" | "started_at">; startedHhmm: string | null; estimatedHhmm: string | null; plannedHhmm?: string | null; held: boolean; statusWord: string | null }): string {
+  const started = input.heat.started_at && input.startedHhmm;
+  const times = started
+    ? [input.plannedHhmm ? H.timePlanned(input.plannedHhmm) : null, H.timeStarted(input.startedHhmm!)]
+    : [input.held ? H.heldWord : input.estimatedHhmm ? H.timeEstimated(input.estimatedHhmm) : null];
+  return H.line([shortRound(input.round), shortHeat(input.heat), ...times, input.statusWord].filter((x): x is string => Boolean(x)));
 }

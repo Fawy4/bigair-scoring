@@ -1,4 +1,7 @@
 import { notFound } from "next/navigation";
+import { ClockText } from "@/components/clock-text";
+import { DriftBadge } from "@/components/drift-badge";
+import { scheduleDrift, type Drift } from "@/lib/schedule/drift";
 import { computeTimetable } from "@/lib/engine/schedule";
 import { getOrgContext } from "@/lib/org/context";
 import { readiness } from "@/lib/org/readiness";
@@ -54,11 +57,25 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
   const origin = await requestOrigin();
   const ready = readiness({ eventId: id, divisions: divisions ?? [], counts });
   const dashRows: DashboardRow[] = rows.map((r) => ({ id: r.itemId, start: r.start, label: r.kind === "heat" ? heatLabel(r) : r.label, status: r.status }));
+  // how far the day has slipped: the next heat that has not started, in the plan as written against now
+  let drift: Drift | null = null;
+  if (todays) {
+    try {
+      const { plan, defaults } = rowToPlan(todays, parseEventSettings(event.settings).readyCallMin);
+      drift = scheduleDrift(plan, model.lives, { timezone: tz, eventDay: today, defaults, now: new Date().toISOString() });
+    } catch {
+      drift = null;
+    }
+  }
   const holdSince = todays?.hold && typeof todays.hold === "object" && "since" in todays.hold ? String((todays.hold as { since: string }).since) : null;
 
   return (
     <div data-testid="dashboard" className="flex flex-col gap-4">
-      <h1 className="text-[20px] font-semibold leading-tight">{copy.dashboard.heading(event.name)}</h1>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <h1 className="text-[20px] font-semibold leading-tight">{copy.dashboard.heading(event.name)}</h1>
+        <DriftBadge drift={drift} />
+        <ClockText timezone={tz} serverNow={new Date().toISOString()} />
+      </div>
       <DashboardView
         eventId={id}
         timezone={tz}

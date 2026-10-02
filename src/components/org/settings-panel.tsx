@@ -15,6 +15,8 @@ interface SettingsPanelProps {
   /** The live example sentence. It stays in view (sticky) while the Advanced fold is scrolled, and is announced politely when it changes. */
   sentence: string;
   sentenceTestId?: string;
+  /** The sentence is shown elsewhere on the page (a SummaryCard beside the form): not repeated inside the panel. */
+  sentenceElsewhere?: boolean;
   /** The quiet "Load…" menu: names of saved presets (the preview) or `{ id, label }` with `onLoad` (the real screens), and "Save as preset…". */
   loadMenu?: { builtIn: LoadItem[]; mine: LoadItem[]; onLoad?: (id: string) => void; onSaveAsPreset?: () => void; disabledReason?: string };
   /** A note above the dials: a locked division says so here, once. */
@@ -32,7 +34,7 @@ interface SettingsPanelProps {
 }
 
 /** Simple dials on top, the live sentence under the title, one "More settings" fold at the bottom, presets in a small "Load…" menu in the header. */
-export function SettingsPanel({ title, sentence, sentenceTestId = "model-sentence", loadMenu, banner, footer, simple, advanced, advancedCount, defaultAdvancedOpen = false, storageKey, testId }: SettingsPanelProps) {
+export function SettingsPanel({ title, sentence, sentenceTestId = "model-sentence", sentenceElsewhere, loadMenu, banner, footer, simple, advanced, advancedCount, defaultAdvancedOpen = false, storageKey, testId }: SettingsPanelProps) {
   const [open, setOpen] = useState(defaultAdvancedOpen);
   useEffect(() => {
     if (!storageKey) return;
@@ -105,12 +107,12 @@ export function SettingsPanel({ title, sentence, sentenceTestId = "model-sentenc
         )}
       </header>
       {banner}
-      <div className="sticky top-[var(--org-sticky-top,0px)] z-10 border-b border-beach-line bg-beach-surface px-4 py-2" aria-live="polite">
+      {sentenceElsewhere ? null : <div className="sticky top-[var(--org-sticky-top,0px)] z-10 border-b border-beach-line bg-beach-surface px-4 py-2" aria-live="polite">
         <p className="text-small font-semibold text-beach-muted">{orgCopy.settings.sentenceLabel}</p>
         <p data-testid={sentenceTestId} className="text-body font-semibold">
           {sentence}
         </p>
-      </div>
+      </div>}
       <div className="px-4">{simple}</div>
       {advanced ? <div className="border-t border-beach-line">
         <button type="button" aria-expanded={open} onClick={toggle} data-testid="advanced-toggle" className="group flex min-h-[var(--org-ctl)] w-full items-center gap-2 px-4 text-left text-body font-semibold hover:bg-beach-surface">

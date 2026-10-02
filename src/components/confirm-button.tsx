@@ -32,11 +32,11 @@ export function ConfirmButton({
   }
   return (
     <div role="group" aria-label={label} className="panel flex flex-col gap-3">
-      <p className="text-lg font-bold">{question}</p>
+      <p className="text-body font-semibold">{question}</p>
       <div className="flex flex-wrap gap-3">
         <button
           type="button"
-          className={`btn btn-primary ${danger ? "!border-[#9b1c1c] !bg-[#9b1c1c]" : ""}`}
+          className={`btn ${danger ? "btn-danger-solid" : "btn-primary"}`}
           disabled={pending}
           onClick={() => {
             onConfirm();

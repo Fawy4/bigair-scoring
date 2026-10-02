@@ -228,8 +228,9 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const nextLine = next ? (next.held ? T.nextHeld(nextRow ? heatTitle(ctx, nextRow) : next.title) : T.next(nextRow ? heatTitle(ctx, nextRow) : next.title, next.startsAt)) : null;
 
   const badge = q.badge;
-  const common = { seat: viewer?.name ?? "", connection: badge.status, pending: badge.pending, onRetry: () => q.queue.retryFailed() };
-  const queueCommon = { seat: viewer?.name ?? "", connection: badge.status, pendingCount: badge.pending, onRetry: () => q.queue.retryFailed() };
+  const timeNow = { timezone: ctx.event.timezone, nowMs: nowServer };
+  const common = { seat: viewer?.name ?? "", connection: badge.status, pending: badge.pending, onRetry: () => q.queue.retryFailed(), clock: timeNow };
+  const queueCommon = { seat: viewer?.name ?? "", connection: badge.status, pendingCount: badge.pending, onRetry: () => q.queue.retryFailed(), clock: timeNow };
   const noticeList =
     notices.length > 0 ? (
       <div className="flex flex-col gap-1 px-2 pt-1" data-testid="notices">

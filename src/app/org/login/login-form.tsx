@@ -64,9 +64,9 @@ export function LoginForm({ next }: { next?: string }) {
 
   if (state.kind === "sent") {
     return (
-      <div role="status" className="rounded-lg border-4 border-[#111] p-4 text-xl font-semibold">
+      <div role="status" className="rounded-card border border-beach-line bg-beach-surface p-4 text-body font-semibold">
         {state.message}
-        <p className="mt-2 text-lg">
+        <p className="mt-2 font-medium">
           {copy.login.sameBrowserBefore}
           <strong>{copy.login.sameBrowserBold}</strong>
           {copy.login.sameBrowserAfter}
@@ -78,16 +78,16 @@ export function LoginForm({ next }: { next?: string }) {
   const working = state.kind === "working";
   const error =
     state.kind === "error" ? (
-      <p role="alert" className="rounded-lg border-2 border-[#111] p-3 text-lg font-semibold">
+      <p role="alert" className="rounded-card border border-beach-failed p-3 text-body font-semibold text-beach-failed">
         {copy.common.problem(state.message)}
       </p>
     ) : null;
   const emailField = (
     <>
-      <label htmlFor="email" className="text-xl font-bold">
+      <label htmlFor="email" className="text-body font-semibold">
         {copy.login.email}
       </label>
-      <Input id="email" type="email" inputMode="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-16 border-2 border-[#111] text-xl font-semibold" />
+      <Input id="email" type="email" inputMode="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
     </>
   );
 
@@ -98,38 +98,38 @@ export function LoginForm({ next }: { next?: string }) {
           e.preventDefault();
           void sendLink(asked ? target : null, copy.login.sentTo);
         }}
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-3"
       >
         {emailField}
         {error}
-        <Button type="submit" size="lg" disabled={working} className="h-16 text-xl font-bold">
+        <Button type="submit" disabled={working} className="self-start">
           {working ? copy.login.sending : copy.login.send}
         </Button>
-        <button type="button" className="btn" onClick={() => { setMode("password"); setState({ kind: "idle" }); }}>
+        <Button type="button" variant="ghost" className="self-start" onClick={() => { setMode("password"); setState({ kind: "idle" }); }}>
           {copy.login.passwordInstead}
-        </button>
+        </Button>
       </form>
     );
   }
 
   return (
-    <form onSubmit={signInWithPassword} className="flex flex-col gap-4">
+    <form onSubmit={signInWithPassword} className="flex flex-col gap-3">
       {emailField}
-      <label htmlFor="password" className="text-xl font-bold">
+      <label htmlFor="password" className="text-body font-semibold">
         {copy.login.password}
       </label>
-      <Input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="h-16 border-2 border-[#111] text-xl font-semibold" />
+      <Input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
       {error}
-      <Button type="submit" size="lg" disabled={working} className="h-16 text-xl font-bold">
+      <Button type="submit" disabled={working} className="self-start">
         {working ? copy.login.signingIn : copy.login.signIn}
       </Button>
       <div className="flex flex-wrap gap-3">
-        <button type="button" className="btn" onClick={() => { setMode("link"); setState({ kind: "idle" }); }}>
+        <Button type="button" variant="ghost" onClick={() => { setMode("link"); setState({ kind: "idle" }); }}>
           {copy.login.linkInstead}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn"
+          variant="ghost"
           disabled={working}
           onClick={() => {
             if (email.trim() === "") setState({ kind: "error", message: copy.login.forgotNeedsEmail });
@@ -137,9 +137,9 @@ export function LoginForm({ next }: { next?: string }) {
           }}
         >
           {copy.login.forgot}
-        </button>
+        </Button>
       </div>
-      <p className="text-sm font-semibold">{copy.login.setPasswordLink}</p>
+      <p className="text-small font-medium text-beach-muted">{copy.login.setPasswordLink}</p>
     </form>
   );
 }

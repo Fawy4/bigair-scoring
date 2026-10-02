@@ -24,17 +24,17 @@ export default async function OrganiserHome({ searchParams }: { searchParams: Pr
   return (
     <main className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-extrabold">{copy.orgHome.heading(current.name)}</h1>
+        <h1>{copy.orgHome.heading(current.name)}</h1>
         <Link href="/org/events/new" className="btn btn-primary">
           {copy.orgHome.newEvent}
         </Link>
       </div>
       <ul className="flex flex-col gap-2">
         {visibleEvents.map((e) => (
-          <li key={e.id} className="panel flex flex-wrap items-center justify-between gap-3">
+          <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-beach-line p-3">
             <div>
-              <p className="text-xl font-bold">{e.name}</p>
-              <p className="flex flex-wrap items-center gap-x-2 font-semibold">
+              <p className="text-[16px] font-semibold">{e.name}</p>
+              <p className="flex flex-wrap items-center gap-x-2 text-body font-medium text-beach-muted">
                 <span>{copy.orgHome.line(e.start_date ?? copy.orgHome.noDate, e.status)}</span>
                 <SlugLink slug={e.slug} />
                 {e.archived_at ? <span>· {copy.eventLifecycle.archivedTag}</span> : null}
@@ -45,7 +45,7 @@ export default async function OrganiserHome({ searchParams }: { searchParams: Pr
             </Link>
           </li>
         ))}
-        {visibleEvents.length === 0 ? <li className="panel text-lg font-semibold">{copy.orgHome.empty}</li> : null}
+        {visibleEvents.length === 0 ? <li className="rounded-card border border-dashed border-beach-border bg-beach-surface p-4 text-body font-semibold">{copy.orgHome.empty}</li> : null}
       </ul>
       {archivedCount > 0 ? (
         <Link href={showArchived ? "/org" : "/org?archived=1"} className="btn w-fit">

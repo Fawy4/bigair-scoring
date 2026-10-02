@@ -15,7 +15,7 @@ export default async function CardsPage({ params, searchParams }: { params: Prom
   if (!event) notFound();
   return (
     <main className="print-page flex max-w-5xl flex-col gap-4">
-      <h1 className="no-print text-3xl font-extrabold">{copy.officials.printCardsTitle}</h1>
+      <h1 className="no-print text-3xl font-semibold">{copy.officials.printCardsTitle}</h1>
       <CardsSheet eventId={id} seatId={seat && /^[0-9a-f-]{36}$/.test(seat) ? seat : null} />
     </main>
   );

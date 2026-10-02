@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { ArrowDown, ArrowUp, GripVertical, Star } from "lucide-react";
+import { Button } from "@/components/org/button";
 import { toast } from "@/hooks/use-toast";
 import { addLocalBlock, blockId, blocksFromVocabulary, deriveCategories, FAMILIES, parseTrickBase, type Block, type FamilyKey, type LocalBlock, type VocabularyJson } from "@/lib/trick-base";
 import { MOVABLE, nudgeBlock, nudgeFamily, parseLayout, placeBlock, resolveLayout, toggleFavourite, defaultLayout, type TrickLayout } from "@/lib/trick-base/layout";
@@ -41,27 +43,19 @@ function BlockRow({
   const id = blockId(block);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
-    <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }} data-testid={`block-row-${id}`} className="flex flex-wrap items-center gap-2 rounded-lg border-2 border-[#111] bg-white px-2 py-1">
-      <button type="button" className="min-h-[40px] min-w-[40px] cursor-grab text-xl font-extrabold" aria-label={T.dragBlock(block.label)} data-testid={`drag-${id}`} {...attributes} {...listeners}>
-        ⠿
-      </button>
+    <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }} data-testid={`block-row-${id}`} className="flex flex-wrap items-center gap-2 rounded-[8px] border border-beach-line bg-beach-bg px-2 py-0.5">
+      <Button variant="quiet" iconOnly icon={GripVertical} className="cursor-grab" aria-label={T.dragBlock(block.label)} data-testid={`drag-${id}`} {...attributes} {...listeners} />
       <label className="flex min-w-0 flex-1 items-center gap-2 font-semibold" title={cannotUntick ? T.cannotUntick : undefined}>
         <input type="checkbox" className="h-6 w-6" checked={ticked} disabled={pending || cannotUntick} onChange={(e) => onTick(e.target.checked)} data-testid={`block-${id}`} />
         <span>{block.label}</span>
-        {block.local || block.proposed ? <span className="rounded border-2 border-[#111] px-1 text-xs font-bold">{block.proposed ? T.proposedTag : T.localTag}</span> : null}
-        {favourite ? <span className="text-xs font-bold">{T.favouriteTag}</span> : null}
+        {block.local || block.proposed ? <span className="rounded border border-beach-line px-1 text-xs font-semibold">{block.proposed ? T.proposedTag : T.localTag}</span> : null}
+        {favourite ? <span className="text-xs font-semibold">{T.favouriteTag}</span> : null}
       </label>
-      <button type="button" className="btn !min-h-[40px] !px-3" aria-label={T.moveUp(block.label)} data-testid={`up-${id}`} disabled={pending} onClick={onUp}>
-        ↑
-      </button>
-      <button type="button" className="btn !min-h-[40px] !px-3" aria-label={T.moveDown(block.label)} data-testid={`down-${id}`} disabled={pending} onClick={onDown}>
-        ↓
-      </button>
-      <button type="button" className="btn !min-h-[40px] !px-3" aria-label={T.favourite(block.label)} aria-pressed={favourite} data-testid={`fav-${id}`} disabled={pending} onClick={onFavourite}>
-        {favourite ? "★" : "☆"}
-      </button>
+      <Button variant="quiet" iconOnly icon={ArrowUp} aria-label={T.moveUp(block.label)} data-testid={`up-${id}`} onClick={onUp} />
+      <Button variant="quiet" iconOnly icon={ArrowDown} aria-label={T.moveDown(block.label)} data-testid={`down-${id}`} onClick={onDown} />
+      <Button variant={favourite ? "secondary" : "quiet"} iconOnly icon={Star} aria-label={T.favourite(block.label)} aria-pressed={favourite} data-testid={`fav-${id}`} onClick={onFavourite} />
       {movable ? (
-        <select aria-label={T.moveTo(block.label)} data-testid={`moveto-${id}`} className="min-h-[40px]" disabled={pending} value="" onChange={(e) => e.target.value && onMove(e.target.value as FamilyKey)}>
+        <select aria-label={T.moveTo(block.label)} data-testid={`moveto-${id}`} disabled={pending} value="" onChange={(e) => e.target.value && onMove(e.target.value as FamilyKey)}>
           <option value="">{T.moveToChoose}</option>
           {FAMILIES.filter((f) => MOVABLE.includes(f.key)).map((f) => (
             <option key={f.key} value={f.key}>
@@ -183,16 +177,16 @@ export function TrickBasePanel({
   return (
     <div className="flex flex-col gap-5" data-testid="trick-base">
       <div>
-        <h3 className="text-xl font-extrabold">{T.heading}</h3>
+        <h3 className="text-xl font-semibold">{T.heading}</h3>
         <p className="font-semibold">{T.intro}</p>
-        <h4 className="mt-2 text-lg font-extrabold">{T.layoutHeading}</h4>
+        <h4 className="mt-2 text-lg font-semibold">{T.layoutHeading}</h4>
         <p className="font-semibold">{T.layoutIntro}</p>
         {started ? (
-          <p className="panel mt-2 font-bold" role="note" data-testid="trick-base-locked">
+          <p className="panel mt-2 font-semibold" role="note" data-testid="trick-base-locked">
             {T.lockedNote}
           </p>
         ) : null}
-        <p className="mt-1 font-bold">{T.count(on, blocks.length)}</p>
+        <p className="mt-1 font-semibold">{T.count(on, blocks.length)}</p>
       </div>
       {error ? (
         <p role="alert" className="field-error">
@@ -203,7 +197,7 @@ export function TrickBasePanel({
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         {view.map((v, i) => (
           <fieldset key={v.family} className="flex flex-col gap-2" data-testid={`family-${v.family}`}>
-            <legend className="flex flex-wrap items-center gap-2 text-lg font-extrabold">
+            <legend className="flex flex-wrap items-center gap-2 text-lg font-semibold">
               {v.label}
               <button type="button" className="btn !min-h-[36px] !px-2" aria-label={T.familyUp(v.label)} data-testid={`family-up-${v.family}`} disabled={pending || i === 0} onClick={() => relayout(nudgeFamily(layout, v.family, -1))}>
                 ↑
@@ -259,7 +253,7 @@ export function TrickBasePanel({
           }}
         >
           <div className="flex flex-col gap-1">
-            <label htmlFor={`blk-family-${divisionId}`} className="font-bold">
+            <label htmlFor={`blk-family-${divisionId}`} className="font-semibold">
               {T.addFamily}
             </label>
             <select id={`blk-family-${divisionId}`} value={family} onChange={(e) => setFamily(e.target.value as FamilyKey)}>
@@ -271,13 +265,13 @@ export function TrickBasePanel({
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor={`blk-name-${divisionId}`} className="font-bold">
+            <label htmlFor={`blk-name-${divisionId}`} className="font-semibold">
               {T.addName}
             </label>
             <input id={`blk-name-${divisionId}`} value={label} onChange={(e) => setLabel(e.target.value)} maxLength={40} className="w-64" />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor={`blk-cat-${divisionId}`} className="font-bold">
+            <label htmlFor={`blk-cat-${divisionId}`} className="font-semibold">
               {T.addCategory}
             </label>
             <select id={`blk-cat-${divisionId}`} value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -296,14 +290,14 @@ export function TrickBasePanel({
       ) : null}
 
       <section className="panel flex flex-col gap-1" aria-labelledby={`cats-${divisionId}`}>
-        <h4 id={`cats-${divisionId}`} className="text-lg font-extrabold">
+        <h4 id={`cats-${divisionId}`} className="text-lg font-semibold">
           {T.categoriesHeading}
         </h4>
-        <p className="text-lg font-bold" data-testid="derived-categories">
+        <p className="text-lg font-semibold" data-testid="derived-categories">
           {derived.length ? derived.map((c) => c.label).join(" · ") : T.categoriesNone}
         </p>
         <p className="text-sm font-semibold">{T.categoriesNote}</p>
-        {missingInScoring.length > 0 && modelCategories.length > 0 ? <p className="text-sm font-bold">{T.notInScoring(missingInScoring.map((c) => c.label).join(", "))}</p> : null}
+        {missingInScoring.length > 0 && modelCategories.length > 0 ? <p className="text-sm font-semibold">{T.notInScoring(missingInScoring.map((c) => c.label).join(", "))}</p> : null}
       </section>
     </div>
   );

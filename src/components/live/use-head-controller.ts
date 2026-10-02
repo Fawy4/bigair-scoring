@@ -8,6 +8,7 @@ import type { ReviewProps } from "./heat-control";
 import { isLiveHeat } from "@/lib/live/division-pick";
 import { activePlanFor, heatTitle, livesFor, timetableOptions, type ActivePlan } from "@/lib/live/run-order";
 import { shortTitle } from "@/lib/live/run-line";
+import { driftOf, plannedTimetable } from "@/lib/schedule/drift";
 import { effectiveStatus, remainingMs } from "@/lib/live/timer";
 import type { HeatRow, LiveContext } from "@/lib/live/types";
 import type { Json } from "@/lib/supabase/database.types";
@@ -23,7 +24,7 @@ export function stateOf(h: HeatRow, nowServer: number): HeatState {
   return "ended";
 }
 
-export type OrderItem = { heat: HeatRow; time: string | null; held: boolean; problem?: string };
+export type OrderItem = { heat: HeatRow; time: string | null; planned?: string | null; held: boolean; problem?: string };
 export type GoneItem = { gone: string; problem: string };
 export type TimerState = "running" | "paused" | "ended" | "held";
 export type DialogKind = "publish" | "reopen" | "rerun" | "hold" | "reset" | null;
@@ -48,6 +49,10 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
   const lives = useMemo(() => livesFor(ctx, heats, ctx.heatMeta), [ctx, heats]);
   const table: Timetable | null = useMemo(() => (plan ? computeTimetable(plan.plan, lives, timetableOptions(plan, ctx.event.timezone, nowServer)) : null), [plan, lives, ctx.event.timezone, Math.floor(nowServer / 5000)]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // the plan as written (nothing started, no clock): the "planned" time of a line, and the drift of the next heat against it
+  const planned: Timetable | null = useMemo(() => (plan ? plannedTimetable(plan.plan, lives, timetableOptions(plan, ctx.event.timezone, 0)) : null), [plan, lives, ctx.event.timezone]);
+  const drift = useMemo(() => driftOf(planned, table), [planned, table]);
+
   // the run order as the timetable has it, with every heat that is not in it after
   const { order, gone } = useMemo(() => {
     const listed: OrderItem[] = [];
@@ -57,7 +62,7 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
         if (r.kind !== "heat") continue;
         const heat = r.heatId ? heats.find((h) => h.id === r.heatId) : undefined;
         const problem = r.issue ? r.warnings[0] : undefined;
-        if (heat) listed.push({ heat, time: r.start, held: r.status === "held", ...(problem ? { problem } : {}) });
+        if (heat) listed.push({ heat, time: r.start, planned: planned?.rows.find((p) => p.itemId === r.itemId)?.start ?? null, held: r.status === "held", ...(problem ? { problem } : {}) });
         else missing.push({ gone: r.itemId, problem: problem ?? "" });
       }
       const rest = heats.filter((h) => !listed.some((l) => l.heat.id === h.id));
@@ -66,7 +71,7 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     const divisionOrder = new Map(ctx.divisions.map((d, i) => [d.id, i]));
     const sorted = [...heats].sort((a, b) => (divisionOrder.get(a.division_id) ?? 0) - (divisionOrder.get(b.division_id) ?? 0) || a.number - b.number);
     return { order: sorted.map((heat) => ({ heat, time: null, held: false })), gone: missing };
-  }, [table, heats, ctx.divisions]);
+  }, [table, planned, heats, ctx.divisions]);
 
   const selected = heats.find((h) => h.id === selectedId) ?? null;
   const state = selected ? stateOf(selected, nowServer) : null;
@@ -164,6 +169,7 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     breakInfo,
     nextTitle,
     nowServer,
+    drift,
     actions: {
       end: () => selected && act(T.done.end(title), () => endHeat(selected.id)),
       pause: () => selected && act(T.done.pause(title), () => pauseHeat(selected.id)),
