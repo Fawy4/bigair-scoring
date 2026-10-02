@@ -1,5 +1,6 @@
 "use client";
 
+import { useThemeScope } from "@/components/theme-scope";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
@@ -17,6 +18,7 @@ type Recognition = { start: () => void; stop: () => void; lang: string; continuo
  * optionally attach or paste a screenshot. The page, event, division, heat and who is writing are saved with the note.
  */
 export function FeedbackButton() {
+  const scope = useThemeScope();
   const path = usePathname();
   const [eligible, setEligible] = useState(false);
   const [open, setOpen] = useState(false);
@@ -127,14 +129,14 @@ export function FeedbackButton() {
 
   if (!eligible) return null;
   return (
-    <div className="org-console no-print" style={{ background: "transparent" }}>
+    <div className={`org-console no-print ${scope}`} style={{ background: "transparent" }}>
       {!open ? (
         <button
           type="button"
           onClick={openPanel}
           aria-label={T.buttonHelp}
           data-testid="note-button"
-          className="fixed bottom-4 right-4 z-50 flex h-14 min-w-14 items-center justify-center rounded-full border-4 border-[#111] bg-[#ffe14d] px-5 text-lg font-extrabold text-[#111] shadow-lg"
+          className="fixed bottom-4 right-4 z-50 flex h-14 min-w-14 items-center justify-center rounded-full border border-beach-border bg-beach-bg px-5 text-body font-semibold text-beach-ink"
         >
           {T.button}
         </button>
@@ -143,25 +145,25 @@ export function FeedbackButton() {
           role="dialog"
           aria-label={T.panelTitle}
           data-testid="note-panel"
-          className="fixed bottom-4 right-4 z-50 flex max-h-[90vh] w-[min(28rem,calc(100vw-2rem))] flex-col gap-3 overflow-y-auto rounded-lg border-4 border-[#111] bg-white p-4 text-[#111] shadow-xl"
+          className="fixed bottom-4 right-4 z-50 flex max-h-[90vh] w-[min(28rem,calc(100vw-2rem))] flex-col gap-3 overflow-y-auto rounded-card border border-beach-line bg-beach-bg p-4 text-beach-ink"
           onPaste={(e) => {
             const item = [...e.clipboardData.items].find((i) => i.type.startsWith("image/"));
             if (item) takeImage(item.getAsFile());
           }}
         >
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-xl font-extrabold">{T.panelTitle}</h2>
+            <h2>{T.panelTitle}</h2>
             <button type="button" className="btn" onClick={close} data-testid="note-close">
               {T.cancel}
             </button>
           </div>
           {saved ? (
-            <p role="status" className="text-lg font-bold" data-testid="note-saved">
+            <p role="status" className="text-lg font-semibold" data-testid="note-saved">
               {T.saved}
             </p>
           ) : (
             <form onSubmit={submit} className="flex flex-col gap-3">
-              <label htmlFor="note-body" className="font-bold">
+              <label htmlFor="note-body" className="font-semibold">
                 {T.bodyLabel}
               </label>
               <textarea id="note-body" rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder={T.bodyPlaceholder} maxLength={4000} className="w-full" />
@@ -172,7 +174,7 @@ export function FeedbackButton() {
                 {!speechAvailable ? <span className="text-sm font-semibold">{T.dictateUnavailable}</span> : null}
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="note-tag" className="font-bold">
+                <label htmlFor="note-tag" className="font-semibold">
                   {T.tagLabel}
                 </label>
                 <select id="note-tag" value={tag} onChange={(e) => setTag(e.target.value as typeof tag)}>
@@ -184,24 +186,24 @@ export function FeedbackButton() {
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="note-shot" className="font-bold">
+                <label htmlFor="note-shot" className="font-semibold">
                   {T.screenshot}
                 </label>
                 <input id="note-shot" type="file" accept="image/png,image/jpeg,image/webp" data-testid="note-shot" onChange={(e) => takeImage(e.target.files?.[0])} />
                 <p className="text-sm font-semibold">{T.screenshotHelp}</p>
                 {shot ? (
-                  <p className="font-bold" data-testid="note-shot-attached">
+                  <p className="font-semibold" data-testid="note-shot-attached">
                     {T.screenshotAttached(shot.name || "image")}{" "}
                     <button type="button" className="underline" onClick={() => setShot(null)}>
                       {T.screenshotRemove}
                     </button>
                   </p>
                 ) : null}
-                {shotError ? <p role="alert" className="font-bold">{copy.common.problem(shotError)}</p> : null}
+                {shotError ? <p role="alert" className="font-semibold">{copy.common.problem(shotError)}</p> : null}
               </div>
               {ctx ? (
-                <div className="rounded border-2 border-[#111] p-2 text-sm font-semibold" data-testid="note-context">
-                  <p className="font-bold">{T.context}</p>
+                <div className="rounded border border-beach-line p-2 text-sm font-semibold" data-testid="note-context">
+                  <p className="font-semibold">{T.context}</p>
                   <p>{T.contextPage(ctx.pageLabel)}</p>
                   {ctx.eventName ? <p>{T.contextEvent(ctx.eventName)}</p> : null}
                   {ctx.divisionName ? <p>{T.contextDivision(ctx.divisionName)}</p> : null}
@@ -209,7 +211,7 @@ export function FeedbackButton() {
                   <p>{T.contextRole(T.roles[ctx.role] ?? ctx.role)}</p>
                 </div>
               ) : null}
-              {error ? <p role="alert" className="font-bold">{copy.common.problem(error)}</p> : null}
+              {error ? <p role="alert" className="font-semibold">{copy.common.problem(error)}</p> : null}
               <button type="submit" className="btn btn-primary" disabled={busy || !ctx || body.trim().length === 0} data-testid="note-send">
                 {busy ? T.sending : T.send}
               </button>
