@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Chip } from "@/components/live/chip";
 import { copy } from "@/lib/ui-copy";
-import { deleteSimulation, rebuildSimulation, resetSimulation, saveStartingPoint } from "./actions";
+import { deleteSimulation, rebuildSimulation, resetSimulation } from "./actions";
 import { Card } from "./parts";
 import type { useSim } from "./use-sim";
 
@@ -20,22 +20,14 @@ export function ResetPanel({ eventId, sim }: { eventId: string; sim: Sim }) {
   const running = status.stats.heats_running > 0;
   const hasStart = status.stats.has_baseline;
   const typedOk = typed.trim().toLowerCase() === slug;
-  const baselineWhen = status.stats.baseline_at ? new Intl.DateTimeFormat("en-GB", { timeZone: status.event.timezone, dateStyle: "medium", timeStyle: "short" }).format(new Date(status.stats.baseline_at)) : null;
 
   return (
     <Card title={T.heading} testId="sim-reset">
       <p className="text-body font-medium">{T.body}</p>
-      {hasStart && baselineWhen ? <p className="text-small font-medium text-beach-muted">{T.baselineAt(baselineWhen)}</p> : null}
       {!hasStart ? (
         <div className="flex flex-col gap-1" data-testid="no-baseline">
           <p className="text-body font-semibold">{T.noBaseline}</p>
-          {!status.stats.played ? (
-            <Chip data-testid="save-baseline" disabled={pending} onClick={() => void act(() => saveStartingPoint(eventId), () => T.baselineSaved)}>
-              {T.saveBaseline}
-            </Chip>
-          ) : (
-            <p className="text-body font-medium">{T.rebuildBody}</p>
-          )}
+          <p className="text-body font-medium">{T.rebuildBody}</p>
         </div>
       ) : null}
       <label className="flex flex-col gap-1 text-body font-semibold">

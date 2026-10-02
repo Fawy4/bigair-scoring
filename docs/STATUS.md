@@ -821,12 +821,11 @@ See the click-through at the end of the pull request description.
 - Tests: unit (config, clock, attempt generator respects the cap and the trick base, judge spread and modes, scenarios and checklist, run order, View as links, preview cookie), `tests/rls/simulator.test.ts` (11: every function refused on a non-simulation event and for non-organisers, a copy never public but previewable by its organiser, virtual seats act through the same functions, fast clock, View as, Reset, delete), `e2e/simulator.spec.ts`.
 
 ### Not done / to know
-- **Reset is the simulation-only version.** Phase 7a-1's general `reset_event` exists on the hosted project but not on main, so it is not reused. **Note for 7a-1:** the two should be unified; the simulator keeps its own starting point in `sim_baseline` (not `divisions.draw_at_lock`), and copies are locked directly, so they have no `draw_at_lock` and 7a-1's Reset would refuse them with DRAW_COPY_MISSING.
+- **One Reset.** The panel's Reset calls 7a-1's general Reset (`resetEvent`), then `sim_after_reset` for the simulator's own leftovers. A copy takes its `draw_at_lock` when it is made. "Wipe and draw again" (`sim_rebuild`) remains only for a simulation event with no draw copy (the Demo). The simulation-only Reset and the "save the starting point" button were removed (migration `20261009100200`); `sim_baseline` now keeps only the run order the copy started with (so a Plan B made by a scenario goes on Reset).
 - **Auto-play needs the panel tab open.** There is no background worker. Each tick makes many round trips to the database, so from a distant machine two heats at ×20 took about 2.5 minutes.
 - **The Demo has no saved starting point** (it was played before the simulator existed): the panel offers "Wipe and draw again". I did not touch the Demo, Arrow or EKL; all tests use throwaway organisations.
 - **A seat cannot be viewed from a second seat at once** with one sign-in (by design, see the decisions log).
 - Not run on Vercel or on a phone from here.
-- `tests/rls/rerun.test.ts` has one failing test (expects HEAT_CANCELLED, the hosted `rerun_heat` answers HEAT_ALREADY_RERUN): not caused by this branch; the hosted function carries a change from another branch.
 
 ### How to test
 See the click-through at the end of the pull request description.

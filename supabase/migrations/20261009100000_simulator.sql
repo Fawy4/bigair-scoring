@@ -221,7 +221,9 @@ begin
 
   -- the stored draw names the riders by entry id: point it at the copies, and lock it when the source was locked
   for r in select dm.new as new_id, d.draw, d.draw_locked_at from public.divisions d join pg_temp._sim_map dm on dm.kind = 'division' and dm.old = d.id where d.event_id = p_event loop
-    update public.divisions set draw = private.sim_remap(r.draw, 'entry'), draw_locked_at = case when r.draw_locked_at is not null then now() end where id = r.new_id;
+    -- draw_at_lock is the copy the general Reset (Phase 7a-1) returns a division to: a copy is a clean start, so it is taken here
+    update public.divisions set draw = private.sim_remap(r.draw, 'entry'), draw_locked_at = case when r.draw_locked_at is not null then now() end,
+      draw_at_lock = case when r.draw_locked_at is not null and r.draw is not null then private.sim_remap(r.draw, 'entry') end where id = r.new_id;
     if r.draw_locked_at is not null then v_locked := v_locked + 1; end if;
   end loop;
 

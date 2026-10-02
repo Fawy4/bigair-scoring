@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { generateDraw, lockDraw } from "../draw/actions";
+import { resetEvent } from "../reset-actions";
 import { generatePin, generateQrToken, joinUrl } from "@/lib/join/pin";
 import { decryptPin, encryptPin, tryPinKey } from "@/lib/officials/pin-crypto";
 import { joinAddress } from "@/lib/officials/share";
@@ -147,21 +148,27 @@ export async function judgeIsBack(eventId: string): Promise<Done> {
   });
 }
 
-/** Reset to the locked draw. The database checks the typed web address, that no heat is running, and that a starting point is saved. */
+/**
+ * Reset to the locked draw: the general Reset of the product (Phase 7a-1, the same one the Event step has), then the simulator's own leftovers (wind calls, shortened
+ * clocks, a Plan B it made, the panel's numbers). A simulation is never public, so the written reason the general Reset asks for after a public result is given here.
+ */
 export async function resetSimulation(eventId: string, typedSlug: string): Promise<Done<{ attempts: number; results: number }>> {
   return wrap(eventId, async (db) => {
-    const { data, error } = await db.user.rpc("sim_reset", { p_event: eventId, p_slug_confirm: typedSlug, p_rebuild: false });
-    if (error) return bad(simErrorSentence(error.message));
+    const denied = await gate(db, eventId);
+    if (denied) return bad(denied);
+    const r = await resetEvent({ eventId, slug: typedSlug, reason: "Simulator reset" });
+    if (!r.ok) return bad(r.error);
+    const after = await db.user.rpc("sim_after_reset", { p_event: eventId });
+    if (after.error) return bad(simErrorSentence(after.error.message));
     forgetContext(eventId);
-    const c = data as { attempts?: number; results?: number } | null;
-    return { ok: true, attempts: c?.attempts ?? 0, results: c?.results ?? 0 };
+    return { ok: true, attempts: r.counts.attempts, results: r.counts.published_results };
   });
 }
 
-/** For an event with no saved starting point (the Demo, played before the simulator existed): wipe it, draw and lock every division again, save that as the starting point. */
+/** For a simulation event with no starting draw copy (the Demo, played before Reset existed): wipe it, draw and lock every division again (locking takes the copy). */
 export async function rebuildSimulation(eventId: string, typedSlug: string): Promise<Done<{ drawn: number; skipped: string[] }>> {
   return wrap(eventId, async (db) => {
-    const wiped = await db.user.rpc("sim_reset", { p_event: eventId, p_slug_confirm: typedSlug, p_rebuild: true });
+    const wiped = await db.user.rpc("sim_rebuild", { p_event: eventId, p_slug_confirm: typedSlug });
     if (wiped.error) return bad(simErrorSentence(wiped.error.message));
     const { data: divisions } = await db.service.from("divisions").select("id, name").eq("event_id", eventId).order("sort_order");
     let drawn = 0;
@@ -172,17 +179,9 @@ export async function rebuildSimulation(eventId: string, typedSlug: string): Pro
       if (g.ok && l.ok) drawn++;
       else skipped.push(d.name);
     }
-    await db.user.rpc("sim_capture_baseline", { p_event: eventId });
     forgetContext(eventId);
     revalidatePath(`/org/events/${eventId}`, "layout");
     return { ok: true, drawn, skipped };
-  });
-}
-
-export async function saveStartingPoint(eventId: string): Promise<Done> {
-  return wrap(eventId, async (db) => {
-    const { error } = await db.user.rpc("sim_capture_baseline", { p_event: eventId });
-    return error ? bad(simErrorSentence(error.message)) : { ok: true };
   });
 }
 

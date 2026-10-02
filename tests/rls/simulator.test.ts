@@ -66,10 +66,10 @@ describe.skipIf(!ENV_OK)("Simulator (hosted development project)", () => {
     sim_set_mode: { p_seat: seat, p_mode: "real" },
     sim_tick_lock: { p_event: event, p_ms: 1000 },
     sim_log_add: { p_event: event, p_kind: "info", p_scenario: null, p_text: "x", p_data: {} },
-    sim_capture_baseline: { p_event: event },
-    sim_view_as: { p_event: event, p_seat: seat },
+        sim_view_as: { p_event: event, p_seat: seat },
     sim_live_heat: { p_heat: heat },
-    sim_reset: { p_event: event, p_slug_confirm: "x", p_rebuild: false },
+    sim_rebuild: { p_event: event, p_slug_confirm: "x" },
+    sim_after_reset: { p_event: event },
     sim_delete: { p_event: event, p_slug_confirm: "x" },
     sim_add_attempt: { p_seat: seat, p_heat: heat, p_entry: entry, p_trick: { name: "x" }, p_status: "landed", p_client_key: randomUUID(), p_override_reason: null },
     sim_submit_score: { p_seat: seat, p_attempt: randomUUID(), p_criteria: {}, p_score: 5, p_missed: false, p_client_key: randomUUID(), p_client_rev: 1 },
@@ -200,22 +200,41 @@ describe.skipIf(!ENV_OK)("Simulator (hosted development project)", () => {
     expect((await f.s.from("judge_seats").select("auth_user_id").eq("id", seats["Judge 2"]).single()).data?.auth_user_id).toBeNull();
   });
 
-  it("Reset: refused while a heat runs and for a wrong address; then attempts, scores and times are gone, the heat and its length are back, the source is untouched", async () => {
-    expect(codeOf(await f.clients.orgA.rpc("sim_reset", { p_event: sim, p_slug_confirm: simSlug, p_rebuild: false }))).toContain("HEAT_RUNNING");
-    expect(codeOf(await f.clients.orgA.rpc("sim_reset", { p_event: sim, p_slug_confirm: "nope", p_rebuild: false }))).toContain("SLUG_MISMATCH");
-    expect(codeOf(await f.clients.orgB.rpc("sim_reset", { p_event: sim, p_slug_confirm: simSlug, p_rebuild: false }))).toContain("NOT_ALLOWED");
+  it("Reset is the general one: a copy has the draw copy it needs; refused while a heat runs; then the simulator's own leftovers go and the panel starts again", async () => {
+    // the copy of a locked division carries the draw it was locked with, so the general Reset can return to it
+    const preview = await f.clients.orgA.rpc("reset_event_preview", { p_event: sim });
+    expect(codeOf(preview)).toBe("");
+    expect((preview.data as { divisions: Array<{ has_copy: boolean; drawn: boolean }> }).divisions.every((d) => !d.drawn || d.has_copy)).toBe(true);
+    expect(((await f.clients.orgA.rpc("sim_stats", { p_event: sim })).data as { has_baseline: boolean }).has_baseline).toBe(true);
+    // while a heat is running the general Reset refuses, and the simulator's own step does not run on a started event
+    expect(codeOf(await f.clients.orgA.rpc("reset_event", { p_event: sim, p_slug: simSlug, p_reason: "Simulator reset", p_draws: [] }))).toContain("HEAT_RUNNING");
+    expect(codeOf(await f.clients.orgA.rpc("sim_after_reset", { p_event: sim }))).toContain("NOT_RESET");
+    expect(codeOf(await f.clients.orgB.rpc("sim_after_reset", { p_event: sim }))).toContain("NOT_ALLOWED");
     expect(codeOf(await f.clients.orgA.rpc("end_heat", { p_heat: simHeat }))).toBe("");
-    const r = await f.clients.orgA.rpc("sim_reset", { p_event: sim, p_slug_confirm: simSlug.toUpperCase(), p_rebuild: false });
+    await f.s.from("wind_calls").insert({ event_id: sim, status: "red", message: "x" });
+    expect(codeOf(await f.clients.orgA.rpc("reset_event", { p_event: sim, p_slug: "nope", p_reason: "Simulator reset", p_draws: [] }))).toContain("SLUG_MISMATCH");
+    const r = await f.clients.orgA.rpc("reset_event", { p_event: sim, p_slug: simSlug, p_reason: "Simulator reset", p_draws: [] });
     expect(codeOf(r)).toBe("");
     expect((r.data as { attempts: number }).attempts).toBe(3);
+    expect(codeOf(await f.clients.orgA.rpc("sim_after_reset", { p_event: sim }))).toBe("");
     expect((await f.s.from("trick_attempts").select("id", { count: "exact", head: true }).eq("event_id", sim)).count).toBe(0);
     expect((await f.s.from("trick_scores").select("id", { count: "exact", head: true }).eq("event_id", sim)).count).toBe(0);
     expect((await f.s.from("heats").select("status, started_at, ended_at, duration_sec").eq("id", simHeat).single()).data).toEqual({ status: "scheduled", started_at: null, ended_at: null, duration_sec: 600 });
     expect((await f.s.from("heat_slots").select("id", { count: "exact", head: true }).eq("heat_id", simHeat)).count).toBe(3);
+    expect((await f.s.from("wind_calls").select("id", { count: "exact", head: true }).eq("event_id", sim)).count).toBe(0);
+    expect((await f.s.from("sim_clock").select("heat_id", { count: "exact", head: true }).eq("event_id", sim)).count).toBe(0);
     expect((await f.s.from("sim_control").select("run_no, state").eq("event_id", sim).single()).data).toEqual({ run_no: 2, state: "stopped" });
-    expect((await f.s.from("audit_log").select("id", { count: "exact", head: true }).eq("event_id", sim).eq("action", "simulation_reset")).count).toBe(1);
     expect((await f.s.from("heats").select("status").eq("id", heat0).single()).data?.status).toBe("scheduled");
     expect(spotterSeat0).toBeTruthy();
+  });
+
+  it("an event with no starting draw copy is rebuilt: everything played goes and every draw is unlocked for the server to draw again", async () => {
+    const { data: ev } = await f.s.from("events").insert({ organisation_id: f.ids.orgA, name: "Own sim 2", slug: `rls-own-sim2-${Date.now() % 1000000}`, status: "published", is_simulation: true }).select("id, slug").single();
+    expect(codeOf(await f.clients.orgA.rpc("sim_enable", { p_event: ev!.id }))).toBe("");
+    expect(codeOf(await f.clients.orgB.rpc("sim_rebuild", { p_event: ev!.id, p_slug_confirm: ev!.slug }))).toContain("NOT_ALLOWED");
+    expect(codeOf(await f.clients.orgA.rpc("sim_rebuild", { p_event: ev!.id, p_slug_confirm: "nope" }))).toContain("SLUG_MISMATCH");
+    expect(codeOf(await f.clients.orgA.rpc("sim_rebuild", { p_event: ev!.id, p_slug_confirm: ev!.slug }))).toBe("");
+    expect(codeOf(await f.clients.orgA.rpc("sim_rebuild", { p_event: f.ids.evA1, p_slug_confirm: "x" }))).toContain("NOT_A_SIMULATION");
   });
 
   it("delete: only a copy, with the typed address, by its organiser; the source stays", async () => {

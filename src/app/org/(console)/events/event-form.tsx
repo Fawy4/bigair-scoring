@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FieldLabel, HelpButton } from "@/components/help-button";
 import { Button, disabledWhen } from "@/components/org/button";
@@ -265,6 +266,11 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
         <h3 className={groupTitle}>{T.simulationHeading}</h3>
         {checkbox(T.simulation, form.isSimulation, (v) => set(["isSimulation"], v), "event.simulation", "simulation-switch")}
         {showError("isSimulation")}
+        {initial.id ? (
+          <Link href={`/org/events/${initial.id}/simulate`} className="w-fit font-semibold underline" data-testid="simulate-link">
+            {copy.simulator.link}
+          </Link>
+        ) : null}
       </section>
 
       <section className={group}>

@@ -3484,11 +3484,11 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      sim_after_reset: { Args: { p_event: string }; Returns: undefined }
       sim_bind_virtual: {
         Args: { p_seat: string; p_user: string }
         Returns: Json
       }
-      sim_capture_baseline: { Args: { p_event: string }; Returns: undefined }
       sim_delete: {
         Args: { p_event: string; p_slug_confirm: string }
         Returns: Json
@@ -3505,8 +3505,8 @@ export type Database = {
         }
         Returns: undefined
       }
-      sim_reset: {
-        Args: { p_event: string; p_rebuild?: boolean; p_slug_confirm: string }
+      sim_rebuild: {
+        Args: { p_event: string; p_slug_confirm: string }
         Returns: Json
       }
       sim_set: {
