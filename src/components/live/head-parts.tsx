@@ -2,17 +2,17 @@
 
 import { useState } from "react";
 import { Clock, Volume2, VolumeX, Wind } from "lucide-react";
-import { HoldDialog, PublishDialog, ReopenDialog, RerunDialog } from "./head-dialogs";
+import { HoldDialog, PublishDialog, ReopenDialog, RerunDialog, ResetHeatDialog } from "./head-dialogs";
 import { HeatTimer } from "./heat-timer";
 import { Pill } from "./pill";
 import { setHeatPublicLive, setPublishHold } from "@/lib/live/head-actions";
 import { type ActionResult } from "@/lib/live/heat-actions";
 import { nextHeatInOrder, utcToLocalHHMM } from "@/lib/engine/schedule";
 import { WindCallControl } from "@/components/wind-call-control";
-import { runLine } from "@/lib/live/run-line";
+import { runLine, shortHeat } from "@/lib/live/run-line";
 import { heatLabel, livesFor } from "@/lib/live/run-order";
 import { formatClock } from "@/lib/live/timer";
-import type { ControlId } from "@/lib/live/head-state";
+import { resetHeatControl, type ControlId } from "@/lib/live/head-state";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { stateOf, type HeadController, type OrderItem } from "./use-head-controller";
@@ -381,8 +381,11 @@ export function VisibilityBox({ c }: { c: HeadController }) {
 /** Publish, Re-open, Cancel heat and Re-run (also on a cancelled heat), the live-score switch and the held final. `compact` keeps the reasons for assistive technology only. */
 export function ReviewButtons({ c, compact = false, visibility = true }: { c: HeadController; compact?: boolean; visibility?: boolean }) {
   const { selected, state, review } = c;
+  const [menuOpen, setMenuOpen] = useState(false);
   if (!selected || !state) return null;
   const cancelled = state === "cancelled";
+  const again = c.heats.find((h) => h.rerun_of === selected.id);
+  const resetRule = resetHeatControl(state, c.alreadyRerun);
   return (
     <div data-testid="review-buttons" className="flex flex-col gap-1.5">
       {visibility ? <VisibilityBox c={c} /> : null}
@@ -425,8 +428,32 @@ export function ReviewButtons({ c, compact = false, visibility = true }: { c: He
           ) : null}
           {review ? (
             <Btn compact={compact} testId="rerun" tone="danger" reason={c.why("rerun")} disabled={c.pending || !c.on("rerun")} onClick={() => c.setDialog("rerun")}>
-              {copy.live.console.rerun}
+              {cancelled && again ? copy.resetParts.alreadyRerunAs(shortHeat(again)) : copy.live.console.rerun}
             </Btn>
+          ) : null}
+          {review ? (
+            <div className="flex flex-col gap-0.5">
+              <Btn compact={compact} testId="heat-menu" onClick={() => setMenuOpen((o) => !o)}>
+                {copy.resetParts.heat.menu}
+              </Btn>
+              {menuOpen ? (
+                <div role="menu" data-testid="heat-menu-list" className="flex flex-col gap-0.5 rounded-card border border-beach-border bg-beach-surface p-1">
+                  <Btn
+                    compact={false}
+                    testId="reset-heat"
+                    tone="danger"
+                    reason={resetRule.reason}
+                    disabled={c.pending || !resetRule.enabled}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      c.setDialog("reset");
+                    }}
+                  >
+                    {copy.resetParts.heat.open}
+                  </Btn>
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </div>
       )}
@@ -491,6 +518,18 @@ export function HeatDialogs({ c }: { c: HeadController }) {
             close();
             c.setMessage({ ok: true, text: HL.rerunDone(title) });
             c.onSelect(newId);
+            review.onChanged();
+          }}
+        />
+      ) : null}
+      {dialog === "reset" ? (
+        <ResetHeatDialog
+          heatId={selected.id}
+          title={title}
+          onClose={close}
+          onDone={(text) => {
+            close();
+            c.setMessage({ ok: true, text });
             review.onChanged();
           }}
         />

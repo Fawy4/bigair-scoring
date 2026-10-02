@@ -20,7 +20,7 @@ export default async function ScheduleStepPage({ params }: { params: Promise<{ i
     supabase.from("divisions").select("id, name, sort_order, draw").eq("event_id", id).order("sort_order").order("created_at"),
     supabase.from("rounds").select("id, division_id, name, short_name, sort_order").eq("event_id", id),
     supabase.from("heats").select("id, division_id, round_id, draw_uid, number, name, status, started_at, ended_at, duration_sec, warm_up_sec, paused_total_sec").eq("event_id", id),
-    supabase.from("schedule_plans").select("id, event_id, day, name, items, anchors, actual_starts, hold, defaults, active").eq("event_id", id).order("created_at"),
+    supabase.from("schedule_plans").select("id, event_id, day, name, items, anchors, actual_starts, hold, defaults, active, hand_pins").eq("event_id", id).order("created_at"),
   ]);
 
   if ((heats ?? []).length === 0) {

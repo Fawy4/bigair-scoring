@@ -1,5 +1,6 @@
 "use client";
 
+import { ResetDivisionButton } from "../reset-buttons";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
@@ -211,6 +212,7 @@ export function DivisionsManager({
                 </button>
               </div>
               {d.hasHeats ? <p className="font-semibold">{copy.divisions.hasHeats}</p> : null}
+              <ResetDivisionButton divisionId={d.id} name={d.name} hasHeats={d.hasHeats} />
               <div className="flex flex-col gap-1">
                 <label htmlFor={`desc-${d.id}`} className="font-bold">
                   {copy.divisions.descriptionLabel}

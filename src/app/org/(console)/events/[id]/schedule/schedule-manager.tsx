@@ -1,5 +1,7 @@
 "use client";
 
+import { ClearActualsButton } from "../reset-buttons";
+import { handPinsAfter, planActuals } from "@/lib/schedule/hand-pins";
 import { NumberField } from "@/components/org/number-field";
 import { DndContext, pointerWithin, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import Link from "next/link";
@@ -147,7 +149,7 @@ export function ScheduleManager(props: ScheduleProps) {
       return;
     }
     const before = currentRow;
-    const after: PlanRow = { ...currentRow, name: next.name, items: next.items, anchors: next.anchors, actual_starts: next.actualStarts, hold: next.hold ?? null, ...(extraDefaults !== undefined ? { defaults: extraDefaults } : {}) };
+    const after: PlanRow = { ...currentRow, name: next.name, items: next.items, anchors: next.anchors, hand_pins: handPinsAfter(currentRow, next.anchors), actual_starts: next.actualStarts, hold: next.hold ?? null, ...(extraDefaults !== undefined ? { defaults: extraDefaults } : {}) };
     setPlans((ps) => ps.map((p) => (p.id === after.id ? after : p)));
     startTransition(async () => {
       const r = await savePlan(after.id, { name: next.name, items: next.items, anchors: next.anchors, actualStarts: next.actualStarts, hold: next.hold, ...(extraDefaults !== undefined ? { defaults: extraDefaults } : {}) });
@@ -257,6 +259,12 @@ export function ScheduleManager(props: ScheduleProps) {
           <ConfirmButton label={T.deletePlan} question={T.deleteQuestion(currentRow.name)} confirmLabel={T.deleteYes} cancelLabel={copy.common.cancel} danger pending={pending} onConfirm={() => act(() => deletePlanAction(currentRow.id), () => { setPlans((ps) => ps.filter((p) => p.id !== currentRow.id)); setPlanId(null); })} />
         ) : null}
       </div>
+
+      {currentRow ? (
+        <div className="panel flex flex-wrap items-start gap-3" data-testid="plan-actuals">
+          <ClearActualsButton planId={currentRow.id} planName={currentRow.name} {...planActuals(currentRow)} />
+        </div>
+      ) : null}
 
       {currentRow ? (
         <div className="panel flex flex-wrap items-end gap-3">

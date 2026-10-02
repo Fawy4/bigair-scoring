@@ -3109,9 +3109,66 @@ export const copy = {
         failed: "The restore could not be done. Nothing was changed.",
       },
     },
+    rebuildArranged: "A later round was arranged by hand, so its seats cannot be rebuilt from the current draw. Nothing was changed.",
+    rebuiltNote: (names: string[]) => `No saved starting copy for ${names.join(", ")}: ${names.length === 1 ? "it is" : "they are"} rebuilt from the current draw (Round 1 keeps its seats, every later seat goes back to its placeholder, re-run heats are removed). That is a rebuild, not the saved copy.`,
     copyHasResults: "The saved starting draw already holds results, so it cannot be used to start over.",
     copyRelock: (division: string) => `${division}: unlock and lock the draw again first`,
     copyUnknown: (division: string) => `${division} was locked before Reset existed (or re-locked after its first heat), so its starting draw is not known and it cannot be reset.`,
+  },
+
+  /** Reset per section: a division, a run order's actual times, one heat (head console). The whole-event Reset is `reset` above. */
+  resetParts: {
+    loading: "Checking what a reset would do…",
+    working: "Resetting…",
+    blocked: "A reset is not possible yet:",
+    reasonLabel: "Reason (at least 5 characters)",
+    reasonWhy: "Results of this were shown publicly, so a reason is needed. It is saved in the audit log.",
+    needReason: "Write a reason of at least 5 characters first.",
+    wipes: (heats: number, attempts: number, scores: number, results: number, reruns: number) =>
+      `This will put ${heats} ${heats === 1 ? "heat" : "heats"} back to not started and wipe ${attempts} ${attempts === 1 ? "attempt" : "attempts"}, ${scores} ${scores === 1 ? "score" : "scores"} and ${results} published ${results === 1 ? "result" : "results"}${reruns > 0 ? `, and remove ${reruns} re-run ${reruns === 1 ? "heat" : "heats"}` : ""}.`,
+    rebuildNote: "This is a rebuild, not the saved copy: this division has no saved starting copy, so Round 1 keeps the seats it has now, every later seat goes back to its placeholder (“1st H1”) and re-run heats are removed.",
+    copyNote: "The draw goes back to the copy that was saved when it was locked.",
+    division: {
+      open: "Reset this division…",
+      title: (name: string) => `Reset ${name}`,
+      intro: "Puts every heat of this division back to not started and wipes its attempts, scores, results, tie decisions and actual times. Riders, officials, settings and the other divisions are not touched.",
+      confirm: "Yes, reset this division",
+      noHeats: "This division has no heats yet, so there is nothing to reset.",
+      done: (name: string, heats: number, attempts: number) => `${name} reset: ${heats} ${heats === 1 ? "heat" : "heats"} and ${attempts} ${attempts === 1 ? "attempt" : "attempts"} wiped.`,
+    },
+    plan: {
+      open: "Clear actual times",
+      title: (name: string) => `Clear actual times: ${name}`,
+      intro: "Clears the actual start times of this run order and the pins written while the day ran (Shift, Resume at, +1 min), so the day flows again from the pins you set. Pins you set by hand (lunch, a briefing, a pinned heat) stay. Heats that already ran keep their real times: use Reset this heat or Reset this division to wipe those.",
+      lines: (starts: number, cleared: number, kept: number, known: boolean) =>
+        known
+          ? `This will clear ${starts} actual ${starts === 1 ? "start" : "starts"} and ${cleared} ${cleared === 1 ? "pin" : "pins"} written while the day ran. The ${kept} ${kept === 1 ? "pin" : "pins"} you set by hand stay.`
+          : `This will clear ${starts} actual ${starts === 1 ? "start" : "starts"}. This run order was made before the app told hand-set pins apart, so all ${kept} ${kept === 1 ? "pin stays" : "pins stay"}: it cannot tell yours from the others. Change anything in this run order and save, and the pins written from then on can be cleared.`,
+      confirm: "Yes, clear actual times",
+      nothing: (kept: number, known: boolean) => `There are no actual start times or pins written while the day ran to clear in this run order.${known || kept === 0 ? "" : " (All its pins stay: this older run order cannot tell hand-set pins from the rest.)"}`,
+      done: (starts: number, cleared: number, kept: number) => `Cleared ${starts} actual ${starts === 1 ? "start" : "starts"} and ${cleared} ${cleared === 1 ? "pin" : "pins"}. ${kept} ${kept === 1 ? "pin stays" : "pins stay"}.`,
+    },
+    heat: {
+      menu: "Heat menu",
+      open: "Reset this heat…",
+      title: (heat: string) => `Reset ${heat}`,
+      intro: "Puts this heat back to not started with the same riders in the same seats. Its attempts and scores are kept for the audit as cancelled entries, and no longer count.",
+      confirm: "Yes, reset this heat",
+      wipes: (attempts: number, scores: number, results: number) => `Kept for the audit: ${attempts} ${attempts === 1 ? "attempt" : "attempts"}, ${scores} ${scores === 1 ? "score" : "scores"} and ${results} published ${results === 1 ? "result" : "results"}. A published result is taken back, and the next round's seats that it filled go back to their placeholders.`,
+      scheduledWhy: "This heat has not started, so there is nothing to reset.",
+      thisHeat: "This heat",
+      done: (heat: string) => `${heat} reset: not started, same seats. What it held is kept for the audit.`,
+    },
+    alreadyRerunAs: (heat: string) => `Already re-run as ${heat}`,
+    errors: {
+      NO_DRAW: "This division has no draw yet, so there is nothing to reset.",
+      HEAT_NOT_STARTED: "This heat has not started, so there is nothing to reset.",
+      HEAT_ALREADY_RERUN: "This heat was cancelled and already re-run. Reset the re-run instead; the cancelled heat stays as it is.",
+      DOWNSTREAM_STARTED: (heat: string) => `A later heat that depends on this result has already started${heat ? ` (${heat})` : ""}. Reset that heat first, then this one.`,
+      DRAW_CHANGED: "The draw changed while the reset was being prepared. Nothing was changed; try again.",
+      HEAT_NOT_FOUND: "That heat is not there any more.",
+      NOT_ALLOWED: "You are not allowed to do this.",
+    },
   },
 
   headLive: {

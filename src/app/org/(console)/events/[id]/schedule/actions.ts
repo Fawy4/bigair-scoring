@@ -16,7 +16,7 @@ const Uuid = z.string().uuid();
 const Day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const Name = z.string().trim().min(2, T.nameRequired).max(60, T.nameRequired);
 
-const COLUMNS = "id, event_id, day, name, items, anchors, actual_starts, hold, defaults, active";
+const COLUMNS = "id, event_id, day, name, items, anchors, actual_starts, hold, defaults, active, hand_pins";
 
 function dbMessage(message: string): string {
   if (/NOT_ALLOWED|row-level|permission denied/i.test(message)) return T.notAllowed;

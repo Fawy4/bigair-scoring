@@ -661,6 +661,44 @@ export type Database = {
           },
         ]
       }
+      heat_reset_records: {
+        Row: {
+          event_id: string
+          heat_id: string
+          id: string
+          payload: Json
+          reason: string | null
+          taken_at: string
+          taken_by: string | null
+        }
+        Insert: {
+          event_id: string
+          heat_id: string
+          id?: string
+          payload: Json
+          reason?: string | null
+          taken_at?: string
+          taken_by?: string | null
+        }
+        Update: {
+          event_id?: string
+          heat_id?: string
+          id?: string
+          payload?: Json
+          reason?: string | null
+          taken_at?: string
+          taken_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "heat_reset_records_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       heat_results: {
         Row: {
           breakdown: Json | null
@@ -1636,6 +1674,7 @@ export type Database = {
           day: string
           defaults: Json
           event_id: string
+          hand_pins: Json | null
           hold: Json | null
           id: string
           items: Json
@@ -1650,6 +1689,7 @@ export type Database = {
           day: string
           defaults?: Json
           event_id: string
+          hand_pins?: Json | null
           hold?: Json | null
           id?: string
           items?: Json
@@ -1664,6 +1704,7 @@ export type Database = {
           day?: string
           defaults?: Json
           event_id?: string
+          hand_pins?: Json | null
           hold?: Json | null
           id?: string
           items?: Json
@@ -2601,6 +2642,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      clear_plan_actuals: { Args: { p_plan: string }; Returns: Json }
       clone_event_as_simulation: {
         Args: { p_event: string; p_name?: string }
         Returns: Json
@@ -3136,6 +3178,11 @@ export type Database = {
         }
         Returns: Json
       }
+      reset_division: {
+        Args: { p_division: string; p_item: Json; p_reason: string }
+        Returns: Json
+      }
+      reset_division_preview: { Args: { p_division: string }; Returns: Json }
       reset_event: {
         Args: {
           p_draws: Json
@@ -3146,6 +3193,17 @@ export type Database = {
         Returns: Json
       }
       reset_event_preview: { Args: { p_event: string }; Returns: Json }
+      reset_heat: {
+        Args: {
+          p_before: Json
+          p_draw: Json
+          p_heat: string
+          p_reason: string
+          p_seats: Json
+        }
+        Returns: Json
+      }
+      reset_heat_preview: { Args: { p_heat: string }; Returns: Json }
       resolve_flag: {
         Args: { p_flag: string; p_resolution?: string }
         Returns: {
@@ -3336,6 +3394,7 @@ export type Database = {
           day: string
           defaults: Json
           event_id: string
+          hand_pins: Json | null
           hold: Json | null
           id: string
           items: Json
@@ -3365,6 +3424,7 @@ export type Database = {
           day: string
           defaults: Json
           event_id: string
+          hand_pins: Json | null
           hold: Json | null
           id: string
           items: Json

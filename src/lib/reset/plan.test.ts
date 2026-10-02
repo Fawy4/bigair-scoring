@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { expandFormat, lockDraw } from "@/lib/engine/ladder";
 import { loadFormat, makeEntrants, publishRound } from "@/lib/engine/ladder/fixtures";
 import { drawProjection } from "@/lib/draw/projection";
-import { copyProblems, everPublic, resetTarget, type HeatFacts } from "./plan";
+import { copyProblems, everPublic, heatResetPlan, rebuildTarget, resetTarget, startingTarget, type HeatFacts } from "./plan";
 
 // docs/PLAN-phase-7a.md step 8d, tests first. The decision itself is made inside the database function (tests/rls/reset.test.ts); this file is the rule in words.
 const kota = () => lockDraw(expandFormat(loadFormat("kota-dingle"), makeEntrants(18)));
@@ -66,4 +66,58 @@ describe("was a result ever shown publicly?", () => {
   it("a heat that never started shows nothing live", () => expect(everPublic([h({ started: false, publicLive: true })])).toBe(false));
   it("nothing published and live scores off: no", () => expect(everPublic([h({ started: true }), h({})])).toBe(false));
   it("one public heat among many is enough", () => expect(everPublic([h({}), h({ hasResults: true })])).toBe(true));
+});
+
+describe("a division without a saved copy is rebuilt from its current draw", () => {
+  it("after two published rounds the rebuild equals the projection of the draw at lock time: Round 1 seats kept, every later seat a placeholder, results gone", () => {
+    const locked = kota();
+    const played = publishRound(publishRound(locked, "R1"), "R2");
+    expect(drawProjection(played)).not.toEqual(drawProjection(locked));
+    const t = rebuildTarget(played);
+    expect(t.projection).toEqual(drawProjection(locked));
+    expect(t.draw.results).toEqual({});
+    expect(t.draw.rounds.every((r) => r.heats.every((h) => h.status === "pending"))).toBe(true);
+  });
+  it("the current draw is not changed", () => {
+    const played = publishRound(kota(), "R1");
+    const before = JSON.stringify(played);
+    rebuildTarget(played);
+    expect(JSON.stringify(played)).toBe(before);
+  });
+  it("startingTarget uses the copy when there is one and says when it rebuilt", () => {
+    const locked = kota();
+    const played = publishRound(locked, "R1");
+    expect(startingTarget(locked, played).rebuilt).toBe(false);
+    expect(startingTarget(null, played).rebuilt).toBe(true);
+    expect(startingTarget(null, played).projection).toEqual(startingTarget(locked, played).projection);
+  });
+});
+
+describe("Reset this heat on a published heat", () => {
+  const uidOf = (d: ReturnType<typeof kota>, id: string) => d.rounds.flatMap((r) => r.heats).find((h) => h.id === id)!;
+  it("takes the result back and returns the winner's next seat to its placeholder", () => {
+    const locked = kota();
+    const played = publishRound(locked, "R1");
+    const h1 = uidOf(played, "R1-H1");
+    const plan = heatResetPlan(played, h1.uid ?? h1.id);
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    expect(plan.draw.results["R1-H1"]).toBeUndefined();
+    expect(plan.draw.rounds[0].heats[0].status).toBe("pending");
+    expect(plan.seats.length).toBeGreaterThan(0);
+    expect(plan.seats.every((s) => s.slots.some((x) => x.entry_id === null))).toBe(true);
+  });
+  it("refuses while a later heat that depends on it has started (the heats are named)", () => {
+    const played = publishRound(publishRound(kota(), "R1"), "R2");
+    const h1 = uidOf(played, "R1-H1");
+    const plan = heatResetPlan(played, h1.uid ?? h1.id);
+    expect(plan.ok).toBe(false);
+    if (!plan.ok) expect(plan.heats.length).toBeGreaterThan(0);
+  });
+  it("a heat that was never published changes nothing in the draw", () => {
+    const locked = kota();
+    const h1 = uidOf(locked, "R1-H1");
+    const plan = heatResetPlan(locked, h1.uid ?? h1.id);
+    expect(plan.ok && plan.seats).toEqual([]);
+  });
 });

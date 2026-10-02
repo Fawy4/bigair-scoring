@@ -95,3 +95,16 @@ export function nextHeatState(state: HeatState, id: ControlId): HeatState {
   if (id === "reopen" && state === "published") return "ended";
   return state;
 }
+
+/**
+ * "Reset this heat" in the heat menu: on for ended, under-review, cancelled and published heats (also a re-run); off, with the sentence of why, for a heat that has not
+ * started, one that is on the water, and a cancelled heat that was already re-run (reset the re-run instead). The database checks the same rules and refuses a reset
+ * while any heat of the event runs, or when a later heat that depends on this one has started.
+ */
+export function resetHeatControl(state: HeatState, alreadyRerun: boolean): { enabled: boolean; reason?: string } {
+  const W = copy.resetParts;
+  if (state === "scheduled") return { enabled: false, reason: W.heat.scheduledWhy };
+  if (state === "running" || state === "paused") return { enabled: false, reason: copy.reset.errors.HEAT_RUNNING(copy.resetParts.heat.thisHeat) };
+  if (state === "cancelled" && alreadyRerun) return { enabled: false, reason: W.errors.HEAT_ALREADY_RERUN };
+  return { enabled: true };
+}

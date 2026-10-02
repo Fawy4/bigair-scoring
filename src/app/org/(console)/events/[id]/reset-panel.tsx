@@ -50,7 +50,7 @@ export function ResetEvent({ eventId, runningHeat }: { eventId: string; runningH
   const c = preview?.counts;
   const addressOk = preview ? typed.trim().toLowerCase() === preview.slug : false;
   const reasonOk = !preview?.everPublic || reason.trim().length >= 5;
-  const blocked = Boolean(preview && (preview.running || preview.problems.length > 0));
+  const blocked = Boolean(preview && preview.running);
 
   const confirm = () =>
     start(async () => {
@@ -80,14 +80,16 @@ export function ResetEvent({ eventId, runningHeat }: { eventId: string; runningH
           <p data-testid="reset-counts" className="text-body font-semibold">
             {T.willWipe(c.heats, c.attempts, c.scores, c.published_results, c.reruns)}
           </p>
+          {preview.rebuilt.length > 0 ? (
+            <p data-testid="reset-rebuild-note" className="text-body font-semibold">
+              {T.rebuiltNote(preview.rebuilt)}
+            </p>
+          ) : null}
           {blocked ? (
             <div role="alert" className="flex flex-col gap-1 text-body font-semibold">
               <p>{T.blocked}</p>
               <ul className="list-disc pl-6">
                 {preview.running ? <li>{T.errors.HEAT_RUNNING(preview.running)}</li> : null}
-                {preview.problems.map((p) => (
-                  <li key={p}>{p}</li>
-                ))}
               </ul>
             </div>
           ) : null}
