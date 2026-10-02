@@ -1,6 +1,6 @@
 {
   "name": "bigair-scoring",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -24,6 +24,7 @@
     "test:e2e:budget": "E2E_PRODUCTION=1 playwright test e2e/public-budget.spec.ts",
     "preview:public": "tsx scripts/public-preview.ts",
     "manual:generate": "tsx scripts/manual-generate.ts",
+    "test:ask-live": "RUN_LIVE_ASK=1 vitest run src/lib/ask/ask-live.test.ts",
     "manual:shots": "MANUAL_SHOTS=1 playwright test e2e/manual-shots.spec.ts --workers=1"
   },
   "dependencies": {

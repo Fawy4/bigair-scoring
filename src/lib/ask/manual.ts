@@ -20,7 +20,8 @@ export function askManual(): AskManual {
     anchors.set(p.anchor, p.title);
     for (const h of p.headings) anchors.set(h.id, h.text);
   }
-  for (const e of built.search) if (!anchors.has(e.id)) anchors.set(e.id, e.title);
+  // an anchored row's title is its whole first cell ("Hold (wind hold) · when the Hold button is grey — …"): its name is the part before " · "
+  for (const e of built.search) if (!anchors.has(e.id)) anchors.set(e.id, e.title.split(" · ")[0].trim());
   cached = {
     pages: built.pages.map((p, i) => ({ file: p.file, title: p.title, anchor: pageAnchor(p.file), source: sources[i].source })),
     search: built.search,

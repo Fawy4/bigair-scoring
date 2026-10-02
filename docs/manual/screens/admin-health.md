@@ -2,7 +2,7 @@
 
 /admin/health: a quick look before an event — database, realtime, last publish, counts, server settings, product version and its testing.
 
-Last checked: 3 Oct 2026 · Product version 0.10.0
+Last checked: 3 Oct 2026 · Product version 0.11.0
 
 ## What it is for {#ah-purpose}
 
@@ -22,6 +22,7 @@ The first page to open the day before and on the morning of the event, and the f
 | “Last publish: ‹when›” | The last published heat anywhere. |
 | “‹n› organisations · ‹n› events · ‹n› live now” | Counts. |
 | **Server settings** | Each setting the server needs, by name only (never the value): set / MISSING, required / optional, and what it is used for. A missing required one breaks that part (for example the PIN key: PINs cannot be shown or made). |
+| {#ah-ask} “Ask Sendbook model: ‹model› (if it fails: ‹model›)” | Ask Sendbook is on (ANTHROPIC_API_KEY exists; the row of server settings says so by name only). “Ask Sendbook is off: ANTHROPIC_API_KEY is missing, so the Ask button is hidden.” when it is not. See [Ask Sendbook](../ask-sendbook.md). |
 | “Platform settings: readable” | Or “could not be read, so the built-in values are in use”. |
 | **Check again** | Runs the checks again. Opening this page also removes expired reset copies (older than 30 days). |
 

@@ -43,14 +43,8 @@ export async function authorizeAsk(s: Client, user: { id: string; is_anonymous?:
     return { ok: true, requester: { kind: "visitor", role: "visitor", userId: null, organisationId: org, eventId: org ? eventId : null, seatId: null } };
   }
 
-  if (user.is_anonymous) {
-    // a PIN seat: only on the event its seat belongs to, and only while the seat is switched on
-    if (!eventId) return { ok: false, reason: "no_seat" };
-    const { data } = await s.from("judge_seats").select("id, role, event_id, events(organisation_id)").eq("event_id", eventId).eq("auth_user_id", user.id).eq("active", true).eq("status", "active").limit(1).maybeSingle();
-    const seat = data as { id: string; role: "head" | "judge" | "spotter" | "announcer"; event_id: string; events: { organisation_id: string } | null } | null;
-    if (!seat?.events) return { ok: false, reason: "no_seat" };
-    return { ok: true, requester: { kind: "seat", role: seat.role, userId: user.id, organisationId: seat.events.organisation_id, eventId: seat.event_id, seatId: seat.id } };
-  }
+  // a PIN seat (an anonymous session) is only ever a seat
+  if (user.is_anonymous) return seatAccess(s, user.id, eventId);
 
   const { data: admin } = await s.from("platform_admins").select("role").eq("user_id", user.id).maybeSingle();
   const adminRole = (admin as { role: "owner" | "staff" } | null)?.role ?? null;
@@ -63,11 +57,24 @@ export async function authorizeAsk(s: Client, user: { id: string; is_anonymous?:
 
   const { data: rows } = await s.from("memberships").select("organisation_id").eq("user_id", user.id).order("created_at");
   const mine = ((rows ?? []) as Array<{ organisation_id: string }>).map((r) => r.organisation_id);
+  // a login that holds a seat of this event (officials may join with a login of their own) asks as that seat
+  if (eventOrg && !mine.includes(eventOrg)) {
+    const seat = await seatAccess(s, user.id, eventId);
+    return seat.ok ? seat : { ok: false, reason: "not_allowed" };
+  }
   if (mine.length === 0) return { ok: false, reason: "not_allowed" };
   if (eventOrg) {
-    if (!mine.includes(eventOrg)) return { ok: false, reason: "not_allowed" };
     return { ok: true, requester: { kind: "organiser", role: "organiser", userId: user.id, organisationId: eventOrg, eventId, seatId: null } };
   }
   const org = target.organisationId && mine.includes(target.organisationId) ? target.organisationId : mine[0];
   return { ok: true, requester: { kind: "organiser", role: "organiser", userId: user.id, organisationId: org, eventId: null, seatId: null } };
+}
+
+/** The seat this login holds on the event: switched on and active, or refused. */
+async function seatAccess(s: Client, userId: string, eventId: string | null): Promise<AccessResult> {
+  if (!eventId) return { ok: false, reason: "no_seat" };
+  const { data } = await s.from("judge_seats").select("id, role, event_id, events(organisation_id)").eq("event_id", eventId).eq("auth_user_id", userId).eq("active", true).eq("status", "active").limit(1).maybeSingle();
+  const seat = data as { id: string; role: "head" | "judge" | "spotter" | "announcer"; event_id: string; events: { organisation_id: string } | null } | null;
+  if (!seat?.events) return { ok: false, reason: "no_seat" };
+  return { ok: true, requester: { kind: "seat", role: seat.role, userId, organisationId: seat.events.organisation_id, eventId: seat.event_id, seatId: seat.id } };
 }

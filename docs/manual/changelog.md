@@ -2,7 +2,19 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 3 Oct 2026 · Product version 0.10.1
+Last checked: 3 Oct 2026 · Product version 0.11.0
+
+## 0.11.0 — 3 Oct 2026 {#cl-0-11-0}
+
+Release entry: [0.11.0](/admin/releases#release-0-11-0) (platform owner only)
+
+**What changed for users**
+- **Ask Sendbook**: an **Ask** button (next to a new **Help** link in the organiser and admin top bar; in the head console's top bar; in the judge and spotter headers) opens a panel (a sheet from the bottom on a phone) where you ask about the screen you are on. The answer streams in a few seconds from the manual and the screen's context (the readiness checklist, the refusal sentences on screen), names the cause, the step and the button, and links to the manual page it used. **Was this right?** saves a Feedback note of the new kind **Ask Sendbook**. PINs, e-mail addresses and scores are never sent.
+- Limits: 30 questions per person per hour; a monthly budget per organisation (2 000 000 input tokens by default, set by the platform owner on the organisation's admin page; at the limit Ask pauses until the 1st). Organisers see this month's use in Organisation settings.
+- Platform owner: **Admin → Ask log** (every question and answer with tokens, model and cost estimate, with search); Health says whether ANTHROPIC_API_KEY exists and which model answers.
+
+**Manual pages updated**
+- New: [Ask Sendbook](ask-sendbook.md). Updated: [Roles](roles.md) (who may ask), [Admin: health](screens/admin-health.md), [Admin: organisations](screens/admin-organisations.md), [Admin: feedback](screens/admin-feedback.md), Settings (Monthly budget), Errors and refusals (the Ask sentences), this changelog.
 
 ## 0.10.1 — 3 Oct 2026 {#cl-0-10-1}
 

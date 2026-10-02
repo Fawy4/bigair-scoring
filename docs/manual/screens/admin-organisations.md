@@ -2,7 +2,7 @@
 
 /admin (platform owner and staff): every customer organisation, opening one as its organiser, creating organisations, inviting their first organiser, moving, archiving and deleting.
 
-Last checked: 3 Oct 2026 · Product version 0.10.0
+Last checked: 3 Oct 2026 · Product version 0.11.0
 
 ## What it is for {#ao-purpose}
 
@@ -27,6 +27,7 @@ The platform owner's control room. /admin answers “This page doesn't exist” 
 | **Create organisation** | Name, web address (slug, for /o/‹slug›), default time zone, logo. |
 | Organisation page: **Organisers** | Who can sign in, with role and since when, and **Remove** (owner only). |
 | {#ao-invite} **Invite organiser** | E-mail → **Invite organiser**. **Send the sign-in email now** (untick it when e-mail is not working: you get a link to copy). The form says “Only 2 sign-in e-mails per hour on this plan.”; the confirmation says “Ask them to click the link today and set a password straight away.” The link works once, for 24 hours, in any browser, and lands them in their organisation; they then choose their own password. When the e-mail could not be sent the sentence says why (limit used up, or the built-in sender only writes to your own team) and shows the link to send yourself. |
+| {#ao-ask} **Ask Sendbook this month** | This month's use of the organisation's Ask budget (“‹used› of ‹budget› tokens used”), the questions answered, and **Monthly budget (input tokens)** → **Save budget** (owner only; default 2 000 000; 0 switches Ask off for the organisation). Every change is in the audit log. See [Ask Sendbook](../ask-sendbook.md#ask-budget). |
 | **Organisers** → **Remove** | Owner only (not your own login): their access ends at once and every phone or computer they are signed in on is signed out; the login stays, so you can invite them again later. |
 | **Events** | The organisation's events; **Move event to another organisation** (not while a heat runs; riders matched by email or copied); delete / archive an event. |
 | **Archive organisation** / **Restore organisation** | Hidden from the public site; nothing deleted. |

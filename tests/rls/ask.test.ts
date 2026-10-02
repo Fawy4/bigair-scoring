@@ -172,6 +172,13 @@ describe.skipIf(!ENV_OK)("Ask Sendbook (hosted development project)", () => {
       expect(await authorizeAsk(s, user("orgA"), { eventId: null, organisationId: id.B })).toMatchObject({ ok: true, requester: { organisationId: id.A } });
     });
 
+    it("answers a login that holds a seat of the event as that seat (officials may join with a login), and nowhere else", async () => {
+      await s.from("judge_seats").insert({ event_id: id.evB, name: "Head", role: "head", auth_user_id: id.orgA, status: "active", active: true });
+      expect(await authorizeAsk(s, user("orgA"), { eventId: id.evB })).toMatchObject({ ok: true, requester: { kind: "seat", role: "head", organisationId: id.B } });
+      expect(await authorizeAsk(s, user("orgB"), { eventId: id.evA })).toMatchObject({ ok: false, reason: "not_allowed" });
+      await s.from("judge_seats").delete().eq("event_id", id.evB).eq("auth_user_id", id.orgA);
+    });
+
     it("answers the platform owner and staff anywhere", async () => {
       expect(await authorizeAsk(s, user("owner"), { eventId: id.evB })).toMatchObject({ ok: true, requester: { kind: "admin", role: "owner", organisationId: id.B } });
       expect(await authorizeAsk(s, user("staff"), { eventId: null })).toMatchObject({ ok: true, requester: { kind: "admin", role: "staff", organisationId: null } });

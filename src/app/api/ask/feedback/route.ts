@@ -38,6 +38,7 @@ export async function POST(request: Request) {
     `role ${log.role}`,
     ctx.eventName ? `event ${ctx.eventName}` : null,
     ctx.lastRefusal ? `last refusal “${ctx.lastRefusal}”` : null,
+    ctx.refusals?.length ? `on screen ${ctx.refusals.map((r) => `“${r}”`).join(" ")}` : null,
     ctx.checklist?.length ? `checklist ${ctx.checklist.map((c) => `[${c.state}] ${c.label}`).join("; ")}` : null,
   ]
     .filter(Boolean)
