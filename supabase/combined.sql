@@ -1679,3 +1679,5511 @@ end $$;
 revoke all on function public.add_attempt, public.delete_attempt, public.set_publish_hold from public, anon;
 grant execute on function public.add_attempt, public.delete_attempt, public.set_publish_hold to authenticated;
 
+
+-- ===== migration 20261001100000_platform_owner.sql =====
+-- Phase 4a-1c: the platform-owner layer.
+--   1. platform_admins (owner | staff), platform_settings (key/value), platform_impersonations ("Open as this organiser")
+--   2. organisations can be archived; archived organisations disappear from the public site but keep their data
+--   3. organiser rights extend to an admin who is inside an organisation through an active, audited impersonation session
+--   4. platform audit lines (audit_log.organisation_id) readable by admins only
+--   5. admin functions (every one checks the caller is a platform admin; the dangerous ones need the owner role)
+--   6. master presets: system presets get versions that are drafts until an owner publishes them
+--   7. public functions: settings, event list, organisation page
+-- Nothing here is readable or writable by anyone it is not meant for. Organisers' own rights are unchanged.
+
+-- ---------------------------------------------------------------- 1. tables
+create table public.platform_admins (
+  user_id uuid primary key references auth.users on delete cascade,
+  role text not null check (role in ('owner', 'staff')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Only these five keys can exist. product_name overrides NEXT_PUBLIC_PRODUCT_NAME wherever it is displayed once set.
+create table public.platform_settings (
+  key text primary key check (key in ('product_name', 'logo_url', 'tagline', 'legal_texts', 'default_timezone')),
+  value jsonb,
+  updated_by uuid,
+  updated_at timestamptz not null default now()
+);
+insert into public.platform_settings (key, value) values ('tagline', to_jsonb('Live scoring and results for kite competitions'::text));
+
+create table public.platform_impersonations (
+  id uuid primary key default gen_random_uuid(),
+  admin_user_id uuid not null references auth.users on delete cascade,
+  organisation_id uuid not null references public.organisations on delete cascade,
+  started_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '8 hours',
+  ended_at timestamptz
+);
+create index on public.platform_impersonations (admin_user_id);
+create index on public.platform_impersonations (organisation_id);
+create unique index platform_impersonations_one_active on public.platform_impersonations (admin_user_id) where ended_at is null;
+
+create trigger z_updated_at before update on public.platform_admins for each row execute function private.set_updated_at();
+create trigger z_updated_at before update on public.platform_settings for each row execute function private.set_updated_at();
+
+alter table public.organisations add column archived_at timestamptz; -- archived: hidden from the public site, data kept
+
+-- ---------------------------------------------------------------- helpers (security definer, so policies never recurse)
+create or replace function private.is_platform_admin() returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.platform_admins a where a.user_id = auth.uid());
+$$;
+
+create or replace function private.is_platform_owner() returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.platform_admins a where a.user_id = auth.uid() and a.role = 'owner');
+$$;
+
+-- True only while: the caller is still an admin, and has an open, unexpired session for exactly this organisation.
+create or replace function private.impersonating(p_org uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select private.is_platform_admin() and exists (
+    select 1 from public.platform_impersonations i
+    where i.admin_user_id = auth.uid() and i.organisation_id = p_org and i.ended_at is null and i.expires_at > now());
+$$;
+
+create or replace function private.org_is_active(p_org uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.organisations o where o.id = p_org and o.archived_at is null);
+$$;
+
+grant execute on function private.is_platform_admin, private.is_platform_owner, private.impersonating, private.org_is_active to anon, authenticated, service_role;
+
+-- ---------------------------------------------------------------- 3. organiser rights extend through an impersonation session
+create or replace function private.is_org_member(p_org uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.memberships m where m.organisation_id = p_org and m.user_id = auth.uid())
+      or private.impersonating(p_org);
+$$;
+
+create or replace function private.is_org_admin(p_org uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.memberships m where m.organisation_id = p_org and m.user_id = auth.uid() and m.role in ('owner', 'admin'))
+      or private.impersonating(p_org);
+$$;
+
+create or replace function private.is_event_organiser(p_event uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.events e where e.id = p_event and private.is_org_member(e.organisation_id));
+$$;
+
+-- An event is public only while its organisation is active.
+create or replace function private.event_is_public(p_event uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from public.events e join public.organisations o on o.id = e.organisation_id
+    where e.id = p_event and e.status in ('published', 'live', 'complete') and o.archived_at is null);
+$$;
+
+drop policy public_read on public.events;
+create policy public_read on public.events for select to anon, authenticated
+  using (status in ('published', 'live', 'complete') and private.org_is_active(organisation_id));
+
+-- Platform admins may read every organisation (organisers keep org_read: only their own).
+create policy admin_read on public.organisations for select to authenticated using (private.is_platform_admin());
+
+-- Logos: an admin may also write anywhere in the branding bucket (the platform logo lives in the all-zero folder).
+create or replace function private.can_write_branding(p_name text) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select case
+    when p_name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[^/]+'
+      then private.is_org_member(split_part(p_name, '/', 1)::uuid) or private.is_platform_admin()
+    else false
+  end;
+$$;
+
+-- ---------------------------------------------------------------- 4. platform audit lines
+alter table public.audit_log add column organisation_id uuid; -- platform actions; no foreign key: the trail outlives the organisation
+create index on public.audit_log (organisation_id, at desc);
+create index on public.audit_log (event_id, at desc);
+create policy platform_read on public.audit_log for select to authenticated using (private.is_platform_admin());
+
+-- One place writes platform audit lines. Callable only from the admin functions below (they run as the owner).
+create or replace function private.platform_audit(
+  p_action text, p_org uuid, p_table text, p_row uuid, p_before jsonb, p_after jsonb, p_reason text
+) returns void
+language sql security definer set search_path = '' as $$
+  insert into public.audit_log (organisation_id, actor_user_id, action, table_name, row_id, before, after, reason)
+  values (p_org, auth.uid(), p_action, p_table, p_row, p_before, p_after, nullif(btrim(coalesce(p_reason, '')), ''));
+$$;
+revoke all on function private.platform_audit from public, anon, authenticated;
+
+-- ---------------------------------------------------------------- platform tables: row level security
+alter table public.platform_admins enable row level security;
+alter table public.platform_settings enable row level security;
+alter table public.platform_impersonations enable row level security;
+
+grant select, insert, update, delete on public.platform_admins, public.platform_settings to authenticated;
+grant select on public.platform_impersonations to authenticated; -- written only by the admin functions
+
+create policy admin_read on public.platform_admins for select to authenticated using (private.is_platform_admin());
+create policy owner_write on public.platform_admins for all to authenticated using (private.is_platform_owner()) with check (private.is_platform_owner());
+create policy admin_read on public.platform_settings for select to authenticated using (private.is_platform_admin());
+create policy owner_write on public.platform_settings for all to authenticated using (private.is_platform_owner()) with check (private.is_platform_owner());
+create policy own_read on public.platform_impersonations for select to authenticated using (admin_user_id = auth.uid() and private.is_platform_admin());
+
+-- ---------------------------------------------------------------- 6. master presets: drafts until an owner publishes
+alter table public.scoring_models add column published_at timestamptz;
+alter table public.format_templates add column published_at timestamptz;
+alter table public.presets add column published_at timestamptz;
+alter table public.trick_vocabularies add column version int not null default 1 check (version >= 1), add column published_at timestamptz;
+update public.scoring_models set published_at = created_at where organisation_id is null;
+update public.format_templates set published_at = created_at where organisation_id is null;
+update public.presets set published_at = created_at where organisation_id is null;
+update public.trick_vocabularies set published_at = created_at where organisation_id is null and event_id is null;
+alter table public.trick_vocabularies drop constraint trick_vocabularies_key_unique;
+alter table public.trick_vocabularies add constraint trick_vocabularies_key_unique unique nulls not distinct (organisation_id, event_id, key, version);
+
+-- Customers see published system presets only (plus the exact row a division already uses). Admins also see drafts, to preview them.
+drop policy read_models on public.scoring_models;
+create policy read_models on public.scoring_models for select to anon, authenticated
+  using ((organisation_id is null and (published_at is not null or private.is_platform_admin()))
+         or private.is_org_member(organisation_id)
+         or exists (select 1 from public.divisions d where d.scoring_model_id = scoring_models.id));
+drop policy read_formats on public.format_templates;
+create policy read_formats on public.format_templates for select to anon, authenticated
+  using ((organisation_id is null and (published_at is not null or private.is_platform_admin()))
+         or private.is_org_member(organisation_id)
+         or exists (select 1 from public.divisions d where d.format_template_id = format_templates.id));
+drop policy read_vocab on public.trick_vocabularies;
+create policy read_vocab on public.trick_vocabularies for select to anon, authenticated
+  using ((organisation_id is null and event_id is null and (published_at is not null or private.is_platform_admin()))
+         or (event_id is not null and (private.event_is_public(event_id) or private.has_seat(event_id) or private.is_event_organiser(event_id)))
+         or (organisation_id is not null and private.is_org_member(organisation_id)));
+drop policy read_presets on public.presets;
+create policy read_presets on public.presets for select to authenticated
+  using ((organisation_id is null and (published_at is not null or private.is_platform_admin())) or private.is_org_member(organisation_id));
+
+create or replace function private.preset_table(p_kind text) returns text
+language sql immutable set search_path = '' as $$
+  select case p_kind when 'scoring_model' then 'scoring_models' when 'format_template' then 'format_templates'
+                     when 'trick_vocabulary' then 'trick_vocabularies' when 'identification' then 'presets' end;
+$$;
+
+-- ---------------------------------------------------------------- 5. admin functions
+-- Every function raises NOT_ALLOWED unless the caller is a platform admin (or owner where stated).
+
+create or replace function public.platform_session() returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare v_role text; v_imp jsonb;
+begin
+  select a.role into v_role from public.platform_admins a where a.user_id = auth.uid();
+  if v_role is not null then
+    select jsonb_build_object('organisation_id', o.id, 'name', o.name, 'slug', o.slug, 'started_at', i.started_at, 'expires_at', i.expires_at)
+      into v_imp
+      from public.platform_impersonations i join public.organisations o on o.id = i.organisation_id
+      where i.admin_user_id = auth.uid() and i.ended_at is null and i.expires_at > now();
+  end if;
+  return jsonb_build_object('role', v_role, 'impersonating', v_imp);
+end $$;
+
+create or replace function public.admin_organisation_overview() returns table (
+  id uuid, name text, slug text, plan text, archived_at timestamptz, created_at timestamptz, logo_url text, timezone text,
+  events_count int, published_events_count int, members_count int, published_results_count int, last_activity timestamptz
+) language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  return query
+  select o.id, o.name, o.slug, o.plan, o.archived_at, o.created_at, o.branding ->> 'logoUrl', o.settings ->> 'defaultTimezone',
+         (select count(*)::int from public.events e where e.organisation_id = o.id),
+         (select count(*)::int from public.events e where e.organisation_id = o.id and e.status in ('published', 'live', 'complete')),
+         (select count(*)::int from public.memberships m where m.organisation_id = o.id),
+         (select count(*)::int from public.heat_results r join public.events e on e.id = r.event_id where e.organisation_id = o.id),
+         greatest(o.updated_at,
+                  (select max(e.updated_at) from public.events e where e.organisation_id = o.id),
+                  (select max(a.at) from public.audit_log a where a.organisation_id = o.id
+                                                          or a.event_id in (select e.id from public.events e where e.organisation_id = o.id)))
+  from public.organisations o
+  order by o.name;
+end $$;
+
+create or replace function public.admin_organisation_members(p_org uuid) returns table (user_id uuid, email text, role text, created_at timestamptz)
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  return query
+  select m.user_id, u.email::text, m.role, m.created_at
+  from public.memberships m join auth.users u on u.id = m.user_id
+  where m.organisation_id = p_org order by m.created_at;
+end $$;
+
+create or replace function public.admin_create_organisation(p_name text, p_slug text, p_timezone text, p_logo_url text default null) returns uuid
+language plpgsql security definer set search_path = '' as $$
+declare v_name text := btrim(coalesce(p_name, '')); v_slug text := lower(btrim(coalesce(p_slug, ''))); v_id uuid;
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  if char_length(v_name) not between 2 and 80 then raise exception 'INVALID_NAME'; end if;
+  if char_length(v_slug) not between 2 and 40 or v_slug !~ '^[a-z0-9][a-z0-9-]*$' then raise exception 'INVALID_SLUG'; end if;
+  if not exists (select 1 from pg_catalog.pg_timezone_names n where n.name = p_timezone) then raise exception 'INVALID_TIMEZONE'; end if;
+  begin
+    insert into public.organisations (name, slug, settings, branding)
+    values (v_name, v_slug, jsonb_build_object('defaultTimezone', p_timezone),
+            case when p_logo_url is null then '{}'::jsonb else jsonb_build_object('logoUrl', p_logo_url) end)
+    returning id into v_id;
+  exception when unique_violation then raise exception 'SLUG_TAKEN';
+  end;
+  perform private.platform_audit('organisation_created', v_id, 'organisations', v_id, null,
+    jsonb_build_object('name', v_name, 'slug', v_slug, 'timezone', p_timezone), null);
+  return v_id;
+end $$;
+
+create or replace function public.admin_rename_organisation(p_org uuid, p_name text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare v_name text := btrim(coalesce(p_name, '')); v_old text;
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  if char_length(v_name) not between 2 and 80 then raise exception 'INVALID_NAME'; end if;
+  select name into v_old from public.organisations where id = p_org;
+  if not found then raise exception 'NOT_FOUND'; end if;
+  update public.organisations set name = v_name where id = p_org;
+  perform private.platform_audit('organisation_renamed', p_org, 'organisations', p_org, jsonb_build_object('name', v_old), jsonb_build_object('name', v_name), null);
+end $$;
+
+create or replace function public.admin_set_organisation_logo(p_org uuid, p_logo_url text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare v_old text;
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  select branding ->> 'logoUrl' into v_old from public.organisations where id = p_org;
+  if not found then raise exception 'NOT_FOUND'; end if;
+  if p_logo_url is not null and p_logo_url !~ '^https?://' then raise exception 'INVALID_URL'; end if;
+  update public.organisations
+     set branding = case when p_logo_url is null then branding - 'logoUrl' else branding || jsonb_build_object('logoUrl', p_logo_url) end
+   where id = p_org;
+  perform private.platform_audit('organisation_logo_changed', p_org, 'organisations', p_org, jsonb_build_object('logoUrl', v_old), jsonb_build_object('logoUrl', p_logo_url), null);
+end $$;
+
+create or replace function public.admin_set_organisation_archived(p_org uuid, p_archived boolean) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  update public.organisations set archived_at = case when p_archived then coalesce(archived_at, now()) else null end where id = p_org;
+  if not found then raise exception 'NOT_FOUND'; end if;
+  perform private.platform_audit(case when p_archived then 'organisation_archived' else 'organisation_unarchived' end, p_org, 'organisations', p_org, null, null, null);
+end $$;
+
+-- Owner only. Refused while any result has been published (results and their audit trail are permanent).
+create or replace function public.admin_delete_organisation(p_org uuid, p_slug_confirm text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare o public.organisations; v_results int; v_events int;
+begin
+  if not private.is_platform_owner() then raise exception 'NOT_ALLOWED'; end if;
+  select * into o from public.organisations where id = p_org;
+  if not found then raise exception 'NOT_FOUND'; end if;
+  if lower(btrim(coalesce(p_slug_confirm, ''))) <> o.slug then raise exception 'SLUG_MISMATCH'; end if;
+  select count(*)::int into v_results from public.heat_results r join public.events e on e.id = r.event_id where e.organisation_id = p_org;
+  if v_results = 0 then
+    select count(*)::int into v_results from public.heats h join public.events e on e.id = h.event_id where e.organisation_id = p_org and h.status = 'published';
+  end if;
+  if v_results > 0 then raise exception 'PUBLISHED_RESULTS'; end if;
+  select count(*)::int into v_events from public.events where organisation_id = p_org;
+  perform private.platform_audit('organisation_deleted', p_org, 'organisations', p_org,
+    jsonb_build_object('name', o.name, 'slug', o.slug, 'plan', o.plan, 'events', v_events), null, null);
+  delete from public.organisations where id = p_org;
+end $$;
+
+create or replace function public.admin_add_organiser(p_org uuid, p_user uuid, p_role text default 'owner') returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  if p_role is null or p_role not in ('owner', 'admin', 'staff') then raise exception 'INVALID_ROLE'; end if;
+  if not exists (select 1 from public.organisations where id = p_org) then raise exception 'NOT_FOUND'; end if;
+  if not exists (select 1 from auth.users where id = p_user) then raise exception 'USER_NOT_FOUND'; end if;
+  insert into public.memberships (organisation_id, user_id, role) values (p_org, p_user, p_role)
+    on conflict (organisation_id, user_id) do update set role = excluded.role;
+  perform private.platform_audit('organiser_added', p_org, 'memberships', null, null, jsonb_build_object('user_id', p_user, 'role', p_role), null);
+end $$;
+
+create or replace function public.admin_start_impersonation(p_org uuid, p_reason text default null) returns void
+language plpgsql security definer set search_path = '' as $$
+declare o public.organisations; prev record;
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  select * into o from public.organisations where id = p_org;
+  if not found then raise exception 'NOT_FOUND'; end if;
+  for prev in update public.platform_impersonations set ended_at = now() where admin_user_id = auth.uid() and ended_at is null returning organisation_id loop
+    perform private.platform_audit('impersonation_ended', prev.organisation_id, 'organisations', prev.organisation_id, null, null, 'replaced by another session');
+  end loop;
+  insert into public.platform_impersonations (admin_user_id, organisation_id) values (auth.uid(), p_org);
+  perform private.platform_audit('impersonation_started', p_org, 'organisations', p_org, null, jsonb_build_object('slug', o.slug, 'name', o.name), p_reason);
+end $$;
+
+create or replace function public.admin_stop_impersonation() returns void
+language plpgsql security definer set search_path = '' as $$
+declare prev record;
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  for prev in update public.platform_impersonations set ended_at = now() where admin_user_id = auth.uid() and ended_at is null returning organisation_id loop
+    perform private.platform_audit('impersonation_ended', prev.organisation_id, 'organisations', prev.organisation_id, null, null, null);
+  end loop;
+end $$;
+
+create or replace function public.admin_health() returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  return jsonb_build_object(
+    'database', true,
+    'checked_at', now(),
+    'last_publish', (select max(r.published_at) from public.heat_results r),
+    'organisations', (select count(*) from public.organisations),
+    'events', (select count(*) from public.events),
+    'live_events', (select count(*) from public.events e where e.status = 'live'));
+end $$;
+
+create or replace function public.admin_audit_log(p_limit int default 200, p_org uuid default null, p_only_platform boolean default false) returns table (
+  id uuid, at timestamptz, action text, table_name text, reason text, before jsonb, after jsonb,
+  actor_user_id uuid, actor_email text, organisation_id uuid, organisation_name text, event_id uuid, event_name text
+) language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  return query
+  select a.id, a.at, a.action, a.table_name, a.reason, a.before, a.after, a.actor_user_id, u.email::text,
+         coalesce(a.organisation_id, e.organisation_id),
+         coalesce(o.name, a.before ->> 'name', a.after ->> 'name'),
+         a.event_id, e.name
+  from public.audit_log a
+  left join public.events e on e.id = a.event_id
+  left join public.organisations o on o.id = coalesce(a.organisation_id, e.organisation_id)
+  left join auth.users u on u.id = a.actor_user_id
+  where (p_org is null or coalesce(a.organisation_id, e.organisation_id) = p_org)
+    and (not p_only_platform or a.organisation_id is not null)
+  order by a.at desc
+  limit least(greatest(coalesce(p_limit, 200), 1), 1000);
+end $$;
+
+-- Master presets. Anyone on the platform team may write a new draft version; only an owner publishes.
+create or replace function public.admin_create_preset_version(p_kind text, p_key text, p_name text, p_json jsonb, p_hash text) returns uuid
+language plpgsql security definer set search_path = '' as $$
+declare v_table text := private.preset_table(p_kind); v_extra text; v_version int; v_id uuid; v_name text := btrim(coalesce(p_name, ''));
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  if v_table is null then raise exception 'INVALID_KIND'; end if;
+  if p_key is null or p_key !~ '^[a-z0-9][a-z0-9_-]{0,79}$' then raise exception 'INVALID_KEY'; end if;
+  if jsonb_typeof(p_json) is distinct from 'object' or p_hash is null or char_length(v_name) = 0 then raise exception 'INVALID_JSON'; end if;
+  v_extra := case p_kind when 'trick_vocabulary' then ' and event_id is null' when 'identification' then ' and kind = ''identification''' else '' end;
+  execute format('select coalesce(max(version), 0) + 1 from public.%I where organisation_id is null and key = $1%s', v_table, v_extra) into v_version using p_key;
+  if p_kind = 'scoring_model' then
+    insert into public.scoring_models (organisation_id, key, name, version, json, content_hash) values (null, p_key, v_name, v_version, p_json, p_hash) returning id into v_id;
+  elsif p_kind = 'format_template' then
+    insert into public.format_templates (organisation_id, key, name, version, json, content_hash) values (null, p_key, v_name, v_version, p_json, p_hash) returning id into v_id;
+  elsif p_kind = 'trick_vocabulary' then
+    insert into public.trick_vocabularies (organisation_id, event_id, key, version, json, content_hash) values (null, null, p_key, v_version, p_json, p_hash) returning id into v_id;
+  else
+    insert into public.presets (organisation_id, kind, key, name, version, json, content_hash) values (null, 'identification', p_key, v_name, v_version, p_json, p_hash) returning id into v_id;
+  end if;
+  perform private.platform_audit('preset_version_created', null, v_table, v_id, null, jsonb_build_object('kind', p_kind, 'key', p_key, 'version', v_version, 'name', v_name), null);
+  return v_id;
+end $$;
+
+create or replace function public.admin_publish_preset(p_kind text, p_id uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+declare v_table text := private.preset_table(p_kind); v_extra text; v_key text; v_version int; v_top int;
+begin
+  if not private.is_platform_owner() then raise exception 'NOT_ALLOWED'; end if;
+  if v_table is null then raise exception 'INVALID_KIND'; end if;
+  v_extra := case p_kind when 'trick_vocabulary' then ' and event_id is null' when 'identification' then ' and kind = ''identification''' else '' end;
+  execute format('select key, version from public.%I where id = $1 and organisation_id is null%s', v_table, v_extra) into v_key, v_version using p_id;
+  if v_key is null then raise exception 'NOT_FOUND'; end if;
+  execute format('select max(version) from public.%I where organisation_id is null and key = $1 and published_at is not null%s', v_table, v_extra) into v_top using v_key;
+  if v_top is not null and v_version < v_top then raise exception 'NOT_NEWER'; end if;
+  execute format('update public.%I set published_at = coalesce(published_at, now()) where id = $1', v_table) using p_id;
+  perform private.platform_audit('preset_published', null, v_table, p_id, null, jsonb_build_object('kind', p_kind, 'key', v_key, 'version', v_version), null);
+end $$;
+
+-- ---------------------------------------------------------------- 7. public functions
+create or replace function public.public_platform_settings() returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object(
+    'product_name', (select s.value from public.platform_settings s where s.key = 'product_name'),
+    'logo_url', (select s.value from public.platform_settings s where s.key = 'logo_url'),
+    'tagline', coalesce((select s.value from public.platform_settings s where s.key = 'tagline'), to_jsonb('Live scoring and results for kite competitions'::text)),
+    'default_timezone', (select s.value from public.platform_settings s where s.key = 'default_timezone'),
+    'legal_texts', (select s.value from public.platform_settings s where s.key = 'legal_texts'));
+$$;
+
+create or replace function public.get_public_events(p_limit int default 30) returns table (
+  id uuid, name text, slug text, location text, start_date date, end_date date, status text, organisation_name text, organisation_slug text
+) language sql stable security definer set search_path = '' as $$
+  select e.id, e.name, e.slug, e.location, e.start_date, e.end_date, e.status, o.name, o.slug
+  from public.events e join public.organisations o on o.id = e.organisation_id
+  where e.status in ('published', 'live', 'complete') and o.archived_at is null
+  order by e.start_date desc nulls last, e.created_at desc
+  limit least(greatest(coalesce(p_limit, 30), 1), 100);
+$$;
+
+-- Null unless the organisation is active and has at least one published event (a customer appears on the public site with its first event).
+create or replace function public.get_public_organisation(p_slug text) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object(
+    'name', o.name, 'slug', o.slug, 'logo_url', o.branding ->> 'logoUrl', 'timezone', o.settings ->> 'defaultTimezone',
+    'events', (select coalesce(jsonb_agg(jsonb_build_object('id', e.id, 'name', e.name, 'slug', e.slug, 'location', e.location,
+                        'start_date', e.start_date, 'end_date', e.end_date, 'status', e.status) order by e.start_date desc nulls last), '[]'::jsonb)
+               from public.events e where e.organisation_id = o.id and e.status in ('published', 'live', 'complete')))
+  from public.organisations o
+  where o.slug = lower(coalesce(p_slug, '')) and o.archived_at is null
+    and exists (select 1 from public.events e where e.organisation_id = o.id and e.status in ('published', 'live', 'complete'));
+$$;
+
+-- ---------------------------------------------------------------- clean-up helper also removes platform audit lines (service role only, used for test data)
+create or replace function public.purge_organisation(p_org uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+declare v_events uuid[];
+begin
+  select coalesce(array_agg(id), '{}') into v_events from public.events where organisation_id = p_org;
+  perform set_config('app.allow_purge', 'on', true);
+  delete from public.organisations where id = p_org;
+  delete from public.audit_log where event_id = any (v_events) or organisation_id = p_org;
+  perform set_config('app.allow_purge', 'off', true);
+end $$;
+
+-- ---------------------------------------------------------------- who may call what
+revoke all on function
+  public.platform_session, public.admin_organisation_overview, public.admin_organisation_members, public.admin_create_organisation,
+  public.admin_rename_organisation, public.admin_set_organisation_logo, public.admin_set_organisation_archived, public.admin_delete_organisation,
+  public.admin_add_organiser, public.admin_start_impersonation, public.admin_stop_impersonation, public.admin_health, public.admin_audit_log,
+  public.admin_create_preset_version, public.admin_publish_preset from public, anon, authenticated;
+grant execute on function
+  public.platform_session, public.admin_organisation_overview, public.admin_organisation_members, public.admin_create_organisation,
+  public.admin_rename_organisation, public.admin_set_organisation_logo, public.admin_set_organisation_archived, public.admin_delete_organisation,
+  public.admin_add_organiser, public.admin_start_impersonation, public.admin_stop_impersonation, public.admin_health, public.admin_audit_log,
+  public.admin_create_preset_version, public.admin_publish_preset to authenticated;
+revoke all on function public.public_platform_settings, public.get_public_events, public.get_public_organisation from public;
+grant execute on function public.public_platform_settings, public.get_public_events, public.get_public_organisation to anon, authenticated, service_role;
+revoke all on function public.purge_organisation from public, anon, authenticated;
+grant execute on function public.purge_organisation to service_role;
+
+
+-- ===== migration 20261001100100_platform_settings_save.sql =====
+-- Phase 4a-1c: saving the platform settings is one owner-only, audited step (all keys or none).
+create or replace function public.admin_save_platform_settings(p_values jsonb) returns void
+language plpgsql security definer set search_path = '' as $$
+declare k text; v_before jsonb;
+begin
+  if not private.is_platform_owner() then raise exception 'NOT_ALLOWED'; end if;
+  if jsonb_typeof(p_values) is distinct from 'object' then raise exception 'INVALID_JSON'; end if;
+  for k in select jsonb_object_keys(p_values) loop
+    if k not in ('product_name', 'logo_url', 'tagline', 'legal_texts', 'default_timezone') then raise exception 'INVALID_KEY'; end if;
+  end loop;
+  select coalesce(jsonb_object_agg(s.key, s.value), '{}') into v_before from public.platform_settings s;
+  for k in select jsonb_object_keys(p_values) loop
+    insert into public.platform_settings (key, value, updated_by) values (k, p_values -> k, auth.uid())
+      on conflict (key) do update set value = excluded.value, updated_by = excluded.updated_by;
+  end loop;
+  -- the legal texts can be long: the audit line records that they changed, not their content
+  perform private.platform_audit('settings_changed', null, 'platform_settings', null, v_before - 'legal_texts', p_values - 'legal_texts', null);
+end $$;
+revoke all on function public.admin_save_platform_settings from public, anon, authenticated;
+grant execute on function public.admin_save_platform_settings to authenticated;
+
+
+-- ===== migration 20261001100200_public_event.sql =====
+-- Phase 4a-1c: the public page of one event needs its organisation's name and logo, which visitors cannot read from the tables.
+-- Returns nothing unless the event is published (or later) and its organisation is active.
+create or replace function public.get_public_event(p_slug text) returns table (
+  id uuid, name text, slug text, location text, start_date date, end_date date, status text, timezone text,
+  organisation_name text, organisation_slug text, organisation_logo_url text
+) language sql stable security definer set search_path = '' as $$
+  select e.id, e.name, e.slug, e.location, e.start_date, e.end_date, e.status, e.timezone,
+         o.name, o.slug, o.branding ->> 'logoUrl'
+  from public.events e join public.organisations o on o.id = e.organisation_id
+  where e.slug = lower(coalesce(p_slug, '')) and e.status in ('published', 'live', 'complete') and o.archived_at is null;
+$$;
+revoke all on function public.get_public_event from public;
+grant execute on function public.get_public_event to anon, authenticated, service_role;
+
+
+-- ===== migration 20261001100300_demo_seed_function.sql =====
+-- Phase 4a-1c: the demo data ("Demo Cup", fictional riders) becomes a database function, so the platform owner can recreate it from
+-- /admin without a command line. supabase/seed.sql now just calls it (same data, same fixed ids, same PINs). Idempotent.
+-- The demo PINs are public knowledge (judges 100001-100003, head judge 200001, spotter 300001): use it on a development project only.
+create or replace function private.seed_demo_data() returns void
+language plpgsql security definer set search_path = '' as $fn$
+begin
+  if (select count(*) from public.scoring_models where organisation_id is null and published_at is not null) < 7
+     or (select count(*) from public.format_templates where organisation_id is null and published_at is not null) < 5 then
+    raise exception 'PRESETS_MISSING';
+  end if;
+  insert into public.organisations (id, name, slug) values ('00000000-0000-4000-8000-000000000001', 'Demo organisation', 'demo-org') on conflict (id) do nothing;
+  insert into public.events (id, organisation_id, name, slug, location, timezone, start_date, end_date, status, settings)
+  values ('00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001', 'Demo Cup', 'demo-cup', 'El Gouna, Egypt', 'Africa/Cairo', '2026-10-16', '2026-10-17', 'published',
+    '{"publicLiveScores":"live","readyCallMin":10,"judgeGraceSec":180,"judgesMayLogAttempts":false,"livePollSec":7,"identification":{"scheme":"vests-per-heat"}}')
+  on conflict (id) do nothing;
+
+  insert into public.judge_seats (id, event_id, name, role, scores, pin_hash) values
+    ('00000000-0000-4000-8000-000000000300', '00000000-0000-4000-8000-000000000002', 'Judge 1', 'judge', true, extensions.crypt('100001', extensions.gen_salt('bf'))),
+    ('00000000-0000-4000-8000-000000000301', '00000000-0000-4000-8000-000000000002', 'Judge 2', 'judge', true, extensions.crypt('100002', extensions.gen_salt('bf'))),
+    ('00000000-0000-4000-8000-000000000302', '00000000-0000-4000-8000-000000000002', 'Judge 3', 'judge', true, extensions.crypt('100003', extensions.gen_salt('bf'))),
+    ('00000000-0000-4000-8000-000000000303', '00000000-0000-4000-8000-000000000002', 'Head judge', 'head', false, extensions.crypt('200001', extensions.gen_salt('bf'))),
+    ('00000000-0000-4000-8000-000000000304', '00000000-0000-4000-8000-000000000002', 'Spotter 1', 'spotter', false, extensions.crypt('300001', extensions.gen_salt('bf')))
+  on conflict (id) do nothing;
+
+  insert into public.panels (id, event_id, name) values ('00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000002', 'Demo panel') on conflict (id) do nothing;
+  insert into public.panel_members (id, panel_id, judge_seat_id, seat_no) values
+    ('00000000-0000-4000-8000-000000000320', '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000300', 1),
+    ('00000000-0000-4000-8000-000000000321', '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000301', 2),
+    ('00000000-0000-4000-8000-000000000322', '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000302', 3)
+  on conflict (id) do nothing;
+
+  insert into public.divisions (id, event_id, name, sort_order, scoring_model_id, format_template_id, panel_id, status) values
+    ('00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000002', 'Pro Men', 1, (select id from public.scoring_models where organisation_id is null and key = 'kota-best3-impression' and published_at is not null order by version desc limit 1), (select id from public.format_templates where organisation_id is null and key = 'kota-dingle' and published_at is not null order by version desc limit 1), '00000000-0000-4000-8000-000000000003', 'draft'),
+    ('00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000002', 'Pro Women', 2, (select id from public.scoring_models where organisation_id is null and key = 'megaloop-single-best' and published_at is not null order by version desc limit 1), (select id from public.format_templates where organisation_id is null and key = 'megaloop-women-6' and published_at is not null order by version desc limit 1), '00000000-0000-4000-8000-000000000003', 'draft'),
+    ('00000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000002', 'Youth U16', 3, (select id from public.scoring_models where organisation_id is null and key = 'legacy-kol-best3-variety' and published_at is not null order by version desc limit 1), (select id from public.format_templates where organisation_id is null and key = 'pools-to-final' and published_at is not null order by version desc limit 1), '00000000-0000-4000-8000-000000000003', 'draft')
+  on conflict (id) do nothing;
+
+  insert into public.riders (id, organisation_id, first_name, last_name, nationality) values
+    ('00000000-0000-4000-8000-000000000101', '00000000-0000-4000-8000-000000000001', 'Karim', 'Farid', 'EG'),
+    ('00000000-0000-4000-8000-000000000102', '00000000-0000-4000-8000-000000000001', 'Omar', 'Nassar', 'EG'),
+    ('00000000-0000-4000-8000-000000000103', '00000000-0000-4000-8000-000000000001', 'Luca', 'Bianchi', 'IT'),
+    ('00000000-0000-4000-8000-000000000104', '00000000-0000-4000-8000-000000000001', 'Tom', 'Weber', 'DE'),
+    ('00000000-0000-4000-8000-000000000105', '00000000-0000-4000-8000-000000000001', 'Sami', 'Haddad', 'LB'),
+    ('00000000-0000-4000-8000-000000000106', '00000000-0000-4000-8000-000000000001', 'Jonas', 'Berg', 'SE'),
+    ('00000000-0000-4000-8000-000000000107', '00000000-0000-4000-8000-000000000001', 'Mateo', 'Ruiz', 'ES'),
+    ('00000000-0000-4000-8000-000000000108', '00000000-0000-4000-8000-000000000001', 'Yusuf', 'Demir', 'TR'),
+    ('00000000-0000-4000-8000-000000000109', '00000000-0000-4000-8000-000000000001', 'Nico', 'Laurent', 'FR'),
+    ('00000000-0000-4000-8000-000000000110', '00000000-0000-4000-8000-000000000001', 'Adam', 'Wright', 'GB'),
+    ('00000000-0000-4000-8000-000000000111', '00000000-0000-4000-8000-000000000001', 'Lina', 'Sherif', 'EG'),
+    ('00000000-0000-4000-8000-000000000112', '00000000-0000-4000-8000-000000000001', 'Sofia', 'Rossi', 'IT'),
+    ('00000000-0000-4000-8000-000000000113', '00000000-0000-4000-8000-000000000001', 'Maja', 'Nilsson', 'SE'),
+    ('00000000-0000-4000-8000-000000000114', '00000000-0000-4000-8000-000000000001', 'Clara', 'Dubois', 'FR'),
+    ('00000000-0000-4000-8000-000000000115', '00000000-0000-4000-8000-000000000001', 'Emma', 'Clarke', 'GB'),
+    ('00000000-0000-4000-8000-000000000116', '00000000-0000-4000-8000-000000000001', 'Nour', 'Adel', 'EG'),
+    ('00000000-0000-4000-8000-000000000117', '00000000-0000-4000-8000-000000000001', 'Ali', 'Hassan', 'EG'),
+    ('00000000-0000-4000-8000-000000000118', '00000000-0000-4000-8000-000000000001', 'Leo', 'Martin', 'FR'),
+    ('00000000-0000-4000-8000-000000000119', '00000000-0000-4000-8000-000000000001', 'Finn', 'Becker', 'DE'),
+    ('00000000-0000-4000-8000-000000000120', '00000000-0000-4000-8000-000000000001', 'Zaid', 'Amin', 'EG')
+  on conflict (id) do nothing;
+
+  insert into public.entries (id, division_id, rider_id, seed, status, source, identifiers) values
+    ('00000000-0000-4000-8000-000000000201', '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000101', 1, 'confirmed', 'manual', '{"bib":1}'),
+    ('00000000-0000-4000-8000-000000000202', '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000102', 2, 'confirmed', 'manual', '{"bib":2}'),
+    ('00000000-0000-4000-8000-000000000203', '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000103', 3, 'confirmed', 'manual', '{"bib":3}'),
+    ('00000000-0000-4000-8000-000000000204', '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000104', 4, 'confirmed', 'manual', '{"bib":4}'),
+    ('00000000-0000-4000-8000-000000000205', '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000105', 5, 'confirmed', 'manual', '{"bib":5}'),
+    ('00000000-0000-4000-8000-000000000206', '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000106', 6, 'confirmed', 'manual', '{"bib":6}'),
+    ('00000000-0000-4000-8000-000000000207', '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000107', 7, 'confirmed', 'manual', '{"bib":7}'),
+    ('00000000-0000-4000-8000-000000000208', '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000108', 8, 'confirmed', 'manual', '{"bib":8}'),
+    ('00000000-0000-4000-8000-000000000209', '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000109', 9, 'confirmed', 'manual', '{"bib":9}'),
+    ('00000000-0000-4000-8000-000000000210', '00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000110', 10, 'confirmed', 'manual', '{"bib":10}'),
+    ('00000000-0000-4000-8000-000000000211', '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000111', 1, 'confirmed', 'manual', '{"bib":11}'),
+    ('00000000-0000-4000-8000-000000000212', '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000112', 2, 'confirmed', 'manual', '{"bib":12}'),
+    ('00000000-0000-4000-8000-000000000213', '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000113', 3, 'confirmed', 'manual', '{"bib":13}'),
+    ('00000000-0000-4000-8000-000000000214', '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000114', 4, 'confirmed', 'manual', '{"bib":14}'),
+    ('00000000-0000-4000-8000-000000000215', '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000115', 5, 'confirmed', 'manual', '{"bib":15}'),
+    ('00000000-0000-4000-8000-000000000216', '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000116', 6, 'confirmed', 'manual', '{"bib":16}'),
+    ('00000000-0000-4000-8000-000000000217', '00000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000117', 1, 'confirmed', 'manual', '{"bib":17}'),
+    ('00000000-0000-4000-8000-000000000218', '00000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000118', 2, 'confirmed', 'manual', '{"bib":18}'),
+    ('00000000-0000-4000-8000-000000000219', '00000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000119', 3, 'confirmed', 'manual', '{"bib":19}'),
+    ('00000000-0000-4000-8000-000000000220', '00000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000120', 4, 'confirmed', 'manual', '{"bib":20}')
+  on conflict (id) do nothing;
+
+end $fn$;
+revoke all on function private.seed_demo_data from public, anon, authenticated;
+
+-- Owner only. Refuses while a demo organisation exists (either slug), so it can never overwrite or duplicate anything.
+create or replace function public.admin_create_demo_organisation() returns uuid
+language plpgsql security definer set search_path = '' as $$
+declare v_id uuid;
+begin
+  if not private.is_platform_owner() then raise exception 'NOT_ALLOWED'; end if;
+  if exists (select 1 from public.organisations where slug in ('demo', 'demo-org') or id = '00000000-0000-4000-8000-000000000001') then raise exception 'DEMO_EXISTS'; end if;
+  perform private.seed_demo_data();
+  v_id := '00000000-0000-4000-8000-000000000001';
+  perform private.platform_audit('demo_organisation_created', v_id, 'organisations', v_id, null, jsonb_build_object('slug', 'demo-org'), null);
+  return v_id;
+end $$;
+revoke all on function public.admin_create_demo_organisation from public, anon, authenticated;
+grant execute on function public.admin_create_demo_organisation to authenticated;
+
+
+-- ===== migration 20261001100400_move_event.sql =====
+-- Phase 4a-1c: the platform owner can move an event to another organisation ("Move event to another organisation" in /admin).
+-- One function = one transaction: either everything moves or nothing does.
+--   * the event row (with its settings and branding), its divisions, rounds, heats, slots, panels, officials, entries, results and
+--     schedule keep their ids and simply follow the event (they hang off event_id)
+--   * riders belong to an organisation, so each rider entered in the event is matched in the new organisation by email (reused) or copied;
+--     the entries are repointed; a rider left with no entries in the old organisation is removed from it
+--   * scoring models and format templates that belong to the OLD organisation and are used by the event's divisions are copied to the new one
+--     (system presets need nothing); the event's identification scheme is stored inside the event, so it travels with it
+-- Refused while any heat of the event is running or paused, for the same organisation, and for anybody who is not a platform owner.
+
+-- The events of one organisation, for the /admin screen (admins cannot read other organisations' events through the tables).
+create or replace function public.admin_organisation_events(p_org uuid) returns table (
+  id uuid, name text, slug text, status text, start_date date, end_date date, divisions_count int, running_heats int
+) language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  return query
+  select e.id, e.name, e.slug, e.status, e.start_date, e.end_date,
+         (select count(*)::int from public.divisions d where d.event_id = e.id),
+         (select count(*)::int from public.heats h where h.event_id = e.id and h.status in ('running', 'paused'))
+  from public.events e where e.organisation_id = p_org
+  order by e.start_date desc nulls last, e.name;
+end $$;
+
+create or replace function public.admin_move_event(p_event uuid, p_target_org uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  ev public.events; src public.organisations; dst public.organisations;
+  r record; v_new uuid; v_key text; v_n int;
+  v_copied int := 0; v_reused int := 0; v_removed int := 0; v_presets int := 0;
+begin
+  if not private.is_platform_owner() then raise exception 'NOT_ALLOWED'; end if;
+  select * into ev from public.events where id = p_event for update;
+  if not found then raise exception 'NOT_FOUND'; end if;
+  select * into dst from public.organisations where id = p_target_org;
+  if not found then raise exception 'TARGET_NOT_FOUND'; end if;
+  if ev.organisation_id = p_target_org then raise exception 'SAME_ORGANISATION'; end if;
+  if exists (select 1 from public.heats h where h.event_id = p_event and h.status in ('running', 'paused')) then raise exception 'HEAT_RUNNING'; end if;
+  select * into src from public.organisations where id = ev.organisation_id;
+
+  -- 1. organisation presets used by the event's divisions (scoring models, then format templates)
+  for r in select distinct m.* from public.scoring_models m join public.divisions d on d.scoring_model_id = m.id
+           where d.event_id = p_event and m.organisation_id = ev.organisation_id loop
+    select t.id into v_new from public.scoring_models t where t.organisation_id = p_target_org and t.key = r.key and t.version = r.version and t.content_hash = r.content_hash;
+    if v_new is null then
+      v_key := r.key; v_n := 1;
+      while exists (select 1 from public.scoring_models t where t.organisation_id = p_target_org and t.key = v_key and t.version = r.version) loop
+        v_n := v_n + 1; v_key := r.key || '-moved' || case when v_n > 2 then '-' || v_n else '' end;
+      end loop;
+      insert into public.scoring_models (organisation_id, key, name, version, json, content_hash) values (p_target_org, v_key, r.name, r.version, r.json, r.content_hash) returning id into v_new;
+      v_presets := v_presets + 1;
+    end if;
+    update public.divisions set scoring_model_id = v_new where event_id = p_event and scoring_model_id = r.id;
+    v_new := null;
+  end loop;
+  for r in select distinct f.* from public.format_templates f join public.divisions d on d.format_template_id = f.id
+           where d.event_id = p_event and f.organisation_id = ev.organisation_id loop
+    select t.id into v_new from public.format_templates t where t.organisation_id = p_target_org and t.key = r.key and t.version = r.version and t.content_hash = r.content_hash;
+    if v_new is null then
+      v_key := r.key; v_n := 1;
+      while exists (select 1 from public.format_templates t where t.organisation_id = p_target_org and t.key = v_key and t.version = r.version) loop
+        v_n := v_n + 1; v_key := r.key || '-moved' || case when v_n > 2 then '-' || v_n else '' end;
+      end loop;
+      insert into public.format_templates (organisation_id, key, name, version, json, content_hash) values (p_target_org, v_key, r.name, r.version, r.json, r.content_hash) returning id into v_new;
+      v_presets := v_presets + 1;
+    end if;
+    update public.divisions set format_template_id = v_new where event_id = p_event and format_template_id = r.id;
+    v_new := null;
+  end loop;
+
+  -- 2. riders: reuse the person in the new organisation (same email) or copy them, then repoint this event's entries
+  for r in select distinct ri.* from public.riders ri join public.entries en on en.rider_id = ri.id where en.event_id = p_event loop
+    v_new := null;
+    if r.email is not null then
+      select t.id into v_new from public.riders t where t.organisation_id = p_target_org and lower(t.email) = lower(r.email);
+    end if;
+    if v_new is null then
+      insert into public.riders (organisation_id, first_name, last_name, nationality, dob, email, phone, sponsor, woo_id, photo_url)
+      values (p_target_org, r.first_name, r.last_name, r.nationality, r.dob, r.email, r.phone, r.sponsor, r.woo_id, r.photo_url) returning id into v_new;
+      v_copied := v_copied + 1;
+    else
+      v_reused := v_reused + 1;
+    end if;
+    update public.entries set rider_id = v_new where event_id = p_event and rider_id = r.id;
+    if not exists (select 1 from public.entries en where en.rider_id = r.id) then
+      delete from public.riders where id = r.id;
+      v_removed := v_removed + 1;
+    end if;
+  end loop;
+
+  -- 3. the event itself, and event-level vocabularies that carried the organisation
+  update public.trick_vocabularies set organisation_id = p_target_org where event_id = p_event and organisation_id is not null;
+  update public.events set organisation_id = p_target_org where id = p_event;
+
+  perform private.platform_audit('event_moved', p_target_org, 'events', p_event,
+    jsonb_build_object('organisation', src.name, 'organisation_slug', src.slug, 'organisation_id', src.id, 'event', ev.name),
+    jsonb_build_object('organisation', dst.name, 'organisation_slug', dst.slug, 'organisation_id', dst.id, 'event', ev.name,
+                       'riders_copied', v_copied, 'riders_reused', v_reused, 'riders_removed', v_removed, 'presets_copied', v_presets), null);
+  return jsonb_build_object('riders_copied', v_copied, 'riders_reused', v_reused, 'riders_removed', v_removed, 'presets_copied', v_presets);
+end $$;
+
+revoke all on function public.admin_organisation_events, public.admin_move_event from public, anon, authenticated;
+grant execute on function public.admin_organisation_events, public.admin_move_event to authenticated;
+
+
+-- ===== migration 20261001100500_rules_guard_identical_copy.sql =====
+-- Phase 4a-1c: moving an event copies its organisation's presets into the new organisation and repoints the divisions to the copies.
+-- The rules lock ("scoring and format are read-only once a heat has started") exists to stop rule CHANGES. Pointing a division at a
+-- copy with identical content changes nothing, so it is allowed; any real change is still refused with RULES_LOCKED.
+create or replace function private.divisions_rules_guard() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_same boolean;
+begin
+  if (new.scoring_model_id, new.scoring_overrides, new.format_template_id, new.format_params)
+       is distinct from (old.scoring_model_id, old.scoring_overrides, old.format_template_id, old.format_params)
+     and new.rules_unlocked_at is null
+     and exists (select 1 from public.heats h where h.division_id = old.id and h.started_at is not null) then
+    v_same := new.scoring_overrides is not distinct from old.scoring_overrides
+      and new.format_params is not distinct from old.format_params
+      and (new.scoring_model_id is not distinct from old.scoring_model_id
+           or (select m.content_hash from public.scoring_models m where m.id = new.scoring_model_id)
+              is not distinct from (select m.content_hash from public.scoring_models m where m.id = old.scoring_model_id))
+      and (new.format_template_id is not distinct from old.format_template_id
+           or (select f.content_hash from public.format_templates f where f.id = new.format_template_id)
+              is not distinct from (select f.content_hash from public.format_templates f where f.id = old.format_template_id));
+    if not v_same or new.scoring_model_id is null and old.scoring_model_id is not null or new.format_template_id is null and old.format_template_id is not null then
+      raise exception 'RULES_LOCKED';
+    end if;
+  end if;
+  return new;
+end $$;
+
+
+-- ===== migration 20261001100600_event_delete_archive.sql =====
+-- Phase 4a-1c: delete and archive an event.
+--   * Archive: events.archived_at. An archived event is hidden everywhere the public looks (home page, organisation page, event page,
+--     live view, tables) and from officials joining; every row is kept and the organisers still see it (and can restore it).
+--   * Delete: organisers of the event's organisation and platform owners, typed web address, refused once any result is published
+--     (then Archive is the only option). One transaction removes divisions, entries, officials, panels, heats and schedule plans with the
+--     event, keeps the riders (they belong to the organisation) and writes an audit line.
+alter table public.events add column archived_at timestamptz;
+grant select (archived_at) on public.events to anon, authenticated;
+
+-- An event is public only while it is published (or later), not archived, and its organisation is active.
+create or replace function private.event_is_public(p_event uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from public.events e join public.organisations o on o.id = e.organisation_id
+    where e.id = p_event and e.status in ('published', 'live', 'complete') and e.archived_at is null and o.archived_at is null);
+$$;
+drop policy public_read on public.events;
+create policy public_read on public.events for select to anon, authenticated
+  using (status in ('published', 'live', 'complete') and archived_at is null and private.org_is_active(organisation_id));
+
+-- the public functions: archived events are not listed
+create or replace function public.get_public_events(p_limit int default 30) returns table (
+  id uuid, name text, slug text, location text, start_date date, end_date date, status text, organisation_name text, organisation_slug text
+) language sql stable security definer set search_path = '' as $$
+  select e.id, e.name, e.slug, e.location, e.start_date, e.end_date, e.status, o.name, o.slug
+  from public.events e join public.organisations o on o.id = e.organisation_id
+  where e.status in ('published', 'live', 'complete') and e.archived_at is null and o.archived_at is null
+  order by e.start_date desc nulls last, e.created_at desc
+  limit least(greatest(coalesce(p_limit, 30), 1), 100);
+$$;
+
+create or replace function public.get_public_organisation(p_slug text) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object(
+    'name', o.name, 'slug', o.slug, 'logo_url', o.branding ->> 'logoUrl', 'timezone', o.settings ->> 'defaultTimezone',
+    'events', (select coalesce(jsonb_agg(jsonb_build_object('id', e.id, 'name', e.name, 'slug', e.slug, 'location', e.location,
+                        'start_date', e.start_date, 'end_date', e.end_date, 'status', e.status) order by e.start_date desc nulls last), '[]'::jsonb)
+               from public.events e where e.organisation_id = o.id and e.status in ('published', 'live', 'complete') and e.archived_at is null))
+  from public.organisations o
+  where o.slug = lower(coalesce(p_slug, '')) and o.archived_at is null
+    and exists (select 1 from public.events e where e.organisation_id = o.id and e.status in ('published', 'live', 'complete') and e.archived_at is null);
+$$;
+
+create or replace function public.get_public_event(p_slug text) returns table (
+  id uuid, name text, slug text, location text, start_date date, end_date date, status text, timezone text,
+  organisation_name text, organisation_slug text, organisation_logo_url text
+) language sql stable security definer set search_path = '' as $$
+  select e.id, e.name, e.slug, e.location, e.start_date, e.end_date, e.status, e.timezone,
+         o.name, o.slug, o.branding ->> 'logoUrl'
+  from public.events e join public.organisations o on o.id = e.organisation_id
+  where e.slug = lower(coalesce(p_slug, '')) and e.status in ('published', 'live', 'complete') and e.archived_at is null and o.archived_at is null;
+$$;
+
+-- the live view follows the same rule (this also closes a gap: it ignored archived organisations)
+create or replace function public.get_public_live_heat(p_heat uuid) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare h public.heats; ev public.events;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found then return jsonb_build_object('allowed', false); end if;
+  select * into ev from public.events where id = h.event_id;
+  if not private.event_is_public(ev.id) or coalesce(ev.settings ->> 'publicLiveScores', 'after_publish') <> 'live'
+     or h.status in ('scheduled', 'cancelled') then
+    return jsonb_build_object('allowed', false);
+  end if;
+  return jsonb_build_object(
+    'allowed', true,
+    'poll_sec', coalesce((ev.settings ->> 'livePollSec')::int, 7),
+    'heat', jsonb_build_object('id', h.id, 'status', h.status, 'effective_status', private.heat_effective_status(h.id), 'started_at', h.started_at,
+             'duration_sec', h.duration_sec, 'paused_at', h.paused_at, 'paused_total_sec', h.paused_total_sec, 'ended_at', h.ended_at,
+             'live_rev', h.live_rev, 'server_now', now()),
+    'slots', coalesce((select jsonb_agg(jsonb_build_object('position', s.position, 'entry_id', s.entry_id, 'vest_colour', s.vest_colour,
+             'modifier', s.modifier, 'flagged_out', s.flagged_out) order by s.position) from public.heat_slots s where s.heat_id = h.id), '[]'),
+    'attempts', coalesce((select jsonb_agg(jsonb_build_object('id', a.id, 'entry_id', a.entry_id, 'seq', a.seq, 'direction', a.direction,
+             'category_key', a.category_key, 'trick_name', a.trick_name, 'status', a.status, 'height_m', a.height_m,
+             'possible_duplicate_of', a.possible_duplicate_of, 'created_at', a.created_at) order by a.created_at)
+             from public.trick_attempts a where a.heat_id = h.id and a.deleted_at is null), '[]'),
+    'scores', coalesce((select jsonb_agg(jsonb_build_object('attempt_id', t.attempt_id, 'seat_no', pm.seat_no, 'criteria', t.criteria,
+             'score', t.score, 'missed', t.missed))
+             from public.trick_scores t
+             join public.trick_attempts a on a.id = t.attempt_id and a.deleted_at is null
+             join public.divisions d on d.id = h.division_id
+             join public.panel_members pm on pm.panel_id = d.panel_id and pm.judge_seat_id = t.judge_seat_id
+             where t.heat_id = h.id), '[]'),
+    'impressions', coalesce((select jsonb_agg(jsonb_build_object('entry_id', i.entry_id, 'seat_no', pm.seat_no, 'value', i.value))
+             from public.impression_scores i
+             join public.divisions d on d.id = h.division_id
+             join public.panel_members pm on pm.panel_id = d.panel_id and pm.judge_seat_id = i.judge_seat_id
+             where i.heat_id = h.id), '[]'),
+    'penalties', coalesce((select jsonb_agg(jsonb_build_object('entry_id', p.entry_id, 'type', p.type, 'value', p.value))
+             from public.penalties p where p.heat_id = h.id), '[]')
+  );
+end $$;
+
+-- Delete: refused unless the caller is an organiser of the event's organisation (also an admin inside it) or a platform owner.
+-- An unknown event and a foreign one look the same (NOT_ALLOWED), so nothing is revealed.
+create or replace function public.delete_event(p_event uuid, p_slug_confirm text) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  ev public.events; v_results int; v_summary jsonb;
+begin
+  select * into ev from public.events where id = p_event for update;
+  if not found or not (private.is_event_organiser(p_event) or private.is_platform_owner()) then raise exception 'NOT_ALLOWED'; end if;
+  if lower(btrim(coalesce(p_slug_confirm, ''))) <> ev.slug then raise exception 'SLUG_MISMATCH'; end if;
+  select count(*)::int into v_results from public.heat_results where event_id = p_event;
+  if v_results = 0 then select count(*)::int into v_results from public.heats where event_id = p_event and status = 'published'; end if;
+  if v_results > 0 then raise exception 'PUBLISHED_RESULTS'; end if;
+  v_summary := jsonb_build_object(
+    'divisions', (select count(*) from public.divisions where event_id = p_event),
+    'entries', (select count(*) from public.entries where event_id = p_event),
+    'seats', (select count(*) from public.judge_seats where event_id = p_event),
+    'heats', (select count(*) from public.heats where event_id = p_event),
+    'plans', (select count(*) from public.schedule_plans where event_id = p_event));
+  perform private.platform_audit('event_deleted', ev.organisation_id, 'events', p_event, jsonb_build_object('name', ev.name, 'slug', ev.slug) || v_summary, null, null);
+  delete from public.events where id = p_event;
+  return v_summary;
+end $$;
+
+create or replace function public.set_event_archived(p_event uuid, p_archived boolean) returns void
+language plpgsql security definer set search_path = '' as $$
+declare ev public.events;
+begin
+  select * into ev from public.events where id = p_event;
+  if not found or not (private.is_event_organiser(p_event) or private.is_platform_owner()) then raise exception 'NOT_ALLOWED'; end if;
+  update public.events set archived_at = case when p_archived then coalesce(archived_at, now()) else null end where id = p_event;
+  perform private.platform_audit(case when p_archived then 'event_archived' else 'event_unarchived' end, ev.organisation_id, 'events', p_event,
+                                 jsonb_build_object('name', ev.name, 'slug', ev.slug), null, null);
+end $$;
+
+-- the admin events table also needs the published-result count and the archive state
+drop function public.admin_organisation_events(uuid);
+create or replace function public.admin_organisation_events(p_org uuid) returns table (
+  id uuid, name text, slug text, status text, start_date date, end_date date, divisions_count int, running_heats int, published_results int, archived_at timestamptz
+) language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  return query
+  select e.id, e.name, e.slug, e.status, e.start_date, e.end_date,
+         (select count(*)::int from public.divisions d where d.event_id = e.id),
+         (select count(*)::int from public.heats h where h.event_id = e.id and h.status in ('running', 'paused')),
+         (select count(*)::int from public.heat_results r where r.event_id = e.id)
+           + (select count(*)::int from public.heats h where h.event_id = e.id and h.status = 'published'),
+         e.archived_at
+  from public.events e where e.organisation_id = p_org
+  order by e.start_date desc nulls last, e.name;
+end $$;
+revoke all on function public.admin_organisation_events from public, anon, authenticated;
+grant execute on function public.admin_organisation_events to authenticated;
+
+revoke all on function public.delete_event, public.set_event_archived from public, anon, authenticated;
+grant execute on function public.delete_event, public.set_event_archived to authenticated;
+
+
+-- ===== migration 20261002100000_phase4a2_riders_officials.sql =====
+-- Phase 4a-2: riders, officials, public registration, trick base, feedback notes.
+--   0. has_password (the "Set a password" / "Change password" button)
+--   1. entries: declined registrations, and a rider can only be entered in a division of their own organisation
+--   2. divisions: description, own identification scheme, trick base (with its lock), seed order and the stored shuffle code
+--   3. judge seats: PIN kept encrypted for "Show PIN" and "Print cards", regenerate, approve, heartbeat, contact numbers
+--   4. public registration: closing time, maximum per division, photos, archived events, information for the public page
+--   5. panels: which judges score which division
+--   6. trick vocabulary of an event: lock, proposals for the master base
+--   7. feedback notes and their screenshots
+--   8. storage: rider photos (private, 2 MB) and feedback screenshots (private)
+-- Every function states who may call it. The PIN encryption key never enters the database (the server holds it).
+
+-- ---------------------------------------------------------------- 0. does this login have a password?
+create or replace function public.has_password() returns boolean
+language sql stable security definer set search_path = '' as $$
+  select coalesce((select u.encrypted_password is not null and u.encrypted_password <> '' from auth.users u where u.id = auth.uid()), false);
+$$;
+revoke all on function public.has_password from public, anon;
+grant execute on function public.has_password to authenticated;
+
+-- ---------------------------------------------------------------- 1. entries
+alter table public.entries drop constraint entries_status_check;
+alter table public.entries add constraint entries_status_check check (status in ('registered', 'confirmed', 'withdrawn', 'no_show', 'declined'));
+alter table public.entries add column decline_reason text check (decline_reason is null or char_length(decline_reason) <= 300);
+
+-- A rider belongs to an organisation, an entry to a division of an event of the same organisation. Also stops a guessed rider id of another organisation.
+create or replace function private.entries_rider_org_guard() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare v_event_org uuid; v_rider_org uuid;
+begin
+  select e.organisation_id into v_event_org from public.divisions d join public.events e on e.id = d.event_id where d.id = new.division_id;
+  select r.organisation_id into v_rider_org from public.riders r where r.id = new.rider_id;
+  if v_event_org is distinct from v_rider_org then raise exception 'RIDER_OTHER_ORGANISATION'; end if;
+  return new;
+end $$;
+create trigger b_rider_org_guard before insert or update of rider_id, division_id on public.entries for each row execute function private.entries_rider_org_guard();
+
+-- Moving an event changes the organisation of the event first, so that every row moved afterwards already belongs to the organisation it sits in.
+create or replace function public.admin_move_event(p_event uuid, p_target_org uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  ev public.events; src public.organisations; dst public.organisations;
+  r record; v_new uuid; v_key text; v_n int;
+  v_copied int := 0; v_reused int := 0; v_removed int := 0; v_presets int := 0;
+begin
+  if not private.is_platform_owner() then raise exception 'NOT_ALLOWED'; end if;
+  select * into ev from public.events where id = p_event for update;
+  if not found then raise exception 'NOT_FOUND'; end if;
+  select * into dst from public.organisations where id = p_target_org;
+  if not found then raise exception 'TARGET_NOT_FOUND'; end if;
+  if ev.organisation_id = p_target_org then raise exception 'SAME_ORGANISATION'; end if;
+  if exists (select 1 from public.heats h where h.event_id = p_event and h.status in ('running', 'paused')) then raise exception 'HEAT_RUNNING'; end if;
+  select * into src from public.organisations where id = ev.organisation_id;
+
+  -- 1. organisation presets used by the event's divisions (scoring models, then format templates)
+  for r in select distinct m.* from public.scoring_models m join public.divisions d on d.scoring_model_id = m.id
+           where d.event_id = p_event and m.organisation_id = ev.organisation_id loop
+    select t.id into v_new from public.scoring_models t where t.organisation_id = p_target_org and t.key = r.key and t.version = r.version and t.content_hash = r.content_hash;
+    if v_new is null then
+      v_key := r.key; v_n := 1;
+      while exists (select 1 from public.scoring_models t where t.organisation_id = p_target_org and t.key = v_key and t.version = r.version) loop
+        v_n := v_n + 1; v_key := r.key || '-moved' || case when v_n > 2 then '-' || v_n else '' end;
+      end loop;
+      insert into public.scoring_models (organisation_id, key, name, version, json, content_hash) values (p_target_org, v_key, r.name, r.version, r.json, r.content_hash) returning id into v_new;
+      v_presets := v_presets + 1;
+    end if;
+    update public.divisions set scoring_model_id = v_new where event_id = p_event and scoring_model_id = r.id;
+    v_new := null;
+  end loop;
+  for r in select distinct f.* from public.format_templates f join public.divisions d on d.format_template_id = f.id
+           where d.event_id = p_event and f.organisation_id = ev.organisation_id loop
+    select t.id into v_new from public.format_templates t where t.organisation_id = p_target_org and t.key = r.key and t.version = r.version and t.content_hash = r.content_hash;
+    if v_new is null then
+      v_key := r.key; v_n := 1;
+      while exists (select 1 from public.format_templates t where t.organisation_id = p_target_org and t.key = v_key and t.version = r.version) loop
+        v_n := v_n + 1; v_key := r.key || '-moved' || case when v_n > 2 then '-' || v_n else '' end;
+      end loop;
+      insert into public.format_templates (organisation_id, key, name, version, json, content_hash) values (p_target_org, v_key, r.name, r.version, r.json, r.content_hash) returning id into v_new;
+      v_presets := v_presets + 1;
+    end if;
+    update public.divisions set format_template_id = v_new where event_id = p_event and format_template_id = r.id;
+    v_new := null;
+  end loop;
+
+  -- the event changes organisation first, so that every later row already belongs to the organisation it sits in
+  update public.events set organisation_id = p_target_org where id = p_event;
+
+  -- 2. riders: reuse the person in the new organisation (same email) or copy them, then repoint this event's entries
+  for r in select distinct ri.* from public.riders ri join public.entries en on en.rider_id = ri.id where en.event_id = p_event loop
+    v_new := null;
+    if r.email is not null then
+      select t.id into v_new from public.riders t where t.organisation_id = p_target_org and lower(t.email) = lower(r.email);
+    end if;
+    if v_new is null then
+      insert into public.riders (organisation_id, first_name, last_name, nationality, dob, email, phone, sponsor, woo_id, photo_url)
+      values (p_target_org, r.first_name, r.last_name, r.nationality, r.dob, r.email, r.phone, r.sponsor, r.woo_id, r.photo_url) returning id into v_new;
+      v_copied := v_copied + 1;
+    else
+      v_reused := v_reused + 1;
+    end if;
+    update public.entries set rider_id = v_new where event_id = p_event and rider_id = r.id;
+    if not exists (select 1 from public.entries en where en.rider_id = r.id) then
+      delete from public.riders where id = r.id;
+      v_removed := v_removed + 1;
+    end if;
+  end loop;
+
+  -- 3. the event itself, and event-level vocabularies that carried the organisation
+  update public.trick_vocabularies set organisation_id = p_target_org where event_id = p_event and organisation_id is not null;
+
+  perform private.platform_audit('event_moved', p_target_org, 'events', p_event,
+    jsonb_build_object('organisation', src.name, 'organisation_slug', src.slug, 'organisation_id', src.id, 'event', ev.name),
+    jsonb_build_object('organisation', dst.name, 'organisation_slug', dst.slug, 'organisation_id', dst.id, 'event', ev.name,
+                       'riders_copied', v_copied, 'riders_reused', v_reused, 'riders_removed', v_removed, 'presets_copied', v_presets), null);
+  return jsonb_build_object('riders_copied', v_copied, 'riders_reused', v_reused, 'riders_removed', v_removed, 'presets_copied', v_presets);
+end $$;
+
+revoke all on function public.admin_move_event from public, anon, authenticated;
+grant execute on function public.admin_move_event to authenticated;
+
+-- ---------------------------------------------------------------- 2. divisions
+alter table public.divisions
+  add column description text check (description is null or char_length(description) <= 300),       -- the level, shown on the registration page
+  add column identification jsonb check (identification is null or jsonb_typeof(identification) = 'object'), -- null = use the event's scheme
+  add column trick_base jsonb not null default '{}' check (jsonb_typeof(trick_base) = 'object'),          -- {"disabled": ["family:key", ...]}
+  add column seed_shuffle_seed bigint;                                                                   -- the code of the last "Shuffle randomly"
+
+-- Once a heat of the division has started, blocks can still be added (ticked) but never removed (unticked).
+create or replace function private.divisions_trick_base_guard() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if new.trick_base is distinct from old.trick_base then
+    if new.trick_base ? 'disabled' and jsonb_typeof(new.trick_base -> 'disabled') is distinct from 'array' then raise exception 'TRICK_BASE_INVALID'; end if;
+    if exists (select 1 from public.heats h where h.division_id = old.id and h.started_at is not null)
+       and exists (select 1 from jsonb_array_elements_text(coalesce(new.trick_base -> 'disabled', '[]'::jsonb)) d(v)
+                   where not (coalesce(old.trick_base -> 'disabled', '[]'::jsonb) ? d.v)) then
+      raise exception 'TRICK_BASE_LOCKED';
+    end if;
+  end if;
+  return new;
+end $$;
+create trigger b_trick_base_guard before update of trick_base on public.divisions for each row execute function private.divisions_trick_base_guard();
+
+-- Seed order: the listed riders become 1, 2, 3…; everybody else follows in their old order. Runs as the caller, so only the organiser's own rows can change.
+create or replace function public.set_entry_order(p_division uuid, p_entry_ids uuid[], p_shuffle_seed bigint default null) returns void
+language plpgsql security invoker set search_path = '' as $$
+declare v_len int := coalesce(array_length(p_entry_ids, 1), 0); v_rows int;
+begin
+  if p_entry_ids is null then raise exception 'INVALID_ORDER'; end if;
+  if (select count(distinct x) from unnest(p_entry_ids) x) <> v_len then raise exception 'INVALID_ORDER'; end if;
+  if (select count(*) from public.entries e where e.division_id = p_division and e.id = any (p_entry_ids)) <> v_len then raise exception 'ENTRY_NOT_IN_DIVISION'; end if;
+  with listed as (
+    select t.id, t.ord from unnest(p_entry_ids) with ordinality as t(id, ord)
+  ), rest as (
+    select e.id, v_len + row_number() over (order by e.seed nulls last, e.created_at, e.id) as ord
+      from public.entries e where e.division_id = p_division and not (e.id = any (p_entry_ids))
+  ), everyone as (
+    select id, ord from listed union all select id, ord from rest
+  )
+  update public.entries e set seed = everyone.ord::int from everyone where e.id = everyone.id;
+  update public.divisions set seed_shuffle_seed = p_shuffle_seed where id = p_division;
+  get diagnostics v_rows = row_count;
+  if v_rows = 0 then raise exception 'NOT_ALLOWED'; end if;
+end $$;
+revoke all on function public.set_entry_order from public, anon;
+grant execute on function public.set_entry_order to authenticated;
+
+-- ---------------------------------------------------------------- 3. judge seats
+alter table public.judge_seats
+  add column pin_enc text,                 -- the PIN, encrypted by the server with a key that is not in the database; NOT readable by any signed-in user
+  add column last_seen_at timestamptz,     -- heartbeat: set when the seat joins and while its page is open
+  add column phone text check (phone is null or char_length(phone) <= 30);
+grant select (last_seen_at) on public.judge_seats to authenticated; -- pin_enc and phone are not granted on purpose
+
+-- The audit log never holds the PIN, and a heartbeat is not worth a line.
+create or replace function private.audit_row() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_old jsonb := case when tg_op in ('UPDATE', 'DELETE') then to_jsonb(old) end;
+  v_new jsonb := case when tg_op in ('INSERT', 'UPDATE') then to_jsonb(new) end;
+  v_event uuid; v_seat uuid; v_action text;
+begin
+  if tg_table_name = 'judge_seats' and tg_op = 'UPDATE'
+     and (v_new - 'last_seen_at' - 'updated_at') is not distinct from (v_old - 'last_seen_at' - 'updated_at') then
+    return null;
+  end if;
+  v_old := v_old - 'pin_hash' - 'qr_token_hash' - 'pin_enc' - 'phone';
+  v_new := v_new - 'pin_hash' - 'qr_token_hash' - 'pin_enc' - 'phone';
+  v_event := (coalesce(v_new, v_old) ->> 'event_id')::uuid;
+  select s.id into v_seat from public.judge_seats s where s.event_id = v_event and s.auth_user_id = auth.uid() and s.active limit 1;
+  v_action := coalesce(nullif(current_setting('app.audit_action', true), ''), lower(tg_op));
+  insert into public.audit_log (event_id, actor_user_id, actor_seat_id, action, table_name, row_id, before, after, reason)
+  values (v_event, auth.uid(), v_seat, v_action, tg_table_name, (coalesce(v_new, v_old) ->> 'id')::uuid, v_old, v_new,
+          nullif(current_setting('app.reason', true), ''));
+  return null;
+end $$;
+
+-- set_seat_pin now also stores the encrypted PIN (optional, for seats made by the old flow).
+drop function public.set_seat_pin(uuid, text);
+create or replace function public.set_seat_pin(p_seat uuid, p_pin text, p_enc text default null) returns void
+language plpgsql security definer set search_path = '' as $$
+declare s public.judge_seats;
+begin
+  if p_pin !~ '^[0-9]{6}$' then raise exception 'PIN_MUST_BE_6_DIGITS'; end if;
+  select * into s from public.judge_seats where id = p_seat;
+  if not found then raise exception 'SEAT_NOT_FOUND'; end if;
+  if exists (select 1 from public.judge_seats o where o.event_id = s.event_id and o.id <> s.id and o.pin_hash is not null
+             and o.pin_hash = extensions.crypt(p_pin, o.pin_hash)) then
+    raise exception 'PIN_IN_USE';
+  end if;
+  perform set_config('app.audit_action', 'pin_set', true);
+  update public.judge_seats set pin_hash = extensions.crypt(p_pin, extensions.gen_salt('bf')), pin_enc = p_enc where id = p_seat;
+  perform set_config('app.audit_action', '', true);
+end $$;
+
+-- Regenerate: the old PIN stops working, the seat's phones are signed out (the seat is unbound), its QR code dies.
+-- Refused while a connected seat is in a heat that is running or paused: nobody is dropped to the join page mid-heat.
+-- Judges count when they sit on the panel of the heat's division; the head judge and spotters work every heat.
+create or replace function public.regenerate_seat_pin(p_seat uuid, p_pin text, p_enc text, p_actor uuid default null) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare s public.judge_seats; h record;
+begin
+  if p_pin !~ '^[0-9]{6}$' then raise exception 'PIN_MUST_BE_6_DIGITS'; end if;
+  select * into s from public.judge_seats where id = p_seat;
+  if not found then return jsonb_build_object('ok', false, 'error', 'SEAT_NOT_FOUND'); end if;
+  if s.status <> 'active' then return jsonb_build_object('ok', false, 'error', 'NOT_ACTIVE'); end if;
+  if s.auth_user_id is not null then
+    select x.number, d.name as division into h
+      from public.heats x join public.divisions d on d.id = x.division_id
+     where x.event_id = s.event_id and x.status in ('running', 'paused')
+       and (s.role in ('head', 'spotter')
+            or (s.role = 'judge' and exists (select 1 from public.panel_members pm where pm.panel_id = d.panel_id and pm.judge_seat_id = s.id)))
+     order by x.number limit 1;
+    if found then return jsonb_build_object('ok', false, 'error', 'SEAT_IN_HEAT', 'heat_number', h.number, 'division', h.division); end if;
+  end if;
+  if exists (select 1 from public.judge_seats o where o.event_id = s.event_id and o.id <> s.id and o.pin_hash is not null
+             and o.pin_hash = extensions.crypt(p_pin, o.pin_hash)) then
+    return jsonb_build_object('ok', false, 'error', 'PIN_IN_USE');
+  end if;
+  perform set_config('app.audit_action', 'pin_regenerated', true);
+  perform set_config('app.reason', 'regenerated by organiser ' || coalesce(p_actor::text, 'unknown'), true);
+  update public.judge_seats
+     set pin_hash = extensions.crypt(p_pin, extensions.gen_salt('bf')), pin_enc = p_enc,
+         auth_user_id = null, bound_at = null, qr_token_hash = null, qr_token_expires_at = null, last_seen_at = null
+   where id = p_seat;
+  perform set_config('app.audit_action', '', true);
+  perform set_config('app.reason', '', true);
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Approve a self-added seat: it becomes active and gets its PIN.
+create or replace function public.approve_seat(p_seat uuid, p_pin text, p_enc text, p_actor uuid default null) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare s public.judge_seats;
+begin
+  if p_pin !~ '^[0-9]{6}$' then raise exception 'PIN_MUST_BE_6_DIGITS'; end if;
+  select * into s from public.judge_seats where id = p_seat;
+  if not found then return jsonb_build_object('ok', false, 'error', 'SEAT_NOT_FOUND'); end if;
+  if s.status <> 'pending' then return jsonb_build_object('ok', false, 'error', 'NOT_PENDING'); end if;
+  if exists (select 1 from public.judge_seats o where o.event_id = s.event_id and o.id <> s.id and o.pin_hash is not null
+             and o.pin_hash = extensions.crypt(p_pin, o.pin_hash)) then
+    return jsonb_build_object('ok', false, 'error', 'PIN_IN_USE');
+  end if;
+  perform set_config('app.audit_action', 'seat_approved', true);
+  perform set_config('app.reason', 'approved by organiser ' || coalesce(p_actor::text, 'unknown'), true);
+  update public.judge_seats set status = 'active', active = true, pin_hash = extensions.crypt(p_pin, extensions.gen_salt('bf')), pin_enc = p_enc where id = p_seat;
+  perform set_config('app.audit_action', '', true);
+  perform set_config('app.reason', '', true);
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Heartbeat: a signed-in phone that holds a seat says "I am here" (at most every 15 seconds per seat).
+create or replace function public.touch_seat() returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.uid() is null then raise exception 'NOT_SIGNED_IN'; end if;
+  update public.judge_seats set last_seen_at = now()
+   where auth_user_id = auth.uid() and (last_seen_at is null or last_seen_at < now() - interval '15 seconds');
+end $$;
+
+-- Joining counts as the first sighting.
+create or replace function private.bind_seat(p_seat public.judge_seats, p_user uuid, p_ip text, p_how text) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare v_rebound boolean;
+begin
+  if p_seat.locked and p_seat.auth_user_id is not null and p_seat.auth_user_id <> p_user then
+    return jsonb_build_object('ok', false, 'error', 'SEAT_LOCKED');
+  end if;
+  v_rebound := p_seat.auth_user_id is not null and p_seat.auth_user_id <> p_user;
+  perform set_config('app.audit_action', 'seat_bound', true);
+  perform set_config('app.reason', 'joined by ' || p_how, true);
+  -- one login holds one seat per event: free any seat this login held before
+  update public.judge_seats set auth_user_id = null where event_id = p_seat.event_id and auth_user_id = p_user and id <> p_seat.id;
+  update public.judge_seats set auth_user_id = p_user, bound_at = now(), last_seen_at = now() where id = p_seat.id;
+  perform set_config('app.audit_action', '', true);
+  perform set_config('app.reason', '', true);
+  insert into public.join_attempts (event_id, ip, seat_id, ok) values (p_seat.event_id, p_ip, p_seat.id, true);
+  return jsonb_build_object('ok', true, 'seat_id', p_seat.id, 'event_id', p_seat.event_id, 'role', p_seat.role, 'name', p_seat.name, 'rebound', v_rebound);
+end $$;
+
+-- Phone numbers of self-added officials are for the organiser only (the head judge can read the seat list, but not these).
+create or replace function public.get_seat_contacts(p_event uuid) returns table (seat_id uuid, phone text)
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not private.is_event_organiser(p_event) then raise exception 'NOT_ALLOWED'; end if;
+  return query select s.id, s.phone from public.judge_seats s where s.event_id = p_event and s.phone is not null;
+end $$;
+
+-- Self-add now takes an optional phone number and refuses archived events like unknown ones.
+drop function public.request_seat(text, text, text, text);
+create or replace function public.request_seat(p_event_slug text, p_name text, p_role text, p_ip text, p_phone text default null) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare ev public.events; v_name text := btrim(coalesce(p_name, '')); v_phone text := nullif(btrim(coalesce(p_phone, '')), '');
+begin
+  select * into ev from public.events where slug = lower(coalesce(p_event_slug, ''));
+  if not found or ev.status = 'complete' or ev.archived_at is not null or not private.org_is_active(ev.organisation_id) then
+    return jsonb_build_object('ok', false, 'error', 'EVENT_NOT_FOUND');
+  end if;
+  if private.form_rate_limited(ev.id, 'self_add', coalesce(nullif(p_ip, ''), 'unknown')) then
+    return jsonb_build_object('ok', false, 'error', 'RATE_LIMITED');
+  end if;
+  if p_role is null or p_role not in ('judge', 'spotter', 'announcer') then return jsonb_build_object('ok', false, 'error', 'INVALID_ROLE'); end if;
+  if char_length(v_name) not between 2 and 60 then return jsonb_build_object('ok', false, 'error', 'INVALID_NAME'); end if;
+  if char_length(coalesce(v_phone, '')) > 30 then return jsonb_build_object('ok', false, 'error', 'INVALID_PHONE'); end if;
+  if exists (select 1 from public.judge_seats s where s.event_id = ev.id and s.status = 'pending' and lower(s.name) = lower(v_name) and s.role = p_role) then
+    return jsonb_build_object('ok', true); -- pressing the button twice is harmless
+  end if;
+  if (select count(*) from public.judge_seats s where s.event_id = ev.id and s.status = 'pending') >= 50 then
+    return jsonb_build_object('ok', false, 'error', 'TOO_MANY_PENDING');
+  end if;
+  insert into public.judge_seats (event_id, name, role, status, active, scores, phone) values (ev.id, v_name, p_role, 'pending', true, false, v_phone);
+  return jsonb_build_object('ok', true);
+end $$;
+
+revoke all on function public.set_seat_pin, public.regenerate_seat_pin, public.approve_seat, public.request_seat from public, anon, authenticated;
+grant execute on function public.set_seat_pin, public.regenerate_seat_pin, public.approve_seat, public.request_seat to service_role;
+revoke all on function public.touch_seat, public.get_seat_contacts from public, anon;
+grant execute on function public.touch_seat, public.get_seat_contacts to authenticated;
+
+-- ---------------------------------------------------------------- 4. public registration
+-- Open = published or live, switched on, and the closing date (and optional time, in the event's time zone) not yet passed.
+create or replace function private.registration_open(ev public.events) returns boolean
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  v_closes date := nullif(ev.settings ->> 'registrationClosesOn', '')::date;
+  v_time text := nullif(ev.settings ->> 'registrationClosesTime', '');
+  v_deadline timestamptz;
+begin
+  if ev.status not in ('published', 'live') or coalesce((ev.settings ->> 'registrationOpen')::boolean, false) is not true then return false; end if;
+  if v_closes is not null then
+    v_deadline := ((v_closes::text || ' ' || case when v_time ~ '^[0-9]{2}:[0-9]{2}$' then v_time || ':00' else '23:59:59.999999' end)::timestamp) at time zone ev.timezone;
+    if now() > v_deadline then return false; end if;
+  end if;
+  return true;
+end $$;
+revoke all on function private.registration_open from public, anon, authenticated;
+
+drop function public.register_rider(text, uuid, jsonb, jsonb, boolean, text);
+create or replace function public.register_rider(
+  p_event_slug text, p_division uuid, p_fields jsonb, p_identifiers jsonb, p_consent boolean, p_ip text, p_photo_path text default null
+) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  ev public.events; v_rider uuid; v_ident jsonb; v_max int; v_photo text := nullif(btrim(coalesce(p_photo_path, '')), '');
+  v_first text := btrim(coalesce(p_fields ->> 'first_name', ''));
+  v_last text := btrim(coalesce(p_fields ->> 'last_name', ''));
+  v_email text := lower(btrim(coalesce(p_fields ->> 'email', '')));
+  v_phone text := nullif(btrim(coalesce(p_fields ->> 'phone', '')), '');
+  v_nat text := nullif(btrim(coalesce(p_fields ->> 'nationality', '')), '');
+  v_sponsor text := nullif(btrim(coalesce(p_fields ->> 'sponsor', '')), '');
+  v_woo text := nullif(btrim(coalesce(p_fields ->> 'woo_id', '')), '');
+begin
+  select * into ev from public.events where slug = lower(coalesce(p_event_slug, ''));
+  if not found or ev.archived_at is not null or not private.org_is_active(ev.organisation_id) then
+    return jsonb_build_object('ok', false, 'error', 'EVENT_NOT_FOUND');
+  end if;
+  if private.form_rate_limited(ev.id, 'register', coalesce(nullif(p_ip, ''), 'unknown')) then
+    return jsonb_build_object('ok', false, 'error', 'RATE_LIMITED');
+  end if;
+  if not private.registration_open(ev) then return jsonb_build_object('ok', false, 'error', 'REGISTRATION_CLOSED'); end if;
+  if not exists (select 1 from public.divisions d where d.id = p_division and d.event_id = ev.id) then
+    return jsonb_build_object('ok', false, 'error', 'DIVISION_NOT_FOUND');
+  end if;
+  v_max := nullif(ev.settings ->> 'registrationMaxPerDivision', '')::int;
+  if v_max is not null and (select count(*) from public.entries e where e.division_id = p_division and e.status in ('registered', 'confirmed')) >= v_max then
+    return jsonb_build_object('ok', false, 'error', 'DIVISION_FULL');
+  end if;
+  if p_consent is not true then return jsonb_build_object('ok', false, 'error', 'CONSENT_REQUIRED'); end if;
+
+  if jsonb_typeof(p_fields) is distinct from 'object' or char_length(v_first) not between 1 and 60 then
+    return jsonb_build_object('ok', false, 'error', 'INVALID_FIELDS', 'field', 'first_name');
+  end if;
+  if char_length(v_last) not between 1 and 60 then return jsonb_build_object('ok', false, 'error', 'INVALID_FIELDS', 'field', 'last_name'); end if;
+  if char_length(v_email) > 254 or v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then
+    return jsonb_build_object('ok', false, 'error', 'INVALID_FIELDS', 'field', 'email');
+  end if;
+  if char_length(coalesce(v_phone, '')) > 30 or char_length(coalesce(v_nat, '')) > 60 or char_length(coalesce(v_sponsor, '')) > 100 or char_length(coalesce(v_woo, '')) > 40 then
+    return jsonb_build_object('ok', false, 'error', 'INVALID_FIELDS', 'field', 'other');
+  end if;
+
+  -- a photo must sit in this organisation's own registration folder and really have been uploaded
+  if v_photo is not null and not (
+       v_photo ~ ('^' || ev.organisation_id::text || '/reg/[0-9a-f-]{36}\.(png|jpg|jpeg|webp)$')
+       and exists (select 1 from storage.objects o where o.bucket_id = 'rider-photos' and o.name = v_photo)) then
+    return jsonb_build_object('ok', false, 'error', 'INVALID_PHOTO');
+  end if;
+
+  -- only known identifier keys, kept small
+  if jsonb_typeof(p_identifiers) = 'object' and char_length(p_identifiers::text) <= 1000 then
+    select coalesce(jsonb_object_agg(k, v), '{}') into v_ident
+      from jsonb_each(p_identifiers) as t(k, v) where k in ('vest_colour', 'bib', 'kite', 'rashguard_colour', 'helmet_colour');
+  else
+    v_ident := '{}';
+  end if;
+
+  -- same person, same organisation: reuse the rider. Never overwrite what an organiser or the rider already gave.
+  insert into public.riders (organisation_id, first_name, last_name, nationality, email, phone, sponsor, woo_id, photo_url)
+  values (ev.organisation_id, v_first, v_last, v_nat, v_email, v_phone, v_sponsor, v_woo, v_photo)
+  on conflict (organisation_id, lower(email)) where email is not null do nothing
+  returning id into v_rider;
+  if v_rider is null then
+    select r.id into v_rider from public.riders r where r.organisation_id = ev.organisation_id and lower(r.email) = v_email;
+    update public.riders set nationality = coalesce(nationality, v_nat), phone = coalesce(phone, v_phone),
+           sponsor = coalesce(sponsor, v_sponsor), woo_id = coalesce(woo_id, v_woo), photo_url = coalesce(photo_url, v_photo)
+     where id = v_rider;
+  end if;
+
+  -- an existing entry looks exactly like a new one (no way to probe who is registered)
+  insert into public.entries (division_id, rider_id, status, source, consent_at, identifiers)
+  values (p_division, v_rider, 'registered', 'self', now(), v_ident)
+  on conflict (division_id, rider_id) do nothing;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Everything the public registration page needs, for the server to read (visitors never touch the tables).
+create or replace function public.public_registration_info(p_slug text) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare ev public.events; org public.organisations; v_max int; v_divs jsonb;
+begin
+  select * into ev from public.events where slug = lower(coalesce(p_slug, ''));
+  if not found or ev.archived_at is not null or ev.status not in ('published', 'live', 'complete') then return jsonb_build_object('found', false); end if;
+  select * into org from public.organisations where id = ev.organisation_id;
+  if org.archived_at is not null then return jsonb_build_object('found', false); end if;
+  v_max := nullif(ev.settings ->> 'registrationMaxPerDivision', '')::int;
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'id', d.id, 'name', d.name, 'description', d.description, 'identification', d.identification,
+           'full', v_max is not null and (select count(*) from public.entries e where e.division_id = d.id and e.status in ('registered', 'confirmed')) >= v_max
+         ) order by d.sort_order, d.created_at), '[]'::jsonb)
+    into v_divs from public.divisions d where d.event_id = ev.id;
+  return jsonb_build_object(
+    'found', true,
+    'event', jsonb_build_object('id', ev.id, 'name', ev.name, 'slug', ev.slug, 'timezone', ev.timezone, 'status', ev.status, 'branding', ev.branding,
+                                'location', ev.location, 'startDate', ev.start_date, 'endDate', ev.end_date),
+    'organisation', jsonb_build_object('id', org.id, 'name', org.name),
+    'open', private.registration_open(ev),
+    'closedMessage', ev.settings ->> 'registrationClosedMessage',
+    'closesOn', ev.settings ->> 'registrationClosesOn',
+    'closesTime', ev.settings ->> 'registrationClosesTime',
+    'identification', ev.settings -> 'identification',
+    'divisions', v_divs);
+end $$;
+
+revoke all on function public.register_rider, public.public_registration_info from public, anon, authenticated;
+grant execute on function public.register_rider, public.public_registration_info to service_role;
+
+-- ---------------------------------------------------------------- 5. panels
+-- The judges of a division (head judge included when ticked). Runs as the caller, and says no to anyone who is not the event's organiser.
+create or replace function public.set_division_panel(p_division uuid, p_seat_ids uuid[]) returns void
+language plpgsql security invoker set search_path = '' as $$
+declare d public.divisions; v_panel uuid; v_len int := coalesce(array_length(p_seat_ids, 1), 0);
+begin
+  select * into d from public.divisions where id = p_division;
+  if not found or not private.is_event_organiser(d.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if (select count(distinct x) from unnest(coalesce(p_seat_ids, '{}'::uuid[])) x) <> v_len then raise exception 'INVALID_SEATS'; end if;
+  if (select count(*) from public.judge_seats s where s.id = any (coalesce(p_seat_ids, '{}'::uuid[])) and s.event_id = d.event_id and s.role in ('judge', 'head') and s.status = 'active') <> v_len then
+    raise exception 'INVALID_SEATS';
+  end if;
+  v_panel := d.panel_id;
+  if v_panel is null then
+    insert into public.panels (event_id, name) values (d.event_id, d.name) returning id into v_panel;
+    update public.divisions set panel_id = v_panel where id = d.id;
+  end if;
+  delete from public.panel_members where panel_id = v_panel;
+  insert into public.panel_members (panel_id, judge_seat_id, seat_no)
+    select v_panel, t.id, t.ord::int from unnest(coalesce(p_seat_ids, '{}'::uuid[])) with ordinality as t(id, ord);
+end $$;
+
+-- "Head judge also scores": on puts the head judge on every panel of the event, off takes them out of all.
+create or replace function public.set_seat_scores(p_seat uuid, p_scores boolean) returns void
+language plpgsql security invoker set search_path = '' as $$
+declare s public.judge_seats;
+begin
+  select * into s from public.judge_seats where id = p_seat;
+  if not found or not private.is_event_organiser(s.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if s.role <> 'head' then raise exception 'INVALID_SEATS'; end if;
+  update public.judge_seats set scores = p_scores where id = p_seat;
+  if p_scores then
+    insert into public.panel_members (panel_id, judge_seat_id, seat_no)
+      select p.id, p_seat, coalesce((select max(m.seat_no) from public.panel_members m where m.panel_id = p.id), 0) + 1
+        from public.panels p
+       where p.event_id = s.event_id and not exists (select 1 from public.panel_members m where m.panel_id = p.id and m.judge_seat_id = p_seat);
+  else
+    delete from public.panel_members where judge_seat_id = p_seat;
+  end if;
+end $$;
+revoke all on function public.set_division_panel, public.set_seat_scores from public, anon;
+grant execute on function public.set_division_panel, public.set_seat_scores to authenticated;
+
+-- ---------------------------------------------------------------- 6. the event's own trick blocks
+-- An event's vocabulary must belong to the event's organisation; once a heat has started its blocks cannot be removed.
+create or replace function private.vocab_event_guard() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare v_org uuid;
+begin
+  if tg_op = 'DELETE' then
+    if old.event_id is not null and exists (select 1 from public.heats h where h.event_id = old.event_id and h.started_at is not null)
+       and jsonb_typeof(old.json -> 'blocks') = 'array' and jsonb_array_length(old.json -> 'blocks') > 0 and pg_trigger_depth() = 1 then
+      raise exception 'TRICK_BASE_LOCKED';
+    end if;
+    return old;
+  end if;
+  if new.event_id is not null then
+    select e.organisation_id into v_org from public.events e where e.id = new.event_id;
+    if v_org is distinct from new.organisation_id then raise exception 'VOCABULARY_OTHER_ORGANISATION'; end if;
+  end if;
+  if tg_op = 'UPDATE' and new.event_id is not null and jsonb_typeof(old.json -> 'blocks') = 'array'
+     and exists (select 1 from public.heats h where h.event_id = new.event_id and h.started_at is not null)
+     and exists (
+       select 1 from jsonb_array_elements(old.json -> 'blocks') b
+        where not exists (select 1 from jsonb_array_elements(coalesce(new.json -> 'blocks', '[]'::jsonb)) n
+                           where n ->> 'key' = b ->> 'key' and n ->> 'family' = b ->> 'family')) then
+    raise exception 'TRICK_BASE_LOCKED';
+  end if;
+  return new;
+end $$;
+create trigger b_vocab_guard before insert or update or delete on public.trick_vocabularies for each row execute function private.vocab_event_guard();
+
+-- Proposals for the master base: every event block still marked "proposed", for platform admins to read.
+create or replace function public.admin_trick_proposals() returns table (
+  event_id uuid, event_name text, organisation_id uuid, organisation_name text, family text, key text, label text, category text
+) language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  return query
+  select v.event_id, e.name, o.id, o.name, b ->> 'family', b ->> 'key', b ->> 'label', b ->> 'category'
+    from public.trick_vocabularies v
+    join public.events e on e.id = v.event_id
+    join public.organisations o on o.id = e.organisation_id
+    cross join lateral jsonb_array_elements(coalesce(v.json -> 'blocks', '[]'::jsonb)) b
+   where v.event_id is not null and v.key = 'event-additions' and b ->> 'status' = 'proposed'
+   order by o.name, e.name, b ->> 'family', b ->> 'label';
+end $$;
+
+-- The owner's answer to a proposal: accepted (now in the master base) or declined (stays in that event only).
+create or replace function public.admin_set_proposal_status(p_event uuid, p_family text, p_key text, p_status text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare v_id uuid;
+begin
+  if not private.is_platform_owner() then raise exception 'NOT_ALLOWED'; end if;
+  if p_status not in ('accepted', 'declined') then raise exception 'INVALID_STATUS'; end if;
+  update public.trick_vocabularies v
+     set json = jsonb_set(v.json, '{blocks}', (
+       select coalesce(jsonb_agg(case when b ->> 'key' = p_key and b ->> 'family' = p_family then jsonb_set(b, '{status}', to_jsonb(p_status)) else b end), '[]'::jsonb)
+         from jsonb_array_elements(v.json -> 'blocks') b))
+   where v.event_id = p_event and v.key = 'event-additions' and jsonb_typeof(v.json -> 'blocks') = 'array'
+  returning v.id into v_id;
+  if v_id is null then raise exception 'NOT_FOUND'; end if;
+  perform private.platform_audit('trick_proposal_' || p_status, null, 'trick_vocabularies', v_id, null, jsonb_build_object('event', p_event, 'family', p_family, 'key', p_key), null);
+end $$;
+revoke all on function public.admin_trick_proposals, public.admin_set_proposal_status from public, anon;
+grant execute on function public.admin_trick_proposals, public.admin_set_proposal_status to authenticated;
+
+-- ---------------------------------------------------------------- 7. feedback notes
+create table public.feedback_notes (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid references public.organisations on delete cascade, -- null = an owner's note from the admin screens
+  author_user_id uuid references auth.users on delete set null,
+  author_role text not null check (author_role in ('owner', 'staff', 'organiser')),
+  event_id uuid references public.events on delete set null,
+  division_id uuid references public.divisions on delete set null,
+  heat_id uuid references public.heats on delete set null,
+  page text not null check (char_length(page) between 1 and 300),
+  page_label text not null check (char_length(page_label) between 1 and 100),
+  body text not null check (char_length(btrim(body)) between 1 and 4000),
+  tag text not null default 'idea' check (tag in ('bug', 'wording', 'layout', 'new_rule', 'idea')),
+  status text not null default 'open' check (status in ('open', 'done')),
+  screenshot_path text check (screenshot_path is null or char_length(screenshot_path) <= 300),
+  exported_at timestamptz,
+  done_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index on public.feedback_notes (organisation_id, status);
+create index on public.feedback_notes (status, tag);
+create index on public.feedback_notes (author_user_id);
+create index on public.feedback_notes (event_id);
+create index on public.feedback_notes (division_id);
+create index on public.feedback_notes (heat_id);
+create trigger z_updated_at before update on public.feedback_notes for each row execute function private.set_updated_at();
+
+create or replace function private.feedback_done_at() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if new.status = 'done' and old.status <> 'done' then new.done_at := now();
+  elsif new.status = 'open' then new.done_at := null;
+  end if;
+  return new;
+end $$;
+create trigger b_done_at before update of status on public.feedback_notes for each row execute function private.feedback_done_at();
+
+alter table public.feedback_notes enable row level security;
+grant select on public.feedback_notes to authenticated;
+grant insert (organisation_id, author_user_id, author_role, event_id, division_id, heat_id, page, page_label, body, tag, screenshot_path) on public.feedback_notes to authenticated;
+grant update (tag, status, exported_at, done_at) on public.feedback_notes to authenticated; -- the text of a note can never be edited
+
+create policy insert_own on public.feedback_notes for insert to authenticated
+  with check (
+    author_user_id = auth.uid()
+    and ((organisation_id is not null and private.is_org_member(organisation_id)) or (organisation_id is null and private.is_platform_admin()))
+    and (author_role <> 'owner' or private.is_platform_owner())
+    and (author_role <> 'staff' or private.is_platform_admin()));
+create policy read_visible on public.feedback_notes for select to authenticated
+  using (private.is_platform_owner() or author_user_id = auth.uid() or (organisation_id is not null and private.is_org_member(organisation_id)));
+create policy owner_update on public.feedback_notes for update to authenticated
+  using (private.is_platform_owner()) with check (private.is_platform_owner());
+
+-- ---------------------------------------------------------------- 8. storage
+-- A path is usable only as "<organisation id>/<file>" by a member of that organisation (no platform-admin shortcut: rider photos are personal).
+create or replace function private.org_folder_member(p_name text) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select case
+    when p_name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[^/]+' then private.is_org_member(split_part(p_name, '/', 1)::uuid)
+    else false
+  end;
+$$;
+grant execute on function private.org_folder_member to anon, authenticated, service_role;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('rider-photos', 'rider-photos', false, 2097152, array['image/jpeg', 'image/png', 'image/webp']),
+       ('feedback', 'feedback', false, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update set public = excluded.public, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+create policy rider_photos_select on storage.objects for select to authenticated using (bucket_id = 'rider-photos' and private.org_folder_member(name));
+create policy rider_photos_insert on storage.objects for insert to authenticated with check (bucket_id = 'rider-photos' and private.org_folder_member(name));
+create policy rider_photos_update on storage.objects for update to authenticated
+  using (bucket_id = 'rider-photos' and private.org_folder_member(name)) with check (bucket_id = 'rider-photos' and private.org_folder_member(name));
+create policy rider_photos_delete on storage.objects for delete to authenticated using (bucket_id = 'rider-photos' and private.org_folder_member(name));
+
+-- Screenshots: an organisation's own folder, or "platform/" for the owner's notes; the platform owner may read everything.
+create policy feedback_select on storage.objects for select to authenticated
+  using (bucket_id = 'feedback' and (private.org_folder_member(name) or private.is_platform_owner()));
+create policy feedback_insert on storage.objects for insert to authenticated
+  with check (bucket_id = 'feedback' and (private.org_folder_member(name) or (name like 'platform/%' and private.is_platform_admin())));
+
+
+-- ===== migration 20261002100100_phase4a2_password_flag_and_seat_scores.sql =====
+-- Phase 4a-2, corrections found by the first test run.
+--   * has_password: a login created by an invitation gets a random password hash from the auth service, so "has a hash" cannot tell
+--     whether a person ever chose a password. The app records the fact in the login's own metadata (set when a password is saved
+--     or used to sign in), and this function reads it. It is only a label for the header button, never a security check.
+--   * set_seat_scores: runs as the caller, so it may only read the seat columns the caller has been granted (not the PIN hashes).
+create or replace function public.has_password() returns boolean
+language sql stable security definer set search_path = '' as $$
+  select coalesce((select (u.raw_user_meta_data ->> 'has_password') = 'true' from auth.users u where u.id = auth.uid()), false);
+$$;
+
+create or replace function public.set_seat_scores(p_seat uuid, p_scores boolean) returns void
+language plpgsql security invoker set search_path = '' as $$
+declare v_event uuid; v_role text;
+begin
+  select s.event_id, s.role into v_event, v_role from public.judge_seats s where s.id = p_seat;
+  if not found or not private.is_event_organiser(v_event) then raise exception 'NOT_ALLOWED'; end if;
+  if v_role <> 'head' then raise exception 'INVALID_SEATS'; end if;
+  update public.judge_seats set scores = p_scores where id = p_seat;
+  if p_scores then
+    insert into public.panel_members (panel_id, judge_seat_id, seat_no)
+      select p.id, p_seat, coalesce((select max(m.seat_no) from public.panel_members m where m.panel_id = p.id), 0) + 1
+        from public.panels p
+       where p.event_id = v_event and not exists (select 1 from public.panel_members m where m.panel_id = p.id and m.judge_seat_id = p_seat);
+  else
+    delete from public.panel_members where judge_seat_id = p_seat;
+  end if;
+end $$;
+
+
+-- ===== migration 20261002100200_import_riders.sql =====
+-- Phase 4a-2: "Paste or upload a CSV" saves all valid rows in one transaction (nothing is half-saved).
+-- Runs as the caller, so only an organiser of the division's organisation can use it; riders are matched by email inside the organisation.
+create or replace function public.import_riders(p_division uuid, p_rows jsonb) returns jsonb
+language plpgsql security invoker set search_path = '' as $$
+declare
+  v_org uuid; r jsonb; v_rider uuid; v_email text; v_ident jsonb; v_rows int;
+  v_created int := 0; v_matched int := 0; v_already int := 0;
+begin
+  select e.organisation_id into v_org from public.divisions d join public.events e on e.id = d.event_id where d.id = p_division;
+  if v_org is null or not private.is_org_member(v_org) then raise exception 'NOT_ALLOWED'; end if;
+  if jsonb_typeof(p_rows) is distinct from 'array' then raise exception 'INVALID_ROWS'; end if;
+  if jsonb_array_length(p_rows) > 500 then raise exception 'TOO_MANY_ROWS'; end if;
+  for r in select x from jsonb_array_elements(p_rows) x loop
+    if btrim(coalesce(r ->> 'first', '')) = '' or btrim(coalesce(r ->> 'last', '')) = '' then raise exception 'INVALID_ROWS'; end if;
+    v_email := nullif(lower(btrim(coalesce(r ->> 'email', ''))), '');
+    v_rider := null;
+    if v_email is not null then
+      select id into v_rider from public.riders where organisation_id = v_org and lower(email) = v_email;
+    end if;
+    if v_rider is null then
+      insert into public.riders (organisation_id, first_name, last_name, nationality, email, phone, sponsor, photo_url)
+      values (v_org, btrim(r ->> 'first'), btrim(r ->> 'last'), nullif(btrim(coalesce(r ->> 'nationality', '')), ''), v_email,
+              nullif(btrim(coalesce(r ->> 'phone', '')), ''), nullif(btrim(coalesce(r ->> 'sponsor', '')), ''), nullif(btrim(coalesce(r ->> 'photoUrl', '')), ''))
+      returning id into v_rider;
+      v_created := v_created + 1;
+    else
+      v_matched := v_matched + 1;
+    end if;
+    if jsonb_typeof(r -> 'identifiers') = 'object' and char_length((r -> 'identifiers')::text) <= 1000 then
+      select coalesce(jsonb_object_agg(k, v), '{}'::jsonb) into v_ident
+        from jsonb_each(r -> 'identifiers') as t(k, v) where k in ('vest_colour', 'bib', 'kite', 'rashguard_colour', 'helmet_colour');
+    else
+      v_ident := '{}'::jsonb;
+    end if;
+    insert into public.entries (division_id, rider_id, seed, status, source, identifiers)
+    values (p_division, v_rider, nullif(r ->> 'seed', '')::int, 'confirmed', 'import', v_ident)
+    on conflict (division_id, rider_id) do nothing;
+    get diagnostics v_rows = row_count;
+    if v_rows = 0 then v_already := v_already + 1; end if;
+  end loop;
+  return jsonb_build_object('created', v_created, 'matched', v_matched, 'already', v_already);
+end $$;
+revoke all on function public.import_riders from public, anon;
+grant execute on function public.import_riders to authenticated;
+
+
+-- ===== migration 20261002100300_shuffle_code_kept.sql =====
+-- Phase 4a-2: the code of the last "Shuffle randomly" is kept when the organiser then moves a rider by hand, so "Repeat this shuffle"
+-- can always put everybody back in exactly that order. Only a new shuffle replaces the code.
+create or replace function public.set_entry_order(p_division uuid, p_entry_ids uuid[], p_shuffle_seed bigint default null) returns void
+language plpgsql security invoker set search_path = '' as $$
+declare v_len int := coalesce(array_length(p_entry_ids, 1), 0); v_rows int;
+begin
+  if p_entry_ids is null then raise exception 'INVALID_ORDER'; end if;
+  if (select count(distinct x) from unnest(p_entry_ids) x) <> v_len then raise exception 'INVALID_ORDER'; end if;
+  if (select count(*) from public.entries e where e.division_id = p_division and e.id = any (p_entry_ids)) <> v_len then raise exception 'ENTRY_NOT_IN_DIVISION'; end if;
+  with listed as (
+    select t.id, t.ord from unnest(p_entry_ids) with ordinality as t(id, ord)
+  ), rest as (
+    select e.id, v_len + row_number() over (order by e.seed nulls last, e.created_at, e.id) as ord
+      from public.entries e where e.division_id = p_division and not (e.id = any (p_entry_ids))
+  ), everyone as (
+    select id, ord from listed union all select id, ord from rest
+  )
+  update public.entries e set seed = everyone.ord::int from everyone where e.id = everyone.id;
+  update public.divisions set seed_shuffle_seed = coalesce(p_shuffle_seed, seed_shuffle_seed) where id = p_division;
+  get diagnostics v_rows = row_count;
+  if v_rows = 0 then raise exception 'NOT_ALLOWED'; end if;
+end $$;
+
+
+-- ===== migration 20261002100400_photo_upload_slots.sql =====
+-- Phase 4a-2: the public registration page may upload a rider photo. The server asks for a slot first: it checks that registration is
+-- open, that the event is live on the public site and that the address has not asked too often, then gives back a path inside the
+-- organisation's own "reg" folder of the private rider-photos bucket. Only the server can call this function.
+alter table public.form_attempts drop constraint form_attempts_kind_check;
+alter table public.form_attempts add constraint form_attempts_kind_check check (kind in ('register', 'self_add', 'photo'));
+
+-- Limits per address and hour: 5 registrations, 5 self-adds, 10 photo slots (a photo may need a second try); per event: 300 / 60 / 600.
+create or replace function private.form_rate_limited(p_event uuid, p_kind text, p_ip text) returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare v_limited boolean; v_per_event int; v_per_ip int;
+begin
+  delete from public.form_attempts where at < now() - interval '2 days';
+  v_per_event := case p_kind when 'register' then 300 when 'photo' then 600 else 60 end;
+  v_per_ip := case p_kind when 'photo' then 10 else 5 end;
+  select (select count(*) from public.form_attempts f where f.event_id = p_event and f.kind = p_kind and f.ip = p_ip and f.at > now() - interval '1 hour') >= v_per_ip
+      or (select count(*) from public.form_attempts f where f.event_id = p_event and f.kind = p_kind and f.at > now() - interval '1 hour') >= v_per_event
+    into v_limited;
+  if v_limited then return true; end if;
+  insert into public.form_attempts (event_id, kind, ip) values (p_event, p_kind, p_ip);
+  return false;
+end $$;
+
+create or replace function public.request_photo_upload(p_event_slug text, p_ext text, p_ip text) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare ev public.events; v_ext text := lower(coalesce(p_ext, ''));
+begin
+  select * into ev from public.events where slug = lower(coalesce(p_event_slug, ''));
+  if not found or ev.archived_at is not null or not private.org_is_active(ev.organisation_id) then
+    return jsonb_build_object('ok', false, 'error', 'EVENT_NOT_FOUND');
+  end if;
+  if private.form_rate_limited(ev.id, 'photo', coalesce(nullif(p_ip, ''), 'unknown')) then
+    return jsonb_build_object('ok', false, 'error', 'RATE_LIMITED');
+  end if;
+  if not private.registration_open(ev) then return jsonb_build_object('ok', false, 'error', 'REGISTRATION_CLOSED'); end if;
+  if v_ext not in ('jpg', 'jpeg', 'png', 'webp') then return jsonb_build_object('ok', false, 'error', 'INVALID_PHOTO'); end if;
+  return jsonb_build_object('ok', true, 'path', ev.organisation_id::text || '/reg/' || gen_random_uuid()::text || '.' || v_ext);
+end $$;
+revoke all on function public.request_photo_upload from public, anon, authenticated;
+grant execute on function public.request_photo_upload to service_role;
+
+
+-- ===== migration 20261002100500_feedback_name_snapshots.sql =====
+-- Phase 4a-2: a feedback note keeps the names of where it was written (organisation, event, division, heat) as words, because the owner
+-- cannot read other organisations' events through the tables, and an event may be deleted later. The text of a note still cannot be edited.
+alter table public.feedback_notes
+  add column organisation_name text check (organisation_name is null or char_length(organisation_name) <= 200),
+  add column event_name text check (event_name is null or char_length(event_name) <= 200),
+  add column division_name text check (division_name is null or char_length(division_name) <= 200),
+  add column heat_label text check (heat_label is null or char_length(heat_label) <= 200);
+grant insert (organisation_name, event_name, division_name, heat_label) on public.feedback_notes to authenticated;
+
+
+-- ===== migration 20261002100600_panels_for_every_division.sql =====
+-- Phase 4a-2: "Head judge also scores" puts the head judge on EVERY panel, including the panel of a division that has none yet.
+-- ensure_division_panel gives a division its panel (if it has none) and puts the scoring head judges on it. Runs as the caller.
+create or replace function public.ensure_division_panel(p_division uuid) returns uuid
+language plpgsql security invoker set search_path = '' as $$
+declare d public.divisions; v_panel uuid;
+begin
+  select * into d from public.divisions where id = p_division;
+  if not found or not private.is_event_organiser(d.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if d.panel_id is not null then return d.panel_id; end if;
+  insert into public.panels (event_id, name) values (d.event_id, d.name) returning id into v_panel;
+  update public.divisions set panel_id = v_panel where id = d.id;
+  insert into public.panel_members (panel_id, judge_seat_id, seat_no)
+    select v_panel, s.id, row_number() over (order by s.created_at, s.id)
+      from public.judge_seats s where s.event_id = d.event_id and s.role = 'head' and s.scores and s.status = 'active';
+  return v_panel;
+end $$;
+revoke all on function public.ensure_division_panel from public, anon;
+grant execute on function public.ensure_division_panel to authenticated;
+
+create or replace function public.set_seat_scores(p_seat uuid, p_scores boolean) returns void
+language plpgsql security invoker set search_path = '' as $$
+declare v_event uuid; v_role text; d record;
+begin
+  select s.event_id, s.role into v_event, v_role from public.judge_seats s where s.id = p_seat;
+  if not found or not private.is_event_organiser(v_event) then raise exception 'NOT_ALLOWED'; end if;
+  if v_role <> 'head' then raise exception 'INVALID_SEATS'; end if;
+  update public.judge_seats set scores = p_scores where id = p_seat;
+  if p_scores then
+    for d in select id from public.divisions where event_id = v_event and panel_id is null loop
+      perform public.ensure_division_panel(d.id);
+    end loop;
+    insert into public.panel_members (panel_id, judge_seat_id, seat_no)
+      select p.id, p_seat, coalesce((select max(m.seat_no) from public.panel_members m where m.panel_id = p.id), 0) + 1
+        from public.panels p
+       where p.event_id = v_event and not exists (select 1 from public.panel_members m where m.panel_id = p.id and m.judge_seat_id = p_seat);
+  else
+    delete from public.panel_members where judge_seat_id = p_seat;
+  end if;
+end $$;
+
+
+-- ===== migration 20261003100000_phase4b_draw_timetable.sql =====
+-- Phase 4b: the draw (generate, hands-on editing, lock / unlock) and the run order (plans, activate).
+--
+--   1. heats: a stable draw id (survives renumbering), an optional name, the warm-up before the heat
+--   2. the draw is hidden from the public role (names of every seat); organisers and the event's officials read it
+--   3. guards: a locked draw refuses seat and heat changes; a heat that has started is never rearranged (names may change)
+--   4. save_division_draw: generate / edit in ONE transaction (draw JSON + rounds + heats + seats), audited
+--   5. lock_division_draw / unlock_division_draw (a written reason) / set_draw_walkover
+--   6. schedule plans: activate one per day in one transaction; plan changes are audited
+
+-- ---------------------------------------------------------------- 1. heats
+alter table public.heats
+  add column draw_uid text,                                  -- the heat's identity in the draw; "R1-H4" may become "R1-H3" when a heat before it is taken out
+  add column name text check (name is null or char_length(name) between 1 and 40),
+  add column warm_up_sec int not null default 0 check (warm_up_sec >= 0);
+create unique index heats_division_draw_uid on public.heats (division_id, draw_uid) where draw_uid is not null;
+
+-- ---------------------------------------------------------------- 2. the stored draw is not public
+-- Seats name riders; the public pages read heats and seats through the rows that are meant to be public.
+do $$
+declare cols text;
+begin
+  select string_agg(quote_ident(column_name), ', ') into cols
+  from information_schema.columns where table_schema = 'public' and table_name = 'divisions' and column_name <> 'draw';
+  execute 'revoke select on public.divisions from anon';
+  execute format('grant select (%s) on public.divisions to anon', cols);
+end $$;
+
+-- ---------------------------------------------------------------- 3. guards
+-- Only the privileged functions below set app.draw_bypass (inside their own transaction); the tables' own grants stay as they were.
+-- The guards protect the draw from signed-in people (organisers, officials). Server code with the service key, migrations and
+-- cascades from deleting a heat, round, division or event are not "people editing the draw".
+create or replace function private.draw_bypass() returns boolean
+language sql stable set search_path = '' as $$
+  select coalesce(current_setting('app.draw_bypass', true), '') = '1'
+      or pg_trigger_depth() > 1
+      or auth.role() is distinct from 'authenticated'
+$$;
+
+-- Seats: entry, position, source and colour cannot change while the draw is locked or once the heat has started.
+create or replace function private.slot_arrangement_guard() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare v_heat public.heats; v_locked timestamptz;
+begin
+  if private.draw_bypass() then return coalesce(new, old); end if;
+  if tg_op = 'UPDATE' and (new.entry_id, new.position, new.source, new.vest_colour) is not distinct from (old.entry_id, old.position, old.source, old.vest_colour) then
+    return new;
+  end if;
+  select * into v_heat from public.heats where id = coalesce(new.heat_id, old.heat_id);
+  if not found then return coalesce(new, old); end if;        -- the heat is being deleted along with its division or event
+  select d.draw_locked_at into v_locked from public.divisions d where d.id = v_heat.division_id;
+  if v_locked is not null then raise exception 'DRAW_LOCKED'; end if;
+  if v_heat.status <> 'scheduled' or v_heat.started_at is not null then raise exception 'HEAT_STARTED'; end if;
+  return coalesce(new, old);
+end $$;
+create trigger b_slot_guard before insert or update or delete on public.heat_slots for each row execute function private.slot_arrangement_guard();
+
+-- Heats: which round, which number, which draw id; adding and taking out heats.
+create or replace function private.heat_arrangement_guard() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare v_div uuid := coalesce(new.division_id, old.division_id); v_locked timestamptz; v_found boolean;
+begin
+  if private.draw_bypass() then return coalesce(new, old); end if;
+  if tg_op = 'UPDATE' and (new.round_id, new.number, new.number_suffix, new.draw_uid) is not distinct from (old.round_id, old.number, old.number_suffix, old.draw_uid) then
+    return new;
+  end if;
+  select d.draw_locked_at, true into v_locked, v_found from public.divisions d where d.id = v_div;
+  if not coalesce(v_found, false) then return coalesce(new, old); end if;  -- the division is being deleted
+  if v_locked is not null then raise exception 'DRAW_LOCKED'; end if;
+  if tg_op <> 'INSERT' and (old.status <> 'scheduled' or old.started_at is not null) then raise exception 'HEAT_STARTED'; end if;
+  return coalesce(new, old);
+end $$;
+create trigger b_heat_guard before insert or update or delete on public.heats for each row execute function private.heat_arrangement_guard();
+
+-- Rounds: adding, taking out and restructuring are refused while locked (a rename is always fine).
+create or replace function private.round_arrangement_guard() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare v_locked timestamptz; v_found boolean;
+begin
+  if private.draw_bypass() then return coalesce(new, old); end if;
+  if tg_op = 'UPDATE' and (new.sort_order, new.spec) is not distinct from (old.sort_order, old.spec) then return new; end if;
+  select d.draw_locked_at, true into v_locked, v_found from public.divisions d where d.id = coalesce(new.division_id, old.division_id);
+  if not coalesce(v_found, false) then return coalesce(new, old); end if;
+  if v_locked is not null then raise exception 'DRAW_LOCKED'; end if;
+  return coalesce(new, old);
+end $$;
+create trigger b_round_guard before insert or update or delete on public.rounds for each row execute function private.round_arrangement_guard();
+
+-- The stored draw itself changes only through the functions below.
+create or replace function private.division_draw_guard() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if private.draw_bypass() then return new; end if;
+  if (new.draw, new.draw_locked_at) is distinct from (old.draw, old.draw_locked_at) then raise exception 'DRAW_FUNCTION_ONLY'; end if;
+  return new;
+end $$;
+create trigger b_draw_guard before update on public.divisions for each row execute function private.division_draw_guard();
+
+-- ---------------------------------------------------------------- 4. save_division_draw
+create or replace function private.draw_audit(p_event uuid, p_division uuid, p_action text, p_audit jsonb, p_reason text default null, p_table text default 'divisions') returns void
+language plpgsql security definer set search_path = '' as $$
+declare v_seat uuid;
+begin
+  select s.id into v_seat from public.judge_seats s where s.event_id = p_event and s.auth_user_id = auth.uid() and s.active limit 1;
+  insert into public.audit_log (event_id, actor_user_id, actor_seat_id, action, table_name, row_id, before, after, reason)
+  values (p_event, auth.uid(), v_seat, p_action, p_table, p_division, p_audit -> 'before', p_audit -> 'after', nullif(btrim(coalesce(p_reason, '')), ''));
+end $$;
+
+-- p_projection = { rounds: [{key, sort_order, name, short_name, spec}], heats: [{uid, round_key, number, name, duration_sec, warm_up_sec, manual_override, slots: [{position, entry_id, vest_colour, source, modifier}]}] }
+-- p_action: 'generate' (a new draw; refused once a heat has started) or 'edit'. A locked draw refuses both: unlock it first, with a reason.
+create or replace function public.save_division_draw(p_division uuid, p_draw jsonb, p_projection jsonb, p_action text, p_audit jsonb default '{}'::jsonb) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  d public.divisions; r jsonb; h jsonb; s jsonb;
+  v_round uuid; v_heat public.heats; v_id uuid; v_keys text[] := '{}'; v_kept uuid[] := '{}'; v_entry uuid;
+  v_started boolean; v_old_slots jsonb; v_new_slots jsonb; v_exists boolean;
+begin
+  select * into d from public.divisions where id = p_division for update;
+  if not found or not private.is_event_organiser(d.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if p_action not in ('generate', 'edit') then raise exception 'BAD_ACTION'; end if;
+  if d.draw_locked_at is not null then raise exception 'DRAW_LOCKED'; end if;
+  if p_action = 'generate' and exists (select 1 from public.heats x where x.division_id = p_division and (x.status <> 'scheduled' or x.started_at is not null)) then
+    raise exception 'HEAT_STARTED';
+  end if;
+
+  perform set_config('app.draw_bypass', '1', true);
+
+  -- rounds (matched by the key stored in spec)
+  for r in select * from jsonb_array_elements(p_projection -> 'rounds') loop
+    v_keys := v_keys || (r ->> 'key');
+    select id into v_round from public.rounds where division_id = p_division and spec ->> 'key' = r ->> 'key';
+    if v_round is null then
+      insert into public.rounds (division_id, event_id, sort_order, name, short_name, spec)
+      values (p_division, d.event_id, (r ->> 'sort_order')::int, r ->> 'name', r ->> 'short_name', r -> 'spec');
+    else
+      update public.rounds set sort_order = (r ->> 'sort_order')::int, name = r ->> 'name', short_name = r ->> 'short_name', spec = r -> 'spec' where id = v_round;
+    end if;
+  end loop;
+
+  -- heats: move the numbers of not-yet-started heats out of the way, then set them
+  update public.heats set number = -number - 1000000 where division_id = p_division and status = 'scheduled' and started_at is null and number > 0;
+
+  for h in select * from jsonb_array_elements(p_projection -> 'heats') loop
+    select id into v_round from public.rounds where division_id = p_division and spec ->> 'key' = h ->> 'round_key';
+    if v_round is null then raise exception 'BAD_PROJECTION'; end if;
+    select * into v_heat from public.heats where division_id = p_division and draw_uid = h ->> 'uid';
+    if not found then
+      -- a heat stored before draw ids existed: match by round and number, once
+      select * into v_heat from public.heats where division_id = p_division and draw_uid is null and round_id = v_round and (number = (h ->> 'number')::int or number = -(h ->> 'number')::int - 1000000);
+    end if;
+    v_exists := found;
+    v_new_slots := coalesce(h -> 'slots', '[]'::jsonb);
+    if v_exists then
+      v_started := v_heat.status <> 'scheduled' or v_heat.started_at is not null;
+      if v_started then
+        -- a started heat may be renamed, nothing else
+        select coalesce(jsonb_agg(jsonb_build_object('position', position, 'entry_id', entry_id) order by position), '[]'::jsonb) into v_old_slots from public.heat_slots where heat_id = v_heat.id;
+        select coalesce(jsonb_agg(jsonb_build_object('position', (x ->> 'position')::int, 'entry_id', nullif(x ->> 'entry_id', '')::uuid) order by (x ->> 'position')::int), '[]'::jsonb) into v_new_slots from jsonb_array_elements(v_new_slots) x;
+        if v_old_slots is distinct from v_new_slots or v_heat.number <> (h ->> 'number')::int or v_heat.round_id <> v_round then raise exception 'HEAT_STARTED'; end if;
+        update public.heats set name = nullif(h ->> 'name', ''), draw_uid = h ->> 'uid' where id = v_heat.id;
+        v_kept := v_kept || v_heat.id;
+        continue;
+      end if;
+      update public.heats set round_id = v_round, number = (h ->> 'number')::int, draw_uid = h ->> 'uid', name = nullif(h ->> 'name', ''),
+        duration_sec = (h ->> 'duration_sec')::int, warm_up_sec = coalesce((h ->> 'warm_up_sec')::int, 0), manual_override = coalesce((h ->> 'manual_override')::boolean, false)
+      where id = v_heat.id;
+      v_id := v_heat.id;
+      delete from public.heat_slots where heat_id = v_id;
+    else
+      insert into public.heats (round_id, division_id, event_id, number, draw_uid, name, duration_sec, warm_up_sec, manual_override, status)
+      values (v_round, p_division, d.event_id, (h ->> 'number')::int, h ->> 'uid', nullif(h ->> 'name', ''), (h ->> 'duration_sec')::int, coalesce((h ->> 'warm_up_sec')::int, 0), coalesce((h ->> 'manual_override')::boolean, false), 'scheduled')
+      returning id into v_id;
+    end if;
+    v_kept := v_kept || v_id;
+    for s in select * from jsonb_array_elements(v_new_slots) loop
+      v_entry := nullif(s ->> 'entry_id', '')::uuid;
+      if v_entry is not null and not exists (select 1 from public.entries e where e.id = v_entry and e.division_id = p_division) then raise exception 'BAD_ENTRY'; end if;
+      insert into public.heat_slots (heat_id, event_id, position, entry_id, vest_colour, source, modifier)
+      values (v_id, d.event_id, (s ->> 'position')::int, v_entry, nullif(s ->> 'vest_colour', ''), s -> 'source', case when s ->> 'modifier' = 'DNS' then 'DNS' end);
+    end loop;
+  end loop;
+
+  -- heats and rounds that are no longer in the draw
+  if exists (select 1 from public.heats x where x.division_id = p_division and x.id <> all (v_kept) and (x.status <> 'scheduled' or x.started_at is not null)) then raise exception 'HEAT_STARTED'; end if;
+  delete from public.heats where division_id = p_division and id <> all (v_kept);
+  delete from public.rounds where division_id = p_division and (spec ->> 'key') <> all (v_keys);
+
+  update public.divisions set draw = p_draw, status = case when status = 'draft' then 'ready' else status end,
+    draw_locked_at = case when p_action = 'generate' then null else draw_locked_at end where id = p_division;
+  perform private.draw_audit(d.event_id, p_division, case p_action when 'generate' then 'draw_generated' else 'draw_edited' end, p_audit, p_audit ->> 'reason');
+  perform set_config('app.draw_bypass', '', true);
+end $$;
+revoke all on function public.save_division_draw from public, anon, authenticated;
+grant execute on function public.save_division_draw to authenticated;
+
+-- ---------------------------------------------------------------- 5. lock, unlock, walkover
+create or replace function public.lock_division_draw(p_division uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+declare d public.divisions;
+begin
+  select * into d from public.divisions where id = p_division for update;
+  if not found or not private.is_event_organiser(d.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if d.draw is null then raise exception 'NO_DRAW'; end if;
+  if d.draw_locked_at is not null then return; end if;
+  perform set_config('app.draw_bypass', '1', true);
+  update public.divisions set draw_locked_at = now(), draw = jsonb_set(draw, '{status}', '"locked"') where id = p_division;
+  perform set_config('app.draw_bypass', '', true);
+  perform private.draw_audit(d.event_id, p_division, 'draw_locked', jsonb_build_object('after', jsonb_build_object('locked', true)));
+end $$;
+
+create or replace function public.unlock_division_draw(p_division uuid, p_reason text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare d public.divisions;
+begin
+  select * into d from public.divisions where id = p_division for update;
+  if not found or not private.is_event_organiser(d.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if p_reason is null or char_length(btrim(p_reason)) < 5 then raise exception 'REASON_REQUIRED'; end if;
+  if d.draw_locked_at is null then return; end if;
+  perform set_config('app.draw_bypass', '1', true);
+  update public.divisions set draw_locked_at = null, draw = jsonb_set(draw, '{status}', '"draft"') where id = p_division;
+  perform set_config('app.draw_bypass', '', true);
+  perform private.draw_audit(d.event_id, p_division, 'draw_unlocked', jsonb_build_object('before', jsonb_build_object('locked', true), 'after', jsonb_build_object('locked', false)), p_reason);
+end $$;
+
+-- A rider who withdraws after the draw is locked keeps the seat as a walkover (DNS); the stored draw comes from the engine.
+create or replace function public.set_draw_walkover(p_division uuid, p_entry uuid, p_draw jsonb) returns void
+language plpgsql security definer set search_path = '' as $$
+declare d public.divisions;
+begin
+  select * into d from public.divisions where id = p_division for update;
+  if not found or not private.is_event_organiser(d.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if not exists (select 1 from public.entries e where e.id = p_entry and e.division_id = p_division) then raise exception 'BAD_ENTRY'; end if;
+  perform set_config('app.draw_bypass', '1', true);
+  update public.heat_slots hs set modifier = 'DNS'
+  from public.heats h where hs.heat_id = h.id and h.division_id = p_division and hs.entry_id = p_entry and h.status = 'scheduled' and h.started_at is null;
+  update public.divisions set draw = p_draw where id = p_division;
+  perform set_config('app.draw_bypass', '', true);
+  perform private.draw_audit(d.event_id, p_division, 'draw_walkover', jsonb_build_object('after', jsonb_build_object('entry', p_entry)));
+end $$;
+
+revoke all on function public.lock_division_draw, public.unlock_division_draw, public.set_draw_walkover from public, anon, authenticated;
+grant execute on function public.lock_division_draw, public.unlock_division_draw, public.set_draw_walkover to authenticated;
+
+-- ---------------------------------------------------------------- 6. schedule plans
+-- One active plan per event day; switching is one transaction, so there is never a moment with two (or none).
+create or replace function public.activate_schedule_plan(p_plan uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+declare p public.schedule_plans;
+begin
+  select * into p from public.schedule_plans where id = p_plan for update;
+  if not found or not private.is_event_organiser(p.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  update public.schedule_plans set active = false where event_id = p.event_id and day = p.day and active and id <> p_plan;
+  update public.schedule_plans set active = true where id = p_plan;
+  perform private.draw_audit(p.event_id, p_plan, 'plan_activated', jsonb_build_object('after', jsonb_build_object('plan', p.name, 'day', p.day)), null, 'schedule_plans');
+end $$;
+revoke all on function public.activate_schedule_plan from public, anon, authenticated;
+grant execute on function public.activate_schedule_plan to authenticated;
+
+-- Creating and deleting a plan leaves a line (the list of items is in the line, so a deleted plan can be read back).
+create trigger z_audit after insert or delete on public.schedule_plans for each row execute function private.audit_row();
+
+
+-- ===== migration 20261004100000_phase5b_live_heat.sql =====
+-- Phase 5b: live heat operations, part 1 (docs/PLAN-phase-5.md steps 1 to 3; owner's answers of 1 Oct 2026).
+--   1. columns: heats.reopened_at, divisions.live_settings, the height columns and sensor_bindings (data model only, no screens)
+--   2. who may run a heat, and the heat functions: start, pause, resume, end, end-if-due, cancel (server time is truth)
+--   3. plan changes for the head judge: hold and pins (set_plan_hold, set_plan_anchors)
+--   4. the spotter's Undo (10 seconds)
+--   5. judge sheets (submit and reopen), attempt flags, and the new lock rule for a judge's marks
+--   6. realtime for the new tables
+
+-- ---------------------------------------------------------------- 1. columns
+alter table public.heats add column reopened_at timestamptz;
+alter table public.divisions add column live_settings jsonb not null default '{}' check (jsonb_typeof(live_settings) = 'object');
+
+-- WOO height data plugs in later (trick_attempts.height_m exists since Phase 3).
+alter table public.trick_attempts
+  add column height_source text check (height_source is null or height_source in ('manual', 'sensor', 'woo')),
+  add column height_ref text,
+  add column height_at timestamptz;
+
+create table public.sensor_bindings (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events on delete cascade, -- filled from the entry by trigger
+  entry_id uuid not null references public.entries on delete cascade,
+  provider text not null check (char_length(provider) between 1 and 40),
+  external_user_id text,
+  device_serial text,
+  bound_at timestamptz not null default now(),
+  unbound_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (external_user_id is not null or device_serial is not null)
+);
+create index on public.sensor_bindings (event_id);
+create index on public.sensor_bindings (entry_id);
+
+create or replace function private.sensor_binding_fill() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  select e.event_id into new.event_id from public.entries e where e.id = new.entry_id;
+  if new.event_id is null then raise exception 'PARENT_NOT_FOUND'; end if;
+  return new;
+end $$;
+create trigger a_fill before insert on public.sensor_bindings for each row execute function private.sensor_binding_fill();
+create trigger z_updated_at before update on public.sensor_bindings for each row execute function private.set_updated_at();
+create trigger z_audit after insert or update or delete on public.sensor_bindings for each row execute function private.audit_row();
+
+alter table public.sensor_bindings enable row level security;
+grant select, insert, update, delete on public.sensor_bindings to authenticated;
+create policy org_all on public.sensor_bindings for all to authenticated using (private.is_event_organiser(event_id)) with check (private.is_event_organiser(event_id));
+create policy seat_read on public.sensor_bindings for select to authenticated using (private.has_seat(event_id));
+
+-- The trick base now also holds the spotter's layout; it must be an object.
+create or replace function private.divisions_trick_base_guard() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if new.trick_base is distinct from old.trick_base then
+    if new.trick_base ? 'disabled' and jsonb_typeof(new.trick_base -> 'disabled') is distinct from 'array' then raise exception 'TRICK_BASE_INVALID'; end if;
+    if new.trick_base ? 'layout' and jsonb_typeof(new.trick_base -> 'layout') is distinct from 'object' then raise exception 'TRICK_BASE_INVALID'; end if;
+    if exists (select 1 from public.heats h where h.division_id = old.id and h.started_at is not null)
+       and exists (select 1 from jsonb_array_elements_text(coalesce(new.trick_base -> 'disabled', '[]'::jsonb)) d(v)
+                   where not (coalesce(old.trick_base -> 'disabled', '[]'::jsonb) ? d.v)) then
+      raise exception 'TRICK_BASE_LOCKED';
+    end if;
+  end if;
+  return new;
+end $$;
+
+-- ---------------------------------------------------------------- 2. who runs a heat, and the heat functions
+-- "Head" means a head seat of the event or an organiser of the event (docs/05 decision 20).
+create or replace function private.can_run_heat(p_event uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select private.is_event_organiser(p_event) or coalesce(private.seat_role(p_event), '') = 'head';
+$$;
+
+create or replace function public.server_now() returns timestamptz
+language sql stable as $$ select now() $$;
+
+-- A setting of the merged model for a division (the division's override wins), at any path, e.g. {panel,minJudges}.
+create or replace function private.division_model_setting(p_division uuid, p_path text[]) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select coalesce(d.scoring_overrides #> p_path, m.json #> p_path)
+  from public.divisions d left join public.scoring_models m on m.id = d.scoring_model_id
+  where d.id = p_division;
+$$;
+
+-- Nobody moves a heat by editing its row: the functions below are the only way (they check the rules and write the audit line).
+create or replace function private.heats_guard() returns trigger
+language plpgsql as $$
+declare
+  priv boolean := current_user in ('service_role', 'postgres', 'supabase_admin');
+  v_end timestamptz;
+  v_started timestamptz := new.started_at; v_paused_at timestamptz := new.paused_at;
+  v_paused_total int := new.paused_total_sec; v_ended timestamptz := new.ended_at; v_published timestamptz := new.published_at;
+begin
+  if not priv then
+    if new.status is distinct from old.status then raise exception 'USE_HEAT_FUNCTIONS'; end if;
+    -- server-owned columns cannot be edited by hand
+    new.started_at := old.started_at; new.paused_at := old.paused_at; new.paused_total_sec := old.paused_total_sec;
+    new.ended_at := old.ended_at; new.published_at := old.published_at; new.live_rev := old.live_rev;
+    new.reopened_at := old.reopened_at;
+    new.event_id := old.event_id; new.division_id := old.division_id; new.round_id := old.round_id;
+    new.publish_hold := old.publish_hold;
+    v_started := old.started_at; v_paused_at := old.paused_at; v_paused_total := old.paused_total_sec; v_ended := old.ended_at; v_published := old.published_at;
+  end if;
+
+  if new.status is distinct from old.status then
+    if not priv and not (
+      (old.status = 'scheduled' and new.status in ('running', 'cancelled')) or
+      (old.status = 'running' and new.status in ('paused', 'ended', 'cancelled')) or
+      (old.status = 'paused' and new.status in ('running', 'ended', 'cancelled')) or
+      (old.status = 'ended' and new.status in ('under_review', 'cancelled')) or
+      (old.status = 'under_review' and new.status in ('cancelled')) or
+      (old.status = 'published' and new.status = 'under_review')
+    ) then
+      raise exception 'ILLEGAL_HEAT_TRANSITION: % -> %', old.status, new.status;
+    end if;
+
+    if old.status = 'scheduled' and new.status = 'running' then
+      v_started := now();
+    elsif old.status = 'running' and new.status = 'paused' then
+      v_paused_at := now();
+    elsif old.status = 'paused' and new.status = 'running' then
+      v_paused_total := old.paused_total_sec + greatest(0, ceil(extract(epoch from (now() - coalesce(old.paused_at, now()))))::int);
+      v_paused_at := null;
+    elsif new.status = 'ended' and old.status in ('running', 'paused') then
+      if old.status = 'paused' then
+        v_ended := coalesce(old.paused_at, now());
+      else
+        v_end := old.started_at + make_interval(secs => old.duration_sec + old.paused_total_sec);
+        v_ended := least(now(), coalesce(v_end, now()));
+      end if;
+    elsif new.status = 'published' then
+      v_published := now();
+    end if;
+
+    -- privileged callers (publish, seeds, tests) may set a column explicitly; everyone else gets the computed value
+    if not priv or new.started_at is not distinct from old.started_at then new.started_at := v_started; end if;
+    if not priv or new.paused_at is not distinct from old.paused_at then new.paused_at := v_paused_at; end if;
+    if not priv or new.paused_total_sec is not distinct from old.paused_total_sec then new.paused_total_sec := v_paused_total; end if;
+    if not priv or new.ended_at is not distinct from old.ended_at then new.ended_at := v_ended; end if;
+    if not priv or new.published_at is not distinct from old.published_at then new.published_at := v_published; end if;
+  end if;
+  return new;
+end $$;
+
+-- One place to change a heat's state: checks the caller, the current state, and writes the audit line.
+create or replace function private.move_heat(p_heat uuid, p_to text, p_action text, p_reason text default null) returns public.heats
+language plpgsql security definer set search_path = '' as $$
+declare v_row public.heats;
+begin
+  perform set_config('app.audit_action', p_action, true);
+  perform set_config('app.reason', coalesce(nullif(btrim(coalesce(p_reason, '')), ''), ''), true);
+  update public.heats set status = p_to where id = p_heat returning * into v_row;
+  perform set_config('app.audit_action', '', true);
+  perform set_config('app.reason', '', true);
+  return v_row;
+end $$;
+
+create or replace function public.start_heat(p_heat uuid) returns public.heats
+language plpgsql security definer set search_path = '' as $$
+declare
+  h public.heats; d public.divisions; ev public.events;
+  v_min int; v_panel int; v_unfilled int; v_running int; v_max int;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not private.can_run_heat(h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  -- one start at a time per event, so two heads pressing together cannot both get the last place
+  select * into ev from public.events where id = h.event_id for update;
+  select * into h from public.heats where id = p_heat for update;
+  if h.status <> 'scheduled' then raise exception 'ILLEGAL_HEAT_TRANSITION: % -> running', h.status; end if;
+  select * into d from public.divisions where id = h.division_id;
+
+  if d.draw_locked_at is null then raise exception 'DRAW_NOT_LOCKED: %', d.name; end if;
+
+  v_min := coalesce((private.division_model_setting(d.id, array['panel', 'minJudges']) #>> '{}')::int, 3);
+  select count(*) into v_panel from public.panel_members pm join public.judge_seats s on s.id = pm.judge_seat_id
+   where pm.panel_id = d.panel_id and s.active and s.status = 'active';
+  if v_panel < v_min then raise exception 'PANEL_TOO_SMALL: %|%|%', d.name, v_panel, v_min; end if;
+
+  select count(*) into v_unfilled from public.heat_slots hs where hs.heat_id = p_heat and hs.entry_id is null and hs.modifier is distinct from 'DNS';
+  if v_unfilled > 0 then raise exception 'SEATS_NOT_FILLED: %', v_unfilled; end if;
+
+  v_max := coalesce((ev.settings ->> 'maxRunningHeats')::int, 1);
+  select count(*) into v_running from public.heats x
+   where x.event_id = h.event_id and x.id <> p_heat and private.heat_effective_status(x.id) in ('running', 'paused');
+  if v_running >= v_max then raise exception 'HEAT_ALREADY_RUNNING: %', v_max; end if;
+
+  return private.move_heat(p_heat, 'running', 'heat_started');
+end $$;
+
+create or replace function public.pause_heat(p_heat uuid) returns public.heats
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats;
+begin
+  select * into h from public.heats where id = p_heat for update;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not private.can_run_heat(h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if h.status <> 'running' then raise exception 'ILLEGAL_HEAT_TRANSITION: % -> paused', h.status; end if;
+  if private.heat_effective_status(p_heat) = 'ended' then raise exception 'HEAT_TIME_UP'; end if;
+  return private.move_heat(p_heat, 'paused', 'heat_paused');
+end $$;
+
+create or replace function public.resume_heat(p_heat uuid) returns public.heats
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats;
+begin
+  select * into h from public.heats where id = p_heat for update;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not private.can_run_heat(h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if h.status <> 'paused' then raise exception 'ILLEGAL_HEAT_TRANSITION: % -> running', h.status; end if;
+  return private.move_heat(p_heat, 'running', 'heat_resumed');
+end $$;
+
+create or replace function public.end_heat(p_heat uuid) returns public.heats
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats;
+begin
+  select * into h from public.heats where id = p_heat for update;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not private.can_run_heat(h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if h.status not in ('running', 'paused') then raise exception 'ILLEGAL_HEAT_TRANSITION: % -> ended', h.status; end if;
+  return private.move_heat(p_heat, 'ended', 'heat_ended');
+end $$;
+
+-- Every official device calls this when its timer reaches 0, so "end at zero" needs no cron and no trusted client.
+-- It ends the heat only when the time is really up, and a second call changes nothing.
+create or replace function public.end_heat_if_due(p_heat uuid) returns public.heats
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats;
+begin
+  select * into h from public.heats where id = p_heat for update;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not (private.is_event_organiser(h.event_id) or private.has_seat(h.event_id)) then raise exception 'NOT_ALLOWED'; end if;
+  if h.status = 'running' and private.heat_effective_status(p_heat) = 'ended' then
+    return private.move_heat(p_heat, 'ended', 'heat_ended_by_clock');
+  end if;
+  return h;
+end $$;
+
+create or replace function public.cancel_heat(p_heat uuid, p_reason text) returns public.heats
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; v_row public.heats;
+begin
+  select * into h from public.heats where id = p_heat for update;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not private.can_run_heat(h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if p_reason is null or char_length(btrim(p_reason)) < 3 then raise exception 'REASON_REQUIRED'; end if;
+  if h.status = 'published' then raise exception 'HEAT_PUBLISHED'; end if;
+  if h.status = 'cancelled' then return h; end if;
+  v_row := private.move_heat(p_heat, 'cancelled', 'heat_cancelled', p_reason);
+  -- a heat that had started keeps started_at and gets an end, so the timetable knows how long it really ran
+  if h.started_at is not null and v_row.ended_at is null then
+    perform set_config('app.audit_action', '', true);
+    update public.heats set ended_at = case when h.status = 'paused' then coalesce(h.paused_at, now()) else now() end where id = p_heat returning * into v_row;
+  end if;
+  return v_row;
+end $$;
+
+-- ---------------------------------------------------------------- 3. plan changes for the head judge (hold and pins only, on the active plan)
+create or replace function public.set_plan_hold(p_plan uuid, p_hold jsonb, p_reason text default null, p_expected timestamptz default null, p_anchors jsonb default null)
+returns public.schedule_plans
+language plpgsql security definer set search_path = '' as $$
+declare p public.schedule_plans; v_new public.schedule_plans; k text; v text;
+begin
+  select * into p from public.schedule_plans where id = p_plan for update;
+  if not found then raise exception 'PLAN_NOT_FOUND'; end if;
+  if not private.can_run_heat(p.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if not p.active then raise exception 'PLAN_NOT_ACTIVE'; end if;
+  if p_expected is not null and p.updated_at is distinct from p_expected then raise exception 'PLAN_CHANGED'; end if;
+  if p_hold is not null and (jsonb_typeof(p_hold) <> 'object' or (p_hold ->> 'since')::timestamptz is null) then raise exception 'BAD_PLAN_VALUE'; end if;
+  if p_anchors is not null then
+    if jsonb_typeof(p_anchors) <> 'object' then raise exception 'BAD_PLAN_VALUE'; end if;
+    for k, v in select * from jsonb_each_text(p_anchors) loop
+      if v !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then raise exception 'BAD_PLAN_VALUE'; end if;
+    end loop;
+  end if;
+  update public.schedule_plans set hold = p_hold, anchors = coalesce(p_anchors, anchors) where id = p_plan returning * into v_new;
+  perform private.draw_audit(p.event_id, p_plan, case when p_hold is null then 'plan_hold_cleared' else 'plan_hold_set' end,
+    jsonb_build_object('before', jsonb_build_object('hold', p.hold, 'anchors', p.anchors), 'after', jsonb_build_object('hold', v_new.hold, 'anchors', v_new.anchors)), p_reason, 'schedule_plans');
+  return v_new;
+end $$;
+
+create or replace function public.set_plan_anchors(p_plan uuid, p_anchors jsonb, p_reason text default null, p_expected timestamptz default null)
+returns public.schedule_plans
+language plpgsql security definer set search_path = '' as $$
+declare p public.schedule_plans; v_new public.schedule_plans; k text; v text;
+begin
+  select * into p from public.schedule_plans where id = p_plan for update;
+  if not found then raise exception 'PLAN_NOT_FOUND'; end if;
+  if not private.can_run_heat(p.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if not p.active then raise exception 'PLAN_NOT_ACTIVE'; end if;
+  if p_expected is not null and p.updated_at is distinct from p_expected then raise exception 'PLAN_CHANGED'; end if;
+  if p_anchors is null or jsonb_typeof(p_anchors) <> 'object' then raise exception 'BAD_PLAN_VALUE'; end if;
+  for k, v in select * from jsonb_each_text(p_anchors) loop
+    if v !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then raise exception 'BAD_PLAN_VALUE'; end if;
+  end loop;
+  update public.schedule_plans set anchors = p_anchors where id = p_plan returning * into v_new;
+  perform private.draw_audit(p.event_id, p_plan, 'plan_anchors_set',
+    jsonb_build_object('before', jsonb_build_object('anchors', p.anchors), 'after', jsonb_build_object('anchors', v_new.anchors)), p_reason, 'schedule_plans');
+  return v_new;
+end $$;
+
+-- ---------------------------------------------------------------- 4. spotter Undo last (10 seconds, the creating seat only)
+create or replace function public.undo_attempt(p_attempt uuid) returns public.trick_attempts
+language plpgsql security definer set search_path = '' as $$
+declare a public.trick_attempts; h public.heats; v_row public.trick_attempts;
+begin
+  select * into a from public.trick_attempts where id = p_attempt for update;
+  if not found then raise exception 'ATTEMPT_NOT_FOUND'; end if;
+  if a.created_by_seat is null or a.created_by_seat is distinct from private.seat_id(a.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if a.deleted_at is not null then return a; end if;
+  select * into h from public.heats where id = a.heat_id;
+  if h.status in ('published', 'cancelled') then raise exception 'HEAT_PUBLISHED'; end if;
+  if now() > a.created_at + interval '10 seconds' then raise exception 'UNDO_TOO_LATE'; end if;
+  perform set_config('app.audit_action', 'attempt_undone', true);
+  update public.trick_attempts set deleted_at = now(), deleted_by = auth.uid() where id = p_attempt returning * into v_row;
+  perform set_config('app.audit_action', '', true);
+  return v_row;
+end $$;
+
+-- ---------------------------------------------------------------- 5. judge sheets, flags and the new lock rule
+-- A judge's marks lock at Submit or when the head judge moves the heat to review, whichever comes first (owner, 1 Oct 2026).
+-- The head judge can reopen one judge's sheet. The three-minute grace period (events.settings.judgeGraceSec) is no longer read.
+create table public.judge_sheets (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events on delete cascade,
+  heat_id uuid not null references public.heats on delete cascade,
+  judge_seat_id uuid not null references public.judge_seats on delete cascade,
+  submitted_at timestamptz,
+  reopened_at timestamptz,
+  reopened_reason text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (heat_id, judge_seat_id)
+);
+create index on public.judge_sheets (event_id);
+create index on public.judge_sheets (judge_seat_id);
+
+create table public.attempt_flags (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events on delete cascade,
+  heat_id uuid not null references public.heats on delete cascade,
+  attempt_id uuid not null references public.trick_attempts on delete cascade,
+  judge_seat_id uuid not null references public.judge_seats on delete cascade,
+  kind text not null check (kind in ('crash', 'landed', 'wrong_rider', 'duplicate', 'other')),
+  note text,
+  client_key uuid not null unique,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  resolved_at timestamptz,
+  resolved_by uuid,
+  resolution text
+);
+create index on public.attempt_flags (event_id);
+create index on public.attempt_flags (heat_id);
+create index on public.attempt_flags (attempt_id);
+create index on public.attempt_flags (judge_seat_id);
+
+create trigger z_updated_at before update on public.judge_sheets for each row execute function private.set_updated_at();
+create trigger z_updated_at before update on public.attempt_flags for each row execute function private.set_updated_at();
+create trigger z_audit after insert or update or delete on public.judge_sheets for each row execute function private.audit_row();
+create trigger z_audit after insert or update or delete on public.attempt_flags for each row execute function private.audit_row();
+
+alter table public.judge_sheets enable row level security;
+alter table public.attempt_flags enable row level security;
+grant select on public.judge_sheets, public.attempt_flags to authenticated;
+-- written only through submit_sheet, reopen_sheet and submit_flag below
+create policy own_read on public.judge_sheets for select to authenticated using (judge_seat_id = private.seat_id(event_id));
+create policy head_read on public.judge_sheets for select to authenticated using (coalesce(private.seat_role(event_id), '') = 'head');
+create policy org_read on public.judge_sheets for select to authenticated using (private.is_event_organiser(event_id));
+create policy own_read on public.attempt_flags for select to authenticated using (judge_seat_id = private.seat_id(event_id));
+create policy head_read on public.attempt_flags for select to authenticated using (coalesce(private.seat_role(event_id), '') = 'head');
+create policy org_read on public.attempt_flags for select to authenticated using (private.is_event_organiser(event_id));
+
+-- Why may this judge not write a mark for this heat right now? Null = they may. The code is what the phone shows.
+create or replace function private.judge_write_block(p_heat uuid, p_impression boolean) returns text
+language plpgsql stable security definer set search_path = '' as $$
+declare h public.heats; v_seat uuid; v_eff text; s public.judge_sheets; v_found boolean; v_locked boolean; v_reopened boolean;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found then return 'HEAT_NOT_FOUND'; end if;
+  v_seat := private.seat_id(h.event_id);
+  if v_seat is null then return 'NOT_ALLOWED'; end if;
+  if not exists (select 1 from public.divisions d join public.panel_members pm on pm.panel_id = d.panel_id where d.id = h.division_id and pm.judge_seat_id = v_seat) then
+    return 'NOT_ALLOWED';
+  end if;
+  select * into s from public.judge_sheets where heat_id = p_heat and judge_seat_id = v_seat;
+  v_found := found;
+  v_locked := v_found and s.submitted_at is not null and (s.reopened_at is null or s.submitted_at > s.reopened_at);
+  v_reopened := v_found and s.reopened_at is not null and (s.submitted_at is null or s.reopened_at >= s.submitted_at);
+  if v_locked then return 'SHEET_LOCKED'; end if;
+  v_eff := private.heat_effective_status(p_heat);
+  if v_eff in ('under_review', 'published') then return case when v_reopened then null else 'SHEET_LOCKED' end; end if;
+  if v_eff = 'ended' then return null; end if;
+  if v_eff in ('running', 'paused') then return case when p_impression then 'IMPRESSION_NOT_OPEN' else null end; end if;
+  return 'HEAT_NOT_RUNNING';
+end $$;
+
+-- the row policies of trick_scores and impression_scores keep calling this (RLS stays the backstop)
+create or replace function private.judge_can_write(p_heat uuid, p_impression boolean) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select private.judge_write_block(p_heat, p_impression) is null;
+$$;
+
+create or replace function public.submit_trick_score(
+  p_attempt uuid, p_criteria jsonb, p_score numeric, p_missed boolean, p_flag text, p_client_key uuid, p_client_rev bigint
+) returns public.trick_scores
+language plpgsql security invoker set search_path = '' as $$
+declare a public.trick_attempts; r public.trick_scores; v_seat uuid; v_block text;
+begin
+  select * into a from public.trick_attempts where id = p_attempt;
+  if not found or a.deleted_at is not null then raise exception 'ATTEMPT_NOT_FOUND'; end if;
+  v_seat := private.seat_id(a.event_id);
+  if v_seat is null then raise exception 'NOT_ALLOWED'; end if;
+  -- judges never score a crash (owner, 1 Oct 2026); a judge who saw a landing flags it and the head judge switches it
+  if a.status = 'crashed' then raise exception 'NOT_SCORABLE'; end if;
+  v_block := private.judge_write_block(a.heat_id, false);
+  if v_block is not null then raise exception '%', v_block; end if;
+  insert into public.trick_scores as ts (attempt_id, judge_seat_id, criteria, score, missed, flag, client_key, client_rev, edited_by, event_id, heat_id)
+  values (p_attempt, v_seat, coalesce(p_criteria, '{}'), case when p_missed then null else p_score end, coalesce(p_missed, false), p_flag,
+          p_client_key, p_client_rev, auth.uid(), a.event_id, a.heat_id)
+  on conflict (attempt_id, judge_seat_id) do update
+    set criteria = excluded.criteria, score = excluded.score, missed = excluded.missed, flag = excluded.flag,
+        client_key = excluded.client_key, client_rev = excluded.client_rev, version = ts.version + 1, edited_by = auth.uid()
+    where excluded.client_rev > ts.client_rev
+  returning * into r;
+  if r.id is null then -- an older queued edit arrived late: keep the newer mark
+    select * into r from public.trick_scores where attempt_id = p_attempt and judge_seat_id = v_seat;
+  end if;
+  return r;
+end $$;
+
+create or replace function public.submit_impression(p_heat uuid, p_entry uuid, p_value numeric, p_client_key uuid, p_client_rev bigint)
+returns public.impression_scores
+language plpgsql security invoker set search_path = '' as $$
+declare h public.heats; r public.impression_scores; v_seat uuid; v_block text;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  v_seat := private.seat_id(h.event_id);
+  if v_seat is null then raise exception 'NOT_ALLOWED'; end if;
+  v_block := private.judge_write_block(p_heat, true);
+  if v_block is not null then raise exception '%', v_block; end if;
+  if not exists (select 1 from public.heat_slots hs where hs.heat_id = p_heat and hs.entry_id = p_entry) then raise exception 'RIDER_NOT_IN_HEAT'; end if;
+  insert into public.impression_scores as i (heat_id, entry_id, judge_seat_id, value, client_key, client_rev, event_id)
+  values (p_heat, p_entry, v_seat, p_value, p_client_key, p_client_rev, h.event_id)
+  on conflict (heat_id, entry_id, judge_seat_id) do update
+    set value = excluded.value, client_key = excluded.client_key, client_rev = excluded.client_rev
+    where excluded.client_rev > i.client_rev
+  returning * into r;
+  if r.id is null then
+    select * into r from public.impression_scores where heat_id = p_heat and entry_id = p_entry and judge_seat_id = v_seat;
+  end if;
+  return r;
+end $$;
+
+-- A flag needs no score (trick_scores.flag stays unused). "That was a crash" only on a landed attempt, "That was a landing" only on a crashed one.
+create or replace function public.submit_flag(p_attempt uuid, p_kind text, p_note text, p_client_key uuid) returns public.attempt_flags
+language plpgsql security definer set search_path = '' as $$
+declare a public.trick_attempts; r public.attempt_flags; v_seat uuid; v_block text;
+begin
+  select * into r from public.attempt_flags where client_key = p_client_key;
+  if found then return r; end if; -- a retry of the same tap
+  select * into a from public.trick_attempts where id = p_attempt;
+  if not found or a.deleted_at is not null then raise exception 'ATTEMPT_NOT_FOUND'; end if;
+  v_seat := private.seat_id(a.event_id);
+  if v_seat is null then raise exception 'NOT_ALLOWED'; end if;
+  v_block := private.judge_write_block(a.heat_id, false);
+  if v_block is not null then raise exception '%', v_block; end if;
+  if p_kind not in ('crash', 'landed', 'wrong_rider', 'duplicate', 'other') then raise exception 'BAD_FLAG'; end if;
+  if (p_kind = 'crash' and a.status <> 'landed') or (p_kind = 'landed' and a.status <> 'crashed') then raise exception 'FLAG_NOT_APPLICABLE'; end if;
+  insert into public.attempt_flags (event_id, heat_id, attempt_id, judge_seat_id, kind, note, client_key)
+  values (a.event_id, a.heat_id, a.id, v_seat, p_kind, nullif(btrim(coalesce(p_note, '')), ''), p_client_key)
+  returning * into r;
+  return r;
+end $$;
+
+-- "Submit": the server half of "Submit only when every rider has a score". Locks this judge's marks for the heat.
+create or replace function public.submit_sheet(p_heat uuid) returns public.judge_sheets
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; s public.judge_sheets; v_seat uuid; v_block text; v_imp jsonb; v_missing int; v_locked boolean;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  v_seat := private.seat_id(h.event_id);
+  if v_seat is null or not exists (select 1 from public.divisions d join public.panel_members pm on pm.panel_id = d.panel_id where d.id = h.division_id and pm.judge_seat_id = v_seat) then
+    raise exception 'NOT_ALLOWED';
+  end if;
+  select * into s from public.judge_sheets where heat_id = p_heat and judge_seat_id = v_seat;
+  v_locked := found and s.submitted_at is not null and (s.reopened_at is null or s.submitted_at > s.reopened_at);
+  if v_locked then return s; end if; -- pressing twice is harmless
+  if private.heat_effective_status(p_heat) not in ('ended', 'under_review') then raise exception 'IMPRESSION_NOT_OPEN'; end if;
+  v_imp := private.division_model_setting(h.division_id, array['heat', 'impression']);
+  if v_imp is not null and jsonb_typeof(v_imp) = 'object' and coalesce((v_imp ->> 'required')::boolean, true) then
+    select count(*) into v_missing from public.heat_slots hs
+     where hs.heat_id = p_heat and hs.entry_id is not null and hs.modifier is null
+       and not exists (select 1 from public.impression_scores i where i.heat_id = p_heat and i.entry_id = hs.entry_id and i.judge_seat_id = v_seat);
+    if v_missing > 0 then raise exception 'IMPRESSION_MISSING: %', v_missing; end if;
+  end if;
+  insert into public.judge_sheets (event_id, heat_id, judge_seat_id, submitted_at) values (h.event_id, p_heat, v_seat, now())
+  on conflict (heat_id, judge_seat_id) do update set submitted_at = now()
+  returning * into s;
+  return s;
+end $$;
+
+create or replace function public.reopen_sheet(p_heat uuid, p_seat uuid, p_reason text) returns public.judge_sheets
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; s public.judge_sheets;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not private.can_run_heat(h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if p_reason is null or char_length(btrim(p_reason)) < 3 then raise exception 'REASON_REQUIRED'; end if;
+  if not exists (select 1 from public.judge_seats js where js.id = p_seat and js.event_id = h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  perform set_config('app.audit_action', 'sheet_reopened', true);
+  perform set_config('app.reason', btrim(p_reason), true);
+  insert into public.judge_sheets (event_id, heat_id, judge_seat_id, reopened_at, reopened_reason) values (h.event_id, p_heat, p_seat, now(), btrim(p_reason))
+  on conflict (heat_id, judge_seat_id) do update set reopened_at = now(), reopened_reason = btrim(p_reason)
+  returning * into s;
+  perform set_config('app.audit_action', '', true);
+  perform set_config('app.reason', '', true);
+  return s;
+end $$;
+
+-- ---------------------------------------------------------------- grants
+revoke all on function public.start_heat, public.pause_heat, public.resume_heat, public.end_heat, public.end_heat_if_due, public.cancel_heat,
+  public.set_plan_hold, public.set_plan_anchors, public.undo_attempt, public.submit_trick_score, public.submit_impression, public.submit_flag,
+  public.submit_sheet, public.reopen_sheet from public, anon;
+grant execute on function public.start_heat, public.pause_heat, public.resume_heat, public.end_heat, public.end_heat_if_due, public.cancel_heat,
+  public.set_plan_hold, public.set_plan_anchors, public.undo_attempt, public.submit_trick_score, public.submit_impression, public.submit_flag,
+  public.submit_sheet, public.reopen_sheet to authenticated;
+revoke all on function public.server_now from public;
+grant execute on function public.server_now to anon, authenticated;
+grant execute on all functions in schema private to anon, authenticated, service_role;
+
+-- ---------------------------------------------------------------- 6. realtime for the new tables
+alter publication supabase_realtime add table public.attempt_flags, public.judge_sheets;
+alter table public.attempt_flags replica identity full;
+alter table public.judge_sheets replica identity full;
+
+
+-- ===== migration 20261005100000_phase5c_review_publish.sql =====
+-- Phase 5c, steps 4 and 5: the head judge's tools (edit a score, merge, edit an attempt, rider status, tie decision, flag-out, review, re-open)
+-- and Publish as ONE transaction that is safe to press twice.
+--
+--   1. helpers: who is "head", the shared guard of every head function, the audit helpers
+--   2. heat_decisions: tie decisions and publish overrides (append-only)
+--   3. the head functions (each checks the caller itself, asks for a reason where the plan says so, and writes an audit line)
+--   4. add_attempt: past the cap only for the head judge, or an organiser when the event has no active head judge
+--   5. review_heat, reopen_heat
+--   6. publish_heat_commit (service role only: the server computes the result, the database writes it atomically)
+--   7. realtime
+
+-- ---------------------------------------------------------------- 1. helpers
+create or replace function public.am_i_head(p_event uuid) returns boolean
+language sql stable security definer set search_path = '' as $$ select private.can_run_heat(p_event) $$;
+
+create or replace function private.event_has_active_head(p_event uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.judge_seats s where s.event_id = p_event and s.role = 'head' and s.active and s.status = 'active');
+$$;
+
+-- What the audit trigger of a table records for the next write: the action word and the reason (reset after the write).
+create or replace function private.audit_ctx(p_action text, p_reason text) returns void
+language plpgsql as $$
+begin
+  perform set_config('app.audit_action', coalesce(p_action, ''), true);
+  perform set_config('app.reason', coalesce(nullif(btrim(coalesce(p_reason, '')), ''), ''), true);
+end $$;
+
+-- An audit line for a change whose table has no audit trigger of its own.
+create or replace function private.head_audit(p_event uuid, p_table text, p_row uuid, p_action text, p_before jsonb, p_after jsonb, p_reason text) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.audit_log (event_id, actor_user_id, actor_seat_id, action, table_name, row_id, before, after, reason)
+  values (p_event, auth.uid(), private.seat_id(p_event), p_action, p_table, p_row, p_before, p_after, nullif(btrim(coalesce(p_reason, '')), ''));
+end $$;
+
+-- The shared door of the head functions: the heat exists, the caller is the head judge or an organiser, a reason is given (when asked for),
+-- and the heat is in a state where the change makes sense. The heat is locked for the rest of the transaction.
+create or replace function private.head_heat(p_heat uuid, p_states text[], p_reason text default null, p_need_reason boolean default true) returns public.heats
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; v_eff text;
+begin
+  select * into h from public.heats where id = p_heat for update;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not private.can_run_heat(h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if p_need_reason and (p_reason is null or char_length(btrim(p_reason)) < 3) then raise exception 'REASON_REQUIRED'; end if;
+  v_eff := private.heat_effective_status(p_heat);
+  if not (v_eff = any (p_states)) then
+    raise exception '%', case h.status when 'published' then 'HEAT_PUBLISHED' when 'cancelled' then 'HEAT_CANCELLED' else 'HEAT_NOT_EDITABLE' end;
+  end if;
+  return h;
+end $$;
+
+-- A judge's sheet counts as submitted when it was submitted and not re-opened since.
+create or replace function private.unsubmitted_judges(p_heat uuid) returns int
+language sql stable security definer set search_path = '' as $$
+  select count(*)::int
+  from public.heats h
+  join public.divisions d on d.id = h.division_id
+  join public.panel_members pm on pm.panel_id = d.panel_id
+  join public.judge_seats js on js.id = pm.judge_seat_id and js.active and js.status = 'active'
+  where h.id = p_heat
+    and not exists (select 1 from public.judge_sheets s
+                    where s.heat_id = p_heat and s.judge_seat_id = pm.judge_seat_id and s.submitted_at is not null
+                      and (s.reopened_at is null or s.submitted_at > s.reopened_at));
+$$;
+
+-- ---------------------------------------------------------------- 2. decisions (a tie order, a publish override): written once, never changed
+create table public.heat_decisions (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events on delete cascade,
+  heat_id uuid not null references public.heats on delete cascade,
+  kind text not null check (kind in ('tie', 'publish_override')),
+  payload jsonb not null default '{}',
+  reason text,
+  by_user uuid,
+  by_seat uuid references public.judge_seats on delete set null,
+  at timestamptz not null default now()
+);
+create index on public.heat_decisions (event_id);
+create index on public.heat_decisions (heat_id);
+create index on public.heat_decisions (by_seat);
+
+create or replace function private.decisions_append_only() returns trigger
+language plpgsql as $$
+begin
+  -- a cascade from deleting a heat or an event is not somebody editing the record
+  if tg_op = 'DELETE' and (pg_trigger_depth() > 1 or current_setting('app.allow_purge', true) = 'on') then return old; end if;
+  raise exception 'APPEND_ONLY: % on % is not allowed', tg_op, tg_table_name;
+end $$;
+create trigger a_append_only before update or delete on public.heat_decisions for each row execute function private.decisions_append_only();
+
+alter table public.heat_decisions enable row level security;
+grant select on public.heat_decisions to authenticated;
+create policy head_read on public.heat_decisions for select to authenticated using (coalesce(private.seat_role(event_id), '') = 'head');
+create policy org_read on public.heat_decisions for select to authenticated using (private.is_event_organiser(event_id));
+
+-- ---------------------------------------------------------------- 3. the head functions
+-- Change one judge's score of an attempt, enter a score a judge never gave (paper sheets), or mark a judge absent for one attempt (Missed + reason "Absent").
+-- The head judge's value wins over any older edit still queued on a judge's phone.
+create or replace function public.head_set_trick_score(p_attempt uuid, p_seat uuid, p_score numeric, p_criteria jsonb, p_missed boolean, p_reason text)
+returns public.trick_scores
+language plpgsql security definer set search_path = '' as $$
+declare a public.trick_attempts; h public.heats; r public.trick_scores; v_missed boolean := coalesce(p_missed, false);
+begin
+  select * into a from public.trick_attempts where id = p_attempt;
+  if not found or a.deleted_at is not null then raise exception 'ATTEMPT_NOT_FOUND'; end if;
+  h := private.head_heat(a.heat_id, array['running', 'paused', 'ended', 'under_review'], p_reason);
+  if a.status = 'crashed' then raise exception 'NOT_SCORABLE'; end if;
+  if not exists (select 1 from public.divisions d join public.panel_members pm on pm.panel_id = d.panel_id where d.id = h.division_id and pm.judge_seat_id = p_seat) then
+    raise exception 'NOT_ON_PANEL';
+  end if;
+  if not v_missed and p_score is null then raise exception 'SCORE_REQUIRED'; end if;
+  perform private.audit_ctx('score_edited', p_reason);
+  insert into public.trick_scores as ts (event_id, heat_id, attempt_id, judge_seat_id, criteria, score, missed, client_key, client_rev, edited_by, edit_reason)
+  values (a.event_id, a.heat_id, a.id, p_seat, coalesce(p_criteria, '{}'), case when v_missed then null else p_score end, v_missed,
+          gen_random_uuid(), 9000000000000000, auth.uid(), btrim(p_reason))
+  on conflict (attempt_id, judge_seat_id) do update
+    set criteria = excluded.criteria, score = excluded.score, missed = excluded.missed, client_key = excluded.client_key, client_rev = 9000000000000000,
+        version = ts.version + 1, edited_by = auth.uid(), edit_reason = excluded.edit_reason
+  returning * into r;
+  perform private.audit_ctx('', '');
+  return r;
+end $$;
+
+-- Paper sheets, typed in ("tabulator mode"): one judge's Impression / Variety score for one rider.
+create or replace function public.head_set_impression(p_heat uuid, p_entry uuid, p_seat uuid, p_value numeric, p_reason text)
+returns public.impression_scores
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; r public.impression_scores;
+begin
+  h := private.head_heat(p_heat, array['ended', 'under_review'], p_reason);
+  if not exists (select 1 from public.heat_slots s where s.heat_id = p_heat and s.entry_id = p_entry) then raise exception 'RIDER_NOT_IN_HEAT'; end if;
+  if not exists (select 1 from public.divisions d join public.panel_members pm on pm.panel_id = d.panel_id where d.id = h.division_id and pm.judge_seat_id = p_seat) then
+    raise exception 'NOT_ON_PANEL';
+  end if;
+  if p_value is null or p_value < 0 then raise exception 'SCORE_REQUIRED'; end if;
+  perform private.audit_ctx('impression_set', p_reason);
+  insert into public.impression_scores as i (event_id, heat_id, entry_id, judge_seat_id, value, client_key, client_rev)
+  values (h.event_id, p_heat, p_entry, p_seat, p_value, gen_random_uuid(), 9000000000000000)
+  on conflict (heat_id, entry_id, judge_seat_id) do update set value = excluded.value, client_key = excluded.client_key, client_rev = 9000000000000000
+  returning * into r;
+  perform private.audit_ctx('', '');
+  return r;
+end $$;
+
+-- Edit an attempt: another rider (it takes that rider's next number), the trick, direction, category, landed or crashed. Null leaves a field as it is.
+-- A crash switched to a landing resolves the judge's "That was a landing" flag (the pads then appear on the judge phones through realtime).
+-- Moving it to a rider who is out of attempts is a cap override: the head judge, or an organiser when the event has no active head judge; the reason is the override reason.
+create or replace function public.edit_attempt(
+  p_attempt uuid, p_reason text, p_entry uuid default null, p_trick_name text default null, p_trick_parts jsonb default null,
+  p_category text default null, p_status text default null, p_direction text default null
+) returns public.trick_attempts
+language plpgsql security definer set search_path = '' as $$
+declare
+  a public.trick_attempts; h public.heats; slot public.heat_slots; v_row public.trick_attempts;
+  v_entry uuid; v_seq int; v_cap int; v_used int; v_action text := 'attempt_edited';
+begin
+  select * into a from public.trick_attempts where id = p_attempt;
+  if not found or a.deleted_at is not null then raise exception 'ATTEMPT_NOT_FOUND'; end if;
+  h := private.head_heat(a.heat_id, array['running', 'paused', 'ended', 'under_review'], p_reason);
+  if p_status is not null and p_status not in ('landed', 'crashed') then raise exception 'BAD_STATUS'; end if;
+  if p_direction is not null and p_direction not in ('left', 'right') then raise exception 'BAD_DIRECTION'; end if;
+  v_entry := a.entry_id;
+  v_seq := a.seq;
+  if p_entry is not null and p_entry <> a.entry_id then
+    select * into slot from public.heat_slots where heat_id = a.heat_id and entry_id = p_entry;
+    if not found then raise exception 'RIDER_NOT_IN_HEAT'; end if;
+    if slot.modifier is not null or slot.flagged_out then raise exception 'RIDER_NOT_RIDING'; end if;
+    perform pg_advisory_xact_lock(hashtextextended(a.heat_id::text || p_entry::text, 0));
+    v_cap := (private.division_heat_setting(h.division_id, 'maxAttemptsPerRider') #>> '{}')::int;
+    select count(*) into v_used from public.trick_attempts x where x.heat_id = a.heat_id and x.entry_id = p_entry and x.deleted_at is null;
+    if v_cap is not null and v_used >= v_cap then
+      if not (coalesce(private.seat_role(h.event_id), '') = 'head' or (private.is_event_organiser(h.event_id) and not private.event_has_active_head(h.event_id))) then
+        raise exception 'NOT_ALLOWED';
+      end if;
+      v_action := 'attempt_cap_override';
+    end if;
+    select coalesce(max(x.seq), 0) + 1 into v_seq from public.trick_attempts x where x.heat_id = a.heat_id and x.entry_id = p_entry;
+    v_entry := p_entry;
+  end if;
+  perform private.audit_ctx(v_action, p_reason);
+  update public.trick_attempts
+     set entry_id = v_entry, seq = v_seq, trick_name = coalesce(p_trick_name, trick_name), trick_parts = coalesce(p_trick_parts, trick_parts),
+         category_key = coalesce(p_category, category_key), status = coalesce(p_status, status), direction = coalesce(p_direction, direction)
+   where id = p_attempt returning * into v_row;
+  perform private.audit_ctx('', '');
+  if p_status = 'landed' and a.status = 'crashed' then
+    update public.attempt_flags set resolved_at = now(), resolved_by = auth.uid(), resolution = 'Switched to landed: ' || btrim(p_reason)
+     where attempt_id = a.id and resolved_at is null and kind = 'landed';
+  elsif p_status = 'crashed' and a.status = 'landed' then
+    update public.attempt_flags set resolved_at = now(), resolved_by = auth.uid(), resolution = 'Switched to crashed: ' || btrim(p_reason)
+     where attempt_id = a.id and resolved_at is null and kind = 'crash';
+  end if;
+  return v_row;
+end $$;
+
+-- Two attempts that are one: keep the first-logged (the caller passes it as p_keep), move the other's scores over for judges who have none there, and for a judge who
+-- answered on both keep the kept attempt's score unless p_choices says { "<judge seat id>": "drop" }. Then the dropped attempt is soft-deleted.
+create or replace function public.merge_attempts(p_keep uuid, p_drop uuid, p_choices jsonb, p_reason text) returns public.trick_attempts
+language plpgsql security definer set search_path = '' as $$
+declare k public.trick_attempts; d public.trick_attempts; h public.heats; s public.trick_scores; v_choice text; v_row public.trick_attempts;
+begin
+  select * into k from public.trick_attempts where id = p_keep;
+  if not found or k.deleted_at is not null then raise exception 'ATTEMPT_NOT_FOUND'; end if;
+  select * into d from public.trick_attempts where id = p_drop;
+  if not found or d.deleted_at is not null then raise exception 'ATTEMPT_NOT_FOUND'; end if;
+  h := private.head_heat(k.heat_id, array['running', 'paused', 'ended', 'under_review'], p_reason);
+  if k.id = d.id then raise exception 'BAD_MERGE'; end if;
+  if k.heat_id <> d.heat_id or k.entry_id <> d.entry_id then raise exception 'NOT_SAME_RIDER'; end if;
+  for s in select * from public.trick_scores where attempt_id = d.id order by judge_seat_id loop
+    if exists (select 1 from public.trick_scores x where x.attempt_id = k.id and x.judge_seat_id = s.judge_seat_id) then
+      v_choice := coalesce(p_choices ->> s.judge_seat_id::text, 'keep');
+      if v_choice = 'drop' then
+        perform private.audit_ctx('score_merged', p_reason);
+        update public.trick_scores set criteria = s.criteria, score = s.score, missed = s.missed, client_key = gen_random_uuid(),
+               client_rev = greatest(client_rev, s.client_rev), version = version + 1, edited_by = auth.uid(), edit_reason = 'Merged: ' || btrim(p_reason)
+         where attempt_id = k.id and judge_seat_id = s.judge_seat_id;
+      end if;
+    else
+      perform private.audit_ctx('score_merged', p_reason);
+      update public.trick_scores set attempt_id = k.id where id = s.id;
+    end if;
+  end loop;
+  perform private.audit_ctx('attempt_merged', p_reason);
+  update public.trick_attempts set deleted_at = now(), deleted_by = auth.uid() where id = d.id;
+  perform private.audit_ctx('', '');
+  select * into v_row from public.trick_attempts where id = k.id;
+  return v_row;
+end $$;
+
+-- DNS / DNF / DSQ on a rider's seat (null clears it). Interference is a penalty row (add_penalty).
+create or replace function public.set_rider_status(p_heat uuid, p_entry uuid, p_modifier text, p_reason text) returns public.heat_slots
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; slot public.heat_slots; v_before text;
+begin
+  h := private.head_heat(p_heat, array['running', 'paused', 'ended', 'under_review'], p_reason);
+  if p_modifier is not null and p_modifier not in ('DNS', 'DNF', 'DSQ') then raise exception 'BAD_MODIFIER'; end if;
+  select * into slot from public.heat_slots where heat_id = p_heat and entry_id = p_entry;
+  if not found then raise exception 'RIDER_NOT_IN_HEAT'; end if;
+  v_before := slot.modifier;
+  update public.heat_slots set modifier = p_modifier where id = slot.id returning * into slot;
+  perform private.head_audit(h.event_id, 'heat_slots', slot.id, 'rider_status_set',
+    jsonb_build_object('modifier', v_before), jsonb_build_object('modifier', p_modifier, 'heat_id', p_heat, 'entry_id', p_entry), p_reason);
+  return slot;
+end $$;
+
+create or replace function public.add_penalty(p_heat uuid, p_entry uuid, p_type text, p_reason text) returns public.penalties
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; r public.penalties;
+begin
+  h := private.head_heat(p_heat, array['running', 'paused', 'ended', 'under_review'], p_reason);
+  if p_type not in ('INT', 'other') then raise exception 'BAD_PENALTY'; end if;
+  if not exists (select 1 from public.heat_slots s where s.heat_id = p_heat and s.entry_id = p_entry) then raise exception 'RIDER_NOT_IN_HEAT'; end if;
+  perform private.audit_ctx('penalty_added', p_reason);
+  insert into public.penalties (event_id, heat_id, entry_id, type, reason, issued_by) values (h.event_id, p_heat, p_entry, p_type, btrim(p_reason), auth.uid()) returning * into r;
+  perform private.audit_ctx('', '');
+  return r;
+end $$;
+
+create or replace function public.remove_penalty(p_penalty uuid, p_reason text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare r public.penalties;
+begin
+  select * into r from public.penalties where id = p_penalty;
+  if not found then raise exception 'PENALTY_NOT_FOUND'; end if;
+  perform private.head_heat(r.heat_id, array['running', 'paused', 'ended', 'under_review'], p_reason);
+  perform private.audit_ctx('penalty_removed', p_reason);
+  delete from public.penalties where id = p_penalty;
+  perform private.audit_ctx('', '');
+end $$;
+
+-- Flag-out: at the format's minute the lowest riders leave the heat. The format says how many (flagOut.count).
+create or replace function public.flag_out(p_heat uuid, p_entries uuid[], p_reason text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; v_fo jsonb; v_n int := coalesce(array_length(p_entries, 1), 0); v_riding int;
+begin
+  h := private.head_heat(p_heat, array['running', 'paused'], p_reason);
+  select coalesce(d.draw -> 'template' -> 'flagOut', ft.json -> 'flagOut') into v_fo
+    from public.divisions d left join public.format_templates ft on ft.id = d.format_template_id where d.id = h.division_id;
+  if v_fo is null or jsonb_typeof(v_fo) <> 'object' then raise exception 'FLAG_OUT_NOT_AVAILABLE'; end if;
+  if v_n > (v_fo ->> 'count')::int then raise exception 'FLAG_OUT_TOO_MANY: %', v_fo ->> 'count'; end if;
+  select count(*) into v_riding from public.heat_slots s where s.heat_id = p_heat and s.entry_id = any (p_entries) and s.modifier is null;
+  if v_riding <> v_n then raise exception 'RIDER_NOT_IN_HEAT'; end if;
+  update public.heat_slots set flagged_out = (entry_id = any (p_entries)) where heat_id = p_heat and entry_id is not null;
+  update public.heats set flag_out = jsonb_build_object('at', now(), 'entries', to_jsonb(p_entries), 'reason', btrim(p_reason)) where id = p_heat;
+  perform private.head_audit(h.event_id, 'heats', p_heat, 'heat_flag_out', h.flag_out, jsonb_build_object('entries', to_jsonb(p_entries)), p_reason);
+end $$;
+
+-- The head judge's order for riders who are tied (best first). The scoring engine reads it as a head_judge decision.
+create or replace function public.decide_tie(p_heat uuid, p_rider_ids uuid[], p_reason text) returns public.heat_decisions
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; r public.heat_decisions;
+begin
+  h := private.head_heat(p_heat, array['ended', 'under_review'], p_reason);
+  if coalesce(array_length(p_rider_ids, 1), 0) < 2 then raise exception 'BAD_TIE'; end if;
+  if (select count(*) from public.heat_slots s where s.heat_id = p_heat and s.entry_id = any (p_rider_ids)) <> array_length(p_rider_ids, 1) then
+    raise exception 'RIDER_NOT_IN_HEAT';
+  end if;
+  insert into public.heat_decisions (event_id, heat_id, kind, payload, reason, by_user, by_seat)
+  values (h.event_id, p_heat, 'tie', jsonb_build_object('riderIds', to_jsonb(p_rider_ids)), btrim(p_reason), auth.uid(), private.seat_id(h.event_id))
+  returning * into r;
+  perform private.head_audit(h.event_id, 'heat_decisions', r.id, 'tie_decided', null, r.payload, p_reason);
+  return r;
+end $$;
+
+create or replace function public.resolve_flag(p_flag uuid, p_resolution text default null) returns public.attempt_flags
+language plpgsql security definer set search_path = '' as $$
+declare f public.attempt_flags;
+begin
+  select * into f from public.attempt_flags where id = p_flag;
+  if not found then raise exception 'FLAG_NOT_FOUND'; end if;
+  if not private.can_run_heat(f.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  perform private.audit_ctx('flag_resolved', p_resolution);
+  update public.attempt_flags set resolved_at = coalesce(resolved_at, now()), resolved_by = coalesce(resolved_by, auth.uid()),
+         resolution = coalesce(nullif(btrim(coalesce(p_resolution, '')), ''), 'Resolved') where id = p_flag returning * into f;
+  perform private.audit_ctx('', '');
+  return f;
+end $$;
+
+-- ---------------------------------------------------------------- 4. add_attempt: past the cap only for the head judge, or an organiser when the event has no active head judge
+create or replace function public.add_attempt(
+  p_heat uuid, p_entry uuid, p_client_key uuid, p_status text,
+  p_direction text default null, p_category_key text default null, p_trick_name text default null,
+  p_trick_parts jsonb default '{}', p_height_m numeric default null,
+  p_input_method text default 'builder', p_raw_text text default null, p_override_reason text default null
+) returns public.trick_attempts
+language plpgsql security definer set search_path = '' as $$
+declare
+  h public.heats; ev public.events; slot public.heat_slots; v_row public.trick_attempts;
+  v_role text; v_seat uuid; v_org boolean; v_privileged boolean; v_eff text;
+  v_cap int; v_used int; v_seq int; v_dup uuid; v_window int; v_over boolean := false;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  select * into ev from public.events where id = h.event_id;
+  v_org := private.is_event_organiser(h.event_id);
+  v_seat := private.seat_id(h.event_id);
+  v_role := coalesce(private.seat_role(h.event_id), ''); -- never null: `not (null)` would let a seatless user through
+  if not v_org and not (v_role in ('spotter', 'head') or (v_role = 'judge' and coalesce((ev.settings ->> 'judgesMayLogAttempts')::boolean, false))) then
+    raise exception 'NOT_ALLOWED';
+  end if;
+  v_privileged := v_org or v_role = 'head';
+
+  -- safe retry: the same client_key returns the attempt that already exists
+  select * into v_row from public.trick_attempts where client_key = p_client_key;
+  if found then
+    if v_row.heat_id <> p_heat then raise exception 'CLIENT_KEY_REUSED'; end if;
+    return v_row;
+  end if;
+
+  v_eff := private.heat_effective_status(p_heat);
+  if not (v_eff = 'running' or (v_privileged and v_eff in ('paused', 'ended', 'under_review'))) then
+    raise exception 'HEAT_NOT_RUNNING';
+  end if;
+
+  select * into slot from public.heat_slots where heat_id = p_heat and entry_id = p_entry;
+  if not found then raise exception 'RIDER_NOT_IN_HEAT'; end if;
+  if slot.modifier is not null or slot.flagged_out then raise exception 'RIDER_NOT_RIDING'; end if;
+
+  -- one rider, one lock: two phones cannot both take the last place
+  perform pg_advisory_xact_lock(hashtextextended(p_heat::text || p_entry::text, 0));
+  select * into v_row from public.trick_attempts where client_key = p_client_key;
+  if found then return v_row; end if;
+
+  v_cap := (private.division_heat_setting(h.division_id, 'maxAttemptsPerRider') #>> '{}')::int;
+  select count(*) into v_used from public.trick_attempts a where a.heat_id = p_heat and a.entry_id = p_entry and a.deleted_at is null;
+  if v_cap is not null and v_used >= v_cap then
+    if p_override_reason is null or not v_privileged then raise exception 'ATTEMPT_CAP_REACHED'; end if;
+    if btrim(p_override_reason) = '' then raise exception 'OVERRIDE_REASON_REQUIRED'; end if;
+    -- owner's decision 8: the head judge, or an organiser when the event has no head judge (always with a reason)
+    if not (v_role = 'head' or (v_org and not private.event_has_active_head(h.event_id))) then raise exception 'NOT_ALLOWED'; end if;
+    v_over := true;
+  end if;
+
+  select coalesce(max(a.seq), 0) + 1 into v_seq from public.trick_attempts a where a.heat_id = p_heat and a.entry_id = p_entry;
+
+  -- two different spotters logging the same rider within the window: flag it for the head judge, never drop it
+  v_window := coalesce((private.division_heat_setting(h.division_id, 'duplicateWindowSec') #>> '{}')::int, 20);
+  select a.id into v_dup from public.trick_attempts a
+   where a.heat_id = p_heat and a.entry_id = p_entry and a.deleted_at is null
+     and a.created_by_seat is distinct from v_seat and a.created_at > now() - make_interval(secs => v_window)
+   order by a.created_at desc limit 1;
+
+  if v_over then
+    perform set_config('app.audit_action', 'attempt_cap_override', true);
+    perform set_config('app.reason', p_override_reason, true);
+  end if;
+  insert into public.trick_attempts (heat_id, entry_id, seq, client_key, status, direction, category_key, trick_name, trick_parts,
+                                     height_m, created_by_seat, input_method, raw_text, possible_duplicate_of, event_id)
+  values (p_heat, p_entry, v_seq, p_client_key, p_status, p_direction, p_category_key, p_trick_name, coalesce(p_trick_parts, '{}'),
+          p_height_m, v_seat, coalesce(p_input_method, 'builder'), p_raw_text, v_dup, h.event_id)
+  returning * into v_row;
+  perform set_config('app.audit_action', '', true);
+  perform set_config('app.reason', '', true);
+  return v_row;
+end $$;
+
+-- ---------------------------------------------------------------- 5. review and re-open
+-- Moves an ended heat to review (the judges' sheets lock). Every panel judge must have submitted, or the head judge gives a reason.
+create or replace function public.review_heat(p_heat uuid, p_override_reason text default null) returns public.heats
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; v_n int;
+begin
+  select * into h from public.heats where id = p_heat for update;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not private.can_run_heat(h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if h.status = 'running' and private.heat_effective_status(p_heat) = 'ended' then
+    h := private.move_heat(p_heat, 'ended', 'heat_ended_by_clock');
+  end if;
+  if h.status = 'under_review' then return h; end if;
+  if h.status <> 'ended' then raise exception 'ILLEGAL_HEAT_TRANSITION: % -> under_review', h.status; end if;
+  v_n := private.unsubmitted_judges(p_heat);
+  if v_n > 0 and (p_override_reason is null or char_length(btrim(p_override_reason)) < 3) then raise exception 'SHEETS_NOT_SUBMITTED: %', v_n; end if;
+  return private.move_heat(p_heat, 'under_review', 'heat_under_review', p_override_reason);
+end $$;
+
+-- Published → under review, stamped reopened_at. The next publish is version 2. Judges stay locked unless the head judge re-opens their sheet.
+create or replace function public.reopen_heat(p_heat uuid, p_reason text) returns public.heats
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats;
+begin
+  select * into h from public.heats where id = p_heat for update;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not private.can_run_heat(h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if p_reason is null or char_length(btrim(p_reason)) < 3 then raise exception 'REASON_REQUIRED'; end if;
+  if h.status <> 'published' then raise exception 'ILLEGAL_HEAT_TRANSITION: % -> under_review', h.status; end if;
+  perform private.audit_ctx('heat_reopened', p_reason);
+  update public.heats set status = 'under_review', reopened_at = now() where id = p_heat returning * into h;
+  perform private.audit_ctx('', '');
+  return h;
+end $$;
+
+-- ---------------------------------------------------------------- 6. Publish: one transaction, idempotent per version
+-- Called only by the server (service role) after it has computed the result with the scoring engine and the ladder. It trusts nothing about the caller's rights:
+-- the server checked that the person is the head judge, and p_actor is that person, so the audit lines name them.
+--   p_results:    [{ entry_id, place, total, percent, breakdown }] for every rider of the heat
+--   p_draw:       the division's new stored draw (null when the heat is not part of a draw)
+--   p_projection: [{ uid, slots: [{ position, entry_id, modifier }] }] for the later heats whose seats changed
+-- Pressing Publish twice, even together, writes one result: the second call finds the heat published at the version it asked for and returns it.
+create or replace function public.publish_heat_commit(
+  p_heat uuid, p_expected_version int, p_results jsonb, p_draw jsonb, p_projection jsonb, p_hold boolean,
+  p_override_reason text, p_actor uuid, p_blockers jsonb default '[]'::jsonb
+) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  h public.heats; v_latest int; r jsonb; p jsonb; s jsonb; v_target public.heats; v_now timestamptz := now(); v_override text := nullif(btrim(coalesce(p_override_reason, '')), '');
+begin
+  select * into h from public.heats where id = p_heat for update;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  -- the writes below are audited as the person who pressed Publish
+  perform set_config('request.jwt.claims', json_build_object('sub', p_actor, 'role', 'service_role')::text, true);
+  perform set_config('request.jwt.claim.sub', coalesce(p_actor::text, ''), true);
+
+  select coalesce(max(version), 0) into v_latest from public.heat_results where heat_id = p_heat;
+  if h.status = 'published' and v_latest = p_expected_version then
+    return jsonb_build_object('version', v_latest, 'already', true, 'published_at', h.published_at);
+  end if;
+  if p_expected_version <> v_latest + 1 then raise exception 'VERSION_CONFLICT'; end if;
+  if h.status = 'published' then raise exception 'VERSION_CONFLICT'; end if;
+  if h.status not in ('ended', 'under_review') then raise exception 'HEAT_NOT_ENDED'; end if;
+
+  if h.status = 'ended' then
+    if private.unsubmitted_judges(p_heat) > 0 and v_override is null then raise exception 'SHEETS_NOT_SUBMITTED: %', private.unsubmitted_judges(p_heat); end if;
+    perform private.audit_ctx('heat_under_review', v_override);
+    update public.heats set status = 'under_review' where id = p_heat;
+  end if;
+
+  for r in select * from jsonb_array_elements(p_results) loop
+    if not exists (select 1 from public.heat_slots x where x.heat_id = p_heat and x.entry_id = (r ->> 'entry_id')::uuid) then raise exception 'RIDER_NOT_IN_HEAT'; end if;
+    insert into public.heat_results (event_id, heat_id, entry_id, place, total, percent, breakdown, version, published_at)
+    values (h.event_id, p_heat, (r ->> 'entry_id')::uuid, nullif(r ->> 'place', '')::int, nullif(r ->> 'total', '')::numeric, nullif(r ->> 'percent', '')::numeric,
+            r -> 'breakdown', p_expected_version, v_now);
+    update public.heat_slots set place = nullif(r ->> 'place', '')::int, total = nullif(r ->> 'total', '')::numeric, breakdown = r -> 'breakdown'
+     where heat_id = p_heat and entry_id = (r ->> 'entry_id')::uuid;
+  end loop;
+
+  if p_draw is not null then update public.divisions set draw = p_draw where id = h.division_id; end if;
+  -- the next heats' seats: "1st H1" becomes the rider. A heat that has started is never changed (the server returns that as a conflict before it gets here).
+  for p in select * from jsonb_array_elements(coalesce(p_projection, '[]'::jsonb)) loop
+    select * into v_target from public.heats where division_id = h.division_id and draw_uid = p ->> 'uid';
+    if not found then continue; end if;
+    if v_target.status <> 'scheduled' or v_target.started_at is not null then raise exception 'DOWNSTREAM_STARTED: %', p ->> 'uid'; end if;
+    for s in select * from jsonb_array_elements(p -> 'slots') loop
+      update public.heat_slots set entry_id = nullif(s ->> 'entry_id', '')::uuid, modifier = nullif(s ->> 'modifier', '')
+       where heat_id = v_target.id and position = (s ->> 'position')::int;
+    end loop;
+  end loop;
+
+  perform private.audit_ctx('heat_published', v_override);
+  update public.heats set status = 'published', publish_hold = coalesce(p_hold, false), reopened_at = null where id = p_heat;
+  perform private.audit_ctx('', '');
+
+  if v_override is not null and jsonb_array_length(coalesce(p_blockers, '[]'::jsonb)) > 0 then
+    insert into public.heat_decisions (event_id, heat_id, kind, payload, reason, by_user, by_seat)
+    values (h.event_id, p_heat, 'publish_override', jsonb_build_object('version', p_expected_version, 'blockers', p_blockers), v_override, p_actor, private.seat_id(h.event_id));
+    perform private.head_audit(h.event_id, 'heats', p_heat, 'publish_override', null, jsonb_build_object('version', p_expected_version, 'blockers', p_blockers), v_override);
+  end if;
+  return jsonb_build_object('version', p_expected_version, 'already', false, 'published_at', v_now);
+end $$;
+
+-- ---------------------------------------------------------------- grants
+revoke all on function
+  public.am_i_head, public.head_set_trick_score, public.head_set_impression, public.edit_attempt, public.merge_attempts, public.set_rider_status,
+  public.add_penalty, public.remove_penalty, public.flag_out, public.decide_tie, public.resolve_flag, public.add_attempt, public.review_heat, public.reopen_heat,
+  public.publish_heat_commit from public, anon, authenticated;
+grant execute on function
+  public.am_i_head, public.head_set_trick_score, public.head_set_impression, public.edit_attempt, public.merge_attempts, public.set_rider_status,
+  public.add_penalty, public.remove_penalty, public.flag_out, public.decide_tie, public.resolve_flag, public.add_attempt, public.review_heat, public.reopen_heat to authenticated;
+grant execute on function public.publish_heat_commit to service_role;
+grant execute on all functions in schema private to anon, authenticated, service_role;
+
+-- ---------------------------------------------------------------- 7. realtime (officials follow decisions; results keep their old row on update)
+alter publication supabase_realtime add table public.heat_decisions;
+alter table public.heat_results replica identity full;
+
+
+-- ===== migration 20261005100100_phase5c_visibility_rerun_practice.sql =====
+-- Phase 5c, steps 4 (Re-run heat, Practice heat) and 6 (visibility):
+--
+--   1. columns: heats.public_live (the head judge's per-heat live switch), heats.rerun_of, events.is_simulation
+--   2. simulation events are never public (every public door checks it)
+--   3. the two leaks: heat_slots place / total / breakdown for anon and non-members, divisions.draw for any signed-in user (held finals leak nowhere)
+--   4. get_public_live_heat respects the switches and the hold; get_public_results (Phase 6 renders it)
+--   5. rerun_heat: cancel a heat and create its re-run in one transaction
+--   6. practice_add_attempt (organiser only, simulation events only)
+--   7. Demo Cup is flagged as a simulation
+
+-- ---------------------------------------------------------------- 1. columns
+alter table public.heats add column public_live boolean;               -- null = follow the division's / event's setting
+alter table public.heats add column rerun_of uuid references public.heats on delete set null;
+create index on public.heats (rerun_of);
+alter table public.events add column is_simulation boolean not null default false;
+grant select (is_simulation) on public.events to anon, authenticated;  -- policies read it; it is not a secret
+grant update (is_simulation) on public.events to authenticated;
+
+-- A simulation flag can be set only while no heat of the event has started, and never switched off after one has (people editing it; the server keeps its own way in).
+create or replace function private.events_simulation_guard() returns trigger
+language plpgsql as $$
+begin
+  if new.is_simulation is not distinct from old.is_simulation then return new; end if;
+  if current_user in ('postgres', 'service_role', 'supabase_admin') then return new; end if;
+  if exists (select 1 from public.heats h where h.event_id = new.id and (h.status <> 'scheduled' or h.started_at is not null)) then raise exception 'SIMULATION_LOCKED'; end if;
+  return new;
+end $$;
+create trigger b_simulation_guard before update of is_simulation on public.events for each row execute function private.events_simulation_guard();
+
+-- the per-heat switch and the re-run link are changed only by the functions below (a head seat may update its heats otherwise)
+create or replace function private.heats_guard() returns trigger
+language plpgsql as $$
+declare
+  priv boolean := current_user in ('service_role', 'postgres', 'supabase_admin');
+  v_end timestamptz;
+  v_started timestamptz := new.started_at; v_paused_at timestamptz := new.paused_at;
+  v_paused_total int := new.paused_total_sec; v_ended timestamptz := new.ended_at; v_published timestamptz := new.published_at;
+begin
+  if not priv then
+    if new.status is distinct from old.status then raise exception 'USE_HEAT_FUNCTIONS'; end if;
+    -- server-owned columns cannot be edited by hand
+    new.started_at := old.started_at; new.paused_at := old.paused_at; new.paused_total_sec := old.paused_total_sec;
+    new.ended_at := old.ended_at; new.published_at := old.published_at; new.live_rev := old.live_rev;
+    new.reopened_at := old.reopened_at;
+    new.event_id := old.event_id; new.division_id := old.division_id; new.round_id := old.round_id;
+    new.publish_hold := old.publish_hold; new.public_live := old.public_live; new.rerun_of := old.rerun_of;
+    v_started := old.started_at; v_paused_at := old.paused_at; v_paused_total := old.paused_total_sec; v_ended := old.ended_at; v_published := old.published_at;
+  end if;
+
+  if new.status is distinct from old.status then
+    if not priv and not (
+      (old.status = 'scheduled' and new.status in ('running', 'cancelled')) or
+      (old.status = 'running' and new.status in ('paused', 'ended', 'cancelled')) or
+      (old.status = 'paused' and new.status in ('running', 'ended', 'cancelled')) or
+      (old.status = 'ended' and new.status in ('under_review', 'cancelled')) or
+      (old.status = 'under_review' and new.status in ('cancelled')) or
+      (old.status = 'published' and new.status = 'under_review')
+    ) then
+      raise exception 'ILLEGAL_HEAT_TRANSITION: % -> %', old.status, new.status;
+    end if;
+
+    if old.status = 'scheduled' and new.status = 'running' then
+      v_started := now();
+    elsif old.status = 'running' and new.status = 'paused' then
+      v_paused_at := now();
+    elsif old.status = 'paused' and new.status = 'running' then
+      v_paused_total := old.paused_total_sec + greatest(0, ceil(extract(epoch from (now() - coalesce(old.paused_at, now()))))::int);
+      v_paused_at := null;
+    elsif new.status = 'ended' and old.status in ('running', 'paused') then
+      if old.status = 'paused' then
+        v_ended := coalesce(old.paused_at, now());
+      else
+        v_end := old.started_at + make_interval(secs => old.duration_sec + old.paused_total_sec);
+        v_ended := least(now(), coalesce(v_end, now()));
+      end if;
+    elsif new.status = 'published' then
+      v_published := now();
+    end if;
+
+    -- privileged callers (publish, seeds, tests) may set a column explicitly; everyone else gets the computed value
+    if not priv or new.started_at is not distinct from old.started_at then new.started_at := v_started; end if;
+    if not priv or new.paused_at is not distinct from old.paused_at then new.paused_at := v_paused_at; end if;
+    if not priv or new.paused_total_sec is not distinct from old.paused_total_sec then new.paused_total_sec := v_paused_total; end if;
+    if not priv or new.ended_at is not distinct from old.ended_at then new.ended_at := v_ended; end if;
+    if not priv or new.published_at is not distinct from old.published_at then new.published_at := v_published; end if;
+  end if;
+  return new;
+end $$;
+
+-- ---------------------------------------------------------------- 2. simulation events are never public
+create or replace function private.event_is_public(p_event uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from public.events e join public.organisations o on o.id = e.organisation_id
+    where e.id = p_event and e.status in ('published', 'live', 'complete') and e.archived_at is null and o.archived_at is null and not e.is_simulation);
+$$;
+drop policy public_read on public.events;
+create policy public_read on public.events for select to anon, authenticated
+  using (status in ('published', 'live', 'complete') and archived_at is null and not is_simulation and private.org_is_active(organisation_id));
+
+create or replace function public.get_public_events(p_limit int default 30) returns table (
+  id uuid, name text, slug text, location text, start_date date, end_date date, status text, organisation_name text, organisation_slug text
+) language sql stable security definer set search_path = '' as $$
+  select e.id, e.name, e.slug, e.location, e.start_date, e.end_date, e.status, o.name, o.slug
+  from public.events e join public.organisations o on o.id = e.organisation_id
+  where e.status in ('published', 'live', 'complete') and e.archived_at is null and o.archived_at is null and not e.is_simulation
+  order by e.start_date desc nulls last, e.created_at desc
+  limit least(greatest(coalesce(p_limit, 30), 1), 100);
+$$;
+
+create or replace function public.get_public_organisation(p_slug text) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object(
+    'name', o.name, 'slug', o.slug, 'logo_url', o.branding ->> 'logoUrl', 'timezone', o.settings ->> 'defaultTimezone',
+    'events', (select coalesce(jsonb_agg(jsonb_build_object('id', e.id, 'name', e.name, 'slug', e.slug, 'location', e.location,
+                        'start_date', e.start_date, 'end_date', e.end_date, 'status', e.status) order by e.start_date desc nulls last), '[]'::jsonb)
+               from public.events e where e.organisation_id = o.id and e.status in ('published', 'live', 'complete') and e.archived_at is null and not e.is_simulation))
+  from public.organisations o
+  where o.slug = lower(coalesce(p_slug, '')) and o.archived_at is null
+    and exists (select 1 from public.events e where e.organisation_id = o.id and e.status in ('published', 'live', 'complete') and e.archived_at is null and not e.is_simulation);
+$$;
+
+create or replace function public.get_public_event(p_slug text) returns table (
+  id uuid, name text, slug text, location text, start_date date, end_date date, status text, timezone text,
+  organisation_name text, organisation_slug text, organisation_logo_url text
+) language sql stable security definer set search_path = '' as $$
+  select e.id, e.name, e.slug, e.location, e.start_date, e.end_date, e.status, e.timezone,
+         o.name, o.slug, o.branding ->> 'logoUrl'
+  from public.events e join public.organisations o on o.id = e.organisation_id
+  where e.slug = lower(coalesce(p_slug, '')) and e.status in ('published', 'live', 'complete') and e.archived_at is null and o.archived_at is null and not e.is_simulation;
+$$;
+
+create or replace function private.registration_open(ev public.events) returns boolean
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  v_closes date := nullif(ev.settings ->> 'registrationClosesOn', '')::date;
+  v_time text := nullif(ev.settings ->> 'registrationClosesTime', '');
+  v_deadline timestamptz;
+begin
+  if ev.is_simulation then return false; end if;
+  if ev.status not in ('published', 'live') or coalesce((ev.settings ->> 'registrationOpen')::boolean, false) is not true then return false; end if;
+  if v_closes is not null then
+    v_deadline := ((v_closes::text || ' ' || case when v_time ~ '^[0-9]{2}:[0-9]{2}$' then v_time || ':00' else '23:59:59.999999' end)::timestamp) at time zone ev.timezone;
+    if now() > v_deadline then return false; end if;
+  end if;
+  return true;
+end $$;
+revoke all on function private.registration_open from public, anon, authenticated;
+
+create or replace function public.public_registration_info(p_slug text) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare ev public.events; org public.organisations; v_max int; v_divs jsonb;
+begin
+  select * into ev from public.events where slug = lower(coalesce(p_slug, ''));
+  if not found or ev.archived_at is not null or ev.is_simulation or ev.status not in ('published', 'live', 'complete') then return jsonb_build_object('found', false); end if;
+  select * into org from public.organisations where id = ev.organisation_id;
+  if org.archived_at is not null then return jsonb_build_object('found', false); end if;
+  v_max := nullif(ev.settings ->> 'registrationMaxPerDivision', '')::int;
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'id', d.id, 'name', d.name, 'description', d.description, 'identification', d.identification,
+           'full', v_max is not null and (select count(*) from public.entries e where e.division_id = d.id and e.status in ('registered', 'confirmed')) >= v_max
+         ) order by d.sort_order, d.created_at), '[]'::jsonb)
+    into v_divs from public.divisions d where d.event_id = ev.id;
+  return jsonb_build_object(
+    'found', true,
+    'event', jsonb_build_object('id', ev.id, 'name', ev.name, 'slug', ev.slug, 'timezone', ev.timezone, 'status', ev.status, 'branding', ev.branding,
+                                'location', ev.location, 'startDate', ev.start_date, 'endDate', ev.end_date),
+    'organisation', jsonb_build_object('id', org.id, 'name', org.name),
+    'open', private.registration_open(ev),
+    'closedMessage', ev.settings ->> 'registrationClosedMessage',
+    'closesOn', ev.settings ->> 'registrationClosesOn',
+    'closesTime', ev.settings ->> 'registrationClosesTime',
+    'identification', ev.settings -> 'identification',
+    'divisions', v_divs);
+end $$;
+revoke all on function public.public_registration_info from public, anon, authenticated;
+grant execute on function public.public_registration_info to service_role;
+
+-- ---------------------------------------------------------------- 3. the two leaks
+-- Both are closed so that everything already deployed keeps working: organisers and the event's officials read through their own row policies (org_all, seat_read),
+-- exactly as before; what changes is what a visitor and a signed-in stranger can read.
+-- (a) A heat's places, totals and breakdown are written at publish and reach the public only through get_public_results (which skips held heats). A visitor can
+--     read the seat (who sits where), never its place, total or breakdown.
+revoke select on public.heat_slots from anon;
+grant select (id, event_id, heat_id, position, entry_id, vest_colour, source, modifier, flagged_out, created_at, updated_at) on public.heat_slots to anon;
+-- (b) The stored draw holds every published result of the division (and every seat's name). A signed-in stranger (another organisation's organiser, an official of
+--     another event) used to read it through the public policy; now only a visitor-level (anon) policy is public, and organisers and seat holders have their own.
+drop policy public_read on public.heat_slots;
+create policy public_read on public.heat_slots for select to anon using (private.event_is_public(event_id));
+drop policy public_read on public.divisions;
+create policy public_read on public.divisions for select to anon using (private.event_is_public(event_id));
+
+-- (c) Direct reads of results show only the latest version of a heat (an older version is history, not what the public sees), and never a held heat.
+create or replace function private.latest_result_version(p_heat uuid) returns int
+language sql stable security definer set search_path = '' as $$ select coalesce(max(version), 0) from public.heat_results where heat_id = p_heat $$;
+grant execute on function private.latest_result_version to anon, authenticated, service_role;
+drop policy public_read on public.heat_results;
+create policy public_read on public.heat_results for select to anon, authenticated
+  using (private.event_is_public(event_id) and not private.heat_is_held(heat_id) and version = private.latest_result_version(heat_id));
+
+-- ---------------------------------------------------------------- 4. the public functions
+-- The head judge's per-heat switch: true = show this heat live, false = do not, null = follow the setting.
+create or replace function public.set_heat_public_live(p_heat uuid, p_value boolean) returns public.heats
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats;
+begin
+  select * into h from public.heats where id = p_heat for update;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not private.can_run_heat(h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if h.public_live is not distinct from p_value then return h; end if;
+  perform set_config('app.audit_action', 'public_live_set', true);
+  perform set_config('app.reason', coalesce(case when p_value is null then 'follow the setting' when p_value then 'live on' else 'live off' end, ''), true);
+  update public.heats set public_live = p_value where id = p_heat returning * into h;
+  perform set_config('app.audit_action', '', true);
+  perform set_config('app.reason', '', true);
+  return h;
+end $$;
+-- heats are audited on a status change only; this change is worth a line of its own
+create or replace function private.heats_live_audit() returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if new.public_live is distinct from old.public_live then
+    insert into public.audit_log (event_id, actor_user_id, actor_seat_id, action, table_name, row_id, before, after, reason)
+    values (new.event_id, auth.uid(), private.seat_id(new.event_id), 'public_live_set', 'heats', new.id,
+            jsonb_build_object('public_live', old.public_live), jsonb_build_object('public_live', new.public_live), nullif(current_setting('app.reason', true), ''));
+  end if;
+  return null;
+end $$;
+create trigger z_live_audit after update of public_live on public.heats for each row execute function private.heats_live_audit();
+
+-- Live scores follow the heat's switch, then the division's setting, then the event's; a held heat shows nothing; a simulation event is not public.
+create or replace function public.get_public_live_heat(p_heat uuid) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare h public.heats; ev public.events; d public.divisions; v_live boolean;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found then return jsonb_build_object('allowed', false); end if;
+  select * into ev from public.events where id = h.event_id;
+  select * into d from public.divisions where id = h.division_id;
+  v_live := case when h.public_live is not null then h.public_live
+                 else coalesce(nullif(d.live_settings ->> 'publicLiveScores', ''), nullif(ev.settings ->> 'publicLiveScores', ''), 'after_publish') = 'live' end;
+  if not private.event_is_public(ev.id) or not v_live or h.publish_hold or h.status in ('scheduled', 'cancelled') then
+    return jsonb_build_object('allowed', false);
+  end if;
+  return jsonb_build_object(
+    'allowed', true,
+    'poll_sec', coalesce((ev.settings ->> 'livePollSec')::int, 7),
+    'heat', jsonb_build_object('id', h.id, 'status', h.status, 'effective_status', private.heat_effective_status(h.id), 'started_at', h.started_at,
+             'duration_sec', h.duration_sec, 'paused_at', h.paused_at, 'paused_total_sec', h.paused_total_sec, 'ended_at', h.ended_at,
+             'live_rev', h.live_rev, 'server_now', now()),
+    'slots', coalesce((select jsonb_agg(jsonb_build_object('position', s.position, 'entry_id', s.entry_id, 'vest_colour', s.vest_colour,
+             'modifier', s.modifier, 'flagged_out', s.flagged_out) order by s.position) from public.heat_slots s where s.heat_id = h.id), '[]'),
+    'attempts', coalesce((select jsonb_agg(jsonb_build_object('id', a.id, 'entry_id', a.entry_id, 'seq', a.seq, 'direction', a.direction,
+             'category_key', a.category_key, 'trick_name', a.trick_name, 'status', a.status, 'height_m', a.height_m,
+             'possible_duplicate_of', a.possible_duplicate_of, 'created_at', a.created_at) order by a.created_at)
+             from public.trick_attempts a where a.heat_id = h.id and a.deleted_at is null), '[]'),
+    'scores', coalesce((select jsonb_agg(jsonb_build_object('attempt_id', t.attempt_id, 'seat_no', pm.seat_no, 'criteria', t.criteria,
+             'score', t.score, 'missed', t.missed))
+             from public.trick_scores t
+             join public.trick_attempts a on a.id = t.attempt_id and a.deleted_at is null
+             join public.panel_members pm on pm.panel_id = d.panel_id and pm.judge_seat_id = t.judge_seat_id
+             where t.heat_id = h.id), '[]'),
+    'impressions', coalesce((select jsonb_agg(jsonb_build_object('entry_id', i.entry_id, 'seat_no', pm.seat_no, 'value', i.value))
+             from public.impression_scores i
+             join public.panel_members pm on pm.panel_id = d.panel_id and pm.judge_seat_id = i.judge_seat_id
+             where i.heat_id = h.id), '[]'),
+    'penalties', coalesce((select jsonb_agg(jsonb_build_object('entry_id', p.entry_id, 'type', p.type, 'value', p.value))
+             from public.penalties p where p.heat_id = h.id), '[]')
+  );
+end $$;
+
+-- What the public pages show (Phase 6 only renders it): the heats of every division with their seats, and for each published heat that is not held its latest
+-- result. A held heat is listed (so the timetable can say "result to be announced") but carries no seats' places, totals or breakdown. A cancelled heat names its re-run.
+create or replace function public.get_public_results(p_event uuid) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare ev public.events;
+begin
+  select * into ev from public.events where id = p_event;
+  if not found or not private.event_is_public(p_event) then return jsonb_build_object('allowed', false); end if;
+  return jsonb_build_object(
+    'allowed', true,
+    'event', jsonb_build_object('id', ev.id, 'name', ev.name, 'slug', ev.slug, 'timezone', ev.timezone),
+    'poll_sec', coalesce((ev.settings ->> 'livePollSec')::int, 7),
+    'divisions', coalesce((select jsonb_agg(jsonb_build_object(
+        'id', d.id, 'name', d.name, 'sort_order', d.sort_order,
+        'attempt_display', coalesce(d.live_settings ->> 'spectatorAttemptDisplay', 'number_score'),
+        'rounds', coalesce((select jsonb_agg(jsonb_build_object(
+            'id', r.id, 'name', r.name, 'short_name', r.short_name, 'sort_order', r.sort_order,
+            'heats', coalesce((select jsonb_agg(jsonb_build_object(
+                'id', h.id, 'number', h.number, 'suffix', h.number_suffix, 'name', h.name, 'status', h.status, 'held', h.publish_hold,
+                'rerun_of', h.rerun_of, 'rerun_id', (select x.id from public.heats x where x.rerun_of = h.id and x.status <> 'cancelled' order by x.created_at desc limit 1),
+                'published_at', h.published_at,
+                'slots', coalesce((select jsonb_agg(jsonb_build_object('position', s.position, 'entry_id', s.entry_id, 'vest_colour', s.vest_colour,
+                         'modifier', s.modifier, 'source', s.source) order by s.position) from public.heat_slots s where s.heat_id = h.id), '[]'),
+                'results', case when h.status = 'published' and not h.publish_hold then coalesce((
+                    select jsonb_agg(jsonb_build_object('entry_id', x.entry_id, 'place', x.place, 'total', x.total, 'percent', x.percent, 'breakdown', x.breakdown, 'version', x.version)
+                                     order by x.place nulls last)
+                      from public.heat_results x where x.heat_id = h.id and x.version = (select max(y.version) from public.heat_results y where y.heat_id = h.id)), '[]'::jsonb)
+                  else '[]'::jsonb end
+              ) order by h.number, coalesce(h.number_suffix, '')) from public.heats h where h.round_id = r.id), '[]'::jsonb)
+          ) order by r.sort_order) from public.rounds r where r.division_id = d.id), '[]'::jsonb)
+      ) order by d.sort_order) from public.divisions d where d.event_id = p_event), '[]'::jsonb),
+    'entries', coalesce((select jsonb_agg(jsonb_build_object('id', e.id, 'division_id', e.division_id, 'first_name', e.first_name, 'last_name', e.last_name,
+        'nationality', e.nationality, 'identifiers', e.identifiers)) from public.v_entries e where e.event_id = p_event and e.status = 'confirmed'), '[]'::jsonb));
+end $$;
+
+-- ---------------------------------------------------------------- 5. Re-run heat: one transaction
+-- Cancels the heat (a heat that ran keeps its real times) and creates its re-run in the same round: same riders, seats, Lycra colours and timing, number the same
+-- with suffix R (R2 …). Later seats follow the re-run because the heat's draw id moves to it; the stored draw stays locked and unchanged. Riders left out keep a
+-- seat marked DSQ or DNS (so they are ranked last, DSQ below DNS, and the ladder needs no special case). The server computes the new run order with the pure
+-- insertRerunItem and passes it in; the function only accepts it when the plan is as the server saw it and exactly one item was added.
+create or replace function public.rerun_heat(
+  p_heat uuid, p_new_heat uuid, p_suffix text, p_name text, p_reason text, p_leave_out jsonb, p_plan uuid, p_plan_items jsonb, p_plan_updated_at timestamptz
+) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  h public.heats; n public.heats; v_eff text; s public.heat_slots; v_mod text; plan public.schedule_plans;
+  v_old jsonb; v_new jsonb; v_left jsonb := '[]'::jsonb; k text;
+begin
+  select * into h from public.heats where id = p_heat for update;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not private.can_run_heat(h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if p_reason is null or char_length(btrim(p_reason)) < 3 then raise exception 'REASON_REQUIRED'; end if;
+  v_eff := private.heat_effective_status(p_heat);
+  if h.status = 'published' then raise exception 'HEAT_PUBLISHED'; end if;
+  if h.status = 'cancelled' then raise exception 'HEAT_CANCELLED'; end if;
+  if v_eff = 'scheduled' then raise exception 'HEAT_NOT_STARTED'; end if;
+  if p_suffix is null or p_suffix !~ '^R[0-9]*$' or p_name is null or btrim(p_name) = '' or char_length(p_name) > 40 then raise exception 'BAD_RERUN_NAME'; end if;
+  if p_leave_out is not null and jsonb_typeof(p_leave_out) <> 'object' then raise exception 'BAD_LEAVE_OUT'; end if;
+  for k, v_mod in select key, value #>> '{}' from jsonb_each(coalesce(p_leave_out, '{}'::jsonb)) loop
+    if v_mod not in ('DSQ', 'DNS') then raise exception 'BAD_LEAVE_OUT'; end if;
+    if not exists (select 1 from public.heat_slots x where x.heat_id = p_heat and x.entry_id = k::uuid) then raise exception 'RIDER_NOT_IN_HEAT'; end if;
+  end loop;
+
+  -- the run order: the plan must be as the server saw it, and exactly one item (the re-run's) may have been added
+  if p_plan is not null then
+    select * into plan from public.schedule_plans where id = p_plan for update;
+    if not found or plan.event_id <> h.event_id then raise exception 'PLAN_NOT_FOUND'; end if;
+    if p_plan_updated_at is not null and plan.updated_at is distinct from p_plan_updated_at then raise exception 'PLAN_CHANGED'; end if;
+    if p_plan_items is null or jsonb_typeof(p_plan_items) <> 'array'
+       or jsonb_array_length(p_plan_items) <> jsonb_array_length(plan.items) + 1
+       or (select count(*) from jsonb_array_elements(p_plan_items) i where i ->> 'heatId' = p_new_heat::text) <> 1
+       or (select coalesce(jsonb_agg(i order by ord), '[]'::jsonb) from jsonb_array_elements(p_plan_items) with ordinality t(i, ord) where i ->> 'heatId' is distinct from p_new_heat::text) <> plan.items then
+      raise exception 'BAD_PLAN_ITEMS';
+    end if;
+  end if;
+
+  -- 1. cancel the original (a started heat keeps started_at and gets an end)
+  perform public.cancel_heat(p_heat, p_reason);
+
+  -- 2. the re-run takes the heat's place in the draw: the draw id moves to it (the stored draw is not edited)
+  perform set_config('app.draw_bypass', '1', true);
+  update public.heats set draw_uid = null where id = p_heat;
+  insert into public.heats (id, round_id, division_id, event_id, number, number_suffix, name, status, duration_sec, warm_up_sec, draw_uid, rerun_of, manual_override)
+  values (p_new_heat, h.round_id, h.division_id, h.event_id, h.number, p_suffix, btrim(p_name), 'scheduled', h.duration_sec, h.warm_up_sec, h.draw_uid, p_heat, h.manual_override)
+  returning * into n;
+  for s in select * from public.heat_slots where heat_id = p_heat order by position loop
+    v_mod := coalesce(p_leave_out ->> s.entry_id::text, case when s.modifier in ('DNS', 'DSQ') then s.modifier end);
+    insert into public.heat_slots (heat_id, position, entry_id, vest_colour, source, modifier) values (n.id, s.position, s.entry_id, s.vest_colour, s.source, v_mod);
+    if p_leave_out ? s.entry_id::text then v_left := v_left || jsonb_build_array(jsonb_build_object('entry_id', s.entry_id, 'as', p_leave_out ->> s.entry_id::text)); end if;
+  end loop;
+  perform set_config('app.draw_bypass', '', true);
+
+  -- 3. the run order
+  if p_plan is not null then update public.schedule_plans set items = p_plan_items where id = p_plan; end if;
+
+  -- 4. one audit line
+  v_old := jsonb_build_object('heat', p_heat, 'status', h.status);
+  v_new := jsonb_build_object('heat', n.id, 'suffix', p_suffix, 'name', btrim(p_name), 'left_out', v_left, 'plan', p_plan);
+  perform private.head_audit(h.event_id, 'heats', n.id, 'heat_rerun', v_old, v_new, p_reason);
+  return jsonb_build_object('new_heat', n.id, 'suffix', p_suffix, 'name', btrim(p_name));
+end $$;
+
+-- ---------------------------------------------------------------- 6. Practice heat (the seed of the later simulator)
+-- An organiser plays a made-up spotter feed on a simulation event. The same path as add_attempt, including the cap.
+create or replace function public.practice_add_attempt(p_heat uuid, p_entry uuid, p_trick jsonb, p_status text) returns public.trick_attempts
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; ev public.events;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not private.is_event_organiser(h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  select * into ev from public.events where id = h.event_id;
+  if not ev.is_simulation then raise exception 'NOT_A_SIMULATION'; end if;
+  return public.add_attempt(p_heat, p_entry, gen_random_uuid(), p_status, p_trick ->> 'direction', p_trick ->> 'category', p_trick ->> 'name',
+                            coalesce(p_trick -> 'parts', '{}'::jsonb), null, 'builder', null, null);
+end $$;
+
+-- ---------------------------------------------------------------- 7. grants, and Demo Cup is a simulation
+revoke all on function public.set_heat_public_live, public.rerun_heat, public.practice_add_attempt from public, anon;
+grant execute on function public.set_heat_public_live, public.rerun_heat, public.practice_add_attempt to authenticated;
+revoke all on function public.get_public_results from public;
+grant execute on function public.get_public_results to anon, authenticated;
+grant execute on all functions in schema private to anon, authenticated, service_role;
+
+-- Its riders are fictional and its PINs are public, so it never appears on the public site (docs/PLAN-phase-5 §12).
+update public.events set is_simulation = true where slug = 'demo-cup';
+
+-- Wherever the Demo event is (re)created (the demo seed function or a script), it is a simulation again.
+create or replace function private.demo_event_is_simulation() returns trigger language plpgsql as $$
+begin
+  new.is_simulation := true;
+  return new;
+end $$;
+create trigger b_demo_simulation before insert on public.events for each row when (new.slug = 'demo-cup') execute function private.demo_event_is_simulation();
+
+
+-- ===== migration 20261006100000_phase6_public.sql =====
+-- Phase 6: the public event site. Everything a visitor reads goes through these functions (docs/06 §7, §8; docs/PLAN-phase-5 §8).
+--
+--   1. Wind calls: `set_wind_call` (head judge or organiser, audited) and the value "clear"
+--   2. get_public_site      the event page: event, organisation, branding, the settings a visitor needs, the wind banner, the divisions
+--   3. get_public_timetable the active run orders and the heats of drawn divisions, with what the timetable engine needs to estimate times
+--   4. get_public_results   (replaces the Phase 5c version) results of released heats only, WITHOUT judge-level marks, seats fed from a held heat masked,
+--                           the highest jump of a division
+--   5. get_public_draw      the stored draw, cleaned: no result and no rider that comes from a heat that is not released
+--   6. get_public_rules     scoring model and format of each division, for the generated rules page
+--   7. a visitor can no longer read heat_slots from the table (the functions above are the door)
+--
+-- A draft draw (division not locked) is never public: its heats, seats and ladder do not appear.
+
+-- ---------------------------------------------------------------- 1. wind calls
+do $$
+declare c text;
+begin
+  for c in select conname from pg_constraint where conrelid = 'public.wind_calls'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%status%' loop
+    execute format('alter table public.wind_calls drop constraint %I', c);
+  end loop;
+end $$;
+alter table public.wind_calls add constraint wind_calls_status_check check (status in ('red', 'amber', 'green', 'clear'));
+
+create or replace function public.set_wind_call(p_event uuid, p_status text, p_message text) returns public.wind_calls
+language plpgsql security definer set search_path = '' as $$
+declare w public.wind_calls; v_msg text := nullif(btrim(coalesce(p_message, '')), '');
+begin
+  if not private.can_run_heat(p_event) then raise exception 'NOT_ALLOWED'; end if;
+  if p_status is null or p_status not in ('red', 'amber', 'green', 'clear') then raise exception 'BAD_WIND_STATUS'; end if;
+  if v_msg is not null and char_length(v_msg) > 140 then raise exception 'MESSAGE_TOO_LONG'; end if;
+  insert into public.wind_calls (event_id, status, message) values (p_event, p_status, v_msg) returning * into w;
+  perform private.head_audit(p_event, 'wind_calls', w.id, 'wind_call_set', null, jsonb_build_object('status', p_status, 'message', v_msg), null);
+  return w;
+end $$;
+revoke all on function public.set_wind_call from public, anon;
+grant execute on function public.set_wind_call to authenticated;
+
+-- ---------------------------------------------------------------- helpers
+-- The heat of a stored draw by its stable id (uid, or id when it has none).
+create or replace function private.draw_heat(p_draw jsonb, p_uid text) returns jsonb
+language sql immutable set search_path = '' as $$
+  select h || jsonb_build_object('_round', r ->> 'id')
+  from jsonb_array_elements(coalesce(p_draw -> 'rounds', '[]'::jsonb)) r, jsonb_array_elements(coalesce(r -> 'heats', '[]'::jsonb)) h
+  where coalesce(h ->> 'uid', h ->> 'id') = p_uid
+  limit 1;
+$$;
+
+-- Is a heat released: published and not held back.
+create or replace function private.heat_released(p_division uuid, p_uid text) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.heats x where x.division_id = p_division and x.draw_uid = p_uid and x.status = 'published' and not x.publish_hold);
+$$;
+
+-- Where a seat's rider comes from ({round, heat, place}) is public only when that heat is released (a heat that advances without riding is always known;
+-- "heat 0" is a place across every heat of a round, known when all of them are released). A source that cannot be read is treated as not released.
+create or replace function private.source_visible(p_division uuid, p_draw jsonb, p_source jsonb) returns boolean
+language plpgsql stable security definer set search_path = '' as $$
+declare v_round text; v_idx int; v_uid text; v_bye boolean;
+begin
+  if p_source is null or jsonb_typeof(p_source) <> 'object' then return true; end if;
+  if not (p_source ? 'round') or not (p_source ? 'heat') or jsonb_typeof(p_source -> 'heat') <> 'number' then return false; end if;
+  v_round := p_source ->> 'round';
+  v_idx := (p_source ->> 'heat')::int;
+  if v_idx = 0 then
+    return not exists (
+      select 1 from jsonb_array_elements(coalesce(p_draw -> 'rounds', '[]'::jsonb)) r, jsonb_array_elements(coalesce(r -> 'heats', '[]'::jsonb)) h
+      where r ->> 'id' = v_round and coalesce((h ->> 'bye')::boolean, false) = false
+        and not private.heat_released(p_division, coalesce(h ->> 'uid', h ->> 'id')));
+  end if;
+  select coalesce(h ->> 'uid', h ->> 'id'), coalesce((h ->> 'bye')::boolean, false) into v_uid, v_bye
+  from jsonb_array_elements(coalesce(p_draw -> 'rounds', '[]'::jsonb)) r, jsonb_array_elements(coalesce(r -> 'heats', '[]'::jsonb)) h
+  where r ->> 'id' = v_round and (h ->> 'index')::int = v_idx
+  limit 1;
+  if v_uid is null then return false; end if;
+  if v_bye then return true; end if;
+  return private.heat_released(p_division, v_uid);
+end $$;
+
+-- A result's breakdown for the public: the panel's scores and the counting, never an individual judge's mark, who missed, or who was an outlier.
+create or replace function private.public_breakdown(b jsonb) returns jsonb
+language sql immutable set search_path = '' as $$
+  select jsonb_build_object(
+    'status', b -> 'status', 'total', b -> 'total', 'totalLabel', b -> 'totalLabel', 'components', b -> 'components',
+    'counted', coalesce((select jsonb_agg(jsonb_build_object('attemptSeq', c -> 'attemptSeq', 'score', c -> 'score')) from jsonb_array_elements(coalesce(b -> 'counted', '[]'::jsonb)) c), '[]'::jsonb),
+    'allAttempts', coalesce((select jsonb_agg(jsonb_build_object(
+        'seq', a -> 'seq', 'status', a -> 'status', 'trickName', a -> 'trickName', 'categoryKey', a -> 'categoryKey', 'score', a -> 'score',
+        'counted', a -> 'counted', 'panelScore', a #> '{panel,score}', 'ignored', a -> 'ignored', 'repeatIndex', a -> 'repeatIndex')
+        order by (a ->> 'seq')::int) from jsonb_array_elements(coalesce(b -> 'allAttempts', '[]'::jsonb)) a), '[]'::jsonb),
+    'impression', case when jsonb_typeof(b -> 'impression') = 'object' then jsonb_build_object('score', b #> '{impression,score}') else null end,
+    'landedCount', b -> 'landedCount', 'attemptCount', b -> 'attemptCount', 'attemptCap', b -> 'attemptCap', 'modifiers', coalesce(b -> 'modifiers', '[]'::jsonb));
+$$;
+
+-- ---------------------------------------------------------------- 2. the event page
+create or replace function public.get_public_site(p_slug text) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare ev public.events; org public.organisations; w public.wind_calls; v_banner boolean;
+begin
+  select e.* into ev from public.events e where e.slug = lower(coalesce(p_slug, '')) and private.event_is_public(e.id);
+  if not found then return jsonb_build_object('found', false); end if;
+  select * into org from public.organisations where id = ev.organisation_id;
+  v_banner := coalesce((ev.settings ->> 'windCallBanner')::boolean, true);
+  select * into w from public.wind_calls where event_id = ev.id order by created_at desc, id desc limit 1;
+  return jsonb_build_object(
+    'found', true,
+    'event', jsonb_build_object('id', ev.id, 'name', ev.name, 'slug', ev.slug, 'location', ev.location, 'start_date', ev.start_date, 'end_date', ev.end_date,
+                                'status', ev.status, 'timezone', ev.timezone),
+    'organisation', jsonb_build_object('name', org.name, 'slug', org.slug, 'logo_url', org.branding ->> 'logoUrl'),
+    'branding', jsonb_build_object('logoUrl', ev.branding ->> 'logoUrl', 'sponsors', coalesce(ev.branding -> 'sponsors', '[]'::jsonb)),
+    'settings', jsonb_build_object(
+      'windCallBanner', v_banner,
+      'readyCallMin', coalesce((ev.settings ->> 'readyCallMin')::int, 15),
+      'livePollSec', coalesce((ev.settings ->> 'livePollSec')::int, 7),
+      'screenRotateSec', coalesce((ev.settings ->> 'screenRotateSec')::int, 20),
+      'externalLeaderboards', coalesce(ev.settings -> 'externalLeaderboards', '[]'::jsonb),
+      'identification', ev.settings -> 'identification',
+      'publicLiveScores', coalesce(ev.settings ->> 'publicLiveScores', 'after_publish')),
+    'wind', case when w.id is null or w.status = 'clear' or not v_banner then null
+                 else jsonb_build_object('status', w.status, 'message', w.message, 'at', w.created_at) end,
+    'divisions', coalesce((select jsonb_agg(jsonb_build_object(
+        'id', d.id, 'name', d.name, 'description', d.description, 'sort_order', d.sort_order, 'identification', d.identification,
+        'attempt_display', coalesce(d.live_settings ->> 'spectatorAttemptDisplay', 'number_score'),
+        'show_percent', coalesce((d.live_settings ->> 'showPercentOfMax')::boolean, false),
+        'drawn', d.draw_locked_at is not null) order by d.sort_order, d.created_at)
+      from public.divisions d where d.event_id = ev.id), '[]'::jsonb));
+end $$;
+
+-- ---------------------------------------------------------------- 3. the timetable
+create or replace function public.get_public_timetable(p_event uuid) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare ev public.events;
+begin
+  select * into ev from public.events where id = p_event;
+  if not found or not private.event_is_public(p_event) then return jsonb_build_object('allowed', false); end if;
+  return jsonb_build_object(
+    'allowed', true, 'server_now', now(), 'timezone', ev.timezone,
+    'poll_sec', coalesce((ev.settings ->> 'livePollSec')::int, 7),
+    'ready_call_min', coalesce((ev.settings ->> 'readyCallMin')::int, 15),
+    'plans', coalesce((select jsonb_agg(jsonb_build_object('id', p.id, 'day', p.day, 'name', p.name, 'items', p.items, 'anchors', p.anchors,
+                'actual_starts', p.actual_starts, 'hold', p.hold, 'defaults', p.defaults) order by p.day, p.created_at)
+              from public.schedule_plans p where p.event_id = p_event and p.active), '[]'::jsonb),
+    'divisions', coalesce((select jsonb_agg(jsonb_build_object('id', d.id, 'name', d.name, 'sort_order', d.sort_order) order by d.sort_order, d.created_at)
+              from public.divisions d where d.event_id = p_event and d.draw_locked_at is not null), '[]'::jsonb),
+    'rounds', coalesce((select jsonb_agg(jsonb_build_object('id', r.id, 'division_id', r.division_id, 'name', r.name, 'short_name', r.short_name, 'sort_order', r.sort_order) order by r.sort_order)
+              from public.rounds r join public.divisions d on d.id = r.division_id where d.event_id = p_event and d.draw_locked_at is not null), '[]'::jsonb),
+    'heats', coalesce((select jsonb_agg(jsonb_build_object(
+          'id', h.id, 'division_id', h.division_id, 'round_id', h.round_id, 'number', h.number, 'suffix', h.number_suffix, 'name', h.name,
+          'status', h.status, 'effective_status', private.heat_effective_status(h.id), 'held', h.publish_hold,
+          'started_at', h.started_at, 'ended_at', h.ended_at, 'paused_at', h.paused_at, 'paused_total_sec', h.paused_total_sec,
+          'duration_sec', h.duration_sec, 'warm_up_sec', h.warm_up_sec, 'rerun_of', h.rerun_of,
+          'round_last', coalesce((dh.j ->> 'roundLast')::boolean, h.number = (select max(x.number) from public.heats x where x.round_id = h.round_id)),
+          'break_after_heat_min', (dh.j ->> 'breakAfterHeatMin')::numeric, 'break_after_round_min', (dh.j ->> 'breakAfterRoundMin')::numeric)
+          order by d.sort_order, r.sort_order, h.number, coalesce(h.number_suffix, ''))
+        from public.heats h
+        join public.divisions d on d.id = h.division_id
+        join public.rounds r on r.id = h.round_id
+        cross join lateral (select private.draw_heat(d.draw, h.draw_uid) as j) dh
+        where h.event_id = p_event and d.draw_locked_at is not null), '[]'::jsonb));
+end $$;
+
+-- ---------------------------------------------------------------- 4. results
+create or replace function public.get_public_results(p_event uuid) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare ev public.events;
+begin
+  select * into ev from public.events where id = p_event;
+  if not found or not private.event_is_public(p_event) then return jsonb_build_object('allowed', false); end if;
+  return jsonb_build_object(
+    'allowed', true,
+    'event', jsonb_build_object('id', ev.id, 'name', ev.name, 'slug', ev.slug, 'timezone', ev.timezone),
+    'poll_sec', coalesce((ev.settings ->> 'livePollSec')::int, 7),
+    'divisions', coalesce((select jsonb_agg(jsonb_build_object(
+        'id', d.id, 'name', d.name, 'sort_order', d.sort_order,
+        'attempt_display', coalesce(d.live_settings ->> 'spectatorAttemptDisplay', 'number_score'),
+        'show_percent', coalesce((d.live_settings ->> 'showPercentOfMax')::boolean, false),
+        'highest_jump', (select jsonb_build_object('height_m', a.height_m, 'entry_id', a.entry_id, 'heat_id', a.heat_id, 'trick_name', a.trick_name)
+                           from public.trick_attempts a join public.heats hh on hh.id = a.heat_id
+                          where hh.division_id = d.id and hh.status = 'published' and not hh.publish_hold
+                            and a.deleted_at is null and a.status = 'landed' and a.height_m is not null
+                          order by a.height_m desc, a.created_at limit 1),
+        'rounds', coalesce((select jsonb_agg(jsonb_build_object(
+            'id', r.id, 'name', r.name, 'short_name', r.short_name, 'sort_order', r.sort_order,
+            'heats', coalesce((select jsonb_agg(jsonb_build_object(
+                'id', h.id, 'number', h.number, 'suffix', h.number_suffix, 'name', h.name, 'draw_uid', h.draw_uid, 'status', h.status, 'held', h.publish_hold,
+                'rerun_of', h.rerun_of, 'rerun_id', (select x.id from public.heats x where x.rerun_of = h.id and x.status <> 'cancelled' order by x.created_at desc limit 1),
+                'published_at', h.published_at,
+                'draw_round', private.draw_heat(d.draw, h.draw_uid) ->> '_round', 'draw_index', (private.draw_heat(d.draw, h.draw_uid) ->> 'index')::int,
+                'slots', coalesce((select jsonb_agg(jsonb_build_object('position', s.position,
+                           'entry_id', case when s.source is not null and not private.source_visible(d.id, d.draw, s.source) then null else s.entry_id end,
+                           'vest_colour', s.vest_colour, 'modifier', s.modifier, 'source', s.source) order by s.position)
+                           from public.heat_slots s where s.heat_id = h.id), '[]'::jsonb),
+                'results', case when h.status = 'published' and not h.publish_hold then coalesce((
+                    select jsonb_agg(jsonb_build_object('entry_id', x.entry_id, 'place', x.place, 'total', x.total,
+                                                        'percent', case when coalesce((d.live_settings ->> 'showPercentOfMax')::boolean, false) then x.percent else null end,
+                                                        'breakdown', private.public_breakdown(x.breakdown), 'version', x.version)
+                                     order by x.place nulls last)
+                      from public.heat_results x where x.heat_id = h.id and x.version = (select max(y.version) from public.heat_results y where y.heat_id = h.id)), '[]'::jsonb)
+                  else '[]'::jsonb end
+              ) order by h.number, coalesce(h.number_suffix, '')) from public.heats h where h.round_id = r.id), '[]'::jsonb)
+          ) order by r.sort_order) from public.rounds r where r.division_id = d.id), '[]'::jsonb)
+      ) order by d.sort_order, d.created_at) from public.divisions d where d.event_id = p_event and d.draw_locked_at is not null), '[]'::jsonb),
+    'entries', coalesce((select jsonb_agg(jsonb_build_object('id', e.id, 'division_id', e.division_id, 'first_name', e.first_name, 'last_name', e.last_name,
+        'nationality', e.nationality, 'identifiers', e.identifiers))
+        from public.v_entries e join public.divisions d on d.id = e.division_id
+        where e.event_id = p_event and e.status = 'confirmed' and d.draw_locked_at is not null), '[]'::jsonb));
+end $$;
+
+-- ---------------------------------------------------------------- 5. the stored draw, cleaned for the public
+-- Same shape the engine reads, so the public ladder and placings use the engine the organiser's Draw step uses. Removed: results of heats that are not released,
+-- the rider of any seat fed from a heat that is not released (the seat keeps its source, so it reads "1st H1"), seat histories (they carry earlier totals), seat
+-- arrivals, warnings and the shuffle seed. A heat that is not released reads "pending".
+create or replace function private.public_draw(p_division uuid) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  d public.divisions; rr record; hh record; ss record;
+  v_rounds jsonb := '[]'::jsonb; v_heats jsonb; v_slots jsonb; v_results jsonb := '{}'::jsonb;
+  v_round jsonb; v_heat jsonb; v_slot jsonb; v_uid text; v_rel boolean; k text;
+begin
+  select * into d from public.divisions where id = p_division;
+  if not found or d.draw is null or d.draw_locked_at is null then return null; end if;
+  for rr in select value from jsonb_array_elements(coalesce(d.draw -> 'rounds', '[]'::jsonb)) loop
+    v_round := rr.value;
+    v_heats := '[]'::jsonb;
+    for hh in select value from jsonb_array_elements(coalesce(v_round -> 'heats', '[]'::jsonb)) loop
+      v_heat := hh.value;
+      v_uid := coalesce(v_heat ->> 'uid', v_heat ->> 'id');
+      v_rel := coalesce((v_heat ->> 'bye')::boolean, false) or private.heat_released(p_division, v_uid);
+      v_slots := '[]'::jsonb;
+      for ss in select value from jsonb_array_elements(coalesce(v_heat -> 'slots', '[]'::jsonb)) loop
+        v_slot := ss.value - 'history';
+        if v_slot ? 'from' and not private.source_visible(p_division, d.draw, v_slot -> 'from') then v_slot := v_slot - 'entrantId' - 'seed'; end if;
+        v_slots := v_slots || jsonb_build_array(v_slot);
+      end loop;
+      v_heat := jsonb_set(v_heat, '{slots}', v_slots);
+      if not v_rel then v_heat := jsonb_set(v_heat, '{status}', '"pending"'::jsonb); end if;
+      if v_rel and not coalesce((v_heat ->> 'bye')::boolean, false) and d.draw -> 'results' ? (v_heat ->> 'id') then
+        v_results := v_results || jsonb_build_object(v_heat ->> 'id', d.draw -> 'results' -> (v_heat ->> 'id'));
+      end if;
+      v_heats := v_heats || jsonb_build_array(v_heat);
+    end loop;
+    v_round := jsonb_set(jsonb_set(v_round, '{heats}', v_heats), '{arrivals}', '[]'::jsonb);
+    v_rounds := v_rounds || jsonb_build_array(v_round);
+  end loop;
+  return jsonb_build_object('templateId', d.draw -> 'templateId', 'template', d.draw -> 'template', 'overrides', '{}'::jsonb, 'status', d.draw -> 'status',
+                            'entrants', coalesce(d.draw -> 'entrants', '[]'::jsonb), 'seedOrder', coalesce(d.draw -> 'seedOrder', '[]'::jsonb),
+                            'rounds', v_rounds, 'results', v_results, 'warnings', '[]'::jsonb);
+end $$;
+
+create or replace function public.get_public_draw(p_event uuid) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not private.event_is_public(p_event) then return jsonb_build_object('allowed', false); end if;
+  return jsonb_build_object('allowed', true,
+    'divisions', coalesce((select jsonb_agg(jsonb_build_object('id', d.id, 'name', d.name, 'draw', private.public_draw(d.id)) order by d.sort_order, d.created_at)
+                           from public.divisions d where d.event_id = p_event), '[]'::jsonb));
+end $$;
+
+-- ---------------------------------------------------------------- 6. the rules page
+create or replace function public.get_public_rules(p_event uuid) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not private.event_is_public(p_event) then return jsonb_build_object('allowed', false); end if;
+  return jsonb_build_object('allowed', true,
+    'divisions', coalesce((select jsonb_agg(jsonb_build_object(
+        'id', d.id, 'name', d.name, 'description', d.description, 'identification', d.identification,
+        'scoring_model', sm.json, 'scoring_overrides', d.scoring_overrides,
+        'format_template', coalesce(d.draw -> 'template', ft.json), 'format_params', case when d.draw -> 'template' is null then d.format_params else '{}'::jsonb end,
+        'riders', (select count(*) from public.entries e where e.division_id = d.id and e.status = 'confirmed'))
+        order by d.sort_order, d.created_at)
+      from public.divisions d
+      left join public.scoring_models sm on sm.id = d.scoring_model_id
+      left join public.format_templates ft on ft.id = d.format_template_id
+      where d.event_id = p_event), '[]'::jsonb));
+end $$;
+
+-- ---------------------------------------------------------------- 7. grants
+revoke all on function public.get_public_site, public.get_public_timetable, public.get_public_results, public.get_public_draw, public.get_public_rules from public;
+grant execute on function public.get_public_site, public.get_public_timetable, public.get_public_results, public.get_public_draw, public.get_public_rules to anon, authenticated;
+grant execute on all functions in schema private to anon, authenticated, service_role;
+
+-- Seats name riders, and a seat fed from a held heat names the winner: a visitor reads them only through get_public_results and get_public_draw.
+revoke select on public.heat_slots from anon;
+drop policy if exists public_read on public.heat_slots;
+
+
+-- ===== migration 20261006100100_events_insert_simulation_grant.sql =====
+-- Fix for a Phase 5c slip found while testing Phase 6: the Event step sends `is_simulation` when it creates an event, but only UPDATE had been granted on that column,
+-- so "Create event" failed with "permission denied for table events" (saving an existing event worked). Organisers may set it when they create the event; the
+-- existing guard (SIMULATION_LOCKED) still refuses to change it once a heat has started.
+grant insert (is_simulation) on public.events to authenticated;
+
+
+-- ===== migration 20261006100200_live_scores_server_only.sql =====
+-- Judge-level scores never reach a visitor (owner decision, 1 Oct 2026). The live-heat function used to return each judge's score by seat number so a phone could add
+-- up the totals; the totals are now worked out on the server (same scoring engine as the head judge's console) and only the panel's result reaches the public page.
+--
+--   get_live_heat_for_server(heat)  the full live view (attempts, scores by seat number, Impression scores, penalties); service role only
+--   get_public_live_heat(heat)      what a visitor may call: the heat's clock, seats and attempts, and no scores of any kind
+-- Seats and organisers still read per-judge scores through their own row policies, unchanged.
+
+alter function public.get_public_live_heat(uuid) rename to get_live_heat_for_server;
+revoke all on function public.get_live_heat_for_server(uuid) from public, anon, authenticated;
+grant execute on function public.get_live_heat_for_server(uuid) to service_role;
+
+create function public.get_public_live_heat(p_heat uuid) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select case when coalesce((r ->> 'allowed')::boolean, false) then r - 'scores' - 'impressions' - 'penalties' else r end
+  from (select public.get_live_heat_for_server(p_heat) as r) x;
+$$;
+revoke all on function public.get_public_live_heat(uuid) from public;
+grant execute on function public.get_public_live_heat(uuid) to anon, authenticated, service_role;
+
+
+-- ===== migration 20261006100300_ready_call_one_setting.sql =====
+-- The ready call (minutes before a heat that riders are called) is set in one place only: the Event step. It used to exist twice: on every run order (default 15, the one
+-- the timetables showed) and on the event (default 10, which nothing read). The run order's copy goes away; existing values are carried over like this:
+--
+--   1. an event that holds a value somebody chose (anything but the old unused default of 10) keeps it
+--   2. an event holding 10 or nothing takes the value its run order stored (the first run order by day), so the times people saw do not change
+--   3. an event with neither simply gets the new default of 15
+--   4. the run orders no longer store it
+update public.events e
+set settings = jsonb_set(coalesce(e.settings, '{}'::jsonb), '{readyCallMin}', to_jsonb(p.value))
+from (
+  select distinct on (event_id) event_id, (defaults ->> 'readyCallMin')::numeric as value
+  from public.schedule_plans
+  where defaults ? 'readyCallMin' and (defaults ->> 'readyCallMin') ~ '^[0-9]+(\.[0-9]+)?$'
+  order by event_id, day, created_at
+) p
+where p.event_id = e.id and (not (e.settings ? 'readyCallMin') or e.settings -> 'readyCallMin' = '10'::jsonb);
+
+update public.events set settings = settings - 'readyCallMin' where settings -> 'readyCallMin' = '10'::jsonb;
+
+update public.schedule_plans set defaults = defaults - 'readyCallMin' where defaults ? 'readyCallMin';
+
+
+-- ===== migration 20261006100400_public_ready_call_default.sql =====
+-- The public functions' fallback for the ready call is 15 minutes (the Event step's default), not the old 10. A fresh database gets 15 from the earlier migration
+-- file; this brings a database that already ran it up to date, and does nothing where the text is already right.
+do $$
+declare d text;
+begin
+  for d in
+    select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname in ('get_public_site', 'get_public_timetable')
+  loop
+    execute replace(d, $s$'readyCallMin')::int, 10)$s$, $s$'readyCallMin')::int, 15)$s$);
+  end loop;
+end $$;
+
+
+-- ===== migration 20261007100000_run_order_follows_heats.sql =====
+-- A run-order row names its heat by id inside the plan's JSON. When a draw is made again (save_division_draw) heats that are no longer in it
+-- are deleted, and the rows pointing at them stayed behind: the timetable then had no heat and no length for them (Demo Cup, rows r12 and r13).
+-- From now on a deleted heat takes its row out of every run order of its event, together with the row's pin and recorded start.
+
+create or replace function private.prune_heat_from_plans() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  update public.schedule_plans p set
+    anchors = p.anchors - coalesce((select array_agg(i ->> 'id') from jsonb_array_elements(p.items) i where i ->> 'heatId' = old.id::text), '{}'::text[]),
+    actual_starts = p.actual_starts - coalesce((select array_agg(i ->> 'id') from jsonb_array_elements(p.items) i where i ->> 'heatId' = old.id::text), '{}'::text[]),
+    items = coalesce((select jsonb_agg(i order by n) from jsonb_array_elements(p.items) with ordinality as t(i, n) where i ->> 'heatId' is distinct from old.id::text), '[]'::jsonb)
+  where p.event_id = old.event_id and p.items @> jsonb_build_array(jsonb_build_object('heatId', old.id::text));
+  return old;
+end $$;
+
+create trigger heat_leaves_plans after delete on public.heats for each row execute function private.prune_heat_from_plans();
+
+-- One-off: rows that already point at a heat that no longer exists.
+update public.schedule_plans p set
+  anchors = p.anchors - coalesce((select array_agg(i ->> 'id') from jsonb_array_elements(p.items) i where i ->> 'kind' = 'heat' and i ->> 'heatId' is not null and not exists (select 1 from public.heats h where h.id::text = i ->> 'heatId')), '{}'::text[]),
+  actual_starts = p.actual_starts - coalesce((select array_agg(i ->> 'id') from jsonb_array_elements(p.items) i where i ->> 'kind' = 'heat' and i ->> 'heatId' is not null and not exists (select 1 from public.heats h where h.id::text = i ->> 'heatId')), '{}'::text[]),
+  items = coalesce((select jsonb_agg(i order by n) from jsonb_array_elements(p.items) with ordinality as t(i, n) where not (i ->> 'kind' = 'heat' and i ->> 'heatId' is not null and not exists (select 1 from public.heats h where h.id::text = i ->> 'heatId'))), '[]'::jsonb)
+where exists (select 1 from jsonb_array_elements(p.items) i where i ->> 'kind' = 'heat' and i ->> 'heatId' is not null and not exists (select 1 from public.heats h where h.id::text = i ->> 'heatId'));
+
+
+-- ===== migration 20261008100000_phase7a_reset.sql =====
+-- Phase 7a-1: Reset event and Restore (docs/PLAN-phase-7a.md step 8d)
+--   1. divisions.draw_at_lock: the draw as it was when it was locked, kept only while no heat of the division had left "scheduled"
+--   2. lock / unlock write and clear that copy; the draw guard protects it like the draw itself
+--   3. event_reset_snapshots: everything a Reset wipes, as JSON, for 30 days; organisers and platform owners can read it, only the functions write it
+--   4. reset_event_preview: what a Reset would do (counts, who is running, which divisions cannot be reset, whether a reason is needed)
+--   5. reset_event: one transaction: checks, snapshot, wipe, the ladder back to its locked draw, one audit line
+--   6. restore_event_reset: platform owners only, while no heat has started since the reset and before the snapshot expires
+-- It adds a column, a table and functions and changes the lock and unlock functions; it changes no existing data.
+
+-- ---------------------------------------------------------------- 1. the copy
+alter table public.divisions add column draw_at_lock jsonb;   -- not granted to anon (the column grant list of the stored draw does not include new columns)
+
+create or replace function private.division_draw_guard() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if private.draw_bypass() then return new; end if;
+  if (new.draw, new.draw_locked_at, new.draw_at_lock) is distinct from (old.draw, old.draw_locked_at, old.draw_at_lock) then raise exception 'DRAW_FUNCTION_ONLY'; end if;
+  return new;
+end $$;
+
+-- ---------------------------------------------------------------- 2. lock and unlock
+-- The copy is only trusted when it was taken before any heat ran: unlocking after a heat started is allowed, and by then the stored draw holds results and later-round riders.
+-- A cancelled heat that never started does not count.
+create or replace function public.lock_division_draw(p_division uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+declare d public.divisions; v_clean boolean;
+begin
+  select * into d from public.divisions where id = p_division for update;
+  if not found or not private.is_event_organiser(d.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if d.draw is null then raise exception 'NO_DRAW'; end if;
+  if d.draw_locked_at is not null then return; end if;
+  v_clean := not exists (
+    select 1 from public.heats h
+    where h.division_id = p_division and (h.status <> 'scheduled' or h.started_at is not null) and not (h.status = 'cancelled' and h.started_at is null));
+  perform set_config('app.draw_bypass', '1', true);
+  update public.divisions
+     set draw_locked_at = now(),
+         draw = jsonb_set(draw, '{status}', '"locked"'),
+         draw_at_lock = case when v_clean then jsonb_set(draw, '{status}', '"locked"') else null end
+   where id = p_division;
+  perform set_config('app.draw_bypass', '', true);
+  perform private.draw_audit(d.event_id, p_division, 'draw_locked', jsonb_build_object('after', jsonb_build_object('locked', true, 'starting_draw_kept', v_clean)));
+end $$;
+
+create or replace function public.unlock_division_draw(p_division uuid, p_reason text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare d public.divisions;
+begin
+  select * into d from public.divisions where id = p_division for update;
+  if not found or not private.is_event_organiser(d.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if p_reason is null or char_length(btrim(p_reason)) < 5 then raise exception 'REASON_REQUIRED'; end if;
+  if d.draw_locked_at is null then return; end if;
+  perform set_config('app.draw_bypass', '1', true);
+  update public.divisions set draw_locked_at = null, draw = jsonb_set(draw, '{status}', '"draft"'), draw_at_lock = null where id = p_division;
+  perform set_config('app.draw_bypass', '', true);
+  perform private.draw_audit(d.event_id, p_division, 'draw_unlocked', jsonb_build_object('before', jsonb_build_object('locked', true), 'after', jsonb_build_object('locked', false)), p_reason);
+end $$;
+revoke all on function public.lock_division_draw, public.unlock_division_draw from public, anon, authenticated;
+grant execute on function public.lock_division_draw, public.unlock_division_draw to authenticated;
+
+-- ---------------------------------------------------------------- 3. snapshots
+create table public.event_reset_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events on delete cascade,
+  organisation_id uuid not null,
+  taken_at timestamptz not null default now(),
+  taken_by uuid,
+  expires_at timestamptz not null default (now() + interval '30 days'),
+  payload jsonb not null,
+  restored_at timestamptz
+);
+create index on public.event_reset_snapshots (event_id);
+alter table public.event_reset_snapshots enable row level security;
+grant select on public.event_reset_snapshots to authenticated;
+create policy read_own on public.event_reset_snapshots for select to authenticated using (private.is_event_organiser(event_id) or private.is_platform_owner());
+
+-- ---------------------------------------------------------------- helpers
+-- The divisions' starting draw: the copy taken at lock time; an unlocked draw that no heat has left yet is its own starting draw.
+create or replace function private.reset_division_source(d public.divisions) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select coalesce(
+    d.draw_at_lock,
+    case when d.draw_locked_at is null and not exists (select 1 from public.heats h where h.division_id = d.id and (h.status <> 'scheduled' or h.started_at is not null) and not (h.status = 'cancelled' and h.started_at is null)) then d.draw end);
+$$;
+
+-- "Ever shown publicly": a result was published and is not held (or was released), or a heat ran with live scores on (its own switch, else the division's, else the event's).
+create or replace function private.event_ever_public(p_event uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from public.heats h
+    join public.divisions d on d.id = h.division_id
+    join public.events e on e.id = h.event_id
+    where h.event_id = p_event and (
+      (exists (select 1 from public.heat_results r where r.heat_id = h.id)
+        and (not h.publish_hold or exists (select 1 from public.audit_log a where a.row_id = h.id and a.action = 'publish_release')))
+      or (h.started_at is not null and coalesce(h.public_live, coalesce(nullif(d.live_settings ->> 'publicLiveScores', ''), nullif(e.settings ->> 'publicLiveScores', ''), 'after_publish') = 'live'))));
+$$;
+
+create or replace function private.reset_counts(p_event uuid) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object(
+    'heats', (select count(*) from public.heats where event_id = p_event and (status <> 'scheduled' or started_at is not null)),
+    'all_heats', (select count(*) from public.heats where event_id = p_event),
+    'reruns', (select count(*) from public.heats where event_id = p_event and rerun_of is not null),
+    'attempts', (select count(*) from public.trick_attempts where event_id = p_event),
+    'scores', (select count(*) from public.trick_scores where event_id = p_event) + (select count(*) from public.impression_scores where event_id = p_event),
+    'published_results', (select count(distinct heat_id) from public.heat_results where event_id = p_event));
+$$;
+
+-- ---------------------------------------------------------------- 4. preview
+create or replace function public.reset_event_preview(p_event uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare ev public.events; v_running text;
+begin
+  select * into ev from public.events where id = p_event;
+  if not found or not (private.is_event_organiser(p_event) or private.is_platform_owner()) then raise exception 'NOT_ALLOWED'; end if;
+  select coalesce(h.name, 'Heat ' || h.number::text) into v_running from public.heats h where h.event_id = p_event and h.status in ('running', 'paused') order by h.started_at limit 1;
+  return jsonb_build_object(
+    'slug', ev.slug,
+    'counts', private.reset_counts(p_event),
+    'running', v_running,
+    'ever_public', private.event_ever_public(p_event),
+    'divisions', coalesce((select jsonb_agg(jsonb_build_object(
+        'id', d.id, 'name', d.name, 'drawn', d.draw is not null, 'has_copy', private.reset_division_source(d) is not null,
+        'heat_left_scheduled', exists (select 1 from public.heats h where h.division_id = d.id and (h.status <> 'scheduled' or h.started_at is not null) and not (h.status = 'cancelled' and h.started_at is null)))
+        order by d.sort_order) from public.divisions d where d.event_id = p_event), '[]'::jsonb));
+end $$;
+
+-- ---------------------------------------------------------------- 5. reset
+-- p_draws: [{ division, draw, projection }] for every drawn division. `draw` must be the division's starting draw as the database holds it; `projection` is what the
+-- pure drawProjection makes of it (rounds, heats, seats). Same pattern as save_division_draw: TypeScript computes, the function checks and writes.
+create or replace function public.reset_event(p_event uuid, p_slug text, p_reason text, p_draws jsonb) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  ev public.events; d public.divisions; v_run text; v_missing text; v_counts jsonb; v_snapshot uuid; v_public boolean; v_item jsonb;
+  h jsonb; s jsonb; v_round uuid; v_heat public.heats; v_id uuid; v_kept uuid[]; v_expected int; v_role text;
+begin
+  select * into ev from public.events where id = p_event for update;
+  if not found or not (private.is_event_organiser(p_event) or private.is_platform_owner()) then raise exception 'NOT_ALLOWED'; end if;
+  if lower(btrim(coalesce(p_slug, ''))) <> ev.slug then raise exception 'SLUG_MISMATCH'; end if;
+
+  delete from public.event_reset_snapshots where expires_at < now();
+
+  select coalesce(x.name, 'Heat ' || x.number::text) into v_run from public.heats x where x.event_id = p_event and x.status in ('running', 'paused') order by x.started_at limit 1;
+  if v_run is not null then raise exception 'HEAT_RUNNING: %', v_run; end if;
+
+  select string_agg(dv.name, ', ' order by dv.sort_order) into v_missing from public.divisions dv where dv.event_id = p_event and dv.draw is not null and private.reset_division_source(dv) is null;
+  if v_missing is not null then raise exception 'DRAW_COPY_MISSING: %', v_missing; end if;
+
+  v_public := private.event_ever_public(p_event);
+  if v_public and (p_reason is null or char_length(btrim(p_reason)) < 5) then raise exception 'REASON_REQUIRED'; end if;
+
+  -- every drawn division comes with its starting draw and the rows that draw is made of
+  if p_draws is null or jsonb_typeof(p_draws) <> 'array' then raise exception 'BAD_PROJECTION'; end if;
+  for d in select * from public.divisions dv where dv.event_id = p_event and dv.draw is not null loop
+    select i into v_item from jsonb_array_elements(p_draws) i where i ->> 'division' = d.id::text limit 1;
+    if v_item is null or (v_item -> 'draw') is distinct from private.reset_division_source(d) then raise exception 'BAD_PROJECTION'; end if;
+  end loop;
+
+  v_counts := private.reset_counts(p_event);
+
+  -- the snapshot: every row that is about to change, so Restore can put it back
+  insert into public.event_reset_snapshots (event_id, organisation_id, taken_by, payload)
+  values (p_event, ev.organisation_id, auth.uid(), jsonb_build_object(
+    'heats', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.heats x where x.event_id = p_event),
+    'heat_slots', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.heat_slots x where x.event_id = p_event),
+    'trick_attempts', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.trick_attempts x where x.event_id = p_event),
+    'trick_scores', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.trick_scores x where x.event_id = p_event),
+    'impression_scores', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.impression_scores x where x.event_id = p_event),
+    'penalties', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.penalties x where x.event_id = p_event),
+    'attempt_flags', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.attempt_flags x where x.event_id = p_event),
+    'judge_sheets', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.judge_sheets x where x.event_id = p_event),
+    'heat_decisions', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.heat_decisions x where x.event_id = p_event),
+    'heat_results', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.heat_results x where x.event_id = p_event),
+    'schedule_plans', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.schedule_plans x where x.event_id = p_event),
+    'divisions', (select coalesce(jsonb_agg(jsonb_build_object('id', x.id, 'draw', x.draw)), '[]'::jsonb) from public.divisions x where x.event_id = p_event)))
+  returning id into v_snapshot;
+
+  -- the wipe (published results and tie decisions are append-only: the transaction-local purge switch lets this function, and only inside this transaction, delete them)
+  perform set_config('app.allow_purge', 'on', true);
+  perform set_config('app.draw_bypass', '1', true);
+  delete from public.trick_scores where event_id = p_event;
+  delete from public.attempt_flags where event_id = p_event;
+  delete from public.impression_scores where event_id = p_event;
+  delete from public.penalties where event_id = p_event;
+  delete from public.judge_sheets where event_id = p_event;
+  delete from public.heat_decisions where event_id = p_event;
+  delete from public.heat_results where event_id = p_event;
+  delete from public.trick_attempts where event_id = p_event;
+  perform set_config('app.allow_purge', '', true);
+
+  -- a re-run goes (its run order row with it, by the run order trigger); the original returns to "scheduled" with its draw id back below
+  delete from public.heats where event_id = p_event and rerun_of is not null;
+  update public.heats set status = 'scheduled', started_at = null, paused_at = null, paused_total_sec = 0, ended_at = null, published_at = null, reopened_at = null,
+         publish_hold = false, public_live = null, flag_out = null
+   where event_id = p_event;
+  update public.heat_slots set place = null, total = null, breakdown = null, flagged_out = false where event_id = p_event;
+  update public.schedule_plans set actual_starts = '{}'::jsonb, hold = null where event_id = p_event;
+
+  -- the ladder back to its starting draw: seats, rounds' later riders and heat numbers as the draw made them
+  for d in select * from public.divisions dv where dv.event_id = p_event and dv.draw is not null order by dv.sort_order loop
+    select i into v_item from jsonb_array_elements(p_draws) i where i ->> 'division' = d.id::text limit 1;
+    v_kept := '{}';
+    v_expected := jsonb_array_length(v_item -> 'projection' -> 'heats');
+    update public.heats set number = -number - 1000000 where division_id = d.id and number > 0;
+    for h in select * from jsonb_array_elements(v_item -> 'projection' -> 'heats') loop
+      select id into v_round from public.rounds where division_id = d.id and spec ->> 'key' = h ->> 'round_key';
+      if v_round is null then raise exception 'BAD_PROJECTION'; end if;
+      select * into v_heat from public.heats where division_id = d.id and draw_uid = h ->> 'uid';
+      if not found then
+        select * into v_heat from public.heats where division_id = d.id and draw_uid is null and round_id = v_round and (number = (h ->> 'number')::int or number = -(h ->> 'number')::int - 1000000) and number_suffix is null;
+      end if;
+      if not found then raise exception 'BAD_PROJECTION'; end if;
+      update public.heats set round_id = v_round, number = (h ->> 'number')::int, draw_uid = h ->> 'uid', name = nullif(h ->> 'name', ''),
+             duration_sec = (h ->> 'duration_sec')::int, warm_up_sec = coalesce((h ->> 'warm_up_sec')::int, 0), manual_override = coalesce((h ->> 'manual_override')::boolean, false)
+       where id = v_heat.id;
+      v_kept := v_kept || v_heat.id;
+      delete from public.heat_slots where heat_id = v_heat.id;
+      for s in select * from jsonb_array_elements(h -> 'slots') loop
+        insert into public.heat_slots (heat_id, position, entry_id, vest_colour, source, modifier)
+        values (v_heat.id, (s ->> 'position')::int, nullif(s ->> 'entry_id', '')::uuid, nullif(s ->> 'vest_colour', ''), s -> 'source', case when s ->> 'modifier' = 'DNS' then 'DNS' end);
+      end loop;
+    end loop;
+    if (select count(*) from public.heats where division_id = d.id and id <> all (v_kept)) > 0 or array_length(v_kept, 1) is distinct from v_expected then raise exception 'BAD_PROJECTION'; end if;
+    update public.divisions set draw = v_item -> 'draw' where id = d.id;
+  end loop;
+  perform set_config('app.draw_bypass', '', true);
+
+  v_role := case when private.is_event_organiser(p_event) then 'organiser' else 'platform_owner' end;
+  insert into public.audit_log (event_id, organisation_id, actor_user_id, action, table_name, row_id, before, after, reason)
+  values (p_event, ev.organisation_id, auth.uid(), 'event_reset', 'events', p_event, v_counts, jsonb_build_object('role', v_role, 'snapshot', v_snapshot, 'ever_public', v_public), nullif(btrim(coalesce(p_reason, '')), ''));
+
+  return v_counts || jsonb_build_object('snapshot', v_snapshot);
+end $$;
+
+-- ---------------------------------------------------------------- 6. restore
+create or replace function public.restore_event_reset(p_snapshot uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare sn public.event_reset_snapshots; ev public.events; pl jsonb; d jsonb;
+begin
+  if not private.is_platform_owner() then raise exception 'NOT_ALLOWED'; end if;
+  delete from public.event_reset_snapshots where expires_at < now() and id <> p_snapshot;
+  select * into sn from public.event_reset_snapshots where id = p_snapshot for update;
+  if not found then raise exception 'SNAPSHOT_NOT_FOUND'; end if;
+  if sn.expires_at < now() then
+    delete from public.event_reset_snapshots where id = p_snapshot;
+    raise exception 'SNAPSHOT_EXPIRED';
+  end if;
+  select * into ev from public.events where id = sn.event_id for update;
+  if exists (select 1 from public.heats h where h.event_id = sn.event_id and (h.status <> 'scheduled' or h.started_at is not null)) then raise exception 'HEAT_STARTED'; end if;
+  pl := sn.payload;
+
+  perform set_config('app.draw_bypass', '1', true);
+  -- heats: the draw ids are freed first (a re-run and its original shared one), then every heat takes its saved row; a deleted re-run is put back
+  update public.heats set draw_uid = null where event_id = sn.event_id;
+  update public.heats h set round_id = r.round_id, number = r.number, number_suffix = r.number_suffix, name = r.name, status = r.status, duration_sec = r.duration_sec, warm_up_sec = r.warm_up_sec,
+         draw_uid = r.draw_uid, started_at = r.started_at, paused_at = r.paused_at, paused_total_sec = r.paused_total_sec, ended_at = r.ended_at, published_at = r.published_at,
+         reopened_at = r.reopened_at, publish_hold = r.publish_hold, public_live = r.public_live, flag_out = r.flag_out, manual_override = r.manual_override, rerun_of = null
+    from jsonb_populate_recordset(null::public.heats, pl -> 'heats') r where h.id = r.id;
+  insert into public.heats select r.* from jsonb_populate_recordset(null::public.heats, pl -> 'heats') r where r.rerun_of is null and not exists (select 1 from public.heats x where x.id = r.id);
+  insert into public.heats select r.* from jsonb_populate_recordset(null::public.heats, pl -> 'heats') r where r.rerun_of is not null and not exists (select 1 from public.heats x where x.id = r.id);
+  update public.heats h set rerun_of = r.rerun_of from jsonb_populate_recordset(null::public.heats, pl -> 'heats') r where h.id = r.id and r.rerun_of is not null;
+  delete from public.heat_slots where event_id = sn.event_id;
+  insert into public.heat_slots select r.* from jsonb_populate_recordset(null::public.heat_slots, pl -> 'heat_slots') r;
+  for d in select * from jsonb_array_elements(pl -> 'divisions') loop
+    update public.divisions set draw = d -> 'draw' where id = (d ->> 'id')::uuid;
+  end loop;
+  perform set_config('app.draw_bypass', '', true);
+
+  insert into public.trick_attempts select r.* from jsonb_populate_recordset(null::public.trick_attempts, pl -> 'trick_attempts') r;
+  insert into public.trick_scores select r.* from jsonb_populate_recordset(null::public.trick_scores, pl -> 'trick_scores') r;
+  insert into public.attempt_flags select r.* from jsonb_populate_recordset(null::public.attempt_flags, pl -> 'attempt_flags') r;
+  insert into public.impression_scores select r.* from jsonb_populate_recordset(null::public.impression_scores, pl -> 'impression_scores') r;
+  insert into public.penalties select r.* from jsonb_populate_recordset(null::public.penalties, pl -> 'penalties') r;
+  insert into public.judge_sheets select r.* from jsonb_populate_recordset(null::public.judge_sheets, pl -> 'judge_sheets') r;
+  insert into public.heat_decisions select r.* from jsonb_populate_recordset(null::public.heat_decisions, pl -> 'heat_decisions') r;
+  insert into public.heat_results select r.* from jsonb_populate_recordset(null::public.heat_results, pl -> 'heat_results') r;
+  update public.schedule_plans p set items = r.items, anchors = r.anchors, actual_starts = r.actual_starts, hold = r.hold
+    from jsonb_populate_recordset(null::public.schedule_plans, pl -> 'schedule_plans') r where p.id = r.id;
+
+  insert into public.audit_log (event_id, organisation_id, actor_user_id, action, table_name, row_id, before, after, reason)
+  values (sn.event_id, ev.organisation_id, auth.uid(), 'event_reset_restored', 'events', sn.event_id, null, jsonb_build_object('snapshot', sn.id, 'taken_at', sn.taken_at), null);
+  delete from public.event_reset_snapshots where id = p_snapshot;
+  return jsonb_build_object('event', sn.event_id, 'taken_at', sn.taken_at);
+end $$;
+
+revoke all on function public.reset_event_preview, public.reset_event, public.restore_event_reset from public, anon, authenticated;
+grant execute on function public.reset_event_preview, public.reset_event, public.restore_event_reset to authenticated;
+
+
+-- ===== migration 20261008100100_phase7a_reset_purge.sql =====
+-- Phase 7a-1: expired Reset snapshots are removed when /admin/health loads (and by every Reset and Restore call), so no scheduled job is needed.
+-- (A snapshot that is refused as expired cannot delete itself: the refusal rolls the transaction back.)
+create or replace function public.purge_expired_reset_snapshots() returns int
+language plpgsql security definer set search_path = '' as $$
+declare n int;
+begin
+  if not private.is_platform_admin() then raise exception 'NOT_ALLOWED'; end if;
+  delete from public.event_reset_snapshots where expires_at < now();
+  get diagnostics n = row_count;
+  return n;
+end $$;
+revoke all on function public.purge_expired_reset_snapshots from public, anon, authenticated;
+grant execute on function public.purge_expired_reset_snapshots to authenticated;
+
+
+-- ===== migration 20261008120000_console_v2_rerun_cancelled.sql =====
+-- Console v2 (head judge console redesign): Re-run heat also works on a cancelled heat.
+-- Before: rerun_heat refused a cancelled heat (HEAT_CANCELLED). Now a cancelled heat that had started can be re-run, once: the same one transaction,
+-- the same riders, seats and Lycra colours, the same "3R" naming and run-order rules. cancel_heat on an already-cancelled heat is a no-op, so the
+-- cancel step inside the function does nothing and the one audit line ("heat_rerun") still names the reason. Who may: head seat or organiser, as before.
+-- Nothing else changes; no data is touched.
+create or replace function public.rerun_heat(
+  p_heat uuid, p_new_heat uuid, p_suffix text, p_name text, p_reason text, p_leave_out jsonb, p_plan uuid, p_plan_items jsonb, p_plan_updated_at timestamptz
+) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  h public.heats; n public.heats; v_eff text; s public.heat_slots; v_mod text; plan public.schedule_plans;
+  v_old jsonb; v_new jsonb; v_left jsonb := '[]'::jsonb; k text;
+begin
+  select * into h from public.heats where id = p_heat for update;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  if not private.can_run_heat(h.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if p_reason is null or char_length(btrim(p_reason)) < 3 then raise exception 'REASON_REQUIRED'; end if;
+  v_eff := private.heat_effective_status(p_heat);
+  if h.status = 'published' then raise exception 'HEAT_PUBLISHED'; end if;
+  -- Console v2: a cancelled heat that ran can be re-run, once (the re-run takes its place in the draw). A cancelled heat that already has its re-run cannot.
+  if h.status = 'cancelled' then
+    if h.started_at is null then raise exception 'HEAT_NOT_STARTED'; end if;
+    if exists (select 1 from public.heats r where r.rerun_of = p_heat) then raise exception 'HEAT_ALREADY_RERUN'; end if;
+  elsif v_eff = 'scheduled' then raise exception 'HEAT_NOT_STARTED'; end if;
+  if p_suffix is null or p_suffix !~ '^R[0-9]*$' or p_name is null or btrim(p_name) = '' or char_length(p_name) > 40 then raise exception 'BAD_RERUN_NAME'; end if;
+  if p_leave_out is not null and jsonb_typeof(p_leave_out) <> 'object' then raise exception 'BAD_LEAVE_OUT'; end if;
+  for k, v_mod in select key, value #>> '{}' from jsonb_each(coalesce(p_leave_out, '{}'::jsonb)) loop
+    if v_mod not in ('DSQ', 'DNS') then raise exception 'BAD_LEAVE_OUT'; end if;
+    if not exists (select 1 from public.heat_slots x where x.heat_id = p_heat and x.entry_id = k::uuid) then raise exception 'RIDER_NOT_IN_HEAT'; end if;
+  end loop;
+
+  -- the run order: the plan must be as the server saw it, and exactly one item (the re-run's) may have been added
+  if p_plan is not null then
+    select * into plan from public.schedule_plans where id = p_plan for update;
+    if not found or plan.event_id <> h.event_id then raise exception 'PLAN_NOT_FOUND'; end if;
+    if p_plan_updated_at is not null and plan.updated_at is distinct from p_plan_updated_at then raise exception 'PLAN_CHANGED'; end if;
+    if p_plan_items is null or jsonb_typeof(p_plan_items) <> 'array'
+       or jsonb_array_length(p_plan_items) <> jsonb_array_length(plan.items) + 1
+       or (select count(*) from jsonb_array_elements(p_plan_items) i where i ->> 'heatId' = p_new_heat::text) <> 1
+       or (select coalesce(jsonb_agg(i order by ord), '[]'::jsonb) from jsonb_array_elements(p_plan_items) with ordinality t(i, ord) where i ->> 'heatId' is distinct from p_new_heat::text) <> plan.items then
+      raise exception 'BAD_PLAN_ITEMS';
+    end if;
+  end if;
+
+  -- 1. cancel the original (a started heat keeps started_at and gets an end)
+  perform public.cancel_heat(p_heat, p_reason);
+
+  -- 2. the re-run takes the heat's place in the draw: the draw id moves to it (the stored draw is not edited)
+  perform set_config('app.draw_bypass', '1', true);
+  update public.heats set draw_uid = null where id = p_heat;
+  insert into public.heats (id, round_id, division_id, event_id, number, number_suffix, name, status, duration_sec, warm_up_sec, draw_uid, rerun_of, manual_override)
+  values (p_new_heat, h.round_id, h.division_id, h.event_id, h.number, p_suffix, btrim(p_name), 'scheduled', h.duration_sec, h.warm_up_sec, h.draw_uid, p_heat, h.manual_override)
+  returning * into n;
+  for s in select * from public.heat_slots where heat_id = p_heat order by position loop
+    v_mod := coalesce(p_leave_out ->> s.entry_id::text, case when s.modifier in ('DNS', 'DSQ') then s.modifier end);
+    insert into public.heat_slots (heat_id, position, entry_id, vest_colour, source, modifier) values (n.id, s.position, s.entry_id, s.vest_colour, s.source, v_mod);
+    if p_leave_out ? s.entry_id::text then v_left := v_left || jsonb_build_array(jsonb_build_object('entry_id', s.entry_id, 'as', p_leave_out ->> s.entry_id::text)); end if;
+  end loop;
+  perform set_config('app.draw_bypass', '', true);
+
+  -- 3. the run order
+  if p_plan is not null then update public.schedule_plans set items = p_plan_items where id = p_plan; end if;
+
+  -- 4. one audit line
+  v_old := jsonb_build_object('heat', p_heat, 'status', h.status);
+  v_new := jsonb_build_object('heat', n.id, 'suffix', p_suffix, 'name', btrim(p_name), 'left_out', v_left, 'plan', p_plan);
+  perform private.head_audit(h.event_id, 'heats', n.id, 'heat_rerun', v_old, v_new, p_reason);
+  return jsonb_build_object('new_heat', n.id, 'suffix', p_suffix, 'name', btrim(p_name));
+end $$;
+
+revoke all on function public.rerun_heat from public, anon;
+grant execute on function public.rerun_heat to authenticated;
+
+
+-- ===== migration 20261009100000_simulator.sql =====
+-- The event simulator (owner brief of 1 Oct 2026): run any event as a rehearsal, play it automatically, press scenario buttons, look at each role's screen, reset.
+--
+--   1. columns and tables: events.simulation_of, sim_control (speed, state, settings), sim_seats (virtual or real), sim_log (what happened), sim_clock (fast clock),
+--      sim_baseline (the locked draw a Reset returns to)
+--   2. a simulation event is visible to its own organiser through the public functions (the "preview"), and to nobody else
+--   3. clone_event_as_simulation: divisions, rules, riders, officials, locked draws and run order copied into a new event flagged is_simulation
+--   4. the control functions (speed, state, settings, ticks, log, stats, officials virtual or real)
+--   5. play-as-seat functions: a virtual spotter or judge acts through add_attempt, submit_trick_score, submit_impression and submit_sheet, exactly like a phone
+--   6. the fast clock: a simulated heat's length is divided by the speed when it starts, so every phone and the public page see the same shorter clock
+--   7. View as: give one seat to the organiser's own sign-in; the preview of a heat's live view
+--   8. baseline, Reset (simulation events only) and delete (clones only)
+--
+-- Everything here is refused unless the event is a simulation (NOT_A_SIMULATION) and the caller is an organiser of it (NOT_ALLOWED).
+-- Reset here is the simulation-only version; the general Reset of Phase 7a-1 is not on main yet (docs/STATUS.md has the note to unify them).
+
+-- ---------------------------------------------------------------- 1. columns and tables
+alter table public.events add column simulation_of uuid references public.events on delete set null;
+create index on public.events (simulation_of);
+grant select (simulation_of) on public.events to authenticated;
+
+create table public.sim_control (
+  event_id uuid primary key references public.events on delete cascade,
+  speed int not null default 1 check (speed in (1, 5, 10, 20)),
+  state text not null default 'stopped' check (state in ('stopped', 'playing', 'paused')),
+  config jsonb not null default '{}',     -- how the virtual people behave; validated by the app (src/lib/simulator/config.ts)
+  stats jsonb not null default '{}',
+  blocker text,                           -- the sentence the virtual head judge stopped at, if any
+  run_no int not null default 1,          -- bumped by Reset, so "the last run's numbers" start again
+  tick_lock_until timestamptz,            -- one tick at a time, whichever tab sends it
+  last_tick_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.sim_seats (
+  seat_id uuid primary key references public.judge_seats on delete cascade,
+  event_id uuid not null references public.events on delete cascade,
+  mode text not null default 'virtual' check (mode in ('virtual', 'real')),
+  virtual_user uuid references auth.users on delete set null,   -- the login the simulator plays this seat with
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index on public.sim_seats (event_id);
+create index on public.sim_seats (virtual_user);
+
+create table public.sim_log (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events on delete cascade,
+  run_no int not null default 1,
+  at timestamptz not null default now(),
+  kind text not null check (kind in ('info', 'scenario', 'scenario_failed', 'blocker', 'heat', 'reset')),
+  scenario text,
+  text text not null,
+  data jsonb not null default '{}'
+);
+create index on public.sim_log (event_id, at desc);
+create index on public.sim_log (event_id, scenario);
+
+-- the original length of each heat that started at a speed above ×1 (Reset puts it back)
+create table public.sim_clock (
+  heat_id uuid primary key references public.heats on delete cascade,
+  event_id uuid not null references public.events on delete cascade,
+  original_sec int not null,
+  speed int not null,
+  started_at timestamptz not null default now()
+);
+create index on public.sim_clock (event_id);
+
+-- the locked draw as it was before anything was played: heats, seats, run order
+create table public.sim_baseline (
+  event_id uuid primary key references public.events on delete cascade,
+  taken_at timestamptz not null default now(),
+  divisions jsonb not null,
+  heats jsonb not null,
+  slots jsonb not null,
+  plans jsonb not null
+);
+
+alter table public.sim_control enable row level security;
+alter table public.sim_seats enable row level security;
+alter table public.sim_log enable row level security;
+alter table public.sim_clock enable row level security;
+alter table public.sim_baseline enable row level security;
+revoke all on public.sim_control, public.sim_seats, public.sim_log, public.sim_clock, public.sim_baseline from anon, authenticated;
+grant select on public.sim_control, public.sim_seats, public.sim_log to authenticated;
+-- written only by the functions below; read by the event's organisers
+create policy org_read on public.sim_control for select to authenticated using (private.is_event_organiser(event_id));
+create policy org_read on public.sim_seats for select to authenticated using (private.is_event_organiser(event_id));
+create policy org_read on public.sim_log for select to authenticated using (private.is_event_organiser(event_id));
+
+create trigger z_updated_at before update on public.sim_control for each row execute function private.set_updated_at();
+create trigger z_updated_at before update on public.sim_seats for each row execute function private.set_updated_at();
+
+-- The one door of every simulator function: the caller is an organiser of the event, and the event is a simulation.
+create or replace function private.sim_guard(p_event uuid) returns public.events
+language plpgsql stable security definer set search_path = '' as $$
+declare ev public.events;
+begin
+  select * into ev from public.events where id = p_event;
+  if not found or not private.is_event_organiser(p_event) then raise exception 'NOT_ALLOWED'; end if;
+  if not ev.is_simulation then raise exception 'NOT_A_SIMULATION'; end if;
+  return ev;
+end $$;
+
+-- ---------------------------------------------------------------- 2. the preview: a simulation event is public to its own organiser only
+-- (the public pages read as that organiser while the preview is on; a visitor and every other organiser still get "not found")
+create or replace function private.event_is_public(p_event uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from public.events e join public.organisations o on o.id = e.organisation_id
+    where e.id = p_event and e.status in ('published', 'live', 'complete') and e.archived_at is null and o.archived_at is null
+      and (not e.is_simulation or private.is_event_organiser(e.id) or current_setting('app.sim_preview', true) = e.id::text));
+$$;
+
+-- ---------------------------------------------------------------- baseline: the locked draw before anything was played
+create or replace function private.sim_capture_baseline(p_event uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.sim_baseline (event_id, divisions, heats, slots, plans)
+  values (
+    p_event,
+    (select coalesce(jsonb_agg(jsonb_build_object('id', d.id, 'draw', d.draw, 'draw_locked_at', d.draw_locked_at, 'status', d.status)), '[]'::jsonb)
+       from public.divisions d where d.event_id = p_event),
+    (select coalesce(jsonb_agg(jsonb_build_object('id', h.id, 'division_id', h.division_id, 'round_id', h.round_id, 'number', h.number, 'number_suffix', h.number_suffix,
+                                                  'name', h.name, 'draw_uid', h.draw_uid, 'duration_sec', h.duration_sec, 'warm_up_sec', h.warm_up_sec,
+                                                  'manual_override', h.manual_override, 'public_live', h.public_live)), '[]'::jsonb)
+       from public.heats h where h.event_id = p_event),
+    (select coalesce(jsonb_agg(jsonb_build_object('heat_id', s.heat_id, 'position', s.position, 'entry_id', s.entry_id, 'vest_colour', s.vest_colour,
+                                                  'source', s.source, 'modifier', s.modifier)), '[]'::jsonb)
+       from public.heat_slots s where s.event_id = p_event),
+    (select coalesce(jsonb_agg(jsonb_build_object('id', p.id, 'day', p.day, 'name', p.name, 'items', p.items, 'anchors', p.anchors, 'defaults', p.defaults, 'active', p.active)), '[]'::jsonb)
+       from public.schedule_plans p where p.event_id = p_event))
+  on conflict (event_id) do update
+    set taken_at = now(), divisions = excluded.divisions, heats = excluded.heats, slots = excluded.slots, plans = excluded.plans;
+end $$;
+
+-- ---------------------------------------------------------------- 3. clone
+-- Replaces every id of one kind in a document with its copy's id (the map lives in the temp table of the clone call).
+create or replace function private.sim_remap(p_doc jsonb, p_kind text) returns jsonb
+language plpgsql set search_path = '' as $$
+declare t text := p_doc::text; m record;
+begin
+  if p_doc is null then return null; end if;
+  for m in select x.old, x.new from pg_temp._sim_map x where x.kind = p_kind loop
+    t := replace(t, m.old::text, m.new::text);
+  end loop;
+  return t::jsonb;
+end $$;
+
+-- A new simulation event with the same divisions, rules, riders, officials (no PINs yet: the server issues fresh ones), locked draws and run order.
+-- Refused when the source has already been run: a played ladder is not a starting point.
+create or replace function public.clone_event_as_simulation(p_event uuid, p_name text default null) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  src public.events; v_new uuid := gen_random_uuid(); v_slug text; v_name text; r record; v_locked int := 0;
+begin
+  select * into src from public.events where id = p_event for share;
+  if not found or not private.is_event_organiser(p_event) then raise exception 'NOT_ALLOWED'; end if;
+  if exists (select 1 from public.heats h where h.event_id = p_event and (h.status <> 'scheduled' or h.started_at is not null or h.rerun_of is not null)) then
+    raise exception 'SOURCE_ALREADY_RUN';
+  end if;
+
+  loop
+    v_slug := left(src.slug, 38) || '-sim-' || substr(md5(random()::text || clock_timestamp()::text), 1, 5);
+    exit when not exists (select 1 from public.events where slug = v_slug);
+  end loop;
+  v_name := left(coalesce(nullif(btrim(coalesce(p_name, '')), ''), src.name || ' (simulation)'), 120);
+
+  perform set_config('app.draw_bypass', '1', true);
+
+  insert into public.events (id, organisation_id, name, slug, location, timezone, start_date, end_date, status, settings, branding, is_simulation, simulation_of)
+  values (v_new, src.organisation_id, v_name, v_slug, src.location, src.timezone, src.start_date, src.end_date, 'published', src.settings, src.branding, true, src.id);
+
+  -- the id maps (old -> new), dropped at the end of the transaction
+  create temp table if not exists _sim_map (kind text not null, old uuid not null, new uuid not null) on commit drop;
+  delete from pg_temp._sim_map where true; -- (the database refuses a delete without a where)
+  insert into pg_temp._sim_map select 'division', d.id, gen_random_uuid() from public.divisions d where d.event_id = p_event;
+  insert into pg_temp._sim_map select 'entry', e.id, gen_random_uuid() from public.entries e where e.event_id = p_event;
+  insert into pg_temp._sim_map select 'round', x.id, gen_random_uuid() from public.rounds x where x.event_id = p_event;
+  insert into pg_temp._sim_map select 'heat', h.id, gen_random_uuid() from public.heats h where h.event_id = p_event;
+  insert into pg_temp._sim_map select 'panel', p.id, gen_random_uuid() from public.panels p where p.event_id = p_event;
+  insert into pg_temp._sim_map select 'seat', s.id, gen_random_uuid() from public.judge_seats s where s.event_id = p_event and s.status = 'active' and s.active;
+
+  -- local trick blocks of the event
+  insert into public.trick_vocabularies (organisation_id, event_id, key, json, content_hash, version, published_at)
+  select t.organisation_id, v_new, t.key, t.json, t.content_hash, t.version, t.published_at from public.trick_vocabularies t where t.event_id = p_event;
+
+  insert into public.divisions (id, event_id, name, sort_order, scoring_model_id, scoring_overrides, format_template_id, format_params, status, description,
+                                identification, trick_base, seed_shuffle_seed, live_settings)
+  select m.new, v_new, d.name, d.sort_order, d.scoring_model_id, d.scoring_overrides, d.format_template_id, d.format_params,
+         case when d.status in ('running', 'complete') then 'ready' else d.status end, d.description, d.identification, d.trick_base, d.seed_shuffle_seed, d.live_settings
+  from public.divisions d join pg_temp._sim_map m on m.kind = 'division' and m.old = d.id where d.event_id = p_event;
+
+  insert into public.panels (id, event_id, name) select m.new, v_new, p.name from public.panels p join pg_temp._sim_map m on m.kind = 'panel' and m.old = p.id;
+  insert into public.judge_seats (id, event_id, name, role, scores, spotter_assignment, status, active)
+  select m.new, v_new, s.name, s.role, s.scores, s.spotter_assignment, 'active', true
+  from public.judge_seats s join pg_temp._sim_map m on m.kind = 'seat' and m.old = s.id;
+  insert into public.panel_members (panel_id, judge_seat_id, seat_no, event_id)
+  select pm.new, sm.new, x.seat_no, v_new
+  from public.panel_members x join pg_temp._sim_map pm on pm.kind = 'panel' and pm.old = x.panel_id join pg_temp._sim_map sm on sm.kind = 'seat' and sm.old = x.judge_seat_id;
+  update public.divisions d set panel_id = pm.new
+  from public.divisions o join pg_temp._sim_map dm on dm.kind = 'division' and dm.old = o.id join pg_temp._sim_map pm on pm.kind = 'panel' and pm.old = o.panel_id
+  where d.id = dm.new;
+
+  insert into public.entries (id, event_id, division_id, rider_id, seed, status, source, paid, consent_at, identifiers, decline_reason)
+  select m.new, v_new, dm.new, e.rider_id, e.seed, e.status, 'manual', e.paid, e.consent_at, e.identifiers, e.decline_reason
+  from public.entries e join pg_temp._sim_map m on m.kind = 'entry' and m.old = e.id join pg_temp._sim_map dm on dm.kind = 'division' and dm.old = e.division_id;
+
+  insert into public.rounds (id, event_id, division_id, sort_order, name, short_name, spec)
+  select m.new, v_new, dm.new, x.sort_order, x.name, x.short_name, x.spec
+  from public.rounds x join pg_temp._sim_map m on m.kind = 'round' and m.old = x.id join pg_temp._sim_map dm on dm.kind = 'division' and dm.old = x.division_id;
+
+  insert into public.heats (id, event_id, division_id, round_id, number, number_suffix, status, duration_sec, manual_override, draw_uid, name, warm_up_sec, public_live)
+  select m.new, v_new, dm.new, rm.new, h.number, h.number_suffix, 'scheduled', h.duration_sec, h.manual_override, h.draw_uid, h.name, h.warm_up_sec, h.public_live
+  from public.heats h join pg_temp._sim_map m on m.kind = 'heat' and m.old = h.id join pg_temp._sim_map dm on dm.kind = 'division' and dm.old = h.division_id
+  join pg_temp._sim_map rm on rm.kind = 'round' and rm.old = h.round_id;
+
+  insert into public.heat_slots (event_id, heat_id, position, entry_id, vest_colour, source, modifier)
+  select v_new, hm.new, s.position, em.new, s.vest_colour, s.source, case when s.modifier = 'DNS' then 'DNS' end
+  from public.heat_slots s join pg_temp._sim_map hm on hm.kind = 'heat' and hm.old = s.heat_id left join pg_temp._sim_map em on em.kind = 'entry' and em.old = s.entry_id;
+
+  -- the stored draw names the riders by entry id: point it at the copies, and lock it when the source was locked
+  for r in select dm.new as new_id, d.draw, d.draw_locked_at from public.divisions d join pg_temp._sim_map dm on dm.kind = 'division' and dm.old = d.id where d.event_id = p_event loop
+    -- draw_at_lock is the copy the general Reset (Phase 7a-1) returns a division to: a copy is a clean start, so it is taken here
+    update public.divisions set draw = private.sim_remap(r.draw, 'entry'), draw_locked_at = case when r.draw_locked_at is not null then now() end,
+      draw_at_lock = case when r.draw_locked_at is not null and r.draw is not null then private.sim_remap(r.draw, 'entry') end where id = r.new_id;
+    if r.draw_locked_at is not null then v_locked := v_locked + 1; end if;
+  end loop;
+
+  -- a spotter's assigned riders are named by entry id too
+  update public.judge_seats set spotter_assignment = private.sim_remap(spotter_assignment, 'entry') where event_id = v_new and spotter_assignment is not null;
+
+  -- the run order: the same items, pointing at the copied heats; nothing started, no hold
+  for r in select p.day, p.name, p.items, p.anchors, p.defaults, p.active from public.schedule_plans p where p.event_id = p_event loop
+    insert into public.schedule_plans (event_id, day, name, items, anchors, actual_starts, hold, defaults, active)
+    values (v_new, r.day, r.name, private.sim_remap(r.items, 'heat'), private.sim_remap(r.anchors, 'heat'), '{}'::jsonb, null, r.defaults, r.active);
+  end loop;
+
+  insert into public.sim_control (event_id) values (v_new);
+  insert into public.sim_seats (seat_id, event_id, mode) select m.new, v_new, 'virtual' from pg_temp._sim_map m where m.kind = 'seat';
+  perform private.sim_capture_baseline(v_new);
+  insert into public.sim_log (event_id, kind, text, data) values (v_new, 'info', 'Copied from ' || src.name, jsonb_build_object('source', src.id));
+  perform private.head_audit(v_new, 'events', v_new, 'simulation_cloned', null, jsonb_build_object('source', src.id, 'slug', v_slug), null);
+  perform set_config('app.draw_bypass', '', true);
+
+  return jsonb_build_object(
+    'event_id', v_new, 'slug', v_slug, 'name', v_name,
+    'divisions', (select count(*) from public.divisions where event_id = v_new),
+    'locked', v_locked,
+    'heats', (select count(*) from public.heats where event_id = v_new),
+    'seats', coalesce((select jsonb_agg(jsonb_build_object('seat_id', s.id, 'name', s.name, 'role', s.role) order by s.role, s.name) from public.judge_seats s where s.event_id = v_new), '[]'::jsonb));
+end $$;
+
+-- ---------------------------------------------------------------- 4. control
+-- Switches an existing simulation event (the Demo) on for the simulator: its settings row, a row per official, and the starting point when nothing has started.
+create or replace function public.sim_enable(p_event uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare v_started boolean;
+begin
+  perform private.sim_guard(p_event);
+  insert into public.sim_control (event_id) values (p_event) on conflict (event_id) do nothing;
+  insert into public.sim_seats (seat_id, event_id, mode)
+  select s.id, p_event, 'virtual' from public.judge_seats s where s.event_id = p_event and s.status = 'active' and s.active on conflict (seat_id) do nothing;
+  select exists (select 1 from public.heats h where h.event_id = p_event and (h.status <> 'scheduled' or h.started_at is not null or h.rerun_of is not null)) into v_started;
+  if not v_started and not exists (select 1 from public.sim_baseline b where b.event_id = p_event) then
+    perform private.sim_capture_baseline(p_event);
+  end if;
+  return jsonb_build_object('has_baseline', exists (select 1 from public.sim_baseline b where b.event_id = p_event), 'played', v_started);
+end $$;
+
+-- Saves the starting point again (only before any heat has started): after the draw was changed, or for an event made before the simulator existed.
+create or replace function public.sim_capture_baseline(p_event uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  perform private.sim_guard(p_event);
+  if exists (select 1 from public.heats h where h.event_id = p_event and (h.status <> 'scheduled' or h.started_at is not null or h.rerun_of is not null)) then raise exception 'HEAT_STARTED'; end if;
+  perform private.sim_capture_baseline(p_event);
+  insert into public.sim_log (event_id, run_no, kind, text) select p_event, c.run_no, 'info', 'Starting point saved' from public.sim_control c where c.event_id = p_event;
+end $$;
+
+-- p_patch keys: speed (1, 5, 10, 20), state (stopped, playing, paused), config, stats, blocker (null clears), tick (stamps the time)
+create or replace function public.sim_set(p_event uuid, p_patch jsonb) returns public.sim_control
+language plpgsql security definer set search_path = '' as $$
+declare c public.sim_control;
+begin
+  perform private.sim_guard(p_event);
+  select * into c from public.sim_control where event_id = p_event for update;
+  if not found then raise exception 'SIM_NOT_ENABLED'; end if;
+  if p_patch ? 'speed' and (p_patch ->> 'speed')::int not in (1, 5, 10, 20) then raise exception 'BAD_SPEED'; end if;
+  if p_patch ? 'state' and (p_patch ->> 'state') not in ('stopped', 'playing', 'paused') then raise exception 'BAD_STATE'; end if;
+  update public.sim_control set
+    speed = coalesce((p_patch ->> 'speed')::int, speed),
+    state = coalesce(p_patch ->> 'state', state),
+    config = case when p_patch ? 'config' then p_patch -> 'config' else config end,
+    stats = case when p_patch ? 'stats' then p_patch -> 'stats' else stats end,
+    blocker = case when p_patch ? 'blocker' then nullif(p_patch ->> 'blocker', '') else blocker end,
+    last_tick_at = case when p_patch ? 'tick' then now() else last_tick_at end
+  where event_id = p_event returning * into c;
+  return c;
+end $$;
+
+-- One official is played by the simulator (virtual) or left to a real person on a phone (real). Real lets go of the seat so a PIN can take it.
+create or replace function public.sim_set_mode(p_seat uuid, p_mode text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare s public.judge_seats; ss public.sim_seats;
+begin
+  select * into s from public.judge_seats where id = p_seat;
+  if not found then raise exception 'SEAT_NOT_FOUND'; end if;
+  perform private.sim_guard(s.event_id);
+  if p_mode not in ('virtual', 'real') then raise exception 'BAD_MODE'; end if;
+  select * into ss from public.sim_seats where seat_id = p_seat;
+  if not found then raise exception 'SIM_NOT_ENABLED'; end if;
+  if p_mode = 'real' and ss.virtual_user is not null and s.auth_user_id = ss.virtual_user then
+    update public.judge_seats set auth_user_id = null where id = p_seat;
+  end if;
+  update public.sim_seats set mode = p_mode where seat_id = p_seat;
+end $$;
+
+-- One tick at a time: true when this call holds the lock for p_ms milliseconds. Also adds a row for any official added since the last tick.
+create or replace function public.sim_tick_lock(p_event uuid, p_ms int default 4000) returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare v_ok boolean;
+begin
+  perform private.sim_guard(p_event);
+  insert into public.sim_seats (seat_id, event_id, mode)
+  select s.id, p_event, 'virtual' from public.judge_seats s where s.event_id = p_event and s.status = 'active' and s.active on conflict (seat_id) do nothing;
+  update public.sim_control set tick_lock_until = now() + make_interval(secs => greatest(p_ms, 500) / 1000.0)
+   where event_id = p_event and (tick_lock_until is null or tick_lock_until < now()) returning true into v_ok;
+  return coalesce(v_ok, false);
+end $$;
+
+create or replace function public.sim_log_add(p_event uuid, p_kind text, p_scenario text, p_text text, p_data jsonb default '{}'::jsonb) returns void
+language plpgsql security definer set search_path = '' as $$
+declare v_run int;
+begin
+  perform private.sim_guard(p_event);
+  select run_no into v_run from public.sim_control where event_id = p_event;
+  insert into public.sim_log (event_id, run_no, kind, scenario, text, data) values (p_event, coalesce(v_run, 1), p_kind, p_scenario, left(p_text, 400), coalesce(p_data, '{}'::jsonb));
+  -- the running commentary is trimmed; scenario lines are the checklist and stay
+  delete from public.sim_log where event_id = p_event and kind in ('info', 'heat', 'blocker')
+    and id in (select id from public.sim_log where event_id = p_event and kind in ('info', 'heat', 'blocker') order by at desc offset 300);
+end $$;
+
+-- The numbers of the current run, for the checklist and the panel.
+create or replace function public.sim_stats(p_event uuid) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare v_run int;
+begin
+  perform private.sim_guard(p_event);
+  select run_no into v_run from public.sim_control where event_id = p_event;
+  return jsonb_build_object(
+    'run', coalesce(v_run, 1),
+    'heats_total', (select count(*) from public.heats h where h.event_id = p_event and h.status <> 'cancelled'),
+    'heats_published', (select count(*) from public.heats h where h.event_id = p_event and h.status = 'published'),
+    'heats_running', (select count(*) from public.heats h where h.event_id = p_event and h.status in ('running', 'paused')),
+    'attempts', (select count(*) from public.trick_attempts a where a.event_id = p_event and a.deleted_at is null),
+    'scores', (select count(*) from public.trick_scores t where t.event_id = p_event),
+    'impressions', (select count(*) from public.impression_scores i where i.event_id = p_event),
+    'blockers', (select count(*) from public.sim_log l where l.event_id = p_event and l.kind = 'blocker' and l.run_no = coalesce(v_run, 1)),
+    'flagged_duplicates', (select count(*) from public.trick_attempts a where a.event_id = p_event and a.possible_duplicate_of is not null and a.deleted_at is null));
+end $$;
+
+-- Binds the simulator's own login to a virtual seat (service role only: the server makes the login and hands it over).
+create or replace function public.sim_bind_virtual(p_seat uuid, p_user uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare s public.judge_seats; ss public.sim_seats;
+begin
+  select * into s from public.judge_seats where id = p_seat;
+  select * into ss from public.sim_seats where seat_id = p_seat;
+  if s.id is null or ss.seat_id is null or ss.mode <> 'virtual' then return jsonb_build_object('ok', false, 'error', 'NOT_VIRTUAL'); end if;
+  if not exists (select 1 from public.events e where e.id = s.event_id and e.is_simulation) then return jsonb_build_object('ok', false, 'error', 'NOT_A_SIMULATION'); end if;
+  -- a person who has the seat keeps it
+  if s.auth_user_id is not null and s.auth_user_id is distinct from ss.virtual_user and s.auth_user_id <> p_user then return jsonb_build_object('ok', false, 'error', 'SEAT_TAKEN'); end if;
+  update public.sim_seats set virtual_user = p_user where seat_id = p_seat;
+  return private.bind_seat(s, p_user, 'simulator', 'the simulator');
+end $$;
+
+-- ---------------------------------------------------------------- 5. play as a seat
+-- The caller is an organiser of a simulation event and the seat is a virtual one the simulator holds right now (not a person's phone).
+create or replace function private.sim_seat_user(p_event uuid, p_seat uuid) returns uuid
+language plpgsql stable security definer set search_path = '' as $$
+declare v_user uuid; v_virtual uuid; v_mode text; v_event uuid;
+begin
+  select s.auth_user_id, ss.virtual_user, ss.mode, s.event_id into v_user, v_virtual, v_mode, v_event
+    from public.judge_seats s join public.sim_seats ss on ss.seat_id = s.id where s.id = p_seat;
+  if not found or v_event <> p_event then raise exception 'SEAT_NOT_FOUND'; end if;
+  if v_mode <> 'virtual' or v_virtual is null or v_user is distinct from v_virtual then raise exception 'SEAT_IS_REAL'; end if;
+  return v_virtual;
+end $$;
+
+-- For the rest of this transaction the database sees this login (the same trick publish_heat_commit uses to audit as the person who pressed Publish).
+create or replace function private.sim_act_as(p_user uuid) returns void
+language plpgsql set search_path = '' as $$
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', p_user, 'role', 'authenticated')::text, true);
+  perform set_config('request.jwt.claim.sub', p_user::text, true);
+end $$;
+
+create or replace function public.sim_add_attempt(
+  p_seat uuid, p_heat uuid, p_entry uuid, p_trick jsonb, p_status text, p_client_key uuid default null, p_override_reason text default null
+) returns public.trick_attempts
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; v_user uuid; v_claims text; v_sub text; v_row public.trick_attempts;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  perform private.sim_guard(h.event_id);
+  v_user := private.sim_seat_user(h.event_id, p_seat);
+  v_claims := current_setting('request.jwt.claims', true); v_sub := current_setting('request.jwt.claim.sub', true);
+  perform private.sim_act_as(v_user);
+  v_row := public.add_attempt(p_heat, p_entry, coalesce(p_client_key, gen_random_uuid()), p_status, p_trick ->> 'direction', p_trick ->> 'category', p_trick ->> 'name',
+                              coalesce(p_trick -> 'parts', '{}'::jsonb), null, 'builder', null, p_override_reason);
+  perform set_config('request.jwt.claims', coalesce(v_claims, ''), true);
+  perform set_config('request.jwt.claim.sub', coalesce(v_sub, ''), true);
+  return v_row;
+end $$;
+
+create or replace function public.sim_submit_score(
+  p_seat uuid, p_attempt uuid, p_criteria jsonb, p_score numeric, p_missed boolean, p_client_key uuid, p_client_rev bigint
+) returns public.trick_scores
+language plpgsql security definer set search_path = '' as $$
+declare a public.trick_attempts; v_user uuid; v_claims text; v_sub text; v_row public.trick_scores;
+begin
+  select * into a from public.trick_attempts where id = p_attempt;
+  if not found then raise exception 'ATTEMPT_NOT_FOUND'; end if;
+  perform private.sim_guard(a.event_id);
+  v_user := private.sim_seat_user(a.event_id, p_seat);
+  v_claims := current_setting('request.jwt.claims', true); v_sub := current_setting('request.jwt.claim.sub', true);
+  perform private.sim_act_as(v_user);
+  v_row := public.submit_trick_score(p_attempt, coalesce(p_criteria, '{}'::jsonb), p_score, coalesce(p_missed, false), null, p_client_key, p_client_rev);
+  perform set_config('request.jwt.claims', coalesce(v_claims, ''), true);
+  perform set_config('request.jwt.claim.sub', coalesce(v_sub, ''), true);
+  return v_row;
+end $$;
+
+create or replace function public.sim_submit_impression(p_seat uuid, p_heat uuid, p_entry uuid, p_value numeric, p_client_key uuid, p_client_rev bigint)
+returns public.impression_scores
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; v_user uuid; v_claims text; v_sub text; v_row public.impression_scores;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  perform private.sim_guard(h.event_id);
+  v_user := private.sim_seat_user(h.event_id, p_seat);
+  v_claims := current_setting('request.jwt.claims', true); v_sub := current_setting('request.jwt.claim.sub', true);
+  perform private.sim_act_as(v_user);
+  v_row := public.submit_impression(p_heat, p_entry, p_value, p_client_key, p_client_rev);
+  perform set_config('request.jwt.claims', coalesce(v_claims, ''), true);
+  perform set_config('request.jwt.claim.sub', coalesce(v_sub, ''), true);
+  return v_row;
+end $$;
+
+create or replace function public.sim_submit_sheet(p_seat uuid, p_heat uuid) returns public.judge_sheets
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; v_user uuid; v_claims text; v_sub text; v_row public.judge_sheets;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found then raise exception 'HEAT_NOT_FOUND'; end if;
+  perform private.sim_guard(h.event_id);
+  v_user := private.sim_seat_user(h.event_id, p_seat);
+  v_claims := current_setting('request.jwt.claims', true); v_sub := current_setting('request.jwt.claim.sub', true);
+  perform private.sim_act_as(v_user);
+  v_row := public.submit_sheet(p_heat);
+  perform set_config('request.jwt.claims', coalesce(v_claims, ''), true);
+  perform set_config('request.jwt.claim.sub', coalesce(v_sub, ''), true);
+  return v_row;
+end $$;
+
+-- ---------------------------------------------------------------- 6. the fast clock
+-- A heat of a simulation event that starts while the speed is above ×1 gets a shorter length (the original is kept for Reset). Every phone, the head console, the
+-- timetable and the public page read heats.duration_sec, so all of them see the fast clock through the normal paths.
+create or replace function private.sim_fast_clock() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare v_speed int;
+begin
+  if old.status = 'scheduled' and new.status = 'running' then
+    select c.speed into v_speed from public.sim_control c join public.events e on e.id = c.event_id where c.event_id = new.event_id and e.is_simulation;
+    if coalesce(v_speed, 1) > 1 then
+      insert into public.sim_clock (heat_id, event_id, original_sec, speed) values (new.id, new.event_id, old.duration_sec, v_speed) on conflict (heat_id) do nothing;
+      new.duration_sec := greatest(3, ceil(old.duration_sec::numeric / v_speed))::int;
+    end if;
+  end if;
+  return new;
+end $$;
+create trigger b_sim_clock before update of status on public.heats for each row execute function private.sim_fast_clock();
+
+-- ---------------------------------------------------------------- 7. View as, and the live view for the preview
+-- Gives one seat to the organiser's own sign-in (one seat at a time: the seat held before is let go; the simulator takes a released virtual seat back).
+-- p_seat null lets go of whichever seat the organiser holds.
+create or replace function public.sim_view_as(p_event uuid, p_seat uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare s public.judge_seats;
+begin
+  perform private.sim_guard(p_event);
+  if p_seat is null then
+    update public.judge_seats set auth_user_id = null where event_id = p_event and auth_user_id = auth.uid();
+    return jsonb_build_object('ok', true, 'released', true);
+  end if;
+  select * into s from public.judge_seats where id = p_seat and event_id = p_event and active and status = 'active';
+  if not found then raise exception 'SEAT_NOT_FOUND'; end if;
+  return private.bind_seat(s, auth.uid(), 'simulator', 'View as');
+end $$;
+
+-- What get_live_heat_for_server says, for the preview of a simulation event (the server reads the live view as a service; here the organiser asks for it).
+create or replace function public.sim_live_heat(p_heat uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; v jsonb;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found then return jsonb_build_object('allowed', false); end if;
+  perform private.sim_guard(h.event_id);
+  perform set_config('app.sim_preview', h.event_id::text, true);
+  v := public.get_live_heat_for_server(p_heat);
+  perform set_config('app.sim_preview', '', true);
+  return v;
+end $$;
+
+-- ---------------------------------------------------------------- 8. Reset (simulation events) and delete (copies only)
+-- Back to the locked draw: attempts, scores, results, decisions, wind calls and actual times are wiped; re-run heats go; the draw, seats and run order return to the saved
+-- starting point; fast clocks are put back. Refused while a heat is running or paused. Officials, riders, rules and settings stay.
+-- An event with no saved starting point (the Demo, played before the simulator existed) can be rebuilt instead (p_rebuild): everything played is wiped and every draw is
+-- unlocked and emptied of results, and the server then draws and locks it again from the riders and saves the new starting point.
+create or replace function public.sim_reset(p_event uuid, p_slug_confirm text, p_rebuild boolean default false) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  ev public.events; b public.sim_baseline; v_counts jsonb; v_running record; it jsonb; v_run int; v_has boolean;
+begin
+  ev := private.sim_guard(p_event);
+  if lower(btrim(coalesce(p_slug_confirm, ''))) <> ev.slug then raise exception 'SLUG_MISMATCH'; end if;
+  select h.number, h.name into v_running from public.heats h where h.event_id = p_event and h.status in ('running', 'paused') order by h.number limit 1;
+  if found then raise exception 'HEAT_RUNNING: %', coalesce(v_running.name, 'Heat ' || v_running.number); end if;
+  select * into b from public.sim_baseline where event_id = p_event;
+  v_has := found;
+  if not v_has and not p_rebuild then raise exception 'NO_BASELINE'; end if;
+
+  v_counts := jsonb_build_object(
+    'heats', (select count(*) from public.heats where event_id = p_event and status <> 'scheduled'),
+    'attempts', (select count(*) from public.trick_attempts where event_id = p_event),
+    'scores', (select count(*) from public.trick_scores where event_id = p_event),
+    'impressions', (select count(*) from public.impression_scores where event_id = p_event),
+    'results', (select count(*) from public.heat_results where event_id = p_event),
+    'decisions', (select count(*) from public.heat_decisions where event_id = p_event),
+    'rebuild', not v_has);
+
+  perform set_config('app.allow_purge', 'on', true);
+  perform set_config('app.draw_bypass', '1', true);
+
+  delete from public.heat_decisions where event_id = p_event;
+  delete from public.heat_results where event_id = p_event;
+  delete from public.judge_sheets where event_id = p_event;
+  delete from public.attempt_flags where event_id = p_event;
+  delete from public.penalties where event_id = p_event;
+  delete from public.impression_scores where event_id = p_event;
+  delete from public.trick_scores where event_id = p_event;
+  delete from public.trick_attempts where event_id = p_event;
+  delete from public.wind_calls where event_id = p_event;
+
+  if v_has then
+    -- heats made since (re-runs) go; every saved heat goes back to a scheduled heat with its own length, number and draw id
+    delete from public.heats h where h.event_id = p_event and not exists (select 1 from jsonb_array_elements(b.heats) x where (x ->> 'id')::uuid = h.id);
+    for it in select * from jsonb_array_elements(b.heats) loop
+      update public.heats set
+        round_id = (it ->> 'round_id')::uuid, number = (it ->> 'number')::int, number_suffix = it ->> 'number_suffix', name = it ->> 'name', draw_uid = it ->> 'draw_uid',
+        duration_sec = (it ->> 'duration_sec')::int, warm_up_sec = (it ->> 'warm_up_sec')::int, manual_override = (it ->> 'manual_override')::boolean,
+        public_live = nullif(it ->> 'public_live', '')::boolean, rerun_of = null, flag_out = null, publish_hold = false,
+        status = 'scheduled', started_at = null, paused_at = null, paused_total_sec = 0, ended_at = null, published_at = null, reopened_at = null
+       where id = (it ->> 'id')::uuid;
+    end loop;
+
+    delete from public.heat_slots where event_id = p_event;
+    insert into public.heat_slots (event_id, heat_id, position, entry_id, vest_colour, source, modifier)
+    select p_event, (s ->> 'heat_id')::uuid, (s ->> 'position')::int, nullif(s ->> 'entry_id', '')::uuid, nullif(s ->> 'vest_colour', ''), s -> 'source', nullif(s ->> 'modifier', '')
+    from jsonb_array_elements(b.slots) s where exists (select 1 from public.heats h where h.id = (s ->> 'heat_id')::uuid);
+
+    for it in select * from jsonb_array_elements(b.divisions) loop
+      update public.divisions set draw = it -> 'draw', draw_locked_at = nullif(it ->> 'draw_locked_at', '')::timestamptz, status = it ->> 'status' where id = (it ->> 'id')::uuid;
+    end loop;
+
+    -- the run order: plans made since go (Plan B of the scenario); saved plans return with their items and pins, no actual times, no hold
+    delete from public.schedule_plans p where p.event_id = p_event and not exists (select 1 from jsonb_array_elements(b.plans) x where (x ->> 'id')::uuid = p.id);
+    for it in select * from jsonb_array_elements(b.plans) loop
+      update public.schedule_plans set items = it -> 'items', anchors = it -> 'anchors', defaults = it -> 'defaults', active = (it ->> 'active')::boolean, actual_starts = '{}'::jsonb, hold = null
+       where id = (it ->> 'id')::uuid;
+    end loop;
+  else
+    -- rebuild: nothing is known about the first draw; heats that ran go back to scheduled, re-runs go, every draw is unlocked and drawn again by the server
+    delete from public.heats where event_id = p_event and rerun_of is not null;
+    update public.heats set status = 'scheduled', started_at = null, paused_at = null, paused_total_sec = 0, ended_at = null, published_at = null, reopened_at = null,
+      publish_hold = false, flag_out = null where event_id = p_event;
+    update public.divisions set draw_locked_at = null, draw = case when draw is not null then jsonb_set(draw, '{status}', '"draft"') end,
+      status = case when status in ('running', 'complete') then 'ready' else status end where event_id = p_event;
+    update public.schedule_plans set actual_starts = '{}'::jsonb, hold = null where event_id = p_event;
+    delete from public.sim_baseline where event_id = p_event;
+  end if;
+
+  -- heats that started at a faster clock get their own length back
+  update public.heats h set duration_sec = c.original_sec from public.sim_clock c where c.heat_id = h.id and c.event_id = p_event;
+  delete from public.sim_clock where event_id = p_event;
+  update public.sim_control set state = 'stopped', stats = '{}'::jsonb, blocker = null, run_no = run_no + 1,
+    config = coalesce(config, '{}'::jsonb) - 'armed' - 'tie' - 'dead' - 'hold_final' where event_id = p_event returning run_no into v_run;
+  insert into public.sim_log (event_id, run_no, kind, text, data) values (p_event, coalesce(v_run, 1), 'reset', case when v_has then 'Reset to the locked draw' else 'Wiped; the draw is being rebuilt' end, v_counts);
+  perform private.head_audit(p_event, 'events', p_event, 'simulation_reset', null, v_counts, null);
+
+  perform set_config('app.allow_purge', 'off', true);
+  perform set_config('app.draw_bypass', '', true);
+  return v_counts;
+end $$;
+
+-- Deletes a simulation that was made by Run as simulation (never the Demo or an event of its own), with everything that hangs off it, including published results and
+-- its audit lines. Returns the simulator's logins so the server can remove them.
+create or replace function public.sim_delete(p_event uuid, p_slug_confirm text) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare ev public.events; v_users uuid[]; v_name text;
+begin
+  ev := private.sim_guard(p_event);
+  if ev.simulation_of is null then raise exception 'NOT_A_COPY'; end if;
+  if lower(btrim(coalesce(p_slug_confirm, ''))) <> ev.slug then raise exception 'SLUG_MISMATCH'; end if;
+  select coalesce(array_agg(virtual_user) filter (where virtual_user is not null), '{}') into v_users from public.sim_seats where event_id = p_event;
+  v_name := ev.name;
+  perform set_config('app.allow_purge', 'on', true);
+  perform set_config('app.draw_bypass', '1', true);
+  delete from public.events where id = p_event;
+  delete from public.audit_log where event_id = p_event;
+  perform set_config('app.allow_purge', 'off', true);
+  perform set_config('app.draw_bypass', '', true);
+  return jsonb_build_object('users', to_jsonb(v_users), 'name', v_name);
+end $$;
+
+-- ---------------------------------------------------------------- grants
+revoke all on function
+  public.clone_event_as_simulation, public.sim_enable, public.sim_capture_baseline, public.sim_set, public.sim_set_mode, public.sim_tick_lock, public.sim_log_add,
+  public.sim_stats, public.sim_bind_virtual, public.sim_add_attempt, public.sim_submit_score, public.sim_submit_impression, public.sim_submit_sheet,
+  public.sim_view_as, public.sim_live_heat, public.sim_reset(uuid, text, boolean), public.sim_delete from public, anon, authenticated;
+grant execute on function
+  public.clone_event_as_simulation, public.sim_enable, public.sim_capture_baseline, public.sim_set, public.sim_set_mode, public.sim_tick_lock, public.sim_log_add,
+  public.sim_stats, public.sim_add_attempt, public.sim_submit_score, public.sim_submit_impression, public.sim_submit_sheet,
+  public.sim_view_as, public.sim_live_heat, public.sim_reset(uuid, text, boolean), public.sim_delete to authenticated;
+grant execute on function public.sim_bind_virtual to service_role;
+grant execute on all functions in schema private to anon, authenticated, service_role;
+
+
+-- ===== migration 20261009100100_simulator_stats.sql =====
+-- The simulator panel also needs to know whether a starting point is saved (the baseline table itself is not readable by a browser) and whether anything has been played.
+create or replace function public.sim_stats(p_event uuid) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare v_run int;
+begin
+  perform private.sim_guard(p_event);
+  select run_no into v_run from public.sim_control where event_id = p_event;
+  return jsonb_build_object(
+    'run', coalesce(v_run, 1),
+    'heats_total', (select count(*) from public.heats h where h.event_id = p_event and h.status <> 'cancelled'),
+    'heats_published', (select count(*) from public.heats h where h.event_id = p_event and h.status = 'published'),
+    'heats_running', (select count(*) from public.heats h where h.event_id = p_event and h.status in ('running', 'paused')),
+    'attempts', (select count(*) from public.trick_attempts a where a.event_id = p_event and a.deleted_at is null),
+    'scores', (select count(*) from public.trick_scores t where t.event_id = p_event),
+    'impressions', (select count(*) from public.impression_scores i where i.event_id = p_event),
+    'blockers', (select count(*) from public.sim_log l where l.event_id = p_event and l.kind = 'blocker' and l.run_no = coalesce(v_run, 1)),
+    'flagged_duplicates', (select count(*) from public.trick_attempts a where a.event_id = p_event and a.possible_duplicate_of is not null and a.deleted_at is null),
+    'has_baseline', exists (select 1 from public.sim_baseline b where b.event_id = p_event),
+    'baseline_at', (select b.taken_at from public.sim_baseline b where b.event_id = p_event),
+    'played', exists (select 1 from public.heats h where h.event_id = p_event and (h.status <> 'scheduled' or h.started_at is not null or h.rerun_of is not null)),
+    'locked_divisions', (select count(*) from public.divisions d where d.event_id = p_event and d.draw_locked_at is not null),
+    'divisions', (select count(*) from public.divisions d where d.event_id = p_event));
+end $$;
+revoke all on function public.sim_stats from public, anon, authenticated;
+grant execute on function public.sim_stats to authenticated;
+
+
+-- ===== migration 20261009100200_simulator_general_reset.sql =====
+-- The simulator uses the general Reset of Phase 7a-1 (reset_event, which returns every division to the draw copied when it was locked). What is left for the simulator:
+--   * sim_after_reset: the simulator's own leftovers (wind calls, shortened clocks, a Plan B it made, the panel's state and numbers)
+--   * sim_rebuild: for a simulation event with no starting draw copy (the Demo, played before Reset existed): wipe everything played and unlock every draw, so the server
+--     can draw and lock it again (locking takes the copy)
+--   * sim_stats: "a starting point is saved" now means every drawn division has the draw copy Reset needs
+-- The simulation-only Reset and the "save the starting point" function are removed.
+
+drop function if exists public.sim_reset(uuid, text, boolean);
+drop function if exists public.sim_capture_baseline(uuid);
+
+create or replace function public.sim_after_reset(p_event uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+declare b public.sim_baseline; it jsonb; v_run int;
+begin
+  perform private.sim_guard(p_event);
+  if exists (select 1 from public.heats h where h.event_id = p_event and (h.status <> 'scheduled' or h.started_at is not null)) then raise exception 'NOT_RESET'; end if;
+  delete from public.wind_calls where event_id = p_event;
+  -- heats that started at a faster clock get their own length back (Reset also restores it from the draw; this covers a heat the draw does not describe)
+  update public.heats h set duration_sec = c.original_sec from public.sim_clock c where c.heat_id = h.id and c.event_id = p_event;
+  delete from public.sim_clock where event_id = p_event;
+  -- the run order as it was when the copy was made: a Plan B made since goes, the active plan is the saved one
+  select * into b from public.sim_baseline where event_id = p_event;
+  if found then
+    delete from public.schedule_plans p where p.event_id = p_event and not exists (select 1 from jsonb_array_elements(b.plans) x where (x ->> 'id')::uuid = p.id);
+    for it in select * from jsonb_array_elements(b.plans) loop
+      update public.schedule_plans set active = (it ->> 'active')::boolean where id = (it ->> 'id')::uuid;
+    end loop;
+  end if;
+  update public.sim_control set state = 'stopped', stats = '{}'::jsonb, blocker = null, run_no = run_no + 1,
+    config = coalesce(config, '{}'::jsonb) - 'armed' - 'tie' - 'dead' - 'windHeld' - 'finalHeldHeat' where event_id = p_event returning run_no into v_run;
+  insert into public.sim_log (event_id, run_no, kind, text) values (p_event, coalesce(v_run, 1), 'reset', 'Reset to the locked draw');
+end $$;
+
+create or replace function public.sim_rebuild(p_event uuid, p_slug_confirm text) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare ev public.events; v_running record; v_counts jsonb; v_run int;
+begin
+  ev := private.sim_guard(p_event);
+  if lower(btrim(coalesce(p_slug_confirm, ''))) <> ev.slug then raise exception 'SLUG_MISMATCH'; end if;
+  select h.number, h.name into v_running from public.heats h where h.event_id = p_event and h.status in ('running', 'paused') order by h.number limit 1;
+  if found then raise exception 'HEAT_RUNNING: %', coalesce(v_running.name, 'Heat ' || v_running.number); end if;
+  v_counts := jsonb_build_object(
+    'heats', (select count(*) from public.heats where event_id = p_event and status <> 'scheduled'),
+    'attempts', (select count(*) from public.trick_attempts where event_id = p_event),
+    'results', (select count(*) from public.heat_results where event_id = p_event));
+  perform set_config('app.allow_purge', 'on', true);
+  perform set_config('app.draw_bypass', '1', true);
+  delete from public.heat_decisions where event_id = p_event;
+  delete from public.heat_results where event_id = p_event;
+  delete from public.judge_sheets where event_id = p_event;
+  delete from public.attempt_flags where event_id = p_event;
+  delete from public.penalties where event_id = p_event;
+  delete from public.impression_scores where event_id = p_event;
+  delete from public.trick_scores where event_id = p_event;
+  delete from public.trick_attempts where event_id = p_event;
+  delete from public.wind_calls where event_id = p_event;
+  delete from public.heats where event_id = p_event and rerun_of is not null;
+  update public.heats h set duration_sec = c.original_sec from public.sim_clock c where c.heat_id = h.id and c.event_id = p_event;
+  update public.heats set status = 'scheduled', started_at = null, paused_at = null, paused_total_sec = 0, ended_at = null, published_at = null, reopened_at = null,
+    publish_hold = false, public_live = null, flag_out = null where event_id = p_event;
+  update public.divisions set draw_locked_at = null, draw_at_lock = null, draw = case when draw is not null then jsonb_set(draw, '{status}', '"draft"') end,
+    status = case when status in ('running', 'complete') then 'ready' else status end where event_id = p_event;
+  update public.schedule_plans set actual_starts = '{}'::jsonb, hold = null where event_id = p_event;
+  delete from public.sim_baseline where event_id = p_event;
+  delete from public.sim_clock where event_id = p_event;
+  update public.sim_control set state = 'stopped', stats = '{}'::jsonb, blocker = null, run_no = run_no + 1,
+    config = coalesce(config, '{}'::jsonb) - 'armed' - 'tie' - 'dead' - 'windHeld' - 'finalHeldHeat' where event_id = p_event returning run_no into v_run;
+  insert into public.sim_log (event_id, run_no, kind, text, data) values (p_event, coalesce(v_run, 1), 'reset', 'Wiped; the draw is being rebuilt', v_counts);
+  perform private.head_audit(p_event, 'events', p_event, 'simulation_rebuilt', null, v_counts, null);
+  perform set_config('app.allow_purge', 'off', true);
+  perform set_config('app.draw_bypass', '', true);
+  return v_counts;
+end $$;
+
+create or replace function public.sim_stats(p_event uuid) returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare v_run int;
+begin
+  perform private.sim_guard(p_event);
+  select run_no into v_run from public.sim_control where event_id = p_event;
+  return jsonb_build_object(
+    'run', coalesce(v_run, 1),
+    'heats_total', (select count(*) from public.heats h where h.event_id = p_event and h.status <> 'cancelled'),
+    'heats_published', (select count(*) from public.heats h where h.event_id = p_event and h.status = 'published'),
+    'heats_running', (select count(*) from public.heats h where h.event_id = p_event and h.status in ('running', 'paused')),
+    'attempts', (select count(*) from public.trick_attempts a where a.event_id = p_event and a.deleted_at is null),
+    'scores', (select count(*) from public.trick_scores t where t.event_id = p_event),
+    'impressions', (select count(*) from public.impression_scores i where i.event_id = p_event),
+    'blockers', (select count(*) from public.sim_log l where l.event_id = p_event and l.kind = 'blocker' and l.run_no = coalesce(v_run, 1)),
+    'flagged_duplicates', (select count(*) from public.trick_attempts a where a.event_id = p_event and a.possible_duplicate_of is not null and a.deleted_at is null),
+    -- Reset can run when every drawn division has the draw it was locked with (or is unlocked and untouched)
+    'has_baseline', not exists (select 1 from public.divisions d where d.event_id = p_event and d.draw is not null and private.reset_division_source(d) is null),
+    'baseline_at', null,
+    'played', exists (select 1 from public.heats h where h.event_id = p_event and (h.status <> 'scheduled' or h.started_at is not null or h.rerun_of is not null)),
+    'locked_divisions', (select count(*) from public.divisions d where d.event_id = p_event and d.draw_locked_at is not null),
+    'divisions', (select count(*) from public.divisions d where d.event_id = p_event));
+end $$;
+
+revoke all on function public.sim_after_reset, public.sim_rebuild, public.sim_stats from public, anon, authenticated;
+grant execute on function public.sim_after_reset, public.sim_rebuild, public.sim_stats to authenticated;
+
+
+-- ===== migration 20261010100000_reset_per_section.sql =====
+-- Reset per section (branch fix-reset-visibility). Builds on Phase 7a-1's Reset event (20261008100000):
+--   1. heat_reset_records: what a heat held when it was reset (attempts, scores, results...), kept for the audit. Nothing reads it live.
+--   2. helpers: who is running, per-heat "ever public", counts for a list of heats, the purge of a list of heats, the ladder restore of one division.
+--   3. reset_event now also works for a division with no saved starting copy: TypeScript rebuilds the starting draw from the current one
+--      (Round 1 seats kept, every later seat back to its placeholder) and says so on the screen. The audit line names the rebuilt divisions.
+--   4. reset_division_preview / reset_division: one division back to its starting draw. Same wipe, same rebuild rule, one audit line.
+--   5. clear_plan_actuals: a run order's actual starts and pins cleared (the first pin stays) so the day re-flows from it.
+--   6. reset_heat_preview / reset_heat: one heat back to "not started", seats unchanged, its records moved to heat_reset_records.
+-- Every reset is refused while any heat of the event is running or paused. It adds a table and functions and replaces reset_event; it changes no existing data.
+
+-- ---------------------------------------------------------------- 1. the kept record
+create table public.heat_reset_records (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events on delete cascade,
+  heat_id uuid not null,            -- no foreign key: the record outlives a heat that a later Reset event removes
+  taken_at timestamptz not null default now(),
+  taken_by uuid,
+  reason text,
+  payload jsonb not null
+);
+create index on public.heat_reset_records (event_id);
+create index on public.heat_reset_records (heat_id);
+alter table public.heat_reset_records enable row level security;
+grant select on public.heat_reset_records to authenticated;
+create policy read_own on public.heat_reset_records for select to authenticated using (private.can_run_heat(event_id) or private.is_platform_owner());
+
+-- ---------------------------------------------------------------- 2. helpers
+create or replace function private.running_heat_name(p_event uuid) returns text
+language sql stable security definer set search_path = '' as $$
+  select coalesce(h.name, 'Heat ' || h.number::text) from public.heats h where h.event_id = p_event and h.status in ('running', 'paused') order by h.started_at limit 1;
+$$;
+
+-- "Ever shown publicly" for one heat: a result was published and not held (or was released), or the heat ran with live scores on (its own switch, else the division's, else the event's).
+create or replace function private.heat_ever_public(p_heat uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from public.heats h
+    join public.divisions d on d.id = h.division_id
+    join public.events e on e.id = h.event_id
+    where h.id = p_heat and (
+      (exists (select 1 from public.heat_results r where r.heat_id = h.id)
+        and (not h.publish_hold or exists (select 1 from public.audit_log a where a.row_id = h.id and a.action = 'publish_release')))
+      or (h.started_at is not null and coalesce(h.public_live, coalesce(nullif(d.live_settings ->> 'publicLiveScores', ''), nullif(e.settings ->> 'publicLiveScores', ''), 'after_publish') = 'live'))));
+$$;
+-- the event's answer is the same rule over its heats (as 7a-1 had it, now in one place)
+create or replace function private.event_ever_public(p_event uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.heats h where h.event_id = p_event and private.heat_ever_public(h.id));
+$$;
+
+create or replace function private.heat_counts(p_heats uuid[]) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object(
+    'heats', (select count(*) from public.heats where id = any (p_heats) and (status <> 'scheduled' or started_at is not null)),
+    'all_heats', (select count(*) from public.heats where id = any (p_heats)),
+    'reruns', (select count(*) from public.heats where id = any (p_heats) and rerun_of is not null),
+    'attempts', (select count(*) from public.trick_attempts where heat_id = any (p_heats)),
+    'scores', (select count(*) from public.trick_scores where heat_id = any (p_heats)) + (select count(*) from public.impression_scores where heat_id = any (p_heats)),
+    'published_results', (select count(distinct heat_id) from public.heat_results where heat_id = any (p_heats)));
+$$;
+
+-- Deletes what the given heats recorded (published results and tie decisions are append-only: the transaction-local purge switch lets this, and only inside it, delete them).
+create or replace function private.wipe_heat_data(p_heats uuid[]) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  perform set_config('app.allow_purge', 'on', true);
+  delete from public.trick_scores where heat_id = any (p_heats);
+  delete from public.attempt_flags where heat_id = any (p_heats);
+  delete from public.impression_scores where heat_id = any (p_heats);
+  delete from public.penalties where heat_id = any (p_heats);
+  delete from public.judge_sheets where heat_id = any (p_heats);
+  delete from public.heat_decisions where heat_id = any (p_heats);
+  delete from public.heat_results where heat_id = any (p_heats);
+  delete from public.trick_attempts where heat_id = any (p_heats);
+  perform set_config('app.allow_purge', '', true);
+end $$;
+
+-- A rebuilt starting draw must be the division's own draw with the results taken off: same riders, same seed order, same rounds.
+create or replace function private.rebuild_matches(d public.divisions, p_draw jsonb) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select p_draw is not null and d.draw is not null
+    and (p_draw -> 'seedOrder') is not distinct from (d.draw -> 'seedOrder')
+    and (p_draw -> 'entrants') is not distinct from (d.draw -> 'entrants')
+    and (select jsonb_agg(r ->> 'id' order by o) from jsonb_array_elements(p_draw -> 'rounds') with ordinality t(r, o))
+        is not distinct from (select jsonb_agg(r ->> 'id' order by o) from jsonb_array_elements(d.draw -> 'rounds') with ordinality t(r, o));
+$$;
+
+-- The ladder of one division back to a starting draw: seats, later riders and heat numbers as the draw made them. The caller has switched app.draw_bypass on
+-- and deleted a re-run heat before (so every heat of the projection is found). v_item = { draw, projection }.
+create or replace function private.restore_division_ladder(d public.divisions, v_item jsonb) returns void
+language plpgsql security definer set search_path = '' as $$
+declare h jsonb; s jsonb; v_round uuid; v_heat public.heats; v_kept uuid[] := '{}'; v_expected int := jsonb_array_length(v_item -> 'projection' -> 'heats');
+begin
+  update public.heats set number = -number - 1000000 where division_id = d.id and number > 0;
+  for h in select * from jsonb_array_elements(v_item -> 'projection' -> 'heats') loop
+    select id into v_round from public.rounds where division_id = d.id and spec ->> 'key' = h ->> 'round_key';
+    if v_round is null then raise exception 'BAD_PROJECTION'; end if;
+    select * into v_heat from public.heats where division_id = d.id and draw_uid = h ->> 'uid';
+    if not found then
+      select * into v_heat from public.heats where division_id = d.id and draw_uid is null and round_id = v_round and (number = (h ->> 'number')::int or number = -(h ->> 'number')::int - 1000000) and number_suffix is null;
+    end if;
+    if not found then raise exception 'BAD_PROJECTION'; end if;
+    update public.heats set round_id = v_round, number = (h ->> 'number')::int, draw_uid = h ->> 'uid', name = nullif(h ->> 'name', ''),
+           duration_sec = (h ->> 'duration_sec')::int, warm_up_sec = coalesce((h ->> 'warm_up_sec')::int, 0), manual_override = coalesce((h ->> 'manual_override')::boolean, false)
+     where id = v_heat.id;
+    v_kept := v_kept || v_heat.id;
+    delete from public.heat_slots where heat_id = v_heat.id;
+    for s in select * from jsonb_array_elements(h -> 'slots') loop
+      insert into public.heat_slots (heat_id, position, entry_id, vest_colour, source, modifier)
+      values (v_heat.id, (s ->> 'position')::int, nullif(s ->> 'entry_id', '')::uuid, nullif(s ->> 'vest_colour', ''), s -> 'source', case when s ->> 'modifier' = 'DNS' then 'DNS' end);
+    end loop;
+  end loop;
+  if (select count(*) from public.heats where division_id = d.id and id <> all (v_kept)) > 0 or array_length(v_kept, 1) is distinct from v_expected then raise exception 'BAD_PROJECTION'; end if;
+  update public.divisions set draw = v_item -> 'draw' where id = d.id;
+end $$;
+
+-- ---------------------------------------------------------------- 3. reset_event: a division without a saved copy is rebuilt
+create or replace function public.reset_event(p_event uuid, p_slug text, p_reason text, p_draws jsonb) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  ev public.events; d public.divisions; v_run text; v_counts jsonb; v_snapshot uuid; v_public boolean; v_item jsonb; v_role text; v_rebuilt text[];
+begin
+  select * into ev from public.events where id = p_event for update;
+  if not found or not (private.is_event_organiser(p_event) or private.is_platform_owner()) then raise exception 'NOT_ALLOWED'; end if;
+  if lower(btrim(coalesce(p_slug, ''))) <> ev.slug then raise exception 'SLUG_MISMATCH'; end if;
+
+  delete from public.event_reset_snapshots where expires_at < now();
+
+  v_run := private.running_heat_name(p_event);
+  if v_run is not null then raise exception 'HEAT_RUNNING: %', v_run; end if;
+
+  v_public := private.event_ever_public(p_event);
+  if v_public and (p_reason is null or char_length(btrim(p_reason)) < 5) then raise exception 'REASON_REQUIRED'; end if;
+
+  -- every drawn division comes with its starting draw and the rows that draw is made of: the saved copy, or (no copy) the rebuild of its own current draw
+  if p_draws is null or jsonb_typeof(p_draws) <> 'array' then raise exception 'BAD_PROJECTION'; end if;
+  v_rebuilt := '{}';
+  for d in select * from public.divisions dv where dv.event_id = p_event and dv.draw is not null order by dv.sort_order loop
+    select i into v_item from jsonb_array_elements(p_draws) i where i ->> 'division' = d.id::text limit 1;
+    if v_item is null then raise exception 'BAD_PROJECTION'; end if;
+    if private.reset_division_source(d) is not null then
+      if (v_item -> 'draw') is distinct from private.reset_division_source(d) then raise exception 'BAD_PROJECTION'; end if;
+    else
+      if not private.rebuild_matches(d, v_item -> 'draw') then raise exception 'BAD_PROJECTION'; end if;
+      v_rebuilt := v_rebuilt || d.name;
+    end if;
+  end loop;
+
+  v_counts := private.reset_counts(p_event);
+
+  -- the snapshot: every row that is about to change, so Restore can put it back
+  insert into public.event_reset_snapshots (event_id, organisation_id, taken_by, payload)
+  values (p_event, ev.organisation_id, auth.uid(), jsonb_build_object(
+    'heats', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.heats x where x.event_id = p_event),
+    'heat_slots', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.heat_slots x where x.event_id = p_event),
+    'trick_attempts', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.trick_attempts x where x.event_id = p_event),
+    'trick_scores', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.trick_scores x where x.event_id = p_event),
+    'impression_scores', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.impression_scores x where x.event_id = p_event),
+    'penalties', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.penalties x where x.event_id = p_event),
+    'attempt_flags', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.attempt_flags x where x.event_id = p_event),
+    'judge_sheets', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.judge_sheets x where x.event_id = p_event),
+    'heat_decisions', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.heat_decisions x where x.event_id = p_event),
+    'heat_results', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.heat_results x where x.event_id = p_event),
+    'schedule_plans', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.schedule_plans x where x.event_id = p_event),
+    'divisions', (select coalesce(jsonb_agg(jsonb_build_object('id', x.id, 'draw', x.draw)), '[]'::jsonb) from public.divisions x where x.event_id = p_event)))
+  returning id into v_snapshot;
+
+  perform set_config('app.draw_bypass', '1', true);
+  perform private.wipe_heat_data(array(select id from public.heats where event_id = p_event));
+
+  -- a re-run goes (its run order row with it, by the run order trigger); the original returns to "scheduled" with its draw id back below
+  delete from public.heats where event_id = p_event and rerun_of is not null;
+  update public.heats set status = 'scheduled', started_at = null, paused_at = null, paused_total_sec = 0, ended_at = null, published_at = null, reopened_at = null,
+         publish_hold = false, public_live = null, flag_out = null
+   where event_id = p_event;
+  update public.heat_slots set place = null, total = null, breakdown = null, flagged_out = false where event_id = p_event;
+  update public.schedule_plans set actual_starts = '{}'::jsonb, hold = null where event_id = p_event;
+
+  for d in select * from public.divisions dv where dv.event_id = p_event and dv.draw is not null order by dv.sort_order loop
+    select i into v_item from jsonb_array_elements(p_draws) i where i ->> 'division' = d.id::text limit 1;
+    perform private.restore_division_ladder(d, v_item);
+  end loop;
+  perform set_config('app.draw_bypass', '', true);
+
+  v_role := case when private.is_event_organiser(p_event) then 'organiser' else 'platform_owner' end;
+  insert into public.audit_log (event_id, organisation_id, actor_user_id, action, table_name, row_id, before, after, reason)
+  values (p_event, ev.organisation_id, auth.uid(), 'event_reset', 'events', p_event, v_counts,
+          jsonb_build_object('role', v_role, 'snapshot', v_snapshot, 'ever_public', v_public, 'rebuilt_divisions', to_jsonb(v_rebuilt)), nullif(btrim(coalesce(p_reason, '')), ''));
+
+  return v_counts || jsonb_build_object('snapshot', v_snapshot, 'rebuilt', to_jsonb(v_rebuilt));
+end $$;
+
+-- ---------------------------------------------------------------- 4. reset one division
+create or replace function public.reset_division_preview(p_division uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare d public.divisions; v_heats uuid[];
+begin
+  select * into d from public.divisions where id = p_division;
+  if not found or not (private.is_event_organiser(d.event_id) or private.is_platform_owner()) then raise exception 'NOT_ALLOWED'; end if;
+  v_heats := array(select id from public.heats where division_id = p_division);
+  return jsonb_build_object(
+    'name', d.name,
+    'drawn', d.draw is not null,
+    'has_copy', private.reset_division_source(d) is not null,
+    'counts', private.heat_counts(v_heats),
+    'running', private.running_heat_name(d.event_id),
+    'ever_public', exists (select 1 from unnest(v_heats) x where private.heat_ever_public(x)));
+end $$;
+
+-- p_item = { division, draw, projection } for this division: the saved copy and what the draw makes of it, or (no copy) its own current draw rebuilt. Same shape as reset_event.
+create or replace function public.reset_division(p_division uuid, p_reason text, p_item jsonb) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare d public.divisions; ev public.events; v_run text; v_heats uuid[]; v_counts jsonb; v_public boolean; v_source jsonb; v_rebuilt boolean;
+begin
+  select * into d from public.divisions where id = p_division for update;
+  if not found then raise exception 'NOT_ALLOWED'; end if;
+  select * into ev from public.events where id = d.event_id for update;
+  if not (private.is_event_organiser(d.event_id) or private.is_platform_owner()) then raise exception 'NOT_ALLOWED'; end if;
+  v_run := private.running_heat_name(d.event_id);
+  if v_run is not null then raise exception 'HEAT_RUNNING: %', v_run; end if;
+  if d.draw is null then raise exception 'NO_DRAW'; end if;
+
+  v_heats := array(select id from public.heats where division_id = p_division);
+  v_public := exists (select 1 from unnest(v_heats) x where private.heat_ever_public(x));
+  if v_public and (p_reason is null or char_length(btrim(p_reason)) < 5) then raise exception 'REASON_REQUIRED'; end if;
+
+  v_source := private.reset_division_source(d);
+  v_rebuilt := v_source is null;
+  if p_item is null or jsonb_typeof(p_item) <> 'object' or p_item ->> 'division' is distinct from p_division::text then raise exception 'BAD_PROJECTION'; end if;
+  if v_rebuilt then
+    if not private.rebuild_matches(d, p_item -> 'draw') then raise exception 'BAD_PROJECTION'; end if;
+  elsif (p_item -> 'draw') is distinct from v_source then raise exception 'BAD_PROJECTION';
+  end if;
+
+  v_counts := private.heat_counts(v_heats);
+
+  perform set_config('app.draw_bypass', '1', true);
+  perform private.wipe_heat_data(v_heats);
+  delete from public.heats where division_id = p_division and rerun_of is not null;
+  update public.heats set status = 'scheduled', started_at = null, paused_at = null, paused_total_sec = 0, ended_at = null, published_at = null, reopened_at = null,
+         publish_hold = false, public_live = null, flag_out = null
+   where division_id = p_division;
+  update public.heat_slots set place = null, total = null, breakdown = null, flagged_out = false where heat_id in (select id from public.heats where division_id = p_division);
+  perform private.restore_division_ladder(d, p_item);
+  perform set_config('app.draw_bypass', '', true);
+
+  perform private.draw_audit(d.event_id, p_division, 'division_reset',
+    jsonb_build_object('before', v_counts, 'after', jsonb_build_object('rebuilt', v_rebuilt, 'ever_public', v_public)), p_reason, 'divisions');
+  return v_counts || jsonb_build_object('rebuilt', v_rebuilt);
+end $$;
+
+-- ---------------------------------------------------------------- 5. clear a run order's actual times
+-- Actual starts of breaks and notes, and every pin except the first one in run order (the day's start). The heats' own real times are the heats' (Reset this heat / division wipes those);
+-- a hold is left as it is (Resume ends it).
+create or replace function public.clear_plan_actuals(p_plan uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare p public.schedule_plans; v_first text; v_keep jsonb; v_actuals int; v_pins int; v_run text;
+begin
+  select * into p from public.schedule_plans where id = p_plan for update;
+  if not found or not (private.is_event_organiser(p.event_id) or private.is_platform_owner()) then raise exception 'NOT_ALLOWED'; end if;
+  v_run := private.running_heat_name(p.event_id);
+  if v_run is not null then raise exception 'HEAT_RUNNING: %', v_run; end if;
+  select i ->> 'id' into v_first from jsonb_array_elements(p.items) with ordinality t(i, o) where p.anchors ? (i ->> 'id') order by o limit 1;
+  v_keep := case when v_first is null then '{}'::jsonb else jsonb_build_object(v_first, p.anchors -> v_first) end;
+  v_actuals := (select count(*) from jsonb_object_keys(p.actual_starts));
+  v_pins := (select count(*) from jsonb_object_keys(p.anchors)) - (select count(*) from jsonb_object_keys(v_keep));
+  update public.schedule_plans set anchors = v_keep, actual_starts = '{}'::jsonb where id = p_plan;
+  perform private.draw_audit(p.event_id, p_plan, 'plan_actuals_cleared',
+    jsonb_build_object('before', jsonb_build_object('actual_starts', p.actual_starts, 'anchors', p.anchors), 'after', jsonb_build_object('actual_starts', '{}'::jsonb, 'anchors', v_keep)), null, 'schedule_plans');
+  return jsonb_build_object('actual_starts', v_actuals, 'pins', v_pins, 'kept', v_first);
+end $$;
+
+-- ---------------------------------------------------------------- 6. reset one heat
+create or replace function public.reset_heat_preview(p_heat uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats;
+begin
+  select * into h from public.heats where id = p_heat;
+  if not found or not (private.can_run_heat(h.event_id) or private.is_platform_owner()) then raise exception 'NOT_ALLOWED'; end if;
+  return jsonb_build_object(
+    'status', h.status,
+    'counts', private.heat_counts(array[p_heat]),
+    'running', private.running_heat_name(h.event_id),
+    'ever_public', private.heat_ever_public(p_heat),
+    'already_rerun', exists (select 1 from public.heats r where r.rerun_of = p_heat),
+    'is_rerun', h.rerun_of is not null);
+end $$;
+
+-- p_before: the division's draw as the server read it (refused when it changed since). p_draw / p_seats: what TypeScript makes of taking a published result back out
+-- of the draw (null / [] when the heat was never published): the new draw, and the later heats whose seats change, as publish_heat_commit has them.
+-- Seats stay as they are; a DNS stays, a DSQ stays on a re-run (it was set when it was made), every other mark of the heat goes with its records.
+create or replace function public.reset_heat(p_heat uuid, p_reason text, p_before jsonb, p_draw jsonb, p_seats jsonb) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare h public.heats; d public.divisions; v_run text; v_counts jsonb; v_record uuid; v_public boolean; p jsonb; s jsonb; v_target public.heats; v_changed int := 0;
+begin
+  select * into h from public.heats where id = p_heat for update;
+  if not found or not (private.can_run_heat(h.event_id) or private.is_platform_owner()) then raise exception 'NOT_ALLOWED'; end if;
+  v_run := private.running_heat_name(h.event_id);
+  if v_run is not null then raise exception 'HEAT_RUNNING: %', v_run; end if;
+  if h.status = 'scheduled' then raise exception 'HEAT_NOT_STARTED'; end if;
+  if h.status = 'cancelled' and exists (select 1 from public.heats r where r.rerun_of = p_heat) then raise exception 'HEAT_ALREADY_RERUN'; end if;
+  v_public := private.heat_ever_public(p_heat);
+  if v_public and (p_reason is null or char_length(btrim(p_reason)) < 5) then raise exception 'REASON_REQUIRED'; end if;
+
+  select * into d from public.divisions where id = h.division_id for update;
+  if p_draw is not null then
+    if p_before is distinct from d.draw then raise exception 'DRAW_CHANGED'; end if;
+    for p in select * from jsonb_array_elements(coalesce(p_seats, '[]'::jsonb)) loop
+      select * into v_target from public.heats where division_id = h.division_id and draw_uid = p ->> 'uid';
+      if not found then continue; end if;
+      if v_target.status <> 'scheduled' or v_target.started_at is not null then raise exception 'DOWNSTREAM_STARTED: %', p ->> 'uid'; end if;
+    end loop;
+  end if;
+
+  v_counts := private.heat_counts(array[p_heat]);
+
+  -- the record kept for the audit: the heat as it was, its seats and everything it recorded
+  insert into public.heat_reset_records (event_id, heat_id, taken_by, reason, payload)
+  values (h.event_id, p_heat, auth.uid(), nullif(btrim(coalesce(p_reason, '')), ''), jsonb_build_object(
+    'heat', to_jsonb(h),
+    'heat_slots', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.heat_slots x where x.heat_id = p_heat),
+    'trick_attempts', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.trick_attempts x where x.heat_id = p_heat),
+    'trick_scores', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.trick_scores x where x.heat_id = p_heat),
+    'impression_scores', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.impression_scores x where x.heat_id = p_heat),
+    'penalties', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.penalties x where x.heat_id = p_heat),
+    'attempt_flags', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.attempt_flags x where x.heat_id = p_heat),
+    'judge_sheets', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.judge_sheets x where x.heat_id = p_heat),
+    'heat_decisions', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.heat_decisions x where x.heat_id = p_heat),
+    'heat_results', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from public.heat_results x where x.heat_id = p_heat)))
+  returning id into v_record;
+
+  perform set_config('app.draw_bypass', '1', true);
+  perform private.wipe_heat_data(array[p_heat]);
+  update public.heats set status = 'scheduled', started_at = null, paused_at = null, paused_total_sec = 0, ended_at = null, published_at = null, reopened_at = null,
+         publish_hold = false, public_live = null, flag_out = null
+   where id = p_heat;
+  update public.heat_slots set place = null, total = null, breakdown = null, flagged_out = false,
+         modifier = case when modifier = 'DNS' then 'DNS' when modifier = 'DSQ' and h.rerun_of is not null then 'DSQ' end
+   where heat_id = p_heat;
+  if p_draw is not null then
+    update public.divisions set draw = p_draw where id = h.division_id;
+    for p in select * from jsonb_array_elements(coalesce(p_seats, '[]'::jsonb)) loop
+      select * into v_target from public.heats where division_id = h.division_id and draw_uid = p ->> 'uid';
+      if not found then continue; end if;
+      for s in select * from jsonb_array_elements(p -> 'slots') loop
+        update public.heat_slots set entry_id = nullif(s ->> 'entry_id', '')::uuid, modifier = nullif(s ->> 'modifier', '')
+         where heat_id = v_target.id and position = (s ->> 'position')::int;
+      end loop;
+      v_changed := v_changed + 1;
+    end loop;
+  end if;
+  perform set_config('app.draw_bypass', '', true);
+
+  perform private.head_audit(h.event_id, 'heats', p_heat, 'heat_reset',
+    v_counts || jsonb_build_object('status', h.status, 'heat_id', p_heat),
+    jsonb_build_object('status', 'scheduled', 'record', v_record, 'later_seats_changed', v_changed, 'ever_public', v_public), p_reason);
+  return v_counts || jsonb_build_object('record', v_record, 'later_seats_changed', v_changed);
+end $$;
+
+revoke all on function public.reset_event, public.reset_division_preview, public.reset_division, public.clear_plan_actuals, public.reset_heat_preview, public.reset_heat from public, anon, authenticated;
+grant execute on function public.reset_event, public.reset_division_preview, public.reset_division, public.clear_plan_actuals, public.reset_heat_preview, public.reset_heat to authenticated;
+
+
+-- ===== migration 20261010100100_plan_hand_pins.sql =====
+-- Clear actual times keeps the pins the organiser set by hand (fix-reset-visibility, owner's change 1).
+-- A pin is "hand-set" when the organiser wrote it (the Run order step, a copied or generated plan); the pins the head console writes while the day runs
+-- (Shift, Resume at, +1 min, Pause break) are not. schedule_plans.hand_pins lists the item ids whose pin is hand-set.
+--   null  = a plan made before this change: nobody can tell, so every pin counts as hand-set and Clear actual times keeps them all (and says so);
+--   array = known. The first organiser save of an older plan turns it into a known one with every pin it has then marked hand-set.
+-- A pin the console moves stays hand-set if it was (the organiser's time is moved, never dropped). It changes no pins and no existing plan's behaviour.
+alter table public.schedule_plans add column hand_pins jsonb;
+
+create or replace function private.plan_hand_pins() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if tg_op = 'UPDATE' and new.anchors is not distinct from old.anchors then return new; end if;
+  if current_setting('app.pin_source', true) = 'console' then
+    if tg_op = 'UPDATE' then new.hand_pins := old.hand_pins; end if;
+    return new;
+  end if;
+  new.hand_pins := (select coalesce(jsonb_agg(distinct x), '[]'::jsonb) from (
+      select h as x from jsonb_array_elements_text(case when tg_op = 'UPDATE' and old.hand_pins is not null then old.hand_pins else '[]'::jsonb end) h where new.anchors ? h
+      union all
+      select e.key from jsonb_each(new.anchors) e where tg_op = 'INSERT' or old.hand_pins is null or (old.anchors -> e.key) is distinct from e.value) s);
+  return new;
+end $$;
+create trigger plan_hand_pins before insert or update on public.schedule_plans for each row execute function private.plan_hand_pins();
+
+-- the head console's two plan functions, as 5b has them, marking their pins as the console's
+create or replace function public.set_plan_hold(p_plan uuid, p_hold jsonb, p_reason text default null, p_expected timestamptz default null, p_anchors jsonb default null)
+returns public.schedule_plans
+language plpgsql security definer set search_path = '' as $$
+declare p public.schedule_plans; v_new public.schedule_plans; k text; v text;
+begin
+  select * into p from public.schedule_plans where id = p_plan for update;
+  if not found then raise exception 'PLAN_NOT_FOUND'; end if;
+  if not private.can_run_heat(p.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if not p.active then raise exception 'PLAN_NOT_ACTIVE'; end if;
+  if p_expected is not null and p.updated_at is distinct from p_expected then raise exception 'PLAN_CHANGED'; end if;
+  if p_hold is not null and (jsonb_typeof(p_hold) <> 'object' or (p_hold ->> 'since')::timestamptz is null) then raise exception 'BAD_PLAN_VALUE'; end if;
+  if p_anchors is not null then
+    if jsonb_typeof(p_anchors) <> 'object' then raise exception 'BAD_PLAN_VALUE'; end if;
+    for k, v in select * from jsonb_each_text(p_anchors) loop
+      if v !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then raise exception 'BAD_PLAN_VALUE'; end if;
+    end loop;
+  end if;
+  perform set_config('app.pin_source', 'console', true);
+  update public.schedule_plans set hold = p_hold, anchors = coalesce(p_anchors, anchors) where id = p_plan returning * into v_new;
+  perform set_config('app.pin_source', '', true);
+  perform private.draw_audit(p.event_id, p_plan, case when p_hold is null then 'plan_hold_cleared' else 'plan_hold_set' end,
+    jsonb_build_object('before', jsonb_build_object('hold', p.hold, 'anchors', p.anchors), 'after', jsonb_build_object('hold', v_new.hold, 'anchors', v_new.anchors)), p_reason, 'schedule_plans');
+  return v_new;
+end $$;
+
+create or replace function public.set_plan_anchors(p_plan uuid, p_anchors jsonb, p_reason text default null, p_expected timestamptz default null)
+returns public.schedule_plans
+language plpgsql security definer set search_path = '' as $$
+declare p public.schedule_plans; v_new public.schedule_plans; k text; v text;
+begin
+  select * into p from public.schedule_plans where id = p_plan for update;
+  if not found then raise exception 'PLAN_NOT_FOUND'; end if;
+  if not private.can_run_heat(p.event_id) then raise exception 'NOT_ALLOWED'; end if;
+  if not p.active then raise exception 'PLAN_NOT_ACTIVE'; end if;
+  if p_expected is not null and p.updated_at is distinct from p_expected then raise exception 'PLAN_CHANGED'; end if;
+  if p_anchors is null or jsonb_typeof(p_anchors) <> 'object' then raise exception 'BAD_PLAN_VALUE'; end if;
+  for k, v in select * from jsonb_each_text(p_anchors) loop
+    if v !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then raise exception 'BAD_PLAN_VALUE'; end if;
+  end loop;
+  perform set_config('app.pin_source', 'console', true);
+  update public.schedule_plans set anchors = p_anchors where id = p_plan returning * into v_new;
+  perform set_config('app.pin_source', '', true);
+  perform private.draw_audit(p.event_id, p_plan, 'plan_anchors_set',
+    jsonb_build_object('before', jsonb_build_object('anchors', p.anchors), 'after', jsonb_build_object('anchors', v_new.anchors)), p_reason, 'schedule_plans');
+  return v_new;
+end $$;
+
+-- Clear actual times: the actual starts of breaks and notes, and the pins the console wrote while the day ran. Hand-set pins stay. A plan that cannot tell
+-- (hand_pins is null) keeps every pin. The heats' own real times are the heats' (Reset this heat / division wipes those); a hold is left as it is.
+create or replace function public.clear_plan_actuals(p_plan uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare p public.schedule_plans; v_keep jsonb; v_actuals int; v_cleared int; v_run text;
+begin
+  select * into p from public.schedule_plans where id = p_plan for update;
+  if not found or not (private.is_event_organiser(p.event_id) or private.is_platform_owner()) then raise exception 'NOT_ALLOWED'; end if;
+  v_run := private.running_heat_name(p.event_id);
+  if v_run is not null then raise exception 'HEAT_RUNNING: %', v_run; end if;
+  v_keep := case when p.hand_pins is null then p.anchors
+                 else coalesce((select jsonb_object_agg(e.key, e.value) from jsonb_each(p.anchors) e where p.hand_pins ? e.key), '{}'::jsonb) end;
+  v_actuals := (select count(*) from jsonb_object_keys(p.actual_starts));
+  v_cleared := (select count(*) from jsonb_object_keys(p.anchors)) - (select count(*) from jsonb_object_keys(v_keep));
+  perform set_config('app.pin_source', 'console', true);
+  update public.schedule_plans set anchors = v_keep, actual_starts = '{}'::jsonb where id = p_plan;
+  perform set_config('app.pin_source', '', true);
+  perform private.draw_audit(p.event_id, p_plan, 'plan_actuals_cleared',
+    jsonb_build_object('before', jsonb_build_object('actual_starts', p.actual_starts, 'anchors', p.anchors), 'after', jsonb_build_object('actual_starts', '{}'::jsonb, 'anchors', v_keep, 'pins_known', p.hand_pins is not null)), null, 'schedule_plans');
+  return jsonb_build_object('actual_starts', v_actuals, 'pins', v_cleared, 'kept', (select count(*) from jsonb_object_keys(v_keep)), 'known', p.hand_pins is not null);
+end $$;
+
+revoke all on function public.set_plan_hold, public.set_plan_anchors, public.clear_plan_actuals from public, anon;
+grant execute on function public.set_plan_hold, public.set_plan_anchors, public.clear_plan_actuals to authenticated;
+
+
+-- ===== migration 20261011100000_organiser_access.sql =====
+-- Polish 1, item 2: organiser access.
+--   * admin_remove_organiser: the platform owner takes a person out of one organisation. Their access ends at once (the organisation's rows stop being readable
+--     to them, because every rule asks the memberships table) and every session they hold is deleted, so a phone that is still open is signed out the next time it
+--     asks the auth service. The login itself stays, so the same address can be invited again later. Audited.
+
+create or replace function public.admin_remove_organiser(p_org uuid, p_user uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+declare m public.memberships;
+begin
+  if not private.is_platform_owner() then raise exception 'NOT_ALLOWED'; end if;
+  if p_user = auth.uid() then raise exception 'CANNOT_REMOVE_SELF'; end if;
+  select * into m from public.memberships where organisation_id = p_org and user_id = p_user;
+  if not found then raise exception 'NOT_A_MEMBER'; end if;
+  delete from public.memberships where id = m.id;
+  -- signed out everywhere: their refresh tokens go with the sessions
+  delete from auth.sessions where user_id = p_user;
+  perform private.platform_audit('organiser_removed', p_org, 'memberships', m.id, jsonb_build_object('user_id', p_user, 'role', m.role), null, null);
+end $$;
+
+revoke all on function public.admin_remove_organiser from public, anon, authenticated;
+grant execute on function public.admin_remove_organiser to authenticated;
+

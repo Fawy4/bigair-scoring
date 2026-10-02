@@ -892,3 +892,48 @@ Branch `phase-7a-2-design-system`, started from main after PR #17 and #18. The S
 - Not seen on a real phone or in the sun.
 
 **How to test**: see the pull request description.
+
+## Polish 1 – simulator panel, organiser access (branch `polish-1-simulator-access`)
+
+One commit per item. Item 3 (the master trick base editor) is **not** in this pull request: see "Not done".
+
+### Item 1 – the simulator panel in the design system
+- `/org/events/[id]/simulate` now uses the shared organiser building blocks: the controls (speed, Start / Pause / Stop, the state and the one sentence that says what it is doing) are one quiet toolbar; Who plays, How they behave, Scenarios, View as…, Checklist, What happened and Reset are cards; the "Run as simulation" and "setting up" screens are a card and a banner. The old hard-coded daylight wrapper is gone, so the panel follows Daylight / Dark like every other organiser screen. Controls are 40 px (44 on touch); times in the log sit in a right-aligned column.
+- View as… is a compact grid: public pages as buttons with icons; one row per official with a role icon, "Open" and "Phone". The PIN in the phone box is hidden until **Show PIN** is tapped.
+- Behaviour, test ids and web addresses are unchanged. Buttons that cannot be pressed say why under them (Reset: "Type the event's web address first."). While an action is running the toolbar says "Working…" once instead of printing a reason under every button.
+- The screenshot pass (`e2e/design-system-shots.spec.ts`) now includes the simulator (a real event's "Run as simulation" card, and a simulation's full panel) at 1280 and 390 px, Daylight and Dark, with the same checks (sideways scroll, control height, white panels in Dark, contrast). `SHOTS_ONLY=simulate` limits a run to those screens.
+- The "Last run" numbers stay sentences ("3 of 12 heats published") because a test reads them; they use tabular digits but are not in right-aligned columns.
+
+### Item 2 – organiser access, end to end
+**What was wrong, found by testing on the hosted project**
+- The invite **e-mail link did not sign anybody in.** The e-mail is sent by the server, and the auth service then returns the session after a `#` in the address, which a server route never receives, so `/auth/confirm` always said "link failed". (The copy-the-link path worked, which is why it was not noticed.) Fixed with a new page `/auth/link` that reads the session from the address, keeps it, and sends the person to their organisation (or `/admin` for the owner). An expired or already-used link goes to the sign-in page with its own sentence.
+- The confirmation said "They open the link in the same browser they asked from", which is wrong for an invitation. Removed.
+- There was **no way to remove an organiser.** New database function `admin_remove_organiser` (owner only; migration `20261011100000_organiser_access.sql`, applied to the hosted project with `npm run db:apply`, types regenerated): deletes the membership, deletes every session of that login (so a phone that is still open is signed out the next time it asks), keeps the login so the address can be invited again, writes an audit line. You cannot remove yourself. A person who is an organiser of two organisations loses only the one, but is signed out of both until they sign in again.
+
+**What the owner sees now** (/admin → organisation)
+- The Organisers table has an "Access" column with **Remove** (a question first: "Their access ends at once and every phone or computer they are signed in on is signed out. You can invite them again later."). Staff do not see it.
+- The invite form is titled "Invite organiser" and says: "Only 2 sign-in e-mails per hour on this plan." The number is `NEXT_PUBLIC_AUTH_EMAIL_LIMIT_PER_HOUR` (default 2; set it on Vercel and redeploy when the plan or the sender changes; the sentence disappears at 0). If a send fails the confirmation says why in words (hourly limit used up / the plan's sender only writes to your own team's addresses / other) and gives the link to copy; it is never silent.
+- Every invite confirmation ends with: "Ask them to click the link today and set a password straight away."
+- No owner-set temporary passwords exist anywhere: the invite form has no password field (the test checks this); the organiser chooses theirs with **Set a password** in the account menu, then signs in with e-mail + password. "Forgot password?" is unchanged: it sends a sign-in link and lands on the set-password page.
+
+**What the invite e-mail looks like, and where to change it**
+- Subject "Your sign-in link"; body: heading "Your sign-in link", "Follow the link below to sign in. This link expires shortly and can only be used once.", and a link "Sign in". It is Supabase's **Magic Link** template (an invited login is an existing confirmed login, so that template is used).
+- Sender: the Supabase default (name "Supabase Auth", a noreply address of Supabase's). Neither the sender nor the wording is in this code. Wording: Supabase dashboard → Authentication → Emails → Templates → Magic Link. Sender name/address: Authentication → Emails → SMTP Settings, which needs a custom SMTP provider; the sender address of the built-in service cannot be changed. The sign-in link is valid for **1 hour** (`mailer_otp_exp` 3600 s), and the plan allows 2 e-mails per hour.
+- **Open question for the owner:** the requested line says "click the link **today**", but the link works for one hour. Either the line should say "within the hour", or the validity can be raised (Authentication → Sign In / Providers → Email → "Email OTP expiration", up to 24 h). I left both as they are. Also, e-mail security scanners that open links can use up a one-time link; if somebody says their link "already expired", invite them again.
+- Also not verified: whether the built-in sender writes to addresses outside the project team. No real e-mail was sent in testing (2 per hour); the link path is the same address the e-mail carries, produced by the auth service.
+
+**Tests**
+- `tests/rls/organiser-access.test.ts` (6): an organiser sees only their own organisation, events and members; cannot add or remove members by table or by the owner's functions; staff cannot remove; self and non-member refused; removal ends access at once, signs the session out (the old token no longer works, refresh fails), keeps the login, writes the audit line; re-adding works.
+- `e2e/organiser-access.spec.ts` (2), on a throwaway platform owner and organisation: invite (no password field; the limit sentence and the "today" line visible) → the link opened in a private window lands in that organisation only (no admin, 404) → Set a password → sign out → sign in with e-mail + password → the e-mail's own link shape (session after `#`) signs in and a used link says so → "Forgot password" needs an e-mail first and its link lands on set-password → owner removes → table row gone, their window is sent to sign-in, the password gets "not an organiser" → invite again works. Plus: the owner cannot remove their own login, and an organiser gets 404 on the organisation's admin page.
+- Unit: the hash parser and the e-mail failure classifier / limit (`src/lib/auth`).
+- Found but not mine: `e2e/admin.spec.ts` "the owner runs the platform…" times out at the Archive confirmation on a **clean `main`** too (checked in a separate copy of `main`); the other 39 tests in admin, password-login and organiser specs pass.
+
+### Not done
+- **Item 3, the master trick base editor** (form editor, versions and diff, proposals queue, update-to-latest) is not started. It is a large change on its own (new tables or versioning rules, RLS, an editor with drag and drop, and four Playwright paths), and doing it in the same pull request would have meant a rushed, less tested editor. It becomes its own pull request.
+- "Forgot password" and "Sign in with a link" on the login page still use the browser's own link (it works only in the same browser that asked, as the page says). Only the invite e-mail was moved to the any-browser link.
+- Not seen on a real phone.
+
+### How to test on the preview
+1. Open /admin → an organisation → note the sentence about 2 e-mails an hour; Invite organiser with your own address (or untick the e-mail and copy the link); open the link in a private window: you are in that organisation, nothing else to do. Account → Set a password, sign out, sign in with e-mail + password.
+2. Back in /admin: Remove next to that person, confirm; in the private window reload: you are sent to sign-in. Invite again.
+3. Open an event → Simulate: the panel is in the same look in Daylight and Dark; View as… → Phone → Show PIN.

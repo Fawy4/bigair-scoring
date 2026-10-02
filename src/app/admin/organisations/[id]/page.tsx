@@ -6,7 +6,7 @@ import { organisationStatus, deleteBlockedReason } from "@/lib/platform/organisa
 import { requireAdmin } from "@/lib/platform/session";
 import { copy } from "@/lib/ui-copy";
 import { startImpersonation } from "../../actions";
-import { ArchivePanel, DeletePanel, InvitePanel, LogoPanel, RenamePanel } from "./panels";
+import { ArchivePanel, DeletePanel, InvitePanel, LogoPanel, RemoveOrganiserButton, RenamePanel } from "./panels";
 import { EventsPanel } from "./events-panel";
 import { formatEventDates } from "@/lib/platform/event-label";
 
@@ -15,7 +15,7 @@ const td = "border border-beach-line p-2";
 
 export default async function OrganisationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, role } = await requireAdmin();
+  const { supabase, role, user } = await requireAdmin();
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const { data: all } = await supabase.rpc("admin_organisation_overview");
   const org = (all ?? []).find((o) => o.id === id);
@@ -64,6 +64,7 @@ export default async function OrganisationPage({ params }: { params: Promise<{ i
                 <th className={th}>{c.memberColumns.email}</th>
                 <th className={th}>{c.memberColumns.role}</th>
                 <th className={th}>{c.memberColumns.since}</th>
+                {role === "owner" ? <th className={th}>{c.removeColumn}</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -72,6 +73,11 @@ export default async function OrganisationPage({ params }: { params: Promise<{ i
                   <td className={td}>{m.email}</td>
                   <td className={td}>{m.role}</td>
                   <td className={td}>{formatWhen(m.created_at, defaultTimezone)}</td>
+                  {role === "owner" ? (
+                    <td className={td}>
+                      <RemoveOrganiserButton orgId={org.id} orgName={org.name} userId={m.user_id} email={m.email} isSelf={m.user_id === user.id} />
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

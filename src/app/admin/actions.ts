@@ -11,6 +11,7 @@ import { loadVersions } from "@/lib/platform/preset-rows";
 import { SETTINGS_TAG } from "@/lib/platform/public-settings";
 import { validatePlatformSettings, settingsToRows, type SettingsInput } from "@/lib/platform/settings";
 import { inviteConfirmLink } from "@/lib/platform/organisation";
+import { classifyEmailError, emailLimitPerHour, type EmailFailure } from "@/lib/auth/email-send";
 import { requestOrigin } from "@/lib/platform/origin";
 import { MASTER_KINDS, nextVersion, prepareNewVersion, validateMasterPreset, type MasterKind } from "@/lib/platform/master-presets";
 import { canonicalHash } from "@/lib/presets/plan";
@@ -122,7 +123,7 @@ export async function deleteOrganisation(orgId: string, typedSlug: string): Prom
 }
 
 export type InviteResult =
-  | { ok: true; email: string; emailSent: boolean; emailFailed: boolean; link: string | null }
+  | { ok: true; email: string; emailSent: boolean; emailFailed: boolean; failure: EmailFailure | null; limitPerHour: number; link: string | null }
   | Failure;
 
 /**
@@ -149,9 +150,12 @@ export async function inviteOrganiser(input: { orgId: string; email: string; sen
 
   const origin = await requestOrigin();
   let emailSent = false;
+  let failure: EmailFailure | null = null;
   if (sendEmail) {
+    // sent from here (not from the invitee's browser), so the link in the e-mail comes back with the session after "#": /auth/link reads it, in any browser
     const anon = createPlainClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
-    const sent = await anon.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: `${origin}/auth/confirm?next=%2Forg` } });
+    const sent = await anon.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: `${origin}/auth/link?next=%2Forg` } });
+    failure = classifyEmailError(sent.error);
     emailSent = !sent.error;
   }
   let link: string | null = null;
@@ -162,7 +166,23 @@ export async function inviteOrganiser(input: { orgId: string; email: string; sen
     link = inviteConfirmLink(origin, generated.data.properties.hashed_token);
   }
   revalidatePath(`/admin/organisations/${orgId}`);
-  return { ok: true, email, emailSent, emailFailed: sendEmail && !emailSent, link };
+  return { ok: true, email, emailSent, emailFailed: sendEmail && !emailSent, failure, limitPerHour: emailLimitPerHour(), link };
+}
+
+/**
+ * Owner only. Takes a person out of one organisation: their access ends at once and every session they hold is deleted (the database does both and writes the audit
+ * line). The login stays, so the same address can be invited again later.
+ */
+export async function removeOrganiser(input: { orgId: string; userId: string }): Promise<{ ok: true } | Failure> {
+  const parsed = z.object({ orgId: z.string().uuid(), userId: z.string().uuid() }).safeParse(input);
+  if (!parsed.success) return fail();
+  const { supabase, role } = await requireAdmin();
+  if (role !== "owner") return fail("NOT_ALLOWED");
+  const { error } = await supabase.rpc("admin_remove_organiser", { p_org: parsed.data.orgId, p_user: parsed.data.userId });
+  if (error) return fail(error.message);
+  revalidatePath(`/admin/organisations/${parsed.data.orgId}`);
+  revalidatePath("/admin");
+  return { ok: true };
 }
 
 // ------------------------------------------------------------------ platform settings
