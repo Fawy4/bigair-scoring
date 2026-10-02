@@ -1,71 +1,83 @@
 "use client";
 
-import { Pause, Play, Square } from "lucide-react";
-import { Chip } from "@/components/live/chip";
+import React from "react";
+import { Binoculars, Gavel, Pause, Play, ShieldCheck, Square } from "lucide-react";
+import { Banner } from "@/components/ui/banner";
 import { Pill } from "@/components/live/pill";
 import { SPEEDS, SPREADS, JUDGE_MODES } from "@/lib/simulator/config";
 import type { SeatView, SimStatus } from "@/lib/simulator/types";
 import { copy } from "@/lib/ui-copy";
 import { saveSettings, setPlayState, setSeatMode, setSpeed } from "./actions";
-import { Card, Field } from "./parts";
+import { Card, Choice, Field } from "./parts";
 import type { useSim } from "./use-sim";
 
 const T = copy.simulator;
 type Sim = ReturnType<typeof useSim>;
 
+const ROLE_ICON = { judge: Gavel, spotter: Binoculars, head: ShieldCheck } as const;
 const ATTEMPTS = [3, 4, 5, 6, 7, 8];
 const CRASH = [0, 0.1, 0.2, 0.3, 0.5];
 const REPEAT = [0, 0.1, 0.2, 0.3];
 
-/** Speed ×1 / ×5 / ×10 / ×20, and Start / Pause / Stop of the auto-play, with the sentence that says what it is doing. */
-export function SpeedAndPlay({ eventId, sim }: { eventId: string; sim: Sim }) {
+/**
+ * The controls as one quiet toolbar: speed ×1 / ×5 / ×10 / ×20, Start / Pause / Stop of the auto-play and the state, with the sentence that says what it is doing
+ * under it. A thin frame, no card: the cards below hold the settings.
+ */
+export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
   const { status, line, act, pending } = sim;
   const state = status.control.state;
   const stateWord = state === "playing" ? T.play.statePlaying : state === "paused" ? T.play.statePaused : T.play.stateStopped;
   return (
-    <>
-      <Card title={T.speed.heading} help={T.speed.help} testId="sim-speed">
-        <div className="flex flex-wrap gap-1.5">
-          {SPEEDS.map((n) => (
-            <Chip key={n} data-testid={`sim-speed-${n}`} pressed={status.control.speed === n} disabled={pending} onClick={() => void act(() => setSpeed(eventId, n))}>
-              {T.speed.option(n)}
-            </Chip>
-          ))}
+    <section role="toolbar" aria-label={T.toolbarLabel} data-testid="sim-toolbar" className="flex flex-col gap-3 rounded-card border border-beach-line bg-beach-bg p-4">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div data-testid="sim-speed">
+          <Field label={T.speed.heading} help={T.speed.help}>
+            {SPEEDS.map((n) => (
+              <Choice key={n} data-testid={`sim-speed-${n}`} pressed={status.control.speed === n} disabled={pending} onClick={() => void act(() => setSpeed(eventId, n))}>
+                {T.speed.option(n)}
+              </Choice>
+            ))}
+          </Field>
         </div>
-        <p className="text-small font-medium text-beach-muted">{T.speed.note}</p>
-      </Card>
-
-      <Card title={T.play.heading} help={T.play.help} testId="sim-play">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {state !== "playing" ? (
-            <Chip variant="accent" icon={Play} data-testid="sim-start" disabled={pending} onClick={() => void act(() => setPlayState(eventId, "playing"))}>
-              {state === "paused" ? T.play.resume : T.play.start}
-            </Chip>
-          ) : (
-            <Chip icon={Pause} data-testid="sim-pause" disabled={pending} onClick={() => void act(() => setPlayState(eventId, "paused"))}>
-              {T.play.pause}
-            </Chip>
-          )}
-          <Chip icon={Square} data-testid="sim-stop" disabled={pending || state === "stopped"} onClick={() => void act(() => setPlayState(eventId, "stopped"))}>
-            {T.play.stop}
-          </Chip>
-          <Pill tone={state === "playing" ? "live" : state === "paused" ? "pending" : "missing"} icon={state === "playing" ? Play : state === "paused" ? Pause : Square}>
-            <span data-testid="sim-state" data-state={state}>
-              {stateWord}
-            </span>
-          </Pill>
+        <div data-testid="sim-play">
+          <Field label={T.play.heading} help={T.play.help}>
+            {state !== "playing" ? (
+              <Choice primary icon={Play} data-testid="sim-start" disabled={pending} onClick={() => void act(() => setPlayState(eventId, "playing"))}>
+                {state === "paused" ? T.play.resume : T.play.start}
+              </Choice>
+            ) : (
+              <Choice icon={Pause} data-testid="sim-pause" disabled={pending} onClick={() => void act(() => setPlayState(eventId, "paused"))}>
+                {T.play.pause}
+              </Choice>
+            )}
+            <Choice icon={Square} data-testid="sim-stop" disabled={pending || state === "stopped"} onClick={() => void act(() => setPlayState(eventId, "stopped"))}>
+              {T.play.stop}
+            </Choice>
+            <Pill tone={state === "playing" ? "live" : state === "paused" ? "pending" : "missing"} icon={state === "playing" ? Play : state === "paused" ? Pause : Square}>
+              <span data-testid="sim-state" data-state={state}>
+                {stateWord}
+              </span>
+            </Pill>
+            {pending ? (
+              <span role="status" className="text-small font-medium text-beach-muted">
+                {T.busy}
+              </span>
+            ) : null}
+          </Field>
         </div>
-        <p data-testid="sim-line" role="status" className="text-name font-semibold">
-          {line}
-        </p>
-        {status.control.blocker ? (
-          <p data-testid="sim-blocker" role="alert" className="rounded-xl border border-beach-failed p-2 text-body font-semibold text-beach-failed">
-            {T.play.lines.stoppedAtBlocker(status.control.blocker)}
-          </p>
-        ) : null}
-        <p className="text-small font-medium text-beach-muted">{T.play.tabNote}</p>
-      </Card>
-    </>
+      </div>
+      <p data-testid="sim-line" role="status" className="text-name font-semibold">
+        {line}
+      </p>
+      {status.control.blocker ? (
+        <Banner tone="danger" data-testid="sim-blocker">
+          {T.play.lines.stoppedAtBlocker(status.control.blocker)}
+        </Banner>
+      ) : null}
+      <p className="text-small font-medium text-beach-muted">
+        {T.speed.note} {T.play.tabNote}
+      </p>
+    </section>
   );
 }
 
@@ -90,19 +102,22 @@ export function Roles({ eventId, sim }: { eventId: string; sim: Sim }) {
         const seats = status.seats.filter((s) => s.role === g.role).sort((a, b) => (a.seatNo ?? 99) - (b.seatNo ?? 99) || a.name.localeCompare(b.name));
         return (
           <div key={g.role} className="flex flex-col gap-1">
-            <h3 className="text-small font-semibold text-beach-muted">{g.title}</h3>
+            <h3 className="flex items-center gap-2 text-small font-semibold text-beach-muted">
+              {React.createElement(ROLE_ICON[g.role], { "aria-hidden": true, className: "size-4" })}
+              {g.title}
+            </h3>
             {seats.length === 0 ? <p className="text-small font-medium">{g.role === "head" ? T.roles.noHeadSeat : g.role === "spotter" ? T.roles.noSpotterSeat : ""}</p> : null}
             {seats.map((s) => (
-              <div key={s.id} data-testid={`role-${s.id}`} data-mode={s.mode} className="flex min-h-row flex-wrap items-center justify-between gap-1.5 rounded-xl border border-beach-line bg-beach-bg px-2 py-1">
+              <div key={s.id} data-testid={`role-${s.id}`} data-mode={s.mode} className="flex min-h-[var(--org-row)] flex-wrap items-center justify-between gap-2 rounded-[8px] border border-beach-line px-3 py-1">
                 <span className="text-name font-semibold">{s.name}</span>
-                <span className="flex items-center gap-1.5">
+                <span className="flex flex-wrap items-center gap-2">
                   {heldPill(s)}
-                  <Chip data-testid={`role-${s.id}-virtual`} pressed={s.mode === "virtual"} disabled={pending} onClick={() => void act(() => setSeatMode(eventId, s.id, "virtual"))}>
+                  <Choice data-testid={`role-${s.id}-virtual`} pressed={s.mode === "virtual"} disabled={pending} onClick={() => void act(() => setSeatMode(eventId, s.id, "virtual"))}>
                     {T.roles.virtual}
-                  </Chip>
-                  <Chip data-testid={`role-${s.id}-real`} pressed={s.mode === "real"} disabled={pending} onClick={() => void act(() => setSeatMode(eventId, s.id, "real"))}>
+                  </Choice>
+                  <Choice data-testid={`role-${s.id}-real`} pressed={s.mode === "real"} disabled={pending} onClick={() => void act(() => setSeatMode(eventId, s.id, "real"))}>
                     {T.roles.real}
-                  </Chip>
+                  </Choice>
                 </span>
               </div>
             ))}
@@ -124,45 +139,45 @@ export function Behaviour({ eventId, sim }: { eventId: string; sim: Sim }) {
     <Card title={B.heading} testId="sim-behaviour">
       <Field label={B.attemptsPerRider} help={B.attemptsHelp}>
         {ATTEMPTS.map((n) => (
-          <Chip key={n} data-testid={`attempts-${n}`} pressed={c.attemptsPerRider === n} disabled={pending} onClick={() => save({ attemptsPerRider: n })}>
+          <Choice key={n} data-testid={`attempts-${n}`} pressed={c.attemptsPerRider === n} disabled={pending} onClick={() => save({ attemptsPerRider: n })}>
             {n}
-          </Chip>
+          </Choice>
         ))}
       </Field>
       <Field label={B.crashShare} help={B.crashHelp}>
         {CRASH.map((n) => (
-          <Chip key={n} data-testid={`crash-${Math.round(n * 100)}`} pressed={Math.abs(c.crashShare - n) < 0.001} disabled={pending} onClick={() => save({ crashShare: n })}>
+          <Choice key={n} data-testid={`crash-${Math.round(n * 100)}`} pressed={Math.abs(c.crashShare - n) < 0.001} disabled={pending} onClick={() => save({ crashShare: n })}>
             {B.percent(Math.round(n * 100))}
-          </Chip>
+          </Choice>
         ))}
       </Field>
       <Field label={B.repeatShare} help={B.repeatHelp}>
         {REPEAT.map((n) => (
-          <Chip key={n} data-testid={`repeat-${Math.round(n * 100)}`} pressed={Math.abs(c.repeatShare - n) < 0.001} disabled={pending} onClick={() => save({ repeatShare: n })}>
+          <Choice key={n} data-testid={`repeat-${Math.round(n * 100)}`} pressed={Math.abs(c.repeatShare - n) < 0.001} disabled={pending} onClick={() => save({ repeatShare: n })}>
             {B.percent(Math.round(n * 100))}
-          </Chip>
+          </Choice>
         ))}
       </Field>
       <Field label={B.spread} help={B.spreadHelp}>
         {SPREADS.map((s) => (
-          <Chip key={s} data-testid={`spread-${s}`} pressed={c.spread === s} disabled={pending} onClick={() => save({ spread: s })}>
+          <Choice key={s} data-testid={`spread-${s}`} pressed={c.spread === s} disabled={pending} onClick={() => save({ spread: s })}>
             {B.spreads[s]}
-          </Chip>
+          </Choice>
         ))}
       </Field>
       <Field label={B.judgeMode} help={B.judgeModeHelp}>
         {JUDGE_MODES.map((m) => (
-          <Chip key={m} data-testid={`mode-${m}`} pressed={c.judgeMode === m} disabled={pending} onClick={() => save({ judgeMode: m })}>
+          <Choice key={m} data-testid={`mode-${m}`} pressed={c.judgeMode === m} disabled={pending} onClick={() => save({ judgeMode: m })}>
             {B.modes[m]}
-          </Chip>
+          </Choice>
         ))}
       </Field>
       {c.judgeMode !== "none" ? (
         <Field label={B.whichJudge}>
           {(judges.length ? judges.map((j, i) => j.seatNo ?? i + 1) : [1, 2, 3]).map((n) => (
-            <Chip key={n} data-testid={`which-judge-${n}`} pressed={c.specialJudge === n} disabled={pending} onClick={() => save({ specialJudge: n })}>
+            <Choice key={n} data-testid={`which-judge-${n}`} pressed={c.specialJudge === n} disabled={pending} onClick={() => save({ specialJudge: n })}>
               {B.judgeNo(n)}
-            </Chip>
+            </Choice>
           ))}
         </Field>
       ) : null}

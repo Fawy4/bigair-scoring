@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Banner } from "@/components/ui/banner";
 import { getOrgContext } from "@/lib/org/context";
 import { loadSimStatus } from "@/lib/simulator/status";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -36,7 +37,7 @@ export default async function SimulatePage({ params }: { params: Promise<{ id: s
 
   if (!event.is_simulation) {
     return (
-      <main className="flex max-w-3xl flex-col gap-4">
+      <main className="flex max-w-3xl flex-col gap-6">
         {header}
         <RunAsSimulation eventId={id} eventName={event.name} />
       </main>
@@ -47,7 +48,7 @@ export default async function SimulatePage({ params }: { params: Promise<{ id: s
   if (result.kind === "denied") notFound();
   if (result.kind === "needs_setup") {
     return (
-      <main className="flex max-w-3xl flex-col gap-4">
+      <main className="flex max-w-3xl flex-col gap-6">
         {header}
         <SetupSimulator eventId={id} />
       </main>
@@ -55,16 +56,14 @@ export default async function SimulatePage({ params }: { params: Promise<{ id: s
   }
   if (result.kind !== "ok") {
     return (
-      <main className="flex max-w-3xl flex-col gap-4">
+      <main className="flex max-w-3xl flex-col gap-6">
         {header}
-        <p role="alert" className="panel font-semibold">
-          {result.kind === "error" ? result.message : T.generic}
-        </p>
+        <Banner tone="danger">{result.kind === "error" ? result.message : T.generic}</Banner>
       </main>
     );
   }
   return (
-    <main className="flex flex-col gap-4">
+    <main className="flex flex-col gap-6">
       {header}
       <SimConsole eventId={id} initial={result.status} />
     </main>

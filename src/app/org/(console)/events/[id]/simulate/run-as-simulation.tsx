@@ -1,6 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { Button, disabledWhen } from "@/components/org/button";
+import { OrgCard } from "@/components/org/org-card";
+import { Banner } from "@/components/ui/banner";
+import { Input } from "@/components/ui/input";
 import { useState, useTransition } from "react";
 import { copy } from "@/lib/ui-copy";
 import { cloneAsSimulation } from "./actions";
@@ -24,33 +27,34 @@ export function RunAsSimulation({ eventId, eventName }: { eventId: string; event
   }
 
   return (
-    <section className="panel flex flex-col gap-3" data-testid="run-as-simulation" aria-label={T.heading}>
-      <h2 className="text-xl font-extrabold">{T.heading}</h2>
-      <p className="font-semibold">{T.body}</p>
-      {made ? (
-        <div className="flex flex-col gap-2" role="status" data-testid="clone-done">
-          <p className="font-bold">{T.ready(made.name)}</p>
-          {made.locked < made.divisions ? <p className="font-semibold">{T.notDrawn(made.divisions - made.locked)}</p> : null}
-          <Link href={`/org/events/${made.id}/simulate`} className="btn btn-primary w-fit" data-testid="clone-open">
-            {T.open}
-          </Link>
-        </div>
-      ) : (
-        <>
-          <label className="flex flex-col gap-1 font-bold">
-            {T.nameLabel}
-            <input data-testid="clone-name" value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />
-          </label>
-          <button type="button" className="btn btn-primary w-fit" disabled={pending} onClick={run} data-testid="run-as-simulation-button">
-            {pending ? T.working : T.button}
-          </button>
-        </>
-      )}
-      {error ? (
-        <p role="alert" className="font-bold" data-testid="clone-error">
-          {error}
-        </p>
-      ) : null}
-    </section>
+    <OrgCard title={T.heading} testId="run-as-simulation">
+      <div className="flex max-w-prose flex-col gap-3">
+        <p className="text-body font-medium">{T.body}</p>
+        {made ? (
+          <div className="flex flex-col gap-3" role="status" data-testid="clone-done">
+            <p className="text-body font-semibold">{T.ready(made.name)}</p>
+            {made.locked < made.divisions ? <p className="text-body font-medium">{T.notDrawn(made.divisions - made.locked)}</p> : null}
+            <Button variant="primary" href={`/org/events/${made.id}/simulate`} data-testid="clone-open" className="w-fit">
+              {T.open}
+            </Button>
+          </div>
+        ) : (
+          <>
+            <label className="flex flex-col gap-1 text-body font-semibold">
+              {T.nameLabel}
+              <Input data-testid="clone-name" value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />
+            </label>
+            <Button variant="primary" className="w-fit" {...disabledWhen(pending && T.working)} onClick={run} data-testid="run-as-simulation-button">
+              {T.button}
+            </Button>
+          </>
+        )}
+        {error ? (
+          <Banner tone="danger" data-testid="clone-error">
+            {error}
+          </Banner>
+        ) : null}
+      </div>
+    </OrgCard>
   );
 }

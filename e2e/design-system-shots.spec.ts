@@ -6,16 +6,34 @@ import { createOrganiser } from "./organiser";
 // no control under the control height, nothing painted white on a dark page). Runs only when SHOTS names a folder: `SHOTS=/tmp/shots npx playwright test design-system-shots`.
 // One throwaway organisation with a live world, and one throwaway platform owner; Arrow, EKL and Demo are never touched.
 const OUT = process.env.SHOTS;
+// SHOTS_ONLY=simulate limits a run to the screens whose name matches (a quick look while working on one screen)
+const only = process.env.SHOTS_ONLY ? new RegExp(process.env.SHOTS_ONLY) : null;
 test.skip(!OUT, "set SHOTS to a folder to take the screenshots");
 test.describe.configure({ mode: "serial" });
 
 let w: LiveWorld;
 let owner: Awaited<ReturnType<typeof createOrganiser>>;
-test.beforeAll(async () => {
+// the Simulator's control panel needs a simulation event: one copy of the live world, made through the page as the organiser would (Polish 1, item 1)
+let simId = "";
+test.beforeAll(async ({ browser }) => {
+  test.setTimeout(180_000);
   w = await createLiveWorld();
   owner = await createOrganiser({ platformAdmin: "owner" });
+  const context = await browser.newContext();
+  await installSupabaseProxy(context);
+  const page = await context.newPage();
+  await w.org.signIn(page, `/org/events/${w.eventId}/simulate`);
+  await page.getByTestId("run-as-simulation-button").click();
+  await page.getByTestId("clone-open").click();
+  await page.getByTestId("sim-console").waitFor();
+  simId = /events\/([0-9a-f-]{36})\/simulate/.exec(page.url())![1];
+  await context.close();
 });
 test.afterAll(async () => {
+  if (w && simId) {
+    const { data } = await w.db.from("sim_seats").select("virtual_user").eq("event_id", simId);
+    for (const r of data ?? []) if (r.virtual_user) await w.db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
+  }
   await w?.cleanup();
   await owner?.cleanup();
 });
@@ -39,6 +57,8 @@ const orgPages = (id: string): Array<[string, string]> => [
   ["event-officials", `/org/events/${id}/officials`],
   ["event-draw", `/org/events/${id}/draw`],
   ["event-schedule", `/org/events/${id}/schedule`],
+  ["event-simulate-real", `/org/events/${id}/simulate`],
+  ["event-simulate", `/org/events/${simId}/simulate`],
 ];
 const adminPages = (orgId: string): Array<[string, string]> => [
   ["admin-home", "/admin"],
@@ -70,6 +90,7 @@ for (const vp of VIEWPORTS) {
       const problems: string[] = [];
       // measuring and photographing are two passes: a full-page capture changes a phone context (it stops matching "touch"), which would skew everything measured after it
       const measure = async (name: string, path: string) => {
+        if (only && !only.test(name)) return;
         await page.goto(path, { waitUntil: "networkidle" });
         const sideways = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         if (sideways > 1) problems.push(`${name}: scrolls sideways by ${sideways} px`);
@@ -135,6 +156,7 @@ for (const vp of VIEWPORTS) {
         }
       };
       const shoot = async (name: string, path: string) => {
+        if (only && !only.test(name)) return;
         await page.goto(path, { waitUntil: "networkidle" });
         await page.screenshot({ path: `${OUT}/${name}-${vp.key}-${theme}.png`, fullPage: true });
       };
