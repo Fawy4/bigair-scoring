@@ -152,14 +152,14 @@ function partSentence(message: string): string {
   return sentence(message);
 }
 
-/** "Clear actual times" on one run order: actual starts and pins go (the first pin stays), so the day re-flows from it. */
-export async function clearPlanActuals(planId: string): Promise<{ ok: true; actualStarts: number; pins: number } | Failed> {
+/** "Clear actual times" on one run order: actual starts and the pins written while the day ran go; pins set by hand stay (an older plan keeps all of them). */
+export async function clearPlanActuals(planId: string): Promise<{ ok: true; actualStarts: number; pins: number; kept: number } | Failed> {
   if (!uuid.safeParse(planId).success) return { ok: false, error: T.errors.failed };
   const { supabase } = await getOrgContext();
   const { data: plan } = await supabase.from("schedule_plans").select("event_id").eq("id", planId).maybeSingle();
   const { data, error } = await supabase.rpc("clear_plan_actuals", { p_plan: planId });
   if (error) return { ok: false, error: partSentence(error.message) };
   if (plan) revalidatePath(`/org/events/${plan.event_id}`, "layout");
-  const out = data as unknown as { actual_starts: number; pins: number };
-  return { ok: true, actualStarts: out.actual_starts, pins: out.pins };
+  const out = data as unknown as { actual_starts: number; pins: number; kept: number };
+  return { ok: true, actualStarts: out.actual_starts, pins: out.pins, kept: out.kept };
 }

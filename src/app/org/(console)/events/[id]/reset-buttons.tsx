@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { copy } from "@/lib/ui-copy";
 import { clearPlanActuals, previewResetDivision, resetDivision } from "./reset-actions";
 import { ResetSection } from "./reset-section";
@@ -38,8 +39,14 @@ export function ResetDivisionButton({ divisionId, name, hasHeats }: { divisionId
   );
 }
 
-/** "Clear actual times" on the Run order step, per run order. What it clears is counted from the plan on screen; the database refuses it while a heat runs. */
-export function ClearActualsButton({ planId, planName, actualStarts, pins }: { planId: string; planName: string; actualStarts: number; pins: number }) {
+/**
+ * "Clear actual times" on the Run order step, per plan. What it clears is counted from the plan on screen (the pins the organiser set by hand stay; an older plan keeps
+ * all of them and says so); the database refuses it while a heat runs.
+ */
+export function ClearActualsButton({ planId, planName, actualStarts, pinsCleared, pinsKept, known }: { planId: string; planName: string; actualStarts: number; pinsCleared: number; pinsKept: number; known: boolean }) {
+  const [done, setDone] = useState(false);
+  const starts = done ? 0 : actualStarts;
+  const cleared = done ? 0 : pinsCleared;
   return (
     <ResetSection
       testId="clear-actuals"
@@ -47,11 +54,13 @@ export function ClearActualsButton({ planId, planName, actualStarts, pins }: { p
       title={P.plan.title(planName)}
       intro={P.plan.intro}
       confirmLabel={P.plan.confirm}
-      idleReason={actualStarts + pins === 0 ? P.plan.nothing : undefined}
-      load={async () => ({ ok: true, view: { lines: [P.plan.lines(actualStarts, pins)], blockers: [], reasonNeeded: false } })}
+      idleReason={starts + cleared === 0 ? P.plan.nothing(pinsKept, known) : undefined}
+      load={async () => ({ ok: true, view: { lines: [P.plan.lines(starts, cleared, pinsKept, known)], blockers: [], reasonNeeded: false } })}
       run={async () => {
         const r = await clearPlanActuals(planId);
-        return r.ok ? { ok: true, message: P.plan.done(r.actualStarts, r.pins) } : r;
+        if (!r.ok) return r;
+        setDone(true);
+        return { ok: true, message: P.plan.done(r.actualStarts, r.pins, r.kept) };
       }}
     />
   );

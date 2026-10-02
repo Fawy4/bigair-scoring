@@ -13,6 +13,8 @@ export interface PlanRow {
   hold: unknown;
   defaults: unknown;
   active: boolean;
+  /** Item ids whose pin the organiser set by hand; null on a plan made before that was kept (every pin then counts as hand-set). */
+  hand_pins?: unknown;
 }
 
 export interface DayPlan {

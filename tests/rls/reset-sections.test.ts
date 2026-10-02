@@ -235,25 +235,68 @@ describe.skipIf(!ENV_OK)("Reset per section (hosted development project)", () =>
   });
 
   describe("Clear actual times", () => {
-    it("the organiser: actual starts and pins cleared, the first pin kept, one audit line", async () => {
+    const handPins = async (plan: string) => (await s().from("schedule_plans").select("hand_pins, anchors, actual_starts").eq("id", plan).single()).data!;
+
+    it("the organiser: the actual starts and the pins the console wrote are cleared, the pins set by hand stay (lunch, a pinned heat), one audit line", async () => {
       const w = await world("plan1");
+      // the world's plan was written by the organiser's side: every pin is hand-set
+      expect((await handPins(w.plan)).hand_pins).toEqual(expect.arrayContaining(["i0", "i1", "b1"]));
+      // the head console moves the day while it runs: Shift pins two more items
+      const shifted = await as("head").rpc("set_plan_anchors", { p_plan: w.plan, p_anchors: { i0: "10:00", i1: "10:40", b1: "12:00", i2: "11:07", i3: "11:30" } as never });
+      expect(codeOf(shifted)).toBe("");
+      expect((await handPins(w.plan)).hand_pins).not.toEqual(expect.arrayContaining(["i2"])); // the console's pins are not hand-set
       const res = await as("orgA").rpc("clear_plan_actuals", { p_plan: w.plan });
       expect(codeOf(res)).toBe("");
-      expect(res.data).toMatchObject({ actual_starts: 1, pins: 2, kept: "i0" });
+      expect(res.data).toMatchObject({ actual_starts: 1, pins: 2, kept: 3, known: true });
       const { data } = await s().from("schedule_plans").select("anchors, actual_starts, items").eq("id", w.plan).single();
-      expect(data!.anchors).toEqual({ i0: "10:00" });
+      expect(data!.anchors).toEqual({ i0: "10:00", i1: "10:40", b1: "12:00" });
       expect(data!.actual_starts).toEqual({});
       expect((data!.items as unknown[]).length).toBe(w.heatIds.length + 1); // the run order itself stays
       const lines = await audits(w.event, "plan_actuals_cleared");
       expect(lines).toHaveLength(1);
-      expect(lines[0].before).toMatchObject({ anchors: { i0: "10:00", i1: "10:40", b1: "12:00" } });
+      expect(lines[0].before).toMatchObject({ anchors: { i2: "11:07", i3: "11:30" } });
+      expect(lines[0].after).toMatchObject({ pins_known: true });
+    });
+
+    it("a pin the console moved stays hand-set when the organiser had set it (the organiser's time is moved, not dropped)", async () => {
+      const w = await world("plan1b");
+      expect(codeOf(await as("head").rpc("set_plan_anchors", { p_plan: w.plan, p_anchors: { i0: "10:00", i1: "10:55", b1: "12:00" } as never }))).toBe("");
+      expect((await handPins(w.plan)).hand_pins).toEqual(expect.arrayContaining(["i1"]));
+      expect(codeOf(await as("orgA").rpc("clear_plan_actuals", { p_plan: w.plan }))).toBe("");
+      expect((await handPins(w.plan)).anchors).toMatchObject({ i1: "10:55" });
+    });
+
+    it("a plan made before pins were marked (no list) keeps every pin, clears the actual starts, and says it could not tell", async () => {
+      const w = await world("plan1c");
+      await s().from("schedule_plans").update({ hand_pins: null }).eq("id", w.plan); // an older plan
+      expect(codeOf(await as("head").rpc("set_plan_anchors", { p_plan: w.plan, p_anchors: { i0: "10:00", i1: "10:40", b1: "12:00", i2: "11:07" } as never }))).toBe("");
+      expect((await handPins(w.plan)).hand_pins).toBeNull(); // the console does not make an older plan "known"
+      const res = await as("orgA").rpc("clear_plan_actuals", { p_plan: w.plan });
+      expect(res.data).toMatchObject({ actual_starts: 1, pins: 0, kept: 4, known: false });
+      expect((await handPins(w.plan)).anchors).toMatchObject({ i2: "11:07" });
+      expect((await audits(w.event, "plan_actuals_cleared"))[0].after).toMatchObject({ pins_known: false });
+    });
+
+    it("the organiser's own save marks the pins it changes as hand-set; the first save of an older plan marks every pin it has", async () => {
+      const w = await world("plan1d");
+      await s().from("schedule_plans").update({ hand_pins: null }).eq("id", w.plan);
+      expect(codeOf(await as("head").rpc("set_plan_anchors", { p_plan: w.plan, p_anchors: { i0: "10:00", i1: "10:40", b1: "12:00", i2: "11:07" } as never }))).toBe("");
+      const saved = await as("orgA").from("schedule_plans").update({ anchors: { i0: "10:00", i1: "10:40", b1: "12:00", i2: "11:07", i4: "14:00" } }).eq("id", w.plan).select("hand_pins");
+      expect(saved.error).toBeNull();
+      expect((saved.data![0].hand_pins as string[]).sort()).toEqual(["b1", "i0", "i1", "i2", "i4"]); // an older plan: all of them
+      // from now on the console's pins are told apart
+      expect(codeOf(await as("head").rpc("set_plan_anchors", { p_plan: w.plan, p_anchors: { i0: "10:00", i1: "10:40", b1: "12:00", i2: "11:07", i4: "14:00", i5: "14:30" } as never }))).toBe("");
+      expect(await handPins(w.plan)).toMatchObject({ hand_pins: expect.not.arrayContaining(["i5"]) });
+      const res = await as("orgA").rpc("clear_plan_actuals", { p_plan: w.plan });
+      expect(res.data).toMatchObject({ pins: 1, known: true });
     });
 
     it("only the plan it is asked about changes", async () => {
       const w = await world("plan2");
-      const other = await w.ins<{ id: string }>("schedule_plans", { event_id: w.event, day: "2026-11-02", name: "Plan B", items: [], anchors: { x: "09:00" }, actual_starts: {}, defaults: {}, active: false });
+      const other = await w.ins<{ id: string }>("schedule_plans", { event_id: w.event, day: "2026-11-02", name: "Plan B", items: [], anchors: { x: "09:00" }, actual_starts: { y: new Date().toISOString() }, defaults: {}, active: false });
       expect(codeOf(await as("orgA").rpc("clear_plan_actuals", { p_plan: w.plan }))).toBe("");
-      expect((await s().from("schedule_plans").select("anchors").eq("id", other.id).single()).data!.anchors).toEqual({ x: "09:00" });
+      expect(await handPins(other.id)).toMatchObject({ anchors: { x: "09:00" } });
+      expect(Object.keys((await handPins(other.id)).actual_starts as object)).toEqual(["y"]);
     });
 
     it("judge, spotter, the head seat and another organisation are refused; nothing changes", async () => {

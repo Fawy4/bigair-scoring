@@ -3139,11 +3139,14 @@ export const copy = {
     plan: {
       open: "Clear actual times",
       title: (name: string) => `Clear actual times: ${name}`,
-      intro: "Clears the actual start times and the pins of this run order, except the first pin, so the day flows again from it. Heats that already ran keep their real times: use Reset this heat or Reset this division to wipe those.",
-      lines: (starts: number, pins: number) => `This will clear ${starts} actual ${starts === 1 ? "start" : "starts"} and ${pins} ${pins === 1 ? "pin" : "pins"}.`,
+      intro: "Clears the actual start times of this run order and the pins written while the day ran (Shift, Resume at, +1 min), so the day flows again from the pins you set. Pins you set by hand (lunch, a briefing, a pinned heat) stay. Heats that already ran keep their real times: use Reset this heat or Reset this division to wipe those.",
+      lines: (starts: number, cleared: number, kept: number, known: boolean) =>
+        known
+          ? `This will clear ${starts} actual ${starts === 1 ? "start" : "starts"} and ${cleared} ${cleared === 1 ? "pin" : "pins"} written while the day ran. The ${kept} ${kept === 1 ? "pin" : "pins"} you set by hand stay.`
+          : `This will clear ${starts} actual ${starts === 1 ? "start" : "starts"}. This run order was made before the app told hand-set pins apart, so all ${kept} ${kept === 1 ? "pin stays" : "pins stay"}: it cannot tell yours from the others. Change anything in this run order and save, and the pins written from then on can be cleared.`,
       confirm: "Yes, clear actual times",
-      nothing: "There are no actual times or extra pins to clear in this run order.",
-      done: (starts: number, pins: number) => `Cleared ${starts} actual ${starts === 1 ? "start" : "starts"} and ${pins} ${pins === 1 ? "pin" : "pins"}. The day flows from the first pin.`,
+      nothing: (kept: number, known: boolean) => `There are no actual start times or pins written while the day ran to clear in this run order.${known || kept === 0 ? "" : " (All its pins stay: this older run order cannot tell hand-set pins from the rest.)"}`,
+      done: (starts: number, cleared: number, kept: number) => `Cleared ${starts} actual ${starts === 1 ? "start" : "starts"} and ${cleared} ${cleared === 1 ? "pin" : "pins"}. ${kept} ${kept === 1 ? "pin stays" : "pins stay"}.`,
     },
     heat: {
       menu: "Heat menu",

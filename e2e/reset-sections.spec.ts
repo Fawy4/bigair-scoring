@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, installSupabaseProxy, closePhones } from "./base";
 import { addLadder, createLiveWorld, type LiveWorld } from "./live-world";
+import { createClient } from "@supabase/supabase-js";
 import type { BrowserContext, Page } from "@playwright/test";
 
 // Reset per section (branch fix-reset-visibility) on a throwaway organisation: Reset this heat from the head console, Reset this division, Clear actual times and
@@ -119,25 +120,47 @@ test("Reset this division is refused while a heat runs, and the button stays wit
   await expect(card.getByTestId("reset-division-open")).toBeVisible();
 });
 
-test("Clear actual times: the plan's actual starts and pins go, the first pin stays", async ({ page }) => {
+/** The head seat's own login, to write a pin the way the console does (Shift, Resume at, +1 min). */
+async function headPins(anchors: Record<string, string>) {
+  const head = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
+  const { error: signInError } = await head.auth.signInWithPassword({ email: w.seats.head.email, password: `Pw-${w.org.run}-live` });
+  if (signInError) throw new Error(signInError.message);
+  const { error } = await head.rpc("set_plan_anchors", { p_plan: w.planId, p_anchors: anchors as never });
+  if (error) throw new Error(error.message);
+}
+const planItems = (w0: LiveWorld) => [{ id: "i1", kind: "heat", heatId: w0.heats[0] }, { id: "b1", kind: "break", label: "Lunch", durationMin: 20 }, { id: "i2", kind: "heat", heatId: w0.heats[1] }, { id: "b2", kind: "break", label: "Prize giving", durationMin: 15 }];
+
+test("Clear actual times: the actual starts and the pins the console wrote go; the pins set by hand stay", async ({ page }) => {
   test.setTimeout(180_000);
-  await w.db.from("schedule_plans").update({
-    items: [{ id: "i1", kind: "heat", heatId: w.heats[0] }, { id: "b1", kind: "break", label: "Lunch", durationMin: 20 }, { id: "i2", kind: "heat", heatId: w.heats[1] }],
-    anchors: { i1: "10:00", i2: "11:30" },
-    actual_starts: { b1: new Date().toISOString() },
-  }).eq("id", w.planId);
+  // the organiser's side wrote the pins on Heat 1 and Heat 2 (hand-set); an actual start for the lunch break
+  await w.db.from("schedule_plans").update({ items: planItems(w) as never, anchors: { i1: "10:00", i2: "11:30" }, actual_starts: { b1: new Date().toISOString() } }).eq("id", w.planId);
+  // the head console pins the prize giving while the day runs (Shift, +1 min…)
+  await headPins({ i1: "10:00", i2: "11:30", b2: "13:07" });
   await w.org.signIn(page, `/org/events/${w.eventId}/schedule`);
   await page.getByTestId("clear-actuals-open").click();
-  await expect(page.getByTestId("clear-actuals-line")).toContainText("1 actual start and 1 pin");
+  await expect(page.getByTestId("clear-actuals-line")).toContainText("1 actual start and 1 pin written while the day ran. The 2 pins you set by hand stay.");
   await page.getByTestId("clear-actuals-confirm").click();
-  await expect(page.getByText(/Cleared 1 actual start and 1 pin/).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Cleared 1 actual start and 1 pin\. 2 pins stay\./).first()).toBeVisible({ timeout: 30_000 });
   const plan = (await w.db.from("schedule_plans").select("anchors, actual_starts").eq("id", w.planId).single()).data!;
-  expect(plan.anchors).toEqual({ i1: "10:00" });
+  expect(plan.anchors).toEqual({ i1: "10:00", i2: "11:30" });
   expect(plan.actual_starts).toEqual({});
   // nothing left to clear: the button stays, off, and says so
-  await page.reload();
   await expect(page.getByTestId("clear-actuals-open")).toBeDisabled();
-  await expect(page.getByText("There are no actual times or extra pins to clear in this run order.")).toBeVisible();
+  await expect(page.getByText(/There are no actual start times or pins written while the day ran to clear/)).toBeVisible();
+});
+
+test("Clear actual times on an older run order (hand-set pins not told apart): every pin stays, and the confirmation says so", async ({ page }) => {
+  test.setTimeout(180_000);
+  await w.db.from("schedule_plans").update({ items: planItems(w) as never, anchors: { i1: "10:00", i2: "11:30" }, actual_starts: { b1: new Date().toISOString() } }).eq("id", w.planId);
+  await w.db.from("schedule_plans").update({ hand_pins: null }).eq("id", w.planId); // as every plan made before pins were marked
+  await w.org.signIn(page, `/org/events/${w.eventId}/schedule`);
+  await page.getByTestId("clear-actuals-open").click();
+  await expect(page.getByTestId("clear-actuals-line")).toContainText("made before the app told hand-set pins apart, so all 2 pins stay");
+  await page.getByTestId("clear-actuals-confirm").click();
+  await expect(page.getByText(/Cleared 1 actual start and 0 pins\. 2 pins stay\./).first()).toBeVisible({ timeout: 30_000 });
+  const plan = (await w.db.from("schedule_plans").select("anchors, actual_starts").eq("id", w.planId).single()).data!;
+  expect(plan.anchors).toEqual({ i1: "10:00", i2: "11:30" });
+  expect(plan.actual_starts).toEqual({});
 });
 
 test("Reset event from the dashboard for a division with no saved copy: rebuilt, not refused", async ({ page }) => {

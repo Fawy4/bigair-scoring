@@ -1,6 +1,7 @@
 "use client";
 
 import { ClearActualsButton } from "../reset-buttons";
+import { handPinsAfter, planActuals } from "@/lib/schedule/hand-pins";
 import { NumberField } from "@/components/org/number-field";
 import { DndContext, pointerWithin, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import Link from "next/link";
@@ -93,15 +94,6 @@ function RowShell({ id, problem, children }: { id: string; problem?: string; chi
   );
 }
 
-/** What "Clear actual times" would clear: the plan's actual starts, and every pin but the first one in run order. */
-function actualsOf(row: PlanRow): { actualStarts: number; pins: number } {
-  const items = (Array.isArray(row.items) ? row.items : []) as Array<{ id?: string }>;
-  const anchors = (row.anchors ?? {}) as Record<string, unknown>;
-  const pinned = Object.keys(anchors).length;
-  const hasFirst = items.some((i) => i.id !== undefined && i.id in anchors);
-  return { actualStarts: Object.keys((row.actual_starts ?? {}) as Record<string, unknown>).length, pins: Math.max(0, pinned - (hasFirst ? 1 : 0)) };
-}
-
 export function ScheduleManager(props: ScheduleProps) {
   const { eventId, timezone, days, today, lives, infos, readyCallMin } = props;
   const [plans, setPlans] = useState<PlanRow[]>(props.plans);
@@ -157,7 +149,7 @@ export function ScheduleManager(props: ScheduleProps) {
       return;
     }
     const before = currentRow;
-    const after: PlanRow = { ...currentRow, name: next.name, items: next.items, anchors: next.anchors, actual_starts: next.actualStarts, hold: next.hold ?? null, ...(extraDefaults !== undefined ? { defaults: extraDefaults } : {}) };
+    const after: PlanRow = { ...currentRow, name: next.name, items: next.items, anchors: next.anchors, hand_pins: handPinsAfter(currentRow, next.anchors), actual_starts: next.actualStarts, hold: next.hold ?? null, ...(extraDefaults !== undefined ? { defaults: extraDefaults } : {}) };
     setPlans((ps) => ps.map((p) => (p.id === after.id ? after : p)));
     startTransition(async () => {
       const r = await savePlan(after.id, { name: next.name, items: next.items, anchors: next.anchors, actualStarts: next.actualStarts, hold: next.hold, ...(extraDefaults !== undefined ? { defaults: extraDefaults } : {}) });
@@ -270,7 +262,7 @@ export function ScheduleManager(props: ScheduleProps) {
 
       {currentRow ? (
         <div className="panel flex flex-wrap items-start gap-3" data-testid="plan-actuals">
-          <ClearActualsButton planId={currentRow.id} planName={currentRow.name} {...actualsOf(currentRow)} />
+          <ClearActualsButton planId={currentRow.id} planName={currentRow.name} {...planActuals(currentRow)} />
         </div>
       ) : null}
 
