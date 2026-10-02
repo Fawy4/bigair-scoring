@@ -156,7 +156,7 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
 
   return (
     <>
-      <SeatHeartbeat />
+      <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
       {header}
       {noticeList}
       {q.memoryOnly ? <p className="px-2 pt-1 text-small font-semibold text-beach-muted">{copy.live.queue.memoryOnly}</p> : null}

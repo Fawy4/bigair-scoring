@@ -18,6 +18,7 @@ import { attemptScenario } from "./scenario-runner";
 import { isScenarioKey } from "./scenarios";
 import { forgetContext, heatName, heatPlace, loadSnapshot, type SimDb, type Snapshot } from "./snapshot";
 import type { SeatInfo } from "./types";
+import { SIM_VIEW_LEAVE_GRACE_SEC, SIM_VIEW_SILENT_SEC } from "./view-hold";
 
 const T = copy.simulator;
 const clockOf = (h: HeatRow): HeatClock => ({ status: h.status, startedAt: h.started_at, pausedAt: h.paused_at, pausedTotalSec: h.paused_total_sec, durationSec: h.duration_sec });
@@ -256,6 +257,10 @@ export async function simTick(db: SimDb, eventId: string): Promise<TickResult> {
   const lock = await db.user.rpc("sim_tick_lock", { p_event: eventId, p_ms: 6000 });
   if (lock.error) return { ok: false, message: simErrorSentence(lock.error.message) };
   if (!lock.data) return { ok: true, busy: true, playing: true, line: T.play.lines.busy, blocker: null };
+  // a View-as tab that was closed (or went quiet) gives its seat back first, so the simulator plays it again in this very tick
+  const released = await db.user.rpc("sim_release_stale_views", { p_event: eventId, p_silent_sec: SIM_VIEW_SILENT_SEC, p_leave_grace_sec: SIM_VIEW_LEAVE_GRACE_SEC });
+  const names = (released.data as string[] | null) ?? [];
+  if (names.length) await logLine(db, eventId, "info", null, T.roles.givenBack(names.join(", ")));
   const snap = await loadSnapshot(db, eventId);
   if (!snap) return { ok: false, message: T.errors.SIM_NOT_ENABLED() };
   if (snap.control.state !== "playing") return { ok: true, playing: false, line: T.play.lines.idle, blocker: snap.control.blocker };

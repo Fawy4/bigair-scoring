@@ -200,6 +200,49 @@ describe.skipIf(!ENV_OK)("Simulator (hosted development project)", () => {
     expect((await f.s.from("judge_seats").select("auth_user_id").eq("id", seats["Judge 2"]).single()).data?.auth_user_id).toBeNull();
   });
 
+  it("Polish 2: a View-as seat goes back to the simulator — when its tab closes (after a short grace for a reload), when it goes quiet, or when Virtual is chosen", async () => {
+    const org = f.clients.orgA;
+    const holder = async (seat: string) => (await f.s.from("judge_seats").select("auth_user_id").eq("id", seats[seat]).single()).data?.auth_user_id ?? null;
+    const release = (grace = 0, silent = 90) => org.rpc("sim_release_stale_views", { p_event: sim, p_silent_sec: silent, p_leave_grace_sec: grace });
+    expect(codeOf(await org.rpc("sim_view_as", { p_event: sim, p_seat: seats["Judge 1"] }))).toBe("");
+    expect((await f.s.from("sim_seats").select("viewed_by").eq("seat_id", seats["Judge 1"]).single()).data?.viewed_by).toBe(f.userIds.orgA);
+    // the tab beats; nobody else's beat or leave does anything
+    expect((await org.rpc("sim_view_beat", { p_event: sim })).data).toBe(true);
+    expect((await f.clients.orgB.rpc("sim_view_beat", { p_event: sim })).data).toBe(false);
+    expect((await f.clients.j1.rpc("sim_view_leave", { p_event: sim })).data).toBe(false);
+    // a fresh tab is kept
+    expect((await release(6)).data).toEqual([]);
+    expect(await holder("Judge 1")).toBe(f.userIds.orgA);
+    // a reload: leave, then beat again → kept
+    await org.rpc("sim_view_leave", { p_event: sim });
+    await new Promise((r) => setTimeout(r, 1100));
+    await org.rpc("sim_view_beat", { p_event: sim });
+    expect((await release(0)).data).toEqual([]);
+    expect(await holder("Judge 1")).toBe(f.userIds.orgA);
+    // the tab closes: leave, no beat → given back
+    await org.rpc("sim_view_leave", { p_event: sim });
+    await new Promise((r) => setTimeout(r, 1100));
+    expect((await release(0)).data).toEqual(["Judge 1"]);
+    expect(await holder("Judge 1")).toBeNull();
+    expect((await f.s.from("sim_seats").select("viewed_by").eq("seat_id", seats["Judge 1"]).single()).data?.viewed_by).toBeNull();
+    // a tab that went quiet (a phone asleep) → given back
+    await org.rpc("sim_view_as", { p_event: sim, p_seat: seats["Judge 2"] });
+    await f.s.from("sim_seats").update({ view_seen_at: new Date(Date.now() - 200_000).toISOString() }).eq("seat_id", seats["Judge 2"]);
+    expect((await release(6, 90)).data).toEqual(["Judge 2"]);
+    expect(await holder("Judge 2")).toBeNull();
+    // Virtual gives the seat back at once, from View as and from a phone that joined with the PIN
+    await org.rpc("sim_view_as", { p_event: sim, p_seat: seats["Judge 2"] });
+    expect(codeOf(await org.rpc("sim_set_mode", { p_seat: seats["Judge 2"], p_mode: "virtual" }))).toBe("");
+    expect(await holder("Judge 2")).toBeNull();
+    await f.s.from("judge_seats").update({ auth_user_id: f.userIds.j1 }).eq("id", seats["Judge 3"]);
+    expect(codeOf(await org.rpc("sim_set_mode", { p_seat: seats["Judge 3"], p_mode: "virtual" }))).toBe("");
+    expect(await holder("Judge 3")).toBeNull();
+    // only the event's organisers may give seats back; never on a real event
+    expect(codeOf(await f.clients.orgB.rpc("sim_release_stale_views", { p_event: sim, p_silent_sec: 90, p_leave_grace_sec: 6 }))).toContain("NOT_ALLOWED");
+    expect(codeOf(await f.clients.j1.rpc("sim_release_stale_views", { p_event: sim, p_silent_sec: 90, p_leave_grace_sec: 6 }))).toContain("NOT_ALLOWED");
+    expect(codeOf(await org.rpc("sim_release_stale_views", { p_event: f.ids.evA1, p_silent_sec: 90, p_leave_grace_sec: 6 }))).toContain("NOT_A_SIMULATION");
+  });
+
   it("Reset is the general one: a copy has the draw copy it needs; refused while a heat runs; then the simulator's own leftovers go and the panel starts again", async () => {
     // the copy of a locked division carries the draw it was locked with, so the general Reset can return to it
     const preview = await f.clients.orgA.rpc("reset_event_preview", { p_event: sim });

@@ -2007,6 +2007,9 @@ export type Database = {
           mode: string
           seat_id: string
           updated_at: string
+          view_release_at: string | null
+          view_seen_at: string | null
+          viewed_by: string | null
           virtual_user: string | null
         }
         Insert: {
@@ -2015,6 +2018,9 @@ export type Database = {
           mode?: string
           seat_id: string
           updated_at?: string
+          view_release_at?: string | null
+          view_seen_at?: string | null
+          viewed_by?: string | null
           virtual_user?: string | null
         }
         Update: {
@@ -2023,6 +2029,9 @@ export type Database = {
           mode?: string
           seat_id?: string
           updated_at?: string
+          view_release_at?: string | null
+          view_seen_at?: string | null
+          viewed_by?: string | null
           virtual_user?: string | null
         }
         Relationships: [
@@ -3611,6 +3620,14 @@ export type Database = {
         Args: { p_event: string; p_slug_confirm: string }
         Returns: Json
       }
+      sim_release_stale_views: {
+        Args: {
+          p_event: string
+          p_leave_grace_sec?: number
+          p_silent_sec?: number
+        }
+        Returns: string[]
+      }
       sim_set: {
         Args: { p_event: string; p_patch: Json }
         Returns: {
@@ -3727,6 +3744,8 @@ export type Database = {
         Returns: boolean
       }
       sim_view_as: { Args: { p_event: string; p_seat: string }; Returns: Json }
+      sim_view_beat: { Args: { p_event: string }; Returns: boolean }
+      sim_view_leave: { Args: { p_event: string }; Returns: boolean }
       start_heat: {
         Args: { p_heat: string }
         Returns: {

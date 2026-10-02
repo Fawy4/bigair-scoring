@@ -6,6 +6,7 @@ import { Banner } from "@/components/ui/banner";
 import { Pill } from "@/components/live/pill";
 import { SPEEDS, SPREADS, JUDGE_MODES } from "@/lib/simulator/config";
 import type { SeatView, SimStatus } from "@/lib/simulator/types";
+import { heldWords } from "@/lib/simulator/view-hold";
 import { copy } from "@/lib/ui-copy";
 import { saveSettings, setPlayState, setSeatMode, setSpeed } from "./actions";
 import { Card, Choice, Field } from "./parts";
@@ -81,12 +82,13 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
   );
 }
 
-const heldPill = (s: SeatView) => {
-  if (s.heldBy === "simulator") return <Pill tone="live">{T.roles.virtual}</Pill>;
-  if (s.heldBy === "you") return <Pill tone="pending">{T.roles.you}</Pill>;
-  if (s.heldBy === "phone") return <Pill tone="pending">{T.roles.person}</Pill>;
-  return <Pill tone="missing" dashed>{T.roles.waiting}</Pill>;
-};
+const heldPill = (s: SeatView) => (
+  <span data-testid={`held-${s.id}`} data-held={s.heldBy}>
+    <Pill tone={s.heldBy === "simulator" ? "live" : s.heldBy === "nobody" ? "missing" : "pending"} dashed={s.heldBy === "nobody"}>
+      {heldWords(s)}
+    </Pill>
+  </span>
+);
 
 /** Each judge seat, each spotter seat and the head judge: played by the simulator (virtual) or left to a phone (real). */
 export function Roles({ eventId, sim }: { eventId: string; sim: Sim }) {
@@ -111,7 +113,13 @@ export function Roles({ eventId, sim }: { eventId: string; sim: Sim }) {
               <div key={s.id} data-testid={`role-${s.id}`} data-mode={s.mode} className="flex min-h-[var(--org-row)] flex-wrap items-center justify-between gap-2 rounded-[8px] border border-beach-line px-3 py-1">
                 <span className="text-name font-semibold">{s.name}</span>
                 <span className="flex flex-wrap items-center gap-2">
+                  <span className="sr-only">{T.roles.heldBy}</span>
                   {heldPill(s)}
+                  {s.mode === "virtual" && (s.heldBy === "you" || s.heldBy === "phone") ? (
+                    <Choice data-testid={`role-${s.id}-release`} title={T.roles.giveBackHint} disabled={pending} onClick={() => void act(() => setSeatMode(eventId, s.id, "virtual"))}>
+                      {T.roles.giveBack}
+                    </Choice>
+                  ) : null}
                   <Choice data-testid={`role-${s.id}-virtual`} pressed={s.mode === "virtual"} disabled={pending} onClick={() => void act(() => setSeatMode(eventId, s.id, "virtual"))}>
                     {T.roles.virtual}
                   </Choice>
