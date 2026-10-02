@@ -11,6 +11,7 @@ import { parseScoringModel } from "@/lib/schemas/scoring-model";
 import { copy } from "@/lib/ui-copy";
 import { errorSentence, parseError } from "./errors";
 import { heatInputFromRows } from "./heat-input";
+import { judgeWordFor } from "./judge-names";
 import { publishChecklist, type ChecklistItem } from "./publish-checklist";
 import { ATTEMPT_COLUMNS, IMPRESSION_COLUMNS, SCORE_COLUMNS, SLOT_COLUMNS, type AttemptRow, type ImpressionRow, type ScoreRow, type SlotRow } from "./types";
 import { effectiveSetting, holdAtPublish } from "./visibility";
@@ -79,10 +80,11 @@ export async function publishHeatCore(
 
   // the panel in seat order, and who has submitted
   const { data: members } = division.panel_id ? await service.from("panel_members").select("judge_seat_id, seat_no").eq("panel_id", division.panel_id).order("seat_no") : { data: [] as Array<{ judge_seat_id: string; seat_no: number }> };
-  const { data: seats } = await service.from("judge_seats").select("id, active, status").in("id", (members ?? []).map((m) => m.judge_seat_id));
+  const { data: seats } = await service.from("judge_seats").select("id, name, active, status").in("id", (members ?? []).map((m) => m.judge_seat_id));
   const live = new Set((seats ?? []).filter((s) => s.active && s.status === "active").map((s) => s.id));
   const panelSeatIds = (members ?? []).map((m) => m.judge_seat_id).filter((id) => live.has(id));
   const seatNo = new Map((members ?? []).map((m, i) => [m.judge_seat_id, i + 1] as const));
+  const judgeWord = judgeWordFor((members ?? []).map((m) => m.judge_seat_id), Object.fromEntries((seats ?? []).map((s) => [s.id, s.name] as const)));
   const submitted = new Set((sheets ?? []).filter((s) => s.submitted_at && (!s.reopened_at || s.submitted_at > s.reopened_at)).map((s) => s.judge_seat_id));
   const unsubmitted = panelSeatIds.filter((id) => !submitted.has(id));
 
@@ -98,14 +100,14 @@ export async function publishHeatCore(
     return fail(null, e instanceof Error ? e.message : copy.liveErrors.unknown);
   }
 
-  // words for the blockers: the rider's colour (or name), the judge's number
+  // words for the blockers: the rider's colour (or name), the judge's seat name
   const slotColour = new Map((slots ?? []).map((s) => [s.entry_id, s.vest_colour] as const));
   const nameOf = new Map((entries ?? []).map((e) => [e.id, `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || "Rider"] as const));
   const labelOf = (id: string) => opts.labels?.[id] ?? (slotColour.get(id) ? softWord(String(slotColour.get(id))) : nameOf.get(id) ?? "Rider");
   const checklist = publishChecklist({
     blockers: result.publishBlockers,
     unsubmitted,
-    judgeNumber: (id) => seatNo.get(id) ?? 0,
+    judgeWord,
     riderLabel: (id) => softWord(labelOf(id)),
     impressionLabel: copy.checklist.impressionWord,
   });

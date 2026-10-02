@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { errorSentence, parseError } from "./errors";
-import { holdPlan as holdPlanPure, resumePlanAt as resumePlanAtPure, shiftPlan as shiftPlanPure } from "./plan-actions";
+import { extendBreakPlan, holdPlan as holdPlanPure, resumeBreakPlan, resumePlanAt as resumePlanAtPure, shiftPlan as shiftPlanPure } from "./plan-actions";
 import { buildHeatModel, type DivisionRowDb, type HeatRowDb, type RoundRowDb } from "@/lib/schedule/model";
 import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { rowToPlan, type PlanRow } from "@/lib/schedule/plans";
@@ -107,6 +107,36 @@ export async function shiftPlan(planId: string, minutes: number): Promise<PlanAc
   try {
     const shifted = shiftPlanPure(p.plan, p.lives, minutes, { timezone: p.timezone, eventDay: p.row.day, defaults: p.defaults, serverNowIso: p.serverNow });
     const { data, error } = await p.supabase.rpc("set_plan_anchors", { p_plan: planId, p_anchors: shifted.anchors as unknown as Json, p_expected: p.row.updated_at });
+    return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, hold: data?.hold ?? null, anchors: data?.anchors ?? {} };
+  } catch (e) {
+    return planFailure(e);
+  }
+}
+
+/** "+1 min" on the break after a heat: pins the next heat to start later by that many minutes (rounded up to a whole minute). Nothing starts by itself. */
+export async function extendBreakAction(planId: string, minutes: number): Promise<PlanActionResult> {
+  if (!uuid.safeParse(planId).success) return fail("PLAN_NOT_FOUND");
+  if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 30) return fail("BAD_PLAN_VALUE");
+  const p = await loadPlan(planId);
+  if (!p) return fail("PLAN_NOT_FOUND");
+  try {
+    const next = extendBreakPlan(p.plan, p.lives, minutes, { timezone: p.timezone, eventDay: p.row.day, defaults: p.defaults, serverNowIso: p.serverNow });
+    const { data, error } = await p.supabase.rpc("set_plan_anchors", { p_plan: planId, p_anchors: next.anchors as unknown as Json, p_expected: p.row.updated_at });
+    return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, hold: data?.hold ?? null, anchors: data?.anchors ?? {} };
+  } catch (e) {
+    return planFailure(e);
+  }
+}
+
+/** Resume after "Pause break": the same time is left as when the break was paused (rounded up to a whole minute). Clears the hold. */
+export async function resumeBreakAction(planId: string): Promise<PlanActionResult> {
+  if (!uuid.safeParse(planId).success) return fail("PLAN_NOT_FOUND");
+  const p = await loadPlan(planId);
+  if (!p) return fail("PLAN_NOT_FOUND");
+  if (!p.plan.hold) return fail("NOT_ON_HOLD");
+  try {
+    const resumed = resumeBreakPlan(p.plan, p.lives, { timezone: p.timezone, eventDay: p.row.day, defaults: p.defaults, serverNowIso: p.serverNow });
+    const { data, error } = await p.supabase.rpc("set_plan_hold", { p_plan: planId, p_hold: null, p_expected: p.row.updated_at, p_anchors: resumed.anchors as unknown as Json });
     return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, hold: data?.hold ?? null, anchors: data?.anchors ?? {} };
   } catch (e) {
     return planFailure(e);

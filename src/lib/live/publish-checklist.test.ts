@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { publishChecklist } from "./publish-checklist";
 
 // docs/08 §1H-7
-const judgeNo = (id: string) => ({ J1: 1, J2: 2, J3: 3 })[id as "J1"];
+const judgeWord = (id: string) => ({ J1: "Judge 1", J2: "Judge 2", J3: "Judge 3" })[id as "J1"];
 const label = (id: string) => ({ red: "Red", blue: "Blue" })[id] ?? id;
-const base = { judgeNumber: judgeNo, riderLabel: label, impressionLabel: "Impression / Variety score", unsubmitted: [] as string[] };
+const base = { judgeWord, riderLabel: label, impressionLabel: "Impression / Variety score", unsubmitted: [] as string[] };
 
 describe("1H-7 what blocks Publish, in words", () => {
   it("a missing Impression score", () => {

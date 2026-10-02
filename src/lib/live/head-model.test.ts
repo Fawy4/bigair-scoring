@@ -36,7 +36,7 @@ function red(opts: { skipJ3Impression?: boolean } = {}) {
 }
 const build = (over: Partial<Parameters<typeof buildHeadModel>[0]> = {}) => {
   const r = red();
-  return buildHeadModel({ model, panelSeatIds: PANEL, slots: [slot("red", 1)], attempts: r.attempts, scores: r.scores, impressions: r.impressions, penalties: [], decisions: [], flags: [], sheets: PANEL.map(sheet), labelFor: label, wordFor: word, ...over });
+  return buildHeadModel({ model, panelSeatIds: PANEL, slots: [slot("red", 1)], attempts: r.attempts, scores: r.scores, impressions: r.impressions, penalties: [], decisions: [], flags: [], sheets: PANEL.map(sheet), labelFor: label, wordFor: word, judgeWord: (id) => ({ J3: "Fawy" })[id as "J3"] ?? id, ...over });
 };
 
 describe("the head judge's model of one heat", () => {
@@ -48,16 +48,16 @@ describe("the head judge's model of one heat", () => {
     expect(m.owes).toEqual([]);
     expect(m.error).toBeNull();
   });
-  it("J3's Impression score missing: Judge 3 owes it for Red, and Publish says so in words", () => {
+  it("J3's Impression score missing: Fawy owes it for Red, and Publish says so in words", () => {
     const r = red({ skipJ3Impression: true });
     const m = build({ impressions: r.impressions });
-    expect(m.owes).toEqual([{ seatId: "J3", judgeNo: 3, entryId: "red" }]);
-    expect(m.checklist.items.map((i) => i.text)).toEqual(["Judge 3 has no Impression / Variety score for Red"]);
+    expect(m.owes).toEqual([{ seatId: "J3", judgeNo: 3, judge: "Fawy", entryId: "red" }]);
+    expect(m.checklist.items.map((i) => i.text)).toEqual(["Fawy has no Impression / Variety score for Red"]);
   });
-  it("a judge who has not submitted blocks Publish: 'Judge 3 has not submitted'", () => {
+  it("a judge who has not submitted blocks Publish: 'Fawy has not submitted'", () => {
     const m = build({ sheets: [sheet("J1"), sheet("J2")] });
     expect(m.unsubmitted).toEqual(["J3"]);
-    expect(m.checklist.items.map((i) => i.text)).toEqual(["Judge 3 has not submitted"]);
+    expect(m.checklist.items.map((i) => i.text)).toEqual(["Fawy has not submitted"]);
   });
   it("two riders tied on everything: 'Red and Blue are tied — choose the order', not overridable; a decision turns it into words", () => {
     const blueAttempts = RED.map((_, i) => attempt("blue", i + 1, RED[i] ? "landed" : "crashed"));

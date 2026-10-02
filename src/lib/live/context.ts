@@ -127,6 +127,12 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
   const heatMeta: LiveContext["heatMeta"] = {};
   for (const l of model.lives) heatMeta[l.heatId] = { roundLast: Boolean(l.roundLast), ...(l.breakAfterHeatMin !== undefined ? { breakAfterHeatMin: l.breakAfterHeatMin } : {}), ...(l.breakAfterRoundMin !== undefined ? { breakAfterRoundMin: l.breakAfterRoundMin } : {}) };
 
+  // the judges' names: the head seat and an organiser read every seat of the event (row security), a judge only their own
+  const panelSeatIds = [...new Set((panelRows ?? []).map((p) => p.judge_seat_id))];
+  const { data: nameRows } = panelSeatIds.length ? await db.from("judge_seats").select("id, name").eq("event_id", eventId).in("id", panelSeatIds) : { data: [] as Array<{ id: string; name: string }> };
+  const seatNames: Record<string, string> = {};
+  for (const r of nameRows ?? []) seatNames[r.id] = r.name;
+
   return {
     event: { id: event.id, name: event.name, slug: event.slug, timezone: event.timezone, judgesMayLogAttempts: settings.judgesMayLogAttempts, maxRunningHeats: settings.maxRunningHeats, isSimulation: Boolean(event.is_simulation), readyCallMin: settings.readyCallMin },
     viewer,
@@ -138,5 +144,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
     localBlocks,
     plans,
     heatMeta,
+    seatNames,
+    divisionTabs: (divisionRows ?? []).map((d) => ({ id: d.id, name: d.name })),
   };
 }

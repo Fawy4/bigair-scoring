@@ -41,7 +41,8 @@ export function pickCurrentHeat(i: PickInput): { heat: HeatRow | null; phase: He
     return s === "running" ? "running" : s === "paused" ? "paused" : s === "scheduled" ? "none" : "ended";
   };
   if (i.pinnedId) {
-    const pinned = mine.find((h) => h.id === i.pinnedId);
+    // the head judge and an organiser can open a cancelled heat (to read it and to re-run it); nobody else is shown one
+    const pinned = (i.viewer.role === "head" || i.viewer.role === "organiser" ? i.heats : mine).find((h) => h.id === i.pinnedId);
     if (pinned) return { heat: pinned, phase: phaseOf(pinned) };
   }
   const running = mine.filter((h) => phaseOf(h) === "running").sort((a, b) => startedMs(a) - startedMs(b));
