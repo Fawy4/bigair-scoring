@@ -261,7 +261,7 @@ export const NOTES: Record<string, Note> = {
   "simulator.play.lines.waitJudges": { m: "A judge seat set to Real has not submitted.", f: "Submit on that phone, or set the judge to Virtual." },
   "simulator.play.lines.hold": { f: "Resume the run order (Go live → Resume at…, or the scenario button again)." },
   "simulator.play.lines.notReady": { f: "Lock the division's draw; finish the earlier heats that fill this heat's seats." },
-  "simulator.play.lines.busy": { m: "Auto-play runs in one tab at a time.", f: "Close the other tab, or use it." },
+  "simulator.play.lines.busy": { m: "Another tab asked for a step while this one was still working on its own (two panel tabs of the same simulation). With one tab open you should not see it.", f: "Close the other tab, or use it. If you see it with one tab open, reload the page." },
   "simulator.log.noCap": { f: "Divisions → Scoring → set “Attempts per rider”." },
   "simulator.needTyped": { m: "The Reset or Delete button is grey until the event's web address is typed.", f: "Type the address shown under the box." },
   "simulator.reset.noBaseline": { m: "No copy of the locked draw was saved (the Demo was played before Reset existed).", f: "Use “Wipe and draw again”." },

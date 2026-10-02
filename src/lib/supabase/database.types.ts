@@ -1923,6 +1923,7 @@ export type Database = {
           speed: number
           state: string
           stats: Json
+          tick_lock_token: string | null
           tick_lock_until: string | null
           updated_at: string
         }
@@ -1936,6 +1937,7 @@ export type Database = {
           speed?: number
           state?: string
           stats?: Json
+          tick_lock_token?: string | null
           tick_lock_until?: string | null
           updated_at?: string
         }
@@ -1949,6 +1951,7 @@ export type Database = {
           speed?: number
           state?: string
           stats?: Json
+          tick_lock_token?: string | null
           tick_lock_until?: string | null
           updated_at?: string
         }
@@ -3653,6 +3656,7 @@ export type Database = {
           speed: number
           state: string
           stats: Json
+          tick_lock_token: string | null
           tick_lock_until: string | null
           updated_at: string
         }
@@ -3751,6 +3755,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      sim_tick_begin: {
+        Args: { p_event: string; p_ms?: number }
+        Returns: string
+      }
+      sim_tick_end: {
+        Args: { p_event: string; p_token: string }
+        Returns: boolean
       }
       sim_tick_lock: {
         Args: { p_event: string; p_ms?: number }

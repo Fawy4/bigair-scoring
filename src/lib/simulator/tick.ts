@@ -19,6 +19,7 @@ import { isScenarioKey } from "./scenarios";
 import { forgetContext, heatName, heatPlace, loadSnapshot, type SimDb, type Snapshot } from "./snapshot";
 import type { SeatInfo } from "./types";
 import { SIM_VIEW_LEAVE_GRACE_SEC, SIM_VIEW_SILENT_SEC } from "./view-hold";
+import { withTickLock, type LockRpc } from "./tick-lock";
 
 const T = copy.simulator;
 const clockOf = (h: HeatRow): HeatClock => ({ status: h.status, startedAt: h.started_at, pausedAt: h.paused_at, pausedTotalSec: h.paused_total_sec, durationSec: h.duration_sec });
@@ -252,11 +253,28 @@ async function headStep(db: SimDb, snap: Snapshot, heat: HeatRow, data: HeatData
   return T.play.lines.stoppedAtBlocker(why);
 }
 
-/** One step of the auto-play, as the organiser. Safe to call from any tab: one tick at a time. */
+/** One step of the auto-play, as the organiser. Safe to call from any tab: one step at a time, and each step gives the lock back when it is done (Polish 2, item 4b). */
 export async function simTick(db: SimDb, eventId: string): Promise<TickResult> {
-  const lock = await db.user.rpc("sim_tick_lock", { p_event: eventId, p_ms: 6000 });
-  if (lock.error) return { ok: false, message: simErrorSentence(lock.error.message) };
-  if (!lock.data) return { ok: true, busy: true, playing: true, line: T.play.lines.busy, blocker: null };
+  const lock: LockRpc = {
+    begin: async (ms) => {
+      const r = await db.user.rpc("sim_tick_begin", { p_event: eventId, p_ms: ms });
+      if (r.error) throw new Error(r.error.message);
+      return (r.data as string | null) ?? null;
+    },
+    end: async (token) => {
+      const r = await db.user.rpc("sim_tick_end", { p_event: eventId, p_token: token });
+      return !r.error && Boolean(r.data);
+    },
+  };
+  try {
+    const r = await withTickLock(lock, () => tickInside(db, eventId));
+    return r.busy ? { ok: true, busy: true, playing: true, line: T.play.lines.busy, blocker: null } : r.value;
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? simErrorSentence(e.message) : T.generic };
+  }
+}
+
+async function tickInside(db: SimDb, eventId: string): Promise<TickResult> {
   // a View-as tab that was closed (or went quiet) gives its seat back first, so the simulator plays it again in this very tick
   const released = await db.user.rpc("sim_release_stale_views", { p_event: eventId, p_silent_sec: SIM_VIEW_SILENT_SEC, p_leave_grace_sec: SIM_VIEW_LEAVE_GRACE_SEC });
   const names = (released.data as string[] | null) ?? [];

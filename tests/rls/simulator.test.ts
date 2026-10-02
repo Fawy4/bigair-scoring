@@ -65,6 +65,11 @@ describe.skipIf(!ENV_OK)("Simulator (hosted development project)", () => {
     sim_set: { p_event: event, p_patch: { speed: 5 } },
     sim_set_mode: { p_seat: seat, p_mode: "real" },
     sim_tick_lock: { p_event: event, p_ms: 1000 },
+    sim_tick_begin: { p_event: event, p_ms: 1000 },
+    sim_tick_end: { p_event: event, p_token: randomUUID() },
+    sim_pause_heats: { p_event: event },
+    sim_resume_heats: { p_event: event },
+    sim_release_stale_views: { p_event: event, p_silent_sec: 90, p_leave_grace_sec: 6 },
     sim_log_add: { p_event: event, p_kind: "info", p_scenario: null, p_text: "x", p_data: {} },
         sim_view_as: { p_event: event, p_seat: seat },
     sim_live_heat: { p_heat: heat },
@@ -268,6 +273,18 @@ describe.skipIf(!ENV_OK)("Simulator (hosted development project)", () => {
     await org.rpc("sim_pause_heats", { p_event: sim });
     expect(codeOf(await org.rpc("resume_heat", { p_heat: simHeat }))).toBe("");
     expect(await row()).toMatchObject({ status: "running", paused_reason: null });
+  });
+
+  it("Polish 2: a step gives the tick lock back when it is done, so the next step of the same page runs; a second step at the same moment is busy", async () => {
+    const org = f.clients.orgA;
+    const first = (await org.rpc("sim_tick_begin", { p_event: sim, p_ms: 30000 })).data as string | null;
+    expect(first).toMatch(/^[0-9a-f-]{36}$/);
+    expect((await org.rpc("sim_tick_begin", { p_event: sim, p_ms: 30000 })).data).toBeNull(); // a second tab while the step works
+    expect((await org.rpc("sim_tick_end", { p_event: sim, p_token: randomUUID() })).data).toBe(false); // not its lock
+    expect((await org.rpc("sim_tick_end", { p_event: sim, p_token: first })).data).toBe(true);
+    const second = (await org.rpc("sim_tick_begin", { p_event: sim, p_ms: 30000 })).data as string | null;
+    expect(second).toMatch(/^[0-9a-f-]{36}$/); // the page's next step runs at once
+    expect((await org.rpc("sim_tick_end", { p_event: sim, p_token: second })).data).toBe(true);
   });
 
   it("Reset is the general one: a copy has the draw copy it needs; refused while a heat runs; then the simulator's own leftovers go and the panel starts again", async () => {

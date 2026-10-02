@@ -91,7 +91,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Another heat is already running (‹max› at a time). End it first, or ask the organiser to allow more in the Event step” | End the other heat, or raise “Heats that can run at the same time” in the Event step. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-heat-already-running) |
 | “Another plan of this day already has that name.” | Follow the sentence. | [Organiser: Run order](errors.md#err-runorder-errors-nametaken) |
 | “Another rider in your organisation already has that email address.” | Use the rider who already has that email (Add from this organisation’s riders). | [Organiser: Riders](errors.md#err-riders-errors-emailused) |
-| “Another tab is playing this simulation.” | Close the other tab, or use it. | [Simulator](errors.md#err-simulator-play-lines-busy) |
+| “Another tab is playing this simulation.” | Close the other tab, or use it. If you see it with one tab open, reload the page. | [Simulator](errors.md#err-simulator-play-lines-busy) |
 | “at most 20 sponsors” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-sponsorsmax) |
 | “at most 6 extra leaderboards” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-leaderboardsmax) |
 | “Available once the heat has ended.” | Press End heat (or wait for the clock). | [Grey buttons on the head console](errors.md#err-controlwhy-publish) |
