@@ -366,6 +366,7 @@ export type Database = {
           start_date: string | null
           status: string
           timezone: string
+          trick_vocabulary_version: number | null
           updated_at: string
         }
         Insert: {
@@ -385,6 +386,7 @@ export type Database = {
           start_date?: string | null
           status?: string
           timezone?: string
+          trick_vocabulary_version?: number | null
           updated_at?: string
         }
         Update: {
@@ -404,6 +406,7 @@ export type Database = {
           start_date?: string | null
           status?: string
           timezone?: string
+          trick_vocabulary_version?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -2248,38 +2251,47 @@ export type Database = {
       }
       trick_vocabularies: {
         Row: {
+          change_summary: string | null
           content_hash: string
           created_at: string
+          created_by: string | null
           event_id: string | null
           id: string
           json: Json
           key: string
           organisation_id: string | null
           published_at: string | null
+          published_by: string | null
           updated_at: string
           version: number
         }
         Insert: {
+          change_summary?: string | null
           content_hash: string
           created_at?: string
+          created_by?: string | null
           event_id?: string | null
           id?: string
           json: Json
           key: string
           organisation_id?: string | null
           published_at?: string | null
+          published_by?: string | null
           updated_at?: string
           version?: number
         }
         Update: {
+          change_summary?: string | null
           content_hash?: string
           created_at?: string
+          created_by?: string | null
           event_id?: string | null
           id?: string
           json?: Json
           key?: string
           organisation_id?: string | null
           published_at?: string | null
+          published_by?: string | null
           updated_at?: string
           version?: number
         }
@@ -2567,6 +2579,7 @@ export type Database = {
           p_event: string
           p_family: string
           p_key: string
+          p_reason?: string
           p_status: string
         }
         Returns: undefined
@@ -2576,6 +2589,26 @@ export type Database = {
         Returns: undefined
       }
       admin_stop_impersonation: { Args: never; Returns: undefined }
+      admin_trick_base_history: {
+        Args: never
+        Returns: {
+          change_summary: string
+          created_at: string
+          created_by_email: string
+          id: string
+          published_at: string
+          published_by_email: string
+          version: number
+        }[]
+      }
+      admin_trick_base_publish: {
+        Args: { p_id: string; p_summary: string }
+        Returns: number
+      }
+      admin_trick_base_save: {
+        Args: { p_base_version: number; p_hash: string; p_json: Json }
+        Returns: Json
+      }
       admin_trick_proposals: {
         Args: never
         Returns: {
@@ -3875,6 +3908,7 @@ export type Database = {
         Args: { p_division: string; p_reason: string }
         Returns: undefined
       }
+      update_event_trick_base: { Args: { p_event: string }; Returns: Json }
       unlock_division_rules: {
         Args: { p_division: string; p_reason: string }
         Returns: undefined

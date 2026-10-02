@@ -1,4 +1,4 @@
-// Upserts presets/**/*.json as SYSTEM presets (organisation_id null): scoring models, format templates, trick vocabulary.
+// Upserts presets/**/*.json as SYSTEM presets (organisation_id null): scoring models, format templates, trick vocabulary (only into an empty project).
 // Every file is validated with the same Zod schemas the app uses. A changed preset becomes a NEW version row;
 // rows already used by divisions are never edited (docs/05 §12). Safe to run repeatedly. Never prints secrets.
 import { readdirSync, readFileSync } from "node:fs";
@@ -69,7 +69,10 @@ async function seedGeneric(kind: string, items: Array<{ key: string; name: strin
   }
 }
 
-/** The master trick vocabulary: a changed file becomes the next version, published at once (existing divisions keep what they ticked: a division stores only its unticked blocks). */
+/**
+ * The master trick vocabulary. Since the trick base editor (owner, 2 Oct 2026) /admin is the source of truth: the file is written only when the
+ * database has no version at all (a new project). Otherwise the seed leaves it alone, so it can never publish the file over the owner's edits.
+ */
 async function seedVocabulary() {
   for (const path of files("tricks")) {
     const raw = readJson(path);
@@ -78,14 +81,11 @@ async function seedVocabulary() {
     if (missing.length) { failed++; problems.push(`${path}: missing "${missing.join('", "')}"`); continue; }
     const badFamily = ((raw.modifiers as Array<{ key: string; family?: string }>) ?? []).filter((m) => m.family !== "addon" && m.family !== "grab_landing");
     if (badFamily.length) { failed++; problems.push(`${path}: every modifier needs a "family" of addon or grab_landing (${badFamily.map((m) => m.key).join(", ")})`); continue; }
-    const hash = canonicalHash(raw);
-    const { data: rows, error } = await db.from("trick_vocabularies").select("version, content_hash").is("organisation_id", null).is("event_id", null).eq("key", key);
+    const { data: rows, error } = await db.from("trick_vocabularies").select("version").is("organisation_id", null).is("event_id", null).eq("key", key).limit(1);
     if (error) { failed++; problems.push(`${path}: ${error.message}`); continue; }
-    const plan = planPreset({ key, version: undefined, hash }, (rows ?? []).map((r) => ({ version: r.version, hash: r.content_hash })), false);
-    if (plan.action === "error") { failed++; problems.push(plan.message); continue; }
-    if (plan.action === "unchanged") { unchanged++; console.log(`  same      trick_vocabularies/${key}`); continue; }
-    const { error: insErr } = await db.from("trick_vocabularies").insert({ organisation_id: null, event_id: null, key, version: plan.version, json: raw as never, content_hash: hash, published_at: PUBLISHED_NOW });
-    if (insErr) { failed++; problems.push(`${path}: ${insErr.message}`); } else { inserted++; console.log(`  inserted  trick_vocabularies/${key} v${plan.version}`); }
+    if (rows?.length) { unchanged++; console.log(`  skipped   trick_vocabularies/${key}: managed in /admin (Master presets → Trick base)`); continue; }
+    const { error: insErr } = await db.from("trick_vocabularies").insert({ organisation_id: null, event_id: null, key, version: 1, json: raw as never, content_hash: canonicalHash(raw), published_at: PUBLISHED_NOW });
+    if (insErr) { failed++; problems.push(`${path}: ${insErr.message}`); } else { inserted++; console.log(`  inserted  trick_vocabularies/${key} v1`); }
   }
 }
 
