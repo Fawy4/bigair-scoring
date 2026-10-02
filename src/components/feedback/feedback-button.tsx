@@ -4,7 +4,7 @@ import { useThemeScope } from "@/components/theme-scope";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
-import { FEEDBACK_TAGS } from "@/lib/feedback/format";
+import { NOTE_TAGS } from "@/lib/feedback/format";
 import { copy } from "@/lib/ui-copy";
 import { feedbackEligible, noteContext, saveNote, type NoteContext } from "./actions";
 
@@ -24,7 +24,7 @@ export function FeedbackButton() {
   const [open, setOpen] = useState(false);
   const [ctx, setCtx] = useState<NoteContext | null>(null);
   const [body, setBody] = useState("");
-  const [tag, setTag] = useState<(typeof FEEDBACK_TAGS)[number]>("bug");
+  const [tag, setTag] = useState<(typeof NOTE_TAGS)[number]>("bug");
   const [shot, setShot] = useState<File | null>(null);
   const [shotError, setShotError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -180,7 +180,7 @@ export function FeedbackButton() {
                   {T.tagLabel}
                 </label>
                 <select id="note-tag" value={tag} onChange={(e) => setTag(e.target.value as typeof tag)}>
-                  {FEEDBACK_TAGS.map((t) => (
+                  {NOTE_TAGS.map((t) => (
                     <option key={t} value={t}>
                       {T.tags[t]}
                     </option>

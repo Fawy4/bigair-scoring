@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { z } from "zod";
-import { FEEDBACK_TAGS, pageLabelFor, type FeedbackRole } from "@/lib/feedback/format";
+import { NOTE_TAGS, pageLabelFor, type FeedbackRole } from "@/lib/feedback/format";
 import { ORG_COOKIE } from "@/lib/org/context";
 import { readPlatformSession } from "@/lib/platform/session";
 import { createClient } from "@/lib/supabase/server";
@@ -109,7 +109,7 @@ export async function noteContext(input: z.input<typeof Ids>): Promise<{ ok: tru
 
 const NoteInput = Ids.extend({
   body: z.string().trim().min(1, T.empty).max(4000, T.tooLong),
-  tag: z.enum(FEEDBACK_TAGS),
+  tag: z.enum(NOTE_TAGS),
   screenshotPath: z.string().max(300).nullish(),
 });
 

@@ -1,8 +1,12 @@
 import { copy } from "@/lib/ui-copy";
 
-export const FEEDBACK_TAGS = ["bug", "wording", "layout", "new_rule", "idea"] as const;
+/** Every kind of note: the lists, filters and the export use these. "ask" notes come from Ask Sendbook's "Was this right?" thumbs. */
+export const FEEDBACK_TAGS = ["bug", "wording", "layout", "new_rule", "idea", "ask"] as const;
 export type FeedbackTag = (typeof FEEDBACK_TAGS)[number];
-export type FeedbackRole = "owner" | "staff" | "organiser";
+/** The kinds a person chooses in the Note panel. */
+export const NOTE_TAGS = ["bug", "wording", "layout", "new_rule", "idea"] as const satisfies readonly FeedbackTag[];
+/** "official": a PIN seat's thumbs on an Ask Sendbook answer (written by the server). */
+export type FeedbackRole = "owner" | "staff" | "organiser" | "official";
 
 /** One note as the export needs it (names already looked up, screenshot already a link). */
 export interface FeedbackNote {
