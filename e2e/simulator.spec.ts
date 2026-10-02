@@ -14,7 +14,7 @@ async function removeSimulatorUsers(w: LiveWorld, eventIds: string[]) {
 }
 
 test("copy an event, play it at ×20 until two heats publish, look as a spectator, press scenarios, reset", async ({ page, context }) => {
-  test.setTimeout(900_000);
+  test.setTimeout(600_000);
   const w = await createLiveWorld();
   const simIds: string[] = [];
   try {
@@ -59,7 +59,9 @@ test("copy an event, play it at ×20 until two heats publish, look as a spectato
     await page.getByTestId("scenario-wind_hold").click();
     await expect(page.getByTestId("checklist-wind_hold")).toHaveAttribute("data-done", "true", { timeout: 30_000 });
 
-    // reset: one typed confirmation, then the draw is back
+    // reset: one typed confirmation, then the draw is back (Reset is refused while a heat runs, so the head judge ends the one the auto-play left going)
+    await w.db.from("heats").update({ status: "ended" }).eq("event_id", simId).in("status", ["running", "paused"]);
+    await page.reload();
     const slug = (await w.db.from("events").select("slug").eq("id", simId).single()).data!.slug;
     await expect(page.getByTestId("reset-button")).toBeDisabled();
     await page.getByTestId("reset-slug").fill(slug);
