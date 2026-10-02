@@ -71,6 +71,8 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
         after={after ? { label: heatLabel(after), start: after.start } : null}
         joinUrl={`${origin}/e/${event.slug}/join`}
         publicUrl={`${origin}/e/${event.slug}`}
+        slug={event.slug}
+        windBannerOn={parseEventSettings(event.settings).windCallBanner}
       />
     </div>
   );

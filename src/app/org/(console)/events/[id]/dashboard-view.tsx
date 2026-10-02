@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Monitor, Pause, Play, Printer, SkipForward } from "lucide-react";
 import { Button } from "@/components/org/button";
-import { NowNextCard, ReadinessList, WindCallSlot, type CheckRow, type HeatLine } from "@/components/org/dashboard-parts";
+import { NowNextCard, ReadinessList, type CheckRow, type HeatLine } from "@/components/org/dashboard-parts";
 import { DataTable } from "@/components/org/data-table";
 import { useShellLayout } from "@/components/org/layout-context";
 import { OrgCard } from "@/components/org/org-card";
@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/browser";
 import { effectiveStatus, remainingMs, type HeatTiming } from "@/lib/live/timer";
 import { copy, orgCopy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
+import { WindCallControl } from "@/components/wind-call-control";
 import { ResetEvent } from "./reset-panel";
 import { ShareCard } from "./share-card";
 
@@ -39,6 +40,9 @@ export interface DashboardViewProps {
   after: HeatLine | null;
   joinUrl: string;
   publicUrl: string;
+  /** The event's address: the big screen is /screen/<slug>. */
+  slug: string;
+  windBannerOn: boolean;
 }
 
 const clockIn = (ms: number, tz: string) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(ms);
@@ -63,7 +67,7 @@ function LiveNow({ running, held, next, after, timezone }: { running: DashboardV
 }
 
 /** Hold, Resume at, Shift, the head judge console, the big screen. Each runs on the server with the database's clock and says why when it cannot run. */
-function QuickActionsLive({ eventId, plan, timezone, runningHeat }: { eventId: string; plan: DashboardViewProps["plan"]; timezone: string; runningHeat: string | null }) {
+function QuickActionsLive({ eventId, slug, plan, timezone, runningHeat }: { eventId: string; slug: string; plan: DashboardViewProps["plan"]; timezone: string; runningHeat: string | null }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +149,7 @@ function QuickActionsLive({ eventId, plan, timezone, runningHeat }: { eventId: s
           </Button>
           <span className="text-small font-medium text-beach-muted">{orgCopy.dashboard.headConsoleHint}</span>
         </span>
-        <Button variant="secondary" icon={Monitor} disabled disabledReason={orgCopy.dashboard.bigScreenWaiting}>
+        <Button variant="secondary" icon={Monitor} href={`/screen/${slug}`} target="_blank">
           {orgCopy.dashboard.bigScreen}
         </Button>
       </div>
@@ -174,8 +178,8 @@ export function DashboardView(p: DashboardViewProps) {
       <div className={cn("grid items-start gap-4", laptop ? "grid-cols-2" : "grid-cols-1")}>
         <ReadinessList checks={p.checks} />
         <LiveNow running={p.running} held={held} next={p.next} after={p.after} timezone={p.timezone} />
-        <WindCallSlot />
-        <QuickActionsLive eventId={p.eventId} plan={p.plan} timezone={p.timezone} runningHeat={p.running?.label ?? null} />
+        <WindCallControl eventId={p.eventId} bannerOn={p.windBannerOn} />
+        <QuickActionsLive eventId={p.eventId} slug={p.slug} plan={p.plan} timezone={p.timezone} runningHeat={p.running?.label ?? null} />
         <div className={laptop ? "col-span-2" : undefined} data-testid="dashboard-today">
           <OrgCard title={copy.dashboard.today} actions={p.finish ? <span className="text-small font-semibold text-beach-muted">{copy.runOrder.finish(p.finish)}</span> : undefined} testId="dashboard-timetable">
             {p.rows.length === 0 ? (

@@ -107,10 +107,12 @@ test("Hold, Resume at and Shift work from the dashboard; without a run order the
   await page.reload();
   await expect(actions.getByRole("button", { name: "Hold", exact: true })).toBeDisabled();
   await expect(actions.getByText("No run order is active for today. Activate one in Run order.").first()).toBeVisible();
-  // the big screen and the wind call are waiting for Phase 6 and say so
-  await expect(actions.getByRole("button", { name: "Big screen" })).toBeDisabled();
-  await expect(actions.getByText("The big screen comes with the public pages.")).toBeVisible();
-  await expect(page.getByTestId("wind-call-slot").getByText("The wind call arrives with the public pages.")).toBeVisible();
+  // the big screen link and the wind call (Phase 6) are on the dashboard
+  await expect(actions.getByRole("link", { name: "Big screen" })).toHaveAttribute("href", `/screen/e2e-live-${w.org.run}`);
+  await expect(page.getByTestId("wind-call")).toBeVisible();
+  await page.getByTestId("wind-green").click();
+  await page.getByTestId("wind-set").click();
+  await expect(page.getByTestId("wind-now")).toContainText("Green");
   await expect(actions.getByRole("link", { name: "Open head judge console" })).toHaveAttribute("href", `/head/${w.eventId}`);
   await w.db.from("schedule_plans").update({ active: true }).eq("id", w.planId);
 });
