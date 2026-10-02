@@ -20,7 +20,7 @@ The first draft listed six problems with the brief and eleven questions. The own
 | Dashboard | The start of event day, with Hold, Shift, the wind call and the links on it; the head judge console is one tap away (not embedded). |
 | Timed test | The 30-minute test with a stranger runs **on Sunday 4 Oct 2026** (§11). |
 | Other questions | The recommendations stand: snapshots deleted on use (no nightly job), Daylight / Dark and Normal / Large in the organiser account menu, every form of "record" banned, the head console never switches division by itself. |
-| Split | **7a-0 and 7a-1 before the event.** Reset + Restore and the head console division picker move into **7a-1**. **7a-2** (tables, Draw and Run order pass, consistency sweep) happens only if 7a-1 is accepted by **Saturday 3 Oct evening**, otherwise after the event. 7a-3 after Phase 6. |
+| Split | **7a-0 and 7a-1 before the event.** Reset + Restore move into **7a-1**. The head console division picker is **not** part of 7a-1 any more: it belongs to the Console v2 pull request (`console-v2`), see docs/STATUS.md. **7a-2** (tables, Draw and Run order pass, consistency sweep) happens only if 7a-1 is accepted by **Saturday 3 Oct evening**, otherwise after the event. 7a-3 after Phase 6. |
 | Test ids and web addresses | Unchanged, as planned (§1.1–1.2). |
 
 Two facts the plan still works around:
@@ -367,7 +367,7 @@ Riders, officials, organisations (admin), feedback (org and admin), audit, event
 - On a division locked before this change, Reset says "Unlock and lock the draw again first".
 
 ### 8e. Head judge console: one division at a time (7a-1)
-- A **division selector** in the console header: tabs on a laptop, a dropdown on a phone.
+- **Owned by Console v2, not built in 7a-1.** A **division selector** in the console header: tabs on a laptop, a dropdown on a phone (Console v2 builds tabs on both).
 - **Default** = the division with a running or paused heat, else the division of the next heat on the run order.
 - Each tab of a division with a running heat other than the shown one has a **live dot + "Live"** (never colour alone).
 - The choice is **remembered per device** (`localStorage`, key per event, wrapped in try/catch), but a newly started heat in another division does not switch it by itself. The live dot tells.
@@ -410,7 +410,7 @@ See "Owner's answers" at the top. In short: Q1 reset on any event, reason when r
 | PR | Branch | When | Contents | Hours |
 |---|---|---|---|---|
 | **7a-0** | `phase-7a-0-design` | before the event | Step 0: `/design/organiser`, the shared org components, fixtures, e2e | 4–5 h |
-| **7a-1** (after 7a-0 is approved) | `phase-7a-1-shell-dashboard` | before the event; accepted by Sat 3 Oct evening | In this order: 7 copy + banned words; 1 shell and rail; 2 dashboard (wind-call slot from Phase 6); 3 settings pattern on Event / Divisions / organisation and platform settings; 8a Previous / Next; 8b number fields; 8e head console division picker; 8d Reset + Restore (migration, RLS tests) last. e2e updates throughout | 16–20 h |
+| **7a-1** (after 7a-0 is approved) | `phase-7a-1-shell-dashboard` | before the event; accepted by Sat 3 Oct evening | In this order: 7 copy + banned words; 1 shell and rail; 2 dashboard (wind-call slot from Phase 6); 3 settings pattern on Event / Divisions / organisation and platform settings; 8a Previous / Next; 8b number fields; 8e (head console division picker: dropped from 7a-1, owned by Console v2); 8d Reset + Restore (migration, RLS tests) last. e2e updates throughout | 16–20 h |
 | **7a-2** | `phase-7a-2-tables` | only if 7a-1 is accepted by Sat 3 Oct evening, otherwise after the event | 4 tables, 5 Draw and Run order, 6 consistency sweep + test, fixes from the Sunday test | 7–9 h |
 | **7a-3** | `phase-7a-3-landing` | after Phase 6 merges | 8c landing page | 1 h |
 

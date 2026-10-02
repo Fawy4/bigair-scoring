@@ -23,11 +23,12 @@ export function publishChecklist(input: {
   blockers: PublishBlocker[];
   /** Panel judges who have not submitted. */
   unsubmitted: string[];
-  judgeNumber: (judgeId: string) => number;
+  /** The judge as a word in a sentence: the seat's name ("Fawy"). */
+  judgeWord: (judgeId: string) => string;
   riderLabel: (riderId: string) => string;
   impressionLabel: string;
 }): Checklist {
-  const judge = (id: string) => copy.live.matrix.judge(input.judgeNumber(id));
+  const judge = input.judgeWord;
   const items: ChecklistItem[] = [];
   for (const j of input.unsubmitted) items.push({ kind: "sheet", text: C.sheet(judge(j)) });
   for (const b of input.blockers) {

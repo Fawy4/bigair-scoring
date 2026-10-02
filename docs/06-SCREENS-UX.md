@@ -313,6 +313,23 @@ Written in words. Where a row refines §7 to §9 above, this section wins.
 | Speed | Polling by refreshing the server page every "Live update" seconds while the page is visible; no realtime for the public; no heavy libraries on the public pages; logos from the project's storage are resized by Next. Budget on slow 4G with a 4× slower CPU: 180 kB, 140 kB of script, 16 requests, paint within 2.5 s. |
 
 
+
+### Decisions log – Console v2 (head judge console redesign; owner's verdict on the 5c console after the first real test, 1 Oct 2026)
+
+The brief referred to this as "§1h"; no such section existed in the repository, so the owner's verdict is recorded here.
+
+| Topic | Decision |
+|---|---|
+| Layout (laptop, 1280 and up) | Top bar: division selector, the heat's name, the timer at 48 px with Start / Pause / Resume / End beside it, Sound on. Left, narrow: the run order of the selected division, one short line per heat, the next heat marked, a fold "Other divisions", small Hold / Resume at / Shift +5 / +10, the wind call as one button that opens a small panel. Centre: a strip of the heat's riders (Rider label, running total, attempt counter), then the score table. Right: judges' status, open flags, blockers, Publish, Re-open, Re-run; rider totals and "owes Impression score" compact. Everything not needed to run the current heat is behind a toggle. Phone keeps Score / Control with the same division selector. |
+| Division selector | One division at a time, remembered per device; default is the division with a running heat, else the division of the next heat. A live dot (with its word) on another division's tab while one of its heats is running or paused. The console never switches division by itself. Owned by this PR, not by Phase 7a-1. |
+| Run order lines | Short and never cut short: "R1 · H2 · 14:05 · Ended"; estimated times for heats that have not started. |
+| Score table | Chronological, newest on top; a toggle groups it by rider. Judge columns are headed by the seat names ("Fawy", with "J1" small underneath); the same names in the agreement report, the judges' status and every blocker ("Fawy has not submitted", never "Judge 1"). Outlier colours, tick boxes and menus as built in 5c. |
+| Start any heat | The head judge may start any heat that has not started, of any division whose draw is locked and whose seats are filled, in any order. Out of the run order: one warning ("Not the next heat in the run order — R1 · H3 was next"), asked once (Start anyway / Don't start); the timetable re-flows around the real order. A cancelled heat cannot be started. |
+| Re-run | Also on a cancelled heat ("3R" from the cancelled one, same rules as 5c), once. |
+| Break after a heat | The top bar counts down "Next: R1 · H3 · starts in 4:30" (end of the heat + break + warm-up from the active plan). "+1 min" makes this break one minute longer and moves everything after it, like Shift; "Pause break" holds the countdown until Resume (a Hold). Nothing starts by itself. Hidden when there is no active run order, with the one-line reason. Pins hold whole minutes, so +1 min and the resume after a pause round up to the next whole minute (owner, 1 Oct 2026). |
+| Judge pad | The number field shows a greyed "0.0" and never the word "type". |
+| Sizes | Beach standard, compact Normal sizes, the /design visual language; no truncated names anywhere on the console. |
+
 ### Decisions log – Phase 7a (organiser and admin redesign)
 
 Written in words on purpose: no row refers to another by number. Where a row refines earlier text, this section wins. Source: the owner's answers of 1 Oct 2026 (top of `docs/PLAN-phase-7a.md`).

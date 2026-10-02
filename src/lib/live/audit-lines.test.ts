@@ -3,7 +3,7 @@ import { auditLine, type AuditRow } from "./audit-lines";
 
 // "I edit a score with a reason and see it in the audit log" (the owner's acceptance check)
 const ctx = {
-  judgeNo: (seat: string) => ({ s1: 1, s2: 2 })[seat as "s1"] ?? 0,
+  judgeWord: (seat: string) => ({ s1: "Judge 1", s2: "Judge 2" })[seat as "s1"] ?? "A judge",
   riderWord: (entry: string) => ({ red: "Red", blue: "Blue" })[entry as "red"] ?? "Rider",
   attemptWord: (attempt: string) => ({ a3: "Red 3", a4: "Blue 1" })[attempt as "a3"] ?? "an attempt",
 };

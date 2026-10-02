@@ -1,6 +1,6 @@
 import { copy } from "@/lib/ui-copy";
 
-/** The head judge's Control tab: which buttons are on in which state of the heat. There is no timer reset: use Cancel heat (with a reason) or Re-run heat. */
+/** The head judge's Control tab: which buttons are on in which state of the heat. There is no timer reset: use Cancel heat (with a reason) or Re-run heat. A cancelled heat cannot be started, but it can be re-run once. */
 export type HeatState = "scheduled" | "running" | "paused" | "ended" | "under_review" | "published" | "cancelled";
 export type ControlId = "start" | "pause" | "resume" | "end" | "hold" | "resumeAt" | "shift5" | "shift10" | "publish" | "cancel" | "rerun" | "reopen";
 
@@ -19,6 +19,8 @@ export interface ControlOptions {
   hasPlan?: boolean;
   /** On the real page Publish is on whenever the heat can be published; pressing it shows the blocker list first. */
   publishOpensList?: boolean;
+  /** A cancelled heat whose re-run already exists cannot be re-run again. */
+  alreadyRerun?: boolean;
 }
 
 const WHY = copy.controlWhy;
@@ -26,7 +28,7 @@ const WHY = copy.controlWhy;
 function reasonFor(id: ControlId, state: HeatState, o: ControlOptions, blockers: number): string {
   switch (id) {
     case "start":
-      return WHY.start;
+      return state === "cancelled" ? WHY.startCancelled : WHY.start;
     case "pause":
       return WHY.pause;
     case "resume":
@@ -43,7 +45,7 @@ function reasonFor(id: ControlId, state: HeatState, o: ControlOptions, blockers:
     case "cancel":
       return WHY.cancel;
     case "rerun":
-      return state === "published" ? WHY.rerunPublished : WHY.cancel;
+      return state === "published" ? WHY.rerunPublished : state === "cancelled" ? WHY.rerunDone : WHY.cancel;
     case "reopen":
       return WHY.reopen;
   }
@@ -70,8 +72,9 @@ export function controlsFor(state: HeatState, blockers: number, options: Control
       case "publish":
         return reviewable && (blockers === 0 || options.publishOpensList === true);
       case "cancel":
-      case "rerun":
         return live || reviewable;
+      case "rerun":
+        return live || reviewable || (state === "cancelled" && !options.alreadyRerun);
       case "reopen":
         return state === "published";
     }

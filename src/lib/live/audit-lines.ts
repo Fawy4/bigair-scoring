@@ -13,8 +13,8 @@ export interface AuditRow {
 }
 
 export interface AuditWords {
-  /** Judge seat id → the judge's number on the panel. */
-  judgeNo: (seatId: string) => number;
+  /** Judge seat id → the judge as a word (the seat's name, "Fawy"). */
+  judgeWord: (seatId: string) => string;
   riderWord: (entryId: string) => string;
   /** "Red 3": the rider and the attempt number. */
   attemptWord: (attemptId: string) => string;
@@ -34,11 +34,11 @@ export function auditLine(r: AuditRow, w: AuditWords): string {
   const attempt = (o: Record<string, unknown>) => w.attemptWord(String(o.attempt_id ?? o.id ?? ""));
   switch (r.action) {
     case "score_edited":
-      return `${T.judge(w.judgeNo(String(after.judge_seat_id ?? before.judge_seat_id ?? "")))} · ${attempt(after)}: ${val(r.before)} → ${val(r.after)}${because}`;
+      return `${w.judgeWord(String(after.judge_seat_id ?? before.judge_seat_id ?? ""))} · ${attempt(after)}: ${val(r.before)} → ${val(r.after)}${because}`;
     case "score_merged":
-      return `${T.judge(w.judgeNo(String(after.judge_seat_id ?? "")))} · ${attempt(after)}: ${T.scoreMoved}${because}`;
+      return `${w.judgeWord(String(after.judge_seat_id ?? ""))} · ${attempt(after)}: ${T.scoreMoved}${because}`;
     case "impression_set":
-      return `${T.judge(w.judgeNo(String(after.judge_seat_id ?? "")))} · ${w.riderWord(String(after.entry_id ?? ""))}: ${T.impression} ${val(r.before)} → ${val(r.after)}${because}`;
+      return `${w.judgeWord(String(after.judge_seat_id ?? ""))} · ${w.riderWord(String(after.entry_id ?? ""))}: ${T.impression} ${val(r.before)} → ${val(r.after)}${because}`;
     case "attempt_deleted":
       return `${T.deleted(w.attemptWord(String(after.id ?? "")))}${because}`;
     case "attempt_undone":

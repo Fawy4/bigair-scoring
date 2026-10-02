@@ -46,6 +46,14 @@ describe("which heat a phone opens by itself", () => {
     expect(pickCurrentHeat({ ...base, heats: [cancelled], viewer: { role: "spotter" } }).heat).toBeNull();
     expect(pickCurrentHeat({ ...base, heats: [running, heat("h8", "men")], viewer: { role: "spotter" }, pinnedId: "h8" })).toMatchObject({ heat: { id: "h8" }, phase: "none" });
   });
+  it("the head judge and an organiser can open a cancelled heat that is pinned (to re-run it); a judge, a spotter and a heat that is not pinned never get one", () => {
+    const cancelled = heat("h7", "men", { status: "cancelled", started_at: iso("10:00:00") });
+    expect(pickCurrentHeat({ ...base, heats: [cancelled], viewer: { role: "head", seatId: "hj" }, pinnedId: "h7" }).heat?.id).toBe("h7");
+    expect(pickCurrentHeat({ ...base, heats: [cancelled], viewer: { role: "organiser" }, pinnedId: "h7" }).heat?.id).toBe("h7");
+    expect(pickCurrentHeat({ ...base, heats: [cancelled], viewer: { role: "judge", seatId: "j1" }, pinnedId: "h7" }).heat).toBeNull();
+    expect(pickCurrentHeat({ ...base, heats: [cancelled], viewer: { role: "spotter" }, pinnedId: "h7" }).heat).toBeNull();
+    expect(pickCurrentHeat({ ...base, heats: [cancelled], viewer: { role: "head", seatId: "hj" } }).heat).toBeNull();
+  });
   it("the head judge and an organiser follow every running heat", () => {
     expect(pickCurrentHeat({ ...base, heats: [other], viewer: { role: "head", seatId: "hj" } }).heat?.id).toBe("h2");
     expect(pickCurrentHeat({ ...base, heats: [other], viewer: { role: "organiser" } }).heat?.id).toBe("h2");

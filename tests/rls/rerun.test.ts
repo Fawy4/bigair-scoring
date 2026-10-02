@@ -128,7 +128,7 @@ describe.skipIf(!ENV_OK)("Re-run heat (hosted development project)", () => {
     expect(((await f.clients.head.from("trick_attempts").select("id").eq("heat_id", re.id)).data ?? []).length).toBe(0);
   });
 
-  it("refused for judges, spotters and another organisation, for a heat that is published, one that never started and one that is already cancelled", async () => {
+  it("refused for judges, spotters and another organisation, for a heat that is published, one that never started and one that is cancelled and already re-run", async () => {
     const h2 = (await heatUid("R1-H2")).data!;
     await f.s.from("heats").update({ status: "running", started_at: ago(100) }).eq("id", h2.id);
     for (const who of ["j1", "spotter", "announcer", "orgB"] as const) expect(codeOf(await run(f.clients[who], h2.id, randomUUID(), "kite tangle"))).toContain("NOT_ALLOWED");
@@ -139,9 +139,9 @@ describe.skipIf(!ENV_OK)("Re-run heat (hosted development project)", () => {
     // never started
     const fin = (await heatUid("F-H1")).data!;
     expect(codeOf(await run(f.clients.head, fin.id, randomUUID(), "kite tangle"))).toContain("HEAT_NOT_STARTED");
-    // cancelled
+    // cancelled, and its re-run already exists (Console v2: a cancelled heat can be re-run, but only once)
     const old = (await heatsOf()).find((h) => h.status === "cancelled")!;
-    expect(codeOf(await run(f.clients.head, old.id, randomUUID(), "kite tangle"))).toContain("HEAT_CANCELLED");
+    expect(codeOf(await run(f.clients.head, old.id, randomUUID(), "kite tangle"))).toContain("HEAT_ALREADY_RERUN");
   });
 
   it("the run order: the re-run goes right after the live heat; a stale plan stamp or a wrong item list changes nothing", async () => {

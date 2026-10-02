@@ -153,6 +153,10 @@ export interface LiveContext {
   plans: Array<{ id: string; day: string; name: string; plan: SchedulePlan; defaults: ScheduleDefaults; updatedAt: string }>;
   /** Breaks and last-heat-of-round per heat (from the stored draw), for the estimated start times. */
   heatMeta: Record<string, HeatMeta>;
+  /** The names of the panel's seats ("Fawy"), for the judge columns and every sentence about a judge. The head seat and organisers read all of them; a judge's phone only its own. */
+  seatNames: Record<string, string>;
+  /** Every division of the event in order, by name, for the division selector and the run order: a division whose scoring rules cannot be used is missing from `divisions` but its heats are still listed. */
+  divisionTabs: Array<{ id: string; name: string }>;
 }
 
 export interface PenaltyRowLive {

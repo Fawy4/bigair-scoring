@@ -1,18 +1,25 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { MoreVertical } from "lucide-react";
 import { Chip } from "./chip";
 import { plain } from "./console-parts";
 import { AddAttemptDialog, CellDialog, DeleteDialog, EditAttemptDialog, FlagOutDialog, ImpressionDialog, MergeDialog, StatusDialog } from "./head-console-dialogs";
 import { TieDialog } from "./head-dialogs";
 import { HeadMatrix } from "./head-matrix";
+import { ReviewButtons, VisibilityBox } from "./head-parts";
+import { AgreementReport, AuditLog, JudgesStatus, OpenFlags, useSideData } from "./head-side-panel";
+import { ScreenSettings } from "./live-shell";
+import type { HeadController } from "./use-head-controller";
 import type { LiveHeatState } from "./use-live-heat";
 import { Pill } from "./pill";
 import { RiderLabel } from "@/components/rider-label";
 import { outlierTolerance } from "@/lib/live/cell-tone";
 import { canMerge } from "@/lib/live/console-ops";
 import type { HeadModel } from "@/lib/live/head-model";
+import { judgeWordOf } from "@/lib/live/judge-names";
+import { orderRows, readTableOrder, writeTableOrder, type TableOrder } from "@/lib/live/matrix-order";
 import { heatTitle } from "@/lib/live/run-order";
 import type { PastCapRole } from "@/lib/live/merge-plan";
 import type { LiveMatrixRow } from "@/lib/live/matrix";
@@ -23,6 +30,7 @@ import { cn } from "@/lib/utils";
 
 const C = copy.live.console;
 const H = copy.headLive;
+const V = copy.headV2;
 
 type Menu = { kind: "attempt"; attemptId: string } | { kind: "rider"; entryId: string } | null;
 type Dialog =
@@ -55,6 +63,11 @@ export function HeadLiveConsole({
   onChanged,
   role,
   hasActiveHead,
+  supabase,
+  nowServer,
+  refreshKey,
+  c,
+  extras,
 }: {
   ctx: LiveContext;
   heat: HeatRow;
@@ -66,12 +79,29 @@ export function HeadLiveConsole({
   onChanged: () => void;
   role: PastCapRole;
   hasActiveHead: boolean;
+  supabase: SupabaseClient;
+  nowServer: number;
+  refreshKey: number;
+  /** The heat controller: the right column carries Publish, Re-open, Re-run and Cancel. */
+  c: HeadController;
+  /** Anything else for behind "More" (the practice panel of a simulation event). */
+  extras?: React.ReactNode;
 }) {
   const [menu, setMenu] = useState<Menu>(null);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [selection, setSelection] = useState<string[]>([]);
+  const [order, setOrder] = useState<TableOrder>("newest");
+  const [more, setMore] = useState(false);
+  useEffect(() => setOrder(readTableOrder(typeof window === "undefined" ? null : window.localStorage)), []);
+  const side = useSideData(supabase, ctx.event.id, heat, head.matrix.judgeIds, ctx.seatNames, refreshKey, { audit: more });
+  const judgeWord = (seatId: string) => judgeWordOf(side.judges.find((j) => j.id === seatId) ?? { name: null, tag: copy.live.matrix.aJudge });
+  const chooseOrder = (next: TableOrder) => {
+    setOrder(next);
+    writeTableOrder(typeof window === "undefined" ? null : window.localStorage, next);
+  };
   const model = division.model;
   const rows = head.matrix.rows;
+  const tableRows = useMemo(() => orderRows(rows, order, riders.map((r) => r.entryId)), [rows, order, riders]);
   const open = editable(heat.status);
   // Impression / Variety scores open when the heat has ended: until then nothing is owed and nothing blocks Publish
   const closing = heat.status === "ended" || heat.status === "under_review";
@@ -129,51 +159,93 @@ export function HeadLiveConsole({
   const title = heatTitle(ctx, heat);
   const dialogRows = (ids: string[]) => ids.flatMap((id) => (rowById(id) ? [rowById(id)!] : []));
 
-  return (
-    <div data-testid="head-live-console" data-heat={heat.id} className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="text-name font-semibold">{title}</p>
-        <Pill tone={heat.status === "published" ? "live" : "outlier"}>{copy.heatControl.status[heat.status] ?? heat.status}</Pill>
-        {heat.reopened_at && heat.status === "under_review" ? <Pill tone="outlier">{H.underCorrection}</Pill> : null}
-      </div>
-      {!open ? <p className="text-small font-medium text-beach-muted">{heat.status === "published" ? C.published : ""}</p> : null}
+  const stripTiles = riders.map((r) => {
+    const total = head.totals.find((t) => t.entryId === r.entryId);
+    const slot = slotOf(r.entryId);
+    return { r, total, slot };
+  });
 
-      {open && menu ? (
-        <div role="menu" data-testid={menu.kind === "attempt" ? "attempt-menu" : "rider-menu"} className="flex flex-wrap items-center gap-1.5 rounded-card border border-beach-border bg-beach-surface p-1.5">
-          <span className="text-small font-semibold text-beach-muted">
-            {menu.kind === "attempt" && menuRow ? `${C.attemptMenu}: ${attemptWord(menuRow)}` : menuRider ? `${C.riderMenu}: ${wordFor(menuRider.entryId)}` : ""}
-          </span>
-          {(menu.kind === "attempt" ? attemptItems : riderItems).map(([label, run, enabled]) => (
-            <button key={label} type="button" role="menuitem" disabled={!enabled} onClick={run} className={cn(plain, !enabled && "opacity-60")}>
-              {label}
+  return (
+    <div data-testid="head-live-console" data-heat={heat.id} className="grid items-start gap-3 min-[1280px]:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="whitespace-normal break-words text-name font-semibold">{title}</p>
+          <Pill tone={heat.status === "published" ? "live" : "outlier"}>{copy.heatControl.status[heat.status] ?? heat.status}</Pill>
+          {heat.reopened_at && heat.status === "under_review" ? <Pill tone="outlier">{H.underCorrection}</Pill> : null}
+        </div>
+        {!open ? <p className="text-small font-medium text-beach-muted">{heat.status === "published" ? C.published : ""}</p> : null}
+
+        <section data-testid="rider-strip" aria-label={V.ridersStrip} className="flex flex-wrap gap-1.5">
+          {stripTiles.map(({ r, total, slot }) => (
+            <button
+              key={r.entryId}
+              type="button"
+              data-testid="rider-strip-tile"
+              data-rider={r.entryId}
+              disabled={!open}
+              aria-label={`${wordFor(r.entryId)}: ${C.riderMenu}`}
+              onClick={() => setMenu({ kind: "rider", entryId: r.entryId })}
+              className="flex min-h-tap min-w-[7rem] flex-col items-start gap-0.5 rounded-card border border-beach-line bg-beach-surface px-2 py-1 text-left"
+            >
+              <span className="min-w-0 whitespace-normal break-words">{<RiderLabel model={r.label} variant="live" bare />}</span>
+              <span className="flex w-full items-baseline justify-between gap-2">
+                <span data-testid="rider-strip-total" className="text-name font-semibold tabular-nums">
+                  {total?.totalLabel ?? copy.live.result.noTotal}
+                </span>
+                <span data-testid="rider-strip-attempts" className="text-small font-medium text-beach-muted tabular-nums">
+                  {V.attemptsShort(counts.get(r.entryId) ?? 0, cap)}
+                </span>
+              </span>
+              {slot?.modifier ? <Pill tone="outlier">{slot.modifier}</Pill> : null}
             </button>
           ))}
-          <button type="button" onClick={() => setMenu(null)} className={plain}>
-            {copy.common.close}
-          </button>
-        </div>
-      ) : open ? (
-        <p className="text-small font-medium text-beach-muted">{C.tap}</p>
-      ) : null}
+        </section>
 
-      {open && picked.length > 0 ? (
-        <div data-testid="selection-bar" className="flex flex-wrap items-center gap-1.5 rounded-card border border-beach-accent bg-beach-surface p-1.5">
-          <span className="text-body font-semibold">{C.selected(picked.length)}</span>
-          <Chip data-testid="merge-selected" variant={mergeable(picked) ? "accent" : "muted"} disabled={!mergeable(picked)} onClick={() => setDialog({ kind: "merge", ids: picked.map((r) => r.attemptId) })}>
-            {C.mergeSelected}
-          </Chip>
-          <Chip data-testid="delete-selected" onClick={() => setDialog({ kind: "delete", ids: picked.map((r) => r.attemptId) })}>
-            {C.deleteSelected}
-          </Chip>
-          <Chip onClick={() => setSelection([])}>{C.clearSelection}</Chip>
-        </div>
-      ) : null}
-      <p className="text-small font-medium text-beach-muted">{C.toleranceNote(String(outlierTolerance(model)))}</p>
+        {open && menu ? (
+          <div role="menu" data-testid={menu.kind === "attempt" ? "attempt-menu" : "rider-menu"} className="flex flex-wrap items-center gap-1.5 rounded-card border border-beach-border bg-beach-surface p-1.5">
+            <span className="text-small font-semibold text-beach-muted">
+              {menu.kind === "attempt" && menuRow ? `${C.attemptMenu}: ${attemptWord(menuRow)}` : menuRider ? `${C.riderMenu}: ${wordFor(menuRider.entryId)}` : ""}
+            </span>
+            {(menu.kind === "attempt" ? attemptItems : riderItems).map(([label, run, enabled]) => (
+              <button key={label} type="button" role="menuitem" disabled={!enabled} onClick={run} className={cn(plain, !enabled && "opacity-60")}>
+                {label}
+              </button>
+            ))}
+            <button type="button" onClick={() => setMenu(null)} className={plain}>
+              {copy.common.close}
+            </button>
+          </div>
+        ) : null}
 
-      <div className="grid items-start gap-2 min-[1700px]:grid-cols-[minmax(0,1fr)_14rem]">
+        {open && picked.length > 0 ? (
+          <div data-testid="selection-bar" className="flex flex-wrap items-center gap-1.5 rounded-card border border-beach-accent bg-beach-surface p-1.5">
+            <span className="text-body font-semibold">{C.selected(picked.length)}</span>
+            <Chip data-testid="merge-selected" variant={mergeable(picked) ? "accent" : "muted"} disabled={!mergeable(picked)} onClick={() => setDialog({ kind: "merge", ids: picked.map((r) => r.attemptId) })}>
+              {C.mergeSelected}
+            </Chip>
+            <Chip data-testid="delete-selected" onClick={() => setDialog({ kind: "delete", ids: picked.map((r) => r.attemptId) })}>
+              {C.deleteSelected}
+            </Chip>
+            <Chip onClick={() => setSelection([])}>{C.clearSelection}</Chip>
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="min-w-0 text-small font-medium text-beach-muted">{open && !menu ? `${C.tap} ` : ""}{C.toleranceNote(String(outlierTolerance(model)))}</p>
+          <div role="group" aria-label={V.orderToggle} className="flex gap-1.5">
+            <Chip data-testid="order-newest" pressed={order === "newest"} onClick={() => chooseOrder("newest")}>
+              {V.newestOnTop}
+            </Chip>
+            <Chip data-testid="order-rider" pressed={order === "rider"} onClick={() => chooseOrder("rider")}>
+              {V.groupedByRider}
+            </Chip>
+          </div>
+        </div>
+
         <HeadMatrix
           tolerance={outlierTolerance(model)}
-          model={{ judgeIds: head.matrix.judgeIds, rows }}
+          judges={side.judges}
+          model={{ judgeIds: head.matrix.judgeIds, rows: tableRows }}
           actions={
             open
               ? {
@@ -186,92 +258,113 @@ export function HeadLiveConsole({
               : {}
           }
         />
-        <aside className="grid gap-2 sm:grid-cols-2 min-[1700px]:grid-cols-1">
-          <section className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={C.totals}>
-            <h3 className="text-heading font-semibold text-beach-muted">{C.totals}</h3>
-            {head.totals.map((t) => {
-              const r = riderOf(t.entryId);
-              const slot = slotOf(t.entryId);
-              return (
-                <div key={t.entryId} data-testid="console-total" data-rider={t.entryId} className="flex flex-col gap-0.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <button type="button" aria-label={`${wordFor(t.entryId)}: ${C.riderMenu}`} disabled={!open} onClick={() => setMenu({ kind: "rider", entryId: t.entryId })} className="flex min-h-tap min-w-0 items-center gap-1 rounded-lg text-left">
-                      {r ? <RiderLabel model={r.label} variant="live" bare /> : <span>{wordFor(t.entryId)}</span>}
-                      {open ? <MoreVertical aria-hidden className="size-4 shrink-0 text-beach-muted" /> : null}
-                    </button>
-                    <span className="flex flex-col items-end">
-                      <span data-testid="console-total-value" className="text-name font-semibold tabular-nums">
-                        {t.totalLabel}
-                      </span>
-                      {slot?.modifier ? <Pill tone="outlier">{slot.modifier}</Pill> : null}
+      </div>
+
+      <aside data-testid="head-side" className="flex min-w-0 flex-col gap-2">
+        <ReviewButtons c={c} compact visibility={false} />
+        <JudgesStatus side={side} live={live} nowServer={nowServer} heat={heat} />
+
+        <section data-testid="blockers" className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={H.blockersHeading}>
+          <h3 className="text-heading font-semibold text-beach-muted">{blockerItems.length ? C.publishBlocked : H.nothingBlocks}</h3>
+          {blockerItems.map((b) => (
+            <p key={b.text} className="rounded-lg border border-beach-outlier bg-beach-bg px-2 py-0.5 text-body font-medium">
+              {b.text}
+            </p>
+          ))}
+        </section>
+
+        <OpenFlags side={side} live={live} head={head} heat={heat} wordFor={wordFor} onChanged={onChanged} />
+
+        <section className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={C.totals}>
+          <h3 className="text-heading font-semibold text-beach-muted">{C.totals}</h3>
+          {head.totals.map((t) => {
+            const r = riderOf(t.entryId);
+            const slot = slotOf(t.entryId);
+            return (
+              <div key={t.entryId} data-testid="console-total" data-rider={t.entryId} className="flex flex-col gap-0.5">
+                <div className="flex items-center justify-between gap-2">
+                  <button type="button" aria-label={`${wordFor(t.entryId)}: ${C.riderMenu}`} disabled={!open} onClick={() => setMenu({ kind: "rider", entryId: t.entryId })} className="flex min-h-tap min-w-0 items-center gap-1 rounded-lg text-left">
+                    {r ? <RiderLabel model={r.label} variant="live" bare /> : <span>{wordFor(t.entryId)}</span>}
+                    {open ? <MoreVertical aria-hidden className="size-4 shrink-0 text-beach-muted" /> : null}
+                  </button>
+                  <span className="flex flex-col items-end">
+                    <span data-testid="console-total-value" className="text-name font-semibold tabular-nums">
+                      {t.totalLabel}
                     </span>
-                  </div>
-                  {t.formula ? <p className="text-small font-medium text-beach-muted">{t.formula}</p> : null}
+                    {slot?.modifier ? <Pill tone="outlier">{slot.modifier}</Pill> : null}
+                  </span>
                 </div>
-              );
-            })}
-          </section>
+                {t.formula ? <p className="text-small font-medium text-beach-muted">{t.formula}</p> : null}
+              </div>
+            );
+          })}
+        </section>
 
-          {closing ? (
-            <div data-testid="owes" className="flex flex-col gap-1 rounded-xl border border-beach-line bg-beach-bg px-2 py-1 text-body font-medium">
-              {owes.length === 0 ? <span>{C.noneOwed}</span> : null}
-              {[...new Set(owes.map((o) => o.seatId))].map((seatId) => {
-                const mine = owes.filter((o) => o.seatId === seatId);
-                return (
-                  <div key={seatId} data-testid="owes-judge" className="flex flex-col gap-0.5">
-                    <span>{C.owes(copy.live.matrix.judge(mine[0].judgeNo), mine.map((o) => wordFor(o.entryId)).join(", "))}</span>
-                    {open ? (
-                      <button type="button" data-testid="enter-impression" onClick={() => setDialog({ kind: "impression", seatId, entryId: mine[0].entryId })} className={plain}>
-                        {C.enterImpression}
-                      </button>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-
-          {head.ties.length > 0 ? (
-            <section data-testid="ties" aria-label={H.tiesHeading} className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2">
-              <h3 className="text-heading font-semibold text-beach-muted">{H.tiesHeading}</h3>
-              {head.ties.map((t) => (
-                <div key={t.text} className="flex flex-col gap-1">
-                  <p className="text-body font-medium">{t.text}</p>
-                  {open && (t.unresolved || t.shared) ? (
-                    <button type="button" data-testid="choose-order" className={plain} onClick={() => setDialog({ kind: "tie", riders: t.riderIds })}>
-                      {H.chooseOrder}
+        {closing ? (
+          <div data-testid="owes" className="flex flex-col gap-1 rounded-xl border border-beach-line bg-beach-bg px-2 py-1 text-body font-medium">
+            {owes.length === 0 ? <span>{C.noneOwed}</span> : null}
+            {[...new Set(owes.map((o) => o.seatId))].map((seatId) => {
+              const mine = owes.filter((o) => o.seatId === seatId);
+              return (
+                <div key={seatId} data-testid="owes-judge" className="flex flex-col gap-0.5">
+                  <span>{C.owes(mine[0].judge, mine.map((o) => wordFor(o.entryId)).join(", "))}</span>
+                  {open ? (
+                    <button type="button" data-testid="enter-impression" onClick={() => setDialog({ kind: "impression", seatId, entryId: mine[0].entryId })} className={plain}>
+                      {C.enterImpression}
                     </button>
                   ) : null}
                 </div>
-              ))}
-            </section>
-          ) : null}
+              );
+            })}
+          </div>
+        ) : null}
 
-          <section data-testid="blockers" className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={H.blockersHeading}>
-            <h3 className="text-heading font-semibold text-beach-muted">{blockerItems.length ? C.publishBlocked : H.nothingBlocks}</h3>
-            {blockerItems.map((b) => (
-              <p key={b.text} className="rounded-lg border border-beach-outlier bg-beach-bg px-2 py-0.5 text-body font-medium">
-                {b.text}
-              </p>
+        {head.ties.length > 0 ? (
+          <section data-testid="ties" aria-label={H.tiesHeading} className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2">
+            <h3 className="text-heading font-semibold text-beach-muted">{H.tiesHeading}</h3>
+            {head.ties.map((t) => (
+              <div key={t.text} className="flex flex-col gap-1">
+                <p className="text-body font-medium">{t.text}</p>
+                {open && (t.unresolved || t.shared) ? (
+                  <button type="button" data-testid="choose-order" className={plain} onClick={() => setDialog({ kind: "tie", riders: t.riderIds })}>
+                    {H.chooseOrder}
+                  </button>
+                ) : null}
+              </div>
             ))}
           </section>
+        ) : null}
 
-          {showFlagOut && division.flagOut ? (
-            <section data-testid="flag-out" aria-label={H.flagOutHeading} className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2">
-              <h3 className="text-heading font-semibold text-beach-muted">{H.flagOutHeading}</h3>
-              <p className="text-small font-medium">{H.flagOutDue(division.flagOut.count, division.flagOut.atMin)}</p>
-              <button type="button" data-testid="flag-out-button" className={plain} onClick={() => setDialog({ kind: "flagOut" })}>
-                {H.flagOutButton}
-              </button>
-            </section>
-          ) : null}
-          {open ? (
-            <button type="button" data-testid="add-attempt" className={plain} onClick={() => setDialog({ kind: "add" })}>
-              {C.add}
+        {showFlagOut && division.flagOut ? (
+          <section data-testid="flag-out" aria-label={H.flagOutHeading} className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2">
+            <h3 className="text-heading font-semibold text-beach-muted">{H.flagOutHeading}</h3>
+            <p className="text-small font-medium">{H.flagOutDue(division.flagOut.count, division.flagOut.atMin)}</p>
+            <button type="button" data-testid="flag-out-button" className={plain} onClick={() => setDialog({ kind: "flagOut" })}>
+              {H.flagOutButton}
             </button>
-          ) : null}
-        </aside>
-      </div>
+          </section>
+        ) : null}
+        {open ? (
+          <button type="button" data-testid="add-attempt" className={plain} onClick={() => setDialog({ kind: "add" })}>
+            {C.add}
+          </button>
+        ) : null}
+
+        <button type="button" data-testid="more-toggle" aria-expanded={more} onClick={() => setMore((m) => !m)} className={plain}>
+          {more ? V.moreHide : V.more}
+          {" · "}
+          {V.detailsToggle}
+        </button>
+        {more ? (
+          <div data-testid="more-panel" className="flex flex-col gap-2">
+            <VisibilityBox c={c} />
+            <AgreementReport side={side} head={head} heat={heat} />
+            <AuditLog side={side} head={head} wordFor={wordFor} />
+            <ScreenSettings hideSound />
+            {extras}
+          </div>
+        ) : null}
+      </aside>
 
       {dialog?.kind === "cell"
         ? (() => {
@@ -283,7 +376,7 @@ export function HeadLiveConsole({
                 model={model}
                 attemptId={dialog.attemptId}
                 seatId={dialog.seatId}
-                judgeNo={head.matrix.judgeIds.indexOf(dialog.seatId) + 1}
+                judge={judgeWord(dialog.seatId)}
                 who={attemptWord(row)}
                 current={live.scores.find((s) => s.attempt_id === dialog.attemptId && s.judge_seat_id === dialog.seatId)}
                 onClose={close}
@@ -293,7 +386,7 @@ export function HeadLiveConsole({
           })()
         : null}
       {dialog?.kind === "delete" ? <DeleteDialog rows={dialogRows(dialog.ids)} wordFor={wordFor} onClose={close} onDone={done} /> : null}
-      {dialog?.kind === "merge" ? <MergeDialog model={model} rows={dialogRows(dialog.ids)} attempts={live.attempts} scores={live.scores} panelSeatIds={head.matrix.judgeIds} wordFor={wordFor} onClose={close} onDone={done} /> : null}
+      {dialog?.kind === "merge" ? <MergeDialog model={model} rows={dialogRows(dialog.ids)} attempts={live.attempts} scores={live.scores} panelSeatIds={head.matrix.judgeIds} judgeWord={judgeWord} wordFor={wordFor} onClose={close} onDone={done} /> : null}
       {dialog?.kind === "edit"
         ? (() => {
             const a = live.attempts.find((x) => x.id === dialog.attemptId);
@@ -307,7 +400,7 @@ export function HeadLiveConsole({
           model={model}
           heatId={heat.id}
           seatId={dialog.seatId}
-          judgeNo={head.matrix.judgeIds.indexOf(dialog.seatId) + 1}
+          judge={judgeWord(dialog.seatId)}
           riders={owes.filter((o) => o.seatId === dialog.seatId).map((o) => ({ id: o.entryId, word: wordFor(o.entryId) }))}
           first={dialog.entryId}
           onClose={close}

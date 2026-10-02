@@ -35,6 +35,17 @@ const pad = async (p: Pick<Page, "getByRole">, whole: number, half: "0" | "5") =
   await p.getByRole("button", { name: `Set .${half}` }).click();
 };
 const rows = (head: Page) => head.getByTestId("matrix-row");
+/** Opens a heat of any division from the run order (other divisions are folded away; opening one switches the console to its division). */
+const pickHeat = async (p: Page, heat: string) => {
+  const row = p.locator(`[data-testid="order-row"][data-heat="${heat}"]`);
+  await row.waitFor({ state: "attached", timeout: 40_000 });
+  if (!(await row.isVisible())) await p.getByTestId("other-divisions").locator("summary").click();
+  await row.click();
+};
+/** Everything that is not needed to run the heat (audit log, agreement report, live switch, practice) is behind "More". */
+const openMore = async (p: Page) => {
+  if ((await p.getByTestId("more-toggle").getAttribute("aria-expanded")) !== "true") await p.getByTestId("more-toggle").click();
+};
 const dialog = (head: Page) => head.getByTestId("console-dialog");
 const audit = async (heat: string, action: string) => (await w.db.from("audit_log").select("action, reason, before, after, actor_user_id").eq("row_id", heat).eq("action", action)).data ?? [];
 
@@ -52,8 +63,8 @@ test("two spotters log Red 5 s apart: the console shows the duplicate; Merge kee
   await head.waitForTimeout(5000);
   await log(s2, ["direction:left", "base:backroll"]);
   await expect(rows(head)).toHaveCount(2, { timeout: 40_000 });
-  await expect(rows(head).nth(1)).toHaveAttribute("data-row-state", "duplicate");
-  await expect(rows(head).nth(1)).toContainText("possible duplicate");
+  await expect(rows(head).nth(0)).toHaveAttribute("data-row-state", "duplicate"); // newest on top
+  await expect(rows(head).nth(0)).toContainText("possible duplicate");
   await expect(j1.getByTestId("waiting-pill")).toContainText("1 waiting", { timeout: 30_000 });
 
   // tick both and Merge: the first logged is kept (the dialog says so), a reason is needed
@@ -65,7 +76,7 @@ test("two spotters log Red 5 s apart: the console shows the duplicate; Merge kee
   await expect(dialog(head).getByTestId("dialog-save")).toBeDisabled();
   await dialog(head).getByTestId("reason-input").fill("same trick logged twice");
   await dialog(head).getByTestId("dialog-save").click();
-  await expect(rows(head).nth(1)).toHaveAttribute("data-row-state", "deleted", { timeout: 30_000 });
+  await expect(rows(head).nth(0)).toHaveAttribute("data-row-state", "deleted", { timeout: 30_000 });
   const attempts = (await w.db.from("trick_attempts").select("id, seq, deleted_at, created_at").eq("heat_id", w.heats[0]).order("created_at")).data!;
   expect(attempts[0].deleted_at).toBeNull();
   expect(attempts[1].deleted_at).not.toBeNull();
@@ -93,6 +104,7 @@ test("the head judge edits a score with a reason and sees it in the audit log; a
   await dialog(head).getByTestId("reason-input").fill("paper sheet");
   await dialog(head).getByTestId("dialog-save").click();
   await expect(cells.nth(0)).toContainText("8.50", { timeout: 30_000 });
+  await openMore(head);
   await expect(head.getByTestId("audit-line").first()).toContainText("Judge 1", { timeout: 30_000 });
   await expect(head.getByTestId("audit-line").first()).toContainText("7.50 → 8.50");
   await expect(head.getByTestId("audit-line").first()).toContainText("paper sheet");
@@ -138,7 +150,7 @@ test("Publish is blocked until the second judge submits, then publishes; the win
   const ladder = await addLadder(w);
   const { heat, entries } = await endedLadderHeat(ladder, ["j1", "j3"]);
   const head = await laptop(browser, `/head/${w.eventId}`);
-  await head.locator(`[data-testid="order-row"][data-heat="${heat}"]`).click({ timeout: 40_000 });
+  await pickHeat(head, heat);
   await expect(rows(head)).toHaveCount(3, { timeout: 40_000 });
 
   // Judge 2 has not submitted: Publish says so in words, and a reason is needed to go on
@@ -156,7 +168,7 @@ test("Publish is blocked until the second judge submits, then publishes; the win
 
   // a second laptop presses Publish at the same moment: one result, not two
   const head2 = await laptop(browser, `/head/${w.eventId}`);
-  await head2.locator(`[data-testid="order-row"][data-heat="${heat}"]`).click({ timeout: 40_000 });
+  await pickHeat(head2, heat);
   await expect(rows(head2)).toHaveCount(3, { timeout: 40_000 });
   await head2.getByTestId("publish").click();
   await expect(dialog(head2)).toContainText("Publish this result?");
@@ -183,11 +195,11 @@ test("Publish is blocked until the second judge submits, then publishes; the win
   await dialog(head).getByTestId("reason-input").fill("a paper sheet showed a different score");
   await dialog(head).getByTestId("dialog-save").click();
   await expect(head.getByTestId("under-correction")).toBeVisible({ timeout: 40_000 });
-  await rows(head).first().getByTestId("matrix-cell").first().click();
+  await rows(head).last().getByTestId("matrix-cell").first().click(); // rider 1 logged first: newest is on top, so the oldest is the last row
   await pad(dialog(head), 0, "0");
   await dialog(head).getByTestId("reason-input").fill("paper sheet");
   await dialog(head).getByTestId("dialog-save").click();
-  await expect(rows(head).first().getByTestId("matrix-cell").first()).toContainText("0.00", { timeout: 40_000 });
+  await expect(rows(head).last().getByTestId("matrix-cell").first()).toContainText("0.00", { timeout: 40_000 });
   await head.getByTestId("publish").click();
   await dialog(head).getByTestId("dialog-save").click();
   await expect(head.getByTestId("control-message")).toContainText("Published — version 2", { timeout: 60_000 });
@@ -201,7 +213,7 @@ test("on a phone the Control tab has Publish and Re-open, and Details holds the 
   const ladder = await addLadder(w);
   const { heat } = await endedLadderHeat(ladder, ["j1"]);
   const phone = await open(browser, "head", `/head/${w.eventId}`);
-  await phone.locator(`[data-testid="order-row"][data-heat="${heat}"]`).click({ timeout: 40_000 });
+  await pickHeat(phone, heat);
   await expect(phone.getByTestId("publish")).toBeEnabled({ timeout: 40_000 });
   await expect(phone.getByTestId("reopen")).toBeDisabled();
   await expect(phone.getByTestId("why-reopen")).toContainText("Only a published heat can be re-opened.");
@@ -259,7 +271,8 @@ test("visibility: the head judge's per-heat live switch, and a held result stays
   const ladder = await addLadder(w);
   const { heat } = await endedLadderHeat(ladder, ["j1", "j2", "j3"]);
   const head = await laptop(browser, `/head/${w.eventId}`);
-  await head.locator(`[data-testid="order-row"][data-heat="${heat}"]`).click({ timeout: 40_000 });
+  await pickHeat(head, heat);
+  await openMore(head);
   await expect(head.getByTestId("live-follow")).toHaveAttribute("aria-pressed", "true", { timeout: 40_000 });
   await head.getByTestId("live-on").click();
   await expect.poll(async () => (await w.db.from("heats").select("public_live").eq("id", heat).single()).data!.public_live, { timeout: 30_000 }).toBe(true);
@@ -291,6 +304,8 @@ test("Practice heat on a simulation event: the organiser's tab plays a spotter f
   const page = await context.newPage();
   await w.org.signIn(page, `/head/${w.eventId}`);
   const j1 = await open(browser, "j1", `/judge/${w.eventId}`);
+  await page.getByTestId("more-toggle").waitFor({ timeout: 60_000 });
+  await openMore(page);
   await expect(page.getByTestId("practice")).toBeVisible({ timeout: 60_000 });
   await expect(j1.getByTestId("all-scored")).toBeVisible({ timeout: 40_000 });
   await page.getByTestId("practice-seconds").fill("3");
@@ -307,6 +322,7 @@ test("Practice heat on a simulation event: the organiser's tab plays a spotter f
   // a normal head seat does not get the Practice panel (organiser only)
   const headSeat = await laptop(browser, `/head/${w.eventId}`);
   await expect(headSeat.getByTestId("heat-control")).toBeVisible({ timeout: 40_000 });
+  await openMore(headSeat);
   await expect(headSeat.getByTestId("practice")).toHaveCount(0);
 });
 

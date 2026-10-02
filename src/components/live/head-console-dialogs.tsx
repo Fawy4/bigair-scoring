@@ -55,7 +55,7 @@ function Choice<T extends string>({ value, options, onChange, label }: { value: 
 }
 
 // ---------------------------------------------------------------- one judge's score of one attempt
-export function CellDialog({ model, attemptId, seatId, judgeNo, who, current, onClose, onDone }: { model: ScoringModel; attemptId: string; seatId: string; judgeNo: number; who: string; current: ScoreRow | undefined; onClose: () => void; onDone: () => void }) {
+export function CellDialog({ model, attemptId, seatId, judgeNo, judge, who, current, onClose, onDone }: { model: ScoringModel; attemptId: string; seatId: string; judgeNo?: number; /** The judge as a word (the seat's name); without it the dialog says "Judge n" (the design preview). */ judge?: string; who: string; current: ScoreRow | undefined; onClose: () => void; onDone: () => void }) {
   const [reason, setReason] = useState("");
   const criteria = model.trick.entry === "criteria";
   const [single, setSingle] = useState<number | null>(null);
@@ -77,7 +77,7 @@ export function CellDialog({ model, attemptId, seatId, judgeNo, who, current, on
   const nowLabel = nowMark === undefined ? copy.live.pad.none : nowMark === "missed" ? copy.live.matrix.missed : criteria ? formatCell(judgeTrickScore(model, nowMark as Record<string, number>).score) : formatCell(Number(nowMark));
   return (
     <Modal screen title={C.editScore} onClose={onClose}>
-      <p className="text-body font-medium text-beach-muted">{C.editScoreFor(copy.live.matrix.judge(judgeNo), who)}</p>
+      <p className="text-body font-medium text-beach-muted">{C.editScoreFor(judge ?? copy.live.matrix.judge(judgeNo ?? 0), who)}</p>
       {criteria ? (
         <CriteriaRows
           criteria={model.trick.criteria.map((c) => ({ key: c.key, label: c.label, ...(c.help ? { help: c.help } : {}), scale: c.scale }))}
@@ -105,7 +105,7 @@ export function CellDialog({ model, attemptId, seatId, judgeNo, who, current, on
 }
 
 // ---------------------------------------------------------------- a judge's Impression / Variety score typed in from paper
-export function ImpressionDialog({ model, heatId, seatId, judgeNo, riders, first, onClose, onDone }: { model: ScoringModel; heatId: string; seatId: string; judgeNo: number; riders: Array<{ id: string; word: string }>; first: string; onClose: () => void; onDone: () => void }) {
+export function ImpressionDialog({ model, heatId, seatId, judgeNo, judge, riders, first, onClose, onDone }: { model: ScoringModel; heatId: string; seatId: string; judgeNo?: number; judge?: string; riders: Array<{ id: string; word: string }>; first: string; onClose: () => void; onDone: () => void }) {
   const [reason, setReason] = useState("");
   const [entry, setEntry] = useState(first);
   const [value, setValue] = useState<number | null>(null);
@@ -114,7 +114,7 @@ export function ImpressionDialog({ model, heatId, seatId, judgeNo, riders, first
   if (!scale) return null;
   return (
     <Modal screen title={C.enterImpression} onClose={onClose}>
-      <p className="text-body font-medium text-beach-muted">{copy.live.matrix.judge(judgeNo)}</p>
+      <p className="text-body font-medium text-beach-muted">{judge ?? copy.live.matrix.judge(judgeNo ?? 0)}</p>
       {riders.length > 1 ? (
         <Choice label={C.rider} value={entry} onChange={setEntry} options={riders.map((r) => [r.id, r.word] as [string, string])} />
       ) : (
@@ -143,7 +143,7 @@ export function DeleteDialog({ rows, wordFor, onClose, onDone }: { rows: LiveMat
 }
 
 // ---------------------------------------------------------------- merge attempts that are one
-export function MergeDialog({ model, rows, attempts, scores, panelSeatIds, wordFor, onClose, onDone }: { model: ScoringModel; rows: LiveMatrixRow[]; attempts: AttemptRow[]; scores: ScoreRow[]; panelSeatIds: string[]; wordFor: (entryId: string) => string; onClose: () => void; onDone: () => void }) {
+export function MergeDialog({ model, rows, attempts, scores, panelSeatIds, judgeWord, wordFor, onClose, onDone }: { model: ScoringModel; rows: LiveMatrixRow[]; attempts: AttemptRow[]; scores: ScoreRow[]; panelSeatIds: string[]; /** The judge as a word (the seat's name); without it "Judge n". */ judgeWord?: (seatId: string) => string; wordFor: (entryId: string) => string; onClose: () => void; onDone: () => void }) {
   const picked = attempts.filter((a) => rows.some((r) => r.attemptId === a.id));
   const first = useMemo(() => defaultKeep(picked), [picked]);
   const [keep, setKeep] = useState(first.keep);
@@ -184,9 +184,9 @@ export function MergeDialog({ model, rows, attempts, scores, panelSeatIds, wordF
           <p className="text-small font-semibold text-beach-muted">{H.mergeWhich}</p>
           {plan.conflicts.map((c) => (
             <div key={c.judgeId} className="flex flex-wrap items-center justify-between gap-2 text-body font-medium">
-              <span>{H.mergeBoth(copy.live.matrix.judge(panelSeatIds.indexOf(c.judgeId) + 1))}</span>
+              <span>{H.mergeBoth(judgeWord ? judgeWord(c.judgeId) : copy.live.matrix.judge(panelSeatIds.indexOf(c.judgeId) + 1))}</span>
               <Choice
-                label={copy.live.matrix.judge(panelSeatIds.indexOf(c.judgeId) + 1)}
+                label={judgeWord ? judgeWord(c.judgeId) : copy.live.matrix.judge(panelSeatIds.indexOf(c.judgeId) + 1)}
                 value={c.takes}
                 onChange={(v) => setChoices((o) => ({ ...o, [c.judgeId]: v }))}
                 options={[

@@ -77,6 +77,23 @@ describe("1H-13 why a control is off", () => {
     const onIds = (s: Parameters<typeof controlsFor>[0]) => controlsFor(s, 0, { hasPlan: true, publishOpensList: true }).filter((c) => c.enabled).map((c) => c.id);
     expect(onIds("under_review")).toEqual(["publish", "cancel", "rerun"]);
     expect(onIds("published")).toEqual(["reopen"]);
-    expect(onIds("cancelled")).toEqual([]);
+    expect(onIds("cancelled")).toEqual(["rerun"]);
+  });
+  // Console v2 §3 and §4: a cancelled heat cannot be started, but it can be re-run (once)
+  it("a cancelled heat: Start is off and says why, Re-run is on", () => {
+    expect(reason("cancelled", "start")).toMatchObject({ enabled: false, reason: "A cancelled heat cannot be started. Re-run it instead." });
+    expect(reason("cancelled", "rerun").enabled).toBe(true);
+    expect(controlsFor("cancelled", 0, { hasPlan: true }).filter((c) => c.enabled).map((c) => c.id)).toEqual(["rerun"]);
+  });
+  it("a cancelled heat that already has its re-run cannot be re-run again, and says so", () => {
+    const c = reason("cancelled", "rerun", { hasPlan: true, alreadyRerun: true });
+    expect(c).toMatchObject({ enabled: false, reason: "This heat has already been re-run." });
+  });
+  it("Cancel is off on a cancelled heat; every state still lists the same controls in the same order", () => {
+    expect(reason("cancelled", "cancel").enabled).toBe(false);
+    expect(controlsFor("cancelled", 0).map((c) => c.id)).toEqual(controlsFor("running", 0).map((c) => c.id));
+  });
+  it("a heat that has not started cannot be re-run", () => {
+    expect(reason("scheduled", "rerun").enabled).toBe(false);
   });
 });
