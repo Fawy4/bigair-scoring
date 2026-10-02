@@ -15,6 +15,13 @@ describe("default layout", () => {
     expect(labels(view(), "base").slice(0, 3)).toEqual(["straight_jump", "backroll", "frontroll"]);
     expect(isDefaultLayout(defaultLayout())).toBe(true);
   });
+  it("Polish 2, item 11: the old breakdown is the default — Base trick (straight jump, backroll, frontroll, kiteloop, megaloop …), then Add-ons, then Grabs & landings", () => {
+    const v = view();
+    expect(v.filter((f) => ["base", "addon", "grab_landing"].includes(f.family)).map((f) => f.label)).toEqual(["Base trick", "Add-ons", "Grabs & landings"]);
+    expect(labels(v, "base").slice(0, 5)).toEqual(["straight_jump", "backroll", "frontroll", "kiteloop", "megaloop"]);
+    expect(labels(v, "addon")).toContain("board_off");
+    expect(labels(v, "grab_landing")).toContain("grab");
+  });
   it("reads anything stored without failing", () => {
     expect(parseLayout(null)).toEqual(defaultLayout());
     expect(parseLayout({ families: ["grab_landing", "bogus"], moved: { "base:x": "nowhere" }, order: { base: "no" }, favourites: [1, "a"] })).toEqual({ ...defaultLayout(), families: ["grab_landing", "direction", "multiplier", "base", "addon"], favourites: ["a"] });
