@@ -1,5 +1,6 @@
 import { drawProjection, type DrawProjection } from "@/lib/draw/projection";
-import type { DivisionDraw } from "@/lib/engine/ladder";
+import { unpublishHeat, type DivisionDraw } from "@/lib/engine/ladder";
+import { recompute } from "@/lib/engine/ladder/recompute";
 import { copy } from "@/lib/ui-copy";
 
 const T = copy.reset;
@@ -52,4 +53,59 @@ export function everPublic(heats: HeatFacts[]): boolean {
     const liveShown = h.started && (h.publicLive === true || (h.publicLive === null && h.liveSettingOn));
     return resultShown || liveShown;
   });
+}
+
+/**
+ * A division with no saved starting draw (locked before Reset existed, or re-locked after its first heat): the starting draw is rebuilt from the current one.
+ * Round 1 keeps the seats it has, results and heat states go, and the ladder deals again, so every later seat is back to its placeholder ("1st H1").
+ * It is a rebuild, not the saved copy: a seat changed by hand in a later round is not remembered. Pure.
+ */
+export function rebuildTarget(current: DivisionDraw): { draw: DivisionDraw; projection: DrawProjection } {
+  const draw: DivisionDraw = structuredClone(current);
+  draw.results = {};
+  for (const r of draw.rounds) for (const h of r.heats) h.status = "pending";
+  if (recompute(draw).length > 0) throw new Error(T.rebuildArranged);
+  return { draw, projection: drawProjection(draw) };
+}
+
+/** What Reset puts a division back to: the saved copy when there is one, else the rebuild from the current draw. `rebuilt` says which, for the confirmation. */
+export function startingTarget(copyOfDraw: DivisionDraw | null, current: DivisionDraw): { draw: DivisionDraw; projection: DrawProjection; rebuilt: boolean } {
+  return copyOfDraw ? { ...resetTarget(copyOfDraw), rebuilt: false } : { ...rebuildTarget(current), rebuilt: true };
+}
+
+export interface SeatChange {
+  uid: string;
+  slots: Array<{ position: number; entry_id: string | null; modifier: string | null }>;
+}
+
+/**
+ * "Reset this heat" on a heat whose result was published: takes the result back out of the draw and lists the later heats whose seats change (the winner's
+ * seat in the next round goes back to its placeholder). `statuses` are the stored heats of the division, so a later heat that has started is seen.
+ * A published result that later heats already depend on cannot be taken back: `conflict` names the heats.
+ */
+export function heatResetPlan(synced: DivisionDraw, heatUid: string): { ok: true; draw: DivisionDraw; seats: SeatChange[] } | { ok: false; heats: string[] } {
+  const drawHeat = synced.rounds.flatMap((r) => r.heats).find((h) => (h.uid ?? h.id) === heatUid);
+  if (!drawHeat) return { ok: true, draw: synced, seats: [] };
+  const out = unpublishHeat(synced, drawHeat.id);
+  if (out.conflict) {
+    return { ok: false, heats: out.conflict.affectedHeats.map((a) => { const h = synced.rounds.flatMap((r) => r.heats).find((x) => x.id === a.heatId); return h?.name ?? (h?.number ? `Heat ${h.number}` : a.heatId); }) };
+  }
+  const key = (s: { entry_id: string | null; modifier: string | null }) => `${s.entry_id ?? ""}|${s.modifier ?? ""}`;
+  const before = new Map(drawProjection(synced).heats.map((h) => [h.uid, h]));
+  const seats = drawProjection(out.draw)
+    .heats.filter((h) => h.uid !== heatUid)
+    .filter((h) => (before.get(h.uid)?.slots ?? []).map(key).join(",") !== h.slots.map(key).join(","))
+    .map((h) => ({ uid: h.uid, slots: h.slots.map((s) => ({ position: s.position, entry_id: s.entry_id, modifier: s.modifier })) }));
+  return { ok: true, draw: out.draw, seats };
+}
+
+/**
+ * The division's saved starting draw, as the database counts it: the copy taken at lock time, or an unlocked draw that has not been played (it is its own start).
+ * Anything else has no copy and is rebuilt (`rebuildTarget`).
+ */
+export function startingCopy(row: { draw: DivisionDraw | null; draw_at_lock: DivisionDraw | null; draw_locked_at: string | null }): DivisionDraw | null {
+  if (row.draw_at_lock) return row.draw_at_lock;
+  if (row.draw_locked_at || !row.draw) return null;
+  const untouched = Object.keys(row.draw.results ?? {}).length === 0 && row.draw.rounds.every((r) => r.heats.every((h) => h.status === "pending"));
+  return untouched ? row.draw : null;
 }

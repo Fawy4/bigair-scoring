@@ -193,28 +193,28 @@ describe.skipIf(!ENV_OK)("Reset event and Restore (hosted development project)",
       expect(codeOf(await reset(x, w, {}, await draws(w)))).toMatch(/HEAT_RUNNING/);
       expect((await x.rpc("reset_event_preview", { p_event: w.event })).data.running).toBe("Heat 1");
     });
-    it("a division locked before this change (no copy) names the division; unlock and lock again gives a copy when no heat started; with a started heat the copy stays empty and Reset still refuses", async () => {
+    it("a division with no saved copy (locked before Reset existed, or re-locked after its first heat) is rebuilt from its current draw instead of being refused; a draw that is not its own is refused", async () => {
       const w = await world("nocopy", { lock: "service" }); // locked with no copy, as every division locked before the migration
       expect((await s.from("divisions").select("draw_at_lock").eq("id", w.division).single()).data!.draw_at_lock).toBeNull();
-      const direct = await reset(x, w, {}, [{ division: w.division, draw: lockDraw(w.draw), projection: drawProjection(lockDraw(w.draw)) }]);
-      expect(codeOf(direct)).toMatch(/DRAW_COPY_MISSING: Pro nocopy/);
       const pv = (await x.rpc("reset_event_preview", { p_event: w.event })).data;
       expect(pv.divisions[0]).toMatchObject({ name: "Pro nocopy", drawn: true, has_copy: false, heat_left_scheduled: false });
+      const tampered = lockDraw(w.draw);
+      tampered.seedOrder = [...tampered.seedOrder].reverse();
+      expect(codeOf(await reset(x, w, {}, [{ division: w.division, draw: tampered, projection: drawProjection(tampered) }]))).toMatch(/BAD_PROJECTION/);
+      const direct = await reset(x, w, {}, [{ division: w.division, draw: lockDraw(w.draw), projection: drawProjection(lockDraw(w.draw)) }]);
+      expect(codeOf(direct)).toBe("");
+      expect(direct.data).toMatchObject({ rebuilt: ["Pro nocopy"] });
 
-      // unlock and lock again: the copy is taken, and Reset then works
-      await x.rpc("unlock_division_draw", { p_division: w.division, p_reason: "take the copy" });
-      await x.rpc("lock_division_draw", { p_division: w.division });
-      expect(codeOf(await reset(x, w, {}, await draws(w)))).toBe("");
-
-      // a heat has started: locking again leaves the copy empty and Reset refuses for good
+      // a heat has started: locking again leaves the copy empty, and Reset rebuilds it
       const v = await world("started", { lock: "service" });
       await s.from("heats").update({ status: "ended", started_at: new Date(Date.now() - 600_000).toISOString(), ended_at: new Date().toISOString() }).eq("id", Object.values(v.heats)[0]);
       await x.rpc("unlock_division_draw", { p_division: v.division, p_reason: "after the first heat" });
       await x.rpc("lock_division_draw", { p_division: v.division });
       expect((await s.from("divisions").select("draw_at_lock").eq("id", v.division).single()).data!.draw_at_lock).toBeNull();
-      const again = await reset(x, v, {}, [{ division: v.division, draw: lockDraw(v.draw), projection: drawProjection(lockDraw(v.draw)) }]);
-      expect(codeOf(again)).toMatch(/DRAW_COPY_MISSING: Pro started/);
       expect((await x.rpc("reset_event_preview", { p_event: v.event })).data.divisions[0]).toMatchObject({ has_copy: false, heat_left_scheduled: true });
+      const again = await reset(x, v, {}, [{ division: v.division, draw: lockDraw(v.draw), projection: drawProjection(lockDraw(v.draw)) }]);
+      expect(codeOf(again)).toBe("");
+      expect((await s.from("heats").select("status").eq("id", Object.values(v.heats)[0]).single()).data!.status).toBe("scheduled");
     });
   });
 
