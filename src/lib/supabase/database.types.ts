@@ -361,6 +361,7 @@ export type Database = {
           name: string
           organisation_id: string
           settings: Json
+          simulation_of: string | null
           slug: string
           start_date: string | null
           status: string
@@ -379,6 +380,7 @@ export type Database = {
           name: string
           organisation_id: string
           settings?: Json
+          simulation_of?: string | null
           slug: string
           start_date?: string | null
           status?: string
@@ -397,6 +399,7 @@ export type Database = {
           name?: string
           organisation_id?: string
           settings?: Json
+          simulation_of?: string | null
           slug?: string
           start_date?: string | null
           status?: string
@@ -409,6 +412,13 @@ export type Database = {
             columns: ["organisation_id"]
             isOneToOne: false
             referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_simulation_of_fkey"
+            columns: ["simulation_of"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -1778,6 +1788,213 @@ export type Database = {
           },
         ]
       }
+      sim_baseline: {
+        Row: {
+          divisions: Json
+          event_id: string
+          heats: Json
+          plans: Json
+          slots: Json
+          taken_at: string
+        }
+        Insert: {
+          divisions: Json
+          event_id: string
+          heats: Json
+          plans: Json
+          slots: Json
+          taken_at?: string
+        }
+        Update: {
+          divisions?: Json
+          event_id?: string
+          heats?: Json
+          plans?: Json
+          slots?: Json
+          taken_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sim_baseline_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sim_clock: {
+        Row: {
+          event_id: string
+          heat_id: string
+          original_sec: number
+          speed: number
+          started_at: string
+        }
+        Insert: {
+          event_id: string
+          heat_id: string
+          original_sec: number
+          speed: number
+          started_at?: string
+        }
+        Update: {
+          event_id?: string
+          heat_id?: string
+          original_sec?: number
+          speed?: number
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sim_clock_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sim_clock_heat_id_fkey"
+            columns: ["heat_id"]
+            isOneToOne: true
+            referencedRelation: "heats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sim_control: {
+        Row: {
+          blocker: string | null
+          config: Json
+          created_at: string
+          event_id: string
+          last_tick_at: string | null
+          run_no: number
+          speed: number
+          state: string
+          stats: Json
+          tick_lock_until: string | null
+          updated_at: string
+        }
+        Insert: {
+          blocker?: string | null
+          config?: Json
+          created_at?: string
+          event_id: string
+          last_tick_at?: string | null
+          run_no?: number
+          speed?: number
+          state?: string
+          stats?: Json
+          tick_lock_until?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blocker?: string | null
+          config?: Json
+          created_at?: string
+          event_id?: string
+          last_tick_at?: string | null
+          run_no?: number
+          speed?: number
+          state?: string
+          stats?: Json
+          tick_lock_until?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sim_control_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sim_log: {
+        Row: {
+          at: string
+          data: Json
+          event_id: string
+          id: string
+          kind: string
+          run_no: number
+          scenario: string | null
+          text: string
+        }
+        Insert: {
+          at?: string
+          data?: Json
+          event_id: string
+          id?: string
+          kind: string
+          run_no?: number
+          scenario?: string | null
+          text: string
+        }
+        Update: {
+          at?: string
+          data?: Json
+          event_id?: string
+          id?: string
+          kind?: string
+          run_no?: number
+          scenario?: string | null
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sim_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sim_seats: {
+        Row: {
+          created_at: string
+          event_id: string
+          mode: string
+          seat_id: string
+          updated_at: string
+          virtual_user: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          mode?: string
+          seat_id: string
+          updated_at?: string
+          virtual_user?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          mode?: string
+          seat_id?: string
+          updated_at?: string
+          virtual_user?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sim_seats_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sim_seats_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: true
+            referencedRelation: "judge_seats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trick_attempts: {
         Row: {
           category_key: string | null
@@ -2383,6 +2600,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      clone_event_as_simulation: {
+        Args: { p_event: string; p_name?: string }
+        Returns: Json
       }
       decide_tie: {
         Args: { p_heat: string; p_reason: string; p_rider_ids: string[] }
@@ -3220,6 +3441,189 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      sim_add_attempt: {
+        Args: {
+          p_client_key?: string
+          p_entry: string
+          p_heat: string
+          p_override_reason?: string
+          p_seat: string
+          p_status: string
+          p_trick: Json
+        }
+        Returns: {
+          category_key: string | null
+          client_key: string
+          created_at: string
+          created_by_seat: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          direction: string | null
+          entry_id: string
+          event_id: string
+          heat_id: string
+          height_at: string | null
+          height_m: number | null
+          height_ref: string | null
+          height_source: string | null
+          id: string
+          input_method: string
+          possible_duplicate_of: string | null
+          raw_text: string | null
+          seq: number
+          status: string
+          trick_name: string | null
+          trick_parts: Json
+          updated_at: string
+          video_ts: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trick_attempts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      sim_bind_virtual: {
+        Args: { p_seat: string; p_user: string }
+        Returns: Json
+      }
+      sim_capture_baseline: { Args: { p_event: string }; Returns: undefined }
+      sim_delete: {
+        Args: { p_event: string; p_slug_confirm: string }
+        Returns: Json
+      }
+      sim_enable: { Args: { p_event: string }; Returns: Json }
+      sim_live_heat: { Args: { p_heat: string }; Returns: Json }
+      sim_log_add: {
+        Args: {
+          p_data?: Json
+          p_event: string
+          p_kind: string
+          p_scenario: string
+          p_text: string
+        }
+        Returns: undefined
+      }
+      sim_reset: {
+        Args: { p_event: string; p_rebuild?: boolean; p_slug_confirm: string }
+        Returns: Json
+      }
+      sim_set: {
+        Args: { p_event: string; p_patch: Json }
+        Returns: {
+          blocker: string | null
+          config: Json
+          created_at: string
+          event_id: string
+          last_tick_at: string | null
+          run_no: number
+          speed: number
+          state: string
+          stats: Json
+          tick_lock_until: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sim_control"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      sim_set_mode: {
+        Args: { p_mode: string; p_seat: string }
+        Returns: undefined
+      }
+      sim_stats: { Args: { p_event: string }; Returns: Json }
+      sim_submit_impression: {
+        Args: {
+          p_client_key: string
+          p_client_rev: number
+          p_entry: string
+          p_heat: string
+          p_seat: string
+          p_value: number
+        }
+        Returns: {
+          client_key: string
+          client_rev: number
+          created_at: string
+          entry_id: string
+          event_id: string
+          heat_id: string
+          id: string
+          judge_seat_id: string
+          updated_at: string
+          value: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "impression_scores"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      sim_submit_score: {
+        Args: {
+          p_attempt: string
+          p_client_key: string
+          p_client_rev: number
+          p_criteria: Json
+          p_missed: boolean
+          p_score: number
+          p_seat: string
+        }
+        Returns: {
+          attempt_id: string
+          client_key: string
+          client_rev: number
+          created_at: string
+          criteria: Json
+          edit_reason: string | null
+          edited_by: string | null
+          event_id: string
+          flag: string | null
+          heat_id: string
+          id: string
+          judge_seat_id: string
+          missed: boolean
+          score: number | null
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trick_scores"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      sim_submit_sheet: {
+        Args: { p_heat: string; p_seat: string }
+        Returns: {
+          created_at: string
+          event_id: string
+          heat_id: string
+          id: string
+          judge_seat_id: string
+          reopened_at: string | null
+          reopened_reason: string | null
+          submitted_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "judge_sheets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      sim_tick_lock: {
+        Args: { p_event: string; p_ms?: number }
+        Returns: boolean
+      }
+      sim_view_as: { Args: { p_event: string; p_seat: string }; Returns: Json }
       start_heat: {
         Args: { p_heat: string }
         Returns: {

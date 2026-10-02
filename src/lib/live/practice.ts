@@ -16,7 +16,7 @@ export interface PracticeAttempt {
 }
 
 /** A small seeded random source: the same seed always gives the same numbers. */
-function rng(seed: number): () => number {
+export function rng(seed: number): () => number {
   let a = (seed ^ 0x9e3779b9) >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -27,22 +27,27 @@ function rng(seed: number): () => number {
   };
 }
 
+export interface RandomTrick {
+  parts: TrickParts;
+  trickName: string;
+  categoryKey: string | null;
+  /** The key of the direction block used ("left" | "right"), or null when the trick base has none switched on. */
+  directionKey: string | null;
+}
+
 /**
- * One made-up attempt for the Practice heat (docs/08 §1H-12): a rider still below the cap, a trick built from the blocks ticked in the division's trick
- * base, and about one attempt in five crashes. Pure: the same seed gives the same feed, so a test can replay it.
+ * A trick built from the blocks ticked in a division's trick base: a direction, a base block (sometimes with a multiplier), sometimes an add-on and a grab or landing.
+ * `forceDirection` asks for one direction when the trick base has it switched on. Pure: the same random source gives the same trick.
  */
-export function practiceAttempt(seed: number, vocab: TrickVocab, enabledIds: string[], riders: PracticeRider[], cap: number | null): PracticeAttempt | null {
-  const rnd = rng(seed);
+export function randomTrick(rnd: () => number, vocab: TrickVocab, enabledIds: string[], forceDirection?: "left" | "right"): RandomTrick {
   const pick = <T,>(xs: T[]): T => xs[Math.floor(rnd() * xs.length)];
-  const open = riders.filter((r) => cap === null || r.used < cap);
-  if (open.length === 0) return null;
-  const rider = pick(open);
   const on = new Set(enabledIds);
   const blocks = vocab.blocks.filter((b) => on.has(b.id));
   const of = (family: string) => blocks.filter((b) => b.family === family);
 
   const directions = of("direction");
-  const direction = directions.length ? pick(directions) : null;
+  const forced = forceDirection ? directions.find((b) => b.key === forceDirection) : undefined;
+  const direction = forced ?? (directions.length ? pick(directions) : null);
   const bases = of("base");
   const items: TrickParts["items"] = [];
   const multipliers = of("multiplier");
@@ -58,13 +63,26 @@ export function practiceAttempt(seed: number, vocab: TrickVocab, enabledIds: str
 
   const parts: TrickParts = { direction: direction?.key ?? null, items };
   const composed = composeTrick(vocab, parts);
+  return { parts, trickName: composed.name || "Jump", categoryKey: composed.categoryKey, directionKey: direction?.key ?? null };
+}
+
+/**
+ * One made-up attempt for the Practice heat (docs/08 §1H-12): a rider still below the cap, a trick built from the blocks ticked in the division's trick
+ * base, and about one attempt in five crashes. Pure: the same seed gives the same feed, so a test can replay it.
+ */
+export function practiceAttempt(seed: number, vocab: TrickVocab, enabledIds: string[], riders: PracticeRider[], cap: number | null): PracticeAttempt | null {
+  const rnd = rng(seed);
+  const open = riders.filter((r) => cap === null || r.used < cap);
+  if (open.length === 0) return null;
+  const rider = open[Math.floor(rnd() * open.length)];
+  const trick = randomTrick(rnd, vocab, enabledIds);
   const crashed = rnd() < 0.2;
   return {
     entryId: rider.entryId,
     status: crashed ? "crashed" : "landed",
-    direction: direction?.key === "right" ? "right" : direction?.key === "left" ? "left" : rnd() < 0.5 ? "left" : "right",
-    trickName: composed.name || "Jump",
-    categoryKey: composed.categoryKey,
-    parts,
+    direction: trick.directionKey === "right" ? "right" : trick.directionKey === "left" ? "left" : rnd() < 0.5 ? "left" : "right",
+    trickName: trick.trickName,
+    categoryKey: trick.categoryKey,
+    parts: trick.parts,
   };
 }
