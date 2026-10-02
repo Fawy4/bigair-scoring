@@ -14,6 +14,106 @@ export type Database = {
   }
   public: {
     Tables: {
+      ask_log: {
+        Row: {
+          answer: string
+          budget_tokens: number
+          cache_read_tokens: number
+          cache_write_tokens: number
+          cited: string | null
+          context: Json
+          cost_usd: number
+          created_at: string
+          event_id: string | null
+          id: string
+          input_tokens: number
+          ip_hash: string | null
+          model: string | null
+          organisation_id: string | null
+          output_tokens: number
+          pages: string[]
+          question: string
+          rating: string | null
+          role: string
+          route: string
+          seat_id: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          answer?: string
+          budget_tokens?: number
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          cited?: string | null
+          context?: Json
+          cost_usd?: number
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          input_tokens?: number
+          ip_hash?: string | null
+          model?: string | null
+          organisation_id?: string | null
+          output_tokens?: number
+          pages?: string[]
+          question: string
+          rating?: string | null
+          role: string
+          route: string
+          seat_id?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          answer?: string
+          budget_tokens?: number
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          cited?: string | null
+          context?: Json
+          cost_usd?: number
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          input_tokens?: number
+          ip_hash?: string | null
+          model?: string | null
+          organisation_id?: string | null
+          output_tokens?: number
+          pages?: string[]
+          question?: string
+          rating?: string | null
+          role?: string
+          route?: string
+          seat_id?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ask_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ask_log_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ask_log_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "judge_seats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attempt_flags: {
         Row: {
           attempt_id: string
@@ -1255,6 +1355,7 @@ export type Database = {
       organisations: {
         Row: {
           archived_at: string | null
+          ask_monthly_budget: number
           branding: Json
           created_at: string
           id: string
@@ -1266,6 +1367,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          ask_monthly_budget?: number
           branding?: Json
           created_at?: string
           id?: string
@@ -1277,6 +1379,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          ask_monthly_budget?: number
           branding?: Json
           created_at?: string
           id?: string
@@ -2584,6 +2687,10 @@ export type Database = {
         Args: { p_values: Json }
         Returns: undefined
       }
+      admin_set_ask_budget: {
+        Args: { p_org: string; p_tokens: number }
+        Returns: undefined
+      }
       admin_set_organisation_archived: {
         Args: { p_archived: boolean; p_org: string }
         Returns: undefined
@@ -2645,6 +2752,7 @@ export type Database = {
         Args: { p_actor?: string; p_enc: string; p_pin: string; p_seat: string }
         Returns: Json
       }
+      ask_usage: { Args: { p_org: string }; Returns: Json }
       attempt_counts: {
         Args: { p_heat: string }
         Returns: {
@@ -3980,11 +4088,11 @@ export type Database = {
         Args: { p_division: string; p_reason: string }
         Returns: undefined
       }
-      update_event_trick_base: { Args: { p_event: string }; Returns: Json }
       unlock_division_rules: {
         Args: { p_division: string; p_reason: string }
         Returns: undefined
       }
+      update_event_trick_base: { Args: { p_event: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
