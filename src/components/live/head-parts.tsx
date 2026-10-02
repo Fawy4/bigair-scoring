@@ -15,6 +15,7 @@ import { runLine, shortHeat } from "@/lib/live/run-line";
 import { heatLabel, livesFor } from "@/lib/live/run-order";
 import { formatClock } from "@/lib/live/timer";
 import { resetHeatControl, type ControlId } from "@/lib/live/head-state";
+import type { FixTarget } from "@/lib/live/publish-checklist";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { stateOf, type HeadController, type OrderItem } from "./use-head-controller";
@@ -492,6 +493,14 @@ export function HeatDialogs({ c }: { c: HeadController }) {
             close();
             review.onChooseOrder(riders);
           }}
+          {...(review.onFix
+            ? {
+                onFix: (t: FixTarget) => {
+                  close();
+                  review.onFix!(t);
+                },
+              }
+            : {})}
           onClose={close}
           onDone={(text) => {
             close();

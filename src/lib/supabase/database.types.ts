@@ -976,8 +976,9 @@ export type Database = {
           heat_id: string
           id: string
           judge_seat_id: string
+          missed: boolean | null
           updated_at: string
-          value: number
+          value: number | null
         }
         Insert: {
           client_key: string
@@ -988,8 +989,9 @@ export type Database = {
           heat_id: string
           id?: string
           judge_seat_id: string
+          missed?: boolean | null
           updated_at?: string
-          value: number
+          value?: number | null
         }
         Update: {
           client_key?: string
@@ -1000,8 +1002,9 @@ export type Database = {
           heat_id?: string
           id?: string
           judge_seat_id?: string
+          missed?: boolean | null
           updated_at?: string
-          value?: number
+          value?: number | null
         }
         Relationships: [
           {
@@ -2914,6 +2917,7 @@ export type Database = {
         Args: {
           p_entry: string
           p_heat: string
+          p_missed?: boolean
           p_reason: string
           p_seat: string
           p_value: number
@@ -2927,8 +2931,9 @@ export type Database = {
           heat_id: string
           id: string
           judge_seat_id: string
+          missed: boolean | null
           updated_at: string
-          value: number
+          value: number | null
         }
         SetofOptions: {
           from: "*"
@@ -3651,8 +3656,9 @@ export type Database = {
           heat_id: string
           id: string
           judge_seat_id: string
+          missed: boolean | null
           updated_at: string
-          value: number
+          value: number | null
         }
         SetofOptions: {
           from: "*"
@@ -3803,8 +3809,9 @@ export type Database = {
           heat_id: string
           id: string
           judge_seat_id: string
+          missed: boolean | null
           updated_at: string
-          value: number
+          value: number | null
         }
         SetofOptions: {
           from: "*"

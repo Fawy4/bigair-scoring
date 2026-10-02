@@ -67,15 +67,18 @@ export async function headSetScore(input: { attemptId: string; seatId: string; s
 }
 
 /** Paper sheets, typed in: one judge's Impression / Variety score for one rider. */
-export async function headSetImpression(input: { heatId: string; entryId: string; seatId: string; value: number; reason: string }): Promise<HeadResult> {
+/** A judge's Impression / Variety score typed in from paper, or the judge marked Absent for that rider (`missed`: not counted, not missing). */
+export async function headSetImpression(input: { heatId: string; entryId: string; seatId: string; value: number | null; missed?: boolean; reason: string }): Promise<HeadResult> {
   if (![input.heatId, input.entryId, input.seatId].every((x) => uuid.safeParse(x).success)) return fail("HEAT_NOT_FOUND");
   if (!reasonOk(input.reason)) return fail("REASON_REQUIRED");
   const db = await createClient();
   const model = await modelForHeat(db, input.heatId);
   if (!model) return fail("NOT_ALLOWED");
-  const problem = checkImpression(model, input.value);
-  if (problem) return fail(problem);
-  const { error } = await db.rpc("head_set_impression", { p_heat: input.heatId, p_entry: input.entryId, p_seat: input.seatId, p_value: input.value, p_reason: input.reason.trim() });
+  if (!input.missed) {
+    const problem = input.value === null ? "SCORE_REQUIRED" : checkImpression(model, input.value);
+    if (problem) return fail(problem);
+  }
+  const { error } = await db.rpc("head_set_impression", { p_heat: input.heatId, p_entry: input.entryId, p_seat: input.seatId, p_value: (input.missed ? null : input.value) as never, p_reason: input.reason.trim(), p_missed: Boolean(input.missed) });
   return error ? from(error) : { ok: true };
 }
 

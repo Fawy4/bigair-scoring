@@ -8,6 +8,7 @@ import { judgeWordFor } from "./judge-names";
 import { heatInputFromRows, type PenaltyRow } from "./heat-input";
 import { buildMatrix, type LiveMatrix } from "./matrix";
 import { publishChecklist, type Checklist } from "./publish-checklist";
+import { effectiveUnsubmitted } from "./sheet-rule";
 import { tieSentences, type TieSentence } from "./tie-words";
 import type { AttemptRow, FlagRow, ImpressionRow, ScoreRow, SheetRow, SlotRow } from "./types";
 import { copy } from "@/lib/ui-copy";
@@ -22,14 +23,13 @@ export interface HeadModel {
   ties: TieSentence[];
   /** Impression / Variety scores still owed, in words. */
   owes: Array<{ seatId: string; judgeNo: number; /** The judge as a word: the seat's name. */ judge: string; entryId: string }>;
-  /** Panel judges who have not submitted their sheet. */
+  /** Panel judges whose sheet still holds Publish back (not submitted, and not settled by the head judge's Absent marks: decision P2-1). */
   unsubmitted: string[];
   agreement: JudgeAgreement[];
   flagOut: FlagOutCandidates | null;
 }
 
-/** A sheet counts as submitted when it was submitted and not re-opened since. */
-export const sheetSubmitted = (s: Pick<SheetRow, "submitted_at" | "reopened_at"> | undefined): boolean => Boolean(s?.submitted_at && (!s.reopened_at || s.submitted_at > s.reopened_at));
+export { sheetSubmitted } from "./sheet-state";
 
 /**
  * Everything the head judge's console shows about one heat, from the stored rows: the score table, the rider totals (the same engine the published result
@@ -67,11 +67,12 @@ export function buildHeadModel(input: {
   }
   const seatNo = new Map(panelSeatIds.map((id, i) => [id, i + 1] as const));
   const judgeWord = input.judgeWord ?? judgeWordFor(panelSeatIds, {});
-  const unsubmitted = panelSeatIds.filter((id) => !sheetSubmitted(input.sheets.find((s) => s.judge_seat_id === id)));
+  const unsubmitted = effectiveUnsubmitted({ panelSeatIds, sheets: input.sheets, blockers: result?.publishBlockers ?? [], scores: input.scores, impressions: input.impressions });
   const checklist = publishChecklist({
     blockers: result?.publishBlockers ?? [],
     unsubmitted,
     judgeWord,
+    attemptIdOf: (rider, seq) => input.attempts.find((a) => a.entry_id === rider && a.seq === seq && !a.deleted_at)?.id,
     riderLabel: input.wordFor,
     impressionLabel: copy.checklist.impressionWord,
   });

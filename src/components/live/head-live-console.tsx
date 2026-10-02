@@ -18,6 +18,7 @@ import { RiderLabel } from "@/components/rider-label";
 import { outlierTolerance } from "@/lib/live/cell-tone";
 import { canMerge } from "@/lib/live/console-ops";
 import type { HeadModel } from "@/lib/live/head-model";
+import type { FixTarget } from "@/lib/live/publish-checklist";
 import { judgeWordOf } from "@/lib/live/judge-names";
 import { orderRows, readTableOrder, writeTableOrder, type TableOrder } from "@/lib/live/matrix-order";
 import { heatTitle } from "@/lib/live/run-order";
@@ -68,6 +69,7 @@ export function HeadLiveConsole({
   refreshKey,
   c,
   extras,
+  fixRequest,
 }: {
   ctx: LiveContext;
   heat: HeatRow;
@@ -86,12 +88,15 @@ export function HeadLiveConsole({
   c: HeadController;
   /** Anything else for behind "More" (the practice panel of a simulation event). */
   extras?: React.ReactNode;
+  /** A blocker's "Fix" pressed elsewhere (the Publish dialog): open that cell, that Impression / Variety score, or show that judge. `n` makes a repeat press count. */
+  fixRequest?: { target: FixTarget; n: number } | null;
 }) {
   const [menu, setMenu] = useState<Menu>(null);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [selection, setSelection] = useState<string[]>([]);
   const [order, setOrder] = useState<TableOrder>("newest");
   const [more, setMore] = useState(false);
+  const [highlight, setHighlight] = useState<string | null>(null);
   useEffect(() => setOrder(readTableOrder(typeof window === "undefined" ? null : window.localStorage)), []);
   const side = useSideData(supabase, ctx.event.id, heat, head.matrix.judgeIds, ctx.seatNames, refreshKey, { audit: more });
   const judgeWord = (seatId: string) => judgeWordOf(side.judges.find((j) => j.id === seatId) ?? { name: null, tag: copy.live.matrix.aJudge });
@@ -119,6 +124,19 @@ export function HeadLiveConsole({
   const riderOf = (entryId: string) => riders.find((r) => r.entryId === entryId);
   const attemptWord = (r: LiveMatrixRow) => H.attemptWord(wordFor(r.riderKey), r.seq);
   const close = () => setDialog(null);
+  const openFix = (t: FixTarget) => {
+    setMenu(null);
+    if (t.kind === "score") setDialog({ kind: "cell", attemptId: t.attemptId, seatId: t.seatId });
+    else if (t.kind === "impression") setDialog({ kind: "impression", seatId: t.seatId, entryId: t.entryId });
+    else {
+      setHighlight(t.seatId);
+      if (typeof document !== "undefined") document.querySelector(`[data-testid="judge-row"][data-seat="${t.seatId}"]`)?.scrollIntoView({ block: "center" });
+    }
+  };
+  useEffect(() => {
+    if (fixRequest && open) openFix(fixRequest.target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixRequest?.n]);
   const done = () => {
     setDialog(null);
     setMenu(null);
@@ -262,14 +280,19 @@ export function HeadLiveConsole({
 
       <aside data-testid="head-side" className="flex min-w-0 flex-col gap-2">
         <ReviewButtons c={c} compact visibility={false} />
-        <JudgesStatus side={side} live={live} nowServer={nowServer} heat={heat} />
+        <JudgesStatus side={side} live={live} nowServer={nowServer} heat={heat} highlight={highlight} />
 
         <section data-testid="blockers" className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={H.blockersHeading}>
           <h3 className="text-heading font-semibold text-beach-muted">{blockerItems.length ? C.publishBlocked : H.nothingBlocks}</h3>
           {blockerItems.map((b) => (
-            <p key={b.text} className="rounded-lg border border-beach-outlier bg-beach-bg px-2 py-0.5 text-body font-medium">
-              {b.text}
-            </p>
+            <div key={b.text} data-testid="blocker-line" data-kind={b.kind} className="flex items-center justify-between gap-2 rounded-lg border border-beach-outlier bg-beach-bg px-2 py-0.5">
+              <span className="min-w-0 text-body font-medium">{b.text}</span>
+              {open && b.target ? (
+                <button type="button" data-testid="blocker-fix" aria-label={copy.checklist.fixAria(b.text)} onClick={() => openFix(b.target!)} className={plain}>
+                  {copy.checklist.fix}
+                </button>
+              ) : null}
+            </div>
           ))}
         </section>
 

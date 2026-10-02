@@ -41,7 +41,7 @@ Times below assume a first heat at 10:00 and a ready call of 15 minutes; move th
 | During | Watch Go live: Now and next, drift badge. | Watch the score table: grey “missing” = nudge that judge; amber “outlier” = ask “sure?”; open flags → **Resolve**. Pause only for safety (Pause / Resume). | Phones show Pending when offline; they send when the signal is back. |
 | Flag-out minute | — | Formats with flag-out: **Flag out…** (the lowest riders are ticked). | — |
 | 0:00 | — | The heat ends itself at 0:00 (or **End heat**). | Judges: Impression / Variety for every rider → **Submit**. |
-| +1–3 | — | Read **Before you publish**: missing scores, missing Impression, “has not submitted”, ties (**Choose order**). Fix them, or **Publish with a reason** (not for a tie). **Publish**. | — |
+| +1–3 | — | Read **Before you publish**: each line names the judge and the missing score (“Fawy: score for Omar, attempt 3 missing”, “Fawy: sheet not submitted — 3 attempts unscored”), ties (**Choose order**). **Fix** opens the score; type it from paper or set the judge to **Absent**. Fix them, or **Publish with a reason** (not for a tie). **Publish**. | — |
 | +3 | Results appear on the public pages if “results on publish” is on; otherwise **Release result** on the console. The next round's seats fill. | Hold the final's result for the podium if wanted; **Release result** after the prize-giving. | Announcer reads totals and counted tricks from the announcer view. |
 | Break | — | The countdown: **+1 min**, **Pause break**, **Resume**. Nothing starts by itself. | — |
 

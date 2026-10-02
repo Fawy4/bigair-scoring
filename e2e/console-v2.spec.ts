@@ -110,7 +110,7 @@ test("start Heat 2 before Heat 1: one warning, the big timer beside Start / End;
   await expect(head.getByTestId("break-strip")).toHaveAttribute("data-state", "counting", { timeout: 30_000 });
 });
 
-test("the judges are read by their seat names: 'Fawy' with 'J1' under it in the table header, and 'Fawy has not submitted' in the blocker list", async ({ browser }) => {
+test("the judges are read by their seat names: 'Fawy' with 'J1' under it in the table header, and 'Fawy: sheet not submitted' in the blocker list", async ({ browser }) => {
   test.setTimeout(300_000);
   await w.db.from("judge_seats").update({ name: "Fawy" }).eq("id", w.seats.j1.id);
   await w.db.from("heats").update({ status: "ended", started_at: new Date(Date.now() - 900_000).toISOString(), ended_at: new Date(Date.now() - 300_000).toISOString() }).eq("id", w.heats[0]);
@@ -123,7 +123,7 @@ test("the judges are read by their seat names: 'Fawy' with 'J1' under it in the 
   await expect(head.getByTestId("judge-column-name").first()).toHaveText("Fawy");
   await expect(head.getByTestId("judge-column-tag").first()).toHaveText("J1");
   await expect(head.getByTestId("judge-column-name").nth(1)).toHaveText("Judge 2"); // a seat the organiser did not rename keeps its own name
-  await expect(head.getByTestId("blockers")).toContainText("Fawy has not submitted", { timeout: 40_000 });
+  await expect(head.getByTestId("blockers")).toContainText("Fawy: sheet not submitted", { timeout: 40_000 });
   await expect(head.getByTestId("judges")).toContainText("Fawy");
   await expect(head.locator("body")).not.toContainText("Judge 1");
 });

@@ -33,7 +33,7 @@ describe("judge names", () => {
 
 describe("the names reach every sentence of the console", () => {
   const word = judgeWordFor(panel, names);
-  it("blockers: 'Fawy has not submitted', 'Ali has no score for Red, attempt 3', never 'Judge 1'", () => {
+  it("blockers: 'Fawy: sheet not submitted …', 'Ali: score for Red, attempt 3 missing', never 'Judge 1'", () => {
     const c = publishChecklist({
       blockers: [
         { type: "score_missing", judge: "s-ali", rider: "red", attemptSeq: 3 },
@@ -44,7 +44,7 @@ describe("the names reach every sentence of the console", () => {
       riderLabel: () => "Red",
       impressionLabel: "Impression / Variety score",
     });
-    expect(c.items.map((i) => i.text)).toEqual(["Fawy has not submitted", "Ali has no score for Red, attempt 3", "Noor has no Impression / Variety score for Red"]);
+    expect(c.items.map((i) => i.text)).toEqual(["Fawy: sheet not submitted — every score is in", "Ali: score for Red, attempt 3 missing", "Noor: Impression / Variety score for Red missing"]);
     expect(c.items.map((i) => i.text).join(" ")).not.toMatch(/Judge \d/);
   });
   it("the audit log: 'Fawy · Red 3: 7.50 → 8.00'", () => {

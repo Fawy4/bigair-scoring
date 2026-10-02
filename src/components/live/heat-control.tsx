@@ -2,7 +2,7 @@
 
 import { BreakStrip, ControlMessage, DivisionTabs, HeatDialogs, ReviewButtons, RunOrderList, StartWarning, TimerBar, TimingButtons, WindButton } from "./head-parts";
 import type { HeadController } from "./use-head-controller";
-import type { ChecklistItem } from "@/lib/live/publish-checklist";
+import type { ChecklistItem, FixTarget } from "@/lib/live/publish-checklist";
 
 /** What the Control tab needs to publish and re-open: the blocker list in words, and what to do after a change. */
 export interface ReviewProps {
@@ -13,6 +13,8 @@ export interface ReviewProps {
   /** The riders of a tie (for "Choose order"). */
   onChooseOrder: (riders: string[]) => void;
   onChanged: () => void;
+  /** A blocker line's "Fix": opens that cell / Impression / Variety score / judge on the console (laptop only; absent on a phone). */
+  onFix?: (target: FixTarget) => void;
 }
 
 /**

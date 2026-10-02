@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Footer, Modal, plain, Reason } from "./console-parts";
 import { decideTie, previewResetHeat, publishHeat, reopenHeat, rerunHeat, resetHeat, setPublishHold, type HeatResetPreview, type PublishResult } from "@/lib/live/head-actions";
-import type { ChecklistItem } from "@/lib/live/publish-checklist";
+import type { ChecklistItem, FixTarget } from "@/lib/live/publish-checklist";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +15,7 @@ const H = copy.headLive;
  * the order. The answer of the server (not the screen's own working) decides: a heat that has already been published answers "Already published" and nothing
  * is written twice.
  */
-export function PublishDialog({ heatId, title, items, canOverride, onChooseOrder, onClose, onDone }: { heatId: string; title: string; items: ChecklistItem[]; canOverride: boolean; onChooseOrder: (riders: string[]) => void; onClose: () => void; onDone: (text: string) => void }) {
+export function PublishDialog({ heatId, title, items, canOverride, onChooseOrder, onFix, onClose, onDone }: { heatId: string; title: string; items: ChecklistItem[]; canOverride: boolean; onChooseOrder: (riders: string[]) => void; /** "Fix" on a line: closes the dialog and opens the place on the console. */ onFix?: (target: FixTarget) => void; onClose: () => void; onDone: (text: string) => void }) {
   const [reason, setReason] = useState("");
   const [answer, setAnswer] = useState<PublishResult | null>(null);
   const [pending, start] = useTransition();
@@ -40,6 +40,10 @@ export function PublishDialog({ heatId, title, items, canOverride, onChooseOrder
                 {b.kind === "tie" && b.riders ? (
                   <button type="button" data-testid="choose-order" className={plain} onClick={() => onChooseOrder(b.riders!)}>
                     {H.chooseOrder}
+                  </button>
+                ) : onFix && b.target ? (
+                  <button type="button" data-testid="publish-fix" aria-label={copy.checklist.fixAria(b.text)} className={plain} onClick={() => onFix(b.target!)}>
+                    {copy.checklist.fix}
                   </button>
                 ) : null}
               </li>

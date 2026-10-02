@@ -1,4 +1,4 @@
-import type { Attempt, HeatInput, JudgeMark, Modifier, RiderInput, TieDecision } from "@/lib/engine/scoring";
+import type { Attempt, HeatInput, ImpressionMark, JudgeMark, Modifier, RiderInput, TieDecision } from "@/lib/engine/scoring";
 import type { ScoringModel } from "@/lib/schemas/scoring-model";
 import type { AttemptRow, ImpressionRow, ScoreRow, SlotRow } from "./types";
 
@@ -58,7 +58,7 @@ export function heatInputFromRows(
       return {
         riderId: s.entry_id!,
         attempts: engineAttempts,
-        impressionMarks: impressions.filter((i) => i.entry_id === s.entry_id && panel.has(i.judge_seat_id)).map((i) => ({ judgeId: i.judge_seat_id, value: Number(i.value) })),
+        impressionMarks: impressions.filter((i) => i.entry_id === s.entry_id && panel.has(i.judge_seat_id)).flatMap((i): ImpressionMark[] => (i.missed ? [{ judgeId: i.judge_seat_id, value: "missed" as const }] : i.value === null ? [] : [{ judgeId: i.judge_seat_id, value: Number(i.value) }])),
         ...(modifiers.length ? { modifiers } : {}),
       };
     });

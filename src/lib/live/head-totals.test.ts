@@ -22,7 +22,7 @@ const attempt = (entry: string, seq: number, status: "landed" | "crashed", name:
 });
 const attempts = rows.map(([seq, st, n, cat]) => attempt("red", seq, st, n, cat));
 const scores: ScoreRow[] = rows.flatMap(([seq, , , , marks]) => marks.map((m, i) => ({ id: `${seq}${i}`, attempt_id: `red-${seq}`, heat_id: "h", judge_seat_id: seats[i], score: null, missed: false, criteria: c(m[0], m[1], m[2], m[3]), client_rev: 1, version: 1, edit_reason: null, updated_at: "" })));
-const imp = (v: number[]): ImpressionRow[] => v.map((value, i) => ({ id: `i${i}`, heat_id: "h", entry_id: "red", judge_seat_id: seats[i], value, client_rev: 1, updated_at: "" }));
+const imp = (v: number[]): ImpressionRow[] => v.map((value, i) => ({ id: `i${i}`, heat_id: "h", entry_id: "red", judge_seat_id: seats[i], value, missed: false, client_rev: 1, updated_at: "" }));
 
 describe("riderTotals", () => {
   it("Red: 31.54 = tricks 24.04 + Impression 7.50, 78.85 % of maximum when the division shows percentages", () => {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnnouncerView } from "./announcer-view";
 import { HeadLiveConsole } from "./head-live-console";
+import type { FixTarget } from "@/lib/live/publish-checklist";
 import { TieDialog } from "./head-dialogs";
 import { BreakStrip, ControlMessage, DivisionTabs, HeatDialogs, RunOrderList, StartWarning, TimerBar, TimingButtons, WindButton } from "./head-parts";
 import { HeatControl, type ReviewProps } from "./heat-control";
@@ -73,6 +74,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   const [details, setDetails] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [tieFor, setTieFor] = useState<string[] | null>(null);
+  const [fixRequest, setFixRequest] = useState<{ target: FixTarget; n: number } | null>(null);
   const live = useLiveHeat(supabase, ctx, nowServer, streamId);
   const viewer = ctx.viewer;
   const seatId = viewer.kind === "seat" ? viewer.seatId : null;
@@ -170,7 +172,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
     void live.refresh();
     setRefreshKey((k) => k + 1);
   }, [live]);
-  const review: ReviewProps | undefined = head ? { items: blockerItems, canOverride: head.checklist.canOverride, riders: riders.map((r) => ({ entryId: r.entryId, word: wordFor(r.entryId), name: r.name })), onChooseOrder: setTieFor, onChanged } : undefined;
+  const review: ReviewProps | undefined = head ? { items: blockerItems, canOverride: head.checklist.canOverride, riders: riders.map((r) => ({ entryId: r.entryId, word: wordFor(r.entryId), name: r.name })), onChooseOrder: setTieFor, onChanged, ...(wide ? { onFix: (target: FixTarget) => setFixRequest({ target, n: Date.now() }) } : {}) } : undefined;
 
   const c = useHeadController({ ctx, heats: live.heats, plans: live.plans, nowServer, selectedId: shownId, onSelect: selectHeat, onPlanChanged: live.applyPlan, review, divisionId });
 
@@ -374,6 +376,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
               refreshKey={refreshKey}
               c={c}
               extras={practice}
+              fixRequest={fixRequest}
             />
           ) : (
             <p className="text-body font-medium text-beach-muted">{H.noHeat}</p>

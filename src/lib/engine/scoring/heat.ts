@@ -186,6 +186,7 @@ export function computeRider(
   if (imp) {
     const onPanel = new Set(panelJudgeIds);
     const marks = (rider.impressionMarks ?? []).filter((m) => onPanel.has(m.judgeId)).map((m) => {
+      if (m.value === "missed") return { judgeId: m.judgeId, score: "missed" as const };
       assertOnStep(m.value, imp.scale, imp.label);
       return { judgeId: m.judgeId, score: m.value };
     });

@@ -391,3 +391,14 @@ Written in words on purpose. Where a row refines earlier text, this section wins
 | The time now | A small, muted HH:MM (12–13 px) in the event's time zone, corrected by the server's clock (never the device's), on every screen that shows heat times: head console (next to the timer), judge and spotter headers, announcer, organiser Go live and Run order, public event home and rider page, big screen. |
 | Run-order lines on the console | A heat that has started: "R1 · H2 · planned 14:05 · started 14:11 · Ended". A heat not started: "R1 · H3 · est. 14:35". "Planned" is the time in the plan as written. |
 | Schedule drift | The next heat that has not started: its time in the plan as written against its time now. "On schedule" / "6 min late" / "4 min early", green; amber up to 10 minutes late; red beyond; always an icon and a word. Shown in the console top bar, on Go live and on the Run order header. The public timetable shows only a smaller "Running about 6 min late" when the day has slipped. Computed by the timetable engine each time; nothing is stored. |
+
+### Decisions log – Polish 2 (owner's first full simulator run and a day on the organiser screens, 2 Oct 2026)
+
+Written in words. Where a row refines earlier text, this section wins.
+
+| Topic | Decision |
+|---|---|
+| P2-1 What blocks Publish | Every blocker line names the judge, then the exact thing: "Fawy: Impression / Variety score for Omar missing", "Fawy: score for Omar, attempt 3 missing", "Fawy: sheet not submitted — 3 attempts unscored". Each line has a "Fix" button (on the console's right column and in the Publish dialog, laptop and tablet) that opens that judge's cell of that attempt, that judge's Impression / Variety score of that rider, or points at the judge's row when every score is in. The phone's Details list keeps the words without the button (the score table is a laptop screen). |
+| P2-1 Absent settles a sheet | A judge whose sheet was never submitted (or was re-opened) counts as submitted for Publish when **nothing of theirs is missing any more and the head judge has marked at least one of their scores Absent** (a trick score, or an Impression / Variety score). A judge who scored everything but never pressed Submit still holds Publish back ("— every score is in"): the head judge publishes past it with a reason, as before. Scores typed in from paper settle the gaps but do not, alone, stand in for Submit. The database applies the same rule, so moving the heat to review needs no reason either. |
+| P2-1 Absent on an Impression / Variety score | The head judge can mark a judge Absent for one rider's Impression / Variety score ("Judge absent for this rider"), as for a trick score. It is not counted (the panel score is the other judges'), it is not missing, it is audited with the reason "Absent", and a late score from that judge's phone does not replace it. |
+

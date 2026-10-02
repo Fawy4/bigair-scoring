@@ -89,11 +89,14 @@ export interface ImpressionRow {
   heat_id: string;
   entry_id: string;
   judge_seat_id: string;
-  value: number;
+  /** null when the head judge marked the judge Absent for this rider (`missed`). */
+  value: number | null;
+  /** The head judge marked this judge Absent for this rider's Impression / Variety score: not counted, not missing. */
+  missed: boolean;
   client_rev: number;
   updated_at: string;
 }
-export const IMPRESSION_COLUMNS = "id, heat_id, entry_id, judge_seat_id, value, client_rev, updated_at";
+export const IMPRESSION_COLUMNS = "id, heat_id, entry_id, judge_seat_id, value, missed, client_rev, updated_at";
 
 export interface FlagRow {
   id: string;

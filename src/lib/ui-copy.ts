@@ -3349,9 +3349,16 @@ export const copy = {
   },
   checklist: {
     impressionWord: "Impression / Variety score",
-    sheet: (judge: string) => `${judge} has not submitted`,
-    score: (judge: string, rider: string, seq: number) => `${judge} has no score for ${rider}, attempt ${seq}`,
-    impression: (judge: string, label: string, rider: string) => `${judge} has no ${label} for ${rider}`,
+    sheet: (judge: string, detail: string) => `${judge}: sheet not submitted — ${detail}`,
+    sheetDetail: (attempts: number, impressions: number, label: string) =>
+      attempts + impressions === 0
+        ? "every score is in"
+        : [attempts ? `${attempts} ${attempts === 1 ? "attempt" : "attempts"} unscored` : "", impressions ? `${impressions} ${label}${impressions === 1 ? "" : "s"} missing` : ""].filter(Boolean).join(", "),
+    score: (judge: string, rider: string, seq: number) => `${judge}: score for ${rider}, attempt ${seq} missing`,
+    impression: (judge: string, label: string, rider: string) => `${judge}: ${label} for ${rider} missing`,
+    /** The button on a blocker line: opens the cell, the Impression / Variety score or the judge's row. */
+    fix: "Fix",
+    fixAria: (line: string) => `Fix: ${line}`,
     tie: (names: string) => `${names} are tied — choose the order`,
     and: " and ",
   },
@@ -3527,6 +3534,7 @@ export const copy = {
     pastCapNeedsReason: "That rider has used every attempt. Adding one more is saved with your reason.",
     pastCapNotAllowed: "Only the head judge can add an attempt past the cap.",
     absent: "Judge absent for this attempt",
+    absentImpression: "Judge absent for this rider",
     markedAbsent: "Absent",
     clearStatus: "Clear status",
     removeInterference: "Take back interference",

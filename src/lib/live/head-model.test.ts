@@ -25,7 +25,7 @@ const attempt = (entry: string, seq: number, status: "landed" | "crashed" = "lan
   created_by_seat: "S", created_at: new Date(Date.UTC(2026, 9, 2, 10, seq)).toISOString(), deleted_at: null, possible_duplicate_of: null, input_method: "builder", raw_text: null, updated_at: "",
 });
 const score = (a: string, judge: string, criteria: object): ScoreRow => ({ id: `${a}-${judge}`, attempt_id: a, heat_id: "h", judge_seat_id: judge, score: null, missed: false, criteria, client_rev: 1, version: 1, edit_reason: null, updated_at: "" });
-const imp = (entry: string, judge: string, value: number): ImpressionRow => ({ id: `${entry}-${judge}`, heat_id: "h", entry_id: entry, judge_seat_id: judge, value, client_rev: 1, updated_at: "" });
+const imp = (entry: string, judge: string, value: number): ImpressionRow => ({ id: `${entry}-${judge}`, heat_id: "h", entry_id: entry, judge_seat_id: judge, value, missed: false, client_rev: 1, updated_at: "" });
 const sheet = (judge: string): SheetRow => ({ id: `sh-${judge}`, heat_id: "h", judge_seat_id: judge, submitted_at: "2026-10-02T10:30:00Z", reopened_at: null, updated_at: "" });
 
 function red(opts: { skipJ3Impression?: boolean } = {}) {
@@ -52,12 +52,23 @@ describe("the head judge's model of one heat", () => {
     const r = red({ skipJ3Impression: true });
     const m = build({ impressions: r.impressions });
     expect(m.owes).toEqual([{ seatId: "J3", judgeNo: 3, judge: "Fawy", entryId: "red" }]);
-    expect(m.checklist.items.map((i) => i.text)).toEqual(["Fawy has no Impression / Variety score for Red"]);
+    expect(m.checklist.items.map((i) => i.text)).toEqual(["Fawy: Impression / Variety score for Red missing"]);
   });
-  it("a judge who has not submitted blocks Publish: 'Fawy has not submitted'", () => {
+  it("a judge who has not submitted blocks Publish: 'Fawy: sheet not submitted — every score is in'", () => {
     const m = build({ sheets: [sheet("J1"), sheet("J2")] });
     expect(m.unsubmitted).toEqual(["J3"]);
-    expect(m.checklist.items.map((i) => i.text)).toEqual(["Fawy has not submitted"]);
+    expect(m.checklist.items.map((i) => i.text)).toEqual(["Fawy: sheet not submitted — every score is in"]);
+  });
+  it("Polish 2: Fawy never submitted and has no score on Red 2; the head judge marks it Absent → the sheet counts as submitted, nothing blocks", () => {
+    const r = red();
+    const scores = r.scores.filter((s) => !(s.attempt_id === "red-2" && s.judge_seat_id === "J3"));
+    const blocked = build({ scores, sheets: [sheet("J1"), sheet("J2")] });
+    expect(blocked.checklist.items.map((i) => i.text)).toEqual(["Fawy: sheet not submitted — 1 attempt unscored", "Fawy: score for Red, attempt 2 missing"]);
+    expect(blocked.checklist.items[1].target).toEqual({ kind: "score", seatId: "J3", attemptId: "red-2" });
+    const absent: ScoreRow = { ...score("red-2", "J3", {}), missed: true, edit_reason: "Absent" };
+    const settled = build({ scores: [...scores, absent], sheets: [sheet("J1"), sheet("J2")] });
+    expect(settled.unsubmitted).toEqual([]);
+    expect(settled.checklist.items).toEqual([]);
   });
   it("two riders tied on everything: 'Red and Blue are tied — choose the order', not overridable; a decision turns it into words", () => {
     const blueAttempts = RED.map((_, i) => attempt("blue", i + 1, RED[i] ? "landed" : "crashed"));

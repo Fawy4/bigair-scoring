@@ -5,6 +5,7 @@ import { CriteriaRows } from "./criteria-rows";
 import { Footer, Modal, plain, Reason, btn } from "./console-parts";
 import { ScorePad } from "./score-pad";
 import { judgeTrickScore } from "@/lib/engine/scoring";
+import { ABSENT_REASON } from "@/lib/live/sheet-rule";
 import { addAttemptByHead, addInterference, deleteAttempts, editAttempt, flagOutRiders, headSetImpression, headSetScore, mergeAttempts, removePenalty, setRiderStatus, type HeadResult } from "@/lib/live/head-actions";
 import { canAddPastCap, defaultKeep, mergePlan, type PastCapRole } from "@/lib/live/merge-plan";
 import { formatCell } from "@/lib/live/matrix-model";
@@ -97,7 +98,7 @@ export function CellDialog({ model, attemptId, seatId, judgeNo, judge, who, curr
         onCancel={onClose}
         onSave={() => run(() => headSetScore({ attemptId, seatId, ...(criteria ? { criteria: values as Record<string, number> } : { score: single }), reason }))}
       />
-      <button type="button" data-testid="mark-absent" disabled={pending} onClick={() => run(() => headSetScore({ attemptId, seatId, missed: true, reason: "Absent" }))} className={plain}>
+      <button type="button" data-testid="mark-absent" disabled={pending} onClick={() => run(() => headSetScore({ attemptId, seatId, missed: true, reason: ABSENT_REASON }))} className={plain}>
         {H.absent}
       </button>
     </Modal>
@@ -124,6 +125,9 @@ export function ImpressionDialog({ model, heatId, seatId, judgeNo, judge, riders
       <Reason value={reason} onChange={setReason} />
       <ErrorLine error={error} />
       <Footer canSave={!pending && value !== null && reason.trim().length >= 3} saveLabel={pending ? H.working : C.save} onCancel={onClose} onSave={() => run(() => headSetImpression({ heatId, entryId: entry, seatId, value: value as number, reason }))} />
+      <button type="button" data-testid="mark-impression-absent" disabled={pending} onClick={() => run(() => headSetImpression({ heatId, entryId: entry, seatId, value: null, missed: true, reason: ABSENT_REASON }))} className={plain}>
+        {H.absentImpression}
+      </button>
     </Modal>
   );
 }

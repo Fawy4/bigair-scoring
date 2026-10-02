@@ -155,7 +155,7 @@ test("Publish is blocked until the second judge submits, then publishes; the win
 
   // Judge 2 has not submitted: Publish says so in words, and a reason is needed to go on
   await head.getByTestId("publish").click();
-  await expect(head.getByTestId("publish-blockers")).toContainText("Judge 2 has not submitted");
+  await expect(head.getByTestId("publish-blockers")).toContainText("Judge 2: sheet not submitted");
   await expect(dialog(head).getByTestId("dialog-save")).toBeDisabled();
   await dialog(head).getByTestId("dialog-cancel").click();
   expect(await results(heat)).toHaveLength(0);
@@ -219,18 +219,18 @@ test("on a phone the Control tab has Publish and Re-open, and Details holds the 
   await expect(phone.getByTestId("why-reopen")).toContainText("Only a published heat can be re-opened.");
   await phone.getByTestId("details-toggle").click();
   await expect(phone.getByTestId("details").getByTestId("total-row")).toHaveCount(3, { timeout: 40_000 });
-  await expect(phone.getByTestId("phone-blockers")).toContainText("Judge 2 has not submitted");
-  await expect(phone.getByTestId("phone-blockers")).toContainText("Judge 3 has not submitted");
+  await expect(phone.getByTestId("phone-blockers")).toContainText("Judge 2: sheet not submitted");
+  await expect(phone.getByTestId("phone-blockers")).toContainText("Judge 3: sheet not submitted");
   await expect(phone.getByTestId("details")).toContainText("tablet or laptop");
   await phone.getByTestId("publish").click();
-  await expect(phone.getByTestId("publish-blockers")).toContainText("Judge 2 has not submitted");
+  await expect(phone.getByTestId("publish-blockers")).toContainText("Judge 2: sheet not submitted");
   await phone.getByTestId("reason-input").fill("Judges 2 and 3 left the beach");
   await phone.getByTestId("dialog-save").click();
   await expect(phone.getByTestId("control-message")).toContainText("Published", { timeout: 60_000 });
   const line = (await w.db.from("audit_log").select("reason, after").eq("row_id", heat).eq("action", "publish_override")).data ?? [];
   expect(line).toHaveLength(1);
   expect(line[0].reason).toBe("Judges 2 and 3 left the beach");
-  expect(JSON.stringify(line[0].after)).toContain("Judge 2 has not submitted");
+  expect(JSON.stringify(line[0].after)).toContain("Judge 2: sheet not submitted");
 });
 
 test("Re-run heat: a reason and one confirmation; Heat 1 is cancelled, 'Heat 1 re-run' is next with the same riders and Lycras, Blue did not start; Start opens it on the spotter's phone by itself", async ({ browser }) => {

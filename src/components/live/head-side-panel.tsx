@@ -11,6 +11,7 @@ import { sheetSubmitted, type HeadModel } from "@/lib/live/head-model";
 import { judgeNames, judgeWordOf } from "@/lib/live/judge-names";
 import type { HeatRow } from "@/lib/live/types";
 import { copy } from "@/lib/ui-copy";
+import { cn } from "@/lib/utils";
 
 const H = copy.headLive;
 const SEEN_WITHIN_MS = 45_000;
@@ -65,7 +66,7 @@ export function useSideData(supabase: SupabaseClient, eventId: string, heat: Hea
 export type SideData = ReturnType<typeof useSideData>;
 
 /** Who is connected and who has submitted, one line per judge, by the seat's name. */
-export function JudgesStatus({ side, live, nowServer, heat }: { side: SideData; live: LiveHeatState; nowServer: number; heat: HeatRow }) {
+export function JudgesStatus({ side, live, nowServer, heat, highlight }: { side: SideData; live: LiveHeatState; nowServer: number; heat: HeatRow; /** The judge a blocker's "Fix" pointed at. */ highlight?: string | null }) {
   const ended = heat.status !== "scheduled" && heat.status !== "running" && heat.status !== "paused";
   return (
     <section data-testid="judges" className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={H.judgesHeading}>
@@ -76,7 +77,7 @@ export function JudgesStatus({ side, live, nowServer, heat }: { side: SideData; 
         const liveNow = seen !== null && seen <= SEEN_WITHIN_MS;
         const sheet = live.sheets.find((s) => s.judge_seat_id === j.id);
         return (
-          <div key={j.id} data-testid="judge-row" data-live={liveNow} className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
+          <div key={j.id} data-testid="judge-row" data-seat={j.id} data-live={liveNow} data-highlight={highlight === j.id} className={cn("flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 rounded-lg", highlight === j.id && "outline outline-2 outline-beach-accent")}>
             <span className="min-w-0 whitespace-normal break-words text-body font-semibold">
               {judgeWordOf(j)}
               {j.name ? <span className="font-medium text-beach-muted"> · {j.tag}</span> : null}

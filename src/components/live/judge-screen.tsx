@@ -190,7 +190,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
 
   // ---- the Impression / Variety step
   const impressionRiders = useMemo<ImpressionRider[]>(() => {
-    const serverMine = new Map(live.impressions.filter((i) => i.judge_seat_id === seatId).map((i) => [i.entry_id, Number(i.value)]));
+    const serverMine = new Map(live.impressions.filter((i) => i.judge_seat_id === seatId && !i.missed && i.value !== null).map((i) => [i.entry_id, Number(i.value)]));
     return riding.map((r) => {
       const mine = live.attempts.filter((a) => a.entry_id === r.entryId && !a.deleted_at);
       const myScores: Record<string, number | "missed" | null> = {};
