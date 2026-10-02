@@ -56,22 +56,24 @@ export function LiveShell({ children, soundDefault = false, wide = false }: { ch
 }
 
 /** The device's own settings: theme, text size and sound. Shown at the top of the Details view. */
-export function ScreenSettings({ seatLine }: { seatLine?: React.ReactNode }) {
+export function ScreenSettings({ seatLine, hideSound = false }: { seatLine?: React.ReactNode; /** The head judge's laptop has "Sound on" in its top bar, so it is not repeated here. */ hideSound?: boolean }) {
   const s = useLiveSettings();
   return (
     <section data-testid="screen-settings" aria-label={copy.spotter.settings} className="flex flex-wrap items-center gap-1.5 rounded-card border border-beach-line bg-beach-surface p-1.5">
       <ThemeSwitch theme={s.theme} onChange={s.setTheme} />
       <TextSizeSwitch size={s.size} onChange={s.setSize} />
-      <button
-        type="button"
-        data-testid="sound-toggle"
-        aria-pressed={s.soundOn}
-        onClick={() => s.setSoundOn(!s.soundOn)}
-        className="inline-flex min-h-tap items-center gap-1 rounded-xl border border-beach-border bg-beach-bg px-3 text-small font-semibold text-beach-ink"
-      >
-        {s.soundOn ? <Volume2 aria-hidden className="size-4" /> : <VolumeX aria-hidden className="size-4" />}
-        {s.soundOn ? copy.live.timer.soundOn : copy.live.timer.soundOff}
-      </button>
+      {hideSound ? null : (
+        <button
+          type="button"
+          data-testid="sound-toggle"
+          aria-pressed={s.soundOn}
+          onClick={() => s.setSoundOn(!s.soundOn)}
+          className="inline-flex min-h-tap items-center gap-1 rounded-xl border border-beach-border bg-beach-bg px-3 text-small font-semibold text-beach-ink"
+        >
+          {s.soundOn ? <Volume2 aria-hidden className="size-4" /> : <VolumeX aria-hidden className="size-4" />}
+          {s.soundOn ? copy.live.timer.soundOn : copy.live.timer.soundOff}
+        </button>
+      )}
       {seatLine}
     </section>
   );

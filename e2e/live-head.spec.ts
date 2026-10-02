@@ -42,7 +42,7 @@ test("the head judge runs a whole heat from a phone: Start refused in plain word
   const head = await phone(browser, "head", `/head/${w.eventId}`);
   await expect(head.getByTestId("run-order")).toBeVisible({ timeout: 30_000 });
   await expect(head.getByTestId("order-row")).toHaveCount(2);
-  await expect(row(head, w.heats[0])).toContainText("Pro Men · R1 · Heat 1");
+  await expect(row(head, w.heats[0])).toContainText("R1 · H1");
   await expect(row(head, w.heats[0])).toContainText(/est\. \d\d:\d\d/); // pinned at 10:00 "not before": today it starts when the day really is
 
   // the draw is not locked: refused, in words

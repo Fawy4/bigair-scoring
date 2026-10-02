@@ -2,6 +2,7 @@ import { Copy, EyeOff, Flag, Flame, MoreVertical, Minus, Trash2, UserX } from "l
 import { RiderLabel } from "@/components/rider-label";
 import { cellTone, outlierTolerance } from "@/lib/live/cell-tone";
 import { KOTA } from "@/lib/live/design-fixtures";
+import { judgeWordOf, type JudgeName } from "@/lib/live/judge-names";
 import type { CellState, MatrixCell, MatrixModel, MatrixRow } from "@/lib/live/matrix-model";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
@@ -64,7 +65,8 @@ function Cell({ cell, panel, onTap, label, tolerance }: { cell: MatrixCell; pane
   );
 }
 
-function Row({ row, actions, tolerance }: { row: Row; actions: MatrixActions; tolerance: number }) {
+function Row({ row, actions, tolerance, judges }: { row: Row; actions: MatrixActions; tolerance: number; judges?: JudgeName[] }) {
+  const judgeWord = (i: number) => (judges?.[i] ? judgeWordOf(judges[i]) : T.judge(i + 1));
   const struck = row.state === "deleted";
   return (
     <tr data-testid="matrix-row" data-row-id={row.id} data-row-state={row.state} className="border-t border-beach-line align-middle">
@@ -111,7 +113,7 @@ function Row({ row, actions, tolerance }: { row: Row; actions: MatrixActions; to
       </td>
       {row.cells.map((c, i) => (
         <td key={c.judgeId} className="px-1 py-1">
-          <Cell tolerance={tolerance} cell={c} panel={row.panel} label={`${T.judge(i + 1)}, ${T.attempt} ${row.seq}: ${c.label}`} onTap={actions.onCell ? () => actions.onCell!(row, c.judgeId) : undefined} />
+          <Cell tolerance={tolerance} cell={c} panel={row.panel} label={`${judgeWord(i)}, ${T.attempt} ${row.seq}: ${c.label}`} onTap={actions.onCell ? () => actions.onCell!(row, c.judgeId) : undefined} />
         </td>
       ))}
       <td className="px-1.5 py-1 text-right">
@@ -129,7 +131,7 @@ function Row({ row, actions, tolerance }: { row: Row; actions: MatrixActions; to
  * The head judge's score table: attempts down, judges across, the panel score last. For a tablet or laptop. With `actions` it is a working tool:
  * tap a score to edit it, tap the attempt number for its menu, tap the rider for theirs.
  */
-export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE }: { model: MatrixModel & { rows: Row[] }; actions?: MatrixActions; tolerance?: number }) {
+export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE, judges }: { model: MatrixModel & { rows: Row[] }; actions?: MatrixActions; tolerance?: number; /** The judges as the seat names they were given ("Fawy", with "J1" under it). Without it the columns read "Judge 1" (the design preview). */ judges?: JudgeName[] }) {
   return (
     <div data-testid="matrix-scroll" className="overflow-x-auto rounded-card border border-beach-line bg-beach-bg">
       <table data-testid="head-matrix" className="min-w-[34rem] border-collapse text-beach-ink">
@@ -148,8 +150,21 @@ export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE 
               {T.trick}
             </th>
             {model.judgeIds.map((j, i) => (
-              <th key={j} scope="col" className="px-1 py-1 text-center">
-                {T.judge(i + 1)}
+              <th key={j} scope="col" data-testid="judge-column" className="min-w-[5rem] max-w-[9rem] px-1 py-1 text-center">
+                {judges?.[i] ? (
+                  <>
+                    <span data-testid="judge-column-name" className="block whitespace-normal break-words text-body font-semibold text-beach-ink">
+                      {judgeWordOf(judges[i])}
+                    </span>
+                    {judges[i].name ? (
+                      <span data-testid="judge-column-tag" className="block text-small font-medium text-beach-muted">
+                        {judges[i].tag}
+                      </span>
+                    ) : null}
+                  </>
+                ) : (
+                  T.judge(i + 1)
+                )}
               </th>
             ))}
             <th scope="col" className="px-1.5 py-1 text-right">
@@ -159,7 +174,7 @@ export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE 
         </thead>
         <tbody>
           {model.rows.map((r) => (
-            <Row key={r.id} row={r} actions={actions} tolerance={tolerance} />
+            <Row key={r.id} row={r} actions={actions} tolerance={tolerance} judges={judges} />
           ))}
         </tbody>
       </table>
