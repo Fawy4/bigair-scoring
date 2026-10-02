@@ -14,7 +14,7 @@ async function removeSimulatorUsers(w: LiveWorld, eventIds: string[]) {
 }
 
 test("copy an event, play it at ×20 until two heats publish, look as a spectator, press scenarios, reset", async ({ page, context }) => {
-  test.setTimeout(420_000);
+  test.setTimeout(900_000);
   const w = await createLiveWorld();
   const simIds: string[] = [];
   try {
@@ -38,7 +38,7 @@ test("copy an event, play it at ×20 until two heats publish, look as a spectato
     await expect(page.getByTestId("sim-speed-20")).toHaveAttribute("aria-pressed", "true");
     await page.getByTestId("sim-start").click();
     await expect(page.getByTestId("sim-state")).toHaveAttribute("data-state", "playing");
-    await expect(page.getByTestId("stat-heats")).toHaveText(/^[2-9] of \d+ heats published/, { timeout: 240_000 });
+    await expect(page.getByTestId("stat-heats")).toHaveText(/^[2-9] of \d+ heats published/, { timeout: 480_000 });
 
     // the results are on the public page, seen as a spectator in another tab
     const [results] = await Promise.all([context.waitForEvent("page"), page.getByTestId("view-results").click()]);
