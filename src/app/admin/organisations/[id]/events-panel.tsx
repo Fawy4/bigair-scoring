@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { copy } from "@/lib/ui-copy";
 import { EventLifecycle } from "@/components/event-lifecycle";
 import { moveEvent } from "../../actions";
+import { restoreReset } from "@/app/org/(console)/events/[id]/reset-actions";
 
 const c = copy.admin.org;
 const th = "border-2 border-[#111] bg-[#eee] p-2 text-left";
@@ -24,6 +25,8 @@ interface EventRow {
   running: boolean;
   published: number;
   archived: boolean;
+  /** The copy a Reset kept, if one is still within its 30 days. */
+  resetCopy: { id: string; date: string } | null;
 }
 
 /** The organisation's events, each with the owner-only "Move event to another organisation" action. */
@@ -65,6 +68,7 @@ export function EventsPanel({ orgName, events, others, isOwner }: { orgName: str
                     {isOwner ? (
                       <div className="flex flex-col gap-4">
                         <MoveEvent event={e} orgName={orgName} others={others} />
+                        {e.resetCopy ? <RestoreReset event={e} copyInfo={e.resetCopy} /> : null}
                         <EventLifecycle compact eventId={e.id} eventName={e.name} slug={e.slug} publishedResults={e.published} archived={e.archived} afterDelete={null} />
                       </div>
                     ) : (
@@ -117,6 +121,40 @@ function MoveEvent({ event, orgName, others }: { event: EventRow; orgName: strin
             if (res.ok) {
               const s = res.summary;
               toast({ title: c.moved(event.name, to!.name), description: c.movedDetail(s.riders_copied, s.riders_reused, s.riders_removed, s.presets_copied) });
+              router.refresh();
+            } else setError(res.error);
+          })
+        }
+      />
+      {error ? (
+        <p role="alert" className="field-error">
+          {copy.common.problem(error)}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** "Restore results from <date>": platform owners only, one confirmation. */
+function RestoreReset({ event, copyInfo }: { event: EventRow; copyInfo: { id: string; date: string } }) {
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const r = copy.reset.restore;
+  return (
+    <div className="flex min-w-64 flex-col gap-2" data-testid={`restore-${event.id}`}>
+      <ConfirmButton
+        label={r.button(copyInfo.date)}
+        question={r.question(event.name, copyInfo.date)}
+        confirmLabel={r.yes}
+        cancelLabel={r.cancel}
+        pending={pending}
+        onConfirm={() =>
+          start(async () => {
+            setError(null);
+            const res = await restoreReset(copyInfo.id);
+            if (res.ok) {
+              toast({ title: r.done });
               router.refresh();
             } else setError(res.error);
           })

@@ -1,18 +1,25 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FieldLabel, HelpButton } from "@/components/help-button";
+import { Button, disabledWhen } from "@/components/org/button";
+import { registerNextGuard } from "@/components/org/next-guard";
+import { NumberField } from "@/components/org/number-field";
+import { SettingRow } from "@/components/org/setting-row";
+import { SettingsPanel } from "@/components/org/settings-panel";
+import { EVENT_ADVANCED } from "@/lib/settings/simple-fields";
+import { eventSentence } from "@/lib/org/event-sentence";
+import { usesLycras } from "@/lib/schemas/identification";
 import { LogoField } from "@/components/org/logo-field";
 import { SlugLink } from "@/components/slug-link";
 import { toast } from "@/hooks/use-toast";
 import { issuesToMap, moveIn, removeIn, setIn } from "@/lib/form/path";
 import { EventFormSchema, slugify, type EventForm as EventFormValues } from "@/lib/schemas/event-settings";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
-import { copy, help } from "@/lib/ui-copy";
+import { copy, help, orgCopy } from "@/lib/ui-copy";
 import { saveEvent } from "./actions";
-import { IdentificationEditor } from "./identification-editor";
+import { IdentificationEditor, LycraQuestion } from "./identification-editor";
 
 const T = copy.event;
 
@@ -34,6 +41,7 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
   const [serverError, setServerError] = useState<string | null>(null);
   const [serverFields, setServerFields] = useState<Record<string, string>>({});
   const [savedSlug, setSavedSlug] = useState(initial.savedSlug);
+  const [saved, setSaved] = useState(() => JSON.stringify({ form: initial.values, published: initial.status === "published" }));
   const [origin, setOrigin] = useState("");
   const [pending, start] = useTransition();
   useEffect(() => setOrigin(window.location.origin), []);
@@ -52,380 +60,375 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
   const canPublishToggle = initial.status === "draft" || initial.status === "published";
   const ident = form.settings.identification!;
   const timezones = timeZones.includes(form.timezone) ? timeZones : [form.timezone, ...timeZones];
-  const numeric = (v: string) => (v === "" ? NaN : Number(v));
-  const num = (n: number) => (Number.isNaN(n) ? "" : n);
   const showError = (key: string) => (err(key) ? <p className="field-error">{copy.common.problem(err(key)!)}</p> : null);
 
-  function save() {
+  /** Saves the form. Answers true when it was saved (or there was nothing new to save); false with the error on screen when it could not be. */
+  async function submit(): Promise<boolean> {
     setShowErrors(true);
     setServerError(null);
     setServerFields({});
     if (Object.keys(check).length > 0) {
       setServerError(T.fixThese);
-      return;
+      return false;
     }
+    const res = await saveEvent(initial.id, form, canPublishToggle ? (published ? "published" : "draft") : null);
+    if (res.ok) {
+      setSavedSlug(res.slug);
+      setUnderstood(false);
+      setShowErrors(false);
+      setSaved(JSON.stringify({ form, published }));
+      toast({ title: initial.id ? T.saved : T.created });
+      if (!initial.id) router.push(`/org/events/${res.id}/event`);
+      else router.refresh();
+      return true;
+    }
+    setServerError(res.error);
+    setServerFields(res.fields ?? {});
+    return false;
+  }
+  function save() {
     start(async () => {
-      const res = await saveEvent(initial.id, form, canPublishToggle ? (published ? "published" : "draft") : null);
-      if (res.ok) {
-        setSavedSlug(res.slug);
-        setUnderstood(false);
-        setShowErrors(false);
-        toast({ title: initial.id ? T.saved : T.created });
-        if (!initial.id) router.push(`/org/events/${res.id}/event`);
-        else router.refresh();
-      } else {
-        setServerError(res.error);
-        setServerFields(res.fields ?? {});
-      }
+      await submit();
     });
   }
 
-  const field = "flex flex-col gap-1";
+  // the footer's Next saves what was typed first; with nothing new it just moves on, and with an error it stays here (Phase 7a, 8a)
+  const dirty = JSON.stringify({ form, published }) !== saved;
+  useEffect(() => {
+    if (!initial.id) return;
+    return registerNextGuard(async () => {
+      if (!dirty) return true;
+      if (slugChangedOnPublished && !understood) {
+        setServerError(T.understandFirst);
+        return false;
+      }
+      return submit();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-registered on every change so the guard sees the current form
+  }, [form, published, understood, dirty, initial.id]);
+
+  const group = "flex flex-col gap-3 border-t border-beach-line py-4";
+  const groupTitle = "text-[14px] font-semibold";
+  const inputCls = "h-[var(--org-ctl)] w-full rounded-[8px] border border-beach-border bg-transparent px-3 text-body font-semibold";
+  const lycras = usesLycras(ident.scheme);
+  const sentence = eventSentence({ name: form.name, start: form.start_date, end: form.end_date, location: form.location, timezone: form.timezone, lycras, live: form.settings.publicLiveScores === "live", results: form.settings.publicResultsOnPublish });
+  const h = (key: string) => ({ explanation: help[key].line ?? help[key].text, example: help[key].example ?? "", detail: help[key].line ? help[key].text : undefined });
+  const checkbox = (label: string, checked: boolean, onChange: (v: boolean) => void, helpKey: string, testId?: string) => (
+    <span className="flex items-start gap-2">
+      <label className="flex min-h-[var(--org-ctl)] items-center gap-3 text-body font-semibold">
+        <input type="checkbox" data-testid={testId} checked={checked} onChange={(e) => onChange(e.target.checked)} />
+        {label}
+      </label>
+      <HelpButton what={label} help={help[helpKey]} />
+    </span>
+  );
+
+  const simple = (
+    <div className="org-new py-1">
+      <SettingRow id="ev-name" label={T.name} {...h("event.name")}>
+        <input
+          id="ev-name"
+          aria-label={T.name}
+          value={form.name}
+          onChange={(e) => {
+            set(["name"], e.target.value);
+            if (!slugTouched) set(["slug"], slugify(e.target.value));
+          }}
+          aria-invalid={Boolean(err("name"))}
+          className={`${inputCls} w-72 max-w-full`}
+        />
+      </SettingRow>
+      {showError("name")}
+      <SettingRow id="ev-dates" label={orgCopy.settings.datesLabel} {...h("event.dates")}>
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <input id="ev-start" type="date" aria-label={T.firstDay} value={form.start_date} onChange={(e) => set(["start_date"], e.target.value)} className={`${inputCls} w-auto`} />
+          <span aria-hidden>–</span>
+          <input id="ev-end" type="date" aria-label={T.lastDay} value={form.end_date} onChange={(e) => set(["end_date"], e.target.value)} className={`${inputCls} w-auto`} />
+        </span>
+      </SettingRow>
+      {showError("start_date")}
+      {showError("end_date")}
+      <SettingRow id="ev-location" label={T.location} {...h("event.location")}>
+        <input id="ev-location" aria-label={T.location} value={form.location} onChange={(e) => set(["location"], e.target.value)} placeholder={T.locationPlaceholder} className={`${inputCls} w-72 max-w-full`} />
+      </SettingRow>
+      {showError("location")}
+      <SettingRow id="ev-tz" label={T.timeZone} {...h("event.timeZone")}>
+        <select id="ev-tz" aria-label={T.timeZone} value={form.timezone} onChange={(e) => set(["timezone"], e.target.value)} className={`${inputCls} w-72 max-w-full`}>
+          {timezones.map((z) => (
+            <option key={z} value={z}>
+              {z}
+            </option>
+          ))}
+        </select>
+      </SettingRow>
+      <p className="pb-1 text-small font-medium text-beach-muted">{T.timeZoneHint}</p>
+      {showError("timezone")}
+      <SettingRow id="ev-lycras" label={copy.ident.lycraQuestion} {...h("ident.lycraQuestion")}>
+        <LycraQuestion value={ident} onChange={(v) => set(["settings", "identification"], v)} />
+      </SettingRow>
+      <div className="py-2" data-testid="visibility-settings" aria-labelledby="visibility-heading">
+        <h3 id="visibility-heading" className="text-body font-semibold">
+          {T.visibilityHeading}
+        </h3>
+        <p className="text-small font-medium text-beach-muted">{T.visibilityIntro}</p>
+        {checkbox(T.showLive, form.settings.publicLiveScores === "live", (v) => set(["settings", "publicLiveScores"], v ? "live" : "after_publish"), "event.showLive")}
+        {checkbox(T.showResults, form.settings.publicResultsOnPublish, (v) => set(["settings", "publicResultsOnPublish"], v), "event.showResults")}
+        {checkbox(T.holdFinal, form.settings.holdFinalResult, (v) => set(["settings", "holdFinalResult"], v), "event.holdFinal")}
+      </div>
+    </div>
+  );
+
+  const advanced = (
+    <div className="org-new flex flex-col py-1">
+      <section className={group}>
+        <h3 className={groupTitle}>{T.slug}</h3>
+        <FieldLabel htmlFor="ev-slug" text={T.slug} help={help["event.slug"]} />
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-body font-semibold">{origin || "https://…"}/e/</span>
+          <input
+            id="ev-slug"
+            value={form.slug}
+            onChange={(e) => {
+              setSlugTouched(true);
+              set(["slug"], e.target.value);
+            }}
+            spellCheck={false}
+            autoCapitalize="none"
+            aria-invalid={Boolean(err("slug"))}
+            className={`${inputCls} w-64`}
+          />
+        </div>
+        {showError("slug")}
+        {savedSlug ? (
+          <p className="flex flex-wrap items-center gap-2 text-body font-semibold">
+            {T.slugPublicPage} <SlugLink slug={savedSlug} />
+          </p>
+        ) : null}
+        {slugChangedOnPublished ? (
+          <div className="rounded-[8px] border border-beach-border bg-beach-surface p-3" role="note">
+            <p className="text-body font-semibold">{T.slugPublishedTitle}</p>
+            <label className="mt-2 flex items-center gap-3 text-body font-semibold">
+              <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />
+              {T.understand}
+            </label>
+          </div>
+        ) : null}
+      </section>
+
+      <section className={group}>
+        <h3 className={groupTitle}>{T.branding}</h3>
+        <LogoField orgId={initial.organisationId} purpose="event-logo" label={T.eventLogo} value={form.branding.logoUrl} onChange={(u) => set(["branding", "logoUrl"], u ?? undefined)} />
+        <div className="flex flex-col gap-3">
+          <FieldLabel as="span" text={T.sponsors} help={help["event.sponsors"]} />
+          {form.branding.sponsors.length === 0 ? <p className="text-body font-medium text-beach-muted">{T.noSponsors}</p> : null}
+          {form.branding.sponsors.map((sp, i) => (
+            <div key={i} className="flex flex-col gap-3 rounded-[8px] border border-beach-line p-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="flex flex-col gap-1">
+                  <label htmlFor={`sp-name-${i}`} className="text-small font-semibold">
+                    {T.sponsorName(i + 1)}
+                  </label>
+                  <input id={`sp-name-${i}`} value={sp.name} onChange={(e) => set(["branding", "sponsors", i, "name"], e.target.value)} className={inputCls} />
+                  {showError(`branding.sponsors.${i}.name`)}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label htmlFor={`sp-url-${i}`} className="text-small font-semibold">
+                    {T.sponsorUrl(i + 1)}
+                  </label>
+                  <input id={`sp-url-${i}`} value={sp.url ?? ""} onChange={(e) => set(["branding", "sponsors", i, "url"], e.target.value)} placeholder="https://" className={inputCls} />
+                  {showError(`branding.sponsors.${i}.url`)}
+                </div>
+              </div>
+              <LogoField orgId={initial.organisationId} purpose={`sponsor-${i + 1}`} label={T.sponsorLogo(i + 1)} value={sp.logoUrl} onChange={(u) => set(["branding", "sponsors", i, "logoUrl"], u ?? undefined)} />
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" aria-label={T.sponsorUp(i + 1)} onClick={() => setForm((f) => moveIn(f, ["branding", "sponsors"], i, i - 1))} {...disabledWhen(i === 0 && T.sponsorFirst)}>
+                  {copy.common.up}
+                </Button>
+                <Button variant="secondary" aria-label={T.sponsorDown(i + 1)} onClick={() => setForm((f) => moveIn(f, ["branding", "sponsors"], i, i + 1))} {...disabledWhen(i === form.branding.sponsors.length - 1 && T.sponsorLast)}>
+                  {copy.common.down}
+                </Button>
+                <Button variant="danger" onClick={() => setForm((f) => removeIn(f, ["branding", "sponsors", i]))}>
+                  {T.sponsorRemove}
+                </Button>
+              </div>
+            </div>
+          ))}
+          <div>
+            <Button variant="secondary" onClick={() => set(["branding", "sponsors", form.branding.sponsors.length], { name: "" })}>
+              {T.addSponsor}
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <section className={group} aria-label={T.simulationHeading}>
+        <h3 className={groupTitle}>{T.simulationHeading}</h3>
+        {checkbox(T.simulation, form.isSimulation, (v) => set(["isSimulation"], v), "event.simulation", "simulation-switch")}
+        {showError("isSimulation")}
+      </section>
+
+      <section className={group}>
+        <h3 className={groupTitle}>{T.timing}</h3>
+        <SettingRow id="ev-ready" label={T.readyCall} {...h("event.readyCall")}>
+          <NumberField id="ev-ready" label={T.readyCall} min={0} max={120} value={Number.isNaN(form.settings.readyCallMin) ? null : form.settings.readyCallMin} onChange={(v) => set(["settings", "readyCallMin"], v)} unit={T.minutesUnit} />
+        </SettingRow>
+        {showError("settings.readyCallMin")}
+        <SettingRow id="ev-poll" label={T.livePoll} {...h("event.livePoll")}>
+          <NumberField id="ev-poll" label={T.livePoll} min={3} max={60} value={Number.isNaN(form.settings.livePollSec) ? null : form.settings.livePollSec} onChange={(v) => set(["settings", "livePollSec"], v)} unit={T.secondsUnit} />
+        </SettingRow>
+        {showError("settings.livePollSec")}
+        <SettingRow id="ev-rotate" label={T.screenRotate} {...h("event.screenRotate")}>
+          <NumberField id="ev-rotate" label={T.screenRotate} min={5} max={120} value={Number.isNaN(form.settings.screenRotateSec) ? null : form.settings.screenRotateSec} onChange={(v) => set(["settings", "screenRotateSec"], v)} unit={T.secondsUnit} />
+        </SettingRow>
+        {showError("settings.screenRotateSec")}
+        <SettingRow id="ev-max-running" label={T.maxRunning} {...h("event.maxRunning")}>
+          <NumberField id="ev-max-running" label={T.maxRunning} min={1} max={5} value={Number.isNaN(form.settings.maxRunningHeats) ? null : form.settings.maxRunningHeats} onChange={(v) => set(["settings", "maxRunningHeats"], v)} />
+        </SettingRow>
+        {showError("settings.maxRunningHeats")}
+        {checkbox(T.judgesLog, form.settings.judgesMayLogAttempts, (v) => set(["settings", "judgesMayLogAttempts"], v), "event.judgesLog")}
+        <div className="flex flex-col gap-2" data-testid="external-leaderboards">
+          <FieldLabel as="span" text={T.leaderboards} help={help["event.leaderboards"]} />
+          {form.settings.externalLeaderboards.length === 0 ? <p className="text-body font-medium text-beach-muted">{T.noLeaderboards}</p> : null}
+          {form.settings.externalLeaderboards.map((lb, i) => (
+            <div key={i} className="flex flex-col gap-2 rounded-[8px] border border-beach-line p-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="flex flex-col gap-1">
+                  <label htmlFor={`lb-title-${i}`} className="text-small font-semibold">
+                    {T.leaderboardTitle(i + 1)}
+                  </label>
+                  <input id={`lb-title-${i}`} value={lb.title} onChange={(e) => set(["settings", "externalLeaderboards", i, "title"], e.target.value)} className={inputCls} />
+                  {showError(`settings.externalLeaderboards.${i}.title`)}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label htmlFor={`lb-url-${i}`} className="text-small font-semibold">
+                    {T.leaderboardUrl(i + 1)}
+                  </label>
+                  <input id={`lb-url-${i}`} value={lb.url} onChange={(e) => set(["settings", "externalLeaderboards", i, "url"], e.target.value)} placeholder="https://" className={inputCls} />
+                  {showError(`settings.externalLeaderboards.${i}.url`)}
+                </div>
+              </div>
+              <label className="flex min-h-[var(--org-ctl)] items-center gap-3 text-body font-semibold">
+                <input type="checkbox" checked={lb.embed} onChange={(e) => set(["settings", "externalLeaderboards", i, "embed"], e.target.checked)} />
+                {T.leaderboardEmbed}
+              </label>
+              <div>
+                <Button variant="danger" onClick={() => setForm((f) => removeIn(f, ["settings", "externalLeaderboards", i]))}>
+                  {T.removeLeaderboard}
+                </Button>
+              </div>
+            </div>
+          ))}
+          {form.settings.externalLeaderboards.length < 6 ? (
+            <div>
+              <Button variant="secondary" onClick={() => set(["settings", "externalLeaderboards", form.settings.externalLeaderboards.length], { title: "", url: "", embed: false })}>
+                {T.addLeaderboard}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+        {checkbox(T.windBanner, form.settings.windCallBanner, (v) => set(["settings", "windCallBanner"], v), "event.windBanner")}
+      </section>
+
+      <section className={group} data-testid="registration-settings">
+        <h3 className={groupTitle}>{T.registration}</h3>
+        <fieldset className="flex flex-col gap-1">
+          <legend>
+            <FieldLabel as="span" text={T.registrationStatus} help={help["event.registrationOpen"]} />
+          </legend>
+          <label className="flex min-h-[var(--org-ctl)] items-center gap-3 text-body font-semibold">
+            <input type="radio" name="registration" checked={form.settings.registrationOpen} onChange={() => set(["settings", "registrationOpen"], true)} />
+            {T.registrationOptionOpen}
+          </label>
+          <label className="flex min-h-[var(--org-ctl)] items-center gap-3 text-body font-semibold">
+            <input type="radio" name="registration" checked={!form.settings.registrationOpen} onChange={() => set(["settings", "registrationOpen"], false)} />
+            {T.registrationOptionClosed}
+          </label>
+        </fieldset>
+        <p className="text-body font-medium text-beach-muted">{T.registrationNote}</p>
+        {savedSlug ? (
+          <p className="flex flex-wrap items-center gap-2 text-body font-semibold">
+            {T.registrationLink} <SlugLink slug={`${savedSlug}/register`} />
+          </p>
+        ) : null}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="flex flex-col gap-1">
+            <FieldLabel htmlFor="ev-closes" text={T.registrationCloses} help={help["event.registrationCloses"]} />
+            <input id="ev-closes" type="date" value={form.settings.registrationClosesOn ?? ""} onChange={(e) => set(["settings", "registrationClosesOn"], e.target.value || null)} className={inputCls} />
+            {showError("settings.registrationClosesOn")}
+          </div>
+          <div className="flex flex-col gap-1">
+            <FieldLabel htmlFor="ev-closes-time" text={T.registrationClosesTime} help={help["event.registrationClosesTime"]} />
+            <input id="ev-closes-time" type="time" value={form.settings.registrationClosesTime ?? ""} onChange={(e) => set(["settings", "registrationClosesTime"], e.target.value || null)} className={inputCls} />
+            {showError("settings.registrationClosesTime")}
+          </div>
+          <div className="flex flex-col gap-1">
+            <FieldLabel htmlFor="ev-max" text={T.registrationMax} help={help["event.registrationMax"]} />
+            <NumberField id="ev-max" label={T.registrationMax} min={1} max={500} value={form.settings.registrationMaxPerDivision ?? null} placeholder={T.noLimitWord} onChange={(v) => set(["settings", "registrationMaxPerDivision"], v)} onClear={() => set(["settings", "registrationMaxPerDivision"], null)} />
+            {showError("settings.registrationMaxPerDivision")}
+          </div>
+        </div>
+        <p className="text-small font-medium text-beach-muted">{T.registrationClosesHint}</p>
+        <p className="text-small font-medium text-beach-muted">{T.registrationMaxHint}</p>
+        <div className="flex flex-col gap-1">
+          <FieldLabel htmlFor="ev-closed-message" text={T.registrationClosedMessage} help={help["event.registrationClosedMessage"]} />
+          <textarea id="ev-closed-message" rows={3} maxLength={300} value={form.settings.registrationClosedMessage ?? ""} onChange={(e) => set(["settings", "registrationClosedMessage"], e.target.value)} />
+          <p className="text-small font-medium text-beach-muted">{T.registrationClosedMessageHint}</p>
+          {showError("settings.registrationClosedMessage")}
+        </div>
+      </section>
+
+      <section className={group}>
+        <IdentificationEditor value={ident} onChange={(v) => set(["settings", "identification"], v)} presets={schemes} organisationId={initial.organisationId} errors={identErrors} hideLycraQuestion />
+      </section>
+
+      <section className={group}>
+        <h3 className={groupTitle}>{T.joinHeading}</h3>
+        <p className="text-body font-medium">{T.joinText(origin || "…", form.slug || "…")}</p>
+        <p className="text-body font-medium">
+          {T.eventCode} <strong data-testid="event-code">{form.slug || "…"}</strong>
+        </p>
+      </section>
+    </div>
+  );
+
+  const footer = (
+    <div className="org-new flex flex-wrap items-center gap-3">
+      <Button type="submit" variant={initial.id ? "secondary" : "primary"} {...disabledWhen(pending ? copy.common.saving : slugChangedOnPublished && !understood ? T.understandFirst : null)}>
+        {pending ? copy.common.saving : initial.id ? T.saveEvent : T.create}
+      </Button>
+      {initial.id && dirty ? <span className="text-body font-semibold">{copy.common.unsaved}</span> : null}
+    </div>
+  );
+
   return (
     <form
-      className="flex flex-col gap-6"
+      className="flex min-w-0 flex-col gap-4"
       aria-label={T.formLabel}
       onSubmit={(e) => {
         e.preventDefault();
         save();
       }}
     >
-      <section className="panel flex flex-col gap-4">
-        <h2 className="text-xl font-extrabold">{T.basics}</h2>
-        <div className={field}>
-          <FieldLabel htmlFor="ev-name" text={T.name} help={help["event.name"]} />
-          <input
-            id="ev-name"
-            value={form.name}
-            onChange={(e) => {
-              set(["name"], e.target.value);
-              if (!slugTouched) set(["slug"], slugify(e.target.value));
-            }}
-            aria-invalid={Boolean(err("name"))}
-          />
-          {showError("name")}
-        </div>
-        <div className={field}>
-          <FieldLabel htmlFor="ev-slug" text={T.slug} help={help["event.slug"]} />
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold">{origin || "https://…"}/e/</span>
-            <input
-              id="ev-slug"
-              value={form.slug}
-              onChange={(e) => {
-                setSlugTouched(true);
-                set(["slug"], e.target.value);
-              }}
-              spellCheck={false}
-              autoCapitalize="none"
-              aria-invalid={Boolean(err("slug"))}
-              className="w-64"
-            />
-          </div>
-          {showError("slug")}
-          {savedSlug ? (
-            <p className="flex flex-wrap items-center gap-2 font-semibold">
-              {T.slugPublicPage} <SlugLink slug={savedSlug} />
-            </p>
-          ) : null}
-          {slugChangedOnPublished ? (
-            <div className="panel mt-1" role="note">
-              <p className="font-bold">{T.slugPublishedTitle}</p>
-              <label className="mt-2 flex items-center gap-3 font-bold">
-                <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />
-                {T.understand}
-              </label>
-            </div>
-          ) : null}
-        </div>
-        <div className={field}>
-          <FieldLabel htmlFor="ev-location" text={T.location} help={help["event.location"]} />
-          <input id="ev-location" value={form.location} onChange={(e) => set(["location"], e.target.value)} placeholder={T.locationPlaceholder} />
-          {showError("location")}
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className={field}>
-            <FieldLabel htmlFor="ev-start" text={T.firstDay} help={help["event.dates"]} />
-            <input id="ev-start" type="date" value={form.start_date} onChange={(e) => set(["start_date"], e.target.value)} />
-            {showError("start_date")}
-          </div>
-          <div className={field}>
-            <FieldLabel htmlFor="ev-end" text={T.lastDay} help={help["event.dates"]} />
-            <input id="ev-end" type="date" value={form.end_date} onChange={(e) => set(["end_date"], e.target.value)} />
-            {showError("end_date")}
-          </div>
-          <div className={field}>
-            <FieldLabel htmlFor="ev-tz" text={T.timeZone} help={help["event.timeZone"]} />
-            <select id="ev-tz" value={form.timezone} onChange={(e) => set(["timezone"], e.target.value)}>
-              {timezones.map((z) => (
-                <option key={z} value={z}>
-                  {z}
-                </option>
-              ))}
-            </select>
-            <p className="text-sm font-semibold">{T.timeZoneHint}</p>
-            {showError("timezone")}
-          </div>
-        </div>
-      </section>
-
-      <section className="panel flex flex-col gap-5">
-        <h2 className="text-xl font-extrabold">{T.branding}</h2>
-        <LogoField orgId={initial.organisationId} purpose="event-logo" label={T.eventLogo} value={form.branding.logoUrl} onChange={(u) => set(["branding", "logoUrl"], u ?? undefined)} />
-        <div className="flex flex-col gap-3">
-          <FieldLabel as="span" text={T.sponsors} help={help["event.sponsors"]} />
-          {form.branding.sponsors.length === 0 ? <p className="font-semibold">{T.noSponsors}</p> : null}
-          {form.branding.sponsors.map((sp, i) => (
-            <div key={i} className="flex flex-col gap-3 rounded-lg border-2 border-[#111] p-3">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className={field}>
-                  <label htmlFor={`sp-name-${i}`}>{T.sponsorName(i + 1)}</label>
-                  <input id={`sp-name-${i}`} value={sp.name} onChange={(e) => set(["branding", "sponsors", i, "name"], e.target.value)} />
-                  {showError(`branding.sponsors.${i}.name`)}
-                </div>
-                <div className={field}>
-                  <label htmlFor={`sp-url-${i}`}>{T.sponsorUrl(i + 1)}</label>
-                  <input id={`sp-url-${i}`} value={sp.url ?? ""} onChange={(e) => set(["branding", "sponsors", i, "url"], e.target.value)} placeholder="https://" />
-                  {showError(`branding.sponsors.${i}.url`)}
-                </div>
-              </div>
-              <LogoField orgId={initial.organisationId} purpose={`sponsor-${i + 1}`} label={T.sponsorLogo(i + 1)} value={sp.logoUrl} onChange={(u) => set(["branding", "sponsors", i, "logoUrl"], u ?? undefined)} />
-              <div className="flex flex-wrap gap-2">
-                <button type="button" className="btn" disabled={i === 0} aria-label={T.sponsorUp(i + 1)} onClick={() => setForm((f) => moveIn(f, ["branding", "sponsors"], i, i - 1))}>
-                  {copy.common.up}
-                </button>
-                <button type="button" className="btn" disabled={i === form.branding.sponsors.length - 1} aria-label={T.sponsorDown(i + 1)} onClick={() => setForm((f) => moveIn(f, ["branding", "sponsors"], i, i + 1))}>
-                  {copy.common.down}
-                </button>
-                <button type="button" className="btn btn-danger" onClick={() => setForm((f) => removeIn(f, ["branding", "sponsors", i]))}>
-                  {T.sponsorRemove}
-                </button>
-              </div>
-            </div>
-          ))}
-          <div>
-            <button type="button" className="btn" onClick={() => set(["branding", "sponsors", form.branding.sponsors.length], { name: "" })}>
-              {T.addSponsor}
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="panel flex flex-col gap-4" aria-labelledby="visibility-heading">
-        <div className="flex items-start gap-2">
-          <h2 id="visibility-heading" className="text-xl font-extrabold">
-            {T.visibilityHeading}
-          </h2>
-        </div>
-        <FieldLabel as="span" text={T.visibilityIntro} help={help["event.visibility"]} />
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <span className="flex items-start gap-2">
-              <label className="flex items-center gap-3 font-bold">
-                <input type="checkbox" checked={form.settings.publicLiveScores === "live"} onChange={(e) => set(["settings", "publicLiveScores"], e.target.checked ? "live" : "after_publish")} />
-                {T.showLive}
-              </label>
-              <HelpButton what={T.showLive} help={help["event.showLive"]} />
-            </span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="flex items-start gap-2">
-              <label className="flex items-center gap-3 font-bold">
-                <input type="checkbox" checked={form.settings.publicResultsOnPublish} onChange={(e) => set(["settings", "publicResultsOnPublish"], e.target.checked)} />
-                {T.showResults}
-              </label>
-              <HelpButton what={T.showResults} help={help["event.showResults"]} />
-            </span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="flex items-start gap-2">
-              <label className="flex items-center gap-3 font-bold">
-                <input type="checkbox" checked={form.settings.holdFinalResult} onChange={(e) => set(["settings", "holdFinalResult"], e.target.checked)} />
-                {T.holdFinal}
-              </label>
-              <HelpButton what={T.holdFinal} help={help["event.holdFinal"]} />
-            </span>
-          </div>
-        </div>
-      </section>
-
-      <section className="panel flex flex-col gap-4" aria-label={T.simulationHeading}>
-        <h2 className="text-xl font-extrabold">{T.simulationHeading}</h2>
-        <div className="flex flex-col gap-1">
-          <span className="flex items-start gap-2">
-            <label className="flex items-center gap-3 font-bold">
-              <input type="checkbox" data-testid="simulation-switch" checked={form.isSimulation} onChange={(e) => set(["isSimulation"], e.target.checked)} />
-              {T.simulation}
-            </label>
-            <HelpButton what={T.simulation} help={help["event.simulation"]} />
-          </span>
-          {showError("isSimulation")}
-        </div>
-      </section>
-
-      <section className="panel flex flex-col gap-4">
-        <h2 className="text-xl font-extrabold">{T.timing}</h2>
-        <div className="grid gap-4 md:grid-cols-4">
-          <div className={field}>
-            <FieldLabel htmlFor="ev-ready" text={T.readyCall} help={help["event.readyCall"]} />
-            <input id="ev-ready" type="number" min={0} max={120} value={num(form.settings.readyCallMin)} onChange={(e) => set(["settings", "readyCallMin"], numeric(e.target.value))} />
-            {showError("settings.readyCallMin")}
-          </div>
-          <div className={field}>
-            <FieldLabel htmlFor="ev-poll" text={T.livePoll} help={help["event.livePoll"]} />
-            <input id="ev-poll" type="number" min={3} max={60} value={num(form.settings.livePollSec)} onChange={(e) => set(["settings", "livePollSec"], numeric(e.target.value))} />
-            {showError("settings.livePollSec")}
-          </div>
-          <div className={field}>
-            <FieldLabel htmlFor="ev-rotate" text={T.screenRotate} help={help["event.screenRotate"]} />
-            <input id="ev-rotate" type="number" min={5} max={120} value={num(form.settings.screenRotateSec)} onChange={(e) => set(["settings", "screenRotateSec"], numeric(e.target.value))} />
-            {showError("settings.screenRotateSec")}
-          </div>
-          <div className={field}>
-            <FieldLabel htmlFor="ev-max-running" text={T.maxRunning} help={help["event.maxRunning"]} />
-            <input id="ev-max-running" type="number" min={1} max={5} value={num(form.settings.maxRunningHeats)} onChange={(e) => set(["settings", "maxRunningHeats"], numeric(e.target.value))} />
-            {showError("settings.maxRunningHeats")}
-          </div>
-        </div>
-        <span className="flex items-start gap-2">
-          <label className="flex items-center gap-3 font-bold">
-            <input type="checkbox" checked={form.settings.judgesMayLogAttempts} onChange={(e) => set(["settings", "judgesMayLogAttempts"], e.target.checked)} />
-            {T.judgesLog}
-          </label>
-          <HelpButton what={T.judgesLog} help={help["event.judgesLog"]} />
-        </span>
-        <div className="flex flex-col gap-2" data-testid="external-leaderboards">
-          <FieldLabel as="span" text={T.leaderboards} help={help["event.leaderboards"]} />
-          {form.settings.externalLeaderboards.length === 0 ? <p className="font-semibold">{T.noLeaderboards}</p> : null}
-          {form.settings.externalLeaderboards.map((lb, i) => (
-            <div key={i} className="flex flex-col gap-2 rounded-lg border-2 border-[#111] p-3">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className={field}>
-                  <FieldLabel htmlFor={`lb-title-${i}`} text={T.leaderboardTitle(i + 1)} />
-                  <input id={`lb-title-${i}`} value={lb.title} onChange={(e) => set(["settings", "externalLeaderboards", i, "title"], e.target.value)} />
-                  {showError(`settings.externalLeaderboards.${i}.title`)}
-                </div>
-                <div className={field}>
-                  <FieldLabel htmlFor={`lb-url-${i}`} text={T.leaderboardUrl(i + 1)} />
-                  <input id={`lb-url-${i}`} value={lb.url} onChange={(e) => set(["settings", "externalLeaderboards", i, "url"], e.target.value)} placeholder="https://" />
-                  {showError(`settings.externalLeaderboards.${i}.url`)}
-                </div>
-              </div>
-              <label className="flex items-center gap-3 font-bold">
-                <input type="checkbox" checked={lb.embed} onChange={(e) => set(["settings", "externalLeaderboards", i, "embed"], e.target.checked)} />
-                {T.leaderboardEmbed}
-              </label>
-              <div>
-                <button type="button" className="btn btn-danger" onClick={() => setForm((f) => removeIn(f, ["settings", "externalLeaderboards", i]))}>
-                  {T.removeLeaderboard}
-                </button>
-              </div>
-            </div>
-          ))}
-          {form.settings.externalLeaderboards.length < 6 ? (
-            <div>
-              <button type="button" className="btn" onClick={() => set(["settings", "externalLeaderboards", form.settings.externalLeaderboards.length], { title: "", url: "", embed: false })}>
-                {T.addLeaderboard}
-              </button>
-            </div>
-          ) : null}
-        </div>
-        <span className="flex items-start gap-2">
-          <label className="flex items-center gap-3 font-bold">
-            <input type="checkbox" checked={form.settings.windCallBanner} onChange={(e) => set(["settings", "windCallBanner"], e.target.checked)} />
-            {T.windBanner}
-          </label>
-          <HelpButton what={T.windBanner} help={help["event.windBanner"]} />
-        </span>
-      </section>
-
-      <section className="panel flex flex-col gap-4" data-testid="registration-settings">
-        <h2 className="text-xl font-extrabold">{T.registration}</h2>
-        <fieldset className="flex flex-col gap-2">
-          <legend>
-            <FieldLabel as="span" text={T.registrationStatus} help={help["event.registrationOpen"]} />
-          </legend>
-          <label className="flex items-center gap-3 font-bold">
-            <input type="radio" name="registration" checked={form.settings.registrationOpen} onChange={() => set(["settings", "registrationOpen"], true)} />
-            {T.registrationOptionOpen}
-          </label>
-          <label className="flex items-center gap-3 font-bold">
-            <input type="radio" name="registration" checked={!form.settings.registrationOpen} onChange={() => set(["settings", "registrationOpen"], false)} />
-            {T.registrationOptionClosed}
-          </label>
-        </fieldset>
-        <p className="font-semibold">{T.registrationNote}</p>
-        {savedSlug ? (
-          <p className="flex flex-wrap items-center gap-2 font-semibold">
-            {T.registrationLink} <SlugLink slug={`${savedSlug}/register`} />
-          </p>
-        ) : null}
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className={field}>
-            <FieldLabel htmlFor="ev-closes" text={T.registrationCloses} help={help["event.registrationCloses"]} />
-            <input id="ev-closes" type="date" value={form.settings.registrationClosesOn ?? ""} onChange={(e) => set(["settings", "registrationClosesOn"], e.target.value || null)} />
-            {showError("settings.registrationClosesOn")}
-          </div>
-          <div className={field}>
-            <FieldLabel htmlFor="ev-closes-time" text={T.registrationClosesTime} help={help["event.registrationClosesTime"]} />
-            <input id="ev-closes-time" type="time" value={form.settings.registrationClosesTime ?? ""} onChange={(e) => set(["settings", "registrationClosesTime"], e.target.value || null)} />
-            {showError("settings.registrationClosesTime")}
-          </div>
-          <div className={field}>
-            <FieldLabel htmlFor="ev-max" text={T.registrationMax} help={help["event.registrationMax"]} />
-            <input id="ev-max" type="number" min={1} max={500} value={form.settings.registrationMaxPerDivision ?? ""} onChange={(e) => set(["settings", "registrationMaxPerDivision"], e.target.value === "" ? null : Number(e.target.value))} />
-            {showError("settings.registrationMaxPerDivision")}
-          </div>
-        </div>
-        <p className="text-sm font-semibold">{T.registrationClosesHint}</p>
-        <p className="text-sm font-semibold">{T.registrationMaxHint}</p>
-        <div className={field}>
-          <FieldLabel htmlFor="ev-closed-message" text={T.registrationClosedMessage} help={help["event.registrationClosedMessage"]} />
-          <textarea id="ev-closed-message" rows={3} maxLength={300} value={form.settings.registrationClosedMessage ?? ""} onChange={(e) => set(["settings", "registrationClosedMessage"], e.target.value)} />
-          <p className="text-sm font-semibold">{T.registrationClosedMessageHint}</p>
-          {showError("settings.registrationClosedMessage")}
-        </div>
-      </section>
-
-      <IdentificationEditor value={ident} onChange={(v) => set(["settings", "identification"], v)} presets={schemes} organisationId={initial.organisationId} errors={identErrors} />
-
-      <section className="panel flex flex-col gap-3">
-        <h2 className="text-xl font-extrabold">{T.joinHeading}</h2>
-        <p className="font-semibold">{T.joinText(origin || "…", form.slug || "…")}</p>
-        <p className="font-semibold">
-          {T.eventCode} <strong data-testid="event-code">{form.slug || "…"}</strong>
-        </p>
-      </section>
+      <SettingsPanel testId="event-panel" sentenceTestId="event-sentence" title={T.basics} sentence={sentence} simple={simple} advanced={advanced} advancedCount={EVENT_ADVANCED.length} storageKey="bigair.org-more-event" footer={footer} />
 
       {canPublishToggle ? (
-        <section className="panel flex flex-col gap-2">
-          <h2 className="text-xl font-extrabold">{T.visibility}</h2>
-          <label className="flex items-center gap-3 font-bold">
+        <section className="org-new flex flex-col gap-1 rounded-card border border-beach-line p-4">
+          <h3 className="text-[14px] font-semibold">{T.visibility}</h3>
+          <label className="flex min-h-[var(--org-ctl)] items-center gap-3 text-body font-semibold">
             <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
             {T.published}
           </label>
-          <p className="font-semibold">{T.draftNote}</p>
+          <p className="text-body font-medium text-beach-muted">{T.draftNote}</p>
         </section>
       ) : (
-        <p className="panel font-semibold">{T.otherStatus(initial.status)}</p>
+        <p className="rounded-card border border-beach-line p-4 text-body font-semibold">{T.otherStatus(initial.status)}</p>
       )}
 
       {serverError ? (
-        <p role="alert" className="panel field-error">
+        <p role="alert" className="rounded-card border border-beach-border p-4 text-body font-semibold text-beach-crash">
           {copy.common.problem(serverError)}
         </p>
       ) : null}
-
-      <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" className="btn btn-primary" disabled={pending || (slugChangedOnPublished && !understood)}>
-          {pending ? copy.common.saving : initial.id ? T.saveEvent : T.create}
-        </button>
-        {initial.id ? (
-          <Link href={`/org/events/${initial.id}/divisions`} className="btn">
-            {T.next}
-          </Link>
-        ) : null}
-      </div>
     </form>
   );
 }

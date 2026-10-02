@@ -3,15 +3,20 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { ConfirmButton } from "@/components/confirm-button";
-import { FieldLabel, HelpButton } from "@/components/help-button";
 import { LadderDiagram } from "@/components/ladder-diagram";
+import { Button, disabledWhen } from "@/components/org/button";
+import { NumberField } from "@/components/org/number-field";
+import { SettingRow } from "@/components/org/setting-row";
+import { SettingsPanel } from "@/components/org/settings-panel";
 import { SchemaForm, type NewItem, type SelectOptions } from "@/components/schema-form/schema-form";
 import { toast } from "@/hooks/use-toast";
 import { issuesToMap } from "@/lib/form/path";
 import { advanceTargets, newRound } from "@/lib/format-ui/custom";
 import { addRoundAfter } from "@/lib/format-ui/custom-ladder";
-import { GENERATOR, KIND_PRESET_KEY, KINDS, withHeatName, withLadderKind, withRoundName, type GeneratedKind } from "@/lib/format-ui/ladder-kind";
+import { GENERATOR, heatSizes, KIND_PRESET_KEY, KINDS, paramOf, withHeatName, withLadderKind, withRoundName, type GeneratedKind } from "@/lib/format-ui/ladder-kind";
 import { previewFormat } from "@/lib/format-ui/preview";
+import { formatSentence } from "@/lib/format-ui/sentence";
+import { countFields } from "@/lib/schema-form/count";
 import { exportPreset, type PresetKind } from "@/lib/presets/io";
 import { presetGroups, type PresetRow } from "@/lib/presets/options";
 import { FormatTemplateSchema, type FormatTemplate } from "@/lib/schemas/format-template";
@@ -19,7 +24,7 @@ import { ScoringModelSchema } from "@/lib/schemas/scoring-model";
 import { friendlyMessage, schemaToNodes } from "@/lib/schema-form/nodes";
 import { describeScoringModel } from "@/lib/scoring-ui/describe";
 import { diffOverrides, FORMAT_NULLABLE, mergeOverrides, sameOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
-import { copy, FORMAT_HIDDEN, FORMAT_LABELS, help, SCORING_HIDDEN, SCORING_LABELS } from "@/lib/ui-copy";
+import { copy, FORMAT_HIDDEN, FORMAT_LABELS, help, orgCopy, SCORING_HIDDEN, SCORING_LABELS } from "@/lib/ui-copy";
 import { expandFormat, drawToLadder, designDifference, ladderTemplate, LadderConvertError, newLadder, previewRiders, type CustomLadder, type Entrant } from "@/lib/engine/ladder";
 import { generateDraw } from "../draw/actions";
 import { importPreset, savePreset, saveDivisionRules, unlockRules } from "./actions";
@@ -87,8 +92,7 @@ export function RulesPanel({
 
   const [presetId, setPresetId] = useState<string | null>(savedPresetId);
   const [custom, setCustom] = useState(false); // an unsaved custom ladder
-  const [showAll, setShowAll] = useState(false);
-  const [showLoad, setShowLoad] = useState(false);
+  const [showPresetTools, setShowPresetTools] = useState(false);
   const [riders, setRiders] = useState(division.riders.length || 14);
   const [message, setMessage] = useState<Message>(null);
   const [presetName, setPresetName] = useState("");
@@ -159,7 +163,6 @@ export function RulesPanel({
     setCustom(true);
     setWorking(FormatTemplateSchema.parse(ladderTemplate(newLadder(3, 2, 4), { name: R.ladderDefaultName })));
     setMessage(null);
-    setShowLoad(false);
   }
 
   /** "Start from Knockout and edit": any generated format becomes a ladder you can change seat by seat. */
@@ -304,124 +307,55 @@ export function RulesPanel({
   const noun = scoring ? "scoring" : "format";
   const idSuffix = `${kind}-${division.id}`;
 
-  return (
-    <section className="flex flex-col gap-3" aria-label={`${scoring ? copy.divisions.tabScoring : copy.divisions.tabFormat}: ${division.name}`}>
-      {locked ? (
-        <div className="panel flex flex-col gap-3" role="note">
-          <p className="text-lg font-bold">{R.lockedTitle}</p>
-          <p className="font-semibold">{R.lockedText}</p>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col gap-1">
-              <label htmlFor={`reason-${idSuffix}`}>{R.reason}</label>
-              <input id={`reason-${idSuffix}`} value={reason} onChange={(e) => setReason(e.target.value)} className="w-96 max-w-full" />
-            </div>
-            <button type="button" className="btn btn-danger" disabled={pending || reason.trim().length < 5} onClick={unlock}>
-              {R.unlock}
-            </button>
-          </div>
-        </div>
-      ) : null}
+  const gate = disabledWhen;
+  const kindTitle = (): string => {
+    const k = ladderKindOf(working);
+    if (k === "ladder") return copy.formatSimple.customLadder.title;
+    if (k === "custom") return typeof (working as { name?: unknown } | null)?.name === "string" ? String((working as { name: string }).name) : copy.formatSimple.customLadder.title;
+    return copy.formatSimple.types[k as GeneratedKind].title;
+  };
+  const sentence = scoring
+    ? model
+      ? describeScoringModel(model)
+      : R.chooseFirst(R.scoringWord)
+    : preview?.ok && working
+      ? formatSentence({ kindTitle: kindTitle(), heatSize: heatSizes(working as Record<string, unknown>)?.target, advance: paramOf(working as Record<string, unknown>, "advancePerHeat") as number | undefined, finalSize: paramOf(working as Record<string, unknown>, "finalSize") as number | undefined, riders, rounds: preview.rounds.length, totalMin: preview.totalMinutes })
+      : (preview?.sentence ?? R.chooseFirst(R.formatWord));
 
-      {scoring ? (
+  const loadMenu = {
+    builtIn: groups.system.map((o) => ({ id: o.id, label: o.label })),
+    mine: groups.organisation.map((o) => ({ id: o.id, label: o.label })),
+    onLoad: choose,
+    onSaveAsPreset: () => setShowPresetTools(true),
+    disabledReason: locked ? R.loadLocked : undefined,
+  };
+
+  const banner = locked ? (
+    <div role="note" data-testid="rules-locked" className="flex flex-col gap-2 border-b border-beach-line bg-beach-surface px-4 py-3">
+      <p className="text-body font-semibold">{R.lockedTitle}</p>
+      <p className="text-small font-medium text-beach-muted">{R.lockedText}</p>
+      <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
-          <FieldLabel htmlFor={`preset-${idSuffix}`} text={scoring ? R.scoringPreset : R.formatPreset} help={help[scoring ? "scoring.preset" : "format.preset"]} />
-          <select id={`preset-${idSuffix}`} value={custom ? "" : (presetId ?? "")} disabled={locked} onChange={(e) => choose(e.target.value)}>
-            <option value="">{custom ? R.customUnsaved : copy.common.choose}</option>
-            {groups.organisation.length > 0 ? (
-              <optgroup label={R.myPresets}>
-                {groups.organisation.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-            <optgroup label={R.builtIn}>
-              {groups.system.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-          {baseRow && baseParsed && typeof baseParsed.description === "string" ? <p className="text-sm font-semibold">{baseParsed.description}</p> : null}
+          <label htmlFor={`reason-${idSuffix}`} className="text-small font-semibold">
+            {R.reason}
+          </label>
+          <input id={`reason-${idSuffix}`} value={reason} onChange={(e) => setReason(e.target.value)} className="h-[var(--org-ctl)] w-96 max-w-full rounded-[8px] border border-beach-border bg-transparent px-3 text-body font-semibold" />
         </div>
+        <Button variant="danger" onClick={unlock} {...gate(pending ? copy.common.saving : reason.trim().length < 5 ? R.unlockNeedsReason : null)}>
+          {R.unlock}
+        </Button>
+      </div>
+    </div>
+  ) : null;
 
-      ) : (
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-3">
-            <button type="button" className="btn" disabled={locked} aria-expanded={showLoad} onClick={() => setShowLoad((v) => !v)}>
-              {copy.formatSimple.loadSaved}
-            </button>
-            <HelpButton what={copy.formatSimple.loadSaved} help={help["format.load"]} />
-            {custom ? <span className="font-bold">{R.customUnsaved}</span> : null}
-          </div>
-          {showLoad ? (
-            <div className="flex flex-col gap-1">
-              <label htmlFor={`preset-${idSuffix}`} className="font-bold">
-                {copy.formatSimple.loadSavedLabel}
-              </label>
-              <select
-                id={`preset-${idSuffix}`}
-                value=""
-                onChange={(e) => {
-                  if (e.target.value) choose(e.target.value);
-                  setShowLoad(false);
-                }}
-              >
-                <option value="">{copy.common.choose}</option>
-                {groups.organisation.length > 0 ? (
-                  <optgroup label={R.myPresets}>
-                    {groups.organisation.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
-                <optgroup label={R.builtIn}>
-                  {groups.system.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-              <p className="text-sm font-semibold">{copy.formatSimple.loadSavedHint}</p>
-            </div>
-          ) : null}
-        </div>
-      )}
-
-      {model ? (
-        <p className="panel text-lg font-bold" data-testid="model-sentence" aria-live="polite">
-          {describeScoringModel(model)}
-        </p>
-      ) : null}
-
-      {working && scoring ? (
-        <div className="flex flex-col gap-1">
-          <span className="flex items-start gap-2">
-            <label className="flex items-center gap-3 font-bold">
-              <input type="checkbox" checked={showAll} disabled={locked} onChange={(e) => setShowAll(e.target.checked)} />
-              {R.showAll}
-            </label>
-            <HelpButton what={R.showAll} help={help["rules.showAll"]} />
-          </span>
-          <p className="text-sm font-semibold">{R.showAllHint}</p>
-        </div>
-      ) : null}
-
-      {!working && !custom && scoring ? <p className="font-semibold">{R.chooseFirst(R.scoringWord)}</p> : null}
-
+  const simple = (
+    <div className="org-new flex min-w-0 flex-col gap-3 py-2">
+      {scoring && baseRow && baseParsed && typeof baseParsed.description === "string" ? <p className="text-small font-medium text-beach-muted">{baseParsed.description}</p> : null}
+      {!working && !custom && scoring ? <p className="text-body font-semibold">{R.chooseFirst(R.scoringWord)}</p> : null}
       {working && scoring ? <ScoringSimple working={working} onChange={setValue} errors={errors} readOnly={locked} /> : null}
-      {working && scoring && showAll ? (
-        <SchemaForm node={scoringNodes} value={working} onChange={setValue} errors={errors} readOnly={locked} selectOptions={selectOptions} hiddenPaths={SCORING_SIMPLE_PATHS} />
-      ) : null}
-      {working && scoring && showAll ? advancedExtra : null}
 
       {!scoring ? (
-        <section className="panel flex flex-col gap-3" aria-label={R.formatWord} data-testid="format-card">
+        <div className="flex min-w-0 flex-col gap-3" data-testid="format-card" aria-label={R.formatWord}>
           <FormatSimple
             working={(working as Record<string, unknown> | null) ?? null}
             onChange={setValue}
@@ -431,15 +365,27 @@ export function RulesPanel({
             readOnly={locked}
             minHeats={preview?.ok ? preview.minHeatsPerRider : null}
           />
+          {custom ? <p className="text-body font-semibold">{R.customUnsaved}</p> : null}
           {working && isFixed ? <CustomBuilder working={working as Record<string, unknown>} onChange={setValue} riders={riders} readOnly={locked} /> : null}
+
+          {working ? (
+            <SettingRow id="preview-with" label={copy.formatSimple.previewWith} explanation={help["format.preview"].text} example={help["format.preview"].example ?? ""}>
+              <span className="inline-flex flex-wrap items-center gap-2">
+                <NumberField id={`riders-${division.id}`} label={copy.formatSimple.previewWith} min={1} max={200} value={riders} onChange={setRiders} />
+                <span className="text-body font-medium text-beach-muted">{copy.formatSimple.riders}</span>
+                {!isLadder
+                  ? [8, 14, 24].map((n) => (
+                      <Button key={n} variant="secondary" onClick={() => setRiders(n)}>
+                        {String(n)}
+                      </Button>
+                    ))
+                  : null}
+              </span>
+            </SettingRow>
+          ) : null}
 
           {working && isLadder ? (
             <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <FieldLabel htmlFor={`riders-${division.id}`} text={copy.formatSimple.previewWith} help={help["format.preview"]} />
-                <input id={`riders-${division.id}`} type="number" min={1} max={200} value={riders} onChange={(e) => setRiders(Math.max(1, Math.min(200, Number(e.target.value) || 1)))} className="w-24" />
-                <span className="font-bold">{copy.formatSimple.riders}</span>
-              </div>
               <WarmUpField working={working as Record<string, unknown>} onChange={setValue} readOnly={locked} />
               <LadderBuilder
                 ladder={(working as { ladder: CustomLadder }).ladder}
@@ -484,16 +430,6 @@ export function RulesPanel({
 
           {working && !isLadder ? (
             <div className="flex flex-col gap-3" aria-label={copy.formatSimple.previewLabel}>
-              <div className="flex flex-wrap items-center gap-3">
-                <FieldLabel htmlFor={`riders-${division.id}`} text={copy.formatSimple.previewWith} help={help["format.preview"]} />
-                <input id={`riders-${division.id}`} type="number" min={1} max={200} value={riders} onChange={(e) => setRiders(Math.max(1, Math.min(200, Number(e.target.value) || 1)))} className="w-24" />
-                <span className="font-bold">{copy.formatSimple.riders}</span>
-                {[8, 14, 24].map((n) => (
-                  <button key={n} type="button" className="btn" onClick={() => setRiders(n)}>
-                    {n}
-                  </button>
-                ))}
-              </div>
               {preview ? (
                 <>
                   <LadderDiagram
@@ -503,170 +439,215 @@ export function RulesPanel({
                     onAddRound={isFixed && !locked ? (afterId) => setValue(addRoundAfter(working as never, afterId)) : undefined}
                   />
                   <div className="flex flex-col gap-1">
-                    <p className="text-lg font-bold" data-testid="format-preview" aria-live="polite">
+                    <p className="text-body font-semibold" data-testid="format-preview" aria-live="polite">
                       {preview.sentence}
                     </p>
                     {preview.ok && preview.finalNote ? (
-                      <p className="font-bold" data-testid="final-note">
+                      <p className="text-body font-medium" data-testid="final-note">
                         {preview.finalNote}
                       </p>
                     ) : null}
                     {preview.ok ? (
-                      <p className="font-bold" data-testid="min-heats">
+                      <p className="text-body font-medium" data-testid="min-heats">
                         {copy.formatSimple.minHeats(preview.minHeatsPerRider)}
                       </p>
                     ) : null}
                     {preview.ok && preview.timeSentence ? (
-                      <p className="font-bold" data-testid="time-sentence">
+                      <p className="text-body font-medium" data-testid="time-sentence">
                         {preview.timeSentence}
                       </p>
                     ) : null}
-                    {preview.ok ? <p className="font-semibold">{copy.formatSimple.ridingTime(preview.ridingMinutes)}</p> : null}
+                    {preview.ok ? <p className="text-small font-medium text-beach-muted">{copy.formatSimple.ridingTime(preview.ridingMinutes)}</p> : null}
                     {preview.warnings.map((w) => (
-                      <p key={w} className="font-bold">
+                      <p key={w} className="text-body font-semibold">
                         {copy.formatSimple.warning(w)}
                       </p>
                     ))}
                   </div>
                 </>
               ) : (
-                <p className="font-semibold">{copy.formatSimple.fixFirst}</p>
+                <p className="text-body font-semibold">{copy.formatSimple.fixFirst}</p>
               )}
             </div>
           ) : null}
 
-          {working && !isFixed && !isLadder ? <PerRoundLengths working={working as Record<string, unknown>} rounds={perRound} onChange={setValue} readOnly={locked} /> : null}
-
-          {working ? (
-            <div className="flex flex-col gap-1">
-              <span className="flex items-start gap-2">
-                <label className="flex items-center gap-3 font-bold">
-                  <input type="checkbox" checked={showAll} disabled={locked} onChange={(e) => setShowAll(e.target.checked)} />
-                  {R.showAll}
-                </label>
-                <HelpButton what={R.showAll} help={help["rules.showAll"]} />
-              </span>
-              <p className="text-sm font-semibold">{R.showAllHint}</p>
-            </div>
-          ) : null}
-          {working && isFixed && !showAll ? <p className="font-semibold">{R.fixedRoundsNote}</p> : null}
-          {working && showAll ? (
-            <SchemaForm
-              node={formatNodes}
-              value={working}
-              onChange={setValue}
-              errors={errors}
-              readOnly={locked}
-              hidden={
-                (working as { kind?: string }).kind === "fixed"
-                  ? ["generator", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"]
-                  : (working as { kind?: string }).kind === "ladder"
-                    ? ["generator", "rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"]
-                    : ["rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"]
-              }
-              selectOptions={selectOptions}
-              newItem={newItem}
-              hiddenPaths={isFixed ? [] : FORMAT_SIMPLE_PATHS}
-            />
-          ) : null}
-        </section>
-      ) : null}
-
-      {Object.keys(errors).length > 0 ? (
-        <div role="alert" className="panel">
-          <p className="field-error">{R.fixTitle}</p>
-          <ul className="list-disc pl-6 font-semibold">
-            {Object.entries(errors)
-              .slice(0, 8)
-              .map(([k, m]) => (
-                <li key={k}>
-                  {k.replace(/\./g, " › ")}: {friendlyMessage(m)}
-                </li>
-              ))}
-          </ul>
+          {working && !isFixed && !isLadder ? <PerRoundLengths working={working as Record<string, unknown>} rounds={perRound} onChange={setValue} readOnly={locked} emptyReason={template ? undefined : copy.formatSimple.perRound.emptyInvalid} /> : null}
         </div>
       ) : null}
+    </div>
+  );
 
-      {message ? (
-        <div role={message.kind === "error" ? "alert" : "status"} className="panel">
-          <p className={message.kind === "error" ? "field-error" : "font-bold"}>{message.kind === "error" ? copy.common.problem(message.text) : copy.common.toastDone(message.text)}</p>
-          {message.problems && message.problems.length > 0 ? (
+  const advancedFields = scoring
+    ? countFields(scoringNodes, SCORING_HIDDEN, SCORING_SIMPLE_PATHS)
+    : countFields(formatNodes, (working as { kind?: string } | null)?.kind === "fixed" ? [...FORMAT_HIDDEN, "generator", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"] : [...FORMAT_HIDDEN, "rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"], isFixed ? [] : FORMAT_SIMPLE_PATHS);
+  const advanced = working ? (
+    <div className="org-new flex min-w-0 flex-col gap-3 py-2">
+      {scoring ? (
+        <>
+          <SchemaForm node={scoringNodes} value={working} onChange={setValue} errors={errors} readOnly={locked} selectOptions={selectOptions} hiddenPaths={SCORING_SIMPLE_PATHS} />
+          {advancedExtra}
+        </>
+      ) : (
+        <>
+          {isFixed ? <p className="text-body font-semibold">{R.fixedRoundsNote}</p> : null}
+          <SchemaForm
+            node={formatNodes}
+            value={working}
+            onChange={setValue}
+            errors={errors}
+            readOnly={locked}
+            hidden={
+              (working as { kind?: string }).kind === "fixed"
+                ? ["generator", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"]
+                : (working as { kind?: string }).kind === "ladder"
+                  ? ["generator", "rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"]
+                  : ["rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"]
+            }
+            selectOptions={selectOptions}
+            newItem={newItem}
+            hiddenPaths={isFixed ? [] : FORMAT_SIMPLE_PATHS}
+          />
+        </>
+      )}
+    </div>
+  ) : null;
+
+  const messages =
+    Object.keys(errors).length > 0 || message ? (
+      <div className="flex flex-col gap-2">
+        {Object.keys(errors).length > 0 ? (
+          <div role="alert" className="rounded-[8px] border border-beach-border bg-beach-surface px-3 py-2">
+            <p className="field-error">{R.fixTitle}</p>
             <ul className="list-disc pl-6 font-semibold">
-              {message.problems.map((p) => (
-                <li key={p}>{p}</li>
-              ))}
+              {Object.entries(errors)
+                .slice(0, 8)
+                .map(([k, m]) => (
+                  <li key={k}>
+                    {k.replace(/\./g, " › ")}: {friendlyMessage(m)}
+                  </li>
+                ))}
             </ul>
+          </div>
+        ) : null}
+        {message ? (
+          <div role={message.kind === "error" ? "alert" : "status"} className="rounded-[8px] border border-beach-border bg-beach-surface px-3 py-2">
+            <p className={message.kind === "error" ? "field-error" : "font-bold"}>{message.kind === "error" ? copy.common.problem(message.text) : copy.common.toastDone(message.text)}</p>
+            {message.problems && message.problems.length > 0 ? (
+              <ul className="list-disc pl-6 font-semibold">
+                {message.problems.map((p) => (
+                  <li key={p}>{p}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    ) : null;
+
+  const saveTools =
+    working && !locked ? (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="primary" onClick={saveForDivision} {...gate(pending ? copy.common.saving : !valid ? R.saveInvalid : !presetId || custom ? R.saveFirst : null)}>
+            {pending ? copy.common.saving : R.saveFor(noun, division.name)}
+          </Button>
+          {unsaved && presetId && !custom ? <span className="text-body font-semibold">{copy.common.unsaved}</span> : null}
+          {custom ? <span className="text-body font-semibold">{R.saveFirst}</span> : null}
+          {!custom && baseParsed && unsaved ? (
+            <Button variant="quiet" onClick={() => choose(presetId ?? "")}>
+              {R.discard}
+            </Button>
+          ) : null}
+          {!showPresetTools ? (
+            <Button variant="quiet" onClick={() => setShowPresetTools(true)}>
+              {orgCopy.settings.saveAsPreset}
+            </Button>
           ) : null}
         </div>
-      ) : null}
 
-      {working && !locked ? (
-        <div className="flex flex-col gap-4 border-t-2 border-[#111] pt-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <button type="button" className="btn btn-primary" disabled={pending || !valid || !presetId || custom} onClick={saveForDivision}>
-              {pending ? copy.common.saving : R.saveFor(noun, division.name)}
-            </button>
-            {unsaved && presetId && !custom ? <span className="font-bold">{copy.common.unsaved}</span> : null}
-            {custom ? <span className="font-bold">{R.saveFirst}</span> : null}
-            {!custom && baseParsed && unsaved ? (
-              <button type="button" className="btn" onClick={() => choose(presetId ?? "")}>
-                {R.discard}
-              </button>
-            ) : null}
-          </div>
-
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col gap-1">
-              <label htmlFor={`pname-${idSuffix}`}>{scoring ? R.newPresetLabel : R.newFormatLabel}</label>
-              <input id={`pname-${idSuffix}`} value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder={R.presetPlaceholder} className="w-72" />
-            </div>
-            <button type="button" className="btn" disabled={pending || !valid || presetName.trim().length < 2} onClick={() => saveAsPreset(false)}>
-              {scoring ? R.saveNewPreset : R.saveMyFormat}
-            </button>
-            {owned && !custom ? (
-              <button type="button" className="btn" disabled={pending || !valid} onClick={() => saveAsPreset(true)}>
-                {R.saveNewVersion(baseRow?.name ?? "")}
-              </button>
-            ) : null}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button type="button" className="btn" disabled={!valid} onClick={download}>
-              {R.export}
-            </button>
-            <label className="btn cursor-pointer">
-              {R.import}
-              <input
-                ref={fileInput}
-                type="file"
-                accept="application/json,.json"
-                className="sr-only"
-                aria-label={R.importAria(noun)}
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (file) doImport(await file.text());
-                  if (fileInput.current) fileInput.current.value = "";
-                }}
-              />
-            </label>
-            <button type="button" className="btn" onClick={() => setShowPaste((v) => !v)}>
-              {showPaste ? R.pasteHide : R.pasteShow}
-            </button>
-          </div>
-          {showPaste ? (
-            <div className="flex flex-col gap-2">
-              <label htmlFor={`paste-${idSuffix}`}>{R.pasteLabel}</label>
-              <textarea id={`paste-${idSuffix}`} rows={8} value={pasted} onChange={(e) => setPasted(e.target.value)} className="font-mono" />
-              <div>
-                <button type="button" className="btn" disabled={pending || pasted.trim() === ""} onClick={() => doImport(pasted)}>
-                  {R.pasteImport}
-                </button>
+        {showPresetTools ? (
+          <div className="flex flex-col gap-3 rounded-[8px] border border-beach-line p-3" data-testid="preset-tools">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex flex-col gap-1">
+                <label htmlFor={`pname-${idSuffix}`} className="text-small font-semibold">
+                  {scoring ? R.newPresetLabel : R.newFormatLabel}
+                </label>
+                <input id={`pname-${idSuffix}`} value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder={R.presetPlaceholder} className="h-[var(--org-ctl)] w-72 max-w-full rounded-[8px] border border-beach-border bg-transparent px-3 text-body font-semibold" />
               </div>
+              <Button variant="secondary" onClick={() => saveAsPreset(false)} {...gate(pending ? copy.common.saving : !valid ? R.saveInvalid : presetName.trim().length < 2 ? R.presetNeedsName : null)}>
+                {scoring ? R.saveNewPreset : R.saveMyFormat}
+              </Button>
+              {owned && !custom ? (
+                <Button variant="secondary" onClick={() => saveAsPreset(true)} {...gate(pending ? copy.common.saving : !valid ? R.saveInvalid : null)}>
+                  {R.saveNewVersion(baseRow?.name ?? "")}
+                </Button>
+              ) : null}
             </div>
-          ) : null}
-          <p className="text-sm font-semibold">{R.importNote}</p>
-        </div>
-      ) : null}
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="secondary" onClick={download} {...gate(!valid ? R.saveInvalid : null)}>
+                {R.export}
+              </Button>
+              <label className="inline-flex min-h-[var(--org-ctl)] cursor-pointer items-center rounded-[8px] border border-beach-border bg-beach-bg px-3 text-body font-semibold">
+                {R.import}
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept="application/json,.json"
+                  className="sr-only"
+                  aria-label={R.importAria(noun)}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) doImport(await file.text());
+                    if (fileInput.current) fileInput.current.value = "";
+                  }}
+                />
+              </label>
+              <Button variant="secondary" onClick={() => setShowPaste((v) => !v)}>
+                {showPaste ? R.pasteHide : R.pasteShow}
+              </Button>
+            </div>
+            {showPaste ? (
+              <div className="flex flex-col gap-2">
+                <label htmlFor={`paste-${idSuffix}`} className="text-small font-semibold">
+                  {R.pasteLabel}
+                </label>
+                <textarea id={`paste-${idSuffix}`} rows={8} value={pasted} onChange={(e) => setPasted(e.target.value)} className="rounded-[8px] border border-beach-border bg-transparent p-2 font-mono" />
+                <div>
+                  <Button variant="secondary" onClick={() => doImport(pasted)} {...gate(pending ? copy.common.saving : pasted.trim() === "" ? R.pasteEmpty : null)}>
+                    {R.pasteImport}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            <p className="text-small font-medium text-beach-muted">{R.importNote}</p>
+          </div>
+        ) : null}
+      </div>
+    ) : null;
+
+  const footer =
+    messages || saveTools ? (
+      <div className="org-new flex flex-col gap-3">
+        {messages}
+        {saveTools}
+      </div>
+    ) : undefined;
+
+  return (
+    <section className="min-w-0" aria-label={`${scoring ? copy.divisions.tabScoring : copy.divisions.tabFormat}: ${division.name}`}>
+      <SettingsPanel
+        testId={scoring ? "scoring-panel" : "format-panel"}
+        sentenceTestId={scoring ? "model-sentence" : "format-sentence"}
+        title={`${division.name} · ${scoring ? copy.divisions.tabScoring : copy.divisions.tabFormat}`}
+        sentence={sentence}
+        loadMenu={loadMenu}
+        banner={banner}
+        simple={simple}
+        advanced={advanced}
+        advancedCount={advancedFields}
+        storageKey={`bigair.org-more-${kind}`}
+        footer={footer}
+      />
     </section>
   );
 }

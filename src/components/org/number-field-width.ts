@@ -2,6 +2,8 @@ export interface NumberRange {
   min?: number;
   max: number;
   step?: number;
+  /** A placeholder word ("auto") that must fit when the box is empty. */
+  minChars?: number;
 }
 
 /** Digits after the decimal point that a step allows: 0.5 → 1, 0.25 → 2, 1 → 0. */
@@ -14,9 +16,9 @@ export function decimalsOf(step: number | undefined): number {
 const digitsOf = (n: number) => String(Math.trunc(Math.abs(n))).length;
 
 /** How many characters the longest allowed value takes: its digits, a point and the decimals, and one more when it can be negative. */
-export function numberFieldChars({ min = 0, max, step }: NumberRange): number {
+export function numberFieldChars({ min = 0, max, step, minChars = 0 }: NumberRange): number {
   const decimals = decimalsOf(step);
-  return Math.max(digitsOf(max), digitsOf(min)) + (decimals > 0 ? decimals + 1 : 0) + (min < 0 ? 1 : 0);
+  return Math.max(minChars, Math.max(digitsOf(max), digitsOf(min)) + (decimals > 0 ? decimals + 1 : 0) + (min < 0 ? 1 : 0));
 }
 
 /** The CSS width of a number field: its characters (digits are equally wide) plus the box (2 px frame, 12 px padding each side). Never full width. */

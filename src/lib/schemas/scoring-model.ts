@@ -237,7 +237,7 @@ export const ScoringModelSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["heightSensor", "bonus"],
-        message: 'heightSensor.use = "bonus" needs a bonus configuration',
+        message: 'heightSensor.use = "bonus" needs a bonus setting',
       });
     }
 

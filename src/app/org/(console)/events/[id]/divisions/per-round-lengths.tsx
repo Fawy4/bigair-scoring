@@ -1,6 +1,9 @@
 "use client";
 
-import { FieldLabel } from "@/components/help-button";
+import { Button } from "@/components/org/button";
+import { HelpTip } from "@/components/org/help-tip";
+import { NumberField } from "@/components/org/number-field";
+import { SettingRow } from "@/components/org/setting-row";
 import type { RoundLengthRow } from "@/lib/format-ui/per-round";
 import { warmUpOf, withoutRoundLengths, withoutRoundWarmUps, withRoundLength, withRoundWarmUp, withWarmUp } from "@/lib/format-ui/ladder-kind";
 import { copy, help } from "@/lib/ui-copy";
@@ -9,74 +12,104 @@ const P = copy.formatSimple.perRound;
 
 export type RoundLength = RoundLengthRow;
 
-/** "Heat length per round": optional overrides, pre-filled from the ladder's own lengths. Breaks stay global. */
-export function PerRoundLengths({ working, rounds, onChange, readOnly }: { working: Record<string, unknown>; rounds: RoundLength[]; onChange: (v: unknown) => void; readOnly?: boolean }) {
+/**
+ * "Heat length per round": a table with one row for each round of the preview, each box pre-filled with the length that round has now.
+ * Leaving a box blank (or typing the division's length again) gives the round the division's heat length. Breaks stay global.
+ * With no rows it says why, in a sentence, instead of showing an empty frame.
+ */
+export function PerRoundLengths({ working, rounds, onChange, readOnly, emptyReason }: { working: Record<string, unknown>; rounds: RoundLength[]; onChange: (v: unknown) => void; readOnly?: boolean; emptyReason?: string }) {
   const own = (working.roundDurationMin as Record<string, number> | undefined) ?? {};
   const ownWarm = (working.roundWarmUpMin as Record<string, number> | undefined) ?? {};
   const warm = warmUpOf(working);
+  const baseLength = rounds[0]?.defaultMin;
   return (
-    <fieldset className="flex flex-col gap-2" data-testid="per-round-lengths" disabled={readOnly}>
-      <legend>
-        <FieldLabel as="span" text={P.heading} help={help["format.perRound"]} />
+    <fieldset className="org-new flex min-w-0 flex-col gap-2" data-testid="per-round-lengths" disabled={readOnly}>
+      <legend className="flex items-center gap-1 text-body font-semibold">
+        {P.heading}
+        <HelpTip what={P.heading} text={help["format.perRound"].text} example={help["format.perRound"].example} />
       </legend>
-      <p className="text-sm font-semibold">{P.note}</p>
+      <p className="text-small font-medium text-beach-muted" data-testid="per-round-note">
+        {P.note(baseLength)}
+      </p>
       <WarmUpField working={working} onChange={onChange} readOnly={readOnly} />
       {rounds.length === 0 ? (
-        <p className="font-bold" data-testid="per-round-empty">
-          {P.empty}
+        <p className="rounded-[8px] border border-beach-line bg-beach-surface px-3 py-2 text-body font-semibold" data-testid="per-round-empty">
+          {emptyReason ?? P.empty}
         </p>
-      ) : null}
-      <table className="w-full max-w-xl border-collapse">
-        <tbody>
-          {rounds.map((r) => {
-            const id = `pr-${r.id}`;
-            const custom = own[r.id] !== undefined;
-            return (
-              <tr key={r.id} className="border-b-2 border-[#111]">
-                <th scope="row" className="py-2 pr-3 text-left">
-                  <label htmlFor={id}>{P.row(r.shortName, r.name)}</label>
+      ) : (
+        <div className="overflow-x-auto rounded-card border border-beach-line">
+          <table className="w-full min-w-[22rem] border-collapse text-body" data-testid="per-round-table">
+            <caption className="sr-only">{P.heading}</caption>
+            <thead>
+              <tr className="bg-beach-surface text-left text-small font-semibold text-beach-muted">
+                <th scope="col" className="px-3 py-2">
+                  {P.colRound}
                 </th>
-                <td className="py-2">
-                  <input
-                    id={id}
-                    aria-label={P.rowLabel(r.shortName)}
-                    type="number"
-                    min={1}
-                    step="any"
-                    value={custom ? own[r.id] : r.defaultMin}
-                    onChange={(e) => onChange(withRoundLength(working, r.id, e.target.value === "" ? "" : Number(e.target.value), r.defaultMin))}
-                    className="w-24"
-                  />
-                </td>
-                <td className="py-2 pl-3 text-sm font-bold">{custom ? P.own : ""}</td>
-                <td className="py-2 pl-3">
-                  <input
-                    aria-label={copy.formatSimple.warmUp.rowLabel(r.shortName)}
-                    type="number"
-                    min={0}
-                    step="any"
-                    value={ownWarm[r.id] !== undefined ? ownWarm[r.id] : warm}
-                    onChange={(e) => onChange(withRoundWarmUp(working, r.id, e.target.value === "" ? "" : Number(e.target.value), warm))}
-                    className="w-24"
-                  />
-                </td>
-                <td className="py-2 pl-3 text-sm font-bold">{ownWarm[r.id] !== undefined ? copy.formatSimple.warmUp.own : ""}</td>
+                <th scope="col" className="px-3 py-2 text-right">
+                  {P.colLength}
+                </th>
+                <th scope="col" className="px-3 py-2 text-right">
+                  {P.colWarmUp}
+                </th>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              {rounds.map((r) => {
+                const custom = own[r.id] !== undefined;
+                return (
+                  <tr key={r.id} data-testid={`per-round-row-${r.id}`} className="border-t border-beach-line">
+                    <th scope="row" className="px-3 py-1 text-left font-semibold">
+                      {P.row(r.shortName, r.name)}
+                    </th>
+                    <td className="px-3 py-1 text-right">
+                      <span className="inline-flex items-center justify-end gap-2">
+                        {custom ? <span className="text-small font-medium text-beach-muted">{P.own}</span> : null}
+                        <NumberField
+                          id={`pr-${r.id}`}
+                          label={P.rowLabel(r.shortName)}
+                          min={1}
+                          max={999}
+                          step={0.5}
+                          value={custom ? own[r.id] : r.defaultMin}
+                          onChange={(v) => onChange(withRoundLength(working, r.id, v, r.defaultMin))}
+                          onClear={() => onChange(withRoundLength(working, r.id, "", r.defaultMin))}
+                          disabled={readOnly}
+                        />
+                      </span>
+                    </td>
+                    <td className="px-3 py-1 text-right">
+                      <span className="inline-flex items-center justify-end gap-2">
+                        {ownWarm[r.id] !== undefined ? <span className="text-small font-medium text-beach-muted">{copy.formatSimple.warmUp.own}</span> : null}
+                        <NumberField
+                          label={copy.formatSimple.warmUp.rowLabel(r.shortName)}
+                          min={0}
+                          max={999}
+                          step={0.5}
+                          value={ownWarm[r.id] !== undefined ? ownWarm[r.id] : warm}
+                          onChange={(v) => onChange(withRoundWarmUp(working, r.id, v, warm))}
+                          onClear={() => onChange(withRoundWarmUp(working, r.id, "", warm))}
+                          disabled={readOnly}
+                        />
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
       {Object.keys(own).length > 0 || Object.keys(ownWarm).length > 0 ? (
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
           {Object.keys(own).length > 0 ? (
-            <button type="button" className="btn" onClick={() => onChange(withoutRoundLengths(working))}>
+            <Button variant="secondary" onClick={() => onChange(withoutRoundLengths(working))}>
               {P.reset}
-            </button>
+            </Button>
           ) : null}
           {Object.keys(ownWarm).length > 0 ? (
-            <button type="button" className="btn" onClick={() => onChange(withoutRoundWarmUps(working))}>
+            <Button variant="secondary" onClick={() => onChange(withoutRoundWarmUps(working))}>
               {copy.formatSimple.warmUp.reset}
-            </button>
+            </Button>
           ) : null}
         </div>
       ) : null}
@@ -88,19 +121,8 @@ export function PerRoundLengths({ working, rounds, onChange, readOnly }: { worki
 export function WarmUpField({ working, onChange, readOnly }: { working: Record<string, unknown>; onChange: (v: unknown) => void; readOnly?: boolean }) {
   const W = copy.formatSimple.warmUp;
   return (
-    <div className="flex flex-col gap-1">
-      <FieldLabel htmlFor="warm-up-single" text={W.heading} help={help["format.warmUp"]} />
-      <input
-        id="warm-up-single"
-        type="number"
-        min={0}
-        step="any"
-        disabled={readOnly}
-        className="w-28"
-        value={warmUpOf(working)}
-        onChange={(e) => onChange(withWarmUp(working, e.target.value === "" ? "" : Math.max(0, Number(e.target.value))))}
-      />
-      <p className="text-sm font-semibold">{W.note}</p>
-    </div>
+    <SettingRow id="warm-up" label={W.heading} explanation={W.note} example={help["format.warmUp"].example ?? ""}>
+      <NumberField id="warm-up-single" label={W.heading} min={0} max={999} step={0.5} value={warmUpOf(working)} disabled={readOnly} onChange={(v) => onChange(withWarmUp(working, v))} onClear={() => onChange(withWarmUp(working, ""))} />
+    </SettingRow>
   );
 }

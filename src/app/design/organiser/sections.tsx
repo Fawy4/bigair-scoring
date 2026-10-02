@@ -13,7 +13,7 @@ import { StatusPill, type StatusState } from "@/components/org/status-pill";
 import { StepFooter } from "@/components/org/step-footer";
 import type { RailStep } from "@/components/org/step-rail";
 import { PRODUCT_NAME } from "@/lib/product";
-import { orgCopy } from "@/lib/org-design/copy";
+import { orgCopy } from "@/lib/ui-copy";
 import { ACCOUNT, ADVANCED_SETTINGS, DEFAULT_DIALS, NOW_NEXT, ORGANISATIONS, PREVIEW_EVENT, READINESS, RUN_ORDER, SERVER_TIME, STEPS, TIMER, sentenceFor, type ScoringDials } from "@/lib/org-design/fixtures";
 import { cn } from "@/lib/utils";
 import type { BeachTextSize, BeachTheme } from "@/components/live/theme-switch";
@@ -144,7 +144,7 @@ function Dashboard({ layout, held, setHold }: { layout: ShellLayout; held: boole
       <PageTitle>{STEP_LABEL.golive}</PageTitle>
       <div className={cn("grid items-start gap-4", laptop ? "grid-cols-2" : "grid-cols-1")}>
         <ReadinessList checks={READINESS} />
-        <NowNextCard now={NOW_NEXT.now.label} timerText={TIMER.text} serverTime={SERVER_TIME} next={NOW_NEXT.next} after={NOW_NEXT.after} held={held} />
+        <NowNextCard now={NOW_NEXT.now.label} timerText={TIMER.text} serverTime={SERVER_TIME} serverZone="Cairo" next={NOW_NEXT.next} after={NOW_NEXT.after} held={held} />
         <WindCallSlot />
         <QuickActions runningHeat={NOW_NEXT.now.label} held={held} onHold={() => setHold(true)} onResume={() => setHold(false)} />
         <div className={laptop ? "col-span-2" : undefined}>

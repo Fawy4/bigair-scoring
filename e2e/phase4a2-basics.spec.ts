@@ -20,6 +20,7 @@ test.describe("event web addresses are links with a copy button", () => {
       expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${baseURL}/e/${slug}`);
 
       await page.goto(`/org/events/${ev!.id}/event`);
+      await page.getByTestId("advanced-toggle").click(); // the web address is behind "More settings"
       const inStep = page.getByTestId("slug-link").first(); // the Event step also links the registration page
       await expect(inStep).toHaveAttribute("href", `/e/${slug}`);
       await expect(inStep).toHaveAttribute("target", "_blank");

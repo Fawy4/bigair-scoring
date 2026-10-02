@@ -1,5 +1,6 @@
 "use client";
 
+import { NumberField } from "@/components/org/number-field";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -73,21 +74,14 @@ function Row({ row, index, total, scheme, cols, clashes, handlers, busy, ids }: 
         </div>
       </td>
       <td className={td}>
-        <input
-          key={String(row.seed)}
-          type="number"
+        <NumberField
+          label={`${C.seed}: ${name}`}
           min={1}
-          aria-label={`${C.seed}: ${name}`}
-          defaultValue={row.seed ?? ""}
-          className={`${input} w-20`}
-          onBlur={(e) => {
-            const v = e.target.value.trim();
-            const n = v === "" ? null : Number(v);
-            if (n !== row.seed) handlers.saveEntry(row, { seed: n !== null && Number.isInteger(n) && n >= 1 ? n : null });
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-          }}
+          max={999}
+          commit="blur"
+          value={row.seed ?? null}
+          onChange={(n) => handlers.saveEntry(row, { seed: Number.isInteger(n) && n >= 1 ? n : null })}
+          onClear={() => handlers.saveEntry(row, { seed: null })}
         />
       </td>
       <td className={td} data-testid="rider-label-cell">

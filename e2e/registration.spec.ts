@@ -40,6 +40,7 @@ test("Event step: registration open / closed, closing day and time, most riders 
   try {
     const { eventId, slug } = await registrationEvent(org, { registrationOpen: false });
     await org.signIn(page, `/org/events/${eventId}/event`);
+    await page.getByTestId("advanced-toggle").click(); // registration is behind "More settings"
     const box = page.getByTestId("registration-settings");
     await expect(box.getByRole("radio", { name: "Closed" })).toBeChecked();
     await box.getByRole("radio", { name: "Open" }).check();
