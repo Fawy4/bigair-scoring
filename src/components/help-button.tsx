@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import { copy, type Help } from "@/lib/ui-copy";
 import { LearnMore } from "@/components/manual/learn-more";
-import { settingHref } from "@/lib/manual/settings-lookup";
+import { settingHref, settingWhere } from "@/lib/manual/settings-lookup";
 
 /** A "?" that opens a one-sentence explanation with an example. A tap, never a long-press (beach rule 00.3). */
 export function HelpButton({ what, help }: { what: string; help: Help }) {
@@ -23,6 +23,7 @@ export function HelpButton({ what, help }: { what: string; help: Help }) {
               <strong>{copy.common.example}</strong> {help.example}
             </>
           ) : null}
+          {settingWhere(help.text) ? <span data-testid="setting-where"> {settingWhere(help.text)}</span> : null}
           <LearnMore href={settingHref(help.text)} what={what} />
         </span>
       ) : null}
@@ -53,6 +54,7 @@ export function FieldLabel({ htmlFor, text, help, as = "label" }: { htmlFor?: st
               <strong>{copy.common.example}</strong> {help.example}
             </>
           ) : null}
+          {settingWhere(help.text) ? <span data-testid="setting-where"> {settingWhere(help.text)}</span> : null}
           <LearnMore href={settingHref(help.text)} what={text} />
         </span>
       ) : null}

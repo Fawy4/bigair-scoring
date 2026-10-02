@@ -197,6 +197,8 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   // "?" help on a Simple setting: tap to open, with an example
   await page.getByRole("button", { name: "About “How the judges’ scores are combined”" }).click();
   await expect(page.getByRole("note").filter({ hasText: "Example: Plain average of 3 judges" })).toBeVisible();
+  // Polish 2, item 9: the "?" ends with where the setting shows and what it changes
+  await expect(page.getByRole("note").filter({ hasText: "Example: Plain average of 3 judges" }).getByTestId("setting-where")).toHaveText(" Changes the panel score of every trick on the console and so the heat total.");
 
   // More settings: the Simple fields stay where they are, every other field appears below them, and the sentence stays in view
   await openMore();
