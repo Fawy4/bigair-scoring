@@ -4,8 +4,8 @@ import { EVENT_ADVANCED, EVENT_SIMPLE, FORMAT_SIMPLE, SCORING_SIMPLE, simpleText
 
 // docs/06 decision 32 (and the plan, step 3): the Simple level of each panel is exactly this list.
 describe("the Simple dials", () => {
-  it("Scoring: best N of M attempts, judges, how their scores combine, Impression / Variety on or off and its scale", () => {
-    expect(SCORING_SIMPLE.map((f) => f.path)).toEqual(["heat.counting.n", "heat.maxAttemptsPerRider", "panel.minJudges", "panel.aggregate", "heat.impression", "heat.impression.scale.max"]);
+  it("Scoring (Polish 2, item 8): what judges enter and its scale, which tricks count and how many, attempts, judges and averaging (trimming), Impression / Variety and its scale", () => {
+    expect(SCORING_SIMPLE.map((f) => f.path)).toEqual(["trick.entry", "trick.scale", "heat.counting.type", "heat.counting.n", "heat.counting.maxPerCategory", "heat.maxAttemptsPerRider", "panel.minJudges", "panel.aggregate", "panel.trimMinJudges", "heat.impression", "heat.impression.scale.max"]);
   });
   it("Format: ladder type, riders per heat, minimum and maximum per heat, how many advance, final size, heat length per round", () => {
     expect(FORMAT_SIMPLE.map((f) => f.id)).toEqual(["type", "heatSize", "minHeat", "maxHeat", "advance", "finalSize", "perRound"]);

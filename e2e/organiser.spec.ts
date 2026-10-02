@@ -174,11 +174,15 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await field("Number of judges").fill("4");
   await expect(page.getByTestId("model-sentence")).toHaveText("Best 2 of 5 attempts + Variety 0–10, 4 judges averaged");
   await expect(page.getByTestId("panel-sentence")).toHaveText("4 judges — plain average");
-  await field("How the judges’ scores are combined").selectOption("trimmed_mean");
-  await expect(page.getByTestId("panel-sentence")).toHaveText("4 judges — plain average; with 5 or more judges the highest and lowest score are dropped and the rest averaged");
+  // Polish 2, item 8: the trimmed average is offered from 5 judges on, and its own setting shows only when it is chosen
+  await expect(field("How the judges’ scores are combined").locator("option[value=trimmed_mean]")).toHaveCount(0);
+  await expect(page.getByTestId("trim-needs-five")).toHaveText("Trimmed average needs at least 5 judges.");
   await field("Number of judges").fill("5");
+  await expect(field("Trim only with at least this many judges")).toHaveCount(0);
+  await field("How the judges’ scores are combined").selectOption("trimmed_mean");
   await expect(page.getByTestId("panel-sentence")).toHaveText("5 judges — highest and lowest score dropped, the rest averaged");
   await expect(page.getByText("Trimming only applies from 5 judges. With fewer judges the plain average is used automatically.")).toBeVisible();
+  await expect(field("Trim only with at least this many judges")).toBeVisible();
   await field("How the judges’ scores are combined").selectOption("mean");
   await field("Number of judges").fill("4");
   await page.getByRole("button", { name: "Save scoring for Pro Men" }).click();

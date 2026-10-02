@@ -16,7 +16,8 @@ import { addRoundAfter } from "@/lib/format-ui/custom-ladder";
 import { GENERATOR, heatSizes, KIND_PRESET_KEY, KINDS, paramOf, withHeatName, withLadderKind, withRoundName, type GeneratedKind } from "@/lib/format-ui/ladder-kind";
 import { previewFormat } from "@/lib/format-ui/preview";
 import { formatSentence } from "@/lib/format-ui/sentence";
-import { countFields } from "@/lib/schema-form/count";
+import { countFields, countVisible } from "@/lib/schema-form/count";
+import { scoringMoreHidden, SCORING_FLAT_PATHS } from "@/lib/scoring-ui/visibility";
 import { exportPreset, type PresetKind } from "@/lib/presets/io";
 import { presetGroups, type PresetRow } from "@/lib/presets/options";
 import { FormatTemplateSchema, type FormatTemplate } from "@/lib/schemas/format-template";
@@ -39,7 +40,6 @@ import { ScoringSimple } from "./scoring-simple";
 const R = copy.rules;
 
 /** Settings the Simple part of the screen already shows; "Show all settings" adds everything else below them. */
-const SCORING_SIMPLE_PATHS = ["heat.maxAttemptsPerRider", "panel.minJudges", "panel.aggregate"];
 const FORMAT_SIMPLE_PATHS = [
   "generator.params.heatSize",
   "generator.params.minHeatSize",
@@ -484,13 +484,13 @@ export function RulesPanel({
   );
 
   const advancedFields = scoring
-    ? countFields(scoringNodes, SCORING_HIDDEN, SCORING_SIMPLE_PATHS)
+    ? countVisible(scoringNodes, working, { hidden: SCORING_HIDDEN, hiddenPaths: scoringMoreHidden(working), flatPaths: SCORING_FLAT_PATHS })
     : countFields(formatNodes, (working as { kind?: string } | null)?.kind === "fixed" ? [...FORMAT_HIDDEN, "generator", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"] : [...FORMAT_HIDDEN, "rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"], isFixed ? [] : FORMAT_SIMPLE_PATHS);
   const advanced = working ? (
     <div className="org-new flex min-w-0 flex-col gap-3 py-2">
       {scoring ? (
         <>
-          <SchemaForm node={scoringNodes} value={working} onChange={setValue} errors={errors} readOnly={locked} selectOptions={selectOptions} hiddenPaths={SCORING_SIMPLE_PATHS} />
+          <SchemaForm node={scoringNodes} value={working} onChange={setValue} errors={errors} readOnly={locked} selectOptions={selectOptions} hiddenPaths={scoringMoreHidden(working)} flatPaths={SCORING_FLAT_PATHS} />
           {advancedExtra}
         </>
       ) : (

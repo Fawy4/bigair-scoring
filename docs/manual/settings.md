@@ -95,7 +95,7 @@ Divisions → a division → **Scoring** tab. The sentence at the top (“In wor
 
 ## Scoring: every setting (More settings) {#settings-scoring-all}
 
-Divisions → Scoring tab → **More settings (‹n›)** (the fold under the Simple dials). One row per field of the scoring rules. *Generated.*
+Divisions → Scoring tab → **‹n› more settings** (the fold under the Simple dials). One row per field of the scoring rules. *Generated.*
 
 <!-- generated:scoring-all:start -->
 | Setting | What it does (the “?” text) | Example | Default | Preset values |
@@ -228,6 +228,11 @@ The numbers under the ladder type (riders per heat, how many advance, final size
 | {#set-riders-showallcolumns} **showAllColumns** | The table shows only the identifier columns the division’s Rider label uses. Tick this to see and fill every one. | Bib numbers are not used by Name call-out, but you can still type them. | — |
 | {#set-scoring-preset} **preset** | The rules for scoring this division. Pick one, then adjust below. Your changes stay on this division. | KOTA-style: best 3 tricks plus an Impression / Variety score | — |
 | {#set-scoring-counting} **counting** | How many of a rider’s tricks add up to the heat total. | Best 3 tricks of 7 attempts | — |
+| {#set-scoring-entry} **entry** | One score: each judge gives one number per trick. Several criteria: each judge scores height, extremity and so on, and they are combined into the trick score (the criteria table appears under More settings). Nothing: only an overall score. | One score per trick, 0 to 10 | — |
+| {#set-scoring-scale} **scale** | The lowest and highest trick score and the smallest step judges can give. | 0 to 10 in steps of 0.5 | — |
+| {#set-scoring-countingtype} **countingType** | Which of a rider’s tricks add up to the heat total: the best few, the best of each category, the single best, or all of them. | The best 3 tricks | — |
+| {#set-scoring-maxpercategory} **maxPerCategory** | How many tricks of each category count. Categories are listed under More settings. | 1: the best kiteloop, the best board-off … | — |
+| {#set-scoring-trimmin} **trimMin** | Below this number of judges the plain average is used automatically. | 5: with 4 judges on the day, the plain average is used | — |
 | {#set-scoring-n} **n** | How many of the rider’s best scored tricks count. | 3 means the three best tricks are added up | — |
 | {#set-scoring-attempts} **attempts** | The most attempts a rider may log in one heat. Extra attempts are refused. | 7 attempts | — |
 | {#set-scoring-judges} **judges** | How many judges score each trick. | 3 judges | — |
@@ -264,7 +269,7 @@ The numbers under the ladder type (riders per heat, how many advance, final size
 
 ## Format: every setting (More settings) {#settings-format-all}
 
-Divisions → Format tab → **More settings (‹n›)**. One row per field of the format. *Generated.*
+Divisions → Format tab → **‹n› more settings**. One row per field of the format. *Generated.*
 
 <!-- generated:format-all:start -->
 | Setting | What it does (the “?” text) | Example | Default | Preset values |
@@ -371,7 +376,7 @@ Divisions → Format tab → **More settings (‹n›)**. One row per field of t
 
 ## Live screens (per division) {#settings-live}
 
-Divisions → a division → Scoring tab → **More settings (‹n›)** → **Live screens** (at the end of the fold). Each public setting can follow the event (“Use the event's setting”) or differ for this division.
+Divisions → a division → Scoring tab → **‹n› more settings** → **Live screens** (at the end of the fold). Each public setting can follow the event (“Use the event's setting”) or differ for this division.
 
 <!-- generated:live-settings:start -->
 | Setting | What it does (the “?” text) | Example | Default |

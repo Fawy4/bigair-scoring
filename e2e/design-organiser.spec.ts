@@ -235,7 +235,7 @@ test.describe("on a computer (1440 × 900)", () => {
 
     const advanced = page.getByTestId("section-settings-advanced");
     await expect(advanced.getByTestId("advanced-area")).toBeVisible();
-    await expect(advanced.getByTestId("advanced-toggle")).toContainText("More settings (10)");
+    await expect(advanced.getByTestId("advanced-toggle")).toContainText("10 more settings");
     const last = advanced.getByTestId("setting-advanced-ratio");
     await last.scrollIntoViewIfNeeded();
     await expect(advanced.getByTestId("model-sentence-advanced")).toBeInViewport();

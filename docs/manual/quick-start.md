@@ -27,7 +27,7 @@ A division is a group that ranks together (Pro Men, Pro Women, Youth). Each has 
 
 1. Type a name in **New division name** and press **+ Add division**.
 2. **Scoring** tab: choose a scoring preset under **Load…** (for example “KOTA-style: best 3 tricks + impression”), then adjust the Simple dials — tricks that count, attempts per rider, judges on the panel, how their scores combine, the Impression / Variety score. The sentence “In words” says what you set. Press **Save scoring for ‹division›**.
-3. **Format** tab: choose a ladder type (Knockout, Knockout with a second chance, …), the riders per heat and how many advance. Type the expected number of riders in **Preview with** and read the preview (“With 14 riders: R1 4 heats of 3–4 → SF 2 heats of 4 → F 1 heat of 4”). Heat lengths, breaks and warm-up are under **More settings (‹n›)**. Press **Save format for ‹division›**.
+3. **Format** tab: choose a ladder type (Knockout, Knockout with a second chance, …), the riders per heat and how many advance. Type the expected number of riders in **Preview with** and read the preview (“With 14 riders: R1 4 heats of 3–4 → SF 2 heats of 4 → F 1 heat of 4”). Heat lengths, breaks and warm-up are under **‹n› more settings**. Press **Save format for ‹division›**.
 4. Repeat for every division (**Duplicate** copies one).
 
 Scoring and format lock when the division's first heat starts. See [Divisions](screens/organiser-divisions.md).

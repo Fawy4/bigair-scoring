@@ -6,7 +6,7 @@ Last checked: 2 Oct 2026 · Product version 0.9.0
 
 ## What it is for {#ev-purpose}
 
-Everything that belongs to the whole event rather than one division. Each setting has a “?” that opens one sentence and an example, with a **Learn more** link to its row in [Settings](../settings.md#settings-event). On a laptop the settings are on the left and the “In words” card (a sentence describing the event) and Visibility on the right; on a phone the card comes first. Some settings are folded under **More settings (‹n›)**; the fold is remembered on the device.
+Everything that belongs to the whole event rather than one division. Each setting has a “?” that opens one sentence and an example, with a **Learn more** link to its row in [Settings](../settings.md#settings-event). On a laptop the settings are on the left and the “In words” card (a sentence describing the event) and Visibility on the right; on a phone the card comes first. Some settings are folded under **‹n› more settings**; the fold is remembered on the device.
 
 ![The Event step on a laptop](../img/org-event-1280.png)
 *org-event-1280.png — Event step on a laptop.*
