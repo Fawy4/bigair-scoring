@@ -24,7 +24,7 @@ describe("number field width", () => {
     expect(decimalsOf(undefined)).toBe(0);
   });
   it("is never full width: a CSS width in ch units plus the box, with the control height as the floor", () => {
-    expect(numberFieldWidth({ min: 0, max: 30 })).toBe("calc(2ch + 28px)");
-    expect(numberFieldWidth({ min: 0, max: 10, step: 0.5 })).toBe("calc(4ch + 28px)");
+    expect(numberFieldWidth({ min: 0, max: 30 })).toBe("calc(2ch + 44px)");
+    expect(numberFieldWidth({ min: 0, max: 10, step: 0.5 })).toBe("calc(4ch + 44px)");
   });
 });

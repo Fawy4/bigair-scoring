@@ -30,6 +30,8 @@ test("Event step: the form and the 'In words' card sit side by side on a laptop 
   await expect(page.getByTestId("event-sentence")).toHaveCount(1);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
+  await expect(page.getByTestId("event-panel")).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByTestId("event-sentence")).toBeVisible();
   const p2 = (await page.getByTestId("event-panel").boundingBox())!;
   const c2 = (await page.getByTestId("event-sentence").boundingBox())!;
   expect(c2.y + c2.height).toBeLessThanOrEqual(p2.y + 1); // above the form
