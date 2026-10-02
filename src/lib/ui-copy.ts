@@ -2390,7 +2390,7 @@ export const copy = {
     dnsDsq: "A rider who did not start (DNS) or is disqualified (DSQ) finishes last in the heat.",
     dnfKeep: "A rider who did not finish (DNF) keeps the scores already given.",
     dnfLose: "A rider who did not finish (DNF) loses the scores of that heat.",
-    height: "The height of jumps is recorded and the highest jump is shown for the division.",
+    height: "The height of jumps is saved and the highest jump is shown for the division.",
     formatSentence: (s: string) => s,
     minHeats: (n: number) => (n === 1 ? "A rider can be out after one heat." : `Every rider rides at least ${n} heats.`),
     legendLycra: "Lycra colours (the colour is always written as well):",
