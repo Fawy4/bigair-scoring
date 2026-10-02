@@ -109,7 +109,7 @@ describe.skipIf(!ENV_OK)("Publish, re-open, ladder progression (hosted developme
     await submitAll(h);
     const blocked = await pub(h);
     expect(blocked).toMatchObject({ ok: false, code: "PUBLISH_BLOCKED", canOverride: true });
-    expect((blocked as { blockers: Array<{ text: string }> }).blockers.map((b) => b.text)).toContain("Judge 3 has no Impression / Variety score for Red");
+    expect((blocked as { blockers: Array<{ text: string }> }).blockers.map((b) => b.text)).toContain("Judge 3 (off panel) has no Impression / Variety score for Red");
     expect(await results(h)).toHaveLength(0);
     expect((await heatRow(h)).status).toBe("ended");
     const ok = await pub(h, "Judge 3 left the beach");
@@ -117,7 +117,7 @@ describe.skipIf(!ENV_OK)("Publish, re-open, ladder progression (hosted developme
     const line = (await f.s.from("audit_log").select("reason, after").eq("row_id", h).eq("action", "publish_override")).data ?? [];
     expect(line).toHaveLength(1);
     expect(line[0].reason).toBe("Judge 3 left the beach");
-    expect(JSON.stringify(line[0].after)).toContain("Judge 3 has no Impression / Variety score for Red");
+    expect(JSON.stringify(line[0].after)).toContain("Judge 3 (off panel) has no Impression / Variety score for Red");
   });
 
   it("a judge who has not submitted blocks Publish too, and moving to review locks nobody if the publish is refused", async () => {
@@ -125,7 +125,7 @@ describe.skipIf(!ENV_OK)("Publish, re-open, ladder progression (hosted developme
     await submitAll(h, [f.ids.seat_j1, f.ids.seat_j2]);
     const blocked = await pub(h);
     expect(blocked).toMatchObject({ ok: false, code: "PUBLISH_BLOCKED" });
-    expect((blocked as { blockers: Array<{ text: string }> }).blockers.map((b) => b.text)).toEqual(["Judge 3 has not submitted"]);
+    expect((blocked as { blockers: Array<{ text: string }> }).blockers.map((b) => b.text)).toEqual(["Judge 3 (off panel) has not submitted"]);
     expect((await heatRow(h)).status).toBe("ended"); // still open for the judge who owes the sheet
   });
 
