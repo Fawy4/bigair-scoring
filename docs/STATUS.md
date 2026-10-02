@@ -867,3 +867,22 @@ One pull request, "Fix – reset per section". Reset is no longer only on the Go
 2. Run order step: pin a heat or a break by hand; on the dashboard use Shift +5 or +1 min in the head console; then "Clear actual times" → the pins you set by hand stay, the Shift/+1 min ones go. An older run order keeps every pin and says so.
 3. Head console: end a heat, "Heat menu" → "Reset this heat…" → confirm → the heat is "Not started" with the same riders. Cancel a heat and re-run it: the button reads "Already re-run as H1R".
 4. Start a heat and try any reset: each says which heat is running and how to fix it.
+
+## Phase 7a-2 – design system across organiser and admin (steps 1 and 2 of 6)
+
+Branch `phase-7a-2-design-system`, started from main after PR #17 and #18. The Simulator (`/simulate`) is untouched.
+
+**Done**
+- **Step 1, the shared building blocks.** Every organiser and admin screen now gets the approved /design/organiser look from the base components and the global styles: 1 px frames in the muted border colour (never black), 8 px corners on controls and 12 px on cards, headings semibold and body regular, the deep-teal accent for primary buttons, selected tabs and focus, controls 40 px high (44 on touch, 48 with Large), number boxes as wide as their digits with right-aligned digits, "?" help circles with a full-size tap area, no full-width primary buttons. The shadcn colour names now point at the beach tokens, so /design, the public pages and the base components cannot drift apart. New base components: select, textarea, tick box and radio, label with helper text, banner. A rule test (`components/ui/design-system.test.ts`) keeps the look from drifting.
+- **Step 2, the impersonation banner.** A slim muted strip: "Viewing as <organisation>" and a quiet "Back to admin" link. Same status role, same action. The admin browser test follows the new wording.
+
+**Not done (in this order)**
+- Step 3, page by page: Event form in two columns with "In words" as a quiet card; Divisions as compact cards with real tabs and the lock notice as one pill with a "?"; Riders, Officials and the Organisations list as dense tables; Draw and Run order with the ladder or timetable as the hero; Trick base tab and live-settings panel; /admin pages. Until then those screens have the new frames, colours and type from step 1 but their old arrangement (for example, large bold paragraphs, 24 px up/down arrows in the riders table, full-width Archive and Delete buttons, thick frames on the sign-in page).
+- Step 4, Dark mode: no white panels. Known now: the dialogs and the feedback note open outside the themed area and so are Daylight in Dark mode; some older screens hard-code white.
+- Step 5, the screenshot pass at 1280 and 390 px with the contrast and size checks. The tool is written (`e2e/design-system-shots.spec.ts`, run with `SHOTS=<folder>`); its first run already lists controls under the control height (Copy link, the riders up/down arrows) that step 3 removes.
+- Step 6, the landing page at /.
+
+**Needs the owner's answer before step 3 (plan and code disagree)**
+- The brief says Riders becomes "the dense table from the preview". The preview table has no drag-to-reorder, no seed numbers and only a few columns; the real Riders step is a sortable, seeded grid with up to 20 columns that depend on the Rider label scheme, and the tests and the draw depend on that ordering. I have not swapped one for the other. Proposal: keep the real grid and its behaviour, give it the preview's look (sticky header, 40 px rows, search, tick boxes with a bulk bar, empty state), and use the preview table as it is for Officials and the Organisations list. Say if you want something else.
+
+**How to test**: see the pull request description.

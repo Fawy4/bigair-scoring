@@ -367,3 +367,18 @@ Written in words. The brief named "docs/06 §1b (simulator and feedback)", which
 | View as | Public views (Spectator home, live heat, results, ladder, rider page, big screen) open the real public pages for the organiser only: a preview cookie plus a narrow exception in the database's "is public" check (an organiser of that simulation event). A visitor and every other organiser still get "not found". Officials' screens give that seat to the organiser's own sign-in (the join page refuses a signed-in organiser, so a PIN cannot be used in the same browser): one seat at a time; a phone can hold another seat, and each seat shows its PIN and a single-use QR code. |
 | Reset | One Reset in the product: the panel's button calls the general Reset of Phase 7a-1 (typed web address, refused while a heat runs, snapshot for Restore), then the simulator clears its own leftovers (wind calls, shortened clocks, a Plan B it made, the panel's numbers). A copy takes its draw copy (`draw_at_lock`) when it is made, so Reset works on it at once. A simulation event with no draw copy (the Demo, played before Reset existed) shows "Wipe and draw again" instead: it wipes everything played, then draws and locks every division again, and locking takes the copy. |
 | Delete | Only a copy made by Run as simulation, with the typed address: removes the event, its results and audit lines, and the simulator's own logins. The Demo is reset, never deleted by this button. |
+
+### Decisions log – Phase 7a-2 (design system across organiser and admin; owner's verdict of 2 Oct 2026)
+
+Written in words on purpose. Where a row refines earlier text, this section wins.
+
+| Topic | Decision |
+|---|---|
+| One look | The organiser and admin screens use the same look as /design/organiser: a 1 px frame in the muted border colour, never black; 8 px corners on controls, 12 px on cards; headings semibold, body regular; one accent (deep teal) for the primary button, selected tab, focus and progress; ink for text. The base components and the global styles carry it, so a screen cannot have its own. |
+| No forked tokens | The shadcn colour names (primary, border, input, ring, muted) point at the beach tokens. The beach tokens are also set on the page root, so sign-in and similar pages have the Daylight look without a wrapper. |
+| Sizes | Controls and rows are 40 px on a computer, 44 on a touch screen, 48 with Large. A number box is as wide as its largest value and right-aligned. Labels sit above the box, helper text in muted ink. |
+| Older markup | Until each screen is rewritten, raw inputs, selects, tables and the old button and panel classes inside the organiser area are brought to the same look by the global styles; older heavy-weight and thick-frame classes are brought down to semibold and 1 px. |
+| Buttons | One primary per screen, no full-width primary buttons. A disabled control keeps full-strength text and a dashed frame. |
+| Impersonation | A slim muted strip with the organisation name and a quiet "Back to admin" link; no colour fill. |
+| Open question | Riders: see docs/STATUS.md, Phase 7a-2. The real table keeps its ordering and seeds; it takes the preview's look. |
+
