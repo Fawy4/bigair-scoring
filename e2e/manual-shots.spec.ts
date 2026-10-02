@@ -38,10 +38,11 @@ const SEATS: Array<[string, "judge" | "head" | "spotter" | "announcer"]> = [
   ["Judge 1 · Amr", "judge"], ["Judge 2 · Laura", "judge"], ["Judge 3 · Sven", "judge"], ["Head judge · Nadia", "head"], ["Spotter · Hamdy", "spotter"], ["Announcer · Max", "announcer"],
 ];
 
-async function shot(page: Page, name: string, size: { width: number; height: number }, settle = 600, hideNote = false) {
+async function shot(page: Page, name: string, size: { width: number; height: number }, settle = 600, hideNote = false, ready?: () => Promise<unknown>) {
   await page.setViewportSize(size);
   await page.waitForLoadState("domcontentloaded");
   await page.waitForTimeout(settle);
+  if (ready) await ready();
   // the development server's own badge is not part of the product
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" }).catch(() => undefined);
   // officials never see the organiser's Note button; it shows here only because an organiser holds the seat
@@ -60,6 +61,18 @@ async function open(page: Page, url: string) {
       await page.waitForTimeout(8000);
     }
   }
+}
+
+/** Presses a simulator button until the panel shows the result: a tap made before the page's scripts have loaded does nothing, so it is tried again. */
+async function pressUntil(page: Page, testId: string, done: () => Promise<boolean>) {
+  for (let i = 0; i < 10; i++) {
+    await page.getByTestId(testId).click();
+    for (let j = 0; j < 10; j++) {
+      if (await done()) return;
+      await page.waitForTimeout(500);
+    }
+  }
+  throw new Error(`${testId} did not take effect`);
 }
 
 test.skip(process.env.MANUAL_SHOTS !== "1", "run with npm run manual:shots");
@@ -216,13 +229,24 @@ test("manual screenshots", async ({ page, context, browser }) => {
     await shot(v, "public-home", PHONE, 1500);
     await visitor.close();
 
+    // a second organiser of the sample organisation, so the organisation page shows Remove
+    const second = await db.auth.admin.createUser({ email: `e2e-${org.run}-organiser2@example.com`, email_confirm: true });
+    if (second.data.user) {
+      org.trackUser(second.data.user.id);
+      await db.from("memberships").insert({ organisation_id: org.orgId, user_id: second.data.user.id, role: "owner" });
+    }
+
     // ---------------------------------------------------------------- admin (the feedback list shows only the sample event's note, never real notes)
     const { data: me } = await db.auth.admin.listUsers({ perPage: 1000 });
     const ownerId = me.users.find((u) => u.email === org.email)?.id;
     await db.from("feedback_notes").insert({ organisation_id: org.orgId, author_user_id: ownerId!, author_role: "organiser", event_id: event.id, page: `/org/events/${event.id}/schedule`, page_label: "Run order step", body: "The lunch break should move with the wind hold.", tag: "idea", organisation_name: "Gouna Big Air (sample)", event_name: "Gouna Big Air (sample)" } as never);
-    for (const [url, name] of [[`/admin?q=${encodeURIComponent("Gouna Big Air")}`, "admin-organisations"], ["/admin/presets", "admin-presets"], ["/admin/tricks", "admin-tricks"], ["/admin/settings", "admin-settings"], [`/admin/feedback?event=${event.id}`, "admin-feedback"], ["/admin/health", "admin-health"]] as const) {
+    for (const [url, name] of [[`/admin?q=${encodeURIComponent("Gouna Big Air")}`, "admin-organisations"], [`/admin/organisations/${org.orgId}`, "admin-organisation"], [`/admin/organisations/${org.orgId}#invite-h`, "admin-invite"], ["/admin/presets", "admin-presets"], ["/admin/tricks", "admin-tricks"], ["/admin/settings", "admin-settings"], [`/admin/feedback?event=${event.id}`, "admin-feedback"], ["/admin/health", "admin-health"]] as const) {
       await open(page, url);
       await page.waitForLoadState("networkidle").catch(() => undefined);
+      if (name === "admin-invite") await page.locator("#invite-h").scrollIntoViewIfNeeded().catch(() => undefined);
+      if (name === "admin-invite") await page.evaluate(() => window.scrollBy(0, -16));
+      if (name === "admin-organisation") await page.getByRole("heading", { name: "Organisers" }).scrollIntoViewIfNeeded().catch(() => undefined);
+      if (name === "admin-organisation") await page.evaluate(() => window.scrollBy(0, -16));
       if (name === "admin-organisations") {
         const search = page.getByRole("searchbox").first();
         if (await search.isVisible().catch(() => false)) await search.fill("Gouna Big Air");
@@ -241,18 +265,19 @@ test("manual screenshots", async ({ page, context, browser }) => {
     const simId = /events\/([0-9a-f-]{36})\/simulate/.exec(page.url())![1];
     simIds.push(simId);
     const simSlug = must(await db.from("events").select("slug").eq("id", simId).single(), "sim slug").slug as string;
-    await page.getByTestId("sim-speed-20").click();
-    await page.getByTestId("sim-start").click();
+    await pressUntil(page, "sim-speed-20", async () => (await page.getByTestId("sim-speed-20").getAttribute("aria-pressed")) === "true");
+    await pressUntil(page, "sim-start", async () => (await page.getByTestId("sim-state").getAttribute("data-state")) === "playing");
     await expect(page.getByTestId("stat-heats")).toHaveText(/^([4-9]|\d\d) of \d+ heats published/, { timeout: 25 * 60_000 });
     // the next heat at normal speed (a speed change applies to heats that start afterwards): wait until it is on the water
-    await page.getByTestId("sim-speed-1").click();
+    await pressUntil(page, "sim-speed-1", async () => (await page.getByTestId("sim-speed-1").getAttribute("aria-pressed")) === "true");
     const runningFull = async () => {
       const { data } = await db.from("heats").select("id, duration_sec").eq("event_id", simId).eq("status", "running");
       return (data ?? []).find((h) => h.duration_sec >= 300)?.id ?? null;
     };
     await expect.poll(runningFull, { timeout: 8 * 60_000, intervals: [3000] }).not.toBeNull();
     const liveHeat = (await runningFull())!;
-    await shot(page, "simulator", LAPTOP, 800);
+    // the page ticks every 2 s but a tick holds the lock for 6 s, so the line says "Another tab…" between ticks even with one tab: take the picture on a real line
+    await shot(page, "simulator", LAPTOP, 3000, false, () => expect(page.getByTestId("sim-line")).not.toHaveText(/Another tab/, { timeout: 30_000 }));
 
     // the virtual spotter logs a few attempts of the heat on the water; the head judge console and the announcer view
     await expect

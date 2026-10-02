@@ -4,7 +4,7 @@ The seven setup steps in the order the Go live checklist asks for them — Event
 
 Last checked: 2 Oct 2026 · Product version 0.9.0
 
-**Before you start.** You need an organiser login (the platform owner invites you: see [Roles](roles.md)). Sign in at **/org/login** with the emailed link — open it in the same browser that asked for it — or with your password once you have set one. A laptop is easiest for setup; every step also works on a phone (the step list becomes a drop-down).
+**Before you start.** You need an organiser login: the platform owner invites you, you click the e-mailed link (it works once, for 24 hours) and land in your organisation, then choose a password with **Set a password**. From then on sign in at **/org/login** with your e-mail and password ([Organiser access](screens/organiser-access.md)). A laptop is easiest for setup; every step also works on a phone (the step list becomes a drop-down).
 
 **How the steps work.** Inside an event the left rail lists the seven steps. Each shows **Done**, **Needs attention** or **Not started** and one line saying what is missing. Every step saves on its own; **Previous** and **Next** at the foot move between steps (**Next** on the Event step saves first). Nothing is shown to riders or spectators until you publish the event and the head judge publishes results.
 

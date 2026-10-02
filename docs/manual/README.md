@@ -16,7 +16,7 @@ Last checked: 2 Oct 2026 · Product version 0.9.0
 - **Words.** The manual uses the product's words: *Rider label* (how a rider is shown and recognised), *Lycra* (the coloured top), *score* (a judge's number), *Impression / Variety score*, *Second-chance round*, *Advances without riding*. The [glossary](glossary.md) explains every term with a beach example.
 - **Buttons and sentences** are written exactly as on screen, in **bold** for a button and in “quotes” for a sentence. A value the product fills in is written ‹like this›.
 - **Screenshots** are real, taken from the product with made-up riders, at laptop width (1280 px) and phone width (390 px). Their file name says the page and the step; the caption under each says what it shows. They are retaken with one command after every change (see below).
-- **“Being built — check after Polish 1 merges”** labels a section about a part of the product that another piece of work (Polish 1: the simulator, the admin trick base editor and organiser access) is changing right now. Those sections describe the product as it is on `main` today; check them again once Polish 1 is merged.
+- **“Being built”** labels a section about a part of the product that is being changed right now (on 2 Oct 2026: the master trick base editor in /admin). It describes the product as it is on `main`; the pull request that changes it updates the section.
 - **Every page** starts with one line saying what it covers and a line “Last checked: ‹date› · Product version ‹version›”: the product version the page was last compared with.
 
 ## The product version {#readme-version}

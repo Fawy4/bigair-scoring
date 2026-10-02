@@ -9,6 +9,7 @@ Last checked: 2 Oct 2026 · Product version 0.9.0
 The version for the Arrow launch event (El Gouna, 8–9 October 2026). 1.0.0 follows after it.
 
 **What changed for users**
+- **Organiser access** (Polish 1): the owner invites an organiser by e-mail; the link works once for 24 hours and lands them in their organisation; they set their own password; the owner can remove an organiser (signed out at once) and invite them again.
 - **Help** at /help: the whole product manual, with contents, search and **Download as PDF**.
 - **Learn more** after every refusal sentence and in every “?” on the organiser, admin and head judge screens, opening the matching part of the manual.
 - The product version is shown on the Health page and in the home page's footer (with a **Help** link).
@@ -17,7 +18,7 @@ The version for the Arrow launch event (El Gouna, 8–9 October 2026). 1.0.0 fol
 
 **Manual pages updated**
 - All pages written (first version): README, Quick start, Dependency map, Event day, Troubleshooting, every screen page, Settings, Resets and undo, Roles, Glossary, Errors and refusals, Changelog.
-- Pages to check again after Polish 1 merges: [Simulator](screens/simulator.md), [Admin: trick base](screens/admin-trick-base.md), [Organiser access](screens/organiser-access.md), and the rows labelled “being built” in the [dependency map](dependencies.md) and [Roles](roles.md).
+- After Polish 1 (PR #22): [Organiser access](screens/organiser-access.md) (invite, link, own password, remove), [Admin: organisations](screens/admin-organisations.md), [Roles](roles.md), the invite and simulator rows of the [dependency map](dependencies.md), [Troubleshooting](troubleshooting.md) (e-mail limit, links), the [Simulator](screens/simulator.md) screenshots. Still being built: [Admin: trick base](screens/admin-trick-base.md) (its own pull request updates it).
 
 ## How to add an entry {#cl-how}
 

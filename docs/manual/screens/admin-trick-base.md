@@ -1,6 +1,6 @@
 # Admin: trick base (proposals)
 
-/admin/tricks: blocks that events added to their own trick base and proposed for the master base. *Being built — check after Polish 1 merges* (Polish 1 builds an admin trick base editor; on `main` today this page holds only the proposals).
+/admin/tricks: blocks that events added to their own trick base and proposed for the master base. *Being built: the master trick base editor (families, blocks, aliases, categories; rename, move, retire; versions with “Publish to all customers” and “Update to latest” per event; the proposals queue) arrives in its own pull request, which updates this page. This page describes `main` on 2 Oct 2026, where /admin/tricks holds only the proposals.*
 
 Last checked: 2 Oct 2026 · Product version 0.9.0
 
