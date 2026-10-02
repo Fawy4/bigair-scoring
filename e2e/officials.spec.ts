@@ -174,7 +174,7 @@ test("self-add from the join page appears pending; approve gives a PIN that join
     await expect(pending).toHaveCount(2);
     await expect(pending.filter({ hasText: "Sally Self" })).toContainText("Spotter");
     await expect(pending.filter({ hasText: "Sally Self" })).toContainText("+20 100 555 0199");
-    await expect(page.getByRole("link", { name: /4\. Officials/ }).first()).toBeVisible();
+    await expect(page.getByTestId("rail-officials")).toBeVisible();
 
     await pending.filter({ hasText: "Dan Decline" }).getByRole("button", { name: "Decline" }).click();
     await expect(pending).toHaveCount(1);
@@ -216,7 +216,7 @@ test("panels: tick the judges of a division and the 'needs 3 judges' check turns
     // the head judge who also scores is on the panel from the start
     await expect(page.getByLabel("Head Hal: Pro Men")).toBeChecked();
     await expect(page.getByTestId("panel-warnings")).toContainText("Pro Men needs 3 judges, 1 assigned");
-    await expect(page.getByRole("link", { name: /4\. Officials/ }).first()).toBeVisible();
+    await expect(page.getByTestId("rail-officials")).toBeVisible();
     await page.getByLabel("Judge A: Pro Men").check();
     await expect(page.getByTestId("panel-warnings")).toContainText("Pro Men needs 3 judges, 2 assigned");
     await page.getByLabel("Judge B: Pro Men").check();

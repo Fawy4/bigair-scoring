@@ -15,6 +15,12 @@ test.afterAll(async () => {
   await org?.cleanup();
 });
 
+/** The password and sign-out entries live in the account menu of the top bar (Phase 7a). */
+const openAccount = async (page: import("@playwright/test").Page) => {
+  const menu = page.getByTestId("account-menu");
+  if ((await menu.getByRole("button", { name: "Account" }).getAttribute("aria-expanded")) !== "true") await menu.getByRole("button", { name: "Account" }).click();
+};
+
 test("password sign-in: the right password opens the console, a wrong one gets one plain message", async ({ page }) => {
   await page.goto("/org/login");
   await expect(page.getByLabel("Your email address")).toBeVisible();
@@ -41,9 +47,10 @@ test("password sign-in: the right password opens the console, a wrong one gets o
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/org$/);
   await expect(page.getByRole("navigation", { name: "Organiser" })).toBeVisible();
-  await expect(page.getByText(org.email)).toBeVisible();
-  // a password that just worked counts as "set": the header button is Change password
-  await expect(page.getByRole("link", { name: "Change password" })).toBeVisible();
+  await openAccount(page);
+  await expect(page.getByTestId("account-menu").getByText(org.email)).toBeVisible();
+  // a password that just worked counts as "set": the account menu says Change password
+  await expect(page.getByRole("menuitem", { name: "Change password" })).toBeVisible();
 });
 
 test("password sign-in keeps the page you were going to", async ({ page }) => {
@@ -89,8 +96,9 @@ test("set a password after signing in with the link, then sign in with it", asyn
   try {
     await fresh.signIn(page, "/org/set-password");
     await expect(page.getByRole("heading", { name: "Set a password" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Set a password" })).toBeVisible(); // the header button, while no password is set
-    await expect(page.getByRole("link", { name: "Change password" })).toHaveCount(0);
+    await openAccount(page);
+    await expect(page.getByRole("menuitem", { name: "Set a password" })).toBeVisible(); // the account menu entry, while no password is set
+    await expect(page.getByRole("menuitem", { name: "Change password" })).toHaveCount(0);
     await page.getByLabel("New password").fill("short");
     await page.getByLabel("Type it again").fill("short");
     await page.getByRole("button", { name: "Save password" }).click();
@@ -105,20 +113,23 @@ test("set a password after signing in with the link, then sign in with it", asyn
 
     // once a password is set the header button becomes "Change password" and "Set a password" is gone
     await page.goto("/org");
-    await expect(page.getByRole("link", { name: "Change password" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Set a password" })).toHaveCount(0);
-    await page.getByRole("link", { name: "Change password" }).click();
+    await openAccount(page);
+    await expect(page.getByRole("menuitem", { name: "Change password" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Set a password" })).toHaveCount(0);
+    await page.getByRole("menuitem", { name: "Change password" }).click();
     await expect(page.getByRole("heading", { name: "Change password" })).toBeVisible();
 
     // sign out, then in again with the new password
     await page.goto("/org");
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await openAccount(page);
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
     await page.goto("/org/login");
     await page.getByLabel("Your email address").fill(fresh.email);
     await page.getByLabel("Password", { exact: true }).fill("First-password-1");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page).toHaveURL(/\/org$/);
-    await expect(page.getByRole("link", { name: "Change password" })).toBeVisible();
+    await openAccount(page);
+    await expect(page.getByRole("menuitem", { name: "Change password" })).toBeVisible();
   } finally {
     await fresh.cleanup();
   }
