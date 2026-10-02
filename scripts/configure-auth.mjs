@@ -20,6 +20,7 @@ if (site) allow.push(`${site}/**`);
 const passwordOnly = process.argv.includes("--password-only");
 const body = passwordOnly ? { external_email_enabled: true, disable_signup: false, password_min_length: 8 } : {
   external_anonymous_users_enabled: true,
+  mailer_otp_exp: 86400, // sign-in and invite links work for 24 hours (the invite form tells the owner to ask people to click "today")
   uri_allow_list: allow.join(","),
   ...(process.argv.includes("--with-template")
     ? { mailer_subjects_magic_link: "Your sign-in link for the Big Air scoring system", mailer_templates_magic_link_content: readFileSync("supabase/auth/magic-link.html", "utf8") }
