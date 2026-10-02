@@ -136,7 +136,8 @@ export function FeedbackButton() {
           onClick={openPanel}
           aria-label={T.buttonHelp}
           data-testid="note-button"
-          className="fixed bottom-4 right-4 z-50 flex h-14 min-w-14 items-center justify-center rounded-full border border-beach-border bg-beach-bg px-5 text-body font-semibold text-beach-ink"
+          style={{ bottom: "calc(var(--step-footer-h, 0px) + 1rem)" }}
+          className="fixed right-4 z-50 flex h-14 min-w-14 items-center justify-center rounded-full border border-beach-border bg-beach-bg px-5 text-body font-semibold text-beach-ink"
         >
           {T.button}
         </button>
@@ -145,7 +146,8 @@ export function FeedbackButton() {
           role="dialog"
           aria-label={T.panelTitle}
           data-testid="note-panel"
-          className="fixed bottom-4 right-4 z-50 flex max-h-[90vh] w-[min(28rem,calc(100vw-2rem))] flex-col gap-3 overflow-y-auto rounded-card border border-beach-line bg-beach-bg p-4 text-beach-ink"
+          style={{ bottom: "calc(var(--step-footer-h, 0px) + 1rem)", maxHeight: "calc(90vh - var(--step-footer-h, 0px))" }}
+          className="fixed right-4 z-50 flex max-h-[90vh] w-[min(28rem,calc(100vw-2rem))] flex-col gap-3 overflow-y-auto rounded-card border border-beach-line bg-beach-bg p-4 text-beach-ink"
           onPaste={(e) => {
             const item = [...e.clipboardData.items].find((i) => i.type.startsWith("image/"));
             if (item) takeImage(item.getAsFile());

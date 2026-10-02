@@ -80,7 +80,7 @@ export function OrgFrame({ productName, email, passwordIsSet, organisations, cur
   const nextStep = steps && activeIndex >= 0 && activeIndex < steps.length - 1 ? steps[activeIndex + 1] : null;
   const footer = hasFooter ? (
     <StepFooter
-      sticky={layout === "phone"}
+      sticky
       previous={prevStep ? { label: prevStep.label, href: prevStep.href ?? "" } : undefined}
       next={nextStep ? { label: nextStep.label, href: nextStep.href ?? "", onClick: go(nextStep.href ?? "") } : undefined}
     />
