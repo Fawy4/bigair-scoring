@@ -10,7 +10,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <h1 className="text-[20px] font-semibold leading-tight">{copy.login.title}</h1>
       {error ? (
         <p role="alert" className="rounded-card border border-beach-failed p-4 text-body font-semibold text-beach-failed">
-          {copy.common.problem(copy.login.linkFailed)}
+          {copy.common.problem(error === "expired" ? copy.login.linkExpired : copy.login.linkFailed)}
         </p>
       ) : null}
       <LoginForm next={next} />

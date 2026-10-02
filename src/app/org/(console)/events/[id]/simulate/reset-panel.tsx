@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Chip } from "@/components/live/chip";
+import { Button, disabledWhen } from "@/components/org/button";
+import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/ui-copy";
 import { deleteSimulation, rebuildSimulation, resetSimulation } from "./actions";
 import { Card } from "./parts";
@@ -32,15 +33,14 @@ export function ResetPanel({ eventId, sim }: { eventId: string; sim: Sim }) {
       ) : null}
       <label className="flex flex-col gap-1 text-body font-semibold">
         {T.typeLabel(slug)}
-        <input data-testid="reset-slug" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" autoCapitalize="off" spellCheck={false} className="min-h-tap rounded-lg border border-beach-border bg-beach-bg px-2 text-body font-semibold text-beach-ink" />
+        <Input data-testid="reset-slug" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" autoCapitalize="off" spellCheck={false} />
       </label>
-      {running ? <p className="text-body font-semibold">{T.running(status.now.label ?? "")}</p> : null}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {hasStart ? (
-          <Chip
+          <Button
             data-testid="reset-button"
             variant="danger"
-            disabled={pending || !typedOk || running}
+            {...disabledWhen(pending ? T.working : running ? T.running(status.now.label ?? "") : !typedOk && T.needTyped)}
             onClick={() =>
               void act(
                 () => resetSimulation(eventId, typed),
@@ -53,12 +53,12 @@ export function ResetPanel({ eventId, sim }: { eventId: string; sim: Sim }) {
             }
           >
             {pending ? T.working : T.button}
-          </Chip>
+          </Button>
         ) : (
-          <Chip
+          <Button
             data-testid="rebuild-button"
             variant="danger"
-            disabled={pending || !typedOk || running}
+            {...disabledWhen(pending ? T.rebuilding : running ? T.running(status.now.label ?? "") : !typedOk && T.needTyped)}
             onClick={() =>
               void act(
                 () => rebuildSimulation(eventId, typed),
@@ -71,18 +71,18 @@ export function ResetPanel({ eventId, sim }: { eventId: string; sim: Sim }) {
             }
           >
             {pending ? T.rebuilding : T.rebuildButton}
-          </Chip>
+          </Button>
         )}
       </div>
 
       {status.event.isCopy ? (
-        <div className="mt-2 flex flex-col gap-1 border-t border-beach-line pt-2" data-testid="sim-delete">
-          <h3 className="text-small font-semibold text-beach-muted">{T.deleteHeading}</h3>
+        <div className="flex flex-col gap-2 border-t border-beach-line pt-3" data-testid="sim-delete">
+          <h3 className="text-body font-semibold">{T.deleteHeading}</h3>
           <p className="text-body font-medium">{T.deleteBody}</p>
-          <Chip
+          <Button
             data-testid="delete-button"
             variant="danger"
-            disabled={pending || !typedOk}
+            {...disabledWhen(pending ? T.deleting : !typedOk && T.needTyped)}
             onClick={() =>
               void act(
                 () => deleteSimulation(eventId, typed),
@@ -94,7 +94,7 @@ export function ResetPanel({ eventId, sim }: { eventId: string; sim: Sim }) {
             }
           >
             {pending ? T.deleting : T.deleteButton}
-          </Chip>
+          </Button>
         </div>
       ) : null}
     </Card>

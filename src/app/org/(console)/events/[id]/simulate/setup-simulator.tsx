@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Banner } from "@/components/ui/banner";
 import { copy } from "@/lib/ui-copy";
 import { enableSimulator } from "./actions";
 
@@ -16,8 +17,8 @@ export function SetupSimulator({ eventId }: { eventId: string }) {
     void enableSimulator(eventId).then((r) => (r.ok ? router.refresh() : setError(r.message)));
   }, [eventId, router]);
   return (
-    <p className="panel font-semibold" role={error ? "alert" : "status"} data-testid="sim-setup">
+    <Banner tone={error ? "danger" : "info"} data-testid="sim-setup">
       {error ?? copy.simulator.settingUp}
-    </p>
+    </Banner>
   );
 }

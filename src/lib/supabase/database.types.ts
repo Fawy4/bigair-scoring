@@ -2542,6 +2542,10 @@ export type Database = {
         Args: { p_id: string; p_kind: string }
         Returns: undefined
       }
+      admin_remove_organiser: {
+        Args: { p_org: string; p_user: string }
+        Returns: undefined
+      }
       admin_rename_organisation: {
         Args: { p_name: string; p_org: string }
         Returns: undefined

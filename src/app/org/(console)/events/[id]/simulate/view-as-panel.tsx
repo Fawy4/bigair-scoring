@@ -2,20 +2,24 @@
 
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
-import { Chip } from "@/components/live/chip";
+import { Binoculars, ExternalLink, Eye, EyeOff, Gavel, House, Megaphone, Monitor, Radio, ShieldCheck, Smartphone, Trophy, User, Network, type LucideIcon } from "lucide-react";
+import { Button, disabledWhen } from "@/components/org/button";
 import { Pill } from "@/components/live/pill";
-import { seatGroups, viewHref } from "@/lib/simulator/view-as";
+import { seatGroups, viewHref, type SeatRole } from "@/lib/simulator/view-as";
 import { copy } from "@/lib/ui-copy";
 import { releaseSeat, seatJoinInfo, type SeatJoinInfo } from "./actions";
-import { Card, LinkChip } from "./parts";
+import { Card, LinkButton } from "./parts";
 import type { useSim } from "./use-sim";
 
 const T = copy.simulator.viewAs;
 type Sim = ReturnType<typeof useSim>;
 
-/** The PIN, the join address and a single-use QR code for one seat: for a phone, or a second browser. */
+const ROLE_ICON: Record<SeatRole, LucideIcon> = { judge: Gavel, spotter: Binoculars, head: ShieldCheck, announcer: Megaphone };
+
+/** The join address and a single-use QR code for one seat, for a phone or a second browser. The PIN stays hidden until "Show PIN" is tapped (a screen is often shared in the room). */
 function PhoneBox({ info, onClose, onNewPin, pending }: { info: SeatJoinInfo; onClose: () => void; onNewPin: () => void; pending: boolean }) {
   const [qr, setQr] = useState<string | null>(null);
+  const [shown, setShown] = useState(false);
   useEffect(() => {
     let live = true;
     if (info.qrUrl) QRCode.toDataURL(info.qrUrl, { margin: 1, width: 180 }).then((u) => live && setQr(u)).catch(() => undefined);
@@ -24,36 +28,49 @@ function PhoneBox({ info, onClose, onNewPin, pending }: { info: SeatJoinInfo; on
     };
   }, [info.qrUrl]);
   return (
-    <div data-testid={`phone-box-${info.seatId}`} className="flex flex-col gap-1.5 rounded-xl border border-beach-border bg-beach-bg p-2">
-      <p className="text-name font-semibold">{T.pinFor(info.name)}</p>
+    <div data-testid={`phone-box-${info.seatId}`} className="flex flex-col gap-2 rounded-[8px] border border-beach-line bg-beach-surface p-3">
+      <p className="text-body font-semibold">{T.pinFor(info.name)}</p>
       {info.pin ? (
-        <p data-testid="phone-pin" className="font-mono text-readout font-semibold tracking-[0.25em]">
-          {info.pin}
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          {shown ? (
+            <p data-testid="phone-pin" className="font-mono text-heading font-semibold tabular-nums tracking-[0.25em]">
+              {info.pin}
+            </p>
+          ) : (
+            <p className="font-mono text-heading font-semibold tracking-[0.25em] text-beach-muted" aria-label={T.pinHidden}>
+              ••••••
+            </p>
+          )}
+          <Button variant="secondary" icon={shown ? EyeOff : Eye} data-testid="phone-show-pin" aria-expanded={shown} onClick={() => setShown((v) => !v)}>
+            {shown ? T.hidePin : T.showPin}
+          </Button>
+        </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-body font-medium">{T.pinUnknown}</span>
-          <Chip data-testid="phone-new-pin" disabled={pending} onClick={onNewPin}>
+          <Button variant="secondary" data-testid="phone-new-pin" {...disabledWhen(pending && copy.simulator.busy)} onClick={onNewPin}>
             {T.newPin}
-          </Chip>
+          </Button>
         </div>
       )}
       <p className="text-body font-medium">
         {T.joinAt} <span className="select-all break-all font-semibold">{info.joinUrl}</span>
       </p>
       {qr ? (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qr} alt={T.qr} width={150} height={150} />
+          <img src={qr} alt={T.qr} width={150} height={150} className="rounded-[8px] bg-white p-1" />
           <span className="text-small font-medium text-beach-muted">{T.qr}</span>
         </div>
       ) : null}
-      <Chip onClick={onClose}>{T.close}</Chip>
+      <Button variant="quiet" className="w-fit" onClick={onClose}>
+        {T.close}
+      </Button>
     </div>
   );
 }
 
-/** Buttons that open each person's real screen in a new tab: the public pages as a visitor sees them, and each official's own screen. */
+/** Buttons that open each person's real screen in a new tab, as compact grids: the public pages as a visitor sees them, then one tile per official with a role icon. */
 export function ViewAs({ eventId, sim }: { eventId: string; sim: Sim }) {
   const { status, act, pending } = sim;
   const [rider, setRider] = useState(status.riders[0]?.entryId ?? "");
@@ -68,31 +85,31 @@ export function ViewAs({ eventId, sim }: { eventId: string; sim: Sim }) {
 
   return (
     <Card title={T.heading} help={T.help} testId="sim-viewas">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <h3 className="text-small font-semibold text-beach-muted">{T.spectator}</h3>
-        <div className="flex flex-wrap gap-1.5">
-          <LinkChip testId="view-spectator" href={viewHref(eventId, { kind: "spectator" })}>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <LinkButton icon={House} testId="view-spectator" href={viewHref(eventId, { kind: "spectator" })}>
             {T.home}
-          </LinkChip>
-          <LinkChip testId="view-live" href={viewHref(eventId, { kind: "live" })}>
+          </LinkButton>
+          <LinkButton icon={Radio} testId="view-live" href={viewHref(eventId, { kind: "live" })}>
             {T.live}
-          </LinkChip>
-          <LinkChip testId="view-results" href={viewHref(eventId, { kind: "results" })}>
+          </LinkButton>
+          <LinkButton icon={Trophy} testId="view-results" href={viewHref(eventId, { kind: "results" })}>
             {T.results}
-          </LinkChip>
-          <LinkChip testId="view-ladder" href={viewHref(eventId, { kind: "ladder" })}>
+          </LinkButton>
+          <LinkButton icon={Network} testId="view-ladder" href={viewHref(eventId, { kind: "ladder" })}>
             {T.ladder}
-          </LinkChip>
-          <LinkChip testId="view-screen" href={viewHref(eventId, { kind: "screen" })}>
+          </LinkButton>
+          <LinkButton icon={Monitor} testId="view-screen" href={viewHref(eventId, { kind: "screen" })}>
             {T.screen}
-          </LinkChip>
+          </LinkButton>
         </div>
         {status.riders.length ? (
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
             <label className="text-body font-semibold" htmlFor="view-rider-select">
               {T.pickRider}
             </label>
-            <select id="view-rider-select" data-testid="view-rider-select" value={rider} onChange={(e) => setRider(e.target.value)} className="min-h-tap rounded-lg border border-beach-border bg-beach-bg px-1.5 text-body font-semibold text-beach-ink">
+            <select id="view-rider-select" data-testid="view-rider-select" value={rider} onChange={(e) => setRider(e.target.value)} className="h-[var(--org-ctl)] max-w-full rounded-[8px] border border-beach-border bg-beach-bg px-3 text-body font-semibold text-beach-ink">
               {status.riders.map((r) => (
                 <option key={r.entryId} value={r.entryId}>
                   {r.name} · {r.divisionName}
@@ -100,45 +117,51 @@ export function ViewAs({ eventId, sim }: { eventId: string; sim: Sim }) {
               ))}
             </select>
             {rider ? (
-              <LinkChip testId="view-rider" href={viewHref(eventId, { kind: "rider", entryId: rider })}>
+              <LinkButton icon={User} testId="view-rider" href={viewHref(eventId, { kind: "rider", entryId: rider })}>
                 {T.riderPage}
-              </LinkChip>
+              </LinkButton>
             ) : null}
           </div>
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <h3 className="text-small font-semibold text-beach-muted">{T.officials}</h3>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <LinkChip testId="view-head-laptop" href={viewHref(eventId, { kind: "head-organiser" })}>
+        <div className="grid grid-cols-1 gap-2">
+          <LinkButton icon={ShieldCheck} testId="view-head-laptop" href={viewHref(eventId, { kind: "head-organiser" })}>
             {T.headLaptop}
-          </LinkChip>
+          </LinkButton>
+          {groups.flatMap((g) =>
+            g.seats.map((s) => {
+              const Icon = ROLE_ICON[g.role];
+              return (
+                <div key={s.id} className="flex min-h-[var(--org-row)] items-center justify-between gap-2 rounded-[8px] border border-beach-line px-3 py-1">
+                  <span className="flex min-w-0 flex-1 items-center gap-2 text-body font-semibold">
+                    <Icon aria-hidden className="size-4 shrink-0 text-beach-muted" />
+                    <span className="truncate">{s.name}</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1">
+                    <Button variant="secondary" icon={ExternalLink} aria-label={`${T.open} ${s.name}`} data-testid={`view-seat-${s.id}`} href={viewHref(eventId, { kind: "seat", seatId: s.id })} target="_blank">
+                      {T.open}
+                    </Button>
+                    <Button variant="secondary" icon={Smartphone} aria-label={`${T.phone}: ${s.name}`} data-testid={`view-phone-${s.id}`} onClick={() => void showPhone(s.id)}>
+                      {T.phone}
+                    </Button>
+                  </span>
+                </div>
+              );
+            }),
+          )}
         </div>
-        {groups.map((g) => (
-          <div key={g.role} className="flex flex-col gap-1">
-            {g.seats.map((s) => (
-              <div key={s.id} className="flex flex-wrap items-center gap-1.5">
-                <span className="min-w-24 text-name font-semibold">{s.name}</span>
-                <LinkChip testId={`view-seat-${s.id}`} href={viewHref(eventId, { kind: "seat", seatId: s.id })}>
-                  {T.open}
-                </LinkChip>
-                <Chip data-testid={`view-phone-${s.id}`} disabled={pending} onClick={() => void showPhone(s.id)}>
-                  {T.phone}
-                </Chip>
-              </div>
-            ))}
-          </div>
-        ))}
         {phone ? <PhoneBox info={phone} pending={pending} onClose={() => setPhone(null)} onNewPin={() => void showPhone(phone.seatId, true)} /> : null}
       </div>
 
       {holding ? (
-        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-beach-border bg-beach-bg p-2" data-testid="holding">
+        <div className="flex flex-wrap items-center gap-2 rounded-[8px] border border-beach-line bg-beach-surface p-3" data-testid="holding">
           <Pill tone="pending">{T.holding(holding.name)}</Pill>
-          <Chip data-testid="release-seat" disabled={pending} onClick={() => void act(() => releaseSeat(eventId))}>
+          <Button variant="secondary" data-testid="release-seat" {...disabledWhen(pending && copy.simulator.busy)} onClick={() => void act(() => releaseSeat(eventId))}>
             {T.letGo}
-          </Chip>
+          </Button>
         </div>
       ) : null}
       <p className="text-small font-medium text-beach-muted">{T.oneSeat}</p>

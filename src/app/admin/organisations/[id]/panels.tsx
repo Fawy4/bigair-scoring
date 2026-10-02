@@ -6,9 +6,10 @@ import { ConfirmButton } from "@/components/confirm-button";
 import { FieldLabel } from "@/components/help-button";
 import { LogoField } from "@/components/org/logo-field";
 import { toast } from "@/hooks/use-toast";
+import { emailLimitPerHour } from "@/lib/auth/email-send";
 import { slugMatches } from "@/lib/platform/organisation";
 import { copy } from "@/lib/ui-copy";
-import { deleteOrganisation, inviteOrganiser, renameOrganisation, setOrganisationArchived, setOrganisationLogo, type InviteResult } from "../../actions";
+import { deleteOrganisation, inviteOrganiser, removeOrganiser, renameOrganisation, setOrganisationArchived, setOrganisationLogo, type InviteResult } from "../../actions";
 
 const c = copy.admin.org;
 const Problem = ({ text }: { text: string | null }) =>
@@ -85,6 +86,7 @@ export function LogoPanel({ orgId, logoUrl }: { orgId: string; logoUrl: string |
 }
 
 export function InvitePanel({ orgId }: { orgId: string }) {
+  const limit = emailLimitPerHour();
   const [email, setEmail] = useState("");
   const [send, setSend] = useState(true);
   const [result, setResult] = useState<InviteResult | null>(null);
@@ -124,6 +126,11 @@ export function InvitePanel({ orgId }: { orgId: string }) {
             {c.inviteSend}
           </label>
           <p className="text-sm font-semibold">{c.inviteSendHelp.text}</p>
+          {limit > 0 ? (
+            <p data-testid="email-limit" className="text-sm font-semibold">
+              {c.emailLimit(limit)}
+            </p>
+          ) : null}
         </div>
         <div>
           <button type="submit" className="btn btn-primary" disabled={pending || !email.trim()}>
@@ -134,8 +141,11 @@ export function InvitePanel({ orgId }: { orgId: string }) {
       {result && !result.ok ? <Problem text={result.error} /> : null}
       {result && result.ok ? (
         <div className="panel flex flex-col gap-3" role="status">
-          <p className="text-lg font-semibold">
-            {result.emailSent ? c.inviteSent(result.email) : result.emailFailed ? c.inviteEmailFailed(result.email) : c.inviteLinkOnly(result.email)}
+          <p className="text-lg font-semibold" data-testid="invite-confirmation">
+            {result.emailSent ? c.inviteSent(result.email) : result.emailFailed ? c.inviteEmailFailed[result.failure ?? "other"](result.email, result.limitPerHour) : c.inviteLinkOnly(result.email)}
+          </p>
+          <p className="font-semibold" data-testid="invite-follow-up">
+            {c.inviteFollowUp}
           </p>
           {result.link ? (
             <div className="flex flex-col gap-2">
@@ -167,6 +177,37 @@ export function InvitePanel({ orgId }: { orgId: string }) {
         </div>
       ) : null}
     </section>
+  );
+}
+
+/** One organiser's "Remove" in the Organisers table: a question first, then access ends and their sessions are signed out. */
+export function RemoveOrganiserButton({ orgId, orgName, userId, email, isSelf }: { orgId: string; orgName: string; userId: string; email: string; isSelf: boolean }) {
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  if (isSelf) return <span className="text-sm font-semibold text-beach-muted">{c.removeSelf}</span>;
+  return (
+    <div className="flex flex-col gap-1">
+      <ConfirmButton
+        danger
+        label={c.removeButton}
+        question={c.removeQuestion(email, orgName)}
+        confirmLabel={c.removeYes}
+        cancelLabel={c.cancel}
+        pending={pending}
+        onConfirm={() =>
+          start(async () => {
+            setError(null);
+            const res = await removeOrganiser({ orgId, userId });
+            if (res.ok) {
+              toast({ title: c.removed(email) });
+              router.refresh();
+            } else setError(res.error);
+          })
+        }
+      />
+      <Problem text={error} />
+    </div>
   );
 }
 
