@@ -1,5 +1,6 @@
 "use client";
 
+import { NumberField } from "@/components/org/number-field";
 import { DndContext, pointerWithin, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { useMemo, useState } from "react";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -56,28 +57,12 @@ function decode(v: string): SeatSource {
 const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th")}`;
 
 function NumberBox({ id, label, value, min, max, onCommit, disabled, className }: { id: string; label: string; value: number | undefined; min: number; max: number; onCommit: (n: number) => void; disabled?: boolean; className?: string }) {
-  const [text, setText] = useState<string | null>(null);
   return (
     <div className={cn("flex flex-col gap-1", className)}>
       <label htmlFor={id} className="text-sm font-bold">
         {label}
       </label>
-      <input
-        id={id}
-        type="number"
-        min={min}
-        max={max}
-        step="any"
-        disabled={disabled}
-        className="w-24"
-        value={text ?? (value === undefined ? "" : String(value))}
-        onChange={(e) => {
-          setText(e.target.value);
-          const n = Number(e.target.value);
-          if (e.target.value !== "" && Number.isFinite(n) && n >= min && n <= max) onCommit(n);
-        }}
-        onBlur={() => setText(null)}
-      />
+      <NumberField id={id} label={label} min={min} max={max} step={max > 20 ? 0.5 : 1} value={value ?? null} disabled={disabled} onChange={onCommit} />
     </div>
   );
 }

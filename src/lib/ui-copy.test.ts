@@ -2,12 +2,13 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import identification from "../../presets/identification/schemes.json";
-import { copy, FORMAT_LABELS, help, SCORING_LABELS } from "./ui-copy";
+import { copy, FORMAT_LABELS, help, orgCopy, SCORING_LABELS } from "./ui-copy";
 
 // House words (owner's wording rules): never "chip", "vest" or "mark(s)" (use "Rider label", "Lycra", "score") and no bracket jargon:
 // "bye" (use "Advances without riding"), "repechage" (use "Second-chance round"), "dingle elimination", "man-on-man" (use "1 v 1 heats"),
 // "winners/losers bracket" (use "Main draw" / "Second-chance draw").
-const BANNED = /\b(chips?|vests?|marks?|marked|marking|byes?|repechage|dingle|man-on-man|(winners?|losers?)['’]?\s+bracket)\b/i;
+// Phase 7a adds the jargon words: "configure" in any form, "entity", "record" in any form (a noun or "recorded") and "RPC".
+const BANNED = /\b(chips?|vests?|marks?|marked|marking|byes?|repechage|dingle|man-on-man|(winners?|losers?)['’]?\s+bracket|configure[sd]?|configuring|configuration|entity|entities|records?|recorded|RPC)\b/i;
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -20,7 +21,12 @@ function walk(dir: string, out: string[] = []): string[] {
 
 /** Text a user could read in a component: JSX text and string literals that look like sentences or single words. */
 function userFacingText(source: string): string[] {
-  const code = source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
+  let code = source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
+  // TypeScript generics (Record<string, string>) are types, not words on a screen: drop them before looking for JSX text, innermost first.
+  for (let before = ""; before !== code; ) {
+    before = code;
+    code = code.replace(/\b(?:Record|Array|ReadonlyArray|Partial|Promise|Set|Map|Omit|Pick)<[^<>]*>/g, " ");
+  }
   const found: string[] = [];
   for (const m of code.matchAll(/>([^<>{}=]+)</g)) found.push(m[1]);
   for (const m of code.matchAll(/"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)'|`((?:[^`\\]|\\.)*)`/g)) {
@@ -47,7 +53,7 @@ function strings(value: unknown, out: string[] = []): string[] {
 
 describe("house words in everything a user reads", () => {
   it("the copy file has no banned words", () => {
-    const all = [...strings(copy), ...strings(help), ...strings(SCORING_LABELS), ...strings(FORMAT_LABELS)];
+    const all = [...strings(copy), ...strings(orgCopy), ...strings(help), ...strings(SCORING_LABELS), ...strings(FORMAT_LABELS)];
     expect(all.length).toBeGreaterThan(400);
     expect(all.filter((t) => BANNED.test(t))).toEqual([]);
   });
@@ -69,6 +75,13 @@ describe("house words in everything a user reads", () => {
       for (const text of userFacingText(readFileSync(file, "utf8"))) if (BANNED.test(text)) offenders.push(`${file}: ${text.slice(0, 80)}`);
     }
     expect(offenders).toEqual([]);
+  });
+
+  it("the TypeScript type Record<…> is not a user string", () => {
+    expect(userFacingText("const roles = { a: 'Judge' } as Record<string, string>;\nconst x: Record<string, number> = {};").filter((t) => BANNED.test(t))).toEqual([]);
+    expect(BANNED.test("Nothing recorded yet.")).toBe(true);
+    expect(BANNED.test("Scores stay in the record")).toBe(true);
+    expect(BANNED.test("Server configuration")).toBe(true);
   });
 
   it("the built-in identification schemes use 'lycra' wording", () => {

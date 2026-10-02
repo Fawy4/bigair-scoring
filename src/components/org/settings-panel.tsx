@@ -2,18 +2,28 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { ChevronDown, FolderOpen } from "lucide-react";
-import { orgCopy } from "@/lib/org-design/copy";
+import { orgCopy } from "@/lib/ui-copy";
+import { Button } from "./button";
 import { MenuItem, MenuLabel, Popover } from "./popover";
+
+export type LoadItem = string | { id: string; label: string };
+const itemId = (i: LoadItem) => (typeof i === "string" ? i : i.id);
+const itemLabel = (i: LoadItem) => (typeof i === "string" ? i : i.label);
 
 interface SettingsPanelProps {
   title: string;
   /** The live example sentence. It stays in view (sticky) while the Advanced fold is scrolled, and is announced politely when it changes. */
   sentence: string;
   sentenceTestId?: string;
-  /** Names of saved presets for the quiet "Load…" menu. */
-  loadMenu: { builtIn: string[]; mine: string[] };
+  /** The quiet "Load…" menu: names of saved presets (the preview) or `{ id, label }` with `onLoad` (the real screens), and "Save as preset…". */
+  loadMenu?: { builtIn: LoadItem[]; mine: LoadItem[]; onLoad?: (id: string) => void; onSaveAsPreset?: () => void; disabledReason?: string };
+  /** A note above the dials: a locked division says so here, once. */
+  banner?: ReactNode;
+  /** Under the Advanced fold: Save buttons, export and import. */
+  footer?: ReactNode;
   simple: ReactNode;
-  advanced: ReactNode;
+  /** null = nothing behind the fold (no fold is drawn). */
+  advanced: ReactNode | null;
   advancedCount: number;
   defaultAdvancedOpen?: boolean;
   /** When given, the fold's open or closed state is remembered on this device under this key (inside try/catch). */
@@ -22,7 +32,7 @@ interface SettingsPanelProps {
 }
 
 /** Simple dials on top, the live sentence under the title, one "More settings" fold at the bottom, presets in a small "Load…" menu in the header. */
-export function SettingsPanel({ title, sentence, sentenceTestId = "model-sentence", loadMenu, simple, advanced, advancedCount, defaultAdvancedOpen = false, storageKey, testId }: SettingsPanelProps) {
+export function SettingsPanel({ title, sentence, sentenceTestId = "model-sentence", loadMenu, banner, footer, simple, advanced, advancedCount, defaultAdvancedOpen = false, storageKey, testId }: SettingsPanelProps) {
   const [open, setOpen] = useState(defaultAdvancedOpen);
   useEffect(() => {
     if (!storageKey) return;
@@ -47,28 +57,54 @@ export function SettingsPanel({ title, sentence, sentenceTestId = "model-sentenc
     <section data-testid={testId} aria-label={title} className="rounded-card border border-beach-line bg-beach-bg">
       <header className="flex items-center justify-between gap-2 border-b border-beach-line px-4 py-2">
         <h3 className="text-[14px] font-semibold">{title}</h3>
-        <Popover label={orgCopy.settings.load} icon={FolderOpen} variant="quiet" align="end" panelRole="menu">
-          {(close) => (
-            <>
-              <MenuLabel>{orgCopy.settings.builtIn}</MenuLabel>
-              {loadMenu.builtIn.map((name) => (
-                <MenuItem key={name} onClick={close}>
-                  {name}
-                </MenuItem>
-              ))}
-              <MenuLabel>{orgCopy.settings.mine}</MenuLabel>
-              {loadMenu.mine.map((name) => (
-                <MenuItem key={name} onClick={close}>
-                  {name}
-                </MenuItem>
-              ))}
-              <div className="mt-1 border-t border-beach-line pt-1">
-                <MenuItem onClick={close}>{orgCopy.settings.saveAsPreset}</MenuItem>
-              </div>
-            </>
-          )}
-        </Popover>
+        {!loadMenu ? null : loadMenu.disabledReason ? (
+          <Button variant="quiet" icon={FolderOpen} disabled disabledReason={loadMenu.disabledReason}>
+            {orgCopy.settings.load}
+          </Button>
+        ) : (
+          <Popover label={orgCopy.settings.load} icon={FolderOpen} variant="quiet" align="end" panelRole="menu" testId="load-menu" panelClassName="max-h-[60dvh] w-80 overflow-y-auto">
+            {(close) => (
+              <>
+                {loadMenu.mine.length > 0 ? <MenuLabel>{orgCopy.settings.mine}</MenuLabel> : null}
+                {loadMenu.mine.map((item) => (
+                  <MenuItem
+                    key={itemId(item)}
+                    onClick={() => {
+                      loadMenu.onLoad?.(itemId(item));
+                      close();
+                    }}
+                  >
+                    {itemLabel(item)}
+                  </MenuItem>
+                ))}
+                <MenuLabel>{orgCopy.settings.builtIn}</MenuLabel>
+                {loadMenu.builtIn.map((item) => (
+                  <MenuItem
+                    key={itemId(item)}
+                    onClick={() => {
+                      loadMenu.onLoad?.(itemId(item));
+                      close();
+                    }}
+                  >
+                    {itemLabel(item)}
+                  </MenuItem>
+                ))}
+                <div className="mt-1 border-t border-beach-line pt-1">
+                  <MenuItem
+                    onClick={() => {
+                      loadMenu.onSaveAsPreset?.();
+                      close();
+                    }}
+                  >
+                    {orgCopy.settings.saveAsPreset}
+                  </MenuItem>
+                </div>
+              </>
+            )}
+          </Popover>
+        )}
       </header>
+      {banner}
       <div className="sticky top-[var(--org-sticky-top,0px)] z-10 border-b border-beach-line bg-beach-surface px-4 py-2" aria-live="polite">
         <p className="text-small font-semibold text-beach-muted">{orgCopy.settings.sentenceLabel}</p>
         <p data-testid={sentenceTestId} className="text-body font-semibold">
@@ -76,7 +112,7 @@ export function SettingsPanel({ title, sentence, sentenceTestId = "model-sentenc
         </p>
       </div>
       <div className="px-4">{simple}</div>
-      <div className="border-t border-beach-line">
+      {advanced ? <div className="border-t border-beach-line">
         <button type="button" aria-expanded={open} onClick={toggle} data-testid="advanced-toggle" className="group flex min-h-[var(--org-ctl)] w-full items-center gap-2 px-4 text-left text-body font-semibold hover:bg-beach-surface">
           <ChevronDown aria-hidden className="size-4 shrink-0 transition-transform group-aria-expanded:rotate-180" />
           {orgCopy.settings.more(advancedCount)}
@@ -86,7 +122,8 @@ export function SettingsPanel({ title, sentence, sentenceTestId = "model-sentenc
             {advanced}
           </div>
         ) : null}
-      </div>
+      </div> : null}
+      {footer ? <div className="border-t border-beach-line px-4 py-3">{footer}</div> : null}
     </section>
   );
 }

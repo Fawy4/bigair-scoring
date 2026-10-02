@@ -8,7 +8,7 @@ import { useShellLayout } from "@/components/org/layout-context";
 import { MenuItem, Popover } from "@/components/org/popover";
 import { Pill } from "@/components/live/pill";
 import { DIVISIONS, RIDERS, type PreviewRider, type RiderStatus } from "@/lib/org-design/fixtures";
-import { orgCopy } from "@/lib/org-design/copy";
+import { orgCopy } from "@/lib/ui-copy";
 
 const divisionName = (id: string) => DIVISIONS.find((d) => d.id === id)?.name ?? id;
 

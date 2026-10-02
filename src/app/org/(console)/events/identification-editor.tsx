@@ -25,6 +25,29 @@ export interface IdentificationValue {
   allowDivisionOverride: boolean;
 }
 
+/** "Will riders wear coloured lycras?" picks the matching ready-made scheme: Yes = Lycra colour per heat, No = Name call-out. */
+export function LycraQuestion({ value, onChange }: { value: IdentificationValue; onChange: (v: IdentificationValue) => void }) {
+  const s = value.scheme;
+  const answer = (yes: boolean) => {
+    if (yes === usesLycras(s)) return;
+    const next = yes ? lycraScheme() : defaultScheme();
+    onChange({ ...value, scheme: structuredClone(next), basedOn: next.id });
+  };
+  return (
+    <fieldset className="flex flex-col gap-1">
+      <legend className="sr-only">{T.lycraQuestion}</legend>
+      <label className="flex min-h-[var(--org-ctl)] items-center gap-3 text-body font-semibold">
+        <input type="radio" name="lycras" checked={usesLycras(s)} onChange={() => answer(true)} />
+        {T.lycraYes}
+      </label>
+      <label className="flex min-h-[var(--org-ctl)] items-center gap-3 text-body font-semibold">
+        <input type="radio" name="lycras" checked={s.primary === "name"} onChange={() => answer(false)} />
+        {T.lycraNo}
+      </label>
+    </fieldset>
+  );
+}
+
 /** Pick a preset, edit palette / secondary fields / call-out / fallback, allow a per-division override, save as preset. */
 export function IdentificationEditor({
   value,
@@ -33,6 +56,7 @@ export function IdentificationEditor({
   organisationId,
   errors,
   division,
+  hideLycraQuestion,
 }: {
   value: IdentificationValue;
   onChange: (v: IdentificationValue) => void;
@@ -41,6 +65,8 @@ export function IdentificationEditor({
   errors: string[];
   /** Used inside one division: no "allow per-division override" switch, and the heading says so. */
   division?: boolean;
+  /** The Event step asks the lycra question in its Simple part, so the editor leaves it out. */
+  hideLycraQuestion?: boolean;
 }) {
   const s = value.scheme;
   const [presetName, setPresetName] = useState("");
@@ -88,20 +114,22 @@ export function IdentificationEditor({
       <legend className="px-1 text-xl font-extrabold">{division ? T.divisionHeading : T.heading}</legend>
       <p className="font-semibold">{division ? T.divisionIntro : T.intro}</p>
 
-      <fieldset className="flex flex-col gap-2">
-        <legend>
-          <FieldLabel as="span" text={T.lycraQuestion} help={help["ident.lycraQuestion"]} />
-        </legend>
-        <label className="flex items-center gap-3 font-bold">
-          <input type="radio" name="lycras" checked={lycras} onChange={() => answerLycras(true)} />
-          {T.lycraYes}
-        </label>
-        <label className="flex items-center gap-3 font-bold">
-          <input type="radio" name="lycras" checked={isName} onChange={() => answerLycras(false)} />
-          {T.lycraNo}
-        </label>
-        <p className="text-sm font-semibold">{T.lycraHint}</p>
-      </fieldset>
+      {hideLycraQuestion ? null : (
+        <fieldset className="flex flex-col gap-2">
+          <legend>
+            <FieldLabel as="span" text={T.lycraQuestion} help={help["ident.lycraQuestion"]} />
+          </legend>
+          <label className="flex items-center gap-3 font-bold">
+            <input type="radio" name="lycras" checked={lycras} onChange={() => answerLycras(true)} />
+            {T.lycraYes}
+          </label>
+          <label className="flex items-center gap-3 font-bold">
+            <input type="radio" name="lycras" checked={isName} onChange={() => answerLycras(false)} />
+            {T.lycraNo}
+          </label>
+          <p className="text-sm font-semibold">{T.lycraHint}</p>
+        </fieldset>
+      )}
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="ident-preset" text={T.preset} help={help["ident.preset"]} />

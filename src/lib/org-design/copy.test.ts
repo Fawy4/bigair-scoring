@@ -1,24 +1,8 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { orgCopy } from "./copy";
+import { orgCopy } from "@/lib/ui-copy";
 import { ADVANCED_SETTINGS } from "./fixtures";
-
-// The house words (ui-copy.test.ts) plus the words the Phase 7a plan adds to the banned list for the organiser screens.
-const BANNED = /\b(chips?|vests?|marks?|marked|marking|byes?|repechage|dingle|man-on-man|configure[sd]?|configuring|configuration|entity|entities|records?|recorded|RPC)\b/i;
-
-function strings(value: unknown, out: string[] = []): string[] {
-  if (typeof value === "string") out.push(value);
-  else if (typeof value === "function") {
-    try {
-      const r = (value as (...a: unknown[]) => unknown)("x", "x", "x");
-      if (typeof r === "string") out.push(r);
-    } catch {
-      /* not a text function */
-    }
-  } else if (value && typeof value === "object") for (const v of Object.values(value)) strings(v, out);
-  return out;
-}
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -30,11 +14,6 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 describe("organiser preview wording", () => {
-  it("has no banned word anywhere in the copy", () => {
-    const all = strings(orgCopy);
-    expect(all.length).toBeGreaterThan(80);
-    expect(all.filter((t) => BANNED.test(t))).toEqual([]);
-  });
   it("uses the plain words of the plan for the state pills", () => {
     expect(orgCopy.states.done.label).toBe("Done");
     expect(orgCopy.states.attention.label).toBe("Needs attention");

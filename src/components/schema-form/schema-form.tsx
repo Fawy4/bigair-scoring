@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FieldLabel, HelpButton } from "@/components/help-button";
+import { NumberField } from "@/components/org/number-field";
 import { defaultValueFor, friendlyMessage, type FieldNode } from "@/lib/schema-form/nodes";
 import { copy } from "@/lib/ui-copy";
 import { getIn, moveIn, removeIn, setIn } from "@/lib/form/path";
@@ -156,15 +157,16 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
       return (
         <>
           <Label node={node} path={path} />
-          <input
+          <NumberField
             id={idOf(path)}
-            type="number"
-            inputMode="decimal"
-            step={node.integer ? 1 : "any"}
-            min={node.min}
-            value={typeof value === "number" && !Number.isNaN(value) ? value : ((value as string | undefined) ?? "")}
-            onChange={(e) => (e.target.value === "" ? (node.required ? set("") : ctx.remove(path)) : set(Number(e.target.value)))}
-            aria-invalid={Boolean(errorOf(ctx, path))}
+            label={node.label}
+            clamp={false}
+            step={node.integer ? 1 : 0.01}
+            min={node.min ?? node.exclusiveMin ?? -99}
+            max={node.max ?? 999}
+            value={typeof value === "number" && !Number.isNaN(value) ? value : null}
+            onChange={set}
+            onClear={() => (node.required ? set("") : ctx.remove(path))}
           />
           <Err ctx={ctx} path={path} />
         </>
@@ -226,15 +228,7 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
           {entries.map(([k, v]) => (
             <div key={k} className="flex flex-wrap items-center gap-2">
               <span className="min-w-32 font-bold">{k}</span>
-              <input
-                aria-label={`${node.label}: ${k}`}
-                type="number"
-                min={1}
-                step={1}
-                value={typeof v === "number" ? v : ""}
-                onChange={(e) => ctx.set([...path, k], e.target.value === "" ? "" : Number(e.target.value))}
-                className="w-24"
-              />
+              <NumberField label={`${node.label}: ${k}`} min={1} max={999} value={typeof v === "number" ? v : null} onChange={(n) => ctx.set([...path, k], n)} onClear={() => ctx.set([...path, k], "")} />
               <button type="button" className="btn btn-danger" onClick={() => ctx.remove([...path, k])}>
                 {copy.common.remove}
               </button>

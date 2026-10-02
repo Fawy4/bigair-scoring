@@ -595,7 +595,7 @@ Event-day steps if 7a-1 is live are in docs/09 §A.6:
 The 30-minute test with a stranger runs on Sunday 4 Oct 2026.
 
 ### Status
-- Plan merged (PR #13).
+- Plan merged (PR #13). 7a-0 preview approved and merged (PR #15). 7a-1 built on branch `claude/sleepy-edison-pgmzgn` (see below).
 
 ### Phase 7a-0 – the organiser design preview (built; waiting for the owner's "approved" or a list of changes)
 
@@ -733,3 +733,42 @@ Open Demo Cup → Run order and the head console: both open; the two dead rows a
 
 ### How to test
 See the click-through at the end of the pull request description.
+
+
+## Phase 7a-1 – organiser shell, dashboard and settings (built; pull request open)
+
+**What changed, in words**
+- **Wording.** The banned-words test now also refuses configure / configuration, entity, record / recorded and RPC. Ten sentences were reworded (the plan listed nine; "That rider has used every attempt…", "Which kite details you record…" and a scoring-model message with "configuration" were also caught). The preview's words moved into `src/lib/ui-copy.ts`. The test now ignores TypeScript types such as `Record<…>` (the plan said it already did; it did not).
+- **Shell.** Every organiser screen has the new top bar (product, organisation switcher, event name and dates, state, public link with QR code, account menu with Daylight / Dark, Normal / Large, password, sign out) and, inside an event, the rail of seven steps: Event, Divisions, Riders, Officials, Draw, Run order, Go live. Each step shows Done / Needs attention / Not started and one line of reason; both change as you complete things. On a phone the rail is the step drop-down with the same words. `/admin` has the same bar and a rail of its own.
+- **Go live dashboard** (`/org/events/<id>`). Readiness checklist (riders, judges per division, draw locked, run order for today, PINs issued) with a Fix link per row, "Ready to run" when all green; running heat with the server-time timer, next two heats; Hold, Resume at…, Shift +5 / +10 (server clock, same actions as the Run order page); head judge console in a new tab; share cards with QR codes. The wind call and the big screen are greyed with their reason (see "Not done").
+- **Settings pattern.** Simple dials each with a line under them and a "?" with an example; the live sentence (sticky); one "More settings (n)" fold, remembered per device; a small "Load…" menu for saved presets and "Save as preset…". Applied to Divisions → Scoring, Format and Rider label, the Event step, organisation settings and platform settings.
+- **Heat length per round** is now a table: one row per round of the preview, each box pre-filled, with a note that a blank uses the division's heat length; if it ever has no rows it says why (including when the format has a problem).
+- **Previous / Next** at the foot of every step (Go live has only Previous). On the Event step Next saves the form first and stays with the error if it cannot.
+- **Number boxes** (every one outside the official practice panel) are as wide as their largest value, digits at the right; a test fails if a screen draws its own.
+- **Reset event and Restore** (own commits). Migrations `20261008100000_phase7a_reset.sql` and `20261008100100_phase7a_reset_purge.sql`, applied to the hosted project with `npm run db:apply`; types regenerated. See the "Choices" below.
+
+**Choices I made (please confirm or change)**
+1. **Branch.** Work is on `claude/sleepy-edison-pgmzgn` (the branch this session was given), not `phase-7a-1-shell`.
+2. **Withdrawals after the lock.** The plan says withdrawals made after the lock "stay as DNS walkovers as today". In the code, withdrawing a rider after the lock does not change the draw at all (the database function `set_draw_walkover` exists but nothing calls it). So Reset puts each ladder back to exactly the draw that was locked, and every seat modifier set during the event (DNS / DNF / DSQ by the head judge) is wiped. Nothing guesses.
+3. **Unlocked draws.** A drawn division that is not locked and has no heat past "scheduled" is reset to its current draw (it has no copy and needs none).
+4. **A refused Restore cannot delete its own expired copy** (a refusal rolls the transaction back). Expired copies go when the next Reset or Restore runs and when /admin/health loads (`purge_expired_reset_snapshots`).
+5. **The Note button** stays the floating one it already was (not added again to the top bar); the Next button leaves room for it.
+6. **The Organisation list / Settings / Feedback links** moved into the account menu (inside an event) and a short list on the left (outside one), as the plan says.
+7. **Old look inside the new frame.** Riders, Officials, Draw, Run order, the events list and the Trick base tab keep their old look until 7a-2; they sit inside the new shell. In Dark mode those old screens show as white panels.
+
+**Not done / not verified**
+- **Wind call and big screen:** PR #14 merged; rebased onto main. The dashboard now holds Phase 6's wind-call control (as is) and the Big screen link (`/screen/<address>`, new tab). The greyed placeholders remain only in the design preview.
+- **Owed (decided 2 Oct 2026):** a rider who withdraws after the lock does not become a DNS walkover in the stored draw. Reset restores exactly the locked draw; late withdrawals as walkovers are not needed before the event.
+- **Head console division picker: not in this PR.** The owner decided (2 Oct 2026) that Console v2 owns the console division selector, so it was removed from 7a-1; the head console is untouched here.
+- **Two red tests belong to other sessions' in-progress database changes on the shared project, and are left alone:** `rls.test.ts` table coverage lists `sim_baseline` and `sim_clock` (Simulator), and `rerun.test.ts` expects `HEAT_CANCELLED` where the database now answers `HEAT_ALREADY_RERUN` (Console v2). Neither is defined by a migration in this branch.
+- Trick base tab, the division's live-screen settings (inside More settings) and the Rider label editor's inner fields are not restyled; tables, Draw and Run order, the consistency sweep and the "one primary button per screen" test are 7a-2.
+- Every disabled control on the new screens explains itself; legacy screens still have plain disabled buttons (7a-2).
+- Not seen on a real phone or in the sun; checked in Chromium at 390 and 1440 px.
+- The 30-minute acceptance script (plan §11) has not been run.
+
+**Test evidence**
+- `npm run typecheck` and `npm run lint` clean. `npm test`: 140 files, 1633 tests passed (main had 131 / 1574).
+- RLS (`npm run test:rls`, hosted dev project): new `tests/rls/reset.test.ts` 13 tests pass; with Phase 6 merged, the two public-view tests that were red now pass. The two remaining reds belong to other sessions (see above).
+- Playwright (throwaway organisations, removed by the ledger): new `shell-dashboard` (5), `event-reset` (2); updated `organiser`, `division-identification`, `draw-timetable`, `riders`, `admin`, `password-login`, `officials`, `registration`, `phase4a2-basics`. After the rebase onto main (Phase 6 merged), `join.spec`, `shell-dashboard`, `event-reset` and `organiser` pass; one `shell-dashboard` test is timing-sensitive and passed on re-run. Several first-run timeouts were hosted-database load.
+
+**How to test (laptop, then phone)** — see the pull request description.

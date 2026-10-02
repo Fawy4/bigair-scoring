@@ -1,5 +1,6 @@
 "use client";
 
+import { NumberField } from "@/components/org/number-field";
 import { DndContext, pointerWithin, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
@@ -343,7 +344,7 @@ export function ScheduleManager(props: ScheduleProps) {
                 </div>
                 <div className="flex flex-col gap-1">
                   <label htmlFor="break-min" className="text-sm font-bold">{T.breakMinutes}</label>
-                  <input id="break-min" type="number" min={1} value={breakMin} onChange={(e) => setBreakMin(Number(e.target.value))} className="w-24" />
+                  <NumberField id="break-min" label={T.breakMinutes} min={1} max={999} value={breakMin} onChange={setBreakMin} />
                 </div>
                 <button type="button" className="btn" disabled={pending} onClick={() => mutate((p) => addBreak(p, { label: breakLabel, durationMin: breakMin }))}>{T.addBreak}</button>
                 <div className="flex flex-col gap-1">
@@ -353,7 +354,7 @@ export function ScheduleManager(props: ScheduleProps) {
                 <button type="button" className="btn" disabled={pending} onClick={() => mutate((p) => addNote(p, noteText))}>{T.addNote}</button>
                 <div className="flex flex-col gap-1">
                   <label htmlFor="all-breaks" className="text-sm font-bold">{T.allBreaks}</label>
-                  <input id="all-breaks" type="number" min={0} value={allBreaks} onChange={(e) => setAllBreaks(Number(e.target.value))} className="w-24" />
+                  <NumberField id="all-breaks" label={T.allBreaks} min={0} max={999} value={allBreaks} onChange={setAllBreaks} />
                 </div>
                 <button type="button" className="btn" disabled={pending} onClick={() => mutate((p) => p.items.reduce((acc, i) => (i.kind === "heat" && !liveStarted(i.id) ? setBreakAfter(acc, i.id, allBreaks, lives) : acc), p))}>{T.applyAllBreaks}</button>
               </div>
@@ -399,14 +400,14 @@ export function ScheduleManager(props: ScheduleProps) {
                       {r.kind !== "note" ? (
                         <label className="flex items-center gap-1 text-sm font-bold">
                           {T.durationShort}
-                          <input type="number" min={1} step="any" disabled={started} aria-label={T.durationLabel(idx + 1)} defaultValue={r.durationMin} key={`${r.itemId}-d-${r.durationMin}`} className="w-20" onBlur={(e) => Number(e.target.value) !== r.durationMin && Number(e.target.value) > 0 && mutate((p) => setDuration(p, r.itemId, Number(e.target.value), lives))} />
+                          <NumberField label={T.durationLabel(idx + 1)} min={1} max={999} step={0.5} commit="blur" disabled={started} value={r.durationMin} onChange={(n) => mutate((p) => setDuration(p, r.itemId, n, lives))} />
                         </label>
                       ) : null}
                       {r.kind !== "note" ? <span className="text-sm font-bold" data-testid="row-end">{T.endAt(r.end ?? "–")}</span> : null}
                       {r.kind === "heat" ? (
                         <label className="flex items-center gap-1 text-sm font-bold">
                           {T.breakShort}
-                          <input type="number" min={0} step="any" aria-label={T.breakAfterLabel(idx + 1)} defaultValue={r.breakAfterMin ?? ""} key={`${r.itemId}-b-${r.breakAfterMin}`} placeholder={String(r.breakAfterMin ?? "")} className="w-20" onBlur={(e) => e.target.value !== "" && Number(e.target.value) !== r.breakAfterMin && mutate((p) => setBreakAfter(p, r.itemId, Number(e.target.value), lives))} />
+                          <NumberField label={T.breakAfterLabel(idx + 1)} min={0} max={999} step={0.5} commit="blur" value={r.breakAfterMin ?? null} placeholder={String(r.breakAfterMin ?? "")} onChange={(n) => mutate((p) => setBreakAfter(p, r.itemId, n, lives))} />
                         </label>
                       ) : null}
                       <span className="text-sm font-extrabold" data-testid="row-status">{T.status[r.status]}</span>
@@ -425,7 +426,7 @@ export function ScheduleManager(props: ScheduleProps) {
                   <div key={`x-${r.itemId}`} className="panel flex flex-wrap items-end gap-3">
                     <label className="flex flex-col gap-1 font-bold">
                       {T.warmUpRow}
-                      <input type="number" min={0} step="any" defaultValue={r.warmUpMin} className="w-24" onBlur={(e) => e.target.value !== "" && mutate((p) => setWarmUp(p, r.itemId, Number(e.target.value), lives))} />
+                      <NumberField label={T.warmUpRow} min={0} max={999} step={0.5} commit="blur" value={r.warmUpMin} onChange={(n) => mutate((p) => setWarmUp(p, r.itemId, n, lives))} />
                     </label>
                     {it && it.kind === "heat" ? <span className="text-sm font-semibold">{infoById.get(it.heatId!)?.heat}</span> : null}
                   </div>

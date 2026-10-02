@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { NumberField } from "@/components/org/number-field";
 import { FieldLabel } from "@/components/help-button";
 import { addRoundAfter, advanceCount, ladderProblems, placeCount, placeTargets, removeRound, renameRoundField, roundsOf, setPlaceTarget, setRoundSizes } from "@/lib/format-ui/custom-ladder";
 import { effectiveMaxHeatSize, effectiveMinHeatSize } from "@/lib/engine/ladder/seeding";
@@ -10,29 +10,9 @@ const B = copy.customBuilder;
 
 type Template = Parameters<typeof roundsOf>[0];
 
-/** A whole-number box that keeps what you type while you type (the defaults follow the target and must not snap back). */
+/** A whole-number box (the defaults follow the target; what you type is kept while you type). */
 function NumberBox({ id, value, onCommit }: { id: string; value: number; onCommit: (v: number) => void }) {
-  const [text, setText] = useState(String(value));
-  const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (document.activeElement !== ref.current) setText(String(value));
-  }, [value]);
-  return (
-    <input
-      ref={ref}
-      id={id}
-      type="number"
-      min={1}
-      max={10}
-      value={text}
-      className="w-24"
-      onChange={(e) => {
-        setText(e.target.value);
-        if (e.target.value !== "") onCommit(Number(e.target.value));
-      }}
-      onBlur={() => setText(String(value))}
-    />
-  );
+  return <NumberField id={id} label={id} min={1} max={10} value={value} onChange={onCommit} />;
 }
 
 /**

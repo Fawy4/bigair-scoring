@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { orgCopy } from "@/lib/org-design/copy";
+import { orgCopy } from "@/lib/ui-copy";
 import { OrganiserPreview } from "./organiser-preview";
 
 // Public, no login, kept out of search engines: a look-and-feel preview of the organiser screens with a made-up event. It reads nothing from the database and saves nothing.

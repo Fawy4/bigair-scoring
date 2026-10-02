@@ -60,6 +60,8 @@ export interface FormatPreview {
   ridingMinutes: number;
   /** "15 heats · 5 + 10 min · about 4 h with 2-minute breaks": warm-up, heat length and breaks all counted. */
   timeSentence: string;
+  /** Warm-ups, heats and breaks, in minutes: the number behind the Format sentence's "about 2 h 40". */
+  totalMinutes: number;
   warnings: string[];
 }
 
@@ -120,7 +122,7 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
   try {
     draw = expandFormat(template, entrants);
   } catch (e) {
-    return { riders: riderCount, ok: false, sentence: t.cannotRun(riderCount, (e as Error).message), finalNote: "", rounds: [], ladder: [], totalHeats: 0, minHeatsPerRider: 0, ridingMinutes: 0, timeSentence: "", warnings: [] };
+    return { riders: riderCount, ok: false, sentence: t.cannotRun(riderCount, (e as Error).message), finalNote: "", rounds: [], ladder: [], totalHeats: 0, minHeatsPerRider: 0, ridingMinutes: 0, timeSentence: "", totalMinutes: 0, warnings: [] };
   }
 
   const rounds: RoundPreview[] = draw.rounds.map((r) => {
@@ -173,6 +175,7 @@ export function previewFormat(template: FormatTemplate, riderCount: number): For
     minHeatsPerRider: minHeatsPerRider(draw),
     ridingMinutes,
     timeSentence,
+    totalMinutes: riding.length ? ladderTime(riding.map((h) => ({ warmUpMin: h.warmUpMin ?? 0, durationMin: h.durationMin, breakAfterMin: h.roundLast ? h.breakAfterRoundMin : h.breakAfterHeatMin }))).totalMin : 0,
     warnings: draw.warnings.map((w) => w.message + (w.suggestion ? ` ${w.suggestion}` : "")),
   };
 }

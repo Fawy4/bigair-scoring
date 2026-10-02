@@ -11,6 +11,8 @@ export const metadata = { title: copy.admin.health.heading };
 export default async function HealthPage() {
   const { supabase } = await requireAdmin();
   const { defaultTimezone } = await getPlatformSettings();
+  // expired Reset copies are removed whenever the Health page loads (no scheduled job needed)
+  await Promise.resolve(supabase.rpc("purge_expired_reset_snapshots")).catch(() => null);
   const { data, error } = await supabase.rpc("admin_health");
   const config = checkServerConfig(process.env);
   const settingsCheck = await attempt("Platform settings", async () => {
