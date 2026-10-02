@@ -5,6 +5,7 @@ import { attempt } from "@/lib/platform/safe";
 import { requireAdmin } from "@/lib/platform/session";
 import { copy } from "@/lib/ui-copy";
 import { RealtimeStatus } from "./realtime-status";
+import { PRODUCT_VERSION } from "@/lib/product-version";
 
 export const metadata = { title: copy.admin.health.heading };
 
@@ -28,6 +29,12 @@ export default async function HealthPage() {
     <main className="flex max-w-2xl flex-col gap-6">
       <h1>{c.heading}</h1>
       <p className="text-lg font-semibold">{c.intro}</p>
+      <p data-testid="product-version" className="font-semibold">
+        {copy.manual.version(PRODUCT_VERSION)} ·{" "}
+        <a href="/help" className="underline">
+          {copy.manual.footerHelp}
+        </a>
+      </p>
       <ul className="flex flex-col gap-3 text-xl font-semibold">
         <li className="panel">
           <span aria-hidden="true">{up ? "✔ " : "✖ "}</span>

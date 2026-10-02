@@ -1,3 +1,4 @@
+import { RefusalLinks } from "@/components/manual/refusal-links";
 import { redirect } from "next/navigation";
 import { HeadRoot } from "@/components/live/head-page";
 import { loadLiveContext } from "@/lib/live/context";
@@ -17,5 +18,11 @@ export default async function HeadPageRoute({ params, searchParams }: { params: 
     if (ctx.viewer.role === "spotter") redirect(`/spot/${eventId}`);
     if (ctx.viewer.role !== "head" && ctx.viewer.role !== "announcer") redirect("/seat?card=1");
   }
-  return <HeadRoot ctx={ctx} mode={mode === "announcer" ? "announcer" : undefined} />;
+  return (
+    <>
+      <HeadRoot ctx={ctx} mode={mode === "announcer" ? "announcer" : undefined} />
+      {/* the head judge's console is also an organiser's screen: its refusals link to the manual */}
+      <RefusalLinks />
+    </>
+  );
 }

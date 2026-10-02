@@ -1,4 +1,5 @@
 import { OrgFrame } from "@/components/org/org-frame";
+import { RefusalLinks } from "@/components/manual/refusal-links";
 import { Toaster } from "@/components/ui/toaster";
 import { getOrgContext } from "@/lib/org/context";
 import { getProductName } from "@/lib/platform/public-settings";
@@ -50,6 +51,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         {children}
       </OrgFrame>
       <Toaster />
+      <RefusalLinks />
     </>
   );
 }

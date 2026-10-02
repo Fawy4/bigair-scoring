@@ -23,6 +23,7 @@ Next.js 15 (App Router, TypeScript strict) · Tailwind + shadcn/ui · Supabase (
 - `npm run bootstrap:platform-admin -- --email …` — make an existing login the platform owner (`--role staff` for staff); with no `--email` it uses the only owner of organisation `arrow`
 - `npm run db:types` — rewrite `src/lib/supabase/database.types.ts` from the hosted schema (run after every migration)
 - `npm run seed:presets` — upsert `presets/**/*.json` into `scoring_models` / `format_templates` / `presets` (identification schemes, schedule templates)
+- `npm run manual:generate` — rewrite the generated tables of the product manual (settings, errors, troubleshooting index) from the code; `npm run manual:shots` — retake every manual screenshot (throwaway organisation on the hosted project, needs `npm run dev`)
 
 ## Repo layout
 ```
@@ -35,6 +36,7 @@ src/components/     UI; src/components/live/ for realtime widgets
 supabase/migrations  SQL migrations; supabase/seed.sql dev data
 presets/            scoring/*.json formats/*.json schedule/*.json identification/schemes.json tricks/big-air-vocabulary.json (validated by Zod on load and in tests)
 docs/               specs; docs/STATUS.md = running progress log (update at end of every phase)
+docs/manual/        the product manual (Markdown + img/), rendered in the product at /help; README.md says how to update it
 ```
 
 ## Golden rules (IMPORTANT)
@@ -46,12 +48,13 @@ docs/               specs; docs/STATUS.md = running progress log (update at end 
 6. **Resilience:** score submissions go through a client queue with retry + idempotency key; UI shows pending/synced state. Publishing is blocked while required scores are missing unless the head judge explicitly overrides (recorded).
 7. **Mobile first:** judge/spotter screens are one-thumb, high contrast for sunlight, sizes and rules per docs/06 §00 (beach readability standard: pad buttons ≥56px, taps only), works in Safari iOS and Chrome Android. Rider identification follows the event's configurable scheme (lycra colour per heat, fixed lycra, bib number, kite brand/model/size/colours, rash guard, photo, name call-out — docs/06 §0, presets/identification): one shared RiderLabel component everywhere, colour always shown as text too, never assume vests exist.
 8. **Wording:** every user-facing string lives in `src/lib/ui-copy.ts`, never inline in a component. House words (a test enforces them): "Rider label", "Lycra", "score", "Impression / Variety score"; never the old words for them. Every setting has a "?" (tap) with one sentence and an example.
-9. **Dependencies:** the stack above plus shadcn/ui's helper packages (Radix UI primitives, class-variance-authority, clsx, tailwind-merge, lucide-react, tailwindcss-animate) are pre-approved; anything else, ask first.
+9. **The manual is part of the product.** Every PR that changes a screen, a setting, a sentence or a rule updates the manual pages it touches (docs/manual), retakes their screenshots (`npm run manual:shots`), and adds a changelog line (docs/manual/changelog.md). Run `npm run manual:generate` after changing ui-copy.ts, a schema or a migration's error codes; a new refusal sentence gets its meaning and fix in `scripts/manual/error-notes.ts`. Tests fail when a refusal sentence, a database code or a setting is missing from the manual. Product version = `package.json` version (0.9.0 for the Arrow launch, 1.0.0 after it).
+10. **Dependencies:** the stack above plus shadcn/ui's helper packages (Radix UI primitives, class-variance-authority, clsx, tailwind-merge, lucide-react, tailwindcss-animate) are pre-approved; anything else, ask first.
 
 ## Workflow rules
 - Start each phase by reading `docs/STATUS.md` and ONLY the docs the prompt references. Use plan mode for multi-file work; keep plans short.
 - Small commits per phase: `feat(engine): ...`, `feat(ui): ...`, `fix: ...`, `docs: ...`. Push after each green phase (Vercel deploys `main`).
-- Before saying done: `npm run typecheck && npm test` pass; show the summary lines; list files changed; update `docs/STATUS.md` (done / not done / how to test on phone).
+- Before saying done: `npm run typecheck && npm test` pass; show the summary lines; list files changed; update `docs/STATUS.md` (done / not done / how to test on phone) and the manual (rule 9).
 - When the spec is ambiguous, list the options with a recommendation and ask — do not silently pick.
 - Explain in plain language; the owner is a competition judge, not an engineer.
 

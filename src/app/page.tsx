@@ -9,6 +9,7 @@ import { loadCore } from "@/lib/public/page-data";
 import { todayIn } from "@/lib/schedule/plans";
 import { createClient } from "@/lib/supabase/server";
 import { copy } from "@/lib/ui-copy";
+import { PRODUCT_VERSION } from "@/lib/product-version";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +106,10 @@ export default async function Home() {
 
         <footer className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-4 text-small font-medium text-beach-muted">
           <span>{settings.productName}</span>
+          <span data-testid="product-version">{copy.manual.version(PRODUCT_VERSION)}</span>
+          <Link href="/help" className="underline" data-testid="help-link">
+            {copy.manual.footerHelp}
+          </Link>
           {hasLegal ? (
             <Link href="/legal" className="underline">
               {copy.publicSite.legalLink}

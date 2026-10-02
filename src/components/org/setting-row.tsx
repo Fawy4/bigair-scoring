@@ -2,6 +2,8 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { orgCopy } from "@/lib/ui-copy";
+import { LearnMore } from "@/components/manual/learn-more";
+import { settingHref } from "@/lib/manual/settings-lookup";
 import { cn } from "@/lib/utils";
 import { useShellLayout } from "./layout-context";
 
@@ -48,6 +50,7 @@ export function SettingRow({ id, label, explanation, example, detail, children }
       {open ? (
         <p id={noteId} role="note" data-testid="setting-example" className="mt-1 rounded-[8px] border border-beach-line bg-beach-surface px-3 py-2 text-body font-medium">
           {detail ? `${detail} ` : ""}{orgCopy.settings.example(example)}
+          <LearnMore href={settingHref(detail ?? explanation)} what={label} />
         </p>
       ) : null}
     </div>
