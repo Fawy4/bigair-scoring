@@ -42,6 +42,10 @@ async function saveAndPublish(page: Page) {
   await expect(page.getByTestId("editor-status")).toContainText("(published)");
   return summary;
 }
+/** The editor answers taps only once it has loaded in the browser (data-ready); a click before that is lost. */
+async function editorReady(page: Page) {
+  await expect(page.locator("[data-testid=trick-editor][data-ready=true]")).toBeVisible();
+}
 async function openTrickBaseTab(page: Page, eventId: string) {
   await page.goto(`/org/events/${eventId}/divisions`);
   await page.getByRole("tab", { name: "Trick base" }).click();
@@ -56,6 +60,7 @@ test("rename a block, publish with the diff, and see the new label on an event's
   try {
     const old = await makeEvent(owner, "Old event");
     await owner.signIn(page, "/admin/presets/trick-base");
+    await editorReady(page);
     await expect(page.getByTestId("trick-editor")).toBeVisible();
     const label = `Mega loop ${owner.run}`;
     await page.getByTestId("label-base:megaloop").fill(label);
@@ -92,6 +97,7 @@ test("add an alias and the spotter's typed text matches it", async ({ page }) =>
   let world: Awaited<ReturnType<typeof createLiveWorld>> | null = null;
   try {
     await owner.signIn(page, "/admin/presets/trick-base");
+    await editorReady(page);
     const input = page.getByTestId("alias-input-base:megaloop");
     await input.fill("megaboost");
     await input.press("Enter");
@@ -131,6 +137,7 @@ test("retire a block: absent from a new event, still there on an older one", asy
   try {
     const old = await makeEvent(owner, "Before retiring");
     await owner.signIn(page, "/admin/presets/trick-base");
+    await editorReady(page);
     await page.getByTestId("retire-base:heart_attack").click();
     await expect(page.getByTestId("row-base:heart_attack")).toHaveAttribute("data-retired", "true");
     await expect(page.getByTestId("restore-base:heart_attack")).toBeVisible(); // never a hard delete once published
@@ -163,6 +170,7 @@ test("accept a proposal: edit its name and aliases, choose the family, it goes i
     const key = `local_e2e_${owner.run}`;
     await owner.db.from("trick_vocabularies").insert({ organisation_id: owner.orgId, event_id: ev.id, key: "event-additions", json: { blocks: [{ family: "base", key, label: `E2E roll ${owner.run}`, category: "rotation", status: "proposed" }] }, content_hash: "x" });
     await owner.signIn(page, "/admin/tricks"); // the old address still leads here
+    await editorReady(page);
     await expect(page).toHaveURL(/\/admin\/presets\/trick-base/);
     const row = page.getByTestId("proposal").filter({ hasText: `E2E roll ${owner.run}` });
     await expect(row).toContainText(`Proposals ${owner.run}`);
@@ -199,6 +207,7 @@ test("dismiss a proposal with a reason the organiser sees", async ({ page }) => 
     const key = `local_e2e_d_${owner.run}`;
     await owner.db.from("trick_vocabularies").insert({ organisation_id: owner.orgId, event_id: ev.id, key: "event-additions", json: { blocks: [{ family: "addon", key, label: `E2E spin ${owner.run}`, category: null, status: "proposed" }] }, content_hash: "x" });
     await owner.signIn(page, "/admin/presets/trick-base");
+    await editorReady(page);
     const row = page.getByTestId("proposal").filter({ hasText: `E2E spin ${owner.run}` });
     await row.getByTestId("proposal-dismiss").click();
     await row.getByTestId("proposal-reason").fill("Same as Board spin");

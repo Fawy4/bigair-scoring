@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -450,6 +450,9 @@ export function TrickBaseEditor({
   const [pending, start] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  // set once the page answers taps (a tap on the server-drawn page before that does nothing); browser tests wait for it
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
 
   const readOnly = !isOwner || Boolean(viewing);
   const locked = useMemo(() => new Set(publishedIdList), [publishedIdList]);
@@ -516,7 +519,7 @@ export function TrickBaseEditor({
   const status = viewing ? C.viewingLine(viewing.version) : working.published ? C.workingPublished(working.version) : C.workingDraft(working.version);
 
   return (
-    <div className="flex flex-col gap-5" data-testid="trick-editor">
+    <div className="flex flex-col gap-5" data-testid="trick-editor" data-ready={ready ? "true" : undefined}>
       <div className="flex flex-col gap-2">
         <h1>{C.heading}</h1>
         <p className="max-w-[80ch] text-body font-medium text-beach-muted">{C.intro}</p>

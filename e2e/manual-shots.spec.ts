@@ -377,7 +377,7 @@ test("manual screenshots: trick base", async ({ page }) => {
     await shot(page, "admin-presets", LAPTOP, 1200);
 
     await open(page, "/admin/presets/trick-base");
-    await page.getByTestId("trick-editor").waitFor();
+    await page.locator("[data-testid=trick-editor][data-ready=true]").waitFor(); // a tap before the page is live is lost
     await shot(page, "admin-trick-base", LAPTOP, 1500);
     await shot(page, "admin-trick-base", PHONE, 1500);
 
