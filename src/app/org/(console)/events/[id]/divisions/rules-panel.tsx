@@ -23,7 +23,7 @@ import { FormatTemplateSchema, type FormatTemplate } from "@/lib/schemas/format-
 import { ScoringModelSchema } from "@/lib/schemas/scoring-model";
 import { friendlyMessage, schemaToNodes } from "@/lib/schema-form/nodes";
 import { describeScoringModel } from "@/lib/scoring-ui/describe";
-import { diffOverrides, FORMAT_NULLABLE, mergeOverrides, sameOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
+import { diffOverrides, effectiveOverrides, FORMAT_NULLABLE, mergeOverrides, sameOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { copy, FORMAT_HIDDEN, FORMAT_LABELS, help, orgCopy, SCORING_HIDDEN, SCORING_LABELS } from "@/lib/ui-copy";
 import { expandFormat, drawToLadder, designDifference, ladderTemplate, LadderConvertError, newLadder, previewRiders, type CustomLadder, type Entrant } from "@/lib/engine/ladder";
 import { generateDraw } from "../draw/actions";
@@ -122,7 +122,13 @@ export function RulesPanel({
   const errors = useMemo(() => (check && !check.success ? issuesToMap(check.error.issues) : {}), [check]);
   const valid = Boolean(check?.success);
   const overrides = useMemo(() => (baseParsed && working ? diffOverrides(baseParsed, working, nullable) : {}), [baseParsed, working, nullable]);
-  const unsaved = presetId !== savedPresetId || !sameOverrides(overrides, savedOverrides);
+  // what the saved overrides really change on the saved preset: an override equal to the preset's own value is not a change (no phantom "Unsaved changes")
+  const savedEffective = useMemo(() => {
+    if (!baseParsed || presetId !== savedPresetId) return savedOverrides;
+    const merged = parseWith(kind, mergeOverrides(baseParsed, savedOverrides, nullable));
+    return effectiveOverrides(baseParsed, savedOverrides, merged.success ? merged.data : null, nullable);
+  }, [baseParsed, presetId, savedPresetId, savedOverrides, kind, nullable]);
+  const unsaved = presetId !== savedPresetId || !sameOverrides(overrides, savedEffective);
 
   const groups = presetGroups(presets, presetId);
   const model = check?.success && scoring ? (check.data as Parameters<typeof describeScoringModel>[0]) : null;

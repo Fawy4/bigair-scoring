@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diffOverrides, FORMAT_NULLABLE, isEmptyOverrides, mergeOverrides, SCORING_NULLABLE } from "./overrides";
+import { diffOverrides, effectiveOverrides, FORMAT_NULLABLE, isEmptyOverrides, mergeOverrides, sameOverrides, SCORING_NULLABLE } from "./overrides";
 import { parseScoringModel, ScoringModelSchema } from "@/lib/schemas/scoring-model";
 import { preset } from "@/lib/engine/scoring/fixtures";
 
@@ -56,5 +56,25 @@ describe("override diff", () => {
     const overrides = diffOverrides(base, edited, SCORING_NULLABLE);
     const merged = ScoringModelSchema.parse(mergeOverrides(base, overrides, SCORING_NULLABLE));
     expect(merged.heat.counting.type === "best_per_category" && merged.heat.counting.categoriesCounted).toBeUndefined();
+  });
+});
+
+describe("effectiveOverrides (no phantom Unsaved changes)", () => {
+  it("drops a saved override that equals the base's own value", () => {
+    const base = { heat: { maxAttemptsPerRider: 7, duplicateWindowSec: 20 } };
+    const saved = { heat: { maxAttemptsPerRider: 7 } };
+    const merged = mergeOverrides(base, saved);
+    const eff = effectiveOverrides(base, saved, merged);
+    expect(eff).toEqual({});
+    // nothing touched: the screen's own diff is the same, so it is not "unsaved"
+    expect(sameOverrides(diffOverrides(base, merged), eff)).toBe(true);
+  });
+  it("keeps a saved override that really changes something", () => {
+    const base = { heat: { maxAttemptsPerRider: 7 } };
+    const saved = { heat: { maxAttemptsPerRider: 5 } };
+    expect(effectiveOverrides(base, saved, mergeOverrides(base, saved))).toEqual({ heat: { maxAttemptsPerRider: 5 } });
+  });
+  it("falls back to the saved overrides when there is no base", () => {
+    expect(effectiveOverrides(null, { a: 1 }, null)).toEqual({ a: 1 });
   });
 });

@@ -1,59 +1,61 @@
 # 09 — Event-Day Runbook (Arrow launch, El Gouna) with paper fallback
 
-> Generated: Tuesday 29 September 2026, 20:10 EEST (Cairo, UTC+3) · Part of the Big Air Scoring System handover pack
+> First written 29 September 2026; corrected to the built product (version 0.9.0) on 2 October 2026. The product manual's [Event day](manual/event-day.md) page is the minute-by-minute version with organiser and head-judge columns; keep the two in step.
 
 ## A. The day before (≈60 min)
-1. **Wake the database**: open the Supabase dashboard; if the project shows "Paused", click Resume (free tier pauses after ~7 days idle). Load the public event page once.
-2. **Create the real event** in `/org`: name "Arrow Big Air – El Gouna", slug `arrow-gouna`, time zone Africa/Cairo, logos (Arrow, WOO), live scores setting = "live" (or "after publish" if the head judge prefers), ready-call = 15 min.
-3. **Divisions**: create what you have registrations for (e.g. Pro Men – KOTA preset – dingle or heats-of-4 depending on numbers; Women; Amateur – club-quick-best2 – pools-to-final). Confirm judge panel per division. Lock criteria help texts.
-4. **Riders**: approve self-registrations, add walk-ins, set seeds (ranking or random), print the start list.
-5. **Officials**: create seats (Judge 1–3, Head Judge, Spotter, Announcer); print the PIN/QR cards; test one phone join.
-6. **Draw**: generate per division; sanity-check heat sizes; print bracket PDF.
-   - **If Phase 7a-1 is live (it has Reset event):** lock each division's draw only *after* 7a-1 is on main and *before* that division's first heat. If a draw was locked earlier, unlock it (with a reason) and lock it again while no heat of that division has started. Only a lock taken before any heat ran keeps the starting draw that Reset returns to. A division that has run a heat without such a lock can never be reset (docs/PLAN-phase-7a.md, step 8d).
-   - **Demo, once, after 7a-1 merges:** in /admin delete the Demo organisation and press "Create demo organisation", then lock each Demo division in the Draw step before running any practice heat. Demo Cup, as it is today, cannot be reset.
-   - If 7a-1 did not ship before the event, skip both: the event runs on the current screens and there is no Reset.
-7. **Run order & timetable**: build Plan A (expected start) and Plan B (late wind); set the first anchor; export PDF/PNG → WhatsApp group + noticeboard.
-8. **Backups**: export a CSV of entries; print **paper judge sheets** (Phase 7 export) — one per heat per judge — and blank spares.
-9. **Devices**: judges' phones charged, brightness max, "add to home screen" done, auto-lock off; one power bank per judge; head judge on a laptop/tablet with a hotspot as backup; big screen laptop tested with `/screen/arrow-gouna`.
+1. **Wake the database**: open /admin/health; it must say “Database: reachable” and every required server setting “set”. If the Supabase dashboard shows “Paused”, press Resume (free tier pauses after ~7 days idle). Load the public event page once.
+2. **Event step**: name "Arrow Big Air – El Gouna", web address `arrow-gouna`, time zone Africa/Cairo, logos and sponsors, the three visibility switches (live scores during a heat, results on publish, hold the final), **Ready call** 15, **Published** ticked.
+3. **Divisions**: per division a scoring preset and its Simple dials, a format checked with **Preview with** the real rider count, heat lengths per round and breaks (More settings).
+4. **Riders**: approve registrations, add walk-ins, set the seeds (sort, shuffle with a code, or drag), **Print start list**.
+5. **Officials**: one seat per person (judges, head judge, spotters, announcer), **Panels** ticked for every division, **Print cards**, test one phone join.
+6. **Draw**: **Generate draw** per division, check the ladder and the checks, **Lock draw** before any heat of the division (Reset goes back to that locked draw; a division without a saved copy is rebuilt from its current draw). **Print / PDF** for the noticeboard.
+7. **Run order**: Plan A per day (Add all, breaks, **Pin** the first start, **Activate this plan**); **Duplicate plan** for Plan B (not active); **Export PDF / PNG** → WhatsApp group and noticeboard.
+8. **Rehearse**: Simulator → **Run as simulation** (only before the real event's first heat), lock the copy's draws, play at ×10, try the scenarios, then delete the copy.
+9. **Paper fallback**: print blank judge sheets yourself (the product does not print them) and the start lists.
+10. **Devices**: judges' phones charged, brightness max, auto-lock off, the join page added to the Home Screen on iPhones and joined there; a power bank each; the head judge on a laptop or tablet with a hotspot as backup; the big-screen laptop opens `/screen/arrow-gouna`.
 
 ## B. Riders' briefing (10 min) — say this
-- Vest colours = your identity on every screen; check your colour on the timetable/rider page.
-- Ready call 15 min before your heat at the launch; times are **estimates** that update live — refresh the event page.
-- Scoring: (KOTA-style) each trick 0–10 on height, extremity, technicality, execution; best 3 count + one impression mark; crashes don't count but hurt impression; variety matters.
-- Interference / safety rules and penalties; how ties are broken; protest window (e.g. 10 min after publish, to the head judge).
+- Lycra colours are your identity on every screen; check your colour on the timetable and your rider page.
+- Ready call 15 min before your heat; times are **estimates** that update live — refresh the event page.
+- Scoring as on the event's **Rules** page (generated from the real settings): what counts, the Impression / Variety score, tie-breakers, interference and penalties.
+- Protest window (e.g. 10 min after publish, to the head judge).
 
 ## C. Judges' briefing (15 min) — say this
-- Criteria definitions (use the help texts) and today's emphasis given the wind (write it down; **do not change during the event**).
-- Anchor scores: agree what a 5, 7, 9 looks like in today's conditions after the first heat's warm-up jumps.
-- Phone flow: attempt appears → tap Landed/Crashed → tap numbers → Save; you can edit until the head judge locks; impression at the end.
-- If your phone dies: shout your marks to the head judge (tabulator mode) or use the paper sheet; nothing is lost.
+- Criteria and today's emphasis given the wind (write it down; **do not change during the event**).
+- Anchor scores: agree what a 5, 7, 9 looks like after the first heat's warm-up jumps.
+- Phone flow: the card arrives → score → **Save** (Missed when you did not see it; Flag to alert the head judge); Impression / Variety for every rider at the end → **Submit**.
+- If your phone dies: tell the head judge; nothing is lost (the head judge enters your scores on the console with a reason).
 
 ## D. Running a heat (head judge + spotter)
-1. Head judge: select heat → **Start** (timer starts for everyone; timetable actual start recorded).
-2. Spotter: log each attempt (colour → category → landed/crashed). Judges score as they land.
-3. Watch the matrix: grey = missing mark (nudge the judge), amber = outlier (ask "sure?"). Flag-out if configured at the minute.
-4. Timer 0 → **End heat** → judges enter impression → **Submit sheet**.
-5. Review → resolve ties/penalties → **Publish**. Results and progression appear on all screens; next heat's TBDs fill.
-6. Announcer reads totals + counted tricks from the announcer view.
+1. Head judge: pick the heat in the run order → **Start heat** (a heat that is not next asks “Start anyway” / “Don’t start”). The timer runs from the server's clock on every screen.
+2. Spotter: rider → trick → **Log** (or **CRASH**). Judges score as cards arrive.
+3. Watch the score table: grey “missing” = nudge that judge; amber “outlier” = ask “sure?”; resolve open flags. Flag-out at its minute if the format has one.
+4. Time up (the heat ends itself at 0:00, or **End heat**) → judges give Impression / Variety → **Submit**.
+5. Read **Before you publish**; fix, **Choose order** for a tie, or **Publish with a reason** → **Publish**. Results reach the public when “results on publish” is on (otherwise **Release result**); the next round's seats fill.
+6. Announcer reads totals and counted tricks from the announcer view.
+7. Between heats: the break countdown (**+1 min**, **Pause break**, **Resume**); nothing starts by itself.
 
 ## E. Wind hold / delay
-- Head judge: **Hold** (reason "Wind"). Public pages show "On hold". When conditions return: **Resume at HH:MM** → timetable re-flows from that anchor. Or **Shift +10**.
-- Wind drops for the day: switch active plan to Plan B (fewer rounds) — riders see the new order instantly.
-- Extreme wind and shorter heats: edit the round duration; the timetable recomputes.
+- **Hold** (Go live or the console) and a red wind call. Public pages show “Competition on hold — times will update when we resume.” Hold does not pause a running heat: **Pause** it if riders leave the water.
+- When conditions return: **Resume at** the restart time → the timetable re-flows. Small slips: **Shift +5** / **Shift +10**.
+- Wind drops for the day: Run order → activate **Plan B** (heats that started stay where they are).
+- Shorter heats in strong wind: a row's **Length** in the run order (any heat not started), or the round's heat length in Divisions → Format (unlock with a reason after the first heat).
 
 ## F. Failure modes and what to do
 | Problem | Do this |
 |---|---|
-| A judge's phone shows "pending" for > 1 min | Keep scoring; it syncs when signal returns (no duplicates). If still pending at heat end, head judge types their marks from the phone screen (tabulator mode) |
-| Judge phone dead | Paper sheet → head judge enters marks after the heat, notes "entered by HJ" |
-| App unreachable for everyone | Run the heat on paper sheets + the printed timetable; keep the heat clock on a phone stopwatch; enter marks later (heat can be started/ended retroactively with times) |
-| Wrong result published | Head judge **Re-open** → fix → **Publish v2** (audit records both) — only if the next heat has not started |
-| Rider no-show | Mark DNS; heat runs with the rest |
-| Realtime stops updating | Refresh the page (pull down); check Supabase status; the head judge screen is authoritative |
-| Public live scores cause arguments | Organiser sets live scores to "after publish" — takes effect immediately |
+| A judge's phone shows "Pending" for > 1 min | Keep scoring; it sends when signal returns (no duplicates). Still pending at the end: the head judge enters the missing scores on the console (**Edit score**, with a reason) or **Enter their Impression score** |
+| Judge phone dead | The head judge enters that judge's scores after the heat from what they say or from paper, with a reason; or publishes with a reason without them |
+| App unreachable for everyone | Run the heat on paper with the printed timetable and a stopwatch. Afterwards start and end the heat on the console and enter the scores with reasons (the console records its own times: heats cannot be started or ended with typed times) |
+| Wrong result published | **Re-open** → correct → **Publish** (version 2; the audit log keeps both) — refused once a later heat filled by it has started |
+| Rider no-show | Rider menu → **DNS**; the heat runs with the rest |
+| A heat must be ridden again | **Re-run heat** (same riders, seats, Lycras; riders who do not ride again: Disqualified or Did not start) |
+| Screens stop updating | Pull down to refresh; /admin/health; the head console is the truth |
+| Public live scores cause arguments | Event step → untick “Show live scores during a heat”, or the head judge's per-heat switch **Not live** — takes effect at the next refresh |
+| A page shows “This page could not be shown” | **Try again**; send the error reference to the owner (manual: Troubleshooting) |
 
 ## G. After the event
-Export results CSV/PDF per division; export the audit log; post final placings and Highest Jump; keep the event as a template ("Duplicate event") for the next one; note what to change in the presets.
+Make sure every heat is published and every held final released; the public Results, Ladder and Placings pages stay online — share the link; leave notes with the **Note** button for what to change. (Results export, audit-log export and “Duplicate event” are not built yet: see docs/STATUS.md, owed.)
 
 ## H. One-page checklist (print)
-☐ DB awake ☐ Event created & branded ☐ Divisions + presets ☐ Riders approved & seeded ☐ Officials PIN cards ☐ Draw generated & printed ☐ (7a-1 live) Draws locked after 7a-1, before the first heat ☐ (7a-1 live) Demo recreated and its draws locked ☐ Plan A/B timetable exported ☐ Paper sheets printed ☐ Devices charged/installed ☐ Big screen tested ☐ Briefings done ☐ First anchor set ☐ Hotspot ready ☐ Exports after event
+☐ DB awake (Health) ☐ Event created, branded, published ☐ Divisions + presets ☐ Riders confirmed & seeded ☐ Officials, panels, PIN cards ☐ Draws generated, printed and locked before the first heat ☐ Plan A active, Plan B ready, exported ☐ Simulation rehearsed and deleted ☐ Blank paper sheets printed ☐ Devices charged/installed ☐ Big screen tested ☐ Briefings done ☐ First start pinned ☐ Hotspot ready ☐ Go live: Ready to run

@@ -1,6 +1,6 @@
 # Event day
 
-The event-day runbook (docs/09) brought up to the built product: the day before, the morning minute by minute, each heat, wind holds, failures and the end of the day, with what the organiser and the head judge do side by side.
+The event-day runbook (docs/09, corrected to the built product): the day before, the morning minute by minute, each heat, wind holds, failures and the end of the day, with what the organiser and the head judge do side by side.
 
 Last checked: 2 Oct 2026 · Product version 0.9.0
 
@@ -73,12 +73,11 @@ Times below assume a first heat at 10:00 and a ready call of 15 minutes; move th
 - Archive the event only when it should disappear from the public site (platform owner).
 - Leave notes with the **Note** button for what to change; the owner exports them.
 
-## What docs/09 expected that the product does not have (0.9.0) {#ed-not-built}
+## Not in version 0.9.0 {#ed-not-built}
 
-These items of docs/09 are **not in the product**; do them by hand or wait for a later version:
+Do these by hand; they are owed for a later version (docs/STATUS.md):
 
 - Results export (CSV / PDF per division), audit-log export, “Duplicate event” as a template for the next event.
-- Printed **paper judge sheets** (“Phase 7 export”): print blank sheets yourself.
-- Starting or ending a heat **retroactively** with typed times: the console uses the server's clock.
-- A separate “tabulator mode”: the head judge enters missing scores with **Edit score** (with a reason) and **Enter their Impression score**.
-- The 7a-1 instructions about the Demo in docs/09 §A.6 are out of date: Reset exists; a division locked before its first heat resets to its locked draw, and one without a saved copy is rebuilt.
+- Printed **paper judge sheets**: print blank sheets yourself.
+- Starting or ending a heat with typed times: the console always uses the server's clock.
+- There is no separate “tabulator mode”: the head judge enters missing scores with **Edit score** (with a reason) and **Enter their Impression score**.

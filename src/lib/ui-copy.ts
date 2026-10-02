@@ -720,7 +720,7 @@ export const copy = {
 
   scoringSimple: {
     counting: "Which tricks count?",
-    countingOther: "This preset counts tricks in a different way. Change that under Show all settings.",
+    countingOther: "This preset counts tricks in a different way. Change that under More settings.",
     n: "Best tricks that count (N)",
     attempts: "Attempts allowed per rider per heat (M)",
     noLimit: "No limit on attempts per rider",
@@ -858,7 +858,7 @@ export const copy = {
     secondChanceAll: "Everyone who did not win",
     secondChanceDepth: (n: number) => `${n === 1 ? "2nd place" : n === 2 ? "2nd and 3rd" : `2nd to ${ordinal(n + 1)}`} only; the others are out`,
     tags: { atLeastTwo: "Every rider gets at least 2 heats", canBeOut: "Riders can be out after 1 heat" },
-    heatLengthsMoved: "Heat lengths and breaks are under Show all settings.",
+    heatLengthsMoved: "Heat lengths and breaks are under More settings.",
     minHeats: (n: number) => `Minimum heats per rider: ${n}`,
     advancePerHeat: "How many advance",
     finalSize: "Final size",
@@ -1787,8 +1787,8 @@ export const copy = {
     categoryLabels: { handle_pass: "Handle pass", board_off: "Board-off", kiteloop: "Kiteloop", rotation: "Rotation", other: "Other" } as Record<string, string>,
     categoriesHeading: "Scoring categories from these blocks",
     categoriesNone: "No categories yet: tick at least one base trick.",
-    categoriesNote: "Shown from the highest precedence to the lowest: handle pass, board-off, kiteloop, rotation, other. Per-category counting rules are under Scoring → Show all settings → Trick categories.",
-    notInScoring: (names: string) => `These categories are not in this division’s scoring rules yet: ${names}. Add them under Scoring → Show all settings → Trick categories if you count per category.`,
+    categoriesNote: "Shown from the highest precedence to the lowest: handle pass, board-off, kiteloop, rotation, other. Per-category counting rules are under Scoring → More settings → Trick categories.",
+    notInScoring: (names: string) => `These categories are not in this division’s scoring rules yet: ${names}. Add them under Scoring → More settings → Trick categories if you count per category.`,
     addBlock: "+ Add block",
     addFamily: "Family",
     addName: "Name of the block",

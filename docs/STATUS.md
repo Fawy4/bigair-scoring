@@ -956,5 +956,15 @@ One commit per item. Item 3 (the master trick base editor) is **not** in this pu
 - `src/lib/manual/manual.test.ts`: the renderer; every page's summary and version line; unique anchors; every internal link resolves; every picture exists; house words; search lands “grey” on the Hold row; every refusal sentence and every database code in errors.md; every setting of the scoring, format, event and division-live schemas in settings.md; every “?” opens its own row; the generated tables are up to date.
 - `e2e/help.spec.ts`: /help renders, search, links, pictures, the diagram, the PDF button; a grey button's reason and a “?” on the organiser screens carry Learn more links that resolve.
 
+### Fixed on the way (owner, 2 Oct 2026)
+- The Trick base tab and two Scoring/Format sentences said “Show all settings”; the fold is “More settings”.
+- A division's Scoring or Format tab said “● Unsaved changes” before anything was touched when a stored override equalled the preset's own value (`effectiveOverrides`, with tests).
+- The empty toast area painted a blank strip over the page (bottom right on a laptop: it hid “Opens in a new tab.” on Go live; the top strip on a phone). It is now see-through and lets taps through.
+- docs/09 corrected to the built product.
+
+### Owed (not needed before 8 October, owner 2 Oct 2026)
+- Results export (CSV / PDF per division), audit-log export, “Duplicate event”, printed paper judge sheets.
+
 ### Not done / not verified
-- See the pull request: pages written from the code where Polish 1 is still building (simulator, admin trick base, organiser access), and the docs/09 items the product does not have.
+- The master trick base editor is being built in its own PR, which updates screens/admin-trick-base.md.
+- Not seen on a real phone, in sun, or on the Vercel preview.
