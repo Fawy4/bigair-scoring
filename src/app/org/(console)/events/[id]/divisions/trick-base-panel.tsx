@@ -7,7 +7,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ArrowDown, ArrowUp, GripVertical, Star } from "lucide-react";
 import { Button } from "@/components/org/button";
 import { toast } from "@/hooks/use-toast";
-import { addLocalBlock, blockId, blocksFromVocabulary, deriveCategories, FAMILIES, parseTrickBase, type Block, type FamilyKey, type LocalBlock, type VocabularyJson } from "@/lib/trick-base";
+import { addLocalBlock, blockId, blocksFromVocabulary, deriveCategories, FAMILIES, parseTrickBase, type Block, type BuiltInFamily, type FamilyKey, type LocalBlock, type VocabularyJson } from "@/lib/trick-base";
 import { MOVABLE, nudgeBlock, nudgeFamily, parseLayout, placeBlock, resolveLayout, toggleFavourite, defaultLayout, type TrickLayout } from "@/lib/trick-base/layout";
 import { copy } from "@/lib/ui-copy";
 import { addTrickBlock, saveTrickBase } from "./actions";
@@ -109,7 +109,7 @@ export function TrickBasePanel({
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [adding, setAdding] = useState(false);
-  const [family, setFamily] = useState<FamilyKey>("base");
+  const [family, setFamily] = useState<BuiltInFamily>("base");
   const [label, setLabel] = useState("");
   const [category, setCategory] = useState("");
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
@@ -256,7 +256,7 @@ export function TrickBasePanel({
             <label htmlFor={`blk-family-${divisionId}`} className="font-semibold">
               {T.addFamily}
             </label>
-            <select id={`blk-family-${divisionId}`} value={family} onChange={(e) => setFamily(e.target.value as FamilyKey)}>
+            <select id={`blk-family-${divisionId}`} value={family} onChange={(e) => setFamily(e.target.value as BuiltInFamily)}>
               {FAMILIES.map((f) => (
                 <option key={f.key} value={f.key}>
                   {f.label}

@@ -19,7 +19,7 @@ import { drawDemoEvent } from "@/lib/demo/draw";
 import { OrgNameSchema, OrgSlugSchema, TimeZoneSchema } from "@/lib/schemas/org-settings";
 import { findUserByEmail } from "@/lib/supabase/admin-users";
 import { loadMasterVocabulary, MASTER_VOCABULARY_KEY } from "@/lib/org/trick-vocabulary";
-import { addBlockToVocabulary, type FamilyKey } from "@/lib/trick-base";
+import { addBlockToVocabulary, type BuiltInFamily } from "@/lib/trick-base";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Json } from "@/lib/supabase/database.types";
 import { copy } from "@/lib/ui-copy";
@@ -306,7 +306,7 @@ export async function acceptTrickProposal(input: { eventId: string; family: stri
 
   const master = await loadMasterVocabulary(supabase);
   if (!master) return { ok: false, error: copy.trickBase.errors.noVocabulary };
-  const added = addBlockToVocabulary(master.vocabulary, { family: proposal.family as FamilyKey, key: proposal.key, label: proposal.label, category: proposal.category, status: "proposed" });
+  const added = addBlockToVocabulary(master.vocabulary, { family: proposal.family as BuiltInFamily, key: proposal.key, label: proposal.label, category: proposal.category, status: "proposed" });
   if (!added.ok) return { ok: false, error: added.error };
   const valid = validateMasterPreset("trick_vocabulary", added.vocabulary);
   if (!valid.ok) return { ok: false, error: valid.message };

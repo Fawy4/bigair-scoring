@@ -9,7 +9,7 @@ import type { PresetRow } from "@/lib/presets/options";
 import { FormatTemplateSchema } from "@/lib/schemas/format-template";
 import { IdentificationSchemeSchema } from "@/lib/schemas/identification";
 import { EVENT_VOCABULARY_KEY, loadEventBlocks, loadMasterVocabulary } from "@/lib/org/trick-vocabulary";
-import { addLocalBlock, FAMILIES, type FamilyKey, type LocalBlock } from "@/lib/trick-base";
+import { addLocalBlock, FAMILIES, type BuiltInFamily, type LocalBlock } from "@/lib/trick-base";
 import { ScoringModelSchema } from "@/lib/schemas/scoring-model";
 import { FORMAT_NULLABLE, mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { issuesToMap } from "@/lib/form/path";
@@ -290,7 +290,7 @@ export async function saveLiveSettings(divisionId: string, settings: unknown): P
 }
 
 /** "+ Add block": a local name in the event's own vocabulary, proposed to the master base. Allowed at any time (adding never removes anything). */
-export async function addTrickBlock(eventId: string, input: { family: FamilyKey; label: string; category?: string | null }): Promise<Ok<{ block: LocalBlock }> | Fail> {
+export async function addTrickBlock(eventId: string, input: { family: BuiltInFamily; label: string; category?: string | null }): Promise<Ok<{ block: LocalBlock }> | Fail> {
   const T = copy.trickBase.errors;
   if (!uuid.safeParse(eventId).success || !FAMILIES.some((f) => f.key === input.family)) return { ok: false, error: T.family };
   const { supabase } = await getOrgContext();

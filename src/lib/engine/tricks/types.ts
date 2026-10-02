@@ -1,3 +1,5 @@
+import { effectiveNamingTemplate } from "./naming";
+
 /** The pieces of a trick (docs/08 §1G-3). No I/O: nothing here imports Supabase or React. */
 export type BlockFamily = "direction" | "multiplier" | "base" | "addon" | "grab_landing";
 
@@ -18,6 +20,8 @@ export interface TrickVocab {
   categoryPrecedence: string[];
   /** Key of the multiplier that is not written ("x1"). */
   hideMultiplierWhen: string | null;
+  /** Where the direction and the blocks go in the name (docs/08 §1I-1); "{direction} {blocks}" by default. */
+  namingTemplate: string;
 }
 
 /** One block of the sequence, with the key of its multiplier ("x2") when it has one. */
@@ -52,7 +56,8 @@ export interface VocabularyInput {
   baseTricks: VocabItemJson[];
   modifiers: VocabItemJson[];
   categoryPrecedence: string[];
-  hideMultiplierWhen?: string;
+  hideMultiplierWhen?: string | null;
+  namingTemplate?: string;
 }
 
 /** A block an event added itself (stored in the event's own vocabulary). */
@@ -86,5 +91,5 @@ export function buildTrickVocab(json: VocabularyInput, local: LocalBlockInput[] 
   const own = local
     .filter((l) => !have.has(blockIdOf(l.family, l.key)))
     .map((l) => mk(l.family, { key: l.key, label: l.label, category: l.category ?? null }, l.family === "base"));
-  return { blocks: [...master, ...own], categoryPrecedence: json.categoryPrecedence, hideMultiplierWhen: json.hideMultiplierWhen ?? null };
+  return { blocks: [...master, ...own], categoryPrecedence: json.categoryPrecedence, hideMultiplierWhen: json.hideMultiplierWhen || null, namingTemplate: effectiveNamingTemplate(json.namingTemplate) };
 }

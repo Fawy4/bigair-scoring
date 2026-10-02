@@ -1,4 +1,5 @@
 import type { TrickBlock, TrickItem, TrickParts, TrickVocab } from "./types";
+import { renderTrickName } from "./naming";
 
 const find = (vocab: TrickVocab, id: string): TrickBlock | undefined => vocab.blocks.find((b) => b.id === id);
 const findKey = (vocab: TrickVocab, family: "direction" | "multiplier", key: string | null | undefined): TrickBlock | undefined =>
@@ -11,8 +12,9 @@ export function categoryOf(vocab: TrickVocab, itemIds: string[]): string | null 
 }
 
 /**
- * The name and category of a trick (docs/08 §1G-3). Direction first, then the blocks in the order they were tapped; a multiplier is written
- * before its block and "×1" is hidden; words nobody recognised come last. Tapping order is meaningful: the name is the sequence.
+ * The name and category of a trick (docs/08 §1G-3, §1I-1). The vocabulary's naming template places the direction and the blocks (by default the direction
+ * first); the blocks keep the order they were tapped in; a multiplier is written before its block and "×1" is hidden; words nobody recognised come last.
+ * Tapping order is meaningful: the name is the sequence.
  */
 export function composeTrick(vocab: TrickVocab, parts: TrickParts): { name: string; categoryKey: string | null } {
   const direction = findKey(vocab, "direction", parts.direction);
@@ -22,7 +24,7 @@ export function composeTrick(vocab: TrickVocab, parts: TrickParts): { name: stri
     const mult = item.multiplier && item.multiplier !== vocab.hideMultiplierWhen ? findKey(vocab, "multiplier", item.multiplier) : undefined;
     return [mult ? `${mult.label} ${block.label}` : block.label];
   });
-  const name = [direction?.label, ...words, parts.freeText?.trim() || undefined].filter(Boolean).join(" ");
+  const name = renderTrickName(vocab.namingTemplate, direction?.label ?? "", words, parts.freeText?.trim() ?? "");
   return { name, categoryKey: categoryOf(vocab, parts.items.map((i) => i.id)) };
 }
 
