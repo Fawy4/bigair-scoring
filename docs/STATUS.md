@@ -758,7 +758,9 @@ See the click-through at the end of the pull request description.
 7. **Old look inside the new frame.** Riders, Officials, Draw, Run order, the events list and the Trick base tab keep their old look until 7a-2; they sit inside the new shell. In Dark mode those old screens show as white panels.
 
 **Not done / not verified**
-- **Wind call:** PR #14 (Phase 6) is still open, so the dashboard slot is greyed with "The wind call arrives with the public pages". Rebase onto main and put the real control in once #14 merges. **Big screen** button likewise.
+- **Wind call and big screen:** PR #14 merged; rebased onto main. The dashboard now holds Phase 6's wind-call control (as is) and the Big screen link (`/screen/<address>`, new tab). The greyed placeholders remain only in the design preview.
+- **Owed (decided 2 Oct 2026):** a rider who withdraws after the lock does not become a DNS walkover in the stored draw. Reset restores exactly the locked draw; late withdrawals as walkovers are not needed before the event.
+- **Overlap with Console v2:** this PR contains a head-console division picker (`head-page.tsx`, `heat-control.tsx`, `next-heat.ts`, `division-selector.tsx`). Console v2 owns the console selector; reconcile when either merges.
 - Trick base tab, the division's live-screen settings (inside More settings) and the Rider label editor's inner fields are not restyled; tables, Draw and Run order, the consistency sweep and the "one primary button per screen" test are 7a-2.
 - Every disabled control on the new screens explains itself; legacy screens still have plain disabled buttons (7a-2).
 - Not seen on a real phone or in the sun; checked in Chromium at 390 and 1440 px.

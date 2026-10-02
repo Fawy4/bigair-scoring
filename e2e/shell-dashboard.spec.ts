@@ -112,6 +112,7 @@ test("Hold, Resume at and Shift work from the dashboard; without a run order the
   await expect(page.getByTestId("wind-call")).toBeVisible();
   await page.getByTestId("wind-green").click();
   await page.getByTestId("wind-set").click();
+  await expect(page.getByTestId("wind-note")).toBeVisible();
   await expect(page.getByTestId("wind-now")).toContainText("Green");
   await expect(actions.getByRole("link", { name: "Open head judge console" })).toHaveAttribute("href", `/head/${w.eventId}`);
   await w.db.from("schedule_plans").update({ active: true }).eq("id", w.planId);
