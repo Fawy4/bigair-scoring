@@ -7,6 +7,7 @@ import { copy } from "@/lib/ui-copy";
 import { RealtimeStatus } from "./realtime-status";
 import { PRODUCT_VERSION } from "@/lib/product-version";
 import { currentReleaseLine } from "@/lib/releases/load";
+import { askConfig } from "@/lib/ask/config";
 
 export const metadata = { title: copy.admin.health.heading };
 
@@ -18,6 +19,7 @@ export default async function HealthPage() {
   const { data, error } = await supabase.rpc("admin_health");
   const config = checkServerConfig(process.env);
   const release = await currentReleaseLine(supabase);
+  const ask = askConfig(process.env);
   const settingsCheck = await attempt("Platform settings", async () => {
     const { error: e } = await supabase.from("platform_settings").select("key").limit(1);
     if (e) throw new Error(e.message);
@@ -75,6 +77,11 @@ export default async function HealthPage() {
               {c.configRow(r.name, r.present ? c.configSet : c.configMissing, r.required ? c.configRequired : c.configOptional, r.needed)}
             </li>
           ))}
+          <li className="panel font-semibold" data-testid="health-ask">
+            <span aria-hidden="true">{ask.keyPresent ? "✔ " : "– "}</span>
+            {ask.keyPresent ? copy.ask.health.model(ask.model, ask.fallbackModel) : copy.ask.health.off}
+            {ask.keyPresent && ask.publicAllowed ? ` ${copy.ask.health.publicOn}` : null}
+          </li>
           <li className="panel font-semibold">
             <span aria-hidden="true">{settingsCheck.value ? "✔ " : "✖ "}</span>
             {settingsCheck.value ? c.settingsRead : c.settingsUnreadable}

@@ -6,7 +6,8 @@ import { organisationStatus, deleteBlockedReason } from "@/lib/platform/organisa
 import { requireAdmin } from "@/lib/platform/session";
 import { copy } from "@/lib/ui-copy";
 import { startImpersonation } from "../../actions";
-import { ArchivePanel, DeletePanel, InvitePanel, LogoPanel, RemoveOrganiserButton, RenamePanel } from "./panels";
+import { AskBudgetPanel, ArchivePanel, DeletePanel, InvitePanel, LogoPanel, RemoveOrganiserButton, RenamePanel } from "./panels";
+import { parseUsage } from "@/components/ask/usage";
 import { EventsPanel } from "./events-panel";
 import { formatEventDates } from "@/lib/platform/event-label";
 
@@ -22,6 +23,7 @@ export default async function OrganisationPage({ params }: { params: Promise<{ i
   if (!org) notFound();
   const { data: members } = await supabase.rpc("admin_organisation_members", { p_org: id });
   const { data: events } = await supabase.rpc("admin_organisation_events", { p_org: id });
+  const { data: askUsage } = await supabase.rpc("ask_usage", { p_org: id });
   // the copy a Reset kept (owners only see it; the table's read rule says who), newest first, within its 30 days
   const eventIds = (events ?? []).map((e) => e.id);
   const { data: snapshots } = eventIds.length ? await supabase.from("event_reset_snapshots").select("id, event_id, taken_at").in("event_id", eventIds).gt("expires_at", new Date().toISOString()).order("taken_at", { ascending: false }) : { data: [] as Array<{ id: string; event_id: string; taken_at: string }> };
@@ -92,6 +94,7 @@ export default async function OrganisationPage({ params }: { params: Promise<{ i
         events={(events ?? []).map((e) => ({ id: e.id, name: e.name, slug: e.slug, status: e.status, dates: formatEventDates(e.start_date, e.end_date), divisions: e.divisions_count, running: e.running_heats > 0, published: e.published_results, archived: Boolean(e.archived_at), resetCopy: copies.get(e.id) ?? null }))}
       />
       <InvitePanel orgId={org.id} />
+      <AskBudgetPanel orgId={org.id} usage={parseUsage(askUsage)} isOwner={role === "owner"} />
       <RenamePanel orgId={org.id} name={org.name} />
       <LogoPanel orgId={org.id} logoUrl={org.logo_url} />
       <ArchivePanel orgId={org.id} name={org.name} archived={status === "archived"} />

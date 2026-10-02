@@ -275,6 +275,7 @@ function settingsBlocks(): Record<string, string> {
     row(A("platform.timeZone"), s.timeZone, s.timeZoneHelp.text, s.timeZoneHelp.example ?? "", "NEXT_PUBLIC_DEFAULT_TZ, else Africa/Cairo"),
     row(A("platform.legal"), `${s.terms} / ${s.privacy}`, s.legalHelp.text, s.legalHelp.example ?? "", "empty"),
     row(A("admin.inviteSend"), copy.admin.org.inviteSend, copy.admin.org.inviteSendHelp.text, copy.admin.org.inviteSendHelp.example ?? "", "on"),
+    row(A("admin.askBudget"), copy.ask.usage.budgetLabel, copy.ask.usage.budgetHelp.text, copy.ask.usage.budgetHelp.example ?? "", "2000000"),
   ].join("\n");
 
   const sim = settingHelps().filter((h) => h.key.startsWith("simulator."));

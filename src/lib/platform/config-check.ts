@@ -13,6 +13,7 @@ const NAMES: Array<{ name: string; needed: string; required: boolean }> = [
   { name: "NEXT_PUBLIC_PRODUCT_NAME", needed: "the built-in product name (optional: platform settings can override it)", required: false },
   { name: "NEXT_PUBLIC_DEFAULT_TZ", needed: "the built-in default time zone (optional: falls back to Africa/Cairo)", required: false },
   { name: "NEXT_PUBLIC_SITE_URL", needed: "links in emails when the request address is unknown (optional)", required: false },
+  { name: "ANTHROPIC_API_KEY", needed: "Ask Sendbook, the in-product assistant (optional: without it the Ask button is hidden)", required: false },
 ];
 
 /** Which settings exist. Only names and yes/no are ever returned, never a value. */

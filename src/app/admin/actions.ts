@@ -86,6 +86,17 @@ export async function renameOrganisation(orgId: string, name: string): Promise<{
   return { ok: true };
 }
 
+/** The organisation's monthly Ask Sendbook budget in input tokens (owner only; audited by the database). */
+export async function setAskBudget(orgId: string, tokens: string): Promise<{ ok: true } | Failure> {
+  const t = tokens.replace(/[\s,._]/g, "");
+  if (!/^\d{1,10}$/.test(t)) return fail("BUDGET_INVALID");
+  const { supabase } = await requireAdmin();
+  const { error } = await supabase.rpc("admin_set_ask_budget", { p_org: orgId, p_tokens: Number(t) });
+  if (error) return fail(error.message);
+  revalidatePath(`/admin/organisations/${orgId}`);
+  return { ok: true };
+}
+
 export async function setOrganisationLogo(orgId: string, url: string | null): Promise<{ ok: true } | Failure> {
   if (url !== null && !z.string().url().safeParse(url).success) return fail("INVALID_URL");
   const { supabase } = await requireAdmin();

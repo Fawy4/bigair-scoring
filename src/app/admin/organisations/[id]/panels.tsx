@@ -9,7 +9,8 @@ import { toast } from "@/hooks/use-toast";
 import { emailLimitPerHour } from "@/lib/auth/email-send";
 import { slugMatches } from "@/lib/platform/organisation";
 import { copy } from "@/lib/ui-copy";
-import { deleteOrganisation, inviteOrganiser, removeOrganiser, renameOrganisation, setOrganisationArchived, setOrganisationLogo, type InviteResult } from "../../actions";
+import { AskUsageLines, type AskUsage } from "@/components/ask/usage";
+import { deleteOrganisation, inviteOrganiser, removeOrganiser, renameOrganisation, setAskBudget, setOrganisationArchived, setOrganisationLogo, type InviteResult } from "../../actions";
 
 const c = copy.admin.org;
 const Problem = ({ text }: { text: string | null }) =>
@@ -54,6 +55,52 @@ export function RenamePanel({ orgId, name: initial }: { orgId: string; name: str
           </button>
         </div>
       </form>
+    </section>
+  );
+}
+
+/** Ask Sendbook this month: the organisation's use, and its monthly budget (the owner changes it). */
+export function AskBudgetPanel({ orgId, usage, isOwner }: { orgId: string; usage: AskUsage | null; isOwner: boolean }) {
+  const U = copy.ask.usage;
+  const [tokens, setTokens] = useState(String(usage?.limit ?? ""));
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  return (
+    <section className="flex flex-col gap-3" aria-labelledby="ask-usage-h">
+      <h2 id="ask-usage-h" className="text-2xl font-semibold">
+        {U.title}
+      </h2>
+      {usage ? <AskUsageLines usage={usage} /> : null}
+      {isOwner ? (
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setError(null);
+            start(async () => {
+              const res = await setAskBudget(orgId, tokens);
+              if (res.ok) {
+                toast({ title: U.saved });
+                router.refresh();
+              } else setError(res.error);
+            });
+          }}
+        >
+          <div className="flex flex-col gap-1">
+            <FieldLabel htmlFor="ask-budget" text={U.budgetLabel} help={U.budgetHelp} />
+            <input id="ask-budget" inputMode="numeric" value={tokens} onChange={(e) => setTokens(e.target.value)} disabled={pending} data-testid="ask-budget" />
+          </div>
+          <Problem text={error} />
+          <div>
+            <button type="submit" className="btn" disabled={pending || tokens === String(usage?.limit ?? "")}>
+              {U.save}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <p className="font-semibold">{U.ownerOnly}</p>
+      )}
     </section>
   );
 }

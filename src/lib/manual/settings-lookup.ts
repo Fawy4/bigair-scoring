@@ -54,6 +54,7 @@ function collect(): SettingHelp[] {
   const d = copy.divisions.identification;
   out.push({ key: "division.identificationMode", anchor: a("division.identificationMode"), label: d.modeLabel, text: d.modeExplain, example: d.modeExample });
   out.push({ key: "admin.inviteSend", anchor: a("admin.inviteSend"), label: copy.admin.org.inviteSend, text: copy.admin.org.inviteSendHelp.text, example: copy.admin.org.inviteSendHelp.example });
+  out.push({ key: "admin.askBudget", anchor: a("admin.askBudget"), label: copy.ask.usage.budgetLabel, text: copy.ask.usage.budgetHelp.text, example: copy.ask.usage.budgetHelp.example });
   return out;
 }
 

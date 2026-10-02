@@ -15,11 +15,12 @@ export async function generateMetadata() {
 }
 
 const N = copy.admin.nav;
-const PLACES = [
+const PLACES: Array<{ href: string; label: string; prefixes: string[]; ownerOnly?: boolean }> = [
   { href: "/admin", label: N.organisations, prefixes: ["/admin/organisations"] },
   { href: "/admin/presets", label: N.presets, prefixes: ["/admin/presets", "/admin/tricks"] },
   { href: "/admin/feedback", label: N.feedback, prefixes: ["/admin/feedback"] },
   { href: "/admin/audit", label: N.audit, prefixes: ["/admin/audit"] },
+  { href: "/admin/ask", label: N.ask, prefixes: ["/admin/ask"], ownerOnly: true },
   { href: "/admin/health", label: N.health, prefixes: ["/admin/health"] },
   { href: "/admin/releases", label: N.releases, prefixes: ["/admin/releases"] },
   { href: "/admin/settings", label: N.settings, prefixes: ["/admin/settings"] },
@@ -43,7 +44,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         switchOrganisation={switchOrganisation}
         signOutAction="/auth/signout"
         admin={{
-          places: PLACES.map((p) => ({ ...p, prefixes: p.href === "/admin" ? ["/admin", ...p.prefixes] : p.prefixes })),
+          places: PLACES.filter((p) => !p.ownerOnly || role === "owner").map(({ href, label, prefixes }) => ({ href, label, prefixes: href === "/admin" ? ["/admin", ...prefixes] : prefixes })),
           organiserLabel: current ? copy.layout.organiserView(current.name) : copy.layout.organiserViewNoOrg,
           roleLabel: copy.admin.roles[role],
         }}
