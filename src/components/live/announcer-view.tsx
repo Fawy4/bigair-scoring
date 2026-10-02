@@ -1,5 +1,6 @@
 "use client";
 
+import { ClockText } from "@/components/clock-text";
 import { HeadMatrix } from "./head-matrix";
 import { Pill } from "./pill";
 import { RiderLabel } from "@/components/rider-label";
@@ -16,13 +17,14 @@ const H = copy.headLive;
  * The announcer's view (docs/06 §9, `?mode=announcer` on the head page, or an announcer seat): the heat that is on, read-only: the live score table, the rider totals and
  * the feed of attempts as they are logged. Nothing here changes anything. Rider bios wait for Phase 6.
  */
-export function AnnouncerView({ ctx, heat, division, attempts, riders, head, wordFor }: { ctx: LiveContext; heat: HeatRow; division: LiveDivisionContext; attempts: AttemptRow[]; riders: HeatRider[]; head: HeadModel; wordFor: (entryId: string) => string }) {
+export function AnnouncerView({ ctx, heat, division, attempts, riders, head, wordFor, nowMs }: { nowMs: number; ctx: LiveContext; heat: HeatRow; division: LiveDivisionContext; attempts: AttemptRow[]; riders: HeatRider[]; head: HeadModel; wordFor: (entryId: string) => string }) {
   const feed = [...attempts].filter((a) => !a.deleted_at).sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   return (
     <div data-testid="announcer-view" className="flex flex-col gap-2 px-3 py-2">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-name font-semibold">{heatTitle(ctx, heat)}</h1>
         <Pill tone={heat.status === "running" ? "live" : "ink"}>{copy.heatControl.status[heat.status] ?? heat.status}</Pill>
+        <ClockText timezone={ctx.event.timezone} nowMs={nowMs} />
       </div>
       <p className="text-small font-medium text-beach-muted">{H.announcerNote}</p>
       <div className="grid items-start gap-2 min-[1100px]:grid-cols-[minmax(0,1fr)_18rem]">

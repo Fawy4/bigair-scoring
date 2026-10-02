@@ -48,6 +48,7 @@ export interface JudgeQueueViewProps {
   connection?: ConnectionStatus;
   pendingCount?: number;
   onRetry?: () => void;
+  clock?: { timezone: string; nowMs: number };
   /** The screen's own settings (theme, size, sound), shown at the top of the Details view. */
   settings?: React.ReactNode;
   items: JudgeCard[];
@@ -112,6 +113,7 @@ export function JudgeQueueView(p: JudgeQueueViewProps) {
         connection={p.connection}
         pending={p.pendingCount}
         onRetry={p.onRetry}
+        clock={p.clock}
         details={details}
         onToggleDetails={() => {
           setDetails((d) => !d);

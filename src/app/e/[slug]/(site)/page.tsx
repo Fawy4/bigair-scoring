@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ClockText } from "@/components/clock-text";
+import { PublicDrift } from "@/components/drift-badge";
 import { notFound } from "next/navigation";
 import { CopyLink } from "@/components/public/copy-link";
 import { HeatClock } from "@/components/public/heat-clock";
@@ -85,9 +87,13 @@ export default async function PublicHome({ params }: { params: Promise<{ slug: s
       </section>
 
       <section data-testid="timetable-section" aria-label={H.timetable} className="flex flex-col gap-1.5">
-        <h2 className="text-heading font-semibold text-beach-muted">{day ? H.timetableFor(day) : H.timetable}</h2>
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 className="text-heading font-semibold text-beach-muted">{day ? H.timetableFor(day) : H.timetable}</h2>
+          <ClockText timezone={site.event.timezone} serverNow={core.now} />
+        </div>
         {tt.rows.length ? (
           <>
+            <PublicDrift drift={tt.drift ?? null} />
             <TimetableList rows={tt.rows} heatHref={heatHref} />
             <p data-testid="estimates-note" className="text-small font-medium text-beach-muted">
               {H.estimates}

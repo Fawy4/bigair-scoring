@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ClockText } from "@/components/clock-text";
 import { notFound } from "next/navigation";
 import { CopyLink } from "@/components/public/copy-link";
 import { RiderRow } from "@/components/public/heat-summary";
@@ -55,6 +56,7 @@ export default async function RiderPage({ params }: { params: Promise<{ slug: st
         <p data-testid="rider-next" className="text-name font-semibold">
           {vm.nextLine ?? T.noNext}
         </p>
+        <ClockText timezone={core.site.event.timezone} serverNow={core.now} />
       </section>
 
       <section aria-label={T.heats} className="flex flex-col gap-1.5">

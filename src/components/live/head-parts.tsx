@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Clock, Volume2, VolumeX, Wind } from "lucide-react";
 import { HoldDialog, PublishDialog, ReopenDialog, RerunDialog, ResetHeatDialog } from "./head-dialogs";
+import { ClockText } from "@/components/clock-text";
+import { DriftBadge } from "@/components/drift-badge";
 import { HeatTimer } from "./heat-timer";
 import { Pill } from "./pill";
 import { setHeatPublicLive, setPublishHold } from "@/lib/live/head-actions";
@@ -149,6 +151,8 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
           {selected ? <Pill tone="ink" className="self-start">{T.status[selected.status === "under_review" ? "under_review" : state === "ended" && selected.status === "running" ? "ended" : (state ?? "")] ?? state}</Pill> : null}
         </div>
         {selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
+        <ClockText timezone={c.ctx.event.timezone} nowMs={c.nowServer} />
+        <DriftBadge drift={c.drift} />
         {selected && state !== "cancelled" ? (
           <div className="flex flex-wrap items-center gap-2">
             <Btn compact size="bar" testId="start" tone="accent" reason={c.why("start")} disabled={c.pending || !c.on("start")} onClick={c.requestStart}>
@@ -196,11 +200,11 @@ export function CancelledNote({ c }: { c: HeadController }) {
 }
 
 function OrderRow({ c, entry, nextId, divisionName }: { c: HeadController; entry: OrderItem; nextId: string | null; divisionName?: string }) {
-  const { heat, time, held, problem } = entry;
+  const { heat, time, planned, held, problem } = entry;
   const st = stateOf(heat, c.nowServer);
   const word = st === "scheduled" ? null : (T.status[st === "ended" && heat.status === "under_review" ? "under_review" : st] ?? st);
   const round = c.ctx.rounds.find((r) => r.id === heat.round_id);
-  const line = runLine({ round, heat, startedHhmm: heat.started_at ? utcToLocalHHMM(heat.started_at, c.ctx.event.timezone) : null, estimatedHhmm: time, held, statusWord: word });
+  const line = runLine({ round, heat, startedHhmm: heat.started_at ? utcToLocalHHMM(heat.started_at, c.ctx.event.timezone) : null, estimatedHhmm: time, plannedHhmm: planned ?? null, held, statusWord: word });
   const selectedHere = c.selected?.id === heat.id;
   const isNext = nextId === heat.id && st === "scheduled";
   return (

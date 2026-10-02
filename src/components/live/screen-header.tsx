@@ -1,3 +1,4 @@
+import { ClockText } from "@/components/clock-text";
 import { HeatTimer, type TimerState } from "./heat-timer";
 import { ConnectionBadge, type ConnectionStatus } from "./connection-badge";
 import { Chip } from "./chip";
@@ -19,7 +20,10 @@ export function ScreenHeader({
   detailsLabels,
   onToggleDetails,
   showTimer = true,
+  clock,
 }: {
+  /** The time now in the event time zone, small and muted next to the timer. */
+  clock?: { timezone: string; nowMs: number };
   heatName: string;
   seat: string;
   remainingMs: number;
@@ -38,7 +42,10 @@ export function ScreenHeader({
   return (
     <header data-testid="screen-header" className="flex flex-col border-b border-beach-line bg-beach-bg px-2 pb-0.5 pt-0.5">
       <div className="flex min-h-tap items-center justify-between gap-2">
-        {showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className="text-name font-semibold">{copy.live.header.between}</span>}
+        <div className="flex items-baseline gap-2">
+          {showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className="text-name font-semibold">{copy.live.header.between}</span>}
+          {clock ? <ClockText timezone={clock.timezone} nowMs={clock.nowMs} /> : null}
+        </div>
         {details !== undefined ? (
           <Chip data-testid="details-toggle" pressed={details} onClick={onToggleDetails}>
             {details ? (detailsLabels?.on ?? copy.live.header.detailsOn) : (detailsLabels?.off ?? copy.live.header.details)}

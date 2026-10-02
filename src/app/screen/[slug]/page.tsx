@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClockText } from "@/components/clock-text";
 import { notFound } from "next/navigation";
 import { HeatClock } from "@/components/public/heat-clock";
 import { Logo } from "@/components/public/logo";
@@ -177,6 +178,7 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
           </span>
         ) : null}
         <h1 className="truncate text-[3vw] font-semibold">{site.event.name}</h1>
+        <ClockText timezone={site.event.timezone} serverNow={core.now} className="ml-auto shrink-0 !text-[2vw] !text-white/70" />
       </header>
       <WindBanner wind={site.wind} big />
       <div className="mt-[1.5vw] flex min-h-0 flex-1 pr-[15vw]">
