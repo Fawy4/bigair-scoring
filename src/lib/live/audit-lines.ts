@@ -26,6 +26,13 @@ const val = (o: Record<string, unknown> | null): string => {
   return typeof o.score === "number" || typeof o.score === "string" ? formatCell(Number(o.score)) : T.noScore;
 };
 
+/** An Impression / Variety score as it was: its value, Absent, or nothing yet. */
+const impressionVal = (o: Record<string, unknown> | null): string => {
+  if (!o) return T.noScore;
+  if (o.missed === true) return T.absent;
+  return typeof o.value === "number" || typeof o.value === "string" ? formatCell(Number(o.value)) : T.noScore;
+};
+
 /** One line of the audit log in plain words, for the head judge's console (docs/PLAN-phase-5 step 4: "the audit log shows the old and new value"). */
 export function auditLine(r: AuditRow, w: AuditWords): string {
   const after = r.after ?? {};
@@ -38,7 +45,7 @@ export function auditLine(r: AuditRow, w: AuditWords): string {
     case "score_merged":
       return `${w.judgeWord(String(after.judge_seat_id ?? ""))} · ${attempt(after)}: ${T.scoreMoved}${because}`;
     case "impression_set":
-      return `${w.judgeWord(String(after.judge_seat_id ?? ""))} · ${w.riderWord(String(after.entry_id ?? ""))}: ${T.impression} ${val(r.before)} → ${val(r.after)}${because}`;
+      return `${w.judgeWord(String(after.judge_seat_id ?? ""))} · ${w.riderWord(String(after.entry_id ?? ""))}: ${T.impression} ${impressionVal(r.before)} → ${impressionVal(r.after)}${because}`;
     case "attempt_deleted":
       return `${T.deleted(w.attemptWord(String(after.id ?? "")))}${because}`;
     case "attempt_undone":
@@ -73,6 +80,8 @@ export function auditLine(r: AuditRow, w: AuditWords): string {
       return `${T.reopened}${because}`;
     case "sheet_reopened":
       return `${T.sheetReopened}${because}`;
+    case "sheet_submitted_by_head":
+      return `${w.judgeWord(String(after.judge_seat_id ?? ""))}: ${T.sheetSubmittedByHead}${because}`;
     case "flag_resolved":
       return `${T.flagResolved}${because}`;
     case "heat_cancelled":

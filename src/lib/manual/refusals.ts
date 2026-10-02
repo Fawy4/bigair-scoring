@@ -23,6 +23,8 @@ export interface Refusal {
 /** Sentences outside an errors / codes / validation object that are refusals or problems too. */
 export const EXTRA_REFUSAL_PATHS: readonly string[] = [
   "notFound.eventTitle",
+  "headLive.sheetStillMissing",
+  "headLive.sheetIncomplete",
   "notFound.pageTitle",
   "join.otherError",
   "join.selfAdd.failed",

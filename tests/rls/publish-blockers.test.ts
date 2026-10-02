@@ -117,6 +117,28 @@ describe.skipIf(!ENV_OK)("What blocks Publish, and the head judge's Absent (host
     expect(await pub(h, "J2 handed in paper")).toMatchObject({ ok: true });
   });
 
+  it("item 6: the head judge submits a judge's sheet for them once every rider has a score or Absent; judges and others are refused; it is audited", async () => {
+    const { h, a2 } = await heatWithGaps();
+    const head = f.clients.head;
+    for (const who of ["j1", "j2", "spotter", "orgB"] as const) {
+      expect(codeOf(await f.clients[who].rpc("head_submit_sheet", { p_heat: h, p_seat: J2(), p_reason: "paper sheet" })), who).toContain("NOT_ALLOWED");
+    }
+    expect(codeOf(await head.rpc("head_submit_sheet", { p_heat: h, p_seat: J2(), p_reason: " " }))).toContain("REASON_REQUIRED");
+    // J2 still owes the rider's Impression / Variety score: refused, and says how many
+    expect(codeOf(await head.rpc("head_submit_sheet", { p_heat: h, p_seat: J2(), p_reason: "paper sheet" }))).toContain("IMPRESSION_MISSING: 1");
+    await head.rpc("head_set_impression", { p_heat: h, p_entry: d.entries[0], p_seat: J2(), p_value: 6.5, p_reason: "paper sheet" });
+    const done = await head.rpc("head_submit_sheet", { p_heat: h, p_seat: J2(), p_reason: "paper sheet" });
+    expect(codeOf(done)).toBe("");
+    expect((done.data as { submitted_at: string | null }).submitted_at).not.toBeNull();
+    const audit = (await f.s.from("audit_log").select("reason").eq("event_id", f.ids.evA1).eq("action", "sheet_submitted_by_head").eq("row_id", (done.data as { id: string }).id)).data ?? [];
+    expect(audit).toEqual([{ reason: "paper sheet" }]);
+    // the sheet line has gone; J2's missing trick score is still named
+    const r = await pub(h);
+    expect((r as { blockers: Array<{ text: string }> }).blockers.map((b) => b.text)).toEqual([expect.stringMatching(/: score for L1 Blockers, attempt 2 missing$/)]);
+    await head.rpc("head_set_trick_score", { p_attempt: a2, p_seat: J2(), p_score: 7, p_criteria: {}, p_missed: false, p_reason: "paper sheet" });
+    expect(await pub(h)).toMatchObject({ ok: true });
+  });
+
   it("an Absent on a rider who did not start counts nothing, and that rider is never missing", async () => {
     const h = await mkHeat(f, d, { status: "ended", started_at: ago(900), ended_at: ago(300) }, { riders: 2 });
     await f.s.from("heat_slots").update({ modifier: "DNS" }).eq("heat_id", h).eq("entry_id", d.entries[1]);

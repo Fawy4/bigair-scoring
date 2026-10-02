@@ -51,7 +51,12 @@ test("Publish blocked: 'Fawy: score … missing' with Fix; Absent on the score a
   // still held back by the missing Impression / Variety score: Fix on that line opens it; Absent
   await expect(head.getByTestId("blockers")).toContainText("Fawy: sheet not submitted — 1 Impression / Variety score missing");
   await lines.filter({ hasText: /Impression \/ Variety score for \w+ missing/ }).getByTestId("blocker-fix").click();
+  // the sheet opens on that rider; Absent, a reason, Save
+  await expect(dialog.locator(`[data-testid="sheet-rider"][data-rider="${w.entries[0]}"]`)).toHaveAttribute("aria-pressed", "true");
   await dialog.getByTestId("mark-impression-absent").click();
+  await expect(dialog.locator(`[data-testid="sheet-rider"][data-rider="${w.entries[0]}"]`)).toHaveAttribute("data-state", "absent");
+  await dialog.getByTestId("reason-input").fill("Absent");
+  await dialog.getByTestId("impression-save").click();
   // every gap of Fawy is settled with Absent: the sheet counts as submitted, nothing blocks
   await expect(head.getByTestId("blockers").getByTestId("blocker-line")).toHaveCount(0, { timeout: 40_000 });
   const imp = (await w.db.from("impression_scores").select("value, missed").eq("heat_id", H).eq("judge_seat_id", w.seats.j1.id).eq("entry_id", w.entries[0]).single()).data!;
@@ -63,4 +68,62 @@ test("Publish blocked: 'Fawy: score … missing' with Fix; Absent on the score a
   expect((await w.db.from("heats").select("status").eq("id", H).single()).data!.status).toBe("published");
   // no override was needed
   expect((await w.db.from("audit_log").select("id").eq("row_id", H).eq("action", "publish_override")).data ?? []).toHaveLength(0);
+});
+
+test("items 5–6: after the heat, each judge's Impression / Variety scores per rider; the head judge types a judge's sheet, the next rider is picked, Save and submit", async ({ browser }) => {
+  test.setTimeout(300_000);
+  const H = w.heats[0];
+  await w.db.from("judge_seats").update({ name: "Fawy" }).eq("id", w.seats.j1.id);
+  await w.db.from("heats").update({ status: "ended", started_at: new Date(Date.now() - 900_000).toISOString(), ended_at: new Date(Date.now() - 300_000).toISOString() }).eq("id", H);
+  // Judges 2 and 3 have scored everybody and submitted; Fawy has Red only
+  for (const key of ["j2", "j3"] as const) {
+    for (const entry of w.entries) await w.db.from("impression_scores").insert({ heat_id: H, entry_id: entry, judge_seat_id: w.seats[key].id, value: 6, client_key: crypto.randomUUID(), client_rev: 1 });
+    await w.db.from("judge_sheets").upsert({ event_id: w.eventId, heat_id: H, judge_seat_id: w.seats[key].id, submitted_at: new Date().toISOString() }, { onConflict: "heat_id,judge_seat_id" });
+  }
+  await w.db.from("impression_scores").insert({ heat_id: H, entry_id: w.entries[0], judge_seat_id: w.seats.j1.id, value: 7, client_key: crypto.randomUUID(), client_rev: 1 });
+
+  const context = await browser.newContext({ viewport: { width: 1500, height: 1000 } });
+  contexts.push(context);
+  await installSupabaseProxy(context);
+  const head: Page = await context.newPage();
+  await w.signInAs(head, "head", `/head/${w.eventId}`);
+  await head.locator(`[data-testid="order-row"][data-heat="${H}"]`).click({ timeout: 60_000 });
+
+  // item 5: per judge, per rider
+  const fawy = head.locator(`[data-testid="owes-judge"][data-seat="${w.seats.j1.id}"]`);
+  await expect(fawy).toHaveAttribute("data-missing", "3", { timeout: 60_000 });
+  await expect(fawy.getByTestId("impression-cell")).toHaveCount(4);
+  await expect(fawy.locator(`[data-testid="impression-cell"][data-rider="${w.entries[0]}"]`)).toHaveAttribute("data-state", "done");
+  await expect(fawy.locator(`[data-testid="impression-cell"][data-rider="${w.entries[1]}"]`)).toHaveAttribute("data-state", "missing");
+  await expect(head.locator(`[data-testid="owes-judge"][data-seat="${w.seats.j2.id}"]`)).toHaveAttribute("data-missing", "0");
+  await expect(fawy).toContainText("3 missing");
+
+  // item 6: the sheet opens on the first missing rider; a value moves on to the next one; Absent for the last; Save and submit
+  await fawy.getByTestId("enter-impression").click();
+  const dialog = head.getByTestId("console-dialog");
+  const rider = (i: number) => dialog.locator(`[data-testid="sheet-rider"][data-rider="${w.entries[i]}"]`);
+  await expect(rider(1)).toHaveAttribute("aria-pressed", "true");
+  await expect(dialog.getByTestId("impression-submit")).toBeDisabled();
+  await dialog.getByRole("button", { name: "Set 6", exact: true }).click();
+  await dialog.getByRole("button", { name: "Set .5", exact: true }).click();
+  await expect(rider(1)).toHaveAttribute("data-state", "typed");
+  await expect(rider(2)).toHaveAttribute("aria-pressed", "true");
+  await dialog.getByRole("button", { name: "Set 8", exact: true }).click();
+  await dialog.getByRole("button", { name: "Set .0", exact: true }).click();
+  await expect(rider(3)).toHaveAttribute("aria-pressed", "true");
+  await dialog.getByTestId("mark-impression-absent").click();
+  await expect(rider(3)).toHaveAttribute("data-state", "absent");
+  await expect(dialog.getByTestId("impression-save")).toHaveText("Save 3 riders");
+  await dialog.getByTestId("reason-input").fill("paper sheet");
+  await dialog.getByTestId("impression-submit").click();
+  await expect(dialog).toHaveCount(0, { timeout: 30_000 });
+  await expect(fawy).toHaveAttribute("data-missing", "0", { timeout: 30_000 });
+  const rows = (await w.db.from("impression_scores").select("entry_id, value, missed").eq("heat_id", H).eq("judge_seat_id", w.seats.j1.id)).data ?? [];
+  const by = new Map(rows.map((r) => [r.entry_id, r]));
+  expect(Number(by.get(w.entries[1])!.value)).toBe(6.5);
+  expect(Number(by.get(w.entries[2])!.value)).toBe(8);
+  expect(by.get(w.entries[3])).toMatchObject({ value: null, missed: true });
+  // the sheet is submitted for Fawy: no sheet line in the blockers
+  await expect(head.getByTestId("blockers")).not.toContainText("Fawy: sheet not submitted", { timeout: 30_000 });
+  expect((await w.db.from("judge_sheets").select("submitted_at").eq("heat_id", H).eq("judge_seat_id", w.seats.j1.id).single()).data!.submitted_at).not.toBeNull();
 });

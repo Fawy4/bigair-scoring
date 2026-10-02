@@ -99,6 +99,8 @@ Last checked: 2 Oct 2026 · Product version 0.9.0
 | {#err-headlive-flagoutundecided} “Two riders are tied at the cut: choose who is flagged out.” | Head console dialogs | The head console needs a decision or a reason first. | Tick the rider to flag out. |
 | {#err-headlive-pastcapneedsreason} “That rider has used every attempt. Adding one more is saved with your reason.” | Head console dialogs | The head console needs a decision or a reason first. | Follow the sentence. |
 | {#err-headlive-pastcapnotallowed} “Only the head judge can add an attempt past the cap.” | Head console dialogs | An organiser or head judge seat is needed to add an attempt past the cap. | Follow the sentence. |
+| {#err-headlive-sheetincomplete} “Every rider needs a score or Absent before the sheet can be submitted. Save keeps what you typed so far.” | Head console dialogs | Shown on a judge's Impression / Variety sheet while a rider has neither a score nor Absent: Save and submit stays grey. | Give every rider a score or Absent. Save keeps what you typed so far without submitting. |
+| {#err-headlive-sheetstillmissing} “‹n› riders have no Impression / Variety score from this judge yet. Enter it, or set the judge to Absent for them.” | Head console dialogs | The head judge pressed Save and submit on a judge's Impression / Variety sheet while a rider still has no score from that judge. | Enter the score for each rider shown as missing, or press Judge absent for this rider, then submit again. |
 | {#err-headlive-practicenoheat} “Start a heat first: the feed plays into the running heat.” | Head console dialogs | The head console needs a decision or a reason first. | Start a heat, then Start the practice feed. |
 
 ### Head console, judge and spotter (database answers)

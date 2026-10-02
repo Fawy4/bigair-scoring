@@ -261,6 +261,8 @@ export const NOTES: Record<string, Note> = {
   "simulator.play.lines.waitJudges": { m: "A judge seat set to Real has not submitted.", f: "Submit on that phone, or set the judge to Virtual." },
   "simulator.play.lines.hold": { f: "Resume the run order (Go live → Resume at…, or the scenario button again)." },
   "simulator.play.lines.notReady": { f: "Lock the division's draw; finish the earlier heats that fill this heat's seats." },
+  "headLive.sheetStillMissing": { m: "The head judge pressed Save and submit on a judge's Impression / Variety sheet while a rider still has no score from that judge.", f: "Enter the score for each rider shown as missing, or press Judge absent for this rider, then submit again." },
+  "headLive.sheetIncomplete": { m: "Shown on a judge's Impression / Variety sheet while a rider has neither a score nor Absent: Save and submit stays grey.", f: "Give every rider a score or Absent. Save keeps what you typed so far without submitting." },
   "simulator.play.lines.busy": { m: "Another tab asked for a step while this one was still working on its own (two panel tabs of the same simulation). With one tab open you should not see it.", f: "Close the other tab, or use it. If you see it with one tab open, reload the page." },
   "simulator.log.noCap": { f: "Divisions → Scoring → set “Attempts per rider”." },
   "simulator.needTyped": { m: "The Reset or Delete button is grey until the event's web address is typed.", f: "Type the address shown under the box." },

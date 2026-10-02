@@ -2994,6 +2994,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      head_submit_sheet: {
+        Args: { p_heat: string; p_reason: string; p_seat: string }
+        Returns: {
+          created_at: string
+          event_id: string
+          heat_id: string
+          id: string
+          judge_seat_id: string
+          reopened_at: string | null
+          reopened_reason: string | null
+          submitted_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "judge_sheets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       import_riders: {
         Args: { p_division: string; p_rows: Json }
         Returns: Json
