@@ -18,7 +18,8 @@ The timetable works like a spreadsheet: a row's end = its start + its length (wa
 
 | Control | What it does |
 |---|---|
-| **Day**, **Plan** | Which day and which of its plans you see; the active one is tagged “active”. |
+| **Day**, **Plan** | Which day and which of its plans you see; the active one is tagged “active”. Each day in the list says “Plan A – Sat 10 Oct active”, “2 plans, none active” or “no plan”. The step opens on today (the Go live checklist's **Fix** for “No run order is active for today” lands here with today chosen). |
+| **Create a plan for ‹day›**, **Copy ‹other day›'s plan to ‹day›** | Shown when the chosen day has no plan, never a grey screen. Create starts an empty plan named “Plan A – ‹day›” (change the name first if you like). Copy takes another day's active plan: its heats, breaks and the start times you pinned by hand — not its actual times or the pins the head judge's console wrote while that day ran. The first plan of a day is active at once. |
 | **Activate this plan** | Makes it the plan of that day (heats that started or finished stay where they are). |
 | **New plan** (with **Name of a new empty plan**), **Duplicate plan** (with **Name for the copy**), **Delete plan** | Manage plans. An active plan cannot be deleted. |
 | **Heats not in the run order** | **Add** one heat, **Add all ‹n›**, or drag a heat in. |
@@ -29,7 +30,7 @@ The timetable works like a spreadsheet: a row's end = its start + its length (wa
 | **Break after every heat** + **Set for all heats** | One break for every heat row. |
 | Header | Projected finish, heats left, first warm-up, “On hold since ‹time›”, the drift badge (“On schedule”, “6 min late”), the time now; “Heats already ran on ‹day›” once heats of the plan have real start times. |
 | **Live changes** (active plan) | **Hold**, **Resume at** (+ time), **Resume**, **Shift +5**, **Shift +10**: the same server-time actions as Go live and the head console. |
-| **Clear actual times** | Clears the plan's actual starts and the pins written while the day ran (Shift, Resume at, +1 min); pins you set by hand stay. See [Resets and undo](../resets-and-undo.md#ru-clear-times). |
+| **Clear actual times** | Clears the plan's actual starts and the pins written while the day ran (Shift, Resume at, +1 min); pins you set by hand stay. When there is nothing of that kind it does not just say “nothing to clear”: it names what stays (“Your pinned 10:05 stays”). Every grey button on this step says why under it or when you point at it (a name of 2 characters, a time, an active plan, a heat that has started). See [Resets and undo](../resets-and-undo.md#ru-clear-times). |
 | **Export PDF**, **Export PNG** | The timetable as Division / Session / Warm-up / Start / Duration / End / Break, with “Times are estimates and update live”. |
 | Row warnings (⚠) | “No heat length — set it in Divisions → Format”, or “This heat is no longer in the draw … Take this row out of the run order” (the row takes no time). |
 

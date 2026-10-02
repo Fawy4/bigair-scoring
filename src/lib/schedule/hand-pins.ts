@@ -26,6 +26,8 @@ export interface PlanActuals {
   pinsKept: number;
   /** The plan records which pins are hand-set. False for a plan made before that: every pin is kept. */
   known: boolean;
+  /** The times of the pins that stay, earliest first ("10:05"): what Clear actual times leaves (Polish 2, item 14). */
+  keptTimes: string[];
 }
 
 /** What "Clear actual times" would do to a plan row. */
@@ -34,5 +36,6 @@ export function planActuals(row: { anchors: unknown; actual_starts: unknown; han
   const list = asList(row.hand_pins);
   const ids = Object.keys(anchors);
   const kept = list === null ? ids.length : ids.filter((id) => list.includes(id)).length;
-  return { actualStarts: Object.keys(asAnchors(row.actual_starts)).length, pinsCleared: ids.length - kept, pinsKept: kept, known: list !== null };
+  const keptTimes = (list === null ? ids : ids.filter((id) => list.includes(id))).map((id) => anchors[id]).filter((t) => typeof t === "string").sort();
+  return { actualStarts: Object.keys(asAnchors(row.actual_starts)).length, pinsCleared: ids.length - kept, pinsKept: kept, known: list !== null, keptTimes };
 }

@@ -19,10 +19,10 @@ describe("which pins are hand-set", () => {
 
 describe("what Clear actual times does to a plan", () => {
   it("clears the actual starts and only the pins the console wrote; hand-set pins stay", () => {
-    expect(planActuals({ anchors: { i1: "10:00", b1: "12:00", i2: "10:41", i3: "11:07" }, actual_starts: { b1: "2026-11-01T10:00:00Z" }, hand_pins: ["i1", "b1"] })).toEqual({ actualStarts: 1, pinsCleared: 2, pinsKept: 2, known: true });
+    expect(planActuals({ anchors: { i1: "10:00", b1: "12:00", i2: "10:41", i3: "11:07" }, actual_starts: { b1: "2026-11-01T10:00:00Z" }, hand_pins: ["i1", "b1"] })).toEqual({ actualStarts: 1, pinsCleared: 2, pinsKept: 2, known: true, keptTimes: ["10:00", "12:00"] });
   });
   it("a plan made before pins were marked keeps every pin and says it cannot tell", () => {
-    expect(planActuals({ anchors: { i1: "10:00", i2: "10:41" }, actual_starts: {}, hand_pins: null })).toEqual({ actualStarts: 0, pinsCleared: 0, pinsKept: 2, known: false });
+    expect(planActuals({ anchors: { i1: "10:00", i2: "10:41" }, actual_starts: {}, hand_pins: null })).toEqual({ actualStarts: 0, pinsCleared: 0, pinsKept: 2, known: false, keptTimes: ["10:00", "10:41"] });
     expect(planActuals({ anchors: { i1: "10:00" }, actual_starts: {} })).toMatchObject({ known: false, pinsKept: 1 });
   });
   it("nothing to clear is zero and zero", () => {

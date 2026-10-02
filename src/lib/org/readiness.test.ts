@@ -74,7 +74,7 @@ describe("readiness checklist", () => {
 
   it("run order for another day names both dates: today and the day of the active plan", () => {
     const c = counts({ activePlanToday: false, today: "2026-10-02", activePlanDays: ["2026-10-16"] });
-    expect(readiness({ eventId: EVENT, divisions: divs, counts: c }).checks.find((x) => x.id === "run-order")).toMatchObject({ state: "attention", sentence: "No run order is active for today, Fri 2 Oct — the active plan is for Fri 16 Oct", fixHref: `/org/events/${EVENT}/schedule` });
+    expect(readiness({ eventId: EVENT, divisions: divs, counts: c }).checks.find((x) => x.id === "run-order")).toMatchObject({ state: "attention", sentence: "No run order is active for today, Fri 2 Oct — the active plan is for Fri 16 Oct", fixHref: `/org/events/${EVENT}/schedule?day=2026-10-02` }); // Polish 2: the Fix opens the Run order on today
     const two = counts({ activePlanToday: false, today: "2026-10-02", activePlanDays: ["2026-10-16", "2026-10-17"] });
     expect(readiness({ eventId: EVENT, divisions: divs, counts: two }).checks.find((x) => x.id === "run-order")!.sentence).toBe("No run order is active for today, Fri 2 Oct — the active plans are for Fri 16 Oct and Sat 17 Oct");
     const none = counts({ activePlan: false, activePlanToday: false, today: "2026-10-02", activePlanDays: [], planCount: 2 });
