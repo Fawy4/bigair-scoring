@@ -11,6 +11,7 @@ import { scoringMoreHidden, SCORING_FLAT_PATHS, SCORING_MAIN_PATHS } from "./vis
 // Polish 2, item 8: the main dials first; everything that only applies to a choice shows only when that choice is made; More settings holds the rest.
 const nodes = schemaToNodes(ScoringModelSchema, SCORING_LABELS, SCORING_HIDDEN);
 const more = (m: unknown) => countVisible(nodes, m, { hidden: SCORING_HIDDEN, hiddenPaths: scoringMoreHidden(m), flatPaths: SCORING_FLAT_PATHS });
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const model = (j: unknown, edit?: (m: Record<string, any>) => void) => {
   const m = structuredClone(parseScoringModel(structuredClone(j))) as unknown as Record<string, any>;
   edit?.(m);
