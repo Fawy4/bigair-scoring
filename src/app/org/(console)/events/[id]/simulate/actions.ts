@@ -8,7 +8,7 @@ import { generatePin, generateQrToken, joinUrl } from "@/lib/join/pin";
 import { decryptPin, encryptPin, tryPinKey } from "@/lib/officials/pin-crypto";
 import { joinAddress } from "@/lib/officials/share";
 import { requestOrigin } from "@/lib/platform/origin";
-import { isSpeed, SimConfigSchema, withSettings, type SimSettings } from "@/lib/simulator/config";
+import { isSpeed, parseSettingsPatch, withSettings, type SimSettings } from "@/lib/simulator/config";
 import { simErrorSentence } from "@/lib/simulator/errors";
 import { logLine, updateConfig } from "@/lib/simulator/io";
 import { pressScenario, reviveJudge } from "@/lib/simulator/scenario-runner";
@@ -120,9 +120,10 @@ export async function setPlayState(eventId: string, state: "playing" | "paused" 
 
 export async function saveSettings(eventId: string, patch: Partial<SimSettings>): Promise<Done> {
   return wrap(eventId, async (db) => {
-    const parsed = SimConfigSchema.pick({ attemptsPerRider: true, crashShare: true, repeatShare: true, spread: true, judgeMode: true, specialJudge: true, missShare: true, offlineSec: true, lateSec: true }).partial().safeParse(patch);
-    if (!parsed.success) return bad();
-    await updateConfig(db, eventId, (c) => withSettings(c, parsed.data));
+    // only the setting that was changed: the others stay exactly as they are (Polish 2, item 4)
+    const parsed = parseSettingsPatch(patch);
+    if (!parsed) return bad();
+    await updateConfig(db, eventId, (c) => withSettings(c, parsed));
     return { ok: true };
   });
 }
