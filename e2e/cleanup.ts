@@ -17,6 +17,8 @@ export const service = () =>
 export interface LedgerEntry {
   orgSlug?: string;
   userId?: string;
+  /** A master trick base version a test saved (the trick base editor tests); removed after the organisations, so no test event points at it. */
+  trickVersionId?: string;
 }
 
 const ledgerFile = (runId = process.env.E2E_RUN_ID ?? "local") => join(DIR, `.e2e-ledger-${runId}.jsonl`);
@@ -51,7 +53,9 @@ export async function removeOrganisationFiles(db: NonNullable<ReturnType<typeof 
 async function purge(entries: LedgerEntry[]): Promise<void> {
   const db = service();
   if (!db) return;
-  for (const e of entries) {
+  // master trick base versions last: first every throwaway event that may use them
+  const sorted = [...entries.filter((e) => !e.trickVersionId), ...entries.filter((e) => e.trickVersionId)];
+  for (const e of sorted) {
     try {
       if (e.orgSlug) {
         const { data: org } = await db.from("organisations").select("id").eq("slug", e.orgSlug).maybeSingle();
@@ -61,6 +65,7 @@ async function purge(entries: LedgerEntry[]): Promise<void> {
         }
       }
       if (e.userId) await db.auth.admin.deleteUser(e.userId);
+      if (e.trickVersionId) await db.from("trick_vocabularies").delete().eq("id", e.trickVersionId).is("organisation_id", null).is("event_id", null);
     } catch {
       // one failure must never stop the rest of the clean-up
     }

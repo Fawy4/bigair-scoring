@@ -88,34 +88,4 @@ test("Trick base: + Add block adds a local name, proposed to the master base; af
   }
 });
 
-test("Trick base proposals: the owner sees them in /admin and accepts one into the master base", async ({ page }) => {
-  test.setTimeout(180_000);
-  const owner = await createOrganiser({ platformAdmin: "owner" });
-  let blockKey = "";
-  try {
-    const { eventId } = await setup(owner);
-    blockKey = `local_e2e_${owner.run}`;
-    await owner.db.from("trick_vocabularies").insert({ organisation_id: owner.orgId, event_id: eventId, key: "event-additions", json: { blocks: [{ family: "base", key: blockKey, label: `E2E roll ${owner.run}`, category: "rotation", status: "proposed" }] }, content_hash: "x" });
-    await owner.signIn(page, "/admin/tricks");
-    const row = page.getByTestId("proposal").filter({ hasText: `E2E roll ${owner.run}` });
-    await expect(row).toContainText("Base trick");
-    await expect(row).toContainText(`Tricks Cup ${owner.run}`);
-    await row.getByRole("button", { name: "Accept into the master base" }).click();
-    await row.getByRole("button", { name: "Yes, add it" }).click();
-    await expect(page.getByTestId("proposal").filter({ hasText: `E2E roll ${owner.run}` })).toHaveCount(0);
-
-    const { data: versions } = await owner.db.from("trick_vocabularies").select("version, json, published_at").is("organisation_id", null).is("event_id", null).eq("key", "big-air-vocabulary").order("version", { ascending: false });
-    expect(versions![0].published_at).not.toBeNull();
-    expect(JSON.stringify(versions![0].json)).toContain(blockKey);
-    expect(JSON.stringify(versions![1].json)).not.toContain(blockKey); // the older version is untouched
-    const { data: ev } = await owner.db.from("trick_vocabularies").select("json").eq("event_id", eventId).eq("key", "event-additions").single();
-    expect((ev!.json as { blocks: Array<{ status: string }> }).blocks[0].status).toBe("accepted");
-  } finally {
-    // the master base must not keep a test block: remove the version this test created
-    if (blockKey) {
-      const { data: rows } = await owner.db.from("trick_vocabularies").select("id, json").is("organisation_id", null).is("event_id", null).eq("key", "big-air-vocabulary");
-      for (const r of rows ?? []) if (JSON.stringify(r.json).includes(blockKey)) await owner.db.from("trick_vocabularies").delete().eq("id", r.id);
-    }
-    await owner.cleanup();
-  }
-});
+// Accepting and dismissing proposals: e2e/trick-base-editor.spec.ts (the proposals moved to the top of Master presets → Trick base).

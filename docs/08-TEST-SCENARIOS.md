@@ -161,6 +161,30 @@ Two spotters who tap the same blocks in a different order log two different tric
 
 **1H-14 The Impression step moves on by itself** (`judge-items.ts`/`impression-card`). After a rider's Impression score is saved the step moves to the next rider who has none; with every rider scored the next step is Submit. Riders already scored are skipped; a rider who did not start is never offered.
 
+### 1I — Master trick base editor (trick-base-editor; authoritative before the code: `src/lib/engine/tricks/naming.test.ts`, `src/lib/trick-base/master.test.ts`)
+
+**1I-1 Naming template** (`engine/tricks/naming.ts`). The vocabulary's `namingTemplate` has two parts, `{direction}` and `{blocks}`; `{blocks}` is the blocks in tap order, each written "‹multiplier› ‹name›" with the hidden multiplier left out. Words nobody recognised always come last. Spaces are collapsed and the ends trimmed.
+- `{direction} {blocks}` (the default): left; Backroll ×2, Board-off → **"Left ×2 Backroll Board-off"**. Every 1G-3 row gives exactly the same name as before.
+- An older vocabulary whose `namingTemplate` is a sentence without `{blocks}` names exactly as the default.
+- `{blocks} {direction}`: left; Backroll ×2, Board-off → "×2 Backroll Board-off Left"; no direction → "×2 Backroll Board-off".
+- `hideMultiplierWhen` empty (never hide): right; Frontroll ×1 → "Right ×1 Frontroll".
+- `{blocks} {direction}` with free text "banana" and no blocks: left → "Left banana".
+- Refused: a template without `{blocks}` ("The naming template must contain {blocks}."); an unknown part such as `{grab}` ("The naming template has an unknown part: {grab}. Use {direction} and {blocks}.").
+
+**1I-2 Validation on save, in words** (`trick-base/master.ts`). Case and spaces at the ends do not count.
+- Two blocks with the key `backroll` → "Two blocks use the key “backroll”: Backroll and Back roll. Each key must be unique."
+- Megaloop gets the alias "loop" while Kiteloop has it → "“loop” is already an alias of Kiteloop." A new block named "Tornado" while Late rotations has the alias "tornado" → "“tornado” is already an alias of Late rotations." Frontroll gets the alias "backroll" → "“backroll” is already the name of Backroll."
+- A block with no name → "A block in Base trick has no name."
+- Backroll with the category `spin` → "Backroll has the category “spin”, which is not in the category list." A base trick with no category → "Base trick “Tornado” needs a scoring category."
+- A block of the newest published version missing from the draft → "Heart attack is in a published version: retire it instead of removing it."
+- A word two blocks already shared in the version the draft started from does **not** block the save (the reader already settles it: base tricks first); it is listed under "Worth tidying up": "Already so in the published version (not blocking; base tricks are read first): “kl” is already an alias of Kiteloop." The hosted version 5 has two such words: "KL" (Kiteloop and + Kiteloop) and "doobie" (an alias of Doobie loop, and the name of the accepted block Doobie).
+
+**1I-3 Diff in words** (`trick-base/master.ts`). From the published base to a draft where Megaloop → "Mega loop", Frontroll → "Front roll", Backroll → "Back roll", "Tornado" added to Base trick and Heart attack retired: **"3 renamed, 1 added, 1 retired"**, with one line each in the order shown ("Renamed: Backroll → Back roll", …, "Added: Tornado (Base trick)", "Retired: Heart attack"). Order of the counts: renamed, added, retired, restored, moved, with changed aliases, with other changes; then "families changed", "category order changed", "naming changed". Tic-tac shown in Grabs & landings → "1 moved" ("Moved: Tic-tac → Grabs & landings"). Two identical versions → "No changes". Saving an older vocabulary unchanged in the editor (it gains the family list and the `{direction} {blocks}` template) reads "No changes".
+
+**1I-4 Versions** (`trick-base/master.ts`, `planSave`). Versions 1–5 published: a save makes **6 (draft)**; another different save makes 7 (draft); a save identical to the newest version makes nothing ("No changes to save"). Publishing 7 makes 7 the version new events start from; publishing 6 afterwards is refused. An event created before keeps 5; "Update to latest" moves it to 7 and shows the diff 5 → 7.
+
+**1I-5 Visibility and retiring** (`trick-base/index.ts`). A block with `defaultOn: false` is unticked in a division that never touched it; ticking it stores it in the division's `enabled` list. A retired block is never on the spotter and is read as an unticked word in typed text, while an attempt already stored with it still composes its name.
+
 ## 2. Ladder engine (`presets/formats/*.json`)
 
 ### 2A — Snake seeding, heat size 4, `uneven = smaller_heats_for_top_seeds` (seed numbers)

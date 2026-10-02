@@ -1,18 +1,22 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ArrowDown, ArrowUp, GripVertical, Star } from "lucide-react";
 import { Button } from "@/components/org/button";
 import { toast } from "@/hooks/use-toast";
-import { addLocalBlock, blockId, blocksFromVocabulary, deriveCategories, FAMILIES, parseTrickBase, type Block, type FamilyKey, type LocalBlock, type VocabularyJson } from "@/lib/trick-base";
-import { MOVABLE, nudgeBlock, nudgeFamily, parseLayout, placeBlock, resolveLayout, toggleFavourite, defaultLayout, type TrickLayout } from "@/lib/trick-base/layout";
+import { ConfirmButton } from "@/components/confirm-button";
+import { addLocalBlock, blockId, blocksFromVocabulary, deriveCategories, effectiveDisabled, FAMILIES, familiesOf, parseTrickBase, toggleBlock, type Block, type BuiltInFamily, type FamilyKey, type LocalBlock, type VocabularyJson } from "@/lib/trick-base";
+import { isMovable, nudgeBlock, nudgeFamily, parseLayout, placeBlock, resolveLayout, toggleFavourite, defaultLayout, type TrickLayout } from "@/lib/trick-base/layout";
 import { copy } from "@/lib/ui-copy";
 import { addTrickBlock, saveTrickBase } from "./actions";
+import { loadEventTrickBase, updateEventTrickBase, type EventTrickBase } from "./trick-base-actions";
 
 const T = copy.trickBase;
+const V = copy.trickEditor.event;
 
 /** One block of a family: tick box, the way it is moved (drag handle, arrows, "Move to…"), and the favourite star. */
 function BlockRow({
@@ -22,6 +26,7 @@ function BlockRow({
   favourite,
   pending,
   movable,
+  families,
   onTick,
   onUp,
   onDown,
@@ -34,6 +39,7 @@ function BlockRow({
   favourite: boolean;
   pending: boolean;
   movable: boolean;
+  families: Array<{ key: FamilyKey; label: string }>;
   onTick: (on: boolean) => void;
   onUp: () => void;
   onDown: () => void;
@@ -48,7 +54,7 @@ function BlockRow({
       <label className="flex min-w-0 flex-1 items-center gap-2 font-semibold" title={cannotUntick ? T.cannotUntick : undefined}>
         <input type="checkbox" className="h-6 w-6" checked={ticked} disabled={pending || cannotUntick} onChange={(e) => onTick(e.target.checked)} data-testid={`block-${id}`} />
         <span>{block.label}</span>
-        {block.local || block.proposed ? <span className="rounded border border-beach-line px-1 text-xs font-semibold">{block.proposed ? T.proposedTag : T.localTag}</span> : null}
+        {block.local || block.proposed ? <span className="rounded border border-beach-line px-1 text-xs font-semibold">{block.proposed ? T.proposedTag : block.declined && block.reason ? V.declinedTag(block.reason) : T.localTag}</span> : null}
         {favourite ? <span className="text-xs font-semibold">{T.favouriteTag}</span> : null}
       </label>
       <Button variant="quiet" iconOnly icon={ArrowUp} aria-label={T.moveUp(block.label)} data-testid={`up-${id}`} onClick={onUp} />
@@ -57,7 +63,7 @@ function BlockRow({
       {movable ? (
         <select aria-label={T.moveTo(block.label)} data-testid={`moveto-${id}`} disabled={pending} value="" onChange={(e) => e.target.value && onMove(e.target.value as FamilyKey)}>
           <option value="">{T.moveToChoose}</option>
-          {FAMILIES.filter((f) => MOVABLE.includes(f.key)).map((f) => (
+          {families.filter((f) => isMovable(f.key)).map((f) => (
             <option key={f.key} value={f.key}>
               {f.label}
             </option>
@@ -84,59 +90,148 @@ function FamilyList({ family, children, ids }: { family: FamilyKey; children: Re
  * the order of the families, the order of the blocks in each, blocks moved between Base trick, Add-ons and Grabs & landings, favourites on top. The spotter
  * renders exactly this and never reorders anything. Drag a block (⠿), or use the arrows and "Move to…" (taps only on the official screens; drag is for the organiser).
  */
-export function TrickBasePanel({
-  eventId,
-  divisionId,
-  vocabulary,
-  localBlocks,
-  onBlockAdded,
-  trickBase,
-  started,
-  modelCategories,
-}: {
+type PanelProps = {
   eventId: string;
   divisionId: string;
+  /** The newest published master version (from the page); the panel shows the version this event uses, which it loads itself. */
   vocabulary: VocabularyJson;
   localBlocks: LocalBlock[];
   onBlockAdded: (b: LocalBlock) => void;
   trickBase: unknown;
   started: boolean;
   modelCategories: Array<{ key: string; label: string }>;
-}) {
+};
+
+/** The version line, the diff in words and "Update to latest" (docs/08 §1I-4): the whole event moves at once. */
+function VersionBar({ base, eventId, onUpdated }: { base: EventTrickBase; eventId: string; onUpdated: () => void }) {
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="flex flex-col gap-2 rounded-card border border-beach-line p-3" data-testid="trick-base-version">
+      <p className="font-semibold">{V.versionLine(base.version)}</p>
+      {base.diff ? (
+        <>
+          <p className="font-semibold" data-testid="update-summary">
+            {V.newer(base.latest)} {base.diff.summary}
+          </p>
+          {base.diff.lines.length ? (
+            <ul className="list-disc pl-6 text-small" data-testid="update-lines">
+              {base.diff.lines.map((l) => (
+                <li key={l}>{l}</li>
+              ))}
+            </ul>
+          ) : null}
+          {error ? (
+            <p role="alert" className="field-error">
+              {error}
+            </p>
+          ) : null}
+          <div data-testid="update-to-latest">
+            <ConfirmButton
+              label={V.update}
+              question={V.updateQuestion(base.version, base.latest)}
+              confirmLabel={V.updateYes}
+              cancelLabel={copy.common.cancel}
+              pending={pending}
+              onConfirm={() =>
+                start(async () => {
+                  setError(null);
+                  const r = await updateEventTrickBase(eventId);
+                  if (!r.ok) return setError(r.error);
+                  toast({ title: V.updated(r.version) });
+                  onUpdated();
+                })
+              }
+            />
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+export function TrickBasePanel(props: PanelProps) {
+  const router = useRouter();
+  const [base, setBase] = useState<EventTrickBase | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [round, setRound] = useState(0);
+  useEffect(() => {
+    let live = true;
+    loadEventTrickBase(props.eventId).then((r) => {
+      if (!live) return;
+      if (r.ok) setBase(r.base);
+      else setError(r.error);
+    });
+    return () => {
+      live = false;
+    };
+  }, [props.eventId, round]);
+  if (error) return <p className="rounded-card border border-beach-line p-3 text-body font-semibold">{error}</p>;
+  if (!base) return <p className="text-body font-semibold" data-testid="trick-base-loading">{V.loading}</p>;
+  return (
+    <div className="flex flex-col gap-4">
+      <VersionBar
+        base={base}
+        eventId={props.eventId}
+        onUpdated={() => {
+          setRound((n) => n + 1);
+          router.refresh();
+        }}
+      />
+      <TrickBaseTicks key={base.version} {...props} vocabulary={base.vocabulary} />
+    </div>
+  );
+}
+
+/**
+ * The ticks and the spotter's layout of one division in the version this event uses. Blocks the master base retired are not shown; blocks it has off for
+ * new events start unticked (ticking one stores it in `enabled`).
+ */
+function TrickBaseTicks({ eventId, divisionId, vocabulary, localBlocks, onBlockAdded, trickBase, started, modelCategories }: PanelProps) {
+  const families = useMemo(() => familiesOf(vocabulary), [vocabulary]);
+  const familyKeys = useMemo(() => families.map((f) => f.key), [families]);
   const initial = parseTrickBase(trickBase);
   const [disabled, setDisabled] = useState<string[]>(() => initial.disabled);
-  const [layout, setLayout] = useState<TrickLayout>(() => parseLayout(initial.layout));
+  const [enabled, setEnabled] = useState<string[]>(() => initial.enabled ?? []);
+  const [layout, setLayout] = useState<TrickLayout>(() => parseLayout(initial.layout, familyKeys));
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [adding, setAdding] = useState(false);
-  const [family, setFamily] = useState<FamilyKey>("base");
+  const [family, setFamily] = useState<BuiltInFamily>("base");
   const [label, setLabel] = useState("");
   const [category, setCategory] = useState("");
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
-  const blocks = useMemo(() => blocksFromVocabulary(vocabulary, localBlocks), [vocabulary, localBlocks]);
-  const view = useMemo(() => resolveLayout(blocks, disabled, layout, true), [blocks, disabled, layout]);
-  const derived = useMemo(() => deriveCategories(blocks, disabled, vocabulary.categoryPrecedence, modelCategories), [blocks, disabled, vocabulary.categoryPrecedence, modelCategories]);
+  const blocks = useMemo(() => blocksFromVocabulary(vocabulary, localBlocks).filter((b) => !b.retired), [vocabulary, localBlocks]);
+  const off = useMemo(() => effectiveDisabled(blocks, { disabled, enabled }), [blocks, disabled, enabled]);
+  const view = useMemo(() => resolveLayout(blocks, off, layout, true, families), [blocks, off, layout, families]);
+  const derived = useMemo(() => deriveCategories(blocks, off, vocabulary.categoryPrecedence, modelCategories), [blocks, off, vocabulary.categoryPrecedence, modelCategories]);
   const missingInScoring = derived.filter((c) => !modelCategories.some((m) => m.key === c.key));
-  const on = blocks.length - blocks.filter((b) => disabled.includes(blockId(b))).length;
+  const on = blocks.length - blocks.filter((b) => off.includes(blockId(b))).length;
 
-  function save(nextDisabled: string[], nextLayout: TrickLayout, saved: string) {
-    const before = { disabled, layout };
+  function save(nextDisabled: string[], nextEnabled: string[], nextLayout: TrickLayout, saved: string) {
+    const before = { disabled, enabled, layout };
     setDisabled(nextDisabled);
+    setEnabled(nextEnabled);
     setLayout(nextLayout);
     setError(null);
     start(async () => {
-      const r = await saveTrickBase(divisionId, nextDisabled, nextLayout);
+      const r = await saveTrickBase(divisionId, nextDisabled, nextLayout, nextEnabled);
       if (!r.ok) {
         setDisabled(before.disabled);
+        setEnabled(before.enabled);
         setLayout(before.layout);
         setError(r.error);
       } else toast({ title: saved });
     });
   }
 
-  const toggle = (id: string, checked: boolean) => save(checked ? disabled.filter((d) => d !== id) : [...disabled, id], layout, T.saved);
-  const relayout = (next: TrickLayout) => save(disabled, next, T.layoutSaved);
+  const toggle = (b: Block, checked: boolean) => {
+    const next = toggleBlock({ disabled, enabled }, blockId(b), checked, b.defaultOn !== false);
+    save(next.disabled, next.enabled ?? [], layout, T.saved);
+  };
+  const relayout = (next: TrickLayout) => save(disabled, enabled, next, T.layoutSaved);
+  const tickAll = () => save([], blocks.filter((b) => b.defaultOn === false).map(blockId), layout, T.saved);
 
   function onDragEnd(e: DragEndEvent) {
     if (!e.over) return;
@@ -209,7 +304,7 @@ export function TrickBasePanel({
             <FamilyList family={v.family} ids={v.blocks.map(blockId)}>
               {v.blocks.map((b) => {
                 const id = blockId(b);
-                const ticked = !disabled.includes(id);
+                const ticked = !off.includes(id);
                 return (
                   <BlockRow
                     key={id}
@@ -218,8 +313,9 @@ export function TrickBasePanel({
                     cannotUntick={started && ticked}
                     favourite={layout.favourites.includes(id)}
                     pending={pending}
-                    movable={MOVABLE.includes(b.family)}
-                    onTick={(checked) => toggle(id, checked)}
+                    movable={isMovable(b.family)}
+                    families={families}
+                    onTick={(checked) => toggle(b, checked)}
                     onUp={() => relayout(nudgeBlock(view, layout, b, -1))}
                     onDown={() => relayout(nudgeBlock(view, layout, b, 1))}
                     onMove={(f) => relayout(placeBlock(view, layout, b, f, 9999))}
@@ -233,10 +329,10 @@ export function TrickBasePanel({
       </DndContext>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" className="btn" disabled={pending || disabled.length === 0 || started} onClick={() => save([], layout, T.saved)}>
+        <button type="button" className="btn" disabled={pending || off.length === 0 || started} onClick={tickAll}>
           {T.tickAll}
         </button>
-        <button type="button" className="btn" disabled={pending} data-testid="reset-layout" onClick={() => relayout(defaultLayout())}>
+        <button type="button" className="btn" disabled={pending} data-testid="reset-layout" onClick={() => relayout(defaultLayout(familyKeys))}>
           {T.resetLayout}
         </button>
         <button type="button" className="btn" onClick={() => setAdding((a) => !a)} aria-expanded={adding} data-testid="add-block">
@@ -256,7 +352,7 @@ export function TrickBasePanel({
             <label htmlFor={`blk-family-${divisionId}`} className="font-semibold">
               {T.addFamily}
             </label>
-            <select id={`blk-family-${divisionId}`} value={family} onChange={(e) => setFamily(e.target.value as FamilyKey)}>
+            <select id={`blk-family-${divisionId}`} value={family} onChange={(e) => setFamily(e.target.value as BuiltInFamily)}>
               {FAMILIES.map((f) => (
                 <option key={f.key} value={f.key}>
                   {f.label}

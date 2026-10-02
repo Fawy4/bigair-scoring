@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { defaultVersion, MASTER_KINDS } from "@/lib/platform/master-presets";
 import { loadVersions } from "@/lib/platform/preset-rows";
 import { requireAdmin } from "@/lib/platform/session";
@@ -13,6 +13,7 @@ export default async function EditPresetPage({ params }: { params: Promise<{ kin
   const key = decodeURIComponent(rawKey);
   const def = MASTER_KINDS.find((k) => k.slug === slug);
   if (!def) notFound();
+  if (def.kind === "trick_vocabulary") redirect("/admin/presets/trick-base"); // the form editor, with this JSON under its Advanced fold
   const { supabase, role } = await requireAdmin();
   const versions = await loadVersions(supabase, def.kind, key);
   if (versions.length === 0) notFound();
@@ -20,7 +21,7 @@ export default async function EditPresetPage({ params }: { params: Promise<{ kin
   const base = defaultVersion(versions) ?? versions[0];
 
   // the JSON of the version the box starts from
-  const table = def.kind === "scoring_model" ? "scoring_models" : def.kind === "format_template" ? "format_templates" : def.kind === "trick_vocabulary" ? "trick_vocabularies" : "presets";
+  const table = def.kind === "scoring_model" ? "scoring_models" : def.kind === "format_template" ? "format_templates" : "presets";
   const { data: row } = await supabase.from(table as "scoring_models").select("json").eq("id", base.id).single();
   const c = copy.admin.presets;
 

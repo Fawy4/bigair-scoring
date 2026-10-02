@@ -189,7 +189,7 @@ test("platform settings: the product name replaces the built-in name on the publ
 test("master presets, audit log and health pages open", async ({ page }) => {
   await admin.signIn(page, "/admin/presets");
   await expect(page.getByRole("heading", { name: "Master presets", exact: true })).toBeVisible();
-  for (const h of ["Scoring models", "Format templates", "Trick vocabulary", "Identification schemes"]) await expect(page.getByRole("heading", { name: h })).toBeVisible();
+  for (const h of ["Scoring models", "Format templates", "Trick base", "Identification schemes"]) await expect(page.getByRole("heading", { name: h })).toBeVisible();
   await expect(page.getByRole("link", { name: /Edit/ }).first()).toBeVisible();
   await page.goto("/admin/health");
   await expect(page.getByRole("heading", { name: "Health", exact: true })).toBeVisible();

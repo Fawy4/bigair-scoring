@@ -9,6 +9,7 @@ export const metadata = { title: copy.admin.presets.heading };
 export default async function MasterPresetsPage() {
   const { supabase } = await requireAdmin();
   const groups = await Promise.all(MASTER_KINDS.map(async (k) => ({ ...k, presets: await loadPresetSummaries(supabase, k.kind) })));
+  const proposals = ((await supabase.rpc("admin_trick_proposals")).data ?? []).length;
   const c = copy.admin.presets;
   return (
     <main className="flex flex-col gap-8">
@@ -33,8 +34,8 @@ export default async function MasterPresetsPage() {
                       {drafts.length ? ` · ${c.draftLine(drafts.join(", "))}` : ""}
                     </p>
                   </div>
-                  <Link href={`/admin/presets/${g.slug}/${encodeURIComponent(p.key)}`} className="btn" aria-label={c.edit(p.name)}>
-                    {c.edit(p.name)}
+                  <Link href={g.kind === "trick_vocabulary" ? "/admin/presets/trick-base" : `/admin/presets/${g.slug}/${encodeURIComponent(p.key)}`} className="btn" aria-label={c.edit(p.name)} data-testid={g.kind === "trick_vocabulary" ? "open-trick-base" : undefined}>
+                    {g.kind === "trick_vocabulary" ? c.openTrickBase(proposals) : c.edit(p.name)}
                   </Link>
                 </li>
               );

@@ -46,6 +46,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | Sentence on screen | Fix | Details |
 |---|---|---|
 | “A ‹noun› file must contain one JSON object (starting with “{”).” | Use a file exported with Export as JSON from the same tab. | [Organiser: Divisions](errors.md#err-presets-notobject) |
+| “A block in ‹family› has no name.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-emptylabel) |
 | “A cancelled heat cannot be started. Re-run it instead.” | Heat menu → Re-run heat. | [Grey buttons on the head console](errors.md#err-controlwhy-startcancelled) |
 | “A crash is not scored.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-not-scorable) |
 | “A demo organisation already exists, so nothing was created.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-demo-exists) |
@@ -64,6 +65,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “A heat of this division has started: the Rider label cannot be changed any more.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-identification-errors-locked) |
 | “A heat of this event has already started, so this can no longer be changed.” | Use Run as simulation on the Simulator page to rehearse a real event instead. | [Organiser: event list and Event step](errors.md#err-event-simulationlocked) |
 | “A heat of this event is running or paused, so it cannot be moved now. Try again when no heat is running.” | End the running heat, then move the event. | [Platform owner (/admin)](errors.md#err-admin-errors-heat-running) |
+| “A heat of this event is running or paused. Update when no heat is running.” | Wait until no heat of the event is running or paused (between heats), then press Update to latest. | [Admin: trick base](errors.md#err-trickeditor-event-errors-heat-running) |
 | “A heat that is no longer in the draw” | Take the row out with ✕ (or Take row out of the run order), then Add the heats that are missing. | [Organiser: Run order](errors.md#err-runorder-goneheat) |
 | “A later heat has already started, so this correction would change who rides in it. Nothing was changed.” | Reset or finish the later heat first, or leave the result. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-downstream-started) |
 | “A later heat that depends on this result has already started (‹heat›). Reset that heat first, then this one.” | Reset the later heat first, then this one. | [Resets](errors.md#err-resetparts-errors-downstream-started) |
@@ -85,6 +87,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Already in your organisation: linked to that rider, nothing is overwritten.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-alreadyinorganisation) |
 | “Already last.” | Nothing to fix. | [Organiser: Riders](errors.md#err-riders-lastrow) |
 | “Already re-run as ‹heat›” | Work on the re-run heat. | [Resets](errors.md#err-resetparts-alreadyrerunas) |
+| “Already so in the published version (not blocking; base tricks are read first): ‹sentence›” | Optional: remove the word from one of the blocks. | [Admin: trick base](errors.md#err-trickeditor-errors-alreadyshared) |
 | “Another heat is already running (‹max› at a time). End it first, or ask the organiser to allow more in the Event step” | End the other heat, or raise “Heats that can run at the same time” in the Event step. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-heat-already-running) |
 | “Another plan of this day already has that name.” | Follow the sentence. | [Organiser: Run order](errors.md#err-runorder-errors-nametaken) |
 | “Another rider in your organisation already has that email address.” | Use the rider who already has that email (Add from this organisation’s riders). | [Organiser: Riders](errors.md#err-riders-errors-emailused) |
@@ -94,6 +97,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Available once the heat has ended.” | Press End heat (or wait for the clock). | [Grey buttons on the head console](errors.md#err-controlwhy-publish) |
 | “Available while a heat is running or paused.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-live) |
 | “Available while the heat is running, paused, ended or under review.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-cancel) |
+| “Base trick “‹label›” needs a scoring category.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-baseneedscategory) |
 | “Bib ‹bib› is given to more than one rider: ‹names›.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-repeatedbib) |
 | “Bib ‹bib› is used by more than one rider: ‹names›.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-clash-bib) |
 | “Bib “‹v›” is too long (20 characters at most).” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-badbib) |
@@ -141,6 +145,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Enter your first name.” | Follow the sentence. | [Rider registration](errors.md#err-registration-errors-first) |
 | “Enter your last name.” | Follow the sentence. | [Rider registration](errors.md#err-registration-errors-last) |
 | “Enter your name (2 to 60 characters).” | Follow the sentence; the organiser can regenerate a PIN in the Officials step. | [Officials joining](errors.md#err-join-selfadd-errors-invalid-name) |
+| “Every family needs a name.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-emptyfamily) |
 | “Failed — tap to retry” | Tap the badge to retry. If it still fails, read the sentence; the head judge can type the score on the console. | [Judge and spotter phones](errors.md#err-live-connection-failed) |
 | “First name is missing.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-firstmissing) |
 | “Fix the highlighted settings to see the preview.” | Change the highlighted number; the preview comes back when the format can run. | [Organiser: Divisions](errors.md#err-formatsimple-fixfirst) |
@@ -165,10 +170,13 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “‹heat› is running. End it first.” | Follow the sentence. | [Simulator](errors.md#err-simulator-reset-running) |
 | “‹heat› is waiting for ‹names› (a real person) to submit.” | Submit on that phone, or set the judge to Virtual. | [Simulator](errors.md#err-simulator-play-lines-waitjudges) |
 | “‹heat› is waiting for the head judge, who is a real person. Review and publish it on the head console.” | Publish on the head console, or set the head judge to Virtual. | [Simulator](errors.md#err-simulator-play-lines-waithead) |
+| ““Hide this multiplier” must be one of the multipliers, or empty.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-hidenotmultiplier) |
 | “Invalid identification scheme: ‹detail›” | Fix the colour or field the sentence names, then save. | [Organiser: Rider label](errors.md#err-ident-validation-invalid) |
 | “Keep the message to 140 letters.” | Follow the sentence. | [Organiser: Go live](errors.md#err-windcall-errors-message-too-long) |
 | “Kite size “‹v›” is not a number such as 9 or 12.5.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-badkitesize) |
 | ““‹l›” already exists in that family.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-trickbase-errors-exists) |
+| “‹label› has the category “‹category›”, which is not in the category list.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-unknowncategory) |
+| “‹label› is in a published version: retire it instead of removing it.” | Undo the removal (reload the page) and press Retire instead: it is hidden from new events and kept for history. | [Admin: trick base](errors.md#err-trickeditor-errors-publishedremoved) |
 | “‹label› is out of attempts · ‹n› / ‹max›” | Only the head judge can add one more, with a reason (console → Add attempt). | [Judge and spotter phones](errors.md#err-spotter-outofattempts) |
 | “‹label› is out of attempts (‹max› / ‹max›) — that attempt was not logged” | Head judge adds it with a reason if it really happened. | [Judge and spotter phones](errors.md#err-spotter-refusedcap) |
 | “‹label›: not done. ‹why›” | Follow the sentence. | [Simulator](errors.md#err-simulator-log-failed) |
@@ -215,11 +223,15 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Only a published heat can be re-opened.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-reopen) |
 | “Only a running heat can be paused.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-pause) |
 | “Only a running or paused heat can be ended.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-end) |
+| “Only a version newer than the published one can be published.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-codes-not-newer) |
 | “Only attempts of the same rider can be merged.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-not-same-rider) |
 | “Only owners and admins can change organisation settings.” | Follow the sentence. Only owners and admins of the organisation may save. | [Organiser: organisation settings](errors.md#err-orgsettings-notallowed) |
 | “Only owners and admins can change these settings. You can look, but not save.” | Follow the sentence. Only owners and admins of the organisation may save. | [Organiser: organisation settings](errors.md#err-orgsettings-readonly) |
 | “Only owners and admins can save these settings.” | Ask an owner of the organisation, or the platform owner. | [Organiser: organisation settings](errors.md#err-orgsettings-readonlyreason) |
 | “Only platform owners can accept a proposal.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-trickbase-admin-owneronly) |
+| “Only platform owners can accept or dismiss a proposal.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-proposals-owneronly) |
+| “Only platform owners can change the trick base.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-codes-not-allowed) |
+| “Only platform owners can change the trick base. You can look, but not change it.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-staffnote) |
 | “Only platform owners can delete an organisation.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-org-owneronlydelete) |
 | “Only platform owners can delete or archive an event here.” | Follow the sentence. An event with published results can only be archived. | [Organiser: event list and Event step](errors.md#err-eventlifecycle-owneronly) |
 | “Only platform owners can do this. You can look, but not change it.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-owneronly) |
@@ -248,6 +260,8 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Registration cannot close after the event has ended” | Set the closing day on or before the event's last day. | [Organiser: event list and Event step](errors.md#err-event-validation-closesafterend) |
 | “Registration is closed for this event.” | Organiser: Event step → Rider registration → Open, closing day in the future; Published ticked. | [Rider registration](errors.md#err-registration-closeddefault) |
 | “‹round›: ‹detail›. Send fewer places on, or make the heats bigger.” | Fix the red point it names; then Apply to draw is on. | [Organiser: Divisions](errors.md#err-custombuilder-eliminatesnobody) |
+| “Save or undo your changes first.” | Press Save as a new draft (or reload to drop the edits), then accept. | [Admin: trick base](errors.md#err-trickeditor-proposals-savefirst) |
+| “Save your changes first.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-savebeforepublish) |
 | “Scoring and format are locked because a heat of this division has started. Unlock them with a written reason first.” | Divisions → the division → “Unlock scoring and format” with a reason of at least 5 characters (written to the audit log). | [Organiser: Divisions](errors.md#err-divisions-errors-ruleslocked) |
 | “Seats made before PINs were stored show here. Open Officials and choose Regenerate PIN.” | Officials step → that seat → Regenerate PIN. | [Organiser: Go live](errors.md#err-readiness-pinhint) |
 | “Seed ‹seed› is given to more than one rider: ‹names›. Press “Sort by seed number” to renumber.” | Press “Sort by seed number” to renumber 1, 2, 3… | [Organiser: Riders](errors.md#err-riders-seedrepeated) |
@@ -256,6 +270,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Shown once the heat has ended.” | Follow the sentence. | [Head console](errors.md#err-headlive-agreementwait) |
 | “Some settings need fixing.” | Follow the sentence. Only owners and admins of the organisation may save. | [Organiser: organisation settings](errors.md#err-orgsettings-fixthese) |
 | “Some settings need fixing. They are highlighted below.” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-fixthese) |
+| “Someone saved a newer version while you were editing. Reload the page; your changes were not saved.” | Reload the page, make the change again and save. | [Admin: trick base](errors.md#err-trickeditor-codes-trick-base-stale) |
 | “Something still blocks Publish. See the list.” | Read “Before you publish”; fix each line, or Publish with a reason (ties must be ordered, never overridden). | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-publish-blocked) |
 | “Something went wrong. Please try again.” | Nothing was saved. Check the connection and press the button again. If it keeps failing, note the time and tell the owner (the server log names the cause). | [Officials joining](errors.md#err-join-othererror) |
 | “Something went wrong. Try again.” | Follow the sentence. | [Simulator](errors.md#err-simulator-generic) |
@@ -264,6 +279,8 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Stopped at a blocker: ‹text›” | Follow the sentence. | [Simulator](errors.md#err-simulator-play-lines-stoppedatblocker) |
 | “Submit is on when every rider has a score” | Follow the sentence. | [Judge and spotter phones](errors.md#err-live-impression-submitwaiting) |
 | “Submitted. Ask the head judge to reopen it.” | Head judge: console → judge's row → reopen the sheet. | [Judge and spotter phones](errors.md#err-live-impression-submitted) |
+| ““‹text›” is already an alias of ‹owner›.” | Remove the word from one of the two blocks (the sentence names the block that already had it). | [Admin: trick base](errors.md#err-trickeditor-errors-aliastaken) |
+| ““‹text›” is already the name of ‹owner›.” | Remove that alias, or rename one of the blocks. | [Admin: trick base](errors.md#err-trickeditor-errors-nametaken) |
 | “That account is not an organiser. Ask the owner to add you.” | The platform owner adds it to an organisation. | [Organiser sign-in](errors.md#err-login-notanorganiser) |
 | “That address does not look right.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-invalid-url) |
 | “That attempt no longer exists.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-attempt-not-found) |
@@ -279,6 +296,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “That event code or PIN is not recognised. Check the card you were given and try again.” | Check the event code (the last part of the event address) and the PIN on the card. The organiser sees every PIN in Officials → Show PIN, or makes a new one with Regenerate PIN. | [Officials joining](errors.md#err-join-errors-invalid-pin) |
 | “That event was not found, or you do not have access to it.” | Pick the organisation in the switcher at the top, then open the event from the events list. | [Organiser: event list and Event step](errors.md#err-event-notfound) |
 | “That file is empty.” | Use a PNG, JPEG or WebP file of at most 2 MB. | [Organiser: event list and Event step](errors.md#err-logo-empty) |
+| “That file is larger than 512 KB, far more than a trick base needs. Is it the right file?” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-jsontoolarge) |
 | “That file is not a PNG, JPEG or WebP image. Save the logo as one of those and try again.” | Use a PNG, JPEG or WebP file of at most 2 MB. | [Organiser: event list and Event step](errors.md#err-logo-wrongtype) |
 | “That flag does not fit this attempt.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-flag-not-applicable) |
 | “That flag is not valid.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-bad-flag) |
@@ -337,8 +355,11 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “That time is not valid.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-bad-plan-value) |
 | “That time zone is not known” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-settings-validation-timezone) |
 | “That time zone is not known.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-invalid-timezone) |
+| “That trick base is not complete (it needs base tricks and modifiers).” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-codes-invalid-json) |
 | “That value is not allowed.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-errors-badvalue) |
+| “That version is already published.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-codes-already-default) |
 | “That version no longer exists.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-presets-errors-not-found) |
+| “That version or proposal no longer exists. Reload the page.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-codes-not-found) |
 | “That web address is already used by another event.” | Choose another web address (slug). | [Organiser: event list and Event step](errors.md#err-event-slugtaken) |
 | “That web address is already used by another organisation.” | Choose another web address. | [Organiser: organisation settings](errors.md#err-orgsettings-slugtaken) |
 | “The banner is switched off in the Event step, so nothing shows on the public pages.” | Event step → tick “Show the wind-call banner…”. | [Organiser: Go live](errors.md#err-windcall-banneroffnote) |
@@ -372,15 +393,19 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “The image could not be uploaded. Check your connection and try again.” | Check the connection and choose the file again. | [Organiser: event list and Event step](errors.md#err-logo-uploadfailed) |
 | “The import did not finish. Nothing was half-saved; try again.” | Nothing was saved. Check the connection and press the button again. If it keeps failing, note the time and tell the owner (the server log names the cause). | [Organiser: Riders](errors.md#err-riders-importfailed) |
 | “The Impression / Variety score opens when the heat has ended.” | Wait for the head judge to end the heat. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-impression-not-open) |
+| “The key of ‹label› may only use a–z, 0–9 and _ (80 characters at most).” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-badkey) |
 | “The ladders changed while the reset was being prepared. Nothing was changed; try again.” | Follow the sentence. | [Resets](errors.md#err-reset-errors-bad-projection) |
 | “The last day cannot be before the first day” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-endbeforestart) |
 | “The last round, ‹name›, has ‹heats› heats: the ladder should end in one heat.” | Fix the red point it names; then Apply to draw is on. | [Organiser: Divisions](errors.md#err-custombuilder-lastround) |
 | “The master base already has a block with that name in that family.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-trickbase-admin-clash) |
+| “The master base already has this block.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-proposals-clash) |
 | “The master trick base could not be found. Ask the owner to seed the presets.” | On a computer with the keys: npm run seed:presets. | [Organiser: Divisions](errors.md#err-trickbase-errors-novocabulary) |
 | “the maximum per heat cannot be less than the target” | Change the highlighted number; the preview comes back when the format can run. | [Organiser: Divisions](errors.md#err-formatsimple-maxbelowtarget) |
 | “The message is too long (300 characters at most)” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-closedmessagemax) |
 | “The microphone is not allowed on this phone. Type the trick instead.” | Allow the microphone in the phone's settings, or type the trick. | [Judge and spotter phones](errors.md#err-live-builder-micdenied) |
 | “the minimum per heat cannot be more than the target” | Change the highlighted number; the preview comes back when the format can run. | [Organiser: Divisions](errors.md#err-formatsimple-minabovetarget) |
+| “The naming template has an unknown part: ‹part›. Use {direction} and {blocks}.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-namingunknown) |
+| “The naming template must contain {blocks}.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-namingmissingblocks) |
 | “The next heat is not the final.” | Follow the sentence. | [Simulator](errors.md#err-simulator-log-nofinal) |
 | “The note could not be saved. Try again.” | Follow the sentence. | [Feedback notes](errors.md#err-feedback-failed) |
 | “The organisation was created, but its logo could not be uploaded. Add it on this page.” | Upload the logo again on the organisation's page. | [Platform owner (/admin)](errors.md#err-admin-org-logofailed) |
@@ -428,6 +453,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “There are no open notes to export.” | Follow the sentence. | [Feedback notes](errors.md#err-feedback-exportnone) |
 | “There is no active run order for today.” | Run order step → pick today → Activate this plan. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-no-active-plan) |
 | “There is no draw yet.” | Follow the sentence. | [Organiser: Draw](errors.md#err-draw-errors-nodraw) |
+| “There is no newer draft to publish.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-nothingtopublish) |
 | “There is no other organisation to move it to.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-org-movenoothers) |
 | “There is no run order yet.” | Follow the sentence. | [Simulator](errors.md#err-simulator-log-noplan) |
 | “There is no virtual head judge to do it.” | Follow the sentence. | [Simulator](errors.md#err-simulator-log-noheadseat) |
@@ -475,6 +501,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “This is already the last division.” | Nothing to fix. | [Organiser: Divisions](errors.md#err-divisions-lastdivision) |
 | “This is needed” | Type a value the sentence asks for. | [Organiser: Divisions](errors.md#err-friendly-needed) |
 | “This is not a simulation event.” | Follow the sentence. | [Simulator](errors.md#err-simulator-errors-not-a-simulation) |
+| “This key is in a published version, so it can no longer change (events and stored tricks use it).” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-keylocked) |
 | “This looks like a ‹other›, not a ‹noun›. Import it in the matching place.” | Import a scoring file in the Scoring tab and a format file in the Format tab. | [Organiser: Divisions](errors.md#err-presets-wrongkind) |
 | “This organisation has published results (‹n›), so it cannot be deleted. Archive it instead: results stay permanent.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-org-deleteblocked) |
 | “This organisation has published results, so it cannot be deleted. Archive it instead.” | Archive the organisation instead. | [Platform owner (/admin)](errors.md#err-admin-errors-published-results) |
@@ -504,6 +531,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Too many tries from this connection. Please wait a little and try again.” | Follow the sentence. | [Rider registration](errors.md#err-registration-ratelimited) |
 | “Too many tries from this connection. Wait a little and try again.” | Follow the sentence; the organiser can regenerate a PIN in the Officials step. | [Officials joining](errors.md#err-join-selfadd-errors-rate-limited) |
 | “Too many wrong tries. Wait ten minutes, or ask the organiser for help.” | Wait ten minutes, or let the organiser read the PIN out from Officials → Show PIN. | [Officials joining](errors.md#err-join-errors-rate-limited) |
+| “Two blocks use the key “‹key›”: ‹a› and ‹b›. Each key must be unique.” | Change the key of the new block (only a block that was never published can change its key). | [Admin: trick base](errors.md#err-trickeditor-errors-duplicatekey) |
 | “two colours share a name; colours are called out by name, so each needs its own” | Fix the colour or field the sentence names, then save. | [Organiser: Rider label](errors.md#err-ident-validation-namesunique) |
 | “Two plans cannot be active on the same day.” | Activate the plan you want; the other active plan of that day is switched off by Activate this plan. | [Organiser: Run order](errors.md#err-runorder-errors-twoactive) |
 | “Two riders are both called ‹name›. The spotter could not call them out separately.” | Add a nickname or a bib number. | [Organiser: Riders](errors.md#err-riders-clash-name) |
@@ -529,8 +557,10 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “‹what› could not be shown (‹message›). The rest of the page still works.” | Press Try again. If it repeats, send the error reference (or the sentence) to the owner. | [Pages that fail](errors.md#err-crash-part) |
 | “With ‹n› riders: this format cannot run (‹why›)” | Change the number of riders per heat, how many advance, or pick another format. | [Organiser: Divisions](errors.md#err-ladder-cannotrun) |
 | “Write a reason (at least 5 characters).” | Write at least 5 characters, for example “wind dropped, shorter heats”. | [Organiser: Divisions](errors.md#err-divisions-errors-reason) |
+| “Write a reason first.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-proposals-reasonneeded) |
 | “Write a reason of at least 5 characters first.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-rules-unlockneedsreason) |
 | “Write a reason of at least 5 characters.” | Follow the sentence. | [Organiser: Draw](errors.md#err-draw-unlockreasonshort) |
+| “Write a reason: the organiser sees it.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-codes-reason-required) |
 | “Write something first.” | Follow the sentence. | [Feedback notes](errors.md#err-feedback-errors-empty) |
 | “Write the points for 1st, 2nd, 3rd … separated by commas, e.g. 4, 3, 2, 1” | Change the highlighted number; the preview comes back when the format can run. | [Organiser: Divisions](errors.md#err-formatsimple-pointsinvalid) |
 | “You are not a member of an organisation.” | Follow the sentence. Only owners and admins of the organisation may save. | [Organiser: organisation settings](errors.md#err-orgsettings-nomembership) |

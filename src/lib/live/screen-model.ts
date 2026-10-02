@@ -1,6 +1,6 @@
 import { buildTrickVocab, type TrickVocab, type VocabularyInput } from "@/lib/engine/tricks";
 import { riderLabelModel, type LabelModel } from "@/lib/identification/rider-label";
-import { blocksFromVocabulary, type VocabularyJson } from "@/lib/trick-base";
+import { blocksFromVocabulary, familiesOf, type VocabularyJson } from "@/lib/trick-base";
 import { parseLayout, resolveLayout, type FamilyView } from "@/lib/trick-base/layout";
 import type { PendingAttempt } from "./pending";
 import type { AttemptRow, LiveContext, LiveDivisionContext, SlotRow } from "./types";
@@ -82,8 +82,10 @@ export function trickKit(ctx: Pick<LiveContext, "vocabulary" | "localBlocks">): 
   const json = ctx.vocabulary as unknown as VocabularyInput;
   const vocab = buildTrickVocab(json, ctx.localBlocks);
   const blocks = blocksFromVocabulary(ctx.vocabulary as VocabularyJson, ctx.localBlocks);
+  const families = familiesOf(ctx.vocabulary as VocabularyJson);
+  const keys = families.map((f) => f.key);
   return {
     vocab,
-    viewFor: (division) => resolveLayout(blocks, division?.trickBase.disabled ?? [], parseLayout(division?.trickBase.layout)),
+    viewFor: (division) => resolveLayout(blocks, division?.trickBase.disabled ?? [], parseLayout(division?.trickBase.layout, keys), false, families),
   };
 }

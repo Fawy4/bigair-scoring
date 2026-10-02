@@ -968,3 +968,48 @@ One commit per item. Item 3 (the master trick base editor) is **not** in this pu
 ### Not done / not verified
 - The master trick base editor is being built in its own PR, which updates screens/admin-trick-base.md.
 - Not seen on a real phone, in sun, or on the Vercel preview.
+
+## Trick base editor – manage the master trick base without JSON (branch `trick-base-editor`, 2 Oct 2026)
+
+Started from main after #22 and #23. A Polish 2 session works in parallel on the console, simulator and organiser screens: on the organiser side this branch touches only the Trick base tab (`trick-base-panel.tsx`), its two server actions (`saveTrickBase`, `addTrickBlock`) and one new file beside them (`trick-base-actions.ts`).
+
+### Asked first, and the owner's answers (2 Oct 2026)
+The brief and the code disagreed in seven places; all seven recommendations were accepted:
+1. A block keeps its identity (`family:key`) for ever; moving it in the master base only changes the family it is **shown** in. Direction and Multiplier keep their own blocks; a family the owner adds behaves like Add-ons.
+2. Each event keeps the master version it uses (`events.trick_vocabulary_version`). Every existing event (Arrow, EKL, Demo included) was set to the version it used that day (5); nothing they see changed. New events start from the newest published version.
+3. /admin is the source of truth: `npm run seed:presets` writes the trick base only into an empty project and otherwise prints “skipped … managed in /admin”.
+4. The naming template is real: `{direction} {blocks}`, written into the engine test-first; the default gives exactly the names of before (an older version holding a sentence names the same way).
+5. Accepting a proposal adds it to a new draft; it reaches customers with the next “Publish to all customers”.
+6. Only the Trick base tab and its actions on the organiser side (above).
+7. After “Update to latest”, a retired block is gone from that event's spotter; tricks already logged keep their names (retired blocks stay in the data, hidden).
+Smaller choices: the categories list is reorder-only (a new category also needs scoring settings); a key is editable only until its first published version.
+
+### Done
+- **Engine** (tests first, docs/08 §1I written before the code): `engine/tricks/naming.ts` (template, check, render); `composeTrick` uses it. Every §1G-3 name unchanged.
+- **The editor's logic** (`src/lib/trick-base/master.ts`, pure): the master base as families of rows; rename, key (until published), aliases, category, takes a multiplier, rotation (information only), on for new events, retire / restore, remove (never published only), move (drag or **Move to…**), reorder, add block, families renamed / reordered / added; category precedence; naming; **validation in words**; **diff in words** (“3 renamed, 1 added, 1 retired”); the version plan; the live example.
+- **Spotter and organiser read the event's version**: retired blocks and blocks off by default (unless ticked, stored in the division's `trick_base.enabled`) are off on the spotter, in typed and spoken text and in the derived categories; stored attempts keep their names. The spotter's families follow the master (names, order, shown-in).
+- **Database** (`20261012100000_trick_base_editor.sql`, applied to the hosted project with `npm run db:apply`; types: only this branch's additions written in, see below): who saved / published each version and what changed; owner-only `admin_trick_base_save` (refuses a stale save: `TRICK_BASE_STALE`) and `admin_trick_base_publish`; `admin_trick_base_history`; the JSON route of the generic preset function is owner-only for the trick base; a dismissed proposal needs a reason (`REASON_REQUIRED`) which the organiser reads; `update_event_trick_base` (organisers of the event; refused while a heat runs: `HEAT_RUNNING`); new events get the newest published version; the division guard lets `enabled` only grow after a heat has started.
+- **/admin → Master presets → Trick base** (`/admin/presets/trick-base`), in the 7a-2 look: proposals queue on top (accept into a family after editing name and aliases; dismiss with a reason); **Save as a new draft** / **Publish to all customers** (diff in words first); one card per family; category precedence with its one-line explanation; naming template and hide-multiplier with the live example; version history (who, when, what) with **View**; “Advanced: edit as JSON” with **Use this JSON**, **Export**, **Import a file**. Staff see it read only. `/admin/tricks` and `/admin/presets/trick-vocabulary/big-air-vocabulary` lead to it; the rail's “Trick proposals” item is gone (Master presets says how many proposals wait).
+- **Divisions → Trick base**: “This event uses version ‹n›…”, the diff to the newest and **Update to latest**; a dismissed block shows the owner's reason.
+- **Manual**: `screens/admin-trick-base.md` rewritten from “being built” to the real thing with 8 new screenshots (taken by a new test in `e2e/manual-shots.spec.ts`, `npm run manual:shots -- -g "trick base"`); admin-presets, organiser-divisions, roles, README, changelog; errors and troubleshooting regenerated; notes in `scripts/manual/error-notes.ts`.
+
+### Found on the way (please confirm)
+- **The hosted master base already had two shared words**: “KL” on Kiteloop and + Kiteloop, and “doobie” (an alias of Doobie loop and the name of the block Doobie accepted from the Demo). The brief's rule would have refused every save until they were fixed, so a word two blocks **already** shared in the version being edited does not block a save; it is listed under “Worth tidying up”. A new clash always blocks. Remove either word from one block when convenient.
+- **“Tornado”** (your done-means list) is an alias of Late rotations today, so adding a block “Tornado” is refused with “““tornado” is already an alias of Late rotations.” Remove that alias from Late rotations in the same draft, then save.
+- The hosted schema already holds Polish 2's changes (columns and functions not on main), so `npm run db:types` wrote them too; I kept only this branch's additions in `database.types.ts` to avoid a clash. Run `npm run db:types` after both are merged.
+- Simulation copies made by the simulator start on the newest version (the simulator's copy function was not touched).
+
+### Test evidence
+- `npm run typecheck` clean · `npm run lint` clean · `npm test`: **167 files, 1948 tests** passed (new: naming template 8, master editor 27, plus the layout / trick base suites unchanged and passing).
+- `npm run test:rls -- tests/rls/trick-base-editor.test.ts`: **6 passed** (owner only for every write; staff read; organisers read the published version and cannot change their event's version by hand; stale save refused; identical save makes nothing; publish and history with who; Update to latest refused for another organisation and while a heat runs; proposals written by their organiser, answered by the owner, reason required and readable by the organiser; `enabled` only grows after a heat). The hosted master base is back to versions 1–5 afterwards (checked).
+- Playwright `e2e/trick-base-editor.spec.ts`: **5 passed** (rename + publish with the diff + the new label on a throwaway event after Update to latest; alias typed by the spotter; retire: gone from a new event, there on an old one; accept a proposal; dismiss with a reason the organiser sees). Re-run: trick-base, trick-layout (one wait added: the tab now loads its version first), live-spotter, admin (master presets heading now “Trick base”): all pass except `admin.spec` “archive”, the known open issue from Polish 1 (fails the same way on main).
+
+- Re-run after the owner's request (main unchanged since #23, so no rebase was needed): unit suite 1948 passed; the retire test failed once because its Retire tap landed before the page was live (the tap was lost). Fixed at the root: the editor now says when it is live (`data-ready`) and the tests wait for it; then `trick-base-editor.spec` passed twice in a row (5/5), trick-base and trick-layout passed.
+
+### Not done / not verified
+- Not tried on a real phone; the editor is a laptop screen (it works at 390 px, see the screenshot).
+- The full `npm run manual:shots` was not run (it rewrites every screenshot and would collide with Polish 2's); only the trick base pictures were retaken, and `admin-tricks-1280.png` was removed.
+- The complete Playwright suite was not run in one go.
+
+### How to test on the preview
+See the pull request's click-through (your done-means list, on Demo).

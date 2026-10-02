@@ -1,29 +1,6 @@
-import { requireAdmin } from "@/lib/platform/session";
-import { copy } from "@/lib/ui-copy";
-import { ProposalsTable } from "./proposals-table";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: copy.trickBase.admin.heading };
-export const dynamic = "force-dynamic";
-
-/** Blocks that events added to their own trick base and proposed to the master base. */
-export default async function TrickProposalsPage() {
-  const { supabase, role } = await requireAdmin();
-  const { data } = await supabase.rpc("admin_trick_proposals");
-  const T = copy.trickBase.admin;
-  return (
-    <main className="flex flex-col gap-4">
-      <h1>{T.heading}</h1>
-      <p className="max-w-3xl text-lg font-semibold">{T.intro}</p>
-      {(data ?? []).length === 0 ? (
-        <p className="panel font-semibold" data-testid="no-proposals">
-          {T.none}
-        </p>
-      ) : (
-        <ProposalsTable
-          isOwner={role === "owner"}
-          rows={(data ?? []).map((p) => ({ eventId: p.event_id, eventName: p.event_name, organisationName: p.organisation_name, family: p.family, key: p.key, label: p.label }))}
-        />
-      )}
-    </main>
-  );
+/** The proposals now sit at the top of Master presets → Trick base; this address keeps working. */
+export default function TrickProposalsPage() {
+  redirect("/admin/presets/trick-base#proposals");
 }

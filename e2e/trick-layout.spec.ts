@@ -68,6 +68,7 @@ test("Trick base layout: arrows, Move to…, favourites, family order and drag a
     expect(layout.favourites).toEqual(["base:megaloop"]);
     await page.reload();
     await page.getByRole("tab", { name: "Trick base" }).click();
+    await expect(page.getByTestId("trick-base")).toBeVisible(); // the tab first loads the version of the trick base this event uses
     expect((await keys(page, "base"))[0]).toBe("base:megaloop");
     expect(await keys(page, "base")).toContain("addon:tic_tac");
 
