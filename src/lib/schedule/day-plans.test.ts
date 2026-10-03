@@ -21,17 +21,24 @@ const row = (o: Partial<Record<string, unknown>> = {}) => ({
   ...o,
 });
 
-describe("copy another day's plan", () => {
-  it("heats, breaks and hand-set pins are copied; actual times and the console's pins are not", () => {
-    const c = copyPlanToDay(row());
-    expect(c.items).toEqual(row().items);
-    expect(c.anchors).toEqual({ i1: "10:00", b1: "13:00" }); // 13:47 was written by the console (Shift)
+describe("copy another day's plan (Polish 2b, item 6)", () => {
+  it("only the heats that have not ended come across; never the breaks, the notes or any pin", () => {
+    const c = copyPlanToDay(row(), new Set(["h1"]));
+    expect(c.items).toEqual([{ id: "i2", kind: "heat", heatId: "h2" }]);
+    expect(c.heats).toBe(1);
+    expect(c.anchors).toEqual({});
+    expect(c.hand_pins).toEqual([]);
     expect(c.actual_starts).toEqual({});
     expect(c.hold).toBeNull();
-    expect(c.hand_pins).toEqual(["i1", "b1"]);
   });
-  it("a plan from before hand-set pins were told apart keeps every pin (it cannot tell them apart)", () => {
-    expect(copyPlanToDay(row({ hand_pins: null })).anchors).toEqual({ i1: "10:00", b1: "13:00", i2: "13:47" });
+  it("with nothing ended every heat comes, still without breaks, notes and pins", () => {
+    const c = copyPlanToDay(row({ items: [...(row().items as object[]), { id: "n1", kind: "note", text: "Prize-giving" }] }));
+    expect((c.items as Array<{ kind: string }>).map((i) => i.kind)).toEqual(["heat", "heat"]);
+    expect(c.heats).toBe(2);
+    expect(c.anchors).toEqual({});
+  });
+  it("a plan whose heats have all ended copies nothing (the page says Copied 0 heats)", () => {
+    expect(copyPlanToDay(row(), new Set(["h1", "h2"])).heats).toBe(0);
   });
 });
 

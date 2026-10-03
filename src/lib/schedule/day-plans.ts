@@ -14,17 +14,14 @@ export interface DayPlanRow {
   hand_pins?: unknown;
 }
 
-const asAnchors = (x: unknown): Record<string, string> => (x && typeof x === "object" && !Array.isArray(x) ? (x as Record<string, string>) : {});
-
 /**
- * "Copy ‹other day›'s plan to ‹day›" (Polish 2, item 14): the heats, breaks and notes, and the pins the organiser set by hand. Not the actual start times, the
- * pins the head console wrote while that day ran (Shift, Resume at, +1 min), or a hold. A plan from before hand-set pins were recorded keeps every pin.
+ * "Copy ‹other day›'s plan to ‹day›" (Polish 2b, item 6; audit finding A1a-7): only the heats that have not yet ended come across (a heat that was run, published or
+ * cancelled on the other day stays there), in their order. Never the other day's breaks, notes or pins, its actual times or a hold: the new day gets its own breaks
+ * and its own first-heat pin (those made Friday's 10:00 start slip to 10:20 and the drift badge read hours early).
  */
-export function copyPlanToDay(src: DayPlanRow): { items: unknown; anchors: Record<string, string>; actual_starts: Record<string, string>; hold: null; hand_pins: string[] } {
-  const anchors = asAnchors(src.anchors);
-  const hand = Array.isArray(src.hand_pins) ? (src.hand_pins as unknown[]).filter((x): x is string => typeof x === "string") : null;
-  const kept = Object.fromEntries(Object.entries(anchors).filter(([id]) => hand === null || hand.includes(id)));
-  return { items: src.items, anchors: kept, actual_starts: {}, hold: null, hand_pins: Object.keys(kept) };
+export function copyPlanToDay(src: DayPlanRow, endedHeatIds: ReadonlySet<string> = new Set()): { items: unknown; anchors: Record<string, string>; actual_starts: Record<string, string>; hold: null; hand_pins: string[]; heats: number } {
+  const items = (Array.isArray(src.items) ? src.items : []).filter((it): it is { kind: "heat"; heatId: string } => !!it && typeof it === "object" && (it as { kind?: unknown }).kind === "heat" && typeof (it as { heatId?: unknown }).heatId === "string" && !endedHeatIds.has((it as { heatId: string }).heatId));
+  return { items, anchors: {}, actual_starts: {}, hold: null, hand_pins: [], heats: items.length };
 }
 
 export type DayStatus = { kind: "active"; name: string } | { kind: "none_active"; count: number } | { kind: "no_plan" };

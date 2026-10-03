@@ -111,6 +111,8 @@ export function ScheduleManager(props: ScheduleProps) {
   // the day to open on: the address's ?day= (the dashboard's Fix sends today), else today, else the first day of the event
   const [day, setDay] = useState(props.initialDay && days.includes(props.initialDay) ? props.initialDay : days.includes(today) ? today : days[0]);
   const [dayName, setDayName] = useState<string | null>(null);
+  // after a copy: how many heats came, and what is still to add (cleared when another day or plan is picked)
+  const [copiedNote, setCopiedNote] = useState<string | null>(null);
   const [planId, setPlanId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -277,6 +279,12 @@ export function ScheduleManager(props: ScheduleProps) {
           ) : null}
         </div>
 
+        {copiedNote && dayPlans.length > 0 ? (
+          <p role="status" data-testid="copied-note" className="rounded-[8px] border border-beach-line bg-beach-surface p-3 text-body font-semibold">
+            {copiedNote}
+          </p>
+        ) : null}
+
         {dayPlans.length === 0 ? (
           <div data-testid="no-plan-day" className="flex flex-col gap-3 rounded-[8px] border border-beach-line bg-beach-surface p-3">
             <p className="text-body font-semibold">{T.noPlanDay(shortDay(day))}</p>
@@ -309,7 +317,7 @@ export function ScheduleManager(props: ScheduleProps) {
                       data-testid="copy-day-plan"
                       data-from={src.day}
                       disabled={pending || (dayName ?? defaultPlanName(plans, day)).trim().length < 2}
-                      onClick={() => act(() => copyPlanToDayAction(src.id, day, dayName ?? defaultPlanName(plans, day)), (r) => { setPlans((ps) => [...ps, r.row]); setPlanId(r.row.id); setDayName(null); toast({ title: T.copied(r.row.name) }); })}
+                      onClick={() => act(() => copyPlanToDayAction(src.id, day, dayName ?? defaultPlanName(plans, day)), (r) => { setPlans((ps) => [...ps, r.row]); setPlanId(r.row.id); setDayName(null); setCopiedNote(T.copiedHeats(r.heats)); toast({ title: T.copied(r.row.name) }); })}
                     >
                       {T.copyToDay(shortDay(src.day), shortDay(day))}
                     </button>

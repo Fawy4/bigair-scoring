@@ -2,8 +2,8 @@ import { expect, test } from "./base";
 import { createLiveWorld } from "./live-world";
 
 // Polish 2, item 14, on a throwaway organisation: a day with no plan offers Create (name pre-filled) and Copy another day's plan; the Day list says per day
-// which plan is active; a copy takes the heats and the hand-set pins, not the console's pins; Clear actual times says what stays.
-test("Run order per day: no-plan day offers Create and Copy; the copy keeps hand-set pins only; Clear actual times names the pin that stays", async ({ page }) => {
+// which plan is active. Polish 2b, item 6: a copy takes only the heats that have not ended, never the breaks or any pin, and the page says what to add.
+test("Run order per day: no-plan day offers Create and Copy; the copy brings only un-run heats and no breaks or pins, and says what to add", async ({ page }) => {
   test.setTimeout(300_000);
   const w = await createLiveWorld();
   try {
@@ -14,6 +14,9 @@ test("Run order per day: no-plan day offers Create and Copy; the copy keeps hand
     // today's plan: Heat 1 pinned by hand at 10:00; Heat 2 pinned 11:11 by the console (not hand-set)
     await w.db.from("schedule_plans").update({ anchors: { i1: "10:00", i2: "11:11" } as never }).eq("id", w.planId);
     await w.db.from("schedule_plans").update({ hand_pins: ["i1"] as never }).eq("id", w.planId);
+    // a lunch break between the two heats, and Heat 1 has already been run and published
+    await w.db.from("schedule_plans").update({ items: [{ id: "i1", kind: "heat", heatId: w.heats[0] }, { id: "lunch", kind: "break", label: "Lunch", durationMin: 45 }, { id: "i2", kind: "heat", heatId: w.heats[1] }] as never }).eq("id", w.planId);
+    await w.db.from("heats").update({ status: "published", started_at: new Date(Date.now() - 3_600_000).toISOString(), ended_at: new Date(Date.now() - 3_000_000).toISOString(), published_at: new Date(Date.now() - 2_900_000).toISOString() }).eq("id", w.heats[0]);
 
     await w.org.signIn(page, `/org/events/${w.eventId}/schedule?day=${tomorrow}`);
     await expect(page.locator("#day-pick")).toHaveValue(tomorrow, { timeout: 60_000 });
@@ -32,13 +35,12 @@ test("Run order per day: no-plan day offers Create and Copy; the copy keeps hand
     await copy.click();
     await expect(empty).toHaveCount(0, { timeout: 30_000 });
     const copied = (await w.db.from("schedule_plans").select("items, anchors, actual_starts, active, name").eq("event_id", w.eventId).eq("day", tomorrow).single()).data!;
-    expect((copied.items as Array<{ heatId?: string }>).map((i) => i.heatId)).toEqual(w.heats);
-    expect(copied.anchors).toEqual({ i1: "10:00" });
+    expect((copied.items as Array<{ heatId?: string; kind: string }>).map((i) => [i.kind, i.heatId])).toEqual([["heat", w.heats[1]]]); // only the heat that has not ended; no lunch
+    expect(copied.anchors).toEqual({});
     expect(copied.actual_starts).toEqual({});
     expect(copied.active).toBe(true);
     await expect(page.locator("#day-pick option").nth(1)).toHaveText(/· Plan A – .* active$/);
-    // Clear actual times on the copy: nothing written while the day ran; it says the hand-set pin stays
-    await expect(page.getByTestId("plan-actuals")).toContainText("Your pinned 10:00 stays");
+    await expect(page.getByTestId("copied-note")).toHaveText("Copied 1 heat — add this day's breaks and the first heat's pin");
 
     // the day after: Create with the name pre-filled
     await page.locator("#day-pick").selectOption(after);
