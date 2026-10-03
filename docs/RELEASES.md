@@ -12,6 +12,37 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.12.0 — 3 Oct 2026 {#release-0-12-0}
+
+PR: #31
+
+### What changed
+- **One pause:** pausing a simulated heat from the head judge's console or from the simulator is now one state — the heat clock and the virtual officials stop together and resume together, from either place.
+- **Live scores pill** beside Publish on the console (laptop and phone), out of the More menu.
+- **Big screen colours:** Day and Dark; tap or move the mouse for the button, **D** on a laptop; remembered per browser; the Event step sets the default.
+- **Admin → Feedback:** date filter, tick boxes, Select all, Set done / Reopen many notes at once; the export follows the filter.
+- **Public page tabs:** the organiser switches tabs off on the Event step; an old link to a hidden tab lands on the first visible tab. Join hides itself while registration is closed (the join page itself keeps working for officials).
+- **Copy a plan to another day:** only heats that have not ended, no breaks or pins (audit A1a-7 fixed).
+- **Judge pad:** a typed score off the step says why, under the box.
+- **Needs the database changes** `20261020100000_polish2b_one_pause.sql` and `20261020100100_polish2b_public_site_settings.sql` (both applied to the hosted project).
+- **Tests only:** the simulator RLS test describes the one-pause behaviour; the simulator browser test taps the speed button until the page has loaded (the button itself works); the head judge browser test expects the Learn more link; the trick base browser tests follow the owner's published master edits and step aside while an owner draft is open.
+
+### What to test
+- [ ] On the Demo's simulation (or a throwaway one), set the speed to ×10 and Start. Open View as → Head judge laptop. Press **Pause** on the console: the simulator panel says **Paused** within a second or two and no new attempts or scores appear for 10 seconds. Press **Resume** on the simulator: both run again. Then press **Pause** on the simulator and **Resume** on the console.
+- [ ] On the head console of a started heat, find **Live scores: Public** (or Hidden) next to **Publish**, on a laptop and on a phone. Tap it: it flips; “Division default” disappears while it differs from the division's setting. Tap again: it follows the division's setting again. **More** no longer has a live switch.
+- [ ] Open the big screen (/screen/‹event›). Move the mouse or tap: a Day / Dark button appears in the top left and goes away after three seconds. Tap it: the colours switch. Reload: the choice is remembered. Press **D**: it switches back.
+- [ ] Event step → More settings → **Big screen: colours**: choose Day, save, open the big screen in a private window: it opens in Day.
+- [ ] Admin → Feedback: click **Today**, tick three notes, press **Set done**, confirm: it says “3 notes changed”. Select them again and press **Reopen**. Press **Export for Claude**: only the notes of the filtered list are in the file.
+- [ ] Event step → More settings → **Public page**: switch **Rules** and **Join** off, save. Open the public event page: the tabs no longer show them. Open the old address /e/‹event›/rules: it lands on the first tab, not on “not found”.
+- [ ] Run order, on a day with no plan: **Copy ‹other day›'s plan to ‹day›** brings only the heats that have not ended, no breaks and no pins, and says “Copied ‹n› heats — add this day's breaks and the first heat's pin”.
+- [ ] On a judge's phone (or the Design page), type 7.25 in the small score box on a 0.1 step: **Save** stays grey and “That score is not on the 0.1 step. Use 7.2 or 7.3.” shows under the pad with a **Learn more** link.
+
+### Known issues
+- The console shows a pause made on the simulator through its live connection (under a second on the live address); where live connection is blocked it asks every 5 seconds.
+- A pause of one heat pauses the simulator's virtual officials for the whole simulated event (one state), also when another heat of another division is running.
+- Removing an outside leaderboard shifts the numbering of the ones after it; a tab switched off by number may then belong to the next one.
+- The master trick base has an unpublished draft of the owner on the hosted project, so the trick base editor browser tests step aside until it is published or discarded.
+
 ## 0.11.1 — 3 Oct 2026 {#release-0-11-1}
 
 PR: #29

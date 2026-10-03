@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { combinePad, decimalsOf, formatPadValue, isAllowed, padLayout, padValues, snapToStep } from "./score-pad";
+import { errorSentence } from "./errors";
+import { combinePad, decimalsOf, formatPadValue, isAllowed, padLayout, padRefusal, padValues, snapToStep } from "./score-pad";
 
 // docs/08 §1F: "Value not on step (8.55 on step 0.1) → validation error." The pad can only produce values that pass; typed or restored values are checked here.
 const TENTHS = { min: 0, max: 10, step: 0.1 };
@@ -120,5 +121,33 @@ describe("score pad: how a value is written", () => {
     expect(formatPadValue(7, TENTHS)).toBe("7.0");
     expect(formatPadValue(7.5, TENTHS)).toBe("7.5");
     expect(formatPadValue(3, WHOLE)).toBe("3");
+  });
+});
+
+// Polish 2b, item 7: a typed score off the step says why, in the sentence the server uses
+describe("score pad: the sentence for a typed score that is refused", () => {
+  const step01 = { min: 0, max: 10, step: 0.1 } as Parameters<typeof padRefusal>[1];
+  const sentence = (text: string, scale = step01) => {
+    const r = padRefusal(text, scale);
+    return r ? errorSentence(r.detail ? `${r.code}: ${r.detail}` : r.code) : null;
+  };
+  it("7.25 on a 0.1 step: the same sentence the database gives", () => {
+    expect(sentence("7.25")).toBe("That score is not on the 0.1 step. Use 7.2 or 7.3.");
+    expect(sentence("7,25")).toBe("That score is not on the 0.1 step. Use 7.2 or 7.3."); // a comma is the decimal sign
+  });
+  it("a 0.5 step names that step and its neighbours", () => {
+    expect(sentence("7.3", { min: 0, max: 10, step: 0.5 } as typeof step01)).toBe("That score is not on the 0.5 step. Use 7 or 7.5.");
+  });
+  it("outside the scale names the range", () => {
+    expect(sentence("11")).toBe("That score is outside the scale (0 to 10).");
+  });
+  it("nothing typed, or a score on the step, has no sentence", () => {
+    expect(padRefusal("", step01)).toBeNull();
+    expect(padRefusal("   ", step01)).toBeNull();
+    expect(padRefusal("7.2", step01)).toBeNull();
+    expect(padRefusal("7", step01)).toBeNull();
+  });
+  it("something that is not a number asks for a score", () => {
+    expect(sentence("7.2.1")).toBe("Enter a score.");
   });
 });

@@ -12,6 +12,7 @@ import { SettingsPanel } from "@/components/org/settings-panel";
 import { SummaryCard } from "@/components/org/summary-card";
 import { useShellLayout } from "@/components/org/layout-context";
 import { EVENT_ADVANCED } from "@/lib/settings/simple-fields";
+import { publicTabs, tabsOffLeavesOne } from "@/lib/public/tabs";
 import { eventSentence } from "@/lib/org/event-sentence";
 import { usesLycras } from "@/lib/schemas/identification";
 import { LogoField } from "@/components/org/logo-field";
@@ -290,6 +291,16 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
           <NumberField id="ev-rotate" label={T.screenRotate} min={5} max={120} value={Number.isNaN(form.settings.screenRotateSec) ? null : form.settings.screenRotateSec} onChange={(v) => set(["settings", "screenRotateSec"], v)} unit={T.secondsUnit} />
         </SettingRow>
         {showError("settings.screenRotateSec")}
+        <SettingRow id="ev-screen-colour" label={T.screenColour} {...h("event.screenColour")}>
+          <div role="radiogroup" aria-label={T.screenColour} className="flex flex-wrap gap-4">
+            {(["dark", "day"] as const).map((m) => (
+              <label key={m} className="flex min-h-[var(--org-ctl)] items-center gap-2 text-body font-semibold">
+                <input type="radio" name="screen-colour" data-testid={`screen-colour-${m}`} checked={form.settings.screenColourMode === m} onChange={() => set(["settings", "screenColourMode"], m)} />
+                {m === "dark" ? T.screenColourDark : T.screenColourDay}
+              </label>
+            ))}
+          </div>
+        </SettingRow>
         <SettingRow id="ev-max-running" label={T.maxRunning} {...h("event.maxRunning")}>
           <NumberField id="ev-max-running" label={T.maxRunning} min={1} max={5} value={Number.isNaN(form.settings.maxRunningHeats) ? null : form.settings.maxRunningHeats} onChange={(v) => set(["settings", "maxRunningHeats"], v)} />
         </SettingRow>
@@ -336,6 +347,39 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
           ) : null}
         </div>
         {checkbox(T.windBanner, form.settings.windCallBanner, (v) => set(["settings", "windCallBanner"], v), "event.windBanner")}
+      </section>
+
+      <section className={group} data-testid="public-page-settings">
+        <h3 className={groupTitle}>{T.publicPage}</h3>
+        <div className="flex items-start gap-2">
+          <p className="text-body font-medium text-beach-muted">{T.publicTabsIntro}</p>
+          <HelpButton what={T.publicPage} help={help["event.publicTabs"]} />
+        </div>
+        <ul className="flex flex-col gap-1">
+          {publicTabs(form.settings.externalLeaderboards).map((tab) => {
+            const on = !form.settings.publicTabsOff.includes(tab.key);
+            const label = tab.label.trim() || T.publicTabUntitled;
+            // the last tab that is on cannot be switched off (Join does not count: it hides itself while registration is closed)
+            const last = on && tab.key !== "join" && !tabsOffLeavesOne([...form.settings.publicTabsOff, tab.key], form.settings.externalLeaderboards);
+            return (
+              <li key={tab.key}>
+                <label className="flex min-h-[var(--org-ctl)] items-center gap-3 text-body font-semibold">
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    data-testid={`public-tab-${tab.key}`}
+                    checked={on}
+                    disabled={last}
+                    onChange={(e) => set(["settings", "publicTabsOff"], e.target.checked ? form.settings.publicTabsOff.filter((k) => k !== tab.key) : [...form.settings.publicTabsOff, tab.key])}
+                  />
+                  {T.publicTabOn(label)}
+                  {tab.key === "join" ? <span className="text-small font-medium text-beach-muted">{T.publicTabJoinNote}</span> : null}
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+        {showError("settings.publicTabsOff")}
       </section>
 
       <section className={group} data-testid="registration-settings">

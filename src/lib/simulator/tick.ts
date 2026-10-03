@@ -313,8 +313,12 @@ async function step(db: SimDb, snap: Snapshot): Promise<string> {
     if (heat.status === "paused") return T.play.lines.paused(name);
     const data = await loadHeatData(db, heat.id);
     if (heat.status === "running") {
+      // Pause may have been pressed (on the console or the panel) since this step began: the officials look again before each move
+      if (await pausedNow(db, snap.eventId)) return T.play.lines.paused(name);
       await processArmed(db, snap, heat, data);
+      if (await pausedNow(db, snap.eventId)) return T.play.lines.paused(name);
       await spotterStep(db, await refreshConfig(db, snap), heat, data);
+      if (await pausedNow(db, snap.eventId)) return T.play.lines.paused(name);
       await judgeStep(db, snap, heat, await loadHeatData(db, heat.id), false);
       return T.play.lines.playing(name, formatLeft(remainingSec(clockOf(heat), snap.nowMs)));
     }
@@ -351,6 +355,12 @@ async function step(db: SimDb, snap: Snapshot): Promise<string> {
   await logLine(db, snap.eventId, "heat", null, T.log.heatStarted(heatPlace(heat, snap.ctx), snap.control.speed));
   forgetContext(snap.eventId);
   return T.play.lines.starting(heatName(heat));
+}
+
+/** True when the simulator is no longer playing (Pause or Stop pressed meanwhile). */
+async function pausedNow(db: SimDb, eventId: string): Promise<boolean> {
+  const { data } = await db.service.from("sim_control").select("state").eq("event_id", eventId).maybeSingle();
+  return !!data && data.state !== "playing";
 }
 
 async function refreshConfig(db: SimDb, snap: Snapshot): Promise<Snapshot> {

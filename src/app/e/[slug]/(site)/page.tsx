@@ -9,6 +9,7 @@ import { SponsorStrip } from "@/components/public/sponsor-strip";
 import { StateBadge, TimetableList, timeText } from "@/components/public/timetable-list";
 import { publicMetadata } from "@/lib/public/meta";
 import { eventOg } from "@/lib/public/og";
+import { guardTab } from "@/lib/public/tab-guard";
 import { loadCore } from "@/lib/public/page-data";
 import { eventUrl, whatsappLink } from "@/lib/public/share";
 import { requestOrigin } from "@/lib/platform/origin";
@@ -29,6 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function PublicHome({ params }: { params: Promise<{ slug: string }> }) {
   const core = await loadCore((await params).slug);
   if (!core) notFound();
+  guardTab(core.site, "home");
   const { site, tt, timetable } = core;
   const base = `/e/${site.event.slug}`;
   const origin = await requestOrigin();

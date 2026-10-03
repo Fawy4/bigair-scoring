@@ -1,8 +1,8 @@
 # Big screen
 
-/screen/‹event›: the beach screen — white on dark, large digits, pages that rotate by themselves.
+/screen/‹event›: the beach screen — Dark (white on dark) or Day (dark on light), large digits, pages that rotate by themselves.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.12.0
 
 ## What it is for {#bs-purpose}
 
@@ -22,7 +22,11 @@ A laptop connected to a TV or projector on the beach. Open it from Go live → *
 | Sponsors | “Thank you to our sponsors” with the logos. |
 | QR code | “Scores and timetable on your phone”: opens the public event page. |
 | Wind banner | The wind call, when set and switched on. |
+| **Day / Dark colours** | A quiet button appears in the top left corner when you move the mouse or tap the screen, and goes away again after three seconds, so the screen stays clean. On a laptop the key **D** switches without showing it. The browser remembers its own choice; until it has chosen, the screen opens in the event's default (Event step → **Big screen: colours**, Dark unless you change it). Day keeps sunlight contrast: dark text on a light ground, the same sizes, and the Lycra chips and the wind banner keep their own solid colours. |
 | Rotation | Every “Big screen: seconds per page” (Event step, default 20). **Space** pauses (“Paused — press space to continue”); the **number keys** jump to a page. Nothing animates. |
+
+![Big screen in Day colours](../img/big-screen-day-1280.png)
+*big-screen-day-1280.png — the same live-heat page in Day colours.*
 
 ## What it depends on {#bs-depends}
 

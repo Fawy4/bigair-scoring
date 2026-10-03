@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { Chip } from "./chip";
-import { combinePad, formatPadValue, isAllowed, padLayout, parsePadInput } from "@/lib/live/score-pad";
+import { errorSentence } from "@/lib/live/errors";
+import { combinePad, formatPadValue, isAllowed, padLayout, padRefusal, parsePadInput } from "@/lib/live/score-pad";
+import { LearnMore } from "@/components/manual/learn-more";
 import type { Scale } from "@/lib/schemas/scoring-model";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
@@ -42,6 +44,7 @@ export function ScorePad({ scale, value, onChange, label, caption, disabled = fa
   const [pending, setPending] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
   const typed = parsePadInput(draft, scale);
+  const refusal = padRefusal(draft, scale);
   const commit = (v: number | null) => {
     if (v === null || disabled) return;
     const check = isAllowed(v, scale);
@@ -121,6 +124,13 @@ export function ScorePad({ scale, value, onChange, label, caption, disabled = fa
           </Chip>
         </div>
       </div>
+      {refusal ? (
+        // the same sentence the server gives; the link goes to the judge page of the manual (the sentence is excluded from the automatic links, which point at the errors table)
+        <p role="alert" data-testid="pad-refusal" data-no-learn-more className="text-small font-semibold text-beach-ink">
+          {errorSentence(refusal.detail ? `${refusal.code}: ${refusal.detail}` : refusal.code)}
+          <LearnMore href={copy.manual.href("ju-pad-step")} />
+        </p>
+      ) : null}
     </div>
   );
 }

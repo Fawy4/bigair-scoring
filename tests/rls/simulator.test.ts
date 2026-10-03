@@ -248,31 +248,56 @@ describe.skipIf(!ENV_OK)("Simulator (hosted development project)", () => {
     expect(codeOf(await org.rpc("sim_release_stale_views", { p_event: f.ids.evA1, p_silent_sec: 90, p_leave_grace_sec: 6 }))).toContain("NOT_A_SIMULATION");
   });
 
-  it("Polish 2: the simulator's Pause pauses the heat clock (marked 'simulator'); Resume resumes only what it paused; the console's own Resume clears the mark", async () => {
+  it("Polish 2b: heat pause and simulator pause are ONE state — a pause or resume from either side moves both; the simulator's Resume resumes every paused heat; Stop stays stopped", async () => {
     const org = f.clients.orgA;
     const row = async () => (await f.s.from("heats").select("status, paused_reason, paused_at").eq("id", simHeat).single()).data!;
-    // a heat on the water with plenty of time left
+    const simState = async () => (await f.s.from("sim_control").select("state").eq("event_id", sim).single()).data!.state;
+    // a heat on the water with plenty of time left, the simulator playing
     await f.s.from("heats").update({ status: "running", started_at: new Date().toISOString(), paused_at: null, paused_total_sec: 0, duration_sec: 600, ended_at: null }).eq("id", simHeat);
+    expect(codeOf(await org.rpc("sim_set", { p_event: sim, p_patch: { state: "playing" } }))).toBe("");
     expect(codeOf(await f.clients.orgB.rpc("sim_pause_heats", { p_event: sim }))).toContain("NOT_ALLOWED");
     expect(codeOf(await f.clients.head.rpc("sim_pause_heats", { p_event: sim }))).toContain("NOT_ALLOWED");
     expect(codeOf(await org.rpc("sim_pause_heats", { p_event: f.ids.evA1 }))).toContain("NOT_A_SIMULATION");
+
+    // the simulator's Pause (state, then the heats) pauses the heat clock, marked 'simulator'
+    expect(codeOf(await org.rpc("sim_set", { p_event: sim, p_patch: { state: "paused" } }))).toBe("");
     expect((await org.rpc("sim_pause_heats", { p_event: sim })).data).toBe(1);
     expect(await row()).toMatchObject({ status: "paused", paused_reason: "simulator" });
     expect((await row()).paused_at).not.toBeNull();
+    expect(await simState()).toBe("paused");
     // nobody sets or clears the mark by hand
     await org.from("heats").update({ paused_reason: null } as never).eq("id", simHeat);
     expect((await row()).paused_reason).toBe("simulator");
+    // the simulator's Resume resumes the heat
+    expect(codeOf(await org.rpc("sim_set", { p_event: sim, p_patch: { state: "playing" } }))).toBe("");
     expect((await org.rpc("sim_resume_heats", { p_event: sim })).data).toBe(1);
     expect(await row()).toMatchObject({ status: "running", paused_reason: null });
-    // the head judge's own pause is theirs: the simulator's Resume leaves it
+    expect(await simState()).toBe("playing");
+
+    // the head judge's Pause on the console pauses the simulator too (the virtual officials stop)…
     expect(codeOf(await org.rpc("pause_heat", { p_heat: simHeat }))).toBe("");
-    expect((await org.rpc("sim_resume_heats", { p_event: sim })).data).toBe(0);
     expect(await row()).toMatchObject({ status: "paused", paused_reason: null });
-    expect(codeOf(await org.rpc("resume_heat", { p_heat: simHeat }))).toBe("");
-    // paused by the simulator, resumed on the console: the mark goes with it
+    expect(await simState()).toBe("paused");
+    // …and the simulator's Resume resumes that heat as well (it used to leave it)
+    expect(codeOf(await org.rpc("sim_set", { p_event: sim, p_patch: { state: "playing" } }))).toBe("");
+    expect((await org.rpc("sim_resume_heats", { p_event: sim })).data).toBe(1);
+    expect(await row()).toMatchObject({ status: "running", paused_reason: null });
+
+    // paused on the simulator, resumed on the console: the simulator plays again, the mark goes
+    expect(codeOf(await org.rpc("sim_set", { p_event: sim, p_patch: { state: "paused" } }))).toBe("");
     await org.rpc("sim_pause_heats", { p_event: sim });
     expect(codeOf(await org.rpc("resume_heat", { p_heat: simHeat }))).toBe("");
     expect(await row()).toMatchObject({ status: "running", paused_reason: null });
+    expect(await simState()).toBe("playing");
+
+    // Stop stays stopped: pausing the heats after it does not turn "stopped" into "paused"
+    expect(codeOf(await org.rpc("sim_set", { p_event: sim, p_patch: { state: "stopped" } }))).toBe("");
+    await org.rpc("sim_pause_heats", { p_event: sim });
+    expect(await row()).toMatchObject({ status: "paused" });
+    expect(await simState()).toBe("stopped");
+    // a resumed heat does not start a stopped simulator either
+    expect(codeOf(await org.rpc("resume_heat", { p_heat: simHeat }))).toBe("");
+    expect(await simState()).toBe("stopped");
   });
 
   it("Polish 2: a step gives the tick lock back when it is done, so the next step of the same page runs; a second step at the same moment is busy", async () => {

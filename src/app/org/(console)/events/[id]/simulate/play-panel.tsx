@@ -46,11 +46,11 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
         <div data-testid="sim-play">
           <Field label={T.play.heading} help={T.play.help}>
             {state !== "playing" ? (
-              <Choice primary icon={Play} data-testid="sim-start" disabled={pending} onClick={() => void act(() => setPlayState(eventId, "playing"))}>
+              <Choice primary icon={Play} data-testid="sim-start" disabled={pending} onClick={() => void (state === "paused" ? sim.playDirect("playing") : act(() => setPlayState(eventId, "playing")))}>
                 {state === "paused" ? T.play.resume : T.play.start}
               </Choice>
             ) : (
-              <Choice icon={Pause} data-testid="sim-pause" disabled={pending} onClick={() => void act(() => setPlayState(eventId, "paused"))}>
+              <Choice icon={Pause} data-testid="sim-pause" disabled={pending} onClick={() => void sim.playDirect("paused")}>
                 {T.play.pause}
               </Choice>
             )}

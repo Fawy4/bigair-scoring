@@ -146,12 +146,21 @@ test("pad: tap or type. A whole number alone is a valid score (Save completes it
   // typing, with the numeric keyboard
   const input = f.getByTestId("pad-input");
   await expect(input).toHaveAttribute("inputmode", "decimal");
+  await expect(f.getByTestId("pad-refusal")).toHaveCount(0); // nothing typed, nothing said
   await input.fill("8.55");
   await expect(f.getByTestId("pad-save")).toBeDisabled(); // off the 0.1 step
+  // Polish 2b, item 7: the same sentence the server gives, with a Learn more link to the judge page of the manual
+  await expect(f.getByTestId("pad-refusal")).toContainText("That score is not on the 0.1 step. Use 8.5 or 8.6.");
+  await expect(f.getByTestId("pad-refusal").getByRole("link", { name: "Learn more" })).toHaveAttribute("href", "/help#ju-pad-step");
+  await input.fill("7.25");
+  await expect(f.getByTestId("pad-refusal")).toContainText("That score is not on the 0.1 step. Use 7.2 or 7.3.");
+  await expect(f.getByTestId("pad-save")).toBeDisabled();
   await input.fill("11");
   await expect(f.getByTestId("pad-save")).toBeDisabled(); // out of range
+  await expect(f.getByTestId("pad-refusal")).toContainText("That score is outside the scale (0 to 10).");
   await input.fill("8,5");
   await expect(f.getByTestId("pad-save")).toBeEnabled();
+  await expect(f.getByTestId("pad-refusal")).toHaveCount(0);
   await f.getByTestId("pad-save").click();
   await expect(f.getByTestId("pad-caption")).toHaveText("Saved 8.5 — BLUE — attempt 4");
   // the decimal tap completes it as before

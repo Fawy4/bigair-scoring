@@ -197,6 +197,15 @@ test("manual screenshots", async ({ page, context, browser }) => {
       await shot(page, name, LAPTOP, 1200);
       await shot(page, name, PHONE, 1200);
     }
+    // the Event step's "Public page" card (behind More settings)
+    await open(page, `${base}/event`);
+    await page.setViewportSize(LAPTOP);
+    await expect(async () => {
+      if (!(await page.getByTestId("public-page-settings").isVisible())) await page.getByTestId("advanced-toggle").click({ timeout: 3000 });
+      await expect(page.getByTestId("public-page-settings")).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 30_000 });
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" }).catch(() => undefined);
+    await page.getByTestId("public-page-settings").screenshot({ path: path.join(OUT, "org-event-public-page-1280.png") });
     await open(page, `${base}/divisions`);
     await page.waitForLoadState("networkidle").catch(() => undefined);
     await page.setViewportSize(LAPTOP);
@@ -315,6 +324,11 @@ test("manual screenshots", async ({ page, context, browser }) => {
     await shot(pub, "public-event", LAPTOP, 2000, true);
     await open(pub, `/screen/${simSlug}`);
     await shot(pub, "big-screen", LAPTOP, 2500, true);
+    // the same page in Day colours (this browser's own choice, undone straight after)
+    await pub.evaluate(() => window.localStorage.setItem("bigair-screen-mode", "day"));
+    await pub.reload();
+    await shot(pub, "big-screen-day", LAPTOP, 2500, true);
+    await pub.evaluate(() => window.localStorage.removeItem("bigair-screen-mode"));
 
     // the spotter's screen: this login takes the spotter seat (judge 1 goes back to the simulator)
     await open(judgeTab, `/org/events/${simId}/simulate/view?as=seat&seat=${spotter.id}`);

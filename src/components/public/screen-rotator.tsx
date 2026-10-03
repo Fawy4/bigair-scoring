@@ -42,7 +42,7 @@ export function ScreenRotator({ seconds, children, labels, pausedLabel }: { seco
         {paused ? pausedLabel : labels[shown]}
       </p>
       {paused ? (
-        <p data-testid="screen-paused" className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border-2 border-white px-5 py-1 text-[1.6vw] font-semibold">
+        <p data-testid="screen-paused" className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border-2 border-[var(--bs-ink)] bg-[var(--bs-bg)] px-5 py-1 text-[1.6vw] font-semibold">
           {pausedLabel}
         </p>
       ) : null}

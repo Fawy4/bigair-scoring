@@ -5,6 +5,8 @@ import { Logo } from "@/components/public/logo";
 import { PublicNav } from "@/components/public/nav";
 import { WindBanner } from "@/components/public/wind-banner";
 import { loadSite } from "@/lib/public/load";
+import { tabSettingsOf } from "@/lib/public/tab-guard";
+import { visiblePublicTabs } from "@/lib/public/tabs";
 import { formatEventDates } from "@/lib/platform/event-label";
 import { copy } from "@/lib/ui-copy";
 
@@ -18,16 +20,7 @@ export default async function SiteLayout({ children, params }: { children: React
   if (!site) notFound();
   const base = `/e/${site.event.slug}`;
   const N = copy.pub.nav;
-  const items = [
-    { href: base, label: N.home },
-    { href: `${base}/live`, label: N.live },
-    { href: `${base}/results`, label: N.results },
-    { href: `${base}/ladder`, label: N.ladder },
-    { href: `${base}/placings`, label: N.placings },
-    { href: `${base}/rules`, label: N.rules },
-    ...site.settings.externalLeaderboards.map((l, i) => ({ href: `${base}/leaderboards/${i + 1}`, label: l.title })),
-    { href: `${base}/join`, label: N.join },
-  ];
+  const items = visiblePublicTabs(tabSettingsOf(site)).map((t) => ({ href: `${base}${t.path}`, label: t.label }));
   const dates = formatEventDates(site.event.start_date, site.event.end_date);
   const logo = site.branding.logoUrl ?? site.organisation.logo_url;
   return (

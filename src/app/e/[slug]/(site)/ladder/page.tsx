@@ -5,6 +5,7 @@ import { loadDraw } from "@/lib/public/load";
 import { buildLadder } from "@/lib/public/ladder-model";
 import { publicMetadata } from "@/lib/public/meta";
 import { eventOg } from "@/lib/public/og";
+import { guardTab } from "@/lib/public/tab-guard";
 import { loadCore } from "@/lib/public/page-data";
 import { modelOf } from "@/lib/public/results-model";
 import { schemeFor } from "@/lib/public/schemes";
@@ -26,6 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function LadderPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ division?: string }> }) {
   const core = await loadCore((await params).slug);
   if (!core) notFound();
+  guardTab(core.site, "ladder");
   const { site, results, rules } = core;
   const drawPayload = await loadDraw(site.event.id);
   const drawn = (drawPayload?.divisions ?? []).filter((d) => d.draw);

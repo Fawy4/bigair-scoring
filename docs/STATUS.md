@@ -1126,3 +1126,25 @@ See the release entry 0.11.0 in docs/RELEASES.md (8 checks on Demo).
 ### How to test
 - Release entry 0.11.1 in docs/RELEASES.md (6 checks).
 
+
+## Polish 2b – simulator pause, console menu, big screen colour, feedback admin, public tabs, copy a plan (branch `polish-2b`, 3 Oct 2026)
+
+Started from main 0.11.0, rebased onto main 0.11.1 (fix session, #29); version 0.12.0 (a feature). No change to the engines or the score-saving functions.
+
+### Done
+1. **One pause.** Reproduced on main first (Playwright: Pause on the console left the simulator "Playing"; afterwards the simulator's Resume resumed nothing because it only resumed heats it had paused itself). Migration `20261020100000_polish2b_one_pause.sql`: a trigger moves `sim_control.state` with every heat going running → paused (console, wind Hold or simulator) and paused → running; `sim_resume_heats` resumes every paused heat; Stop stays stopped. The panel's Pause / Resume now call the database straight from the browser (server actions of one tab wait for each other, so behind a tick they took seconds) and the panel reads the state every second; the tick looks at the state again before each of its moves. Playwright `e2e/one-pause.spec.ts` (×10, View as head judge, both directions, 10 s of silence): 3 of 3 passes after the fixes.
+2. **Live-scores pill** beside Publish (laptop and phone), pure rule in `src/lib/live/live-scores.ts` (heat → division → event → "after publish"; a tap that lands on what the setting gives makes the heat follow the setting again). The held final (Hold / Release) stays in More. The three buttons `live-follow` / `live-on` / `live-off` are gone with the control they identified; their test now uses `live-pill`. The old menu item had no confirmation, so the pill has none.
+3. **Big screen Day / Dark.** `ScreenFrame` (control on mouse move / tap, hides after 3 s, **D**, remembered in localStorage), CSS variables `bs-dark` / `bs-day`, Event step radio (default Dark). `e2e/screen-colour.spec.ts`: before the event, running heat, published result, sponsors, wind hold, held final and podium in both modes (contrast at least 7:1, same digit sizes); screenshots looked at.
+4. **Admin → Feedback.** Date filter and quick picks, tick boxes, Select all, Set done / Reopen (asks once, counts), export follows the filter. `e2e/feedback.spec.ts`.
+5. **Public tabs.** Event step card, `src/lib/public/tabs.ts`, a guard on every tab page, migration `20261020100100_polish2b_public_site_settings.sql` (the public site function now also tells `screenColourMode`, `publicTabsOff`, `registrationOpen`). `e2e/public-tabs.spec.ts`.
+6. **Copy a plan.** Only heats that have not ended, no breaks, notes or pins; the page says "Copied N heats — add this day's breaks and the first heat's pin". Audit A1a-7 test flipped (now passing); AUDIT.md says fixed in Polish 2b.
+7. **Judge pad.** The server's sentence under the box with Learn more (to the judge page, `#ju-pad-step`); the same component serves the head judge's entry.
+8. **Trick base editor browser test.** Re-run: it fails again, but not in the editor. The shared master base has an unpublished draft (v7) by the platform owner, made at 10:10 today; the editor opens that draft, so its counts describe the owner's work. Published v6 (the owner's, yesterday) also switches "Triple loop" off by default, which made `trick-base.spec.ts` stale. I did not touch the draft or the editor: `trick-base.spec.ts` now reads the default-off blocks from the published master version; `trick-base-editor.spec.ts` skips with a message while an unpublished master draft exists (so it can never save over the owner's work). Not re-verified with a clean master base.
+9. **Manual.** The Draw step already had a page; it now also lists the refusals it can show and its Learn more targets. Updated pages: console laptop and phone, big screen (+ Day picture), Admin Feedback, Event step (+ Public page picture), public event, run order, judge, simulator; changelog 0.12.0; settings and errors regenerated.
+
+### From the fix session (#29)
+(a) `tests/rls/simulator.test.ts` now describes the one-pause behaviour (15 passed). (b) The ×20 button is not broken: the first tap lands before the page has loaded (the panel is drawn by the server first) and does nothing; the test taps until the button answers (the first tap failed, the second worked). (c) The head judge browser test expects the refusal sentence with its Learn more link.
+
+### Not done / not verified
+- Not tried on a real phone.
+- Pause shown on the console uses realtime on the live address; in this sandbox (websockets blocked) the console asks every 5 s, so the "within a second" for the console side could not be measured here.

@@ -1,5 +1,6 @@
 import { assertOnStep, ScoringInputError } from "@/lib/engine/scoring/round";
 import type { Scale } from "@/lib/schemas/scoring-model";
+import { onScale, type ScoreRefusal } from "./head-validate";
 
 /**
  * The score pad's rules (docs/06 §4: "Errors are impossible by design: no free typing, values snap to step, ranges enforced").
@@ -81,4 +82,15 @@ export function parsePadInput(text: string, scale: Scale): PadParse {
   if (t === "") return { ok: false, reason: "empty" };
   if (!/^-?\d*\.?\d*$/.test(t) || t === "." || t === "-") return { ok: false, reason: "not_a_number" };
   return isAllowed(Number(t), scale);
+}
+
+/**
+ * Why a typed score is refused, as the same refusal the server gives (code and detail, so `errorSentence` writes the sentence): "That score is not on the 0.1 step. Use 7.2 or 7.3."
+ * Nothing typed (or a score that is fine) has none.
+ */
+export function padRefusal(text: string, scale: Scale): ScoreRefusal | null {
+  const parsed = parsePadInput(text, scale);
+  if (parsed.ok || parsed.reason === "empty") return null;
+  if (parsed.reason === "not_a_number") return { code: "SCORE_REQUIRED" };
+  return onScale(Number(text.trim().replace(",", ".")), scale);
 }

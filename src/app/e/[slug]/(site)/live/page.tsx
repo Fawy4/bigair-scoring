@@ -5,6 +5,7 @@ import { HeatSummary } from "@/components/public/heat-summary";
 import { publicMetadata } from "@/lib/public/meta";
 import { heatOg } from "@/lib/public/og";
 import { ridersForView } from "@/lib/public/heat-view";
+import { guardTab } from "@/lib/public/tab-guard";
 import { loadCore } from "@/lib/public/page-data";
 import { requestOrigin } from "@/lib/platform/origin";
 import { copy } from "@/lib/ui-copy";
@@ -31,6 +32,7 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 export default async function LivePage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ heat?: string }> }) {
   const core = await loadCore((await params).slug);
   if (!core) notFound();
+  guardTab(core.site, "live");
   const { site, tabs, timetable } = core;
   const base = `/e/${site.event.slug}`;
   const heatId = pickHeat(core, (await searchParams).heat);

@@ -30,6 +30,9 @@ export interface PublicSite {
     readyCallMin: number;
     livePollSec: number;
     screenRotateSec: number;
+    screenColourMode: "dark" | "day";
+    publicTabsOff: string[];
+    registrationOpen: boolean;
     externalLeaderboards: Array<{ title: string; url: string; embed: boolean }>;
     identification: { scheme?: unknown; allowDivisionOverride?: boolean } | null;
     publicLiveScores: string;

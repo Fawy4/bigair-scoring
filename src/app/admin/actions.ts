@@ -291,13 +291,14 @@ export async function moveEvent(eventId: string, targetOrgId: string): Promise<{
 
 // ------------------------------------------------------------------ feedback notes
 
-/** "Export for Claude" (owner only): every open note as one Markdown text; each note gets today's export date. Nothing leaves the site by itself. */
-export async function exportFeedbackNotes(): Promise<{ ok: true; markdown: string; count: number } | Failure> {
+/** "Export for Claude" (owner only): the notes of the list as it is filtered (open ones unless a status is chosen) as one Markdown text; each note gets today's export date. Nothing leaves the site by itself. */
+export async function exportFeedbackNotes(filters: { tag?: string; status?: string; page?: string; event?: string; from?: string; to?: string } = {}): Promise<{ ok: true; markdown: string; count: number } | Failure> {
   const { supabase, role } = await requireAdmin();
   if (role !== "owner") return { ok: false, error: copy.feedback.exportOwnerOnly };
   const { loadNotes } = await import("@/lib/feedback/load");
   const { formatFeedbackMarkdown } = await import("@/lib/feedback/format");
-  const { notes } = await loadNotes(supabase, { status: "open" }, { signLinks: 60 * 60 * 24 * 30 });
+  // the list's current filters decide; a list with no status filter exports the open notes (a done note is not exported again unless asked for)
+  const { notes } = await loadNotes(supabase, { ...filters, status: filters.status || "open" }, { signLinks: 60 * 60 * 24 * 30 });
   const now = new Date();
   const markdown = formatFeedbackMarkdown(notes, now);
   if (notes.length) {

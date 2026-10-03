@@ -4,6 +4,7 @@ import { ridersForView } from "@/lib/public/heat-view";
 import { HeatSummary } from "@/components/public/heat-summary";
 import { publicMetadata } from "@/lib/public/meta";
 import { heatOg } from "@/lib/public/og";
+import { guardTab } from "@/lib/public/tab-guard";
 import { loadCore } from "@/lib/public/page-data";
 import { defaultHeatId } from "@/lib/public/results-model";
 import { requestOrigin } from "@/lib/platform/origin";
@@ -27,6 +28,7 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 export default async function ResultsPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ heat?: string; division?: string }> }) {
   const core = await loadCore((await params).slug);
   if (!core) notFound();
+  guardTab(core.site, "results");
   const { site, tabs, tt } = core;
   const sp = await searchParams;
   const base = `/e/${site.event.slug}/results`;

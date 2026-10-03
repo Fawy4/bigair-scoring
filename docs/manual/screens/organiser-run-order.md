@@ -2,7 +2,7 @@
 
 Step 6 of an event (/org/events/‹id›/schedule): the order of the day's heats and breaks, one or more plans per day, the pinned start times, and every time that follows from them.
 
-Last checked: 3 Oct 2026 · Product version 0.9.2
+Last checked: 3 Oct 2026 · Product version 0.12.0
 
 ## What it is for {#ro-purpose}
 
@@ -19,7 +19,7 @@ The timetable works like a spreadsheet: a row's end = its start + its length (wa
 | Control | What it does |
 |---|---|
 | **Day**, **Plan** | Which day and which of its plans you see; the active one is tagged “active”. Each day in the list says “Plan A – Sat 10 Oct active”, “2 plans, none active” or “no plan”. The step opens on today (the Go live checklist's **Fix** for “No run order is active for today” lands here with today chosen). |
-| **Create a plan for ‹day›**, **Copy ‹other day›'s plan to ‹day›** | Shown when the chosen day has no plan, never a grey screen. Create starts an empty plan named “Plan A – ‹day›” (change the name first if you like). Copy takes another day's active plan: its heats, breaks and the start times you pinned by hand — not its actual times or the pins the head judge's console wrote while that day ran. The first plan of a day is active at once. |
+| **Create a plan for ‹day›**, **Copy ‹other day›'s plan to ‹day›** | Shown when the chosen day has no plan, never a grey screen. Create starts an empty plan named “Plan A – ‹day›” (change the name first if you like). Copy takes another day's active plan: only the heats that have not yet ended, in their order — never that day's breaks, notes or pins, its actual times or a hold. The page then says “Copied ‹n› heats — add this day's breaks and the first heat's pin”. The first plan of a day is active at once. |
 | **Activate this plan** | Makes it the plan of that day (heats that started or finished stay where they are). |
 | **New plan** (with **Name of a new empty plan**), **Duplicate plan** (with **Name for the copy**), **Delete plan** | Manage plans. An active plan cannot be deleted. |
 | **Heats not in the run order** | **Add** one heat, **Add all ‹n›**, or drag a heat in. |

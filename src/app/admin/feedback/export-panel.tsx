@@ -3,12 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { copy } from "@/lib/ui-copy";
+import type { NoteFilters } from "@/lib/feedback/load";
 import { exportFeedbackNotes } from "../actions";
 
 const T = copy.feedback;
 
 /** "Export for Claude": every open note as one file, grouped by kind and screen. Download it, or copy it to paste into Claude Code. */
-export function ExportPanel() {
+export function ExportPanel({ filters }: { filters: NoteFilters }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ markdown: string; count: number } | null>(null);
@@ -42,6 +43,7 @@ export function ExportPanel() {
         {T.exportHeading}
       </h2>
       <p className="font-semibold">{T.exportHelp}</p>
+      <p className="font-medium text-beach-muted">{T.exportFiltered}</p>
       <div>
         <button
           type="button"
@@ -51,7 +53,7 @@ export function ExportPanel() {
           onClick={() =>
             start(async () => {
               setError(null);
-              const r = await exportFeedbackNotes();
+              const r = await exportFeedbackNotes(filters);
               if (!r.ok) return setError(r.error);
               setResult({ markdown: r.markdown, count: r.count });
               router.refresh();

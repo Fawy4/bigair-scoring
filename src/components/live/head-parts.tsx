@@ -8,6 +8,7 @@ import { DriftBadge } from "@/components/drift-badge";
 import { HeatTimer } from "./heat-timer";
 import { Pill } from "./pill";
 import { setHeatPublicLive, setPublishHold } from "@/lib/live/head-actions";
+import { liveScoresState, nextLiveScoresValue } from "@/lib/live/live-scores";
 import { type ActionResult } from "@/lib/live/heat-actions";
 import { nextHeatInOrder, utcToLocalHHMM } from "@/lib/engine/schedule";
 import { WindCallControl } from "@/components/wind-call-control";
@@ -347,28 +348,37 @@ export function WindButton({ eventId }: { eventId: string }) {
   );
 }
 
-/** The live-score switch of the heat (follow the division / on / off) and the held final. For the public pages; not needed to run the heat, so on the laptop it is behind "More". */
+/** The pill beside Publish: "Live scores: Public" or "Live scores: Hidden", one tap to change (Polish 2b, item 2). A heat that follows the division's setting says so. */
+export function LiveScoresPill({ c }: { c: HeadController }) {
+  const { selected, state, review } = c;
+  if (!selected || !state || !review || state === "scheduled" || state === "cancelled") return null;
+  const division = c.ctx.divisions.find((d) => d.id === selected.division_id);
+  const input = { heat: selected.public_live, division: division?.live.publicLiveScores, event: c.ctx.event.publicLiveScores } as const;
+  const { isPublic, followsDefault } = liveScoresState(input);
+  return (
+    <button
+      type="button"
+      data-testid="live-pill"
+      data-public={isPublic ? "true" : "false"}
+      data-follows={followsDefault ? "true" : "false"}
+      title={HL.livePillTitle(isPublic, followsDefault)}
+      disabled={c.pending}
+      onClick={() => c.act(HL.saved, async () => (await setHeatPublicLive(selected.id, nextLiveScoresValue(input))) as ActionResult, review.onChanged)}
+      className={cn("inline-flex min-h-tap flex-col items-start justify-center rounded-xl border px-3 text-left text-body font-semibold leading-tight", isPublic ? "border-beach-accent bg-beach-bg text-beach-ink" : "border-beach-border bg-beach-bg text-beach-muted")}
+    >
+      <span data-testid="live-pill-text">{HL.livePill(isPublic)}</span>
+      {followsDefault ? <span data-testid="live-pill-default" className="text-small font-medium text-beach-muted">{HL.livePillDefault}</span> : null}
+    </button>
+  );
+}
+
+/** The held final (Hold result back / Release) of a published heat. For the public pages; not needed to run the heat, so on the laptop it is behind "More". The live-score switch is the pill beside Publish. */
 export function VisibilityBox({ c }: { c: HeadController }) {
   const { selected, state, review } = c;
   if (!selected || !state || !review || state === "scheduled" || state === "cancelled") return null;
+  if (state !== "published") return null;
   return (
     <section data-testid="visibility" aria-label={HL.visibilityHeading} className="flex flex-col gap-1.5 rounded-xl border border-beach-line bg-beach-bg p-2">
-      <p className="text-small font-semibold text-beach-muted">{HL.liveHeading}</p>
-      <div role="group" aria-label={HL.liveHeading} className="grid grid-cols-3 gap-1.5">
-        {([[null, HL.liveFollow], [true, HL.liveOn], [false, HL.liveOff]] as Array<[boolean | null, string]>).map(([v, text]) => (
-          <button
-            key={String(v)}
-            type="button"
-            data-testid={`live-${v === null ? "follow" : v ? "on" : "off"}`}
-            aria-pressed={selected.public_live === v}
-            disabled={c.pending}
-            onClick={() => c.act(HL.saved, async () => (await setHeatPublicLive(selected.id, v)) as ActionResult, review.onChanged)}
-            className={cn("min-h-tap rounded-xl border px-1 text-small font-semibold", selected.public_live === v ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}
-          >
-            {text}
-          </button>
-        ))}
-      </div>
       {state === "published" ? (
         selected.publish_hold ? (
           <>
@@ -402,6 +412,7 @@ export function ReviewButtons({ c, compact = false, visibility = true }: { c: He
       {visibility ? <VisibilityBox c={c} /> : null}
       {review ? (
         <div className="flex flex-wrap items-start gap-1.5">
+          <LiveScoresPill c={c} />
           <Btn compact={compact} testId="publish" tone="accent" reason={c.why("publish")} disabled={c.pending || !c.on("publish")} onClick={() => c.setDialog("publish")}>
             {copy.live.console.publish}
           </Btn>

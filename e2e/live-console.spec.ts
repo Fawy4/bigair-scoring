@@ -42,7 +42,7 @@ const pickHeat = async (p: Page, heat: string) => {
   if (!(await row.isVisible())) await p.getByTestId("other-divisions").locator("summary").click();
   await row.click();
 };
-/** Everything that is not needed to run the heat (audit log, agreement report, live switch, practice) is behind "More". */
+/** Everything that is not needed to run the heat (audit log, agreement report, held final, practice) is behind "More". */
 const openMore = async (p: Page) => {
   if ((await p.getByTestId("more-toggle").getAttribute("aria-expanded")) !== "true") await p.getByTestId("more-toggle").click();
 };
@@ -216,6 +216,12 @@ test("on a phone the Control tab has Publish and Re-open, and Details holds the 
   await pickHeat(phone, heat);
   await expect(phone.getByTestId("publish")).toBeEnabled({ timeout: 40_000 });
   await expect(phone.getByTestId("reopen")).toBeDisabled();
+  // the live-scores pill is on the phone too, beside Publish, and one tap changes it
+  const pill = phone.getByTestId("live-pill");
+  await expect(pill).toHaveText(/Live scores: (Public|Hidden)/, { timeout: 40_000 });
+  const was = await pill.getAttribute("data-public");
+  await pill.click();
+  await expect(pill).toHaveAttribute("data-public", was === "true" ? "false" : "true", { timeout: 30_000 });
   await expect(phone.getByTestId("why-reopen")).toContainText("Only a published heat can be re-opened.");
   await phone.getByTestId("details-toggle").click();
   await expect(phone.getByTestId("details").getByTestId("total-row")).toHaveCount(3, { timeout: 40_000 });
@@ -272,14 +278,24 @@ test("visibility: the head judge's per-heat live switch, and a held result stays
   const { heat } = await endedLadderHeat(ladder, ["j1", "j2", "j3"]);
   const head = await laptop(browser, `/head/${w.eventId}`);
   await pickHeat(head, heat);
+  // the live-scores pill sits beside Publish, outside the More menu: it follows the setting (event / division) until it is tapped
+  const pill = head.getByTestId("live-pill");
+  const live = async () => (await w.db.from("heats").select("public_live").eq("id", heat).single()).data!.public_live;
+  await expect(pill).toHaveText(/Live scores: (Public|Hidden)/, { timeout: 40_000 });
+  const startsPublic = (await pill.getAttribute("data-public")) === "true";
+  const word = (isPublic: boolean) => new RegExp(`Live scores: ${isPublic ? "Public" : "Hidden"}`);
+  await expect(head.getByTestId("live-pill-default")).toBeVisible();
+  await expect(head.getByTestId("more-panel")).toHaveCount(0);
+  expect(await live()).toBeNull();
+  await pill.click(); // one tap: the other way, for this heat only
+  await expect.poll(live, { timeout: 30_000 }).toBe(!startsPublic);
+  await expect(pill).toHaveText(word(!startsPublic), { timeout: 30_000 });
+  await expect(head.getByTestId("live-pill-default")).toHaveCount(0);
+  await pill.click(); // back to what the setting gives: the heat follows it again
+  await expect.poll(live, { timeout: 30_000 }).toBeNull();
+  await expect(pill).toHaveText(word(startsPublic), { timeout: 30_000 });
   await openMore(head);
-  await expect(head.getByTestId("live-follow")).toHaveAttribute("aria-pressed", "true", { timeout: 40_000 });
-  await head.getByTestId("live-on").click();
-  await expect.poll(async () => (await w.db.from("heats").select("public_live").eq("id", heat).single()).data!.public_live, { timeout: 30_000 }).toBe(true);
-  await head.getByTestId("live-off").click();
-  await expect.poll(async () => (await w.db.from("heats").select("public_live").eq("id", heat).single()).data!.public_live, { timeout: 30_000 }).toBe(false);
-  await head.getByTestId("live-follow").click();
-  await expect.poll(async () => (await w.db.from("heats").select("public_live").eq("id", heat).single()).data!.public_live, { timeout: 30_000 }).toBeNull();
+  await expect(head.getByTestId("live-pill")).toHaveCount(1); // one pill; the menu does not have a second switch
   // the event does not show results on publish (the default): the published result is held until released
   await head.getByTestId("publish").click();
   await dialog(head).getByTestId("dialog-save").click();

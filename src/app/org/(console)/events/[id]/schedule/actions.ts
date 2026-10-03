@@ -76,10 +76,10 @@ export async function duplicatePlanAction(planId: string, name: string): Promise
 }
 
 /**
- * "Copy ‹other day›'s plan to ‹day›" (Polish 2, item 14): a new run order for `day` with the heats, breaks and notes of `planId` and the pins set by hand there;
- * not its actual times, the console's pins or a hold. Active at once when it is the day's first plan (as Create does).
+ * "Copy ‹other day›'s plan to ‹day›" (Polish 2b, item 6): a new run order for `day` with the heats of `planId` that have not yet ended; never its breaks, notes, pins,
+ * actual times or a hold. Active at once when it is the day's first plan (as Create does).
  */
-export async function copyPlanToDayAction(planId: string, day: string, name: string): Promise<Result<{ row: PlanRow }>> {
+export async function copyPlanToDayAction(planId: string, day: string, name: string): Promise<Result<{ row: PlanRow; heats: number }>> {
   if (!Uuid.safeParse(planId).success || !Day.safeParse(day).success) return fail(T.failed);
   const n = Name.safeParse(name);
   if (!n.success) return fail(n.error.issues[0].message);
@@ -89,14 +89,16 @@ export async function copyPlanToDayAction(planId: string, day: string, name: str
   if (src.day === day) return fail(T.failed);
   const { data: existing } = await supabase.from("schedule_plans").select("id, name").eq("event_id", src.event_id).eq("day", day);
   if ((existing ?? []).some((p) => p.name.trim().toLowerCase() === n.data.toLowerCase())) return fail(T.nameTaken);
-  const copied = copyPlanToDay(src as PlanRow);
+  // a heat that has ended (run, published or cancelled) stays on its own day
+  const { data: heatRows } = await supabase.from("heats").select("id, status").eq("event_id", src.event_id).in("status", ["ended", "under_review", "published", "cancelled"]);
+  const copied = copyPlanToDay(src as PlanRow, new Set((heatRows ?? []).map((h) => h.id)));
   const { data, error } = await supabase
     .from("schedule_plans")
     .insert({ event_id: src.event_id, day, name: n.data, active: (existing ?? []).length === 0, items: copied.items as Json, anchors: copied.anchors as unknown as Json, actual_starts: {}, defaults: src.defaults })
     .select(COLUMNS)
     .single();
   if (error || !data) return fail(dbMessage(error?.message ?? ""));
-  return { ok: true, row: data as PlanRow };
+  return { ok: true, row: data as PlanRow, heats: copied.heats };
 }
 
 const SaveInput = z.object({

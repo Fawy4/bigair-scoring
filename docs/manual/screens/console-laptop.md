@@ -2,7 +2,7 @@
 
 The head judge's working screen at /head/‹event› on a laptop or tablet (1280 px and wider): division tabs, the heat's timer and buttons, the run order with times, the break countdown, the live score table, Publish and everything around it.
 
-Last checked: 3 Oct 2026 · Product version 0.11.0
+Last checked: 3 Oct 2026 · Product version 0.12.0
 
 ## What it is for {#cl-purpose}
 
@@ -40,7 +40,8 @@ The head judge (the head judge seat, or an organiser of the event — an organis
 | Attempt menu | **Delete**, **Merge duplicate** (keeps the first logged attempt), **Edit attempt**, **Add attempt** (past the attempt cap only with a reason: “That rider has used every attempt. Adding one more is saved with your reason.”), judge absent for this attempt. |
 | Tick boxes | Select several attempts → **Merge** or **Delete**. |
 | Rider menu | **DNS (did not start)**, **DNF (did not finish)**, **DSQ (disqualified)**, **Interference**, **Clear status**, **Take back interference**. |
-| **More** | Live switch for this heat (**Follow the setting** / **Live** / **Not live**), agreement report (“‹judge›: 0.4 from the panel score on average, 1 outlier”), **Audit log** of the heat, theme and size, and the **Practice heat** panel on a simulation event. |
+| **Live scores: Public / Hidden** (a pill beside **Publish**) | One tap changes whether spectators see this heat live. It reads what the public sees now; “Division default” under it means the heat still follows the division's (or the event's) setting. Tapping when it follows the setting changes this heat only; tapping back to what the setting would give makes the heat follow the setting again. Shown from the moment the heat has started. |
+| **More** | The held final (**Hold result back** / **Release result**), agreement report (“‹judge›: 0.4 from the panel score on average, 1 outlier”), **Audit log** of the heat, theme and size, and the **Practice heat** panel on a simulation event. (The live-scores switch is not in this menu any more: it is the pill beside Publish.) |
 | **Flag-out** | When the format has one: “At ‹n› min the lowest ‹n› riders are flagged out.” → **Flag out…**. |
 
 ## The right column {#cl-right}

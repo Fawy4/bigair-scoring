@@ -19,7 +19,7 @@ export function stepNeighbours(value: number, scale: Scale): [number, number] {
   return [at(Math.floor(steps)), at(Math.ceil(steps))];
 }
 
-function onScale(value: number, scale: Scale): ScoreRefusal | null {
+export function onScale(value: number, scale: Scale): ScoreRefusal | null {
   if (!Number.isFinite(value) || value < scale.min - 1e-9 || value > scale.max + 1e-9) return { code: "SCORE_OUT_OF_RANGE", detail: `${text(scale.min)}|${text(scale.max)}` };
   try {
     assertOnStep(value, scale, "Score");

@@ -339,37 +339,36 @@ describe("Audit 1a · timetable · a heat never shows on both days", () => {
     for (const r of fri.rows) expect(r.startUtc!.slice(0, 10)).toBe(FRI);
   });
 
-  it.fails("A1a-7: Friday made with 'Copy Thursday's plan' should not list Thursday's heats again (or the drift badge reads hours early)", () => {
-    // Thursday ran; the organiser copies Thursday's plan to Friday and adds the R2–Final heats (the known P2-14 gap).
+  const ranThursday = () => {
     const ranThu = computeTimetable(thursday(), heats(), optsFor(THU));
-    const lives = heats().map((h) => {
+    return heats().map((h) => {
       const r = ranThu.rows.find((x) => x.heatId === h.heatId);
       return r ? { ...h, startedAt: r.startUtc, endedAt: r.endUtc } : h;
     });
-    const copied = copyPlanToDay({ id: "thu", day: THU, name: "Plan A – Thu", active: true, items: thursday().items, anchors: thursday().anchors, hand_pins: ["i1"] });
+  };
+  const ended = (lives: ReturnType<typeof ranThursday>) => new Set(lives.filter((l) => l.endedAt).map((l) => l.heatId));
+
+  it("A1a-7 (fixed in Polish 2b): Friday made with 'Copy Thursday's plan' brings only the heats that have not ended, so Thursday's heats are not listed again and the drift badge is not hours early", () => {
+    // Thursday ran; the organiser copies Thursday's plan to Friday and adds the R2–Final heats (the known P2-14 gap).
+    const lives = ranThursday();
+    const copied = copyPlanToDay({ id: "thu", day: THU, name: "Plan A – Thu", active: true, items: thursday().items, anchors: thursday().anchors, hand_pins: ["i1"] }, ended(lives));
+    expect(copied.heats).toBe(0); // all eight Thursday heats ended
     const fri: SchedulePlan = { id: "fri", name: "Plan A – Fri", active: true, items: [...(copied.items as SchedulePlan["items"]), ...friday().items], anchors: { ...copied.anchors, i9: "10:00" }, actualStarts: {} };
     const opts = optsFor(FRI, at(FRI, "09:30"));
     const t = computeTimetable(fri, lives, opts);
     const thuHeats = t.rows.filter((r) => r.heatId && Number(r.heatId.slice(1)) <= 8);
     expect(thuHeats).toEqual([]);
     expect(scheduleDrift(fri, lives, opts)?.minutes ?? 0).toBeLessThan(60);
+    // Thursday's lunch break did not come across, so Friday's 10:00 pin holds
+    expect(t.rows.find((r) => r.itemId === "lunch")).toBeUndefined();
+    expect(utcToLocalHHMM(t.rows.find((r) => r.itemId === "i9")!.startUtc!, TZ)).toBe("10:00");
   });
 
-  it("A1a-7 today: the 8 Thursday heats show on Friday as done; Thursday's lunch break runs again at 09:30 and pushes Friday's 10:00 pin to 10:20", () => {
-    const ranThu = computeTimetable(thursday(), heats(), optsFor(THU));
-    const lives = heats().map((h) => {
-      const r = ranThu.rows.find((x) => x.heatId === h.heatId);
-      return r ? { ...h, startedAt: r.startUtc, endedAt: r.endUtc } : h;
-    });
+  it("A1a-7: a copy never brings the other day's breaks or pins, even when nothing has ended yet", () => {
     const copied = copyPlanToDay({ id: "thu", day: THU, name: "Plan A – Thu", active: true, items: thursday().items, anchors: thursday().anchors, hand_pins: ["i1"] });
-    const fri: SchedulePlan = { id: "fri", name: "Plan A – Fri", active: true, items: [...(copied.items as SchedulePlan["items"]), ...friday().items], anchors: { ...copied.anchors, i9: "10:00" }, actualStarts: {} };
-    const opts = optsFor(FRI, at(FRI, "09:30"));
-    const t = computeTimetable(fri, lives, opts);
-    expect(t.rows.filter((r) => r.status === "done").map((r) => [r.heatId, r.startUtc!.slice(0, 10)])).toEqual([1, 2, 3, 4, 5, 6, 7, 8].map((i) => [`h${i}`, THU]));
-    const d = scheduleDrift(fri, lives, opts)!;
-    expect(d.state).toBe("early");
-    expect(d.minutes).toBeGreaterThan(150);
-    expect(t.rows.find((r) => r.itemId === "lunch")?.start).toBe("09:30");
-    expect(utcToLocalHHMM(t.rows.find((r) => r.itemId === "i9")!.startUtc!, TZ)).toBe("10:20");
+    expect((copied.items as Array<{ kind: string }>).every((i) => i.kind === "heat")).toBe(true);
+    expect(copied.heats).toBe(8);
+    expect(copied.anchors).toEqual({});
+    expect(copied.hand_pins).toEqual([]);
   });
 });
