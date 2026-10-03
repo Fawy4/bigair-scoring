@@ -2,14 +2,14 @@
 
 The event's **Join** tab (/e/‹event›/join), the officials' join page (/join), the seat page (/seat) and the riders' registration page (/e/‹event›/register).
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.11.0
 
 ## What it is for {#pj-purpose}
 
 One door for everybody who is not a spectator: officials join with their PIN, riders register.
 
 ![Join tab on a phone](../img/public-join-390.png)
-*public-join-390.png — the role picker: Judge, Spotter, Head judge, Announcer (with a PIN); Leaderboard, Ladder, Timetable (open to everyone).*
+*public-join-390.png — the role picker: Judge, Spotter, Head judge, Announcer, Observer (with a PIN); Leaderboard, Ladder, Timetable (open to everyone).*
 
 ![Registration page on a phone](../img/public-register-390.png)
 *public-register-390.png — the registration form.*
@@ -18,8 +18,8 @@ One door for everybody who is not a spectator: officials join with their PIN, ri
 
 | Control | What it does |
 |---|---|
-| Role cards | Judge, Spotter, Head judge, Announcer: “Needs your PIN.” Each card is its own address. |
-| **Event code** + **Your 6-digit PIN** → **Join** | On /join both are typed; on /e/‹event›/join only the PIN. The phone is then bound to the seat and goes straight to its screen (judge, spotter, head console or announcer). |
+| Role cards | Judge, Spotter, Head judge, Announcer, Observer (“Watch every official’s screen, read only.”): “Needs your PIN.” Each card is its own address. |
+| **Event code** + **Your 6-digit PIN** → **Join** | On /join both are typed; on /e/‹event›/join only the PIN. The phone is then bound to the seat and goes straight to its screen (judge, spotter, head console, announcer, or the [observer view](observer.md)). |
 | QR card | Scanning signs the phone in once (“Joining with your QR code…”). |
 | iPhone tip | “tap Share → Add to Home Screen first, then open the app from your home screen and join there. The home-screen app keeps its own login.” |
 | **Not on the list? Add your name** | Name, role wanted (Judge, Spotter, Announcer), phone (optional) → **Ask to be added**; the organiser approves and gives a PIN. |

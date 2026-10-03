@@ -19,6 +19,7 @@ import { remainingMs } from "@/lib/live/timer";
 import type { LiveContext } from "@/lib/live/types";
 import { createClient } from "@/lib/supabase/browser";
 import { copy } from "@/lib/ui-copy";
+import { useObserving } from "./read-only";
 
 const T = copy.spotter;
 
@@ -46,7 +47,8 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
   const viewer = ctx.viewer.kind === "seat" ? ctx.viewer : null;
   const seatId = viewer?.seatId ?? "organiser";
   const q = useSendQueue(supabase, clock.now, `spot-${ctx.event.id}-${seatId}`, online && live.connected, (kind, row) => kind === "attempt" && live.apply("attempts", row as never));
-  const [feedOpen, setFeedOpen] = useState(false);
+  // an observer cannot tap "Feed", so an observed spotter screen shows the feed already open
+  const [feedOpen, setFeedOpen] = useState(useObserving());
   const [notices, setNotices] = useState<Notice[]>([]);
 
   const heat = live.heat;

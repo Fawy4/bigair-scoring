@@ -26,7 +26,7 @@ export function OfficialsManager({ eventId, eventName, seats, panels, riders, co
   const { pending, error, setError, run } = act;
   const [issued, setIssued] = useState<IssuedPin | null>(null);
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"judge" | "head" | "spotter" | "announcer">("judge");
+  const [role, setRole] = useState<"judge" | "head" | "spotter" | "announcer" | "observer">("judge");
   const [headScores, setHeadScores] = useState(true);
   const [now, setNow] = useState(() => new Date());
   // a tick shows at once; the server's answer replaces it when the page data comes back
@@ -105,6 +105,7 @@ export function OfficialsManager({ eventId, eventName, seats, panels, riders, co
           </Button>
         </form>
         {role === "head" ? <p className="text-sm font-semibold">{T.headAlsoScoresHelp}</p> : null}
+        {role === "observer" ? <p data-testid="observer-help" className="text-sm font-semibold">{T.observerHelp}</p> : null}
       </section>
 
       {pendingSeats.length > 0 ? (

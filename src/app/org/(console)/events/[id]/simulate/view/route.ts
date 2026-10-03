@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { data: event } = await service.from("events").select("id, slug").eq("id", id).maybeSingle();
   if (!event) return NextResponse.redirect(back);
 
-  let role: "judge" | "head" | "spotter" | "announcer" | undefined;
+  let role: "judge" | "head" | "spotter" | "announcer" | "observer" | undefined;
   if (target.kind === "seat") {
     const { data: seat } = await service.from("judge_seats").select("id, role").eq("id", target.seatId).eq("event_id", id).maybeSingle();
     if (!seat) return NextResponse.redirect(back);

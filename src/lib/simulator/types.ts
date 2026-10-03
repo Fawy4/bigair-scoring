@@ -77,6 +77,8 @@ export interface SimStatus {
   control: SimControlView;
   stats: SimStats;
   seats: SeatView[];
+  /** Observer seats: never played by the simulator, but View as… can open the observer's view. */
+  observers: Array<{ id: string; name: string }>;
   riders: Array<{ entryId: string; name: string; divisionName: string }>;
   now: NowView;
   line: string;

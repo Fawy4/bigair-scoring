@@ -1072,3 +1072,38 @@ See the click-through in the pull request.
 
 ### How to test on the live address
 The 8 checks of 0.10.0 on Admin → Releases.
+
+## Observer seat – a read-only official (branch `observer-role`, 3 Oct 2026)
+
+Started from main after #26 (release tracker); rebased onto main after #27 (audit 1a). None of the release tracker's files (RELEASES.md aside, which every PR adds its entry to), the admin pages, Health or the audit's files were touched. Version 0.11.0 (a feature).
+
+### Done
+- **Database** (`20261018100000_observer_seat.sql`, applied to the hosted project with `npm run db:apply`; `npm run db:types` changed nothing — the role is a text column): role `observer` on seats; an observer reads what the head judge reads (every judge's scores, Impression / Variety scores, sheets, flags, decisions, the audit log, the seats' names — never the PIN columns); `end_heat_if_due`, the only function any seat could call that changes a heat, now refuses an observer; an observer can never be on a panel (`OBSERVER_NOT_ON_PANEL`, a trigger on panels and on seats; "also scores" stays off); the simulator never gets an observer (a trigger skips it on every path that adds simulator seats); an observer of a **simulation** sees its public pages (the same preview its organiser gets) and the simulation's public live heat.
+- **Officials step**: Role **Observer**, with a sentence on what it is and the warning never to give an observer PIN to a judge (it shows every judge's scores). PIN, card, Show / Regenerate PIN, Switch off as for any seat; never in the panel table.
+- **Join**: an **Observer** card on the event's join page; the seat page and the official screens send an observer to its own page.
+- **Observer view** (`/observe/‹event›`): top bar **Whose screen** (Head judge console laptop / phone, Judge 1…n in panel order, each spotter, Announcer, Big screen, Public page), **Actual size / Fit to screen** for laptop and big-screen views, the strip “Observing — read only”, then the official's **real** screen in a frame of that device's width (so a laptop console really lays out as on a laptop). The framed screen is drawn for that official's seat, so it picks the same heat and shows the same rows that official's phone gets (a judge's screen shows that judge's scores only; pure `maskFor`, tested). Every control is disabled (a disabled fieldset) and every tap, key and form event is stopped (dialogs too); scrolling works. The spotter's feed is shown open (an observer cannot tap Feed). The view checks every 10 s that the seat is still on: switched off or a new PIN ends it at once.
+- **Head console**: “‹n› observers watching” under Judges (observers seen in the last 75 s).
+- **Simulator**: View as… → **Observer** row (Open / Phone).
+- **Manual**: new page Observer view; Roles, Officials, Join, Head console (laptop), Simulator, README updated; errors regenerated; changelog 0.11.0; release entry 0.11.0 in docs/RELEASES.md.
+
+### Decided without asking (please confirm)
+1. **The one write**: an observer's phone still says “I am here” (`touch_seat`, its own last-seen time only), because that is how the head judge can see “observers watching”. Everything else is refused; the RLS test checks that this call changes nothing but that time.
+2. **The spotter's feed opens by itself** on the observer's screen; on the spotter's own phone nothing changed.
+3. **Judge 1…n** are numbered by panel order across divisions; a head judge who also scores is one of them; a judge on no panel is not listed. A seat already named “Judge 1” is not shown as “Judge 1 · Judge 1”.
+4. **Head console / announcer without such a seat**: the observer still gets the view, drawn for its own seat in that role (nothing to score, nothing to show that the real one would not).
+
+### Blind spot to know
+- An observer reads **every judge's scores** as they land. A judge who also holds an observer PIN on a second phone could see the others' scores before Submit. The Officials step says so; the database cannot tell who is holding the phone.
+
+### Tests
+- `npm run typecheck` clean · `npm run lint` clean · `npm test`: **184 files, 2104 passed** (new: `src/lib/live/observer.test.ts`, 14 tests).
+- `npm run test:rls -- tests/rls/observer.test.ts`: **13 passed** — reads like the head judge; **every function a signed-in person may call** (82, listed in the test; a second test fails when a new function appears that is not in the list) refused for an observer and the whole event unchanged afterwards; every official table write refused; touch_seat moves only its own time; never on a panel; several observers; public pages never name it; Switch off / Regenerate PIN cut it off at once; on a simulation: the copy keeps the seat, the simulator never plays it, its observer sees the preview but cannot drive the simulator, View as can hold it.
+- Neighbouring RLS suites re-run: live-heat, live-head, live-judge, live-spotter, simulator, riders-officials, public-site, rls, live-visibility — all pass (two first failed in setup with a hosted “Gateway Timeout” and passed on the re-run).
+- Playwright `e2e/observer.spec.ts`: **1 passed** — the organiser adds an Observer on the Officials step of a throwaway simulation; a phone joins with the PIN; the simulator runs at ×10; the phone switches through every screen; Judge 1's scores arrive on Judge 1's screen; every control of every official screen is disabled; a tap does nothing; `pause_heat`, `submit_trick_score`, `add_attempt` and `set_wind_call` sent with the observer's own token are refused (NOT_ALLOWED); Switch off ends the view; the simulator's View as… opens the observer view.
+
+### Not done / not verified
+- Not tried on a real phone.
+- Pictures taken in the sandbox show the screens' “Offline” badge (live updates cannot use websockets here; they fall back to asking every 5 s). On the live address they say Live.
+
+### How to test on the phone
+See the release entry 0.11.0 in docs/RELEASES.md (8 checks on Demo).

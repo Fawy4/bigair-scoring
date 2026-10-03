@@ -12,6 +12,32 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.11.0 — 3 Oct 2026 {#release-0-11-0}
+
+PR: #30
+
+### What changed
+- **Observer**: a new kind of official seat for people who watch but must not touch anything — a sponsor, a WOO engineer, a trainee head judge, a journalist, or you watching a customer's event. Made on the Officials step like any seat (its own PIN and printable card; as many as you like).
+- An observer who joins sees a bar **Whose screen**: Head judge console (laptop and phone), Judge 1, 2, 3…, each spotter, the announcer, the big screen and the public page. Each screen is the official's real screen, live, with every button disabled and a quiet “Observing — read only” strip.
+- The database refuses every change from an observer seat, whatever the phone sends. Observers never count towards a panel, never appear among the judges, are never played by the simulator and never show on the public pages.
+- The head judge sees “2 observers watching” under **Judges**. Switching the seat off or **Regenerate PIN** ends the observer's view at once.
+- The simulator's **View as…** has an **Observer** row.
+
+### What to test
+- [ ] On Demo, open Officials → **Add a seat**, Role **Observer**, name it, **Add seat and make PIN**: a PIN box appears like for any seat, and the seat is not in the panel table.
+- [ ] On your phone, open Demo's join page, tap **Observer**, type the PIN: the phone opens a page with **Whose screen** at the top and “Observing — read only” under it.
+- [ ] On the laptop, start the simulator at **×10**. On the phone choose **Head judge console (phone)**, then **Judge 1**, then a **Spotter**: each shows the heat that is on and changes as the simulation plays (Judge 1's scores appear one by one).
+- [ ] On each of those screens, tap buttons (a score number, Start, Missed): nothing happens and nothing changes on the laptop.
+- [ ] Choose **Head judge console (laptop)** on the phone: the whole laptop console is shown shrunk to fit; **Actual size** lets you scroll it at full size.
+- [ ] On the laptop, open the head judge console: under **Judges** it says “1 observer watching”, and the observer is not one of the judges.
+- [ ] On the laptop, switch the Observer seat off on the Officials step: within about 10 seconds the phone says the seat was switched off. Switch it on again and join again with the PIN.
+- [ ] On the simulator, **View as…** → **Observer** → **Open**: the observer view opens in a new tab.
+
+### Known issues
+- The phone of an observer shows the officials' screens inside a frame: a laptop screen on a phone is small until you choose **Actual size**.
+- A spotter's feed is shown open on the observer's screen (the observer cannot tap **Feed**); on the spotter's own phone it is behind **Feed** as before.
+- Not tried on a real phone before merging.
+
 ## 0.10.1 — 3 Oct 2026 {#release-0-10-1}
 
 PR: #27

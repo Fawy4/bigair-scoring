@@ -16,6 +16,7 @@ export default async function HeadPageRoute({ params, searchParams }: { params: 
   if (ctx.viewer.kind === "seat") {
     if (ctx.viewer.role === "judge") redirect(`/judge/${eventId}`);
     if (ctx.viewer.role === "spotter") redirect(`/spot/${eventId}`);
+    if (ctx.viewer.role === "observer") redirect(`/observe/${eventId}`);
     if (ctx.viewer.role !== "head" && ctx.viewer.role !== "announcer") redirect("/seat?card=1");
   }
   return (

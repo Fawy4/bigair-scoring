@@ -43,5 +43,5 @@ Three tests stop the manual from drifting silently (`npm test`): every refusal s
 ## The pages {#readme-pages}
 
 - Start: [Quick start](quick-start.md) · [Dependency map](dependencies.md) · [Event day](event-day.md) · [Troubleshooting](troubleshooting.md)
-- Screens: one page per screen, listed in the contents on the left (organiser steps, Go live, the head judge console on a laptop and a phone, judge, spotter, announcer, the public pages, the big screen, the simulator, the platform owner's admin).
+- Screens: one page per screen, listed in the contents on the left (organiser steps, Go live, the head judge console on a laptop and a phone, judge, spotter, announcer, observer, the public pages, the big screen, the simulator, the platform owner's admin).
 - Reference: [Settings](settings.md) · [Resets and undo](resets-and-undo.md) · [Roles](roles.md) · [Glossary](glossary.md) · [Errors and refusals](errors.md) · [Changelog](changelog.md)

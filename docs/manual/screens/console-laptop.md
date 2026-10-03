@@ -2,7 +2,7 @@
 
 The head judge's working screen at /head/‹event› on a laptop or tablet (1280 px and wider): division tabs, the heat's timer and buttons, the run order with times, the break countdown, the live score table, Publish and everything around it.
 
-Last checked: 3 Oct 2026 · Product version 0.9.2
+Last checked: 3 Oct 2026 · Product version 0.11.0
 
 ## What it is for {#cl-purpose}
 
@@ -53,11 +53,14 @@ The head judge (the head judge seat, or an organiser of the event — an organis
 | **Cancel heat** | With a reason (“for example: kite tangle”). |
 | **Re-run heat** | Cancels the heat and creates “H‹n›R” next in the run order with the same riders, seats, Lycras and timing; riders who do not ride again are Disqualified or Did not start (ranked last). Also on a cancelled heat, once (“Already re-run as H1R”). |
 | **Heat menu** → **Reset this heat…** | Back to not started with the same riders; what it held is kept for the audit. See [Resets and undo](../resets-and-undo.md#ru-heat). |
-| **Judges** | Each judge: Live, “Not seen for 40 s”, “Not connected”; Submitted / Not submitted. |
+| **Judges** | Each judge: Live, “Not seen for 40 s”, “Not connected”; Submitted / Not submitted. Under them, “‹n› observers watching” when [observers](observer.md) have their view open (seen in the last 75 seconds); observers are never listed as judges. |
 | **Open flags** | Judges' flags (“That was a crash”, “That was a landing”, “Wrong rider”, “Duplicate”, “Other”) with **Resolve**. |
 | **Impression / Variety scores** | After the heat has ended, one block per judge: “all in” or “3 missing”, and each rider with **done 7.50**, **missing** or **Absent**, so you see at a glance what holds the panel back. **Enter ‹judge›'s sheet** opens that judge's sheet: every rider in a list, the pad for the one selected; a score (or **Judge absent for this rider**) moves on to the next rider who has nothing yet. **Save ‹n› riders** saves them all at once with one reason; **Save and submit ‹judge›'s sheet** also submits the sheet for the judge (every rider needs a score or Absent first). |
 | **Rider totals** and **Ties** | Provisional totals with the formula in words; how each tie is broken. |
 | **Public** | **Release result** / **Hold result back…** for a held result (the final when “Hold the final’s result” is on, or every result when results are not shown on publish). |
+
+![Judges with one observer watching](../img/console-observers-1280.png)
+*console-observers-1280.png — the Judges box with “1 observer watching”.*
 
 ## What it depends on {#cl-depends}
 

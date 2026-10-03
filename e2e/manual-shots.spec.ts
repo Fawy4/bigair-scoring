@@ -35,8 +35,9 @@ const DIVISIONS = [
   { name: "Pro Women", riders: [12, 18], format: "megaloop-women-6", description: "Open to all women riders" },
   { name: "Youth U16", riders: [18, 24], format: "single-final", description: "Born 2010 or later" },
 ];
-const SEATS: Array<[string, "judge" | "head" | "spotter" | "announcer"]> = [
+const SEATS: Array<[string, "judge" | "head" | "spotter" | "announcer" | "observer"]> = [
   ["Judge 1 · Amr", "judge"], ["Judge 2 · Laura", "judge"], ["Judge 3 · Sven", "judge"], ["Head judge · Nadia", "head"], ["Spotter · Hamdy", "spotter"], ["Announcer · Max", "announcer"],
+  ["Observer · Dina", "observer"],
 ];
 
 async function shot(page: Page, name: string, size: { width: number; height: number }, settle = 600, hideNote = false, ready?: () => Promise<unknown>) {
@@ -465,5 +466,95 @@ test("manual screenshots: releases", async ({ page }) => {
   } finally {
     await db.from("release_check_ticks").delete().eq("ticked_by", me);
     await org.cleanup();
+  }
+});
+
+/**
+ * The Observer seat: the Officials step with Observer chosen, the observer's view (head judge console on a laptop, Judge 1 and the spotter on a phone), the
+ * head judge's “1 observer watching” and the simulator's View as… card. Its own throwaway organisation and simulation, played at ×20 for live scores.
+ * `npm run manual:shots -- -g "observer"` runs it alone.
+ */
+test("manual screenshots: observer", async ({ page, browser }) => {
+  test.setTimeout(15 * 60_000);
+  mkdirSync(OUT, { recursive: true });
+  const { createLiveWorld } = await import("./live-world");
+  const { installSupabaseProxy } = await import("./base");
+  const w = await createLiveWorld();
+  const db = w.db;
+  let simId: string | null = null;
+  const watcher = await browser.newContext();
+  try {
+    await installSupabaseProxy(watcher);
+    await w.org.signIn(page, `/org/events/${w.eventId}/simulate`);
+    await page.getByTestId("run-as-simulation-button").click();
+    await expect(page.getByTestId("clone-done")).toBeVisible({ timeout: 60_000 });
+    await page.getByTestId("clone-open").click();
+    await expect(page.getByTestId("sim-console")).toBeVisible({ timeout: 60_000 });
+    simId = /events\/([0-9a-f-]{36})\/simulate/.exec(page.url())![1];
+
+    // the Officials step, Observer chosen (the seat itself is made with its own login, for the pictures)
+    await open(page, `/org/events/${simId}/officials`);
+    await page.getByLabel("Name", { exact: true }).fill("Observer · Dina (sponsor)");
+    await page.getByLabel("Role", { exact: true }).selectOption({ label: "Observer" });
+    await page.getByTestId("observer-help").waitFor();
+    await shot(page, "org-officials-observer", LAPTOP, 800);
+    const email = `e2e-${w.org.run}-observer@example.com`;
+    const { data: u } = await db.auth.admin.createUser({ email, password: `Pw-${w.org.run}-obs`, email_confirm: true });
+    w.org.trackUser(u.user!.id);
+    const { data: seat } = await db.from("judge_seats").insert({ event_id: simId, name: "Dina (sponsor)", role: "observer", auth_user_id: u.user!.id, status: "active", active: true }).select("id").single();
+
+    // play at ×5 until Judge 1 has scores in the running heat (slow enough that the heat is still on for the pictures)
+    await open(page, `/org/events/${simId}/simulate`);
+    await pressUntil(page, "sim-speed-5", async () => (await page.getByTestId("sim-speed-5").getAttribute("aria-pressed")) === "true");
+    await pressUntil(page, "sim-start", async () => (await page.getByTestId("sim-state").getAttribute("data-state")) === "playing");
+    const j1 = (await db.from("judge_seats").select("id").eq("event_id", simId).eq("name", "Judge 1").single()).data!.id as string;
+    await expect.poll(async () => (await db.from("trick_scores").select("id", { count: "exact", head: true }).eq("judge_seat_id", j1)).count ?? 0, { timeout: 240_000 }).toBeGreaterThan(2);
+
+    // the observer's own login
+    const o = await watcher.newPage();
+    const { data: link } = await db.auth.admin.generateLink({ type: "magiclink", email });
+    await o.goto(`/auth/confirm?token_hash=${link!.properties!.hashed_token}&type=magiclink&next=${encodeURIComponent(`/observe/${simId}?view=head-wide`)}`);
+    const frame = o.frameLocator("[data-testid=observer-frame]");
+    const hideBadge = async () => {
+      for (const f of o.frames()) await f.addStyleTag({ content: "nextjs-portal { display: none !important; }" }).catch(() => undefined);
+    };
+    await o.setViewportSize(LAPTOP);
+    await frame.getByTestId("head-page").waitFor({ timeout: 90_000 });
+    await o.waitForTimeout(2500);
+    await hideBadge();
+    await shot(o, "observer-head", LAPTOP, 500);
+    await o.setViewportSize(PHONE);
+    await o.getByTestId("observer-switcher").selectOption(`judge:${j1}`);
+    await frame.getByTestId("history-row").first().waitFor({ timeout: 90_000 });
+    await o.waitForTimeout(1500);
+    await hideBadge();
+    await shot(o, "observer-judge", PHONE, 500);
+    const spotter = (await db.from("judge_seats").select("id").eq("event_id", simId).eq("role", "spotter").order("name").limit(1).single()).data!.id as string;
+    await o.getByTestId("observer-switcher").selectOption(`spotter:${spotter}`);
+    await frame.getByTestId("feed").waitFor({ timeout: 90_000 });
+    await o.waitForTimeout(1500);
+    await hideBadge();
+    await shot(o, "observer-spotter", PHONE, 500);
+
+    // the head judge's column: "1 observer watching" (the organiser's console reads the same)
+    await page.setViewportSize(LAPTOP);
+    await open(page, `/head/${simId}`);
+    await page.getByTestId("observers-watching").waitFor({ timeout: 90_000 });
+    await page.addStyleTag({ content: "nextjs-portal, [data-testid=note-button] { display: none !important; }" });
+    await page.getByTestId("judges").screenshot({ path: path.join(OUT, "console-observers-1280.png") });
+
+    // the simulator's View as… card with the Observer row
+    await open(page, `/org/events/${simId}/simulate`);
+    await page.getByTestId(`view-observer-${seat!.id}`).waitFor({ timeout: 60_000 });
+    await page.addStyleTag({ content: "nextjs-portal, [data-testid=note-button] { display: none !important; }" });
+    await page.getByTestId("sim-viewas").screenshot({ path: path.join(OUT, "simulator-viewas-observer-1280.png") });
+    await page.getByTestId("sim-stop").click().catch(() => undefined);
+  } finally {
+    await watcher.close().catch(() => undefined);
+    if (simId) {
+      const { data } = await db.from("sim_seats").select("virtual_user").eq("event_id", simId);
+      for (const r of data ?? []) if (r.virtual_user) await db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
+    }
+    await w.cleanup();
   }
 });

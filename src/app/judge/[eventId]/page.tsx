@@ -15,6 +15,7 @@ export default async function JudgePage({ params, searchParams }: { params: Prom
   if (ctx.viewer.kind === "organiser") redirect(`/head/${eventId}`);
   if (ctx.viewer.role === "spotter") redirect(`/spot/${eventId}`);
   if (ctx.viewer.role === "head") redirect(`/head/${eventId}`);
+  if (ctx.viewer.role === "observer") redirect(`/observe/${eventId}`);
   if (ctx.viewer.role !== "judge") redirect("/seat?card=1");
   return <JudgeRoot ctx={ctx} pinnedHeatId={heat ?? null} />;
 }

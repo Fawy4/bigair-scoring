@@ -9,6 +9,7 @@ import { auditLine, type AuditRow } from "@/lib/live/audit-lines";
 import { resolveFlag } from "@/lib/live/head-actions";
 import { sheetSubmitted, type HeadModel } from "@/lib/live/head-model";
 import { judgeNames, judgeWordOf } from "@/lib/live/judge-names";
+import { watchingCount } from "@/lib/live/observer";
 import type { HeatRow } from "@/lib/live/types";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ interface SeatInfo {
 export function useSideData(supabase: SupabaseClient, eventId: string, heat: HeatRow, panel: string[], seatNames: Record<string, string>, refreshKey: number, wanted: { audit: boolean }) {
   const [seats, setSeats] = useState<SeatInfo[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
+  const [observers, setObservers] = useState<Array<{ role: string; last_seen_at: string | null }>>([]);
 
   const loadSeats = useCallback(async () => {
     if (panel.length === 0) return;
@@ -48,11 +50,21 @@ export function useSideData(supabase: SupabaseClient, eventId: string, heat: Hea
     if (data) setAudit((data as unknown as AuditRow[]).filter((r) => !["insert", "update", "delete"].includes(r.action)).slice(0, 30));
   }, [supabase, eventId, heat.id]);
 
+  // observers are never judges: they only show as "2 observers watching"
+  const loadObservers = useCallback(async () => {
+    const { data } = await supabase.from("judge_seats").select("role, last_seen_at").eq("event_id", eventId).eq("role", "observer").eq("active", true).eq("status", "active");
+    if (data) setObservers(data as Array<{ role: string; last_seen_at: string | null }>);
+  }, [supabase, eventId]);
+
   useEffect(() => {
     void loadSeats();
-    const t = setInterval(() => void loadSeats(), 10_000);
+    void loadObservers();
+    const t = setInterval(() => {
+      void loadSeats();
+      void loadObservers();
+    }, 10_000);
     return () => clearInterval(t);
-  }, [loadSeats]);
+  }, [loadSeats, loadObservers]);
   useEffect(() => {
     if (!wanted.audit) return;
     void loadAudit();
@@ -61,13 +73,14 @@ export function useSideData(supabase: SupabaseClient, eventId: string, heat: Hea
   }, [loadAudit, refreshKey, wanted.audit]);
 
   const names = { ...seatNames, ...Object.fromEntries(seats.map((s) => [s.id, s.name])) };
-  return { seats, audit, judges: judgeNames(panel, names) };
+  return { seats, audit, observers, judges: judgeNames(panel, names) };
 }
 export type SideData = ReturnType<typeof useSideData>;
 
 /** Who is connected and who has submitted, one line per judge, by the seat's name. */
 export function JudgesStatus({ side, live, nowServer, heat, highlight }: { side: SideData; live: LiveHeatState; nowServer: number; heat: HeatRow; /** The judge a blocker's "Fix" pointed at. */ highlight?: string | null }) {
   const ended = heat.status !== "scheduled" && heat.status !== "running" && heat.status !== "paused";
+  const watching = watchingCount(side.observers, nowServer);
   return (
     <section data-testid="judges" className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={H.judgesHeading}>
       <h3 className="text-heading font-semibold text-beach-muted">{H.judgesHeading}</h3>
@@ -89,6 +102,11 @@ export function JudgesStatus({ side, live, nowServer, heat, highlight }: { side:
           </div>
         );
       })}
+      {watching > 0 ? (
+        <p data-testid="observers-watching" title={copy.observer.watchingHelp} className="text-small font-medium text-beach-muted">
+          {copy.observer.watching(watching)}
+        </p>
+      ) : null}
     </section>
   );
 }

@@ -795,6 +795,7 @@ The database refuses with a short code (for example `DRAW_NOT_LOCKED: Pro Men`);
 | {#code-not-signed-in} `NOT_SIGNED_IN` | nothing (the seat's “last seen” is not updated) | A phone without a session tried to report that it is alive. |
 | {#code-no-baseline} `NO_BASELINE` | “This event has no saved locked draw to go back to…” (Simulator) | The simulation has no saved starting draw. |
 | {#code-no-draw} `NO_DRAW` | [“This division has no draw yet, so there is nothing to reset.”](#err-resetparts-errors-no-draw) | The reset was refused; nothing was changed. |
+| {#code-observer-not-on-panel} `OBSERVER_NOT_ON_PANEL` | “That did not work…” (Officials) | An Observer seat can never be on a panel (and a seat on a panel cannot become an observer): observers never count towards a panel. The Officials step does not offer an observer in the panel table. |
 | {#code-override-reason-required} `OVERRIDE_REASON_REQUIRED` | [“A reason is required.”](#err-liveerrors-codes-override-reason-required) | The database refused the action and said why. |
 | {#code-panel-too-small} `PANEL_TOO_SMALL` | [“‹division› needs ‹need› judges on its panel and has ‹have› — add judges in the Officials step”](#err-liveerrors-codes-panel-too-small) | Fewer judges are on the division's panel than its scoring rules need. |
 | {#code-parent-not-found} `PARENT_NOT_FOUND` | [“That item no longer exists.”](#err-liveerrors-codes-parent-not-found) | The database refused the action and said why. |

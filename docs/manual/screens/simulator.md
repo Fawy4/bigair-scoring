@@ -2,7 +2,7 @@
 
 /org/events/‹id›/simulate: rehearse an event — play it automatically at up to ×20, press a scenario, look at each person's screen, reset.
 
-Last checked: 3 Oct 2026 · Product version 0.9.2
+Last checked: 3 Oct 2026 · Product version 0.11.0
 
 ## What it is for {#si-purpose}
 
@@ -26,10 +26,13 @@ A rehearsal without riders on the water: virtual spotters log attempts, virtual 
 | **Who plays** | Each judge, spotter and the head judge: **Virtual** (the simulator) or **Real** (a phone joins with the PIN; the simulator leaves the seat alone). Each seat says who holds it now: **Simulator**, **You (View as) · seen 4 s ago**, **A phone (PIN) has this seat**, or **Waiting for a phone**. **Give back to the simulator** (or **Virtual**) gives a seat you or a phone hold back to the simulator at once. **Let go** frees a seat you hold. |
 | **How they behave** | Attempts per rider per heat, crashes %, repeated tricks %, judges' scores (Agree / Normal / Disagree), and “One judge…” misses attempts / is offline for a minute / is late. |
 | **Scenarios** | Eleven one-tap buttons: wind hold and resume, rider no-show, duplicate attempt from two spotters, judge phone dies, tie on total, attempt past the cap, re-open and republish, switch to Plan B, out of attempts, publish hold on the final and release, re-run a heat. A scenario that needs a running heat waits (“Waiting for its moment”). |
-| **View as…** | Opens the real screens in a new tab. **Public pages** (home, live heat, results, ladder, big screen) and **A rider's page** (pick the rider) — visible to your login only. Officials (head judge laptop / phone, judges, spotters): your sign-in takes that seat, one at a time, and the simulator steps aside for it. Close that tab and the simulator takes the seat back within seconds (a reload keeps it; a tab that goes quiet for 90 seconds, such as a phone that slept, gives it back too). Each seat can show its PIN (**Show PIN** / **Hide PIN**) and a single-use QR code to join from a phone. |
+| **View as…** | Opens the real screens in a new tab. **Public pages** (home, live heat, results, ladder, big screen) and **A rider's page** (pick the rider) — visible to your login only. Officials (head judge laptop / phone, judges, spotters): your sign-in takes that seat, one at a time, and the simulator steps aside for it. Close that tab and the simulator takes the seat back within seconds (a reload keeps it; a tab that goes quiet for 90 seconds, such as a phone that slept, gives it back too). Each seat can show its PIN (**Show PIN** / **Hide PIN**) and a single-use QR code to join from a phone. **Observer**: each Observer seat of the event with **Open** (the [observer view](observer.md) for your sign-in) and **Phone**; without one, “Add an Observer seat on the Officials step to look through an observer’s eyes.” The simulator never plays an observer. |
 | **Checklist** | Each scenario ticked once exercised, and the numbers of the run (heats published, attempts, scores, blockers hit); **Open the Feedback notes**. |
 | **Reset** | The same Reset as the event's: type the address (the button stays grey until you do: “Type the event's web address first.”) → **Reset to the locked draw**. A Demo with no saved draw shows **Wipe and draw again**. |
 | **Delete the simulation** | Removes the copy with everything in it (not the event it was copied from). |
+
+![View as with an Observer](../img/simulator-viewas-observer-1280.png)
+*simulator-viewas-observer-1280.png — View as…, with the Observer row.*
 
 ## What it depends on {#si-depends}
 

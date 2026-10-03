@@ -7,7 +7,7 @@ import { SeatHeartbeat } from "./heartbeat";
 export const metadata = { title: copy.seat.title };
 export const dynamic = "force-dynamic";
 
-const SCREEN: Record<string, string> = { judge: "judge", spotter: "spot", head: "head" };
+const SCREEN: Record<string, string> = { judge: "judge", spotter: "spot", head: "head", observer: "observe" };
 
 /** After joining, a phone goes straight to its own screen. The connected card stays at /seat?card=1 (and is the home of the announcer's seat). */
 export default async function SeatPage({ searchParams }: { searchParams: Promise<{ card?: string }> }) {

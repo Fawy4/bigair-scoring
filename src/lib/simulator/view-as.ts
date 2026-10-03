@@ -46,7 +46,7 @@ export function parseView(params: URLSearchParams): ViewTarget | null {
 }
 
 /** Where the door finally sends the tab. An official goes to the screen of their role. */
-export function destinationOf(t: ViewTarget, ev: { id: string; slug: string }, role?: "judge" | "head" | "spotter" | "announcer"): string {
+export function destinationOf(t: ViewTarget, ev: { id: string; slug: string }, role?: "judge" | "head" | "spotter" | "announcer" | "observer"): string {
   switch (t.kind) {
     case "spectator":
       return `/e/${ev.slug}`;
@@ -66,6 +66,7 @@ export function destinationOf(t: ViewTarget, ev: { id: string; slug: string }, r
       if (role === "spotter") return `/spot/${ev.id}`;
       if (role === "head") return `/head/${ev.id}`;
       if (role === "announcer") return `/head/${ev.id}?mode=announcer`;
+      if (role === "observer") return `/observe/${ev.id}`;
       return `/judge/${ev.id}`;
   }
 }
