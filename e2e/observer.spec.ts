@@ -100,7 +100,7 @@ test("an Observer joins with its PIN, flips through every official's screen on a
 
     const switcher = p.getByTestId("observer-switcher");
     const keys = await switcher.locator("option").evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
-    expect(keys).toEqual(expect.arrayContaining(["head-wide", "head-phone", `judge:${j1}`, "announcer", "screen", "public"]));
+    expect(keys).toEqual(expect.arrayContaining(["head-wide", "head-phone", `judge:${j1}`, "announcer", "screen", "flag", "public"]));
     expect(keys.filter((k) => k.startsWith("judge:"))).toHaveLength(3);
     expect(keys.some((k) => k.startsWith("spotter:"))).toBe(true);
     const labels = await switcher.locator("option").allTextContents();
@@ -128,6 +128,11 @@ test("an Observer joins with its PIN, flips through every official's screen on a
     for (const key of keys.filter((k) => k !== `judge:${j1}`)) {
       await switcher.selectOption(key);
       await expect(p.getByTestId("observer-frame")).toHaveAttribute("data-view", key);
+      if (key === "flag") {
+        // the flag marshal's screen opens read only for the observer (the preview of a simulation)
+        await expect(frame.getByTestId("flag-view")).toBeAttached({ timeout: 60_000 });
+        continue;
+      }
       if (key === "screen" || key === "public") {
         await expect(frame.locator("body")).toContainText(/\S/, { timeout: 60_000 });
         await expect(frame.getByText("not found", { exact: false })).toHaveCount(0);
