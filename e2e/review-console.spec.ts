@@ -208,7 +208,8 @@ test("at a 15-inch laptop width the card sits beside the rider cards for 2 and 3
       // nothing is cut off inside the card
       expect(await page.getByTestId("impression-card").evaluate((el) => el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1)).toBe(true);
     }
-    tops.push(Math.round(t.y));
+    // the table sits the same distance under the rider cards whatever the heat (anything above the cards, like the clock line, is not this layout's)
+    tops.push(Math.round(t.y - (await page.getByTestId("rider-strip").boundingBox())!.y));
   }
   expect(fits[0]).not.toBe("button");
   expect(fits[1]).not.toBe("button");

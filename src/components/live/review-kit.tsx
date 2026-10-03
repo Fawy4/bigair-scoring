@@ -118,7 +118,7 @@ interface CardProps {
 /** The grid itself, at one of the sizes of `LEVELS`: one column per judge (the table header's short name over its J-number), a Panel column, one row per rider. */
 function Grid({ judges, impressions, riders, tolerance, onCell, level, title = true }: CardProps & { level: CardLevel; title?: boolean }) {
   const size = LEVELS[level];
-  const rows = impressionGrid({ impressions, riderOrder: riders.map((r) => r.entryId), tolerance, words: { missing: "—", absent: copy.live.matrix.absent } });
+  const rows = impressionGrid({ impressions, riderOrder: riders.map((r) => r.entryId), tolerance, words: { missing: "—", absent: copy.headLive.sheetAbsent } });
   const cols = `${size.labelW}px repeat(${judges.length + 1}, ${size.cellW}px)`;
   const text = size.small ? "text-small" : "text-body";
   return (
