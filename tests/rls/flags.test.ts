@@ -127,7 +127,7 @@ describe.skipIf(!ENV_OK)("Flags: arm, start now, abort (hosted development proje
     const a = await mkHeat(f, d);
     const b = await mkHeat(f, d);
     expect(codeOf(await f.clients.head.rpc("abort_start", { p_heat: a }))).toContain("NOTHING_ARMED");
-    expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: a, p_prestart: 601 }))).toContain("BAD_PRESTART");
+    expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: a, p_prestart: 901 }))).toContain("BAD_PRESTART");
     expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: a, p_prestart: 60 }))).toBe("");
     expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: a, p_prestart: 60 }))).toContain("ALREADY_ARMED");
     // one heat at a time: an armed heat holds the water
