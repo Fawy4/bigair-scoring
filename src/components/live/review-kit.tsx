@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { CheckCircle2, CircleAlert, Hourglass, Users } from "lucide-react";
+import { CheckCircle2, CircleAlert, Hourglass, Table2, Users } from "lucide-react";
 import { RiderLabel } from "@/components/rider-label";
 import { fitCard, impressionGrid, LEVELS, type CardLevel } from "@/lib/live/impression-card";
 import type { JudgeImpressions } from "@/lib/live/impression-status";
@@ -206,11 +206,13 @@ export function ImpressionCardInline(props: CardProps) {
   const fit = room ? fitCard({ availW: room.w, availH: room.h, riders: props.riders.length, judges: props.judges.length }) : "button";
   return (
     // the region has no height of its own: the row is as tall as the rider cards, and the card is drawn inside that room
-    <div ref={region} data-testid="impression-region" data-fit={String(fit)} data-room={room ? `${room.w}x${room.h}` : ""} className="relative min-h-tap min-w-[5.5rem] flex-[1_1_5.5rem] self-stretch">
+    <div ref={region} data-testid="impression-region" data-fit={String(fit)} data-room={room ? `${room.w}x${room.h}` : ""} className="relative min-h-tap min-w-[2.75rem] flex-[1_1_2.75rem] self-stretch">
       {fit === "button" ? (
         <>
-          <button type="button" data-testid="impression-button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={cn(small, "h-full min-h-tap w-full")}>
-            {I.button}
+          <button type="button" data-testid="impression-button" aria-expanded={open} onClick={() => setOpen((o) => !o)} aria-label={I.button} title={I.button} className={cn(small, "flex h-full min-h-tap w-full items-center justify-center gap-1 px-1")}>
+            <Table2 aria-hidden className="size-4 shrink-0" />
+            {/* the word shows when there is room for it; in a narrow slot the icon and the name for assistive technology stay */}
+            <span className={cn("truncate", room && room.w < 84 && "sr-only")}>{I.button}</span>
           </button>
           {open ? (
             <div data-testid="impression-popover" role="dialog" aria-label={I.heading} className="absolute right-0 top-full z-30 mt-1 flex flex-col gap-1 rounded-card border border-beach-border bg-beach-bg p-2 shadow-lg">
