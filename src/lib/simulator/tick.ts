@@ -466,9 +466,10 @@ async function skipInside(db: SimDb, eventId: string): Promise<PanelResult> {
   // a few rounds, each writes what is left (scores) until nothing changes
   for (let round = 0; round < 8; round++) {
     const before = await loadHeatData(db, heat.id);
+    const written = before.scores.size; // judgeStep adds what it writes to `before`, so the count is taken first
     await judgeStep(db, fast, heat, before, false, true);
     const after = await loadHeatData(db, heat.id);
-    if (after.scores.size === before.scores.size) break;
+    if (after.scores.size === written) break;
   }
   await logLine(db, eventId, "heat", null, T.log.fastForwarded(heatPlace(heat, snap.ctx)));
   forgetContext(eventId);
@@ -497,9 +498,10 @@ async function endAndPublishInside(db: SimDb, eventId: string): Promise<PanelRes
   // the virtual judges finish: a few rounds, each writes what is left (scores, Impression / Variety scores) and submits
   for (let round = 0; round < 8; round++) {
     const before = await loadHeatData(db, heat.id);
+    const had = [before.scores.size, before.impressions.size, before.submitted.size]; // judgeStep adds what it writes to `before`, so the counts are taken first
     await judgeStep(db, snap, heat, before, true, true);
     const after = await loadHeatData(db, heat.id);
-    if (after.scores.size === before.scores.size && after.impressions.size === before.impressions.size && after.submitted.size === before.submitted.size) break;
+    if (after.scores.size === had[0] && after.impressions.size === had[1] && after.submitted.size === had[2]) break;
   }
   const line = await headStep(db, snap, heat, await loadHeatData(db, heat.id));
   await logLine(db, eventId, "heat", null, T.log.endedAndPublished(heatPlace(heat, snap.ctx)));

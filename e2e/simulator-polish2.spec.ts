@@ -157,9 +157,10 @@ test("item 7: Skip to end of heat fast-forwards the virtual officials and leaves
     const perRider = new Map<string, number>();
     for (const a of (await w.db.from("trick_attempts").select("entry_id").eq("heat_id", heatId)).data ?? []) perRider.set(a.entry_id, (perRider.get(a.entry_id) ?? 0) + 1);
     for (const sl of slots) expect(perRider.get(sl.entry_id as string) ?? 0, "every rider has all attempts logged").toBeGreaterThanOrEqual(3);
-    const ids = ((await w.db.from("trick_attempts").select("id").eq("heat_id", heatId)).data ?? []).map((x) => x.id);
-    const scores = (await w.db.from("trick_scores").select("attempt_id").in("attempt_id", ids)).data ?? [];
-    expect(scores.length, "every attempt scored by the three virtual judges").toBeGreaterThanOrEqual(ids.length * 3 - 3);
+    // a crash needs no score: every landed attempt is scored by each of the three virtual judges
+    const landed = ((await w.db.from("trick_attempts").select("id").eq("heat_id", heatId).eq("status", "landed")).data ?? []).map((x) => x.id);
+    const scores = (await w.db.from("trick_scores").select("attempt_id").in("attempt_id", landed)).data ?? [];
+    expect(scores.length, "every landed attempt scored by the three virtual judges").toBe(landed.length * 3);
     expect((await w.db.from("heats").select("status").eq("id", heatId).single()).data!.status, "the heat is still running: it waits for End heat").toBe("running");
     expect(((await w.db.from("judge_sheets").select("submitted_at").eq("heat_id", heatId)).data ?? []).filter((x) => x.submitted_at)).toHaveLength(0);
     // End heat and publish: the heat ends, the virtual judges finish and submit, the virtual head judge publishes
