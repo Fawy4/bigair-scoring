@@ -1112,7 +1112,7 @@ See the release entry 0.11.0 in docs/RELEASES.md (8 checks on Demo).
 
 ### Done
 - **A1a-1:** riders tied on total with no counted trick are a genuine tie (`rank.ts`), flagged, explained, and Publish waits for the head judge. Test: final of 2 where both crash everything.
-- **A1a-3:** a score off the division's step or outside the scale is refused by the database (migration `20261016100000_fix_audit_1a_score_step.sql`: the four write functions plus a trigger for direct writes) with a sentence naming the step and the two nearest values; the engine never blanks a heat (rounds, notes it in the explanation, leaves out what is not a number). Reachability of an off-step score through each path is written up in docs/AUDIT.md.
+- **A1a-3:** a score off the division's step or outside the scale is refused by the database (migration `20261019100000_fix_audit_1a_score_step.sql`: the four write functions plus a trigger for direct writes) with a sentence naming the step and the two nearest values; the engine never blanks a heat (rounds, notes it in the explanation, leaves out what is not a number). Reachability of an off-step score through each path is written up in docs/AUDIT.md.
 - Tests: scoring engine 167, whole suite 2119 passing, 4 expected failures left (A1a-2, A1a-4, A1a-5, A1a-7). Manual: errors and troubleshooting regenerated, judge screen page, changelog. Release entry 0.11.1.
 
 ### Not done

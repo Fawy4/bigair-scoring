@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildFixture, ENV_OK, type Fixture } from "./helpers";
 import { ago, codeOf, key, mkDivision, mkHeat, type LiveDivision } from "./live-helpers";
 
-// Fix session 1 (audit A1a-3), migration 20261016100000_fix_audit_1a_score_step.sql: a score that is not on the division's step is refused by the
+// Fix session 1 (audit A1a-3), migration 20261019100000_fix_audit_1a_score_step.sql: a score that is not on the division's step is refused by the
 // database itself, whichever way it arrives (a judge's function, the head judge's function, or a direct write to the table).
 const MODEL = {
   trick: { entry: "single", scale: { min: 0, max: 10, step: 0.1 } },
@@ -48,7 +48,7 @@ describe.skipIf(!ENV_OK)("A score off the division's step is refused by the data
   });
 
   it("an Impression / Variety score follows its own step (0.5 here)", async () => {
-    const h = await mkHeat(f, d, { status: "running", started_at: ago(60) });
+    const h = await mkHeat(f, d, { status: "ended", started_at: ago(900), ended_at: ago(300) }); // judges score the Impression after the heat ends
     expect(codeOf(await imp(h, d.entries[0], 6.75))).toBe("SCORE_OFF_STEP: 0.5|6.5|7");
     expect(codeOf(await imp(h, d.entries[0], 7.3))).toContain("SCORE_OFF_STEP");
     expect(codeOf(await imp(h, d.entries[0], 11))).toBe("SCORE_OUT_OF_RANGE: 0|10");

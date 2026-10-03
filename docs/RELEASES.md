@@ -19,7 +19,7 @@ PR: #29
 ### What changed
 - **Tie with no counted trick (audit A1a-1):** two riders on the same total who both have no counted trick (for example both crashed everything and got the same Impression) are now a real tie. The console says the tie is open, Publish is blocked until the head judge decides, and the order the riders were listed in no longer picks the winner. Before, the engine said "resolved by highest counted trick" and put them in slot order. In a final of 2 that picked the winner without anyone deciding.
 - **Scores off the step (audit A1a-3):** a score that is not on the division's step (7.25 on a 0.1 step) or outside the scale is now refused by the database for every judge and for the head judge, with a sentence that names the step and the two nearest values ("That score is not on the 0.1 step. Use 7.2 or 7.3."). The scoring engine also no longer blanks a heat for such a value: it counts the nearest allowed value and the rider's explanation says "J1: Impression 7.25 is not on the 0.1 step, counted as 7.3", so every total still appears.
-- **Needs the database change:** migration `20261016100000_fix_audit_1a_score_step.sql` must be applied to the hosted project (`npm run db:apply`) before the refusals work. The tie fix and the engine change need nothing.
+- **Needs the database change:** migration `20261019100000_fix_audit_1a_score_step.sql` must be applied to the hosted project (`npm run db:apply`) before the refusals work. The tie fix and the engine change need nothing.
 - Not changed, on purpose: the knockout sizing rule (A1a-2), copying a plan (A1a-7), and Shift / the lateness badge (A1a-4, A1a-5; see Known issues).
 
 ### What to test
