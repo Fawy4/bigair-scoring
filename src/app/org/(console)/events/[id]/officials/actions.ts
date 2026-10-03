@@ -62,7 +62,7 @@ async function issue(seat: { id: string; name: string; role: string; events: { s
 const NewSeat = z.object({
   eventId: Uuid,
   name: z.string().trim().min(2, T.nameRequired).max(60, T.nameRequired),
-  role: z.enum(["judge", "head", "spotter", "announcer"]),
+  role: z.enum(["judge", "head", "spotter", "announcer", "observer"]),
   headAlsoScores: z.boolean().optional(),
 });
 
@@ -222,7 +222,7 @@ export async function prepareCards(eventId: string, seatId: string | null): Prom
   const pins = new Map((stored ?? []).map((s) => [s.id, s.pin_enc]));
   const key = tryPinKey(); // without a key the cards still print, each saying that its PIN cannot be shown
   const origin = await requestOrigin();
-  const order = { head: 0, judge: 1, spotter: 2, announcer: 3 } as Record<string, number>;
+  const order = { head: 0, judge: 1, spotter: 2, announcer: 3, observer: 4 } as Record<string, number>;
   const cards: CardData[] = [];
   for (const s of [...(seats ?? [])].sort((a, b) => (order[a.role] ?? 9) - (order[b.role] ?? 9) || a.name.localeCompare(b.name, "en"))) {
     const enc = pins.get(s.id);

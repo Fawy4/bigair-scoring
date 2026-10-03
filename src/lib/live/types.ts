@@ -122,7 +122,7 @@ export interface SheetRow {
 }
 export const SHEET_COLUMNS = "id, heat_id, judge_seat_id, submitted_at, reopened_at, updated_at";
 
-export type SeatRole = "judge" | "head" | "spotter" | "announcer";
+export type SeatRole = "judge" | "head" | "spotter" | "announcer" | "observer";
 
 export interface LiveDivisionContext {
   id: string;
@@ -147,7 +147,18 @@ export interface LiveRiderInfo extends LabelRider {
 export interface LiveContext {
   event: { id: string; name: string; slug: string; timezone: string; judgesMayLogAttempts: boolean; maxRunningHeats: number; isSimulation: boolean; readyCallMin: number };
   /** Who is looking: a seat, or an organiser of the event (the head page only). */
-  viewer: { kind: "seat"; seatId: string; name: string; role: SeatRole; spotterEntries: string[]; spotterColours: string[] } | { kind: "organiser"; name: string };
+  viewer:
+    | {
+        kind: "seat";
+        seatId: string;
+        name: string;
+        role: SeatRole;
+        spotterEntries: string[];
+        spotterColours: string[];
+        /** Set when an Observer seat looks at this official's screen: the observer's own seat. The screen is drawn for `seatId`, read only. */
+        observer?: { seatId: string; name: string };
+      }
+    | { kind: "organiser"; name: string };
   divisions: LiveDivisionContext[];
   rounds: Array<{ id: string; division_id: string; name: string; short_name: string | null; sort_order: number }>;
   heats: HeatRow[];

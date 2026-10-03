@@ -392,6 +392,7 @@ export const CODES_WITHOUT_SENTENCE: Record<string, { shown: string; meaning: st
   INVALID_SETTINGS: { shown: "“The settings could not be saved…” (Organisation settings)", meaning: "An organisation setting was not valid (for example the time zone)." },
   INVALID_STATUS: { shown: "“That did not work…” (Trick proposals)", meaning: "An unknown proposal status." },
   NO_BASELINE: { shown: "“This event has no saved locked draw to go back to…” (Simulator)", meaning: "The simulation has no saved starting draw." },
+  OBSERVER_NOT_ON_PANEL: { shown: "“That did not work…” (Officials)", meaning: "An Observer seat can never be on a panel (and a seat on a panel cannot become an observer): observers never count towards a panel. The Officials step does not offer an observer in the panel table." },
   NOT_SIGNED_IN: { shown: "nothing (the seat's “last seen” is not updated)", meaning: "A phone without a session tried to report that it is alive." },
   PIN_IN_USE: { shown: "“Could not find a free PIN; try again.”", meaning: "The random PIN was already taken; the screen tries again." },
   PIN_MUST_BE_6_DIGITS: { shown: "“That did not work…” (Officials)", meaning: "A PIN must be six digits." },

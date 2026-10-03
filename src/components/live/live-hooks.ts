@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { beep } from "@/lib/live/beep";
 import { timerCues } from "@/lib/live/timer-cues";
 import { holdScreenAwake } from "@/lib/live/wake-lock";
+import { useObserving } from "./read-only";
 
 /** The phone's own idea of "online", from the browser. */
 export function useOnline(): boolean {
@@ -43,12 +44,13 @@ export function useWakeLock(active: boolean): void {
  * a second call changes nothing, so "end at zero" needs no cron job and no trusted phone. Tries again every 3 seconds until the heat has ended.
  */
 export function useEndAtZero(supabase: SupabaseClient, heatId: string | null, timeUp: boolean, status: string | undefined, enabled = true): void {
+  const observing = useObserving(); // an observed screen never asks (the database would refuse an observer anyway)
   useEffect(() => {
-    if (!enabled || !heatId || !timeUp || status !== "running") return;
+    if (observing || !enabled || !heatId || !timeUp || status !== "running") return;
     // a Supabase call only goes out when it is awaited (or .then is called), so `void` would send nothing
     const call = () => void Promise.resolve(supabase.rpc("end_heat_if_due", { p_heat: heatId })).catch(() => {});
     call();
     const t = setInterval(call, 3000);
     return () => clearInterval(t);
-  }, [supabase, heatId, timeUp, status, enabled]);
+  }, [supabase, heatId, timeUp, status, enabled, observing]);
 }

@@ -15,6 +15,7 @@ export default async function SpotterPage({ params, searchParams }: { params: Pr
   if (ctx.viewer.kind === "organiser") redirect(`/head/${eventId}`);
   if (ctx.viewer.role === "judge") redirect(`/judge/${eventId}`);
   if (ctx.viewer.role === "head") redirect(`/head/${eventId}`);
+  if (ctx.viewer.role === "observer") redirect(`/observe/${eventId}`);
   if (ctx.viewer.role !== "spotter") redirect("/seat?card=1");
   if (!ctx.event) notFound();
   return <SpotterRoot ctx={ctx} pinnedHeatId={heat ?? null} />;

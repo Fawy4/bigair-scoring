@@ -2,7 +2,7 @@
 
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
-import { Binoculars, ExternalLink, Eye, EyeOff, Gavel, House, Megaphone, Monitor, Radio, ShieldCheck, Smartphone, Trophy, User, Network, type LucideIcon } from "lucide-react";
+import { Binoculars, ExternalLink, Eye, EyeOff, ScanEye, Gavel, House, Megaphone, Monitor, Radio, ShieldCheck, Smartphone, Trophy, User, Network, type LucideIcon } from "lucide-react";
 import { Button, disabledWhen } from "@/components/org/button";
 import { Pill } from "@/components/live/pill";
 import { seatGroups, viewHref, type SeatRole } from "@/lib/simulator/view-as";
@@ -153,6 +153,27 @@ export function ViewAs({ eventId, sim }: { eventId: string; sim: Sim }) {
             }),
           )}
         </div>
+        <h3 className="pt-1 text-small font-semibold text-beach-muted">{copy.observer.viewAsGroup}</h3>
+        {status.observers.length ? (
+          status.observers.map((o) => (
+            <div key={o.id} className="flex min-h-[var(--org-row)] items-center justify-between gap-2 rounded-[8px] border border-beach-line px-3 py-1">
+              <span className="flex min-w-0 flex-1 items-center gap-2 text-body font-semibold">
+                <ScanEye aria-hidden className="size-4 shrink-0 text-beach-muted" />
+                <span className="truncate">{o.name}</span>
+              </span>
+              <span className="flex shrink-0 items-center gap-1">
+                <Button variant="secondary" icon={ExternalLink} aria-label={`${T.open} ${o.name}`} data-testid={`view-observer-${o.id}`} href={viewHref(eventId, { kind: "seat", seatId: o.id })} target="_blank">
+                  {T.open}
+                </Button>
+                <Button variant="secondary" icon={Smartphone} aria-label={`${T.phone}: ${o.name}`} data-testid={`view-phone-${o.id}`} onClick={() => void showPhone(o.id)}>
+                  {T.phone}
+                </Button>
+              </span>
+            </div>
+          ))
+        ) : (
+          <p className="text-small font-medium text-beach-muted" data-testid="view-observer-none">{copy.observer.viewAsNone}</p>
+        )}
         {phone ? <PhoneBox info={phone} pending={pending} onClose={() => setPhone(null)} onNewPin={() => void showPhone(phone.seatId, true)} /> : null}
       </div>
 

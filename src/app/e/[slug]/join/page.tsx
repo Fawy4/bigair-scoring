@@ -10,7 +10,7 @@ import { copy } from "@/lib/ui-copy";
 export const dynamic = "force-dynamic";
 
 const J = copy.pub.join;
-const PIN_ROLES = ["judge", "spotter", "head", "announcer"] as const;
+const PIN_ROLES = ["judge", "spotter", "head", "announcer", "observer"] as const;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const site = await loadSite((await params).slug);
@@ -28,7 +28,7 @@ function Card({ href, title, text, testId }: { href: string; title: string; text
 }
 
 /**
- * The role picker of an event. Judge, Spotter, Head judge and Announcer open the PIN form for that role; Leaderboard, Ladder and Timetable need no PIN. Every card is its
+ * The role picker of an event. Judge, Spotter, Head judge, Announcer and Observer open the PIN form for that role; Leaderboard, Ladder and Timetable need no PIN. Every card is its
  * own address, so it can be shared on its own. "Not on the list? Add your name" stays below.
  */
 export default async function EventJoinPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ t?: string; role?: string }> }) {

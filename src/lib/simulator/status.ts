@@ -52,6 +52,7 @@ export async function loadSimStatus(db: SimDb, eventId: string): Promise<StatusR
     ? { heatId: live.id, label: heatPlace(live, snap.ctx), status: live.status, remainingSec: live.status === "running" || live.status === "paused" ? remainingSec(clockOf(live), snap.nowMs) : 0 }
     : { heatId: null, label: null, status: null, remainingSec: null };
 
+  const { data: observerRows } = await db.service.from("judge_seats").select("id, name").eq("event_id", eventId).eq("role", "observer").eq("active", true).eq("status", "active").order("name");
   const { data: views } = await db.service.from("sim_seats").select("seat_id, viewed_by, view_seen_at").eq("event_id", eventId);
   const seenOf = new Map((views ?? []).filter((v) => v.viewed_by === db.userId && v.view_seen_at).map((v) => [v.seat_id, Math.max(0, Math.round((snap.nowMs - Date.parse(v.view_seen_at!)) / 1000))] as const));
   const seats: SeatView[] = snap.seats.map((s) => {
@@ -78,6 +79,7 @@ export async function loadSimStatus(db: SimDb, eventId: string): Promise<StatusR
       control: snap.control,
       stats: stats.data as unknown as SimStats,
       seats,
+      observers: observerRows ?? [],
       riders,
       now,
       line: statusLine(snap, now, snap.control.blocker),

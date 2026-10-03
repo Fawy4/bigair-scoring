@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { pickCurrentHeat, type HeatPhase } from "@/lib/live/current-heat";
+import { maskFor } from "@/lib/live/observer";
 import type { ActivePlan } from "@/lib/live/run-order";
 import { rowToPlan, type PlanRow } from "@/lib/schedule/plans";
 import type { Json } from "@/lib/supabase/database.types";
@@ -85,6 +86,9 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
   const viewer = ctx.viewer;
   const role = viewer.kind === "seat" ? viewer.role : "organiser";
   const seatId = viewer.kind === "seat" ? viewer.seatId : undefined;
+  // an observer reads every row; an observed screen shows only the rows that official's own phone gets
+  const observed = viewer.kind === "seat" && viewer.observer ? { role: viewer.role, seatId: viewer.seatId } : null;
+  const shownSnap = useMemo(() => (observed ? maskFor(snap, observed.role, observed.seatId) : snap), [snap, observed?.role, observed?.seatId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const panels = useMemo(() => ctx.divisions.map((d) => ({ divisionId: d.id, seatIds: d.panelSeatIds })), [ctx.divisions]);
   const submittedHeatIds = useMemo(() => new Set(snap.sheets.filter((s) => s.judge_seat_id === seatId && s.submitted_at && (!s.reopened_at || s.submitted_at > s.reopened_at)).map((s) => s.heat_id)), [snap.sheets, seatId]);
@@ -240,5 +244,5 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
     [heatId],
   );
 
-  return { heats, heat, phase, ...snap, apply, plans, applyPlan, connected: up && (typeof navigator === "undefined" || navigator.onLine), submittedHeatIds: submittedMemory.current, refresh };
+  return { heats, heat, phase, ...shownSnap, apply, plans, applyPlan, connected: up && (typeof navigator === "undefined" || navigator.onLine), submittedHeatIds: submittedMemory.current, refresh };
 }
