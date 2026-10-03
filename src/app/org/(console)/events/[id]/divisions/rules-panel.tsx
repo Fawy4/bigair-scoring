@@ -16,7 +16,8 @@ import { addRoundAfter } from "@/lib/format-ui/custom-ladder";
 import { GENERATOR, heatSizes, KIND_PRESET_KEY, KINDS, paramOf, withHeatName, withLadderKind, withRoundName, type GeneratedKind } from "@/lib/format-ui/ladder-kind";
 import { previewFormat } from "@/lib/format-ui/preview";
 import { formatSentence } from "@/lib/format-ui/sentence";
-import { countFields } from "@/lib/schema-form/count";
+import { countFields, countVisible } from "@/lib/schema-form/count";
+import { scoringMoreHidden, SCORING_FLAT_PATHS } from "@/lib/scoring-ui/visibility";
 import { exportPreset, type PresetKind } from "@/lib/presets/io";
 import { presetGroups, type PresetRow } from "@/lib/presets/options";
 import { FormatTemplateSchema, type FormatTemplate } from "@/lib/schemas/format-template";
@@ -32,14 +33,13 @@ import type { DivisionRow } from "./divisions-manager";
 import { CustomBuilder } from "./custom-builder";
 import { LadderBuilder } from "./ladder-builder";
 import { FormatSimple, ladderKindOf } from "./format-simple";
-import { perRoundRows } from "@/lib/format-ui/per-round";
+import { timingRows, TIMING_MORE_HIDDEN } from "@/lib/format-ui/timing";
 import { PerRoundLengths, WarmUpField } from "./per-round-lengths";
 import { ScoringSimple } from "./scoring-simple";
 
 const R = copy.rules;
 
 /** Settings the Simple part of the screen already shows; "Show all settings" adds everything else below them. */
-const SCORING_SIMPLE_PATHS = ["heat.maxAttemptsPerRider", "panel.minJudges", "panel.aggregate"];
 const FORMAT_SIMPLE_PATHS = [
   "generator.params.heatSize",
   "generator.params.minHeatSize",
@@ -141,7 +141,7 @@ export function RulesPanel({
   // what "Apply to draw" does differently from the design (the draw always uses the division's real confirmed riders)
   const difference = useMemo(() => designDifference(riders, division.riders.length), [riders, division.riders.length]);
   // the rounds of "Heat length per round": those of the preview, pre-filled with the single settings' heat length (see perRoundRows)
-  const perRound = useMemo(() => (template && !isFixed ? perRoundRows(template, riders) : []), [template, isFixed, riders]);
+  const perRound = useMemo(() => (working && template ? timingRows(working as Record<string, unknown>, riders) : []), [working, template, riders]);
 
   function choose(id: string) {
     const row = presets.find((p) => p.id === id);
@@ -477,20 +477,20 @@ export function RulesPanel({
             </div>
           ) : null}
 
-          {working && !isFixed && !isLadder ? <PerRoundLengths working={working as Record<string, unknown>} rounds={perRound} onChange={setValue} readOnly={locked} emptyReason={template ? undefined : copy.formatSimple.perRound.emptyInvalid} /> : null}
+          {working && !isLadder ? <PerRoundLengths working={working as Record<string, unknown>} rounds={perRound} onChange={setValue} readOnly={locked} emptyReason={template ? undefined : copy.formatSimple.perRound.emptyInvalid} /> : null}
         </div>
       ) : null}
     </div>
   );
 
   const advancedFields = scoring
-    ? countFields(scoringNodes, SCORING_HIDDEN, SCORING_SIMPLE_PATHS)
-    : countFields(formatNodes, (working as { kind?: string } | null)?.kind === "fixed" ? [...FORMAT_HIDDEN, "generator", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"] : [...FORMAT_HIDDEN, "rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"], isFixed ? [] : FORMAT_SIMPLE_PATHS);
+    ? countVisible(scoringNodes, working, { hidden: SCORING_HIDDEN, hiddenPaths: scoringMoreHidden(working), flatPaths: SCORING_FLAT_PATHS })
+    : countFields(formatNodes, (working as { kind?: string } | null)?.kind === "fixed" ? [...FORMAT_HIDDEN, "generator", "ladder", "roundDurationMin", "roundWarmUpMin", "roundBreakAfterHeatMin", "roundNames", "heatNames"] : [...FORMAT_HIDDEN, "rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundBreakAfterHeatMin", "roundNames", "heatNames"], [...(isFixed ? [] : FORMAT_SIMPLE_PATHS), ...(isLadder ? [] : TIMING_MORE_HIDDEN)]);
   const advanced = working ? (
     <div className="org-new flex min-w-0 flex-col gap-3 py-2">
       {scoring ? (
         <>
-          <SchemaForm node={scoringNodes} value={working} onChange={setValue} errors={errors} readOnly={locked} selectOptions={selectOptions} hiddenPaths={SCORING_SIMPLE_PATHS} />
+          <SchemaForm node={scoringNodes} value={working} onChange={setValue} errors={errors} readOnly={locked} selectOptions={selectOptions} hiddenPaths={scoringMoreHidden(working)} flatPaths={SCORING_FLAT_PATHS} />
           {advancedExtra}
         </>
       ) : (
@@ -504,14 +504,14 @@ export function RulesPanel({
             readOnly={locked}
             hidden={
               (working as { kind?: string }).kind === "fixed"
-                ? ["generator", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"]
+                ? ["generator", "ladder", "roundDurationMin", "roundWarmUpMin", "roundBreakAfterHeatMin", "roundNames", "heatNames"]
                 : (working as { kind?: string }).kind === "ladder"
-                  ? ["generator", "rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"]
-                  : ["rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundNames", "heatNames"]
+                  ? ["generator", "rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundBreakAfterHeatMin", "roundNames", "heatNames"]
+                  : ["rounds", "ladder", "roundDurationMin", "roundWarmUpMin", "roundBreakAfterHeatMin", "roundNames", "heatNames"]
             }
             selectOptions={selectOptions}
             newItem={newItem}
-            hiddenPaths={isFixed ? [] : FORMAT_SIMPLE_PATHS}
+            hiddenPaths={[...(isFixed ? [] : FORMAT_SIMPLE_PATHS), ...(isLadder ? [] : TIMING_MORE_HIDDEN)]}
           />
         </>
       )}

@@ -2,7 +2,7 @@
 
 Every refusal and error sentence the product can show, word for word, with where it appears, what it means and how to fix it; then every database code.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.9.1
 
 **How to use it.** Find the sentence you see (use the search box at the top of Help, or follow the **Learn more** link that the organiser screens put after a refusal). A value the product fills in is written as ‹name›, for example “‹heat› is running. End it first.” stands for “Heat 3 is running. End it first.” The [troubleshooting page](troubleshooting.md) lists the same sentences alphabetically, and the problems that have no sentence (a grey button, a blank page, wrong times).
 
@@ -99,6 +99,8 @@ Last checked: 2 Oct 2026 · Product version 0.9.0
 | {#err-headlive-flagoutundecided} “Two riders are tied at the cut: choose who is flagged out.” | Head console dialogs | The head console needs a decision or a reason first. | Tick the rider to flag out. |
 | {#err-headlive-pastcapneedsreason} “That rider has used every attempt. Adding one more is saved with your reason.” | Head console dialogs | The head console needs a decision or a reason first. | Follow the sentence. |
 | {#err-headlive-pastcapnotallowed} “Only the head judge can add an attempt past the cap.” | Head console dialogs | An organiser or head judge seat is needed to add an attempt past the cap. | Follow the sentence. |
+| {#err-headlive-sheetincomplete} “Every rider needs a score or Absent before the sheet can be submitted. Save keeps what you typed so far.” | Head console dialogs | Shown on a judge's Impression / Variety sheet while a rider has neither a score nor Absent: Save and submit stays grey. | Give every rider a score or Absent. Save keeps what you typed so far without submitting. |
+| {#err-headlive-sheetstillmissing} “‹n› riders have no Impression / Variety score from this judge yet. Enter it, or set the judge to Absent for them.” | Head console dialogs | The head judge pressed Save and submit on a judge's Impression / Variety sheet while a rider still has no score from that judge. | Enter the score for each rider shown as missing, or press Judge absent for this rider, then submit again. |
 | {#err-headlive-practicenoheat} “Start a heat first: the feed plays into the running heat.” | Head console dialogs | The head console needs a decision or a reason first. | Start a heat, then Start the practice feed. |
 
 ### Head console, judge and spotter (database answers)
@@ -663,12 +665,14 @@ Last checked: 2 Oct 2026 · Product version 0.9.0
 |---|---|---|---|
 | {#err-simulator-notsimulation-notdrawn} “‹n› divisions have no locked draw in the copy. Lock their draw on the Draw step of the copy before pressing Start.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Open the copy's Draw step and lock each division's draw before Start. |
 | {#err-simulator-needlock} “‹n› divisions have no locked draw. The simulator plays locked draws only: lock them on the Draw step.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Draw step → Lock draw for each division (of the simulation copy). |
+| {#err-simulator-skip-noheat} “No heat is on the water, so there is nothing to skip. Start the auto-play first.” | Simulator panel (/org/events/‹id›/simulate) | Skip to end of heat was pressed while no heat was running, paused or waiting to be published. | Press Start (or Run the whole event) and skip once a heat is on the water. |
+| {#err-simulator-skip-why} “Available while a heat is running, paused or waiting to be published.” | Simulator panel (/org/events/‹id›/simulate) | Skip to end of heat is grey: no heat is on the water or waiting to be published. | Start the auto-play; the button turns on when a heat starts. |
 | {#err-simulator-play-lines-waithead} “‹heat› is waiting for the head judge, who is a real person. Review and publish it on the head console.” | Simulator panel (/org/events/‹id›/simulate) | The head judge seat is set to Real or held by a person, so the simulator waits. | Publish on the head console, or set the head judge to Virtual. |
 | {#err-simulator-play-lines-waitjudges} “‹heat› is waiting for ‹names› (a real person) to submit.” | Simulator panel (/org/events/‹id›/simulate) | A judge seat set to Real has not submitted. | Submit on that phone, or set the judge to Virtual. |
 | {#err-simulator-play-lines-hold} “The run order is on hold. Resume it to carry on.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Resume the run order (Go live → Resume at…, or the scenario button again). |
 | {#err-simulator-play-lines-notready} “‹heat› is not ready: its draw is not locked or a seat has no rider yet.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Lock the division's draw; finish the earlier heats that fill this heat's seats. |
 | {#err-simulator-play-lines-stoppedatblocker} “Stopped at a blocker: ‹text›” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
-| {#err-simulator-play-lines-busy} “Another tab is playing this simulation.” | Simulator panel (/org/events/‹id›/simulate) | Auto-play runs in one tab at a time. | Close the other tab, or use it. |
+| {#err-simulator-play-lines-busy} “Another tab is playing this simulation.” | Simulator panel (/org/events/‹id›/simulate) | Another tab asked for a step while this one was still working on its own (two panel tabs of the same simulation). With one tab open you should not see it. | Close the other tab, or use it. If you see it with one tab open, reload the page. |
 | {#err-simulator-log-failed} “‹label›: not done. ‹why›” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
 | {#err-simulator-log-norunning} “No heat is running.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |
 | {#err-simulator-log-noriders} “There is nobody to do it to.” | Simulator panel (/org/events/‹id›/simulate) | The simulator could not do it. | Follow the sentence. |

@@ -13,6 +13,7 @@ import { errorSentence, parseError } from "./errors";
 import { heatInputFromRows } from "./heat-input";
 import { judgeWordFor } from "./judge-names";
 import { publishChecklist, type ChecklistItem } from "./publish-checklist";
+import { effectiveUnsubmitted } from "./sheet-rule";
 import { ATTEMPT_COLUMNS, IMPRESSION_COLUMNS, SCORE_COLUMNS, SLOT_COLUMNS, type AttemptRow, type ImpressionRow, type ScoreRow, type SlotRow } from "./types";
 import { effectiveSetting, holdAtPublish } from "./visibility";
 import { softWord } from "./words";
@@ -85,8 +86,6 @@ export async function publishHeatCore(
   const panelSeatIds = (members ?? []).map((m) => m.judge_seat_id).filter((id) => live.has(id));
   const seatNo = new Map((members ?? []).map((m, i) => [m.judge_seat_id, i + 1] as const));
   const judgeWord = judgeWordFor((members ?? []).map((m) => m.judge_seat_id), Object.fromEntries((seats ?? []).map((s) => [s.id, s.name] as const)));
-  const submitted = new Set((sheets ?? []).filter((s) => s.submitted_at && (!s.reopened_at || s.submitted_at > s.reopened_at)).map((s) => s.judge_seat_id));
-  const unsubmitted = panelSeatIds.filter((id) => !submitted.has(id));
 
   const tieDecisions: TieDecision[] = (decisions ?? []).flatMap((d) => {
     const ids = (d.payload as { riderIds?: unknown } | null)?.riderIds;
@@ -104,10 +103,13 @@ export async function publishHeatCore(
   const slotColour = new Map((slots ?? []).map((s) => [s.entry_id, s.vest_colour] as const));
   const nameOf = new Map((entries ?? []).map((e) => [e.id, `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || "Rider"] as const));
   const labelOf = (id: string) => opts.labels?.[id] ?? (slotColour.get(id) ? softWord(String(slotColour.get(id))) : nameOf.get(id) ?? "Rider");
+  // decision P2-1: a sheet the head judge settled with Absent marks (nothing missing any more) counts as submitted
+  const unsubmitted = effectiveUnsubmitted({ panelSeatIds, sheets: sheets ?? [], blockers: result.publishBlockers, scores: (scores ?? []) as ScoreRow[], impressions: (impressions ?? []) as ImpressionRow[] });
   const checklist = publishChecklist({
     blockers: result.publishBlockers,
     unsubmitted,
     judgeWord,
+    attemptIdOf: (rider, seq) => ((attempts ?? []) as AttemptRow[]).find((a) => a.entry_id === rider && a.seq === seq && !a.deleted_at)?.id,
     riderLabel: (id) => softWord(labelOf(id)),
     impressionLabel: copy.checklist.impressionWord,
   });

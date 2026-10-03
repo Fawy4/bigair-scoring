@@ -34,7 +34,7 @@ function roundSpecsFor(template: FormatTemplate, n: number, warnings: LadderWarn
   }
   if (template.kind === "fixed") return template.rounds!;
   const g = template.generator!;
-  return withRoundWarmUps(withRoundDurations(generateRounds(g, n), template.roundDurationMin), template.roundWarmUpMin);
+  return withRoundBreaks(withRoundWarmUps(withRoundDurations(generateRounds(g, n), template.roundDurationMin), template.roundWarmUpMin), template.roundBreakAfterHeatMin);
 }
 
 /** The organiser's optional heat length per round replaces the generator's; unknown round ids are ignored. */
@@ -47,6 +47,12 @@ function withRoundDurations(specs: RoundSpec[], overrides: FormatTemplate["round
 function withRoundWarmUps(specs: RoundSpec[], overrides: FormatTemplate["roundWarmUpMin"]): RoundSpec[] {
   if (!overrides) return specs;
   return specs.map((r) => (overrides[r.id] !== undefined ? { ...r, warmUpMin: overrides[r.id] } : r));
+}
+
+/** The organiser's optional break after each heat per round replaces the division's; unknown round ids are ignored. */
+function withRoundBreaks(specs: RoundSpec[], overrides: FormatTemplate["roundBreakAfterHeatMin"]): RoundSpec[] {
+  if (!overrides) return specs;
+  return specs.map((r) => (overrides[r.id] !== undefined ? { ...r, breakAfterHeatMin: overrides[r.id] } : r));
 }
 
 function generateRounds(g: NonNullable<FormatTemplate["generator"]>, n: number): RoundSpec[] {

@@ -35,6 +35,8 @@ export interface ModeContext {
   /** Real seconds since the heat started (not capped). */
   sinceStartSec: number;
   heatDurationSec: number;
+  /** "Skip to end of heat": everything left is written now, whatever the judge's lag (a late or offline judge too). */
+  finishNow?: boolean;
 }
 
 export type JudgeWrite =
@@ -113,8 +115,8 @@ export function planScoreWrites(input: {
       const special = mode.mode !== "none" && j.seatNo === mode.specialSeatNo;
       let lag = baseLagSec(index);
       if (special && mode.mode === "late") lag += scaledSec(mode.lateSec, mode.speed);
-      if (a.ageSec < (mode.heatEnded && !(special && mode.mode === "late") ? 0 : lag)) return;
-      if (special && mode.mode === "offline" && mode.sinceStartSec < offTo && mode.sinceStartSec >= offFrom) return; // phone offline: writes wait
+      if (!mode.finishNow && a.ageSec < (mode.heatEnded && !(special && mode.mode === "late") ? 0 : lag)) return;
+      if (!mode.finishNow && special && mode.mode === "offline" && mode.sinceStartSec < offTo && mode.sinceStartSec >= offFrom) return; // phone offline: writes wait
       if (special && mode.mode === "misses" && !tied && unit(`${a.id}|${j.seatId}|miss`) < mode.missShare) {
         out.push({ kind: "missed", seatId: j.seatId, attemptId: a.id });
         return;

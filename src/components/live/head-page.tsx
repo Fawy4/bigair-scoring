@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnnouncerView } from "./announcer-view";
 import { HeadLiveConsole } from "./head-live-console";
+import type { FixTarget } from "@/lib/live/publish-checklist";
 import { TieDialog } from "./head-dialogs";
 import { BreakStrip, ControlMessage, DivisionTabs, HeatDialogs, RunOrderList, StartWarning, TimerBar, TimingButtons, WindButton } from "./head-parts";
 import { HeatControl, type ReviewProps } from "./heat-control";
@@ -73,6 +74,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   const [details, setDetails] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [tieFor, setTieFor] = useState<string[] | null>(null);
+  const [fixRequest, setFixRequest] = useState<{ target: FixTarget; n: number } | null>(null);
   const live = useLiveHeat(supabase, ctx, nowServer, streamId);
   const viewer = ctx.viewer;
   const seatId = viewer.kind === "seat" ? viewer.seatId : null;
@@ -170,7 +172,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
     void live.refresh();
     setRefreshKey((k) => k + 1);
   }, [live]);
-  const review: ReviewProps | undefined = head ? { items: blockerItems, canOverride: head.checklist.canOverride, riders: riders.map((r) => ({ entryId: r.entryId, word: wordFor(r.entryId), name: r.name })), onChooseOrder: setTieFor, onChanged } : undefined;
+  const review: ReviewProps | undefined = head ? { items: blockerItems, canOverride: head.checklist.canOverride, riders: riders.map((r) => ({ entryId: r.entryId, word: wordFor(r.entryId), name: r.name })), onChooseOrder: setTieFor, onChanged, ...(wide ? { onFix: (target: FixTarget) => setFixRequest({ target, n: Date.now() }) } : {}) } : undefined;
 
   const c = useHeadController({ ctx, heats: live.heats, plans: live.plans, nowServer, selectedId: shownId, onSelect: selectHeat, onPlanChanged: live.applyPlan, review, divisionId });
 
@@ -286,7 +288,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   if (announcer) {
     return (
       <div data-testid="head-page" data-layout="announcer" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <SeatHeartbeat />
+        <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
         {shown && heatDivision && head ? <AnnouncerView nowMs={nowServer} ctx={ctx} heat={shown} division={heatDivision} attempts={live.attempts} riders={riders} head={head} wordFor={wordFor} /> : <p className="px-3 py-2 text-body font-medium text-beach-muted">{H.noHeat}</p>}
       </div>
     );
@@ -296,7 +298,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   if (!wide && scores) {
     return (
       <>
-        <SeatHeartbeat />
+        <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
         <div role="tablist" aria-label={T.tabsLabel} className="grid grid-cols-2 border-b border-beach-line bg-beach-bg">
           {(["score", "control"] as const).map((t) => (
             <button key={t} type="button" role="tab" data-tab={t} aria-selected={tab === t} onClick={() => setTab(t)} className={cn("min-h-tap text-body font-semibold", tab === t ? "border-b-2 border-beach-accent text-beach-ink" : "border-b-2 border-transparent text-beach-muted")}>
@@ -319,7 +321,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   if (!wide) {
     return (
       <div data-testid="head-page" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <SeatHeartbeat />
+        <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
         {header}
         <div className="flex flex-col gap-3 px-3 py-2">{controlColumn}</div>
         {tieDialog}
@@ -330,7 +332,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   const liveElsewhere = c.liveHeat && c.liveHeat.id !== shownId ? c.liveHeat : null;
   return (
     <div data-testid="head-page" data-layout="wide" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <SeatHeartbeat />
+      <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
       <header data-testid="top-bar" className="sticky top-0 z-10 flex flex-col gap-1.5 border-b border-beach-line bg-beach-bg px-3 py-2">
         <h1 className="sr-only">{T.title}</h1>
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -374,6 +376,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
               refreshKey={refreshKey}
               c={c}
               extras={practice}
+              fixRequest={fixRequest}
             />
           ) : (
             <p className="text-body font-medium text-beach-muted">{H.noHeat}</p>

@@ -176,3 +176,18 @@ describe("Impression / Variety scores at the end of the heat", () => {
   });
   it("is the same every time", () => expect(plan(KOTA)).toEqual(plan(KOTA)));
 });
+
+// Polish 2, item 7: "Skip to end of heat" — the virtual judges finish what is left at once, the late and the offline judge too (a Missed stays a Missed).
+describe("skip to the end of the heat", () => {
+  it("a late judge and fresh attempts: everything is written now", () => {
+    const late = { ...calm, mode: "late" as const, specialSeatNo: 2, lateSec: 60, heatEnded: true, finishNow: true };
+    const writes = run(KOTA, { attempts: attempts(4, "landed", 0), mode: late });
+    expect(writes.length).toBe(12);
+    const waiting = run(KOTA, { attempts: attempts(4, "landed", 0), mode: { ...late, finishNow: false } });
+    expect(waiting.filter((w) => w.seatId === "s2")).toHaveLength(0); // without the skip the late judge still waits
+  });
+  it("an offline judge whose phone is still off sends everything now", () => {
+    const off = { ...calm, mode: "offline" as const, specialSeatNo: 3, offlineSec: 60, heatDurationSec: 100, sinceStartSec: 50, finishNow: true };
+    expect(run(KOTA, { attempts: attempts(6), mode: off }).filter((w) => w.seatId === "s3")).toHaveLength(6);
+  });
+});

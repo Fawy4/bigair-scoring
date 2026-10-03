@@ -9,12 +9,20 @@ export interface SimpleField {
   helpKey: string;
 }
 
-/** Scoring tab, Simple: best N of M attempts, judges, how their scores are combined, Impression / Variety on or off and its scale (docs/06 decision 32). */
+/**
+ * Scoring tab, the main dials (Polish 2, item 8): what judges enter per trick, the scale, which tricks count and how many, attempts per rider, judges and how
+ * their scores are combined (trimming only with the trimmed average), Impression / Variety on or off and its scale.
+ */
 export const SCORING_SIMPLE: readonly SimpleField[] = [
+  { id: "entry", path: "trick.entry", label: copy.scoringSimple.entry, helpKey: "scoring.entry" },
+  { id: "scale", path: "trick.scale", label: copy.scoringSimple.scale, helpKey: "scoring.scale" },
+  { id: "countingType", path: "heat.counting.type", label: copy.scoringSimple.countingType, helpKey: "scoring.countingType" },
   { id: "bestN", path: "heat.counting.n", label: copy.scoringSimple.n, helpKey: "scoring.n" },
+  { id: "perCategory", path: "heat.counting.maxPerCategory", label: copy.scoringSimple.perCategory, helpKey: "scoring.maxPerCategory" },
   { id: "attempts", path: "heat.maxAttemptsPerRider", label: copy.scoringSimple.attempts, helpKey: "scoring.attempts" },
   { id: "judges", path: "panel.minJudges", label: copy.scoringSimple.judges, helpKey: "scoring.judges" },
   { id: "aggregate", path: "panel.aggregate", label: copy.scoringSimple.aggregate, helpKey: "scoring.aggregate" },
+  { id: "trimMin", path: "panel.trimMinJudges", label: copy.scoringSimple.trimMin, helpKey: "scoring.trimMin" },
   { id: "impression", path: "heat.impression", label: copy.scoringSimple.impression, helpKey: "scoring.impression" },
   { id: "impressionMax", path: "heat.impression.scale.max", label: copy.scoringSimple.impressionHigh, helpKey: "scoring.impressionRange" },
 ];

@@ -65,6 +65,11 @@ describe.skipIf(!ENV_OK)("Simulator (hosted development project)", () => {
     sim_set: { p_event: event, p_patch: { speed: 5 } },
     sim_set_mode: { p_seat: seat, p_mode: "real" },
     sim_tick_lock: { p_event: event, p_ms: 1000 },
+    sim_tick_begin: { p_event: event, p_ms: 1000 },
+    sim_tick_end: { p_event: event, p_token: randomUUID() },
+    sim_pause_heats: { p_event: event },
+    sim_resume_heats: { p_event: event },
+    sim_release_stale_views: { p_event: event, p_silent_sec: 90, p_leave_grace_sec: 6 },
     sim_log_add: { p_event: event, p_kind: "info", p_scenario: null, p_text: "x", p_data: {} },
         sim_view_as: { p_event: event, p_seat: seat },
     sim_live_heat: { p_heat: heat },
@@ -198,6 +203,88 @@ describe.skipIf(!ENV_OK)("Simulator (hosted development project)", () => {
     expect((await f.s.from("judge_seats").select("auth_user_id").eq("id", seats["Judge 1"]).single()).data?.auth_user_id).toBeNull();
     await f.clients.orgA.rpc("sim_view_as", { p_event: sim, p_seat: null });
     expect((await f.s.from("judge_seats").select("auth_user_id").eq("id", seats["Judge 2"]).single()).data?.auth_user_id).toBeNull();
+  });
+
+  it("Polish 2: a View-as seat goes back to the simulator — when its tab closes (after a short grace for a reload), when it goes quiet, or when Virtual is chosen", async () => {
+    const org = f.clients.orgA;
+    const holder = async (seat: string) => (await f.s.from("judge_seats").select("auth_user_id").eq("id", seats[seat]).single()).data?.auth_user_id ?? null;
+    const release = (grace = 0, silent = 90) => org.rpc("sim_release_stale_views", { p_event: sim, p_silent_sec: silent, p_leave_grace_sec: grace });
+    expect(codeOf(await org.rpc("sim_view_as", { p_event: sim, p_seat: seats["Judge 1"] }))).toBe("");
+    expect((await f.s.from("sim_seats").select("viewed_by").eq("seat_id", seats["Judge 1"]).single()).data?.viewed_by).toBe(f.userIds.orgA);
+    // the tab beats; nobody else's beat or leave does anything
+    expect((await org.rpc("sim_view_beat", { p_event: sim })).data).toBe(true);
+    expect((await f.clients.orgB.rpc("sim_view_beat", { p_event: sim })).data).toBe(false);
+    expect((await f.clients.j1.rpc("sim_view_leave", { p_event: sim })).data).toBe(false);
+    // a fresh tab is kept
+    expect((await release(6)).data).toEqual([]);
+    expect(await holder("Judge 1")).toBe(f.userIds.orgA);
+    // a reload: leave, then beat again → kept
+    await org.rpc("sim_view_leave", { p_event: sim });
+    await new Promise((r) => setTimeout(r, 1100));
+    await org.rpc("sim_view_beat", { p_event: sim });
+    expect((await release(0)).data).toEqual([]);
+    expect(await holder("Judge 1")).toBe(f.userIds.orgA);
+    // the tab closes: leave, no beat → given back
+    await org.rpc("sim_view_leave", { p_event: sim });
+    await new Promise((r) => setTimeout(r, 1100));
+    expect((await release(0)).data).toEqual(["Judge 1"]);
+    expect(await holder("Judge 1")).toBeNull();
+    expect((await f.s.from("sim_seats").select("viewed_by").eq("seat_id", seats["Judge 1"]).single()).data?.viewed_by).toBeNull();
+    // a tab that went quiet (a phone asleep) → given back
+    await org.rpc("sim_view_as", { p_event: sim, p_seat: seats["Judge 2"] });
+    await f.s.from("sim_seats").update({ view_seen_at: new Date(Date.now() - 200_000).toISOString() }).eq("seat_id", seats["Judge 2"]);
+    expect((await release(6, 90)).data).toEqual(["Judge 2"]);
+    expect(await holder("Judge 2")).toBeNull();
+    // Virtual gives the seat back at once, from View as and from a phone that joined with the PIN
+    await org.rpc("sim_view_as", { p_event: sim, p_seat: seats["Judge 2"] });
+    expect(codeOf(await org.rpc("sim_set_mode", { p_seat: seats["Judge 2"], p_mode: "virtual" }))).toBe("");
+    expect(await holder("Judge 2")).toBeNull();
+    await f.s.from("judge_seats").update({ auth_user_id: f.userIds.j1 }).eq("id", seats["Judge 3"]);
+    expect(codeOf(await org.rpc("sim_set_mode", { p_seat: seats["Judge 3"], p_mode: "virtual" }))).toBe("");
+    expect(await holder("Judge 3")).toBeNull();
+    // only the event's organisers may give seats back; never on a real event
+    expect(codeOf(await f.clients.orgB.rpc("sim_release_stale_views", { p_event: sim, p_silent_sec: 90, p_leave_grace_sec: 6 }))).toContain("NOT_ALLOWED");
+    expect(codeOf(await f.clients.j1.rpc("sim_release_stale_views", { p_event: sim, p_silent_sec: 90, p_leave_grace_sec: 6 }))).toContain("NOT_ALLOWED");
+    expect(codeOf(await org.rpc("sim_release_stale_views", { p_event: f.ids.evA1, p_silent_sec: 90, p_leave_grace_sec: 6 }))).toContain("NOT_A_SIMULATION");
+  });
+
+  it("Polish 2: the simulator's Pause pauses the heat clock (marked 'simulator'); Resume resumes only what it paused; the console's own Resume clears the mark", async () => {
+    const org = f.clients.orgA;
+    const row = async () => (await f.s.from("heats").select("status, paused_reason, paused_at").eq("id", simHeat).single()).data!;
+    // a heat on the water with plenty of time left
+    await f.s.from("heats").update({ status: "running", started_at: new Date().toISOString(), paused_at: null, paused_total_sec: 0, duration_sec: 600, ended_at: null }).eq("id", simHeat);
+    expect(codeOf(await f.clients.orgB.rpc("sim_pause_heats", { p_event: sim }))).toContain("NOT_ALLOWED");
+    expect(codeOf(await f.clients.head.rpc("sim_pause_heats", { p_event: sim }))).toContain("NOT_ALLOWED");
+    expect(codeOf(await org.rpc("sim_pause_heats", { p_event: f.ids.evA1 }))).toContain("NOT_A_SIMULATION");
+    expect((await org.rpc("sim_pause_heats", { p_event: sim })).data).toBe(1);
+    expect(await row()).toMatchObject({ status: "paused", paused_reason: "simulator" });
+    expect((await row()).paused_at).not.toBeNull();
+    // nobody sets or clears the mark by hand
+    await org.from("heats").update({ paused_reason: null } as never).eq("id", simHeat);
+    expect((await row()).paused_reason).toBe("simulator");
+    expect((await org.rpc("sim_resume_heats", { p_event: sim })).data).toBe(1);
+    expect(await row()).toMatchObject({ status: "running", paused_reason: null });
+    // the head judge's own pause is theirs: the simulator's Resume leaves it
+    expect(codeOf(await org.rpc("pause_heat", { p_heat: simHeat }))).toBe("");
+    expect((await org.rpc("sim_resume_heats", { p_event: sim })).data).toBe(0);
+    expect(await row()).toMatchObject({ status: "paused", paused_reason: null });
+    expect(codeOf(await org.rpc("resume_heat", { p_heat: simHeat }))).toBe("");
+    // paused by the simulator, resumed on the console: the mark goes with it
+    await org.rpc("sim_pause_heats", { p_event: sim });
+    expect(codeOf(await org.rpc("resume_heat", { p_heat: simHeat }))).toBe("");
+    expect(await row()).toMatchObject({ status: "running", paused_reason: null });
+  });
+
+  it("Polish 2: a step gives the tick lock back when it is done, so the next step of the same page runs; a second step at the same moment is busy", async () => {
+    const org = f.clients.orgA;
+    const first = (await org.rpc("sim_tick_begin", { p_event: sim, p_ms: 30000 })).data as string | null;
+    expect(first).toMatch(/^[0-9a-f-]{36}$/);
+    expect((await org.rpc("sim_tick_begin", { p_event: sim, p_ms: 30000 })).data).toBeNull(); // a second tab while the step works
+    expect((await org.rpc("sim_tick_end", { p_event: sim, p_token: randomUUID() })).data).toBe(false); // not its lock
+    expect((await org.rpc("sim_tick_end", { p_event: sim, p_token: first })).data).toBe(true);
+    const second = (await org.rpc("sim_tick_begin", { p_event: sim, p_ms: 30000 })).data as string | null;
+    expect(second).toMatch(/^[0-9a-f-]{36}$/); // the page's next step runs at once
+    expect((await org.rpc("sim_tick_end", { p_event: sim, p_token: second })).data).toBe(true);
   });
 
   it("Reset is the general one: a copy has the draw copy it needs; refused while a heat runs; then the simulator's own leftovers go and the panel starts again", async () => {

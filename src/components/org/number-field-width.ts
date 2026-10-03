@@ -21,7 +21,7 @@ export function numberFieldChars({ min = 0, max, step, minChars = 0 }: NumberRan
   return Math.max(minChars, Math.max(digitsOf(max), digitsOf(min)) + (decimals > 0 ? decimals + 1 : 0) + (min < 0 ? 1 : 0));
 }
 
-/** The CSS width of a number field: its characters (digits are equally wide) plus the box (2 px frame, 12 px padding each side). Never full width. */
+/** The CSS width of a number field: its characters (digits are equally wide) plus the box (2 px frame, 12 px padding each side) and the up / down spinner (16 px). Never full width. */
 export function numberFieldWidth(range: NumberRange): string {
-  return `calc(${numberFieldChars(range)}ch + 28px)`;
+  return `calc(${numberFieldChars(range)}ch + 44px)`;
 }

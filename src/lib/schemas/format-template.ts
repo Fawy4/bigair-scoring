@@ -241,6 +241,8 @@ export const FormatTemplateSchema = z
     roundDurationMin: z.record(z.string().min(1), z.number().positive()).optional(),
     /** Generated ladders only: warm-up before each heat per round id; other rounds keep `timing.warmUpBeforeHeatMin`. */
     roundWarmUpMin: z.record(z.string().min(1), z.number().min(0)).optional(),
+    /** Generated ladders only: break after each heat per round id; other rounds keep `timing.defaultBreakAfterHeatMin` (Polish 2, item 10). */
+    roundBreakAfterHeatMin: z.record(z.string().min(1), z.number().min(0)).optional(),
     /** Hidden from the format menus (kept for saved events and tests). Fixed templates that the preview cannot describe are hidden. */
     hidden: z.boolean().optional(),
     /** The organiser's own names for rounds, keyed by round id (blank = the default). They survive regeneration. */
@@ -257,6 +259,9 @@ export const FormatTemplateSchema = z
     }
     if (t.roundWarmUpMin && t.kind !== "generator") {
       ctx.addIssue({ code: "custom", message: "a warm-up per round only applies to a generated ladder (a custom ladder sets it on each round)", path: ["roundWarmUpMin"] });
+    }
+    if (t.roundBreakAfterHeatMin && t.kind !== "generator") {
+      ctx.addIssue({ code: "custom", message: "a break per round only applies to a generated ladder (a custom ladder sets it on each round)", path: ["roundBreakAfterHeatMin"] });
     }
     if (t.roundDurationMin && t.kind !== "generator") {
       ctx.addIssue({ code: "custom", message: "a heat length per round only applies to a generated ladder (a custom ladder sets it on each round)", path: ["roundDurationMin"] });

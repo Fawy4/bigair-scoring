@@ -43,7 +43,7 @@ export function ResetDivisionButton({ divisionId, name, hasHeats }: { divisionId
  * "Clear actual times" on the Run order step, per plan. What it clears is counted from the plan on screen (the pins the organiser set by hand stay; an older plan keeps
  * all of them and says so); the database refuses it while a heat runs.
  */
-export function ClearActualsButton({ planId, planName, actualStarts, pinsCleared, pinsKept, known }: { planId: string; planName: string; actualStarts: number; pinsCleared: number; pinsKept: number; known: boolean }) {
+export function ClearActualsButton({ planId, planName, actualStarts, pinsCleared, pinsKept, known, keptTimes = [] }: { planId: string; planName: string; actualStarts: number; pinsCleared: number; pinsKept: number; known: boolean; keptTimes?: string[] }) {
   const [done, setDone] = useState(false);
   const starts = done ? 0 : actualStarts;
   const cleared = done ? 0 : pinsCleared;
@@ -54,7 +54,7 @@ export function ClearActualsButton({ planId, planName, actualStarts, pinsCleared
       title={P.plan.title(planName)}
       intro={P.plan.intro}
       confirmLabel={P.plan.confirm}
-      idleReason={starts + cleared === 0 ? P.plan.nothing(pinsKept, known) : undefined}
+      idleReason={starts + cleared === 0 ? (keptTimes.length ? P.plan.nothingKept(keptTimes, known) : P.plan.nothing(pinsKept, known)) : undefined}
       load={async () => ({ ok: true, view: { lines: [P.plan.lines(starts, cleared, pinsKept, known)], blockers: [], reasonNeeded: false } })}
       run={async () => {
         const r = await clearPlanActuals(planId);

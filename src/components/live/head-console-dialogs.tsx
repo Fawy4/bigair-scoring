@@ -2,10 +2,12 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { CriteriaRows } from "./criteria-rows";
-import { Footer, Modal, plain, Reason, btn } from "./console-parts";
+import { Footer, Modal, off, plain, primary, Reason, btn } from "./console-parts";
 import { ScorePad } from "./score-pad";
 import { judgeTrickScore } from "@/lib/engine/scoring";
-import { addAttemptByHead, addInterference, deleteAttempts, editAttempt, flagOutRiders, headSetImpression, headSetScore, mergeAttempts, removePenalty, setRiderStatus, type HeadResult } from "@/lib/live/head-actions";
+import { ABSENT_REASON } from "@/lib/live/sheet-rule";
+import { nextOpenRider, type SheetDraft as Draft, type SheetRider } from "@/lib/live/impression-sheet";
+import { addAttemptByHead, addInterference, deleteAttempts, editAttempt, flagOutRiders, headSaveImpressionSheet, headSetScore, mergeAttempts, removePenalty, setRiderStatus, type HeadResult } from "@/lib/live/head-actions";
 import { canAddPastCap, defaultKeep, mergePlan, type PastCapRole } from "@/lib/live/merge-plan";
 import { formatCell } from "@/lib/live/matrix-model";
 import { markOf } from "@/lib/live/heat-input";
@@ -97,33 +99,81 @@ export function CellDialog({ model, attemptId, seatId, judgeNo, judge, who, curr
         onCancel={onClose}
         onSave={() => run(() => headSetScore({ attemptId, seatId, ...(criteria ? { criteria: values as Record<string, number> } : { score: single }), reason }))}
       />
-      <button type="button" data-testid="mark-absent" disabled={pending} onClick={() => run(() => headSetScore({ attemptId, seatId, missed: true, reason: "Absent" }))} className={plain}>
+      <button type="button" data-testid="mark-absent" disabled={pending} onClick={() => run(() => headSetScore({ attemptId, seatId, missed: true, reason: ABSENT_REASON }))} className={plain}>
         {H.absent}
       </button>
     </Modal>
   );
 }
 
-// ---------------------------------------------------------------- a judge's Impression / Variety score typed in from paper
-export function ImpressionDialog({ model, heatId, seatId, judgeNo, judge, riders, first, onClose, onDone }: { model: ScoringModel; heatId: string; seatId: string; judgeNo?: number; judge?: string; riders: Array<{ id: string; word: string }>; first: string; onClose: () => void; onDone: () => void }) {
+// ---------------------------------------------------------------- a judge's Impression / Variety sheet typed in from paper
+/**
+ * One judge's Impression / Variety sheet, typed in by the head judge (Polish 2, item 6): every rider of the heat in a list, the pad for the one selected; a value
+ * (or Absent) moves on to the next rider who has nothing yet; **Save** saves every changed rider at once with one reason; the big button saves and submits
+ * that judge's sheet for them.
+ */
+export function ImpressionDialog({ model, heatId, seatId, judgeNo, judge, riders, first, onClose, onDone }: { model: ScoringModel; heatId: string; seatId: string; judgeNo?: number; judge?: string; riders: SheetRider[]; first: string; onClose: () => void; onDone: () => void }) {
   const [reason, setReason] = useState("");
   const [entry, setEntry] = useState(first);
-  const [value, setValue] = useState<number | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const { error, pending, run } = useRun(onDone);
   const scale = model.heat.impression?.scale;
   if (!scale) return null;
+  const who = judge ?? copy.live.matrix.judge(judgeNo ?? 0);
+  const set = (d: Draft) => {
+    const next = { ...drafts, [entry]: d };
+    setDrafts(next);
+    const open = nextOpenRider(riders, next, entry);
+    if (open) setEntry(open);
+  };
+  const shown = (r: SheetRider): string => {
+    const d = drafts[r.id];
+    if (d) return d.missed ? H.sheetAbsent : formatCell(d.value as number);
+    return r.now.state === "done" ? formatCell(r.now.value as number) : r.now.state === "absent" ? H.sheetAbsent : H.sheetMissing;
+  };
+  const changed = Object.entries(drafts).map(([entryId, d]) => ({ entryId, value: d.missed ? null : d.value, missed: d.missed }));
+  const complete = riders.every((r) => drafts[r.id] || r.now.state !== "missing");
+  const reasonOk = reason.trim().length >= 3;
+  const save = (submit: boolean) => run(() => headSaveImpressionSheet({ heatId, seatId, rows: changed, reason, submit }));
+  const current = drafts[entry];
   return (
-    <Modal screen title={C.enterImpression} onClose={onClose}>
-      <p className="text-body font-medium text-beach-muted">{judge ?? copy.live.matrix.judge(judgeNo ?? 0)}</p>
-      {riders.length > 1 ? (
-        <Choice label={C.rider} value={entry} onChange={setEntry} options={riders.map((r) => [r.id, r.word] as [string, string])} />
-      ) : (
-        <p className="text-body font-semibold">{riders[0]?.word}</p>
-      )}
-      <ScorePad scale={scale} value={value} label={copy.live.impression.heading} onChange={setValue} />
+    <Modal screen title={H.sheetTitle(who)} onClose={onClose}>
+      <ul data-testid="impression-sheet" aria-label={H.sheetTitle(who)} className="flex flex-col gap-1">
+        {riders.map((r) => (
+          <li key={r.id}>
+            <button
+              type="button"
+              data-testid="sheet-rider"
+              data-rider={r.id}
+              data-state={drafts[r.id] ? (drafts[r.id].missed ? "absent" : "typed") : r.now.state}
+              aria-pressed={entry === r.id}
+              onClick={() => setEntry(r.id)}
+              className={cn(btn, "flex w-full items-center justify-between gap-2", entry === r.id ? "border-beach-accent bg-beach-surface" : "border-beach-border bg-beach-bg")}
+            >
+              <span className="min-w-0 text-left">{r.word}</span>
+              <span className="tabular-nums">{shown(r)}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <ScorePad key={entry} scale={scale} value={current && !current.missed ? current.value : null} label={H.sheetPadLabel(riders.find((r) => r.id === entry)?.word ?? "")} onChange={(v) => set({ value: v, missed: false })} />
+      <button type="button" data-testid="mark-impression-absent" disabled={pending} onClick={() => set({ value: null, missed: true })} className={plain}>
+        {H.absentImpression}
+      </button>
       <Reason value={reason} onChange={setReason} />
       <ErrorLine error={error} />
-      <Footer canSave={!pending && value !== null && reason.trim().length >= 3} saveLabel={pending ? H.working : C.save} onCancel={onClose} onSave={() => run(() => headSetImpression({ heatId, entryId: entry, seatId, value: value as number, reason }))} />
+      {!complete ? <p className="text-small font-medium text-beach-muted">{H.sheetIncomplete}</p> : null}
+      <button type="button" data-testid="impression-submit" disabled={pending || !reasonOk || !complete} onClick={() => save(true)} className={!pending && reasonOk && complete ? primary : off}>
+        {pending ? H.working : H.sheetSaveSubmit(who)}
+      </button>
+      <div className="grid grid-cols-2 gap-1.5">
+        <button type="button" data-testid="impression-save" disabled={pending || !reasonOk || changed.length === 0} onClick={() => save(false)} className={!pending && reasonOk && changed.length > 0 ? plain : off}>
+          {H.sheetSave(changed.length)}
+        </button>
+        <button type="button" data-testid="dialog-cancel" onClick={onClose} className={plain}>
+          {C.cancel}
+        </button>
+      </div>
     </Modal>
   );
 }

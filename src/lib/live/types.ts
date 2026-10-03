@@ -31,9 +31,11 @@ export interface HeatRow {
   reopened_at: string | null;
   /** The published result is held back from the public (a final waiting for its prize-giving). */
   publish_hold: boolean;
+  /** "simulator" while the simulator's Pause (or Stop) holds this heat (Polish 2, item 3); null otherwise. */
+  paused_reason?: string | null;
   updated_at: string;
 }
-export const HEAT_COLUMNS = "id, division_id, round_id, number, number_suffix, name, status, duration_sec, warm_up_sec, started_at, paused_at, paused_total_sec, ended_at, draw_uid, rerun_of, public_live, reopened_at, publish_hold, updated_at";
+export const HEAT_COLUMNS = "id, division_id, round_id, number, number_suffix, name, status, duration_sec, warm_up_sec, started_at, paused_at, paused_total_sec, ended_at, draw_uid, rerun_of, public_live, reopened_at, publish_hold, paused_reason, updated_at";
 
 export interface SlotRow {
   id: string;
@@ -89,11 +91,14 @@ export interface ImpressionRow {
   heat_id: string;
   entry_id: string;
   judge_seat_id: string;
-  value: number;
+  /** null when the head judge marked the judge Absent for this rider (`missed`). */
+  value: number | null;
+  /** The head judge marked this judge Absent for this rider's Impression / Variety score: not counted, not missing. */
+  missed: boolean;
   client_rev: number;
   updated_at: string;
 }
-export const IMPRESSION_COLUMNS = "id, heat_id, entry_id, judge_seat_id, value, client_rev, updated_at";
+export const IMPRESSION_COLUMNS = "id, heat_id, entry_id, judge_seat_id, value, missed, client_rev, updated_at";
 
 export interface FlagRow {
   id: string;

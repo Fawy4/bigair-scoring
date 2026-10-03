@@ -36,6 +36,8 @@ export const SimConfigSchema = z.object({
   windHeld: z.boolean().default(false),
   /** The final's result was held back by the scenario and waits to be released. */
   finalHeldHeat: z.string().nullable().default(null),
+  /** "Run the whole event": every day's run order in turn, until every heat (the finals too) is published (Polish 2, item 7). */
+  wholeEvent: z.boolean().default(false),
 });
 export type SimConfig = z.infer<typeof SimConfigSchema>;
 
@@ -52,4 +54,18 @@ export type SimSettings = Pick<SimConfig, "attemptsPerRider" | "crashShare" | "r
 
 export function withSettings(config: SimConfig, patch: Partial<SimSettings>): SimConfig {
   return SimConfigSchema.parse({ ...config, ...patch });
+}
+
+const SETTING_KEYS = ["attemptsPerRider", "crashShare", "repeatShare", "spread", "judgeMode", "specialJudge", "missShare", "offlineSec", "lateSec"] as const satisfies ReadonlyArray<keyof SimSettings>;
+
+/**
+ * What the panel sends when one setting changes, checked: exactly the keys it sent, each valid, nothing else. Null when anything is wrong (nothing is saved then).
+ * Zod fills a field's default even inside `.partial()`, so the keys that were not sent are dropped here: saving one setting never changes another (Polish 2, item 4).
+ */
+export function parseSettingsPatch(patch: Record<string, unknown>): Partial<SimSettings> | null {
+  const keys = Object.keys(patch);
+  if (keys.length === 0 || keys.some((k) => !(SETTING_KEYS as readonly string[]).includes(k))) return null;
+  const parsed = SimConfigSchema.pick({ attemptsPerRider: true, crashShare: true, repeatShare: true, spread: true, judgeMode: true, specialJudge: true, missShare: true, offlineSec: true, lateSec: true }).partial().safeParse(patch);
+  if (!parsed.success) return null;
+  return Object.fromEntries(Object.entries(parsed.data).filter(([k]) => keys.includes(k))) as Partial<SimSettings>;
 }

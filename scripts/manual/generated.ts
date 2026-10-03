@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { refusals, type Refusal } from "../../src/lib/manual/refusals";
-import { settingHelps } from "../../src/lib/manual/settings-lookup";
+import { settingHelps, whereOfKey } from "../../src/lib/manual/settings-lookup";
 import { DivisionLiveSchema } from "../../src/lib/schemas/division-live";
 import { EventSettingsSchema } from "../../src/lib/schemas/event-settings";
 import { FormatTemplateSchema } from "../../src/lib/schemas/format-template";
@@ -210,8 +210,15 @@ function eventDefault(field: string): string {
 function settingsBlocks(): Record<string, string> {
   const scoringPresets = presets("scoring");
   const formatPresets = presets("formats");
+  // the "?" text ends with its "where it shows / what it changes" sentence, as on screen (Polish 2, item 9)
+  const keyOfAnchor = new Map(settingHelps().map((h) => [h.anchor, h.key] as const));
+  const withWhere = (anchor: string, text: string) => {
+    const key = keyOfAnchor.get(anchor);
+    const w = key ? whereOfKey(key) : undefined;
+    return w && text ? `${text} ${w}` : text;
+  };
   const row = (anchor: string, label: string, text: string, example: string, def: string, extra?: string) =>
-    `| {#${anchor}} **${cell(label)}** | ${cell(text)} | ${cell(example)} | ${cell(def)} |${extra !== undefined ? ` ${cell(extra)} |` : ""}`;
+    `| {#${anchor}} **${cell(label)}** | ${cell(withWhere(anchor, text))} | ${cell(example)} | ${cell(def)} |${extra !== undefined ? ` ${cell(extra)} |` : ""}`;
   const head4 = "| Setting | What it does (the “?” text) | Example | Default |\n|---|---|---|---|";
   const head5 = "| Setting | What it does (the “?” text) | Example | Default | Preset values |\n|---|---|---|---|---|";
 
@@ -249,8 +256,8 @@ function settingsBlocks(): Record<string, string> {
 
   const ladderTypes = [
     "| Ladder type | What it does | Example |\n|---|---|---|",
-    ...Object.entries(copy.formatSimple.types).map(([k, t]) => `| {#${A(`ladder.${k}`)}} **${cell(t.title)}** | ${cell(t.explain)} | ${cell(t.example)} |`),
-    `| {#${A("ladder.custom")}} **${cell(copy.formatSimple.customLadder.title)}** | ${cell(copy.formatSimple.customLadder.explain)} | ${cell(copy.formatSimple.customLadder.example)} |`,
+    ...Object.entries(copy.formatSimple.types).map(([k, t]) => `| {#${A(`ladder.${k}`)}} **${cell(t.title)}** | ${cell(withWhere(A(`ladder.${k}`), t.explain))} | ${cell(t.example)} |`),
+    `| {#${A("ladder.custom")}} **${cell(copy.formatSimple.customLadder.title)}** | ${cell(withWhere(A("ladder.custom"), copy.formatSimple.customLadder.explain))} | ${cell(copy.formatSimple.customLadder.example)} |`,
   ].join("\n");
   const formatHelp = [
     head4,

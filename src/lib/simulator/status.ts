@@ -3,6 +3,7 @@ import { remainingSec, type HeatClock } from "./clock";
 import { checklistFromLog, type LogRow } from "./scenarios";
 import { heatName, heatPlace, loadSnapshot, type SimDb, type Snapshot } from "./snapshot";
 import { simErrorCode, simErrorSentence } from "./errors";
+import { heldByOf } from "./view-hold";
 import type { LogLine, NowView, SeatView, SimStats, SimStatus } from "./types";
 
 const T = copy.simulator;
@@ -51,14 +52,12 @@ export async function loadSimStatus(db: SimDb, eventId: string): Promise<StatusR
     ? { heatId: live.id, label: heatPlace(live, snap.ctx), status: live.status, remainingSec: live.status === "running" || live.status === "paused" ? remainingSec(clockOf(live), snap.nowMs) : 0 }
     : { heatId: null, label: null, status: null, remainingSec: null };
 
-  const seats: SeatView[] = snap.seats.map((s) => ({
-    id: s.id,
-    name: s.name,
-    role: s.role,
-    seatNo: s.seatNo,
-    mode: s.mode,
-    heldBy: s.mode === "virtual" && !s.person ? "simulator" : s.boundUser === db.userId ? "you" : s.boundUser ? "phone" : "nobody",
-  }));
+  const { data: views } = await db.service.from("sim_seats").select("seat_id, viewed_by, view_seen_at").eq("event_id", eventId);
+  const seenOf = new Map((views ?? []).filter((v) => v.viewed_by === db.userId && v.view_seen_at).map((v) => [v.seat_id, Math.max(0, Math.round((snap.nowMs - Date.parse(v.view_seen_at!)) / 1000))] as const));
+  const seats: SeatView[] = snap.seats.map((s) => {
+    const heldBy = heldByOf(s, db.userId);
+    return { id: s.id, name: s.name, role: s.role, seatNo: s.seatNo, mode: s.mode, heldBy, viewSeenSec: heldBy === "you" ? (seenOf.get(s.id) ?? null) : null };
+  });
 
   const entryIds = new Set(snap.slots.map((s) => s.entry_id).filter((x): x is string => Boolean(x)));
   const riders = snap.ctx.riders

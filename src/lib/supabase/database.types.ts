@@ -14,6 +14,106 @@ export type Database = {
   }
   public: {
     Tables: {
+      ask_log: {
+        Row: {
+          answer: string
+          budget_tokens: number
+          cache_read_tokens: number
+          cache_write_tokens: number
+          cited: string | null
+          context: Json
+          cost_usd: number
+          created_at: string
+          event_id: string | null
+          id: string
+          input_tokens: number
+          ip_hash: string | null
+          model: string | null
+          organisation_id: string | null
+          output_tokens: number
+          pages: string[]
+          question: string
+          rating: string | null
+          role: string
+          route: string
+          seat_id: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          answer?: string
+          budget_tokens?: number
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          cited?: string | null
+          context?: Json
+          cost_usd?: number
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          input_tokens?: number
+          ip_hash?: string | null
+          model?: string | null
+          organisation_id?: string | null
+          output_tokens?: number
+          pages?: string[]
+          question: string
+          rating?: string | null
+          role: string
+          route: string
+          seat_id?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          answer?: string
+          budget_tokens?: number
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          cited?: string | null
+          context?: Json
+          cost_usd?: number
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          input_tokens?: number
+          ip_hash?: string | null
+          model?: string | null
+          organisation_id?: string | null
+          output_tokens?: number
+          pages?: string[]
+          question?: string
+          rating?: string | null
+          role?: string
+          route?: string
+          seat_id?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ask_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ask_log_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ask_log_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "judge_seats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attempt_flags: {
         Row: {
           attempt_id: string
@@ -869,6 +969,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -896,6 +997,7 @@ export type Database = {
           number: number
           number_suffix?: string | null
           paused_at?: string | null
+          paused_reason?: string | null
           paused_total_sec?: number
           public_live?: boolean | null
           publish_hold?: boolean
@@ -923,6 +1025,7 @@ export type Database = {
           number?: number
           number_suffix?: string | null
           paused_at?: string | null
+          paused_reason?: string | null
           paused_total_sec?: number
           public_live?: boolean | null
           publish_hold?: boolean
@@ -976,8 +1079,9 @@ export type Database = {
           heat_id: string
           id: string
           judge_seat_id: string
+          missed: boolean | null
           updated_at: string
-          value: number
+          value: number | null
         }
         Insert: {
           client_key: string
@@ -988,8 +1092,9 @@ export type Database = {
           heat_id: string
           id?: string
           judge_seat_id: string
+          missed?: boolean | null
           updated_at?: string
-          value: number
+          value?: number | null
         }
         Update: {
           client_key?: string
@@ -1000,8 +1105,9 @@ export type Database = {
           heat_id?: string
           id?: string
           judge_seat_id?: string
+          missed?: boolean | null
           updated_at?: string
-          value?: number
+          value?: number | null
         }
         Relationships: [
           {
@@ -1249,6 +1355,7 @@ export type Database = {
       organisations: {
         Row: {
           archived_at: string | null
+          ask_monthly_budget: number
           branding: Json
           created_at: string
           id: string
@@ -1260,6 +1367,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          ask_monthly_budget?: number
           branding?: Json
           created_at?: string
           id?: string
@@ -1271,6 +1379,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          ask_monthly_budget?: number
           branding?: Json
           created_at?: string
           id?: string
@@ -1917,6 +2026,7 @@ export type Database = {
           speed: number
           state: string
           stats: Json
+          tick_lock_token: string | null
           tick_lock_until: string | null
           updated_at: string
         }
@@ -1930,6 +2040,7 @@ export type Database = {
           speed?: number
           state?: string
           stats?: Json
+          tick_lock_token?: string | null
           tick_lock_until?: string | null
           updated_at?: string
         }
@@ -1943,6 +2054,7 @@ export type Database = {
           speed?: number
           state?: string
           stats?: Json
+          tick_lock_token?: string | null
           tick_lock_until?: string | null
           updated_at?: string
         }
@@ -2004,6 +2116,9 @@ export type Database = {
           mode: string
           seat_id: string
           updated_at: string
+          view_release_at: string | null
+          view_seen_at: string | null
+          viewed_by: string | null
           virtual_user: string | null
         }
         Insert: {
@@ -2012,6 +2127,9 @@ export type Database = {
           mode?: string
           seat_id: string
           updated_at?: string
+          view_release_at?: string | null
+          view_seen_at?: string | null
+          viewed_by?: string | null
           virtual_user?: string | null
         }
         Update: {
@@ -2020,6 +2138,9 @@ export type Database = {
           mode?: string
           seat_id?: string
           updated_at?: string
+          view_release_at?: string | null
+          view_seen_at?: string | null
+          viewed_by?: string | null
           virtual_user?: string | null
         }
         Relationships: [
@@ -2566,6 +2687,10 @@ export type Database = {
         Args: { p_values: Json }
         Returns: undefined
       }
+      admin_set_ask_budget: {
+        Args: { p_org: string; p_tokens: number }
+        Returns: undefined
+      }
       admin_set_organisation_archived: {
         Args: { p_archived: boolean; p_org: string }
         Returns: undefined
@@ -2627,6 +2752,7 @@ export type Database = {
         Args: { p_actor?: string; p_enc: string; p_pin: string; p_seat: string }
         Returns: Json
       }
+      ask_usage: { Args: { p_org: string }; Returns: Json }
       attempt_counts: {
         Args: { p_heat: string }
         Returns: {
@@ -2660,6 +2786,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -2804,6 +2931,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -2840,6 +2968,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -2914,6 +3043,7 @@ export type Database = {
         Args: {
           p_entry: string
           p_heat: string
+          p_missed?: boolean
           p_reason: string
           p_seat: string
           p_value: number
@@ -2927,8 +3057,9 @@ export type Database = {
           heat_id: string
           id: string
           judge_seat_id: string
+          missed: boolean | null
           updated_at: string
-          value: number
+          value: number | null
         }
         SetofOptions: {
           from: "*"
@@ -2967,6 +3098,26 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "trick_scores"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      head_submit_sheet: {
+        Args: { p_heat: string; p_reason: string; p_seat: string }
+        Returns: {
+          created_at: string
+          event_id: string
+          heat_id: string
+          id: string
+          judge_seat_id: string
+          reopened_at: string | null
+          reopened_reason: string | null
+          submitted_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "judge_sheets"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -3033,6 +3184,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -3148,6 +3300,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -3283,6 +3436,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -3319,6 +3473,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -3397,6 +3552,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -3602,10 +3758,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      sim_pause_heats: { Args: { p_event: string }; Returns: number }
       sim_rebuild: {
         Args: { p_event: string; p_slug_confirm: string }
         Returns: Json
       }
+      sim_release_stale_views: {
+        Args: {
+          p_event: string
+          p_leave_grace_sec?: number
+          p_silent_sec?: number
+        }
+        Returns: string[]
+      }
+      sim_resume_heats: { Args: { p_event: string }; Returns: number }
       sim_set: {
         Args: { p_event: string; p_patch: Json }
         Returns: {
@@ -3618,6 +3784,7 @@ export type Database = {
           speed: number
           state: string
           stats: Json
+          tick_lock_token: string | null
           tick_lock_until: string | null
           updated_at: string
         }
@@ -3651,8 +3818,9 @@ export type Database = {
           heat_id: string
           id: string
           judge_seat_id: string
+          missed: boolean | null
           updated_at: string
-          value: number
+          value: number | null
         }
         SetofOptions: {
           from: "*"
@@ -3716,11 +3884,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      sim_tick_begin: {
+        Args: { p_event: string; p_ms?: number }
+        Returns: string
+      }
+      sim_tick_end: {
+        Args: { p_event: string; p_token: string }
+        Returns: boolean
+      }
       sim_tick_lock: {
         Args: { p_event: string; p_ms?: number }
         Returns: boolean
       }
       sim_view_as: { Args: { p_event: string; p_seat: string }; Returns: Json }
+      sim_view_beat: { Args: { p_event: string }; Returns: boolean }
+      sim_view_leave: { Args: { p_event: string }; Returns: boolean }
       start_heat: {
         Args: { p_heat: string }
         Returns: {
@@ -3738,6 +3916,7 @@ export type Database = {
           number: number
           number_suffix: string | null
           paused_at: string | null
+          paused_reason: string | null
           paused_total_sec: number
           public_live: boolean | null
           publish_hold: boolean
@@ -3803,8 +3982,9 @@ export type Database = {
           heat_id: string
           id: string
           judge_seat_id: string
+          missed: boolean | null
           updated_at: string
-          value: number
+          value: number | null
         }
         SetofOptions: {
           from: "*"
@@ -3908,11 +4088,11 @@ export type Database = {
         Args: { p_division: string; p_reason: string }
         Returns: undefined
       }
-      update_event_trick_base: { Args: { p_event: string }; Returns: Json }
       unlock_division_rules: {
         Args: { p_division: string; p_reason: string }
         Returns: undefined
       }
+      update_event_trick_base: { Args: { p_event: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

@@ -12,12 +12,14 @@ import { parseSimConfig } from "./config";
 import { simErrorSentence } from "./errors";
 import { planImpressionWrites, planScoreWrites, type JudgeSeat, type ModeContext } from "./judges";
 import { uuidFrom } from "./random";
-import { logLine, readRunOrder, updateConfig } from "./io";
+import { logLine, readEventOrder, readRunOrder, updateConfig } from "./io";
 import { finishPublish } from "./publish-step";
 import { attemptScenario } from "./scenario-runner";
 import { isScenarioKey } from "./scenarios";
 import { forgetContext, heatName, heatPlace, loadSnapshot, type SimDb, type Snapshot } from "./snapshot";
 import type { SeatInfo } from "./types";
+import { SIM_VIEW_LEAVE_GRACE_SEC, SIM_VIEW_SILENT_SEC } from "./view-hold";
+import { withTickLock, type LockRpc } from "./tick-lock";
 
 const T = copy.simulator;
 const clockOf = (h: HeatRow): HeatClock => ({ status: h.status, startedAt: h.started_at, pausedAt: h.paused_at, pausedTotalSec: h.paused_total_sec, durationSec: h.duration_sec });
@@ -136,7 +138,7 @@ function lastOf(a: AttemptRow): SpotterRider["last"] {
 const needsImpression = (model: { heat: { impression: { required: boolean } | null } }) => Boolean(model.heat.impression && model.heat.impression.required !== false);
 
 /** Virtual judges score what the spotters log, write their Impression / Variety scores when the heat is over, and submit their sheets once everything is in. */
-async function judgeStep(db: SimDb, snap: Snapshot, heat: HeatRow, data: HeatData, ended: boolean): Promise<void> {
+async function judgeStep(db: SimDb, snap: Snapshot, heat: HeatRow, data: HeatData, ended: boolean, finishNow = false): Promise<void> {
   const cfg = snap.control.config;
   const division = snap.ctx.divisions.find((d) => d.id === heat.division_id);
   if (!division) return;
@@ -159,6 +161,7 @@ async function judgeStep(db: SimDb, snap: Snapshot, heat: HeatRow, data: HeatDat
     heatEnded: ended,
     sinceStartSec: sinceStartSec(clock, snap.nowMs),
     heatDurationSec: heat.duration_sec,
+    finishNow,
   };
   const ordinal = new Map(data.attempts.map((a) => [a.id, a.seq]));
   const writes = planScoreWrites({
@@ -251,11 +254,32 @@ async function headStep(db: SimDb, snap: Snapshot, heat: HeatRow, data: HeatData
   return T.play.lines.stoppedAtBlocker(why);
 }
 
-/** One step of the auto-play, as the organiser. Safe to call from any tab: one tick at a time. */
+/** One step of the auto-play, as the organiser. Safe to call from any tab: one step at a time, and each step gives the lock back when it is done (Polish 2, item 4b). */
 export async function simTick(db: SimDb, eventId: string): Promise<TickResult> {
-  const lock = await db.user.rpc("sim_tick_lock", { p_event: eventId, p_ms: 6000 });
-  if (lock.error) return { ok: false, message: simErrorSentence(lock.error.message) };
-  if (!lock.data) return { ok: true, busy: true, playing: true, line: T.play.lines.busy, blocker: null };
+  const lock: LockRpc = {
+    begin: async (ms) => {
+      const r = await db.user.rpc("sim_tick_begin", { p_event: eventId, p_ms: ms });
+      if (r.error) throw new Error(r.error.message);
+      return (r.data as string | null) ?? null;
+    },
+    end: async (token) => {
+      const r = await db.user.rpc("sim_tick_end", { p_event: eventId, p_token: token });
+      return !r.error && Boolean(r.data);
+    },
+  };
+  try {
+    const r = await withTickLock(lock, () => tickInside(db, eventId));
+    return r.busy ? { ok: true, busy: true, playing: true, line: T.play.lines.busy, blocker: null } : r.value;
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? simErrorSentence(e.message) : T.generic };
+  }
+}
+
+async function tickInside(db: SimDb, eventId: string): Promise<TickResult> {
+  // a View-as tab that was closed (or went quiet) gives its seat back first, so the simulator plays it again in this very tick
+  const released = await db.user.rpc("sim_release_stale_views", { p_event: eventId, p_silent_sec: SIM_VIEW_SILENT_SEC, p_leave_grace_sec: SIM_VIEW_LEAVE_GRACE_SEC });
+  const names = (released.data as string[] | null) ?? [];
+  if (names.length) await logLine(db, eventId, "info", null, T.roles.givenBack(names.join(", ")));
   const snap = await loadSnapshot(db, eventId);
   if (!snap) return { ok: false, message: T.errors.SIM_NOT_ENABLED() };
   if (snap.control.state !== "playing") return { ok: true, playing: false, line: T.play.lines.idle, blocker: snap.control.blocker };
@@ -272,8 +296,11 @@ export async function simTick(db: SimDb, eventId: string): Promise<TickResult> {
 }
 
 async function step(db: SimDb, snap: Snapshot): Promise<string> {
-  const order = await readRunOrder(db, snap);
+  const whole = snap.control.config.wholeEvent;
+  const order = whole ? await readEventOrder(db, snap.eventId).then((o) => ({ heatIds: o.heatIds, held: o.held, hold: false })) : { ...(await readRunOrder(db, snap)), held: new Set<string>() };
   const ordered = runOrder(planHeats(snap), order.heatIds);
+  // the whole event: a plan on hold holds only its own heats
+  if (whole) order.hold = order.held.has(ordered.find((h) => h.status === "scheduled")?.id ?? "");
   const byId = new Map(snap.heats.map((h) => [h.id, h]));
   const live = ordered.find((p) => ["running", "paused", "ended", "under_review"].includes(p.status));
   if (live) {
@@ -300,8 +327,9 @@ async function step(db: SimDb, snap: Snapshot): Promise<string> {
   const next = nextStep({ ordered, hold: order.hold, maxRunning: snap.event.maxRunningHeats });
   if (next.kind === "finished") {
     await db.user.rpc("sim_set", { p_event: snap.eventId, p_patch: { state: "stopped", blocker: null } });
-    await logLine(db, snap.eventId, "heat", null, T.log.complete);
-    return T.play.lines.finished;
+    await logLine(db, snap.eventId, "heat", null, whole ? T.log.wholeComplete : T.log.complete);
+    if (whole) await updateConfig(db, snap.eventId, (c) => ({ ...c, wholeEvent: false }));
+    return whole ? T.play.lines.wholeFinished : T.play.lines.finished;
   }
   if (next.kind === "wait") {
     const h = next.heatId ? byId.get(next.heatId) : undefined;
@@ -340,4 +368,56 @@ async function processArmed(db: SimDb, snap: Snapshot, heat: HeatRow, data: Heat
     if (r.status === "wait") continue;
     await updateConfig(db, snap.eventId, (c) => ({ ...c, armed: c.armed.filter((k) => k !== key) }));
   }
+}
+
+/**
+ * "Skip to end of heat" (Polish 2, item 7): ends the heat on the water now with the attempts logged so far, lets the virtual judges finish their scores and
+ * Impression / Variety scores at once (the late and offline judge too) and submit, then the virtual head judge reviews and publishes if nothing blocks.
+ * Real people are waited for, as always. One step at a time with the auto-play (the same lock).
+ */
+export async function skipToEnd(db: SimDb, eventId: string): Promise<{ ok: true; text: string } | { ok: false; message: string }> {
+  const lock: LockRpc = {
+    begin: async (ms) => {
+      const r = await db.user.rpc("sim_tick_begin", { p_event: eventId, p_ms: ms });
+      if (r.error) throw new Error(r.error.message);
+      return (r.data as string | null) ?? null;
+    },
+    end: async (token) => !(await db.user.rpc("sim_tick_end", { p_event: eventId, p_token: token })).error,
+  };
+  try {
+    // the auto-play may be half-way through a step: wait for it a moment rather than refuse
+    for (let tries = 0; tries < 20; tries++) {
+      const r = await withTickLock(lock, () => skipInside(db, eventId));
+      if (!r.busy) return r.value;
+      await new Promise((ok) => setTimeout(ok, 500));
+    }
+    return { ok: false, message: T.play.lines.busy };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? simErrorSentence(e.message) : T.generic };
+  }
+}
+
+async function skipInside(db: SimDb, eventId: string): Promise<{ ok: true; text: string } | { ok: false; message: string }> {
+  const snap = await loadSnapshot(db, eventId);
+  if (!snap) return { ok: false, message: T.errors.SIM_NOT_ENABLED() };
+  await ensureVirtualSeats(db, snap);
+  let heat = snap.heats.find((h) => h.status === "running" || h.status === "paused") ?? snap.heats.find((h) => h.status === "ended" || h.status === "under_review");
+  if (!heat) return { ok: false, message: T.skip.noHeat };
+  const name = heatName(heat);
+  if (heat.status === "running" || heat.status === "paused") {
+    const ended = await db.user.rpc("end_heat", { p_heat: heat.id });
+    if (ended.error) return { ok: false, message: simErrorSentence(ended.error.message) };
+    heat = { ...heat, status: "ended", ended_at: (ended.data as { ended_at: string | null } | null)?.ended_at ?? heat.ended_at };
+  }
+  // the virtual judges finish: a few rounds, each writes what is left (scores, Impression / Variety scores) and submits
+  for (let round = 0; round < 8; round++) {
+    const before = await loadHeatData(db, heat.id);
+    await judgeStep(db, snap, heat, before, true, true);
+    const after = await loadHeatData(db, heat.id);
+    if (after.scores.size === before.scores.size && after.impressions.size === before.impressions.size && after.submitted.size === before.submitted.size) break;
+  }
+  const line = await headStep(db, snap, heat, await loadHeatData(db, heat.id));
+  await logLine(db, eventId, "heat", null, T.log.skipped(heatPlace(heat, snap.ctx)));
+  forgetContext(eventId);
+  return { ok: true, text: `${T.skip.done(name)} ${line}` };
 }

@@ -190,7 +190,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
 
   // ---- the Impression / Variety step
   const impressionRiders = useMemo<ImpressionRider[]>(() => {
-    const serverMine = new Map(live.impressions.filter((i) => i.judge_seat_id === seatId).map((i) => [i.entry_id, Number(i.value)]));
+    const serverMine = new Map(live.impressions.filter((i) => i.judge_seat_id === seatId && !i.missed && i.value !== null).map((i) => [i.entry_id, Number(i.value)]));
     return riding.map((r) => {
       const mine = live.attempts.filter((a) => a.entry_id === r.entryId && !a.deleted_at);
       const myScores: Record<string, number | "missed" | null> = {};
@@ -251,7 +251,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   if (!heat || !division || !model) {
     return (
       <>
-        <SeatHeartbeat />
+        <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
         <ScreenHeader heatName={ctx.event.name} {...common} remainingMs={0} showTimer={false} />
         {noticeList}
         <div data-testid="between-heats" className="flex flex-1 flex-col items-start justify-center gap-2 px-3">
@@ -276,7 +276,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
     const onlyImpression = entry === "none";
     return (
       <>
-        <SeatHeartbeat />
+        <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
         <ScreenHeader heatName={title} {...common} remainingMs={0} timerState="ended" details={tab === "review"} detailsLabels={{ off: T.reviewTab, on: T.impressionTab }} onToggleDetails={onlyImpression ? undefined : () => setTab((t) => (t === "review" ? "impression" : "review"))} />
         {noticeList}
         {tab === "review" && !onlyImpression ? (
@@ -346,7 +346,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   if (entry === "none") {
     return (
       <>
-        <SeatHeartbeat />
+        <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
         <ScreenHeader heatName={title} {...common} remainingMs={remaining} timerState={timerState} />
         {noticeList}
         <div data-testid="screen-body" className="flex flex-1 flex-col gap-2 px-3 py-3">
@@ -359,7 +359,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const canJudgeLog = ctx.event.judgesMayLogAttempts && Boolean(kit);
   return (
     <>
-      <SeatHeartbeat />
+      <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
       {noticeList}
       {q.memoryOnly ? <p className="px-2 pt-1 text-small font-semibold text-beach-muted">{copy.live.queue.memoryOnly}</p> : null}
       <JudgeQueueView

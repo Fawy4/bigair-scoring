@@ -15,6 +15,8 @@ import { runLine, shortHeat } from "@/lib/live/run-line";
 import { heatLabel, livesFor } from "@/lib/live/run-order";
 import { formatClock } from "@/lib/live/timer";
 import { resetHeatControl, type ControlId } from "@/lib/live/head-state";
+import type { FixTarget } from "@/lib/live/publish-checklist";
+import { pausedByWords } from "@/lib/live/paused-by";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { stateOf, type HeadController, type OrderItem } from "./use-head-controller";
@@ -149,6 +151,11 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
             {selected ? c.title : V.noHeat}
           </p>
           {selected ? <Pill tone="ink" className="self-start">{T.status[selected.status === "under_review" ? "under_review" : state === "ended" && selected.status === "running" ? "ended" : (state ?? "")] ?? state}</Pill> : null}
+          {pausedByWords(selected) ? (
+            <p data-testid="paused-by" className="text-small font-semibold text-beach-muted">
+              {pausedByWords(selected)}
+            </p>
+          ) : null}
         </div>
         {selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
         <ClockText timezone={c.ctx.event.timezone} nowMs={c.nowServer} />
@@ -492,6 +499,14 @@ export function HeatDialogs({ c }: { c: HeadController }) {
             close();
             review.onChooseOrder(riders);
           }}
+          {...(review.onFix
+            ? {
+                onFix: (t: FixTarget) => {
+                  close();
+                  review.onFix!(t);
+                },
+              }
+            : {})}
           onClose={close}
           onDone={(text) => {
             close();

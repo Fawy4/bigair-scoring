@@ -188,6 +188,6 @@ export interface PublicLiveHeat {
   slots?: Array<{ position: number; entry_id: string | null; vest_colour: string | null; modifier: string | null; flagged_out: boolean }>;
   attempts?: Array<{ id: string; entry_id: string; seq: number | null; direction: string | null; category_key: string | null; trick_name: string | null; status: "landed" | "crashed"; height_m: number | null; possible_duplicate_of: string | null; created_at: string }>;
   scores?: Array<{ attempt_id: string; seat_no: number; criteria: unknown; score: number | null; missed: boolean }>;
-  impressions?: Array<{ entry_id: string; seat_no: number; value: number | null }>;
+  impressions?: Array<{ entry_id: string; seat_no: number; value: number | null; missed?: boolean }>;
   penalties?: Array<{ entry_id: string; type: string; value: number | null }>;
 }

@@ -67,16 +67,56 @@ export async function headSetScore(input: { attemptId: string; seatId: string; s
 }
 
 /** Paper sheets, typed in: one judge's Impression / Variety score for one rider. */
-export async function headSetImpression(input: { heatId: string; entryId: string; seatId: string; value: number; reason: string }): Promise<HeadResult> {
+/** A judge's Impression / Variety score typed in from paper, or the judge marked Absent for that rider (`missed`: not counted, not missing). */
+export async function headSetImpression(input: { heatId: string; entryId: string; seatId: string; value: number | null; missed?: boolean; reason: string }): Promise<HeadResult> {
   if (![input.heatId, input.entryId, input.seatId].every((x) => uuid.safeParse(x).success)) return fail("HEAT_NOT_FOUND");
   if (!reasonOk(input.reason)) return fail("REASON_REQUIRED");
   const db = await createClient();
   const model = await modelForHeat(db, input.heatId);
   if (!model) return fail("NOT_ALLOWED");
-  const problem = checkImpression(model, input.value);
-  if (problem) return fail(problem);
-  const { error } = await db.rpc("head_set_impression", { p_heat: input.heatId, p_entry: input.entryId, p_seat: input.seatId, p_value: input.value, p_reason: input.reason.trim() });
+  if (!input.missed) {
+    const problem = input.value === null ? "SCORE_REQUIRED" : checkImpression(model, input.value);
+    if (problem) return fail(problem);
+  }
+  const { error } = await db.rpc("head_set_impression", { p_heat: input.heatId, p_entry: input.entryId, p_seat: input.seatId, p_value: (input.missed ? null : input.value) as never, p_reason: input.reason.trim(), p_missed: Boolean(input.missed) });
   return error ? from(error) : { ok: true };
+}
+
+/**
+ * The head judge's Impression / Variety sheet for one judge (Polish 2, item 6): every rider that was changed is saved at once (a score typed from paper, or the
+ * judge set to Absent for that rider), with one reason; with `submit` the judge's sheet is then submitted for them, exactly as the judge's own Submit would.
+ * Nothing is half-saved silently: the first refusal stops the save and says which rider.
+ */
+export async function headSaveImpressionSheet(input: {
+  heatId: string;
+  seatId: string;
+  rows: Array<{ entryId: string; value: number | null; missed?: boolean }>;
+  reason: string;
+  submit: boolean;
+}): Promise<HeadResult> {
+  if (![input.heatId, input.seatId].every((x) => uuid.safeParse(x).success) || input.rows.some((r) => !uuid.safeParse(r.entryId).success)) return fail("HEAT_NOT_FOUND");
+  if (!reasonOk(input.reason)) return fail("REASON_REQUIRED");
+  const db = await createClient();
+  const model = await modelForHeat(db, input.heatId);
+  if (!model) return fail("NOT_ALLOWED");
+  for (const r of input.rows) {
+    if (r.missed) continue;
+    const problem = r.value === null ? "SCORE_REQUIRED" : checkImpression(model, r.value);
+    if (problem) return fail(problem);
+  }
+  for (const r of input.rows) {
+    const { error } = await db.rpc("head_set_impression", { p_heat: input.heatId, p_entry: r.entryId, p_seat: input.seatId, p_value: (r.missed ? null : r.value) as never, p_reason: input.reason.trim(), p_missed: Boolean(r.missed) });
+    if (error) return from(error);
+  }
+  if (input.submit) {
+    const { error } = await db.rpc("head_submit_sheet", { p_heat: input.heatId, p_seat: input.seatId, p_reason: input.reason.trim() });
+    if (error) {
+      const code = parseError(error.message);
+      if (code.code === "IMPRESSION_MISSING") return fail("IMPRESSION_MISSING", copy.headLive.sheetStillMissing(Number(code.detail ?? 1)));
+      return from(error);
+    }
+  }
+  return { ok: true };
 }
 
 /** Edit an attempt: rider, trick, direction, landed or crashed. Fields left out stay as they are. */

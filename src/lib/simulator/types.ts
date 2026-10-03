@@ -68,6 +68,8 @@ export interface SeatView {
   mode: "virtual" | "real";
   /** "simulator" plays it, "you" holds it through View as, "phone" a person joined, "nobody" a real seat waits. */
   heldBy: "simulator" | "you" | "phone" | "nobody";
+  /** Seconds since your View-as tab of this seat last said "I am here"; null when you do not hold it through View as. */
+  viewSeenSec: number | null;
 }
 
 export interface SimStatus {

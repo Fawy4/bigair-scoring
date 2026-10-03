@@ -174,11 +174,15 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await field("Number of judges").fill("4");
   await expect(page.getByTestId("model-sentence")).toHaveText("Best 2 of 5 attempts + Variety 0–10, 4 judges averaged");
   await expect(page.getByTestId("panel-sentence")).toHaveText("4 judges — plain average");
-  await field("How the judges’ scores are combined").selectOption("trimmed_mean");
-  await expect(page.getByTestId("panel-sentence")).toHaveText("4 judges — plain average; with 5 or more judges the highest and lowest score are dropped and the rest averaged");
+  // Polish 2, item 8: the trimmed average is offered from 5 judges on, and its own setting shows only when it is chosen
+  await expect(field("How the judges’ scores are combined").locator("option[value=trimmed_mean]")).toHaveCount(0);
+  await expect(page.getByTestId("trim-needs-five")).toHaveText("Trimmed average needs at least 5 judges.");
   await field("Number of judges").fill("5");
+  await expect(field("Trim only with at least this many judges")).toHaveCount(0);
+  await field("How the judges’ scores are combined").selectOption("trimmed_mean");
   await expect(page.getByTestId("panel-sentence")).toHaveText("5 judges — highest and lowest score dropped, the rest averaged");
   await expect(page.getByText("Trimming only applies from 5 judges. With fewer judges the plain average is used automatically.")).toBeVisible();
+  await expect(field("Trim only with at least this many judges")).toBeVisible();
   await field("How the judges’ scores are combined").selectOption("mean");
   await field("Number of judges").fill("4");
   await page.getByRole("button", { name: "Save scoring for Pro Men" }).click();
@@ -193,6 +197,8 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   // "?" help on a Simple setting: tap to open, with an example
   await page.getByRole("button", { name: "About “How the judges’ scores are combined”" }).click();
   await expect(page.getByRole("note").filter({ hasText: "Example: Plain average of 3 judges" })).toBeVisible();
+  // Polish 2, item 9: the "?" ends with where the setting shows and what it changes
+  await expect(page.getByRole("note").filter({ hasText: "Example: Plain average of 3 judges" }).getByTestId("setting-where")).toHaveText(" Changes the panel score of every trick on the console and so the heat total.");
 
   // More settings: the Simple fields stay where they are, every other field appears below them, and the sentence stays in view
   await openMore();
@@ -450,8 +456,9 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   for (const k of kinds) await expect(page.getByRole("radio", { name: k, exact: true })).toBeVisible();
   await expect(page.getByTestId("per-round-lengths")).toBeVisible();
   await expect(page.getByTestId("ladder-diagram")).toBeVisible();
-  await page.getByText("Default timing (minutes)", { exact: true }).click(); // the advanced part: breaks and the single heat lengths
-  await expect(field("Break after each heat")).toBeVisible();
+  // Polish 2, item 10: timing is in one place, the table; More settings no longer repeats it
+  await expect(page.getByText("Default timing (minutes)", { exact: true })).toHaveCount(0);
+  await expect(field("Break after each heat, every round (minutes)")).toBeVisible();
   await expect(page.getByText("Flag-out", { exact: true })).toBeVisible();
   await page.getByTestId("advanced-toggle").click(); // fold it again
   await expect(page.getByText("Flag-out", { exact: true })).toHaveCount(0);
@@ -462,7 +469,7 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(page.getByTestId("format-preview")).toContainText("R1 5 heats of 2–3");
   await field("Preview with").fill("24");
   await expect(page.getByTestId("format-preview")).toContainText("R1 8 heats of 3");
-  await expect(page.getByTestId("per-round-lengths")).toContainText("Heat length per round");
+  await expect(page.getByTestId("per-round-lengths")).toContainText("Timing per round");
   await expect(field("Heat length: R1 (minutes)")).toHaveValue("10");
   await expect(field("Heat length: F (minutes)")).toHaveValue("10");
   await expect(page.getByTestId("ladder-round").first()).toContainText("10 min");
@@ -471,6 +478,13 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(page.getByTestId("ladder-round").first()).toContainText("9 min");
   await expect(page.getByTestId("ladder-round").last()).toContainText("20 min");
   await expect(page.getByTestId("per-round-lengths").getByText("own length", { exact: true })).toHaveCount(2);
+  // a break of its own in Round 1, and the preview's time sentence follows at once
+  const before = await page.getByTestId("time-sentence").textContent();
+  await field("Break after each heat: R1 (minutes)").fill("12");
+  await expect(page.getByTestId("per-round-lengths").getByText("own break", { exact: true })).toHaveCount(1);
+  await expect(page.getByTestId("time-sentence")).not.toHaveText(before ?? "");
+  await field("Break after each heat: R1 (minutes)").fill("");
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
   // names: a fresh card load starts from the built-in format; put the names back before saving
   await page.getByRole("button", { name: "Rename round Final" }).click();
   await page.getByLabel("New name for Final").fill("Grand final");
@@ -481,7 +495,7 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   const { data: fmt } = await org.db.from("divisions").select("format_params").eq("event_id", eventId).single();
   expect(fmt!.format_params).toMatchObject({ roundDurationMin: { R1: 9, F: 20 }, roundNames: { F: "Grand final" } });
   expect(JSON.stringify(fmt!.format_params)).not.toContain("SF");
-  await page.getByRole("button", { name: "Use the single settings for every round" }).click();
+  await page.getByRole("button", { name: "Use the division's numbers for every round" }).click();
   await expect(page.getByTestId("ladder-round").first()).toContainText("10 min");
 
   // pools: heats of everybody, the best N of all go to the final

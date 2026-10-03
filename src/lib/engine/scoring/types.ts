@@ -36,7 +36,8 @@ export interface Modifier {
 
 export interface ImpressionMark {
   judgeId: string;
-  value: number;
+  /** "missed": the head judge marked this judge Absent for the rider — not counted, not missing. */
+  value: number | "missed";
 }
 
 export interface RiderInput {

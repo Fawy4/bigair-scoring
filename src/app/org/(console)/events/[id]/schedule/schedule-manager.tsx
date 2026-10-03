@@ -39,12 +39,15 @@ import type { SchedulePlan } from "@/lib/schemas/schedule";
 import { toast } from "@/hooks/use-toast";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
-import { activatePlan, createPlan, deletePlanAction, duplicatePlanAction, savePlan } from "./actions";
+import { activatePlan, copyPlanToDayAction, createPlan, deletePlanAction, duplicatePlanAction, savePlan } from "./actions";
+import { copySources, dayStatus, defaultPlanName } from "@/lib/schedule/day-plans";
 import { holdPlan as holdPlanAction, resumePlanAt as resumePlanAtAction, shiftPlan as shiftPlanAction, type PlanActionResult } from "@/lib/live/heat-actions";
 
 const T = copy.runOrder;
 
 export interface ScheduleProps {
+  /** The day to open on (?day=, from the dashboard's Fix). */
+  initialDay?: string;
   eventId: string;
   eventName: string;
   timezone: string;
@@ -105,7 +108,9 @@ function RowShell({ id, problem, children }: { id: string; problem?: string; chi
 export function ScheduleManager(props: ScheduleProps) {
   const { eventId, timezone, days, today, lives, infos, readyCallMin } = props;
   const [plans, setPlans] = useState<PlanRow[]>(props.plans);
-  const [day, setDay] = useState(days.includes(today) ? today : days[0]);
+  // the day to open on: the address's ?day= (the dashboard's Fix sends today), else today, else the first day of the event
+  const [day, setDay] = useState(props.initialDay && days.includes(props.initialDay) ? props.initialDay : days.includes(today) ? today : days[0]);
+  const [dayName, setDayName] = useState<string | null>(null);
   const [planId, setPlanId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -230,7 +235,7 @@ export function ScheduleManager(props: ScheduleProps) {
             <select id="day-pick" value={day} onChange={(e) => { setDay(e.target.value); setPlanId(null); }}>
               {days.map((d) => (
                 <option key={d} value={d}>
-                  {T.dayLabel(d)}
+                  {T.dayOption(T.dayLabel(d), dayStatus(plans, d))}
                 </option>
               ))}
             </select>
@@ -272,6 +277,49 @@ export function ScheduleManager(props: ScheduleProps) {
           ) : null}
         </div>
 
+        {dayPlans.length === 0 ? (
+          <div data-testid="no-plan-day" className="flex flex-col gap-3 rounded-[8px] border border-beach-line bg-beach-surface p-3">
+            <p className="text-body font-semibold">{T.noPlanDay(shortDay(day))}</p>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex flex-col gap-1">
+                <label htmlFor="day-plan-name" className="text-small font-semibold">
+                  {T.createName}
+                </label>
+                <input id="day-plan-name" value={dayName ?? defaultPlanName(plans, day)} onChange={(e) => setDayName(e.target.value)} className="w-72" />
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary"
+                data-testid="create-day-plan"
+                disabled={pending || (dayName ?? defaultPlanName(plans, day)).trim().length < 2}
+                onClick={() => act(() => createPlan(eventId, day, dayName ?? defaultPlanName(plans, day)), (r) => { setPlans((ps) => [...ps, r.row]); setPlanId(r.row.id); setDayName(null); toast({ title: T.copied(r.row.name) }); })}
+              >
+                {T.createForDay(shortDay(day))}
+              </button>
+              {(dayName ?? defaultPlanName(plans, day)).trim().length < 2 ? <span className="text-small font-medium text-beach-muted">{T.needName}</span> : null}
+            </div>
+            {copySources(plans, day).length ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {copySources(plans, day).map((src) => (
+                    <button
+                      key={src.id}
+                      type="button"
+                      className="btn"
+                      data-testid="copy-day-plan"
+                      data-from={src.day}
+                      disabled={pending || (dayName ?? defaultPlanName(plans, day)).trim().length < 2}
+                      onClick={() => act(() => copyPlanToDayAction(src.id, day, dayName ?? defaultPlanName(plans, day)), (r) => { setPlans((ps) => [...ps, r.row]); setPlanId(r.row.id); setDayName(null); toast({ title: T.copied(r.row.name) }); })}
+                    >
+                      {T.copyToDay(shortDay(src.day), shortDay(day))}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-small font-medium text-beach-muted">{T.copyNote}</p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {currentRow ? (
           <div className="flex flex-wrap items-start gap-3" data-testid="plan-actuals">
             <ClearActualsButton planId={currentRow.id} planName={currentRow.name} {...planActuals(currentRow)} />
@@ -288,9 +336,10 @@ export function ScheduleManager(props: ScheduleProps) {
             <button type="button" className="btn" disabled={pending || dupName.trim().length < 2} onClick={() => act(() => duplicatePlanAction(currentRow.id, dupName), (r) => { setPlans((ps) => [...ps, r.row]); setPlanId(r.row.id); setDupName(""); toast({ title: T.duplicated(r.row.name) }); })}>
               {T.duplicate}
             </button>
+            {dupName.trim().length < 2 ? <span className="text-small font-medium text-beach-muted" data-testid="why-duplicate">{T.needName}</span> : null}
           </div>
         ) : null}
-        <div className="flex flex-wrap items-end gap-3">
+        {dayPlans.length > 0 ? <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
             <label htmlFor="new-plan" className="text-small font-semibold">
               {T.newPlanName}
@@ -300,7 +349,8 @@ export function ScheduleManager(props: ScheduleProps) {
           <button type="button" className="btn" disabled={pending || newName.trim().length < 2} onClick={() => act(() => createPlan(eventId, day, newName), (r) => { setPlans((ps) => [...ps, r.row]); setPlanId(r.row.id); setNewName(""); })}>
             {T.newPlan}
           </button>
-        </div>
+          {newName.trim().length < 2 ? <span className="text-small font-medium text-beach-muted" data-testid="why-new-plan">{T.needName}</span> : null}
+        </div> : null}
       </section>
 
       {error ? (
@@ -409,12 +459,12 @@ export function ScheduleManager(props: ScheduleProps) {
                         pinning === r.itemId ? (
                           <span className="flex items-center gap-1">
                             <input type="time" aria-label={T.pinTimeLabel(idx + 1)} value={pinTime} onChange={(e) => setPinTime(e.target.value)} className="w-32" />
-                            <button type="button" className="btn btn-primary !min-h-[var(--org-ctl)]" disabled={!pinTime} onClick={() => { mutate((p) => setPin(p, r.itemId, pinTime, lives)); setPinning(null); }}>{T.pin}</button>
+                            <button type="button" className="btn btn-primary !min-h-[var(--org-ctl)]" disabled={!pinTime} title={!pinTime ? T.needTime : undefined} onClick={() => { mutate((p) => setPin(p, r.itemId, pinTime, lives)); setPinning(null); }}>{T.pin}</button>
                             {r.pinned ? <button type="button" className="btn !min-h-[var(--org-ctl)]" onClick={() => { mutate((p) => setPin(p, r.itemId, null, lives)); setPinning(null); }}>{T.unpin}</button> : null}
                             <button type="button" className="btn !min-h-[var(--org-ctl)]" onClick={() => setPinning(null)}>{copy.common.cancel}</button>
                           </span>
                         ) : (
-                          <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={started} aria-label={T.startButton(idx + 1, r.start ?? "–")} data-testid="row-start" onClick={() => { setPinning(r.itemId); setPinTime(r.start ?? ""); }}>
+                          <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={started} title={started ? T.startedRow : undefined} aria-label={T.startButton(idx + 1, r.start ?? "–")} data-testid="row-start" onClick={() => { setPinning(r.itemId); setPinTime(r.start ?? ""); }}>
                             {r.pinned ? "📌 " : ""}
                             {r.start ?? "–"}
                           </button>
@@ -436,10 +486,11 @@ export function ScheduleManager(props: ScheduleProps) {
                         </label>
                       ) : null}
                       <span className="text-sm font-semibold" data-testid="row-status">{T.status[r.status]}</span>
-                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={pending || started || idx === 0} aria-label={T.moveUp(idx + 1)} onClick={() => mutate((p) => nudgeItem(p, r.itemId, -1, lives))}>↑</button>
-                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={pending || started || idx === table.rows.length - 1} aria-label={T.moveDown(idx + 1)} onClick={() => mutate((p) => nudgeItem(p, r.itemId, 1, lives))}>↓</button>
+                      {started ? <span className="text-small font-medium text-beach-muted" data-testid="row-why">{T.startedRow}</span> : null}
+                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={pending || started || idx === 0} title={started ? T.startedRow : idx === 0 ? T.alreadyFirst : undefined} aria-label={T.moveUp(idx + 1)} onClick={() => mutate((p) => nudgeItem(p, r.itemId, -1, lives))}>↑</button>
+                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={pending || started || idx === table.rows.length - 1} title={started ? T.startedRow : idx === table.rows.length - 1 ? T.alreadyLast : undefined} aria-label={T.moveDown(idx + 1)} onClick={() => mutate((p) => nudgeItem(p, r.itemId, 1, lives))}>↓</button>
                       {r.kind === "heat" && !started ? <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" aria-expanded={openRow === r.itemId} onClick={() => setOpenRow(openRow === r.itemId ? null : r.itemId)}>⋯</button> : null}
-                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={pending || started} aria-label={T.removeRow(idx + 1)} onClick={() => mutate((p) => removeItem(p, r.itemId, lives))}>✕</button>
+                      <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" disabled={pending || started} title={started ? T.startedRow : undefined} aria-label={T.removeRow(idx + 1)} onClick={() => mutate((p) => removeItem(p, r.itemId, lives))}>✕</button>
                     </RowShell>
                   );
                 })}
@@ -468,17 +519,18 @@ export function ScheduleManager(props: ScheduleProps) {
                         <label htmlFor="resume-at" className="text-sm font-semibold">{T.resumeAt}</label>
                         <input id="resume-at" type="time" value={resumeAt} onChange={(e) => setResumeAt(e.target.value)} className="w-32" />
                       </div>
-                      <button type="button" className="btn btn-primary" disabled={pending || !resumeAt} onClick={() => currentRow && live(() => resumePlanAtAction(currentRow.id, resumeAt))}>{T.resume}</button>
+                      <button type="button" className="btn btn-primary" disabled={pending || !resumeAt} title={!resumeAt ? T.needTime : undefined} onClick={() => currentRow && live(() => resumePlanAtAction(currentRow.id, resumeAt))}>{T.resume}</button>
                     </>
                   ) : (
-                    <button type="button" className="btn" disabled={pending || !currentRow?.active} onClick={() => currentRow && live(() => holdPlanAction(currentRow.id))}>{T.hold}</button>
+                    <button type="button" className="btn" disabled={pending || !currentRow?.active} title={!currentRow?.active ? T.needActive : undefined} onClick={() => currentRow && live(() => holdPlanAction(currentRow.id))}>{T.hold}</button>
                   )}
                   {[5, 10].map((m) => (
-                    <button key={m} type="button" className="btn" disabled={pending || !currentRow?.active || Boolean(plan.hold)} onClick={() => currentRow && live(() => shiftPlanAction(currentRow.id, m))}>
+                    <button key={m} type="button" className="btn" disabled={pending || !currentRow?.active || Boolean(plan.hold)} title={!currentRow?.active ? T.needActive : plan.hold ? T.heldNoShift : undefined} onClick={() => currentRow && live(() => shiftPlanAction(currentRow.id, m))}>
                       {T.shift(m)}
                     </button>
                   ))}
                 </div>
+                {!currentRow?.active ? <p className="text-small font-medium text-beach-muted" data-testid="why-live">{T.needActive}</p> : plan.hold ? <p className="text-small font-medium text-beach-muted" data-testid="why-live">{plan.hold && !resumeAt ? `${T.heldNoShift} ${T.needTime}` : T.heldNoShift}</p> : null}
                 <p className="text-sm font-semibold">{T.lengthHint}</p>
               </div>
 

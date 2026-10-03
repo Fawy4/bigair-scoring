@@ -45,3 +45,23 @@ describe("per-round heat length on generated ladders", () => {
     expect(FormatTemplateSchema.safeParse({ ...gen, roundDurationMin: { R1: 12 } }).success).toBe(true);
   });
 });
+
+// Polish 2, item 10: "Timing per round" — a break after each heat per round (warm-up and heat length per round already exist).
+describe("per-round break after each heat on generated ladders", () => {
+  const breaks = (draw: ReturnType<typeof expandFormat>, round: string) => [...new Set(draw.rounds.find((r) => r.id === round)!.heats.map((h) => h.breakAfterHeatMin))];
+  it("knockout: R1 3 min, F 10 min; SF keeps the division's break; the break after a round is unchanged", () => {
+    const base = expandFormat(loadFormat("heats4-top2-single-elim"), makeEntrants(14));
+    const d = expandFormat(loadFormat("heats4-top2-single-elim", (j) => (j.roundBreakAfterHeatMin = { R1: 3, F: 10 })), makeEntrants(14));
+    expect(breaks(d, "R1")).toEqual([3]);
+    expect(breaks(d, "F")).toEqual([10]);
+    expect(breaks(d, "SF")).toEqual(breaks(base, "SF"));
+    expect(d.rounds[0].heats.map((h) => h.breakAfterRoundMin)).toEqual(base.rounds[0].heats.map((h) => h.breakAfterRoundMin));
+  });
+  it("only generated ladders accept it, and a break is never negative", () => {
+    const ok = loadFormat("heats4-top2-single-elim", (j) => (j.roundBreakAfterHeatMin = { R1: 0 }));
+    expect(ok.roundBreakAfterHeatMin).toEqual({ R1: 0 });
+    expect(() => loadFormat("heats4-top2-single-elim", (j) => (j.roundBreakAfterHeatMin = { R1: -1 }))).toThrow();
+    const fixed = FormatTemplateSchema.safeParse({ id: "x", name: "x", entrants: { min: 2, max: null }, timing: { defaultHeatMin: 10, defaultBreakAfterHeatMin: 2, defaultBreakAfterRoundMin: 5 }, kind: "fixed", rounds: [{ id: "F", name: "Final", shortName: "F", heatSize: 4 }], roundBreakAfterHeatMin: { F: 3 } });
+    expect(fixed.success).toBe(false);
+  });
+});

@@ -11,8 +11,9 @@ import { ScheduleManager } from "./schedule-manager";
 export const metadata = { title: copy.wizard.steps.schedule };
 export const dynamic = "force-dynamic";
 
-export default async function ScheduleStepPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ScheduleStepPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ day?: string }> }) {
   const { id } = await params;
+  const { day: askedDay } = await searchParams;
   const { supabase } = await getOrgContext();
   const { data: event } = await supabase.from("events").select("id, name, timezone, start_date, end_date, settings, branding").eq("id", id).maybeSingle();
   if (!event) notFound();
@@ -52,6 +53,7 @@ export default async function ScheduleStepPage({ params }: { params: Promise<{ i
           timezone={tz}
           days={days.length ? days : [today]}
           today={today}
+          initialDay={typeof askedDay === "string" && /^\d{4}-\d{2}-\d{2}$/.test(askedDay) ? askedDay : undefined}
           serverNow={new Date().toISOString()}
           logoUrl={branding.logoUrl ?? null}
           readyCallMin={settings.readyCallMin}

@@ -146,7 +146,8 @@ test("Clear actual times: the actual starts and the pins the console wrote go; t
   expect(plan.actual_starts).toEqual({});
   // nothing left to clear: the button stays, off, and says so
   await expect(page.getByTestId("clear-actuals-open")).toBeDisabled();
-  await expect(page.getByText(/There are no actual start times or pins written while the day ran to clear/)).toBeVisible();
+  // Polish 2, item 14: it says what stays instead of "nothing to clear"
+  await expect(page.getByText("This run order has no actual start times and no pins written while the day ran. Your pinned 10:00 and 11:30 stay.")).toBeVisible();
 });
 
 test("Clear actual times on an older run order (hand-set pins not told apart): every pin stays, and the confirmation says so", async ({ page }) => {

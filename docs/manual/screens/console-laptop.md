@@ -2,7 +2,7 @@
 
 The head judge's working screen at /head/‹event› on a laptop or tablet (1280 px and wider): division tabs, the heat's timer and buttons, the run order with times, the break countdown, the live score table, Publish and everything around it.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.9.1
 
 ## What it is for {#cl-purpose}
 
@@ -17,7 +17,7 @@ The head judge (the head judge seat, or an organiser of the event — an organis
 |---|---|
 | Division tabs | One division at a time (remembered on this device). A live dot with its word shows another division whose heat is running or paused; **On now: ‹heat›** jumps to it. |
 | Heat name and timer | The selected heat; time left from the server's clock (every phone shows the same time). |
-| **Start heat** / **Pause** / **Resume** / **End heat** | The heat's clock. Starting a heat that is not next in the active run order asks once: “Not the next heat in the run order — ‹heat› was next” → **Start anyway** / **Don’t start**. A grey button says why under it (“Only a heat that has not started can be started.”, “Only a running heat can be paused.”…). |
+| **Start heat** / **Pause** / **Resume** / **End heat** | The heat's clock. Starting a heat that is not next in the active run order asks once: “Not the next heat in the run order — ‹heat› was next” → **Start anyway** / **Don’t start**. A grey button says why under it (“Only a heat that has not started can be started.”, “Only a running heat can be paused.”…). In a simulation, a heat the simulator's **Pause** or **Stop** holds says **Paused by the simulator**; **Resume** here, or Resume on the simulator panel, starts it again. |
 | **Sound on** | Beeps once at 1:00 and twice at time up (after one tap, as phones require). The timer never depends on sound. |
 | Break countdown | Between heats: “Next: ‹heat› · starts in 4:30” (end of the last heat + break + warm-up), **+1 min** (this break one minute longer, rounded up to the next whole minute), **Pause break** (holds the run order, freezes the countdown), **Resume**. When the time has passed: “ready to start · 0:45 late”. Nothing starts by itself. |
 | Drift badge and time now | “On schedule” / “6 min late” / “4 min early”, and HH:MM in the event's time zone. |
@@ -48,14 +48,14 @@ The head judge (the head judge seat, or an organiser of the event — an organis
 | Control | What it does |
 |---|---|
 | **Publish** | Opens “Publish ‹heat›”: “Publish this result? The ladder fills the next heats' seats with it.” Grey until the heat has ended, or while something blocks it (“‹n› things to fix first (see Details)”). **Publish with a reason** goes past blockers (not past a tie). Publishing again after Re-open writes the next version. |
-| **Before you publish** | What blocks Publish, in words: “‹judge› has no score for ‹rider›, attempt ‹n›”, “‹judge› has no Impression / Variety score for ‹rider›”, “‹judge› has not submitted”, “‹names› are tied — choose the order” (**Choose order**). |
+| **Before you publish** | What blocks Publish, each line naming the judge and the exact thing: “‹judge›: score for ‹rider›, attempt ‹n› missing”, “‹judge›: Impression / Variety score for ‹rider› missing”, “‹judge›: sheet not submitted — 3 attempts unscored” (or “— every score is in”), “‹names› are tied — choose the order” (**Choose order**). **Fix** on a line opens that judge's cell of that attempt, that judge's Impression / Variety score of that rider, or points at the judge in **Judges**. The Publish dialog shows the same lines with the same **Fix**. In the cell or the Impression / Variety score, **Judge absent for this attempt** / **Judge absent for this rider** sets the judge to Absent: not counted, not missing. When every gap of a judge who never pressed Submit is set to Absent, that judge's sheet counts as submitted and Publish needs no reason. |
 | **Re-open** | Takes a published result back to review; spectators keep the old result until you publish again. |
 | **Cancel heat** | With a reason (“for example: kite tangle”). |
 | **Re-run heat** | Cancels the heat and creates “H‹n›R” next in the run order with the same riders, seats, Lycras and timing; riders who do not ride again are Disqualified or Did not start (ranked last). Also on a cancelled heat, once (“Already re-run as H1R”). |
 | **Heat menu** → **Reset this heat…** | Back to not started with the same riders; what it held is kept for the audit. See [Resets and undo](../resets-and-undo.md#ru-heat). |
 | **Judges** | Each judge: Live, “Not seen for 40 s”, “Not connected”; Submitted / Not submitted. |
 | **Open flags** | Judges' flags (“That was a crash”, “That was a landing”, “Wrong rider”, “Duplicate”, “Other”) with **Resolve**. |
-| **Owes Impression score** | Who has not given which rider an Impression / Variety score; **Enter their Impression score** types it for them (for example from a paper sheet). |
+| **Impression / Variety scores** | After the heat has ended, one block per judge: “all in” or “3 missing”, and each rider with **done 7.50**, **missing** or **Absent**, so you see at a glance what holds the panel back. **Enter ‹judge›'s sheet** opens that judge's sheet: every rider in a list, the pad for the one selected; a score (or **Judge absent for this rider**) moves on to the next rider who has nothing yet. **Save ‹n› riders** saves them all at once with one reason; **Save and submit ‹judge›'s sheet** also submits the sheet for the judge (every rider needs a score or Absent first). |
 | **Rider totals** and **Ties** | Provisional totals with the formula in words; how each tie is broken. |
 | **Public** | **Release result** / **Hold result back…** for a held result (the final when “Hold the final’s result” is on, or every result when results are not shown on publish). |
 

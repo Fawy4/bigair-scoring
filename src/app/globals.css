@@ -82,8 +82,6 @@
     min-width: var(--org-ctl);
     max-width: 100%;
     text-align: right;
-    appearance: textfield;
-    -moz-appearance: textfield;
   }
   @supports (field-sizing: content) {
     :where(.org-console) input[type="number"] {
@@ -91,10 +89,10 @@
       width: auto;
     }
   }
+  /* the up / down spinner stays visible (Polish 2, item 13) */
   :where(.org-console) input[type="number"]::-webkit-inner-spin-button,
   :where(.org-console) input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+    opacity: 1;
   }
   :where(.org-console) :is(input[type="checkbox"], input[type="radio"]) {
     width: 20px;

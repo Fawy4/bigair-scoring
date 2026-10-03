@@ -23,6 +23,8 @@ interface Ctx {
   newItem?: NewItem;
   /** Dotted pattern paths that another part of the screen already shows (kept out so no setting appears twice). */
   hiddenPaths?: string[];
+  /** A choice or an on/off whose switch another part of the screen shows: only what the current choice adds is drawn here. */
+  flatPaths?: readonly string[];
 }
 
 const idOf = (path: Path) => `sf-${path.join("-")}`;
@@ -53,6 +55,7 @@ export function SchemaForm({
   selectOptions,
   newItem,
   hiddenPaths = [],
+  flatPaths = [],
 }: {
   node: FieldNode;
   value: unknown;
@@ -63,6 +66,7 @@ export function SchemaForm({
   selectOptions?: SelectOptions;
   newItem?: NewItem;
   hiddenPaths?: string[];
+  flatPaths?: readonly string[];
 }) {
   if (node.kind !== "object") return null;
   const ctx: Ctx = {
@@ -74,6 +78,7 @@ export function SchemaForm({
     selectOptions,
     newItem,
     hiddenPaths,
+    flatPaths,
   };
   return (
     <fieldset disabled={readOnly} className="flex flex-col gap-4">
@@ -252,6 +257,19 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
     case "choice": {
       const current = (value as Record<string, unknown> | undefined)?.[node.discriminator];
       const variant = node.variants.find((v) => v.value === current) ?? node.variants[0];
+      if (ctx.flatPaths?.includes(node.pattern.join("."))) {
+        // the choice itself is a main dial: only what this choice adds
+        const fields = variant.node.fields.filter((f) => !ctx.hiddenPaths?.includes(f.pattern.join(".")));
+        return fields.length ? (
+          <div className="flex flex-col gap-3">
+            {fields.map((f) => (
+              <div key={f.key} className="flex flex-col gap-1">
+                <FieldView node={f} path={[...path, f.key]} ctx={ctx} />
+              </div>
+            ))}
+          </div>
+        ) : null;
+      }
       return (
         <div className="flex flex-col gap-3">
           {bare ? null : <Label node={node} path={path} />}
@@ -285,6 +303,8 @@ function FieldView({ node, path, ctx, bare }: { node: FieldNode; path: Path; ctx
 
     case "nullable": {
       const on = value !== null && value !== undefined;
+      // the on/off is a main dial: its settings only, and only while it is on
+      if (ctx.flatPaths?.includes(node.pattern.join("."))) return on ? <FieldView node={{ ...node.inner, label: node.label, help: undefined }} path={path} ctx={ctx} /> : null;
       return (
         <div className="flex flex-col gap-3">
           <span className="flex items-start gap-2">

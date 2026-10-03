@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { duplicatePlan, RunOrderError } from "@/lib/engine/schedule";
+import { copyPlanToDay } from "@/lib/schedule/day-plans";
 import { planOfRow, planToRow, type PlanRow } from "@/lib/schedule/plans";
 import { ScheduleDefaultsSchema, SchedulePlanSchema, type SchedulePlan } from "@/lib/schemas/schedule";
 import { createClient } from "@/lib/supabase/server";
@@ -72,6 +73,30 @@ export async function duplicatePlanAction(planId: string, name: string): Promise
   } catch (e) {
     return fail(e instanceof RunOrderError ? e.message : T.failed);
   }
+}
+
+/**
+ * "Copy ‹other day›'s plan to ‹day›" (Polish 2, item 14): a new run order for `day` with the heats, breaks and notes of `planId` and the pins set by hand there;
+ * not its actual times, the console's pins or a hold. Active at once when it is the day's first plan (as Create does).
+ */
+export async function copyPlanToDayAction(planId: string, day: string, name: string): Promise<Result<{ row: PlanRow }>> {
+  if (!Uuid.safeParse(planId).success || !Day.safeParse(day).success) return fail(T.failed);
+  const n = Name.safeParse(name);
+  if (!n.success) return fail(n.error.issues[0].message);
+  const supabase = await createClient();
+  const { data: src } = await supabase.from("schedule_plans").select(COLUMNS).eq("id", planId).maybeSingle();
+  if (!src) return fail(T.notAllowed);
+  if (src.day === day) return fail(T.failed);
+  const { data: existing } = await supabase.from("schedule_plans").select("id, name").eq("event_id", src.event_id).eq("day", day);
+  if ((existing ?? []).some((p) => p.name.trim().toLowerCase() === n.data.toLowerCase())) return fail(T.nameTaken);
+  const copied = copyPlanToDay(src as PlanRow);
+  const { data, error } = await supabase
+    .from("schedule_plans")
+    .insert({ event_id: src.event_id, day, name: n.data, active: (existing ?? []).length === 0, items: copied.items as Json, anchors: copied.anchors as unknown as Json, actual_starts: {}, defaults: src.defaults })
+    .select(COLUMNS)
+    .single();
+  if (error || !data) return fail(dbMessage(error?.message ?? ""));
+  return { ok: true, row: data as PlanRow };
 }
 
 const SaveInput = z.object({

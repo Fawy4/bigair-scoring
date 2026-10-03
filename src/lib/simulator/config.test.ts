@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultSimConfig, isSpeed, parseSimConfig, SPEEDS, withSettings } from "./config";
+import { defaultSimConfig, isSpeed, parseSimConfig, SPEEDS, withSettings, parseSettingsPatch } from "./config";
 
 describe("simulator settings", () => {
   it("an empty object is a working setup", () => {
@@ -31,5 +31,34 @@ describe("simulator settings", () => {
   });
   it("refuses a value outside its range", () => {
     expect(() => withSettings(defaultSimConfig(), { crashShare: 1.5 })).toThrow();
+  });
+});
+
+// Polish 2, item 4: "one judge misses attempts" silently changed attempts per rider from 7 to 5. Every behaviour setting is independent: saving one never changes another.
+describe("behaviour settings are independent", () => {
+  const seven = withSettings(defaultSimConfig(), { attemptsPerRider: 7, crashShare: 0.3, spread: "disagree" });
+  it("choosing 'one judge misses attempts' keeps 7 attempts per rider (and every other setting)", () => {
+    const patch = parseSettingsPatch({ judgeMode: "misses" });
+    expect(patch).toEqual({ judgeMode: "misses" });
+    const next = withSettings(seven, patch!);
+    expect(next).toEqual({ ...seven, judgeMode: "misses" });
+    expect(next.attemptsPerRider).toBe(7);
+  });
+  it("changing attempts per rider keeps the judge mode", () => {
+    const misses = withSettings(seven, { judgeMode: "misses", specialJudge: 3 });
+    const next = withSettings(misses, parseSettingsPatch({ attemptsPerRider: 4 })!);
+    expect(next).toEqual({ ...misses, attemptsPerRider: 4 });
+  });
+  it("every single setting, saved alone, changes only itself", () => {
+    const samples: Record<string, unknown> = { attemptsPerRider: 3, crashShare: 0.5, repeatShare: 0.2, spread: "agree", judgeMode: "late", specialJudge: 1, missShare: 0.5, offlineSec: 30, lateSec: 40 };
+    for (const [k, v] of Object.entries(samples)) {
+      const next = withSettings(seven, parseSettingsPatch({ [k]: v })!);
+      expect(next, k).toEqual({ ...seven, [k]: v });
+    }
+  });
+  it("a bad value or a key that is not a setting is refused (nothing saved)", () => {
+    expect(parseSettingsPatch({ attemptsPerRider: 0 })).toBeNull();
+    expect(parseSettingsPatch({ judgeMode: "asleep" })).toBeNull();
+    expect(parseSettingsPatch({ armed: ["x"] } as never)).toBeNull();
   });
 });

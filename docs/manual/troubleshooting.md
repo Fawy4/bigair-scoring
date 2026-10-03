@@ -2,7 +2,7 @@
 
 Look up the symptom: what you see, why it happens, how to fix it — first the common problems on the beach, then every sentence the product can show, alphabetically.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.9.1
 
 **One-minute method.** 1) Read the sentence on the screen: almost every refusal names its fix, and the organiser screens put a **Learn more** link after it. 2) A grey button has its reason written under it. 3) Search this manual (top of /help) for two words of the sentence. 4) Check the [dependency map](dependencies.md): most problems are a missing step before the one you are on. 5) Still stuck: /admin/health, then the server logs with the error reference.
 
@@ -30,7 +30,7 @@ Last checked: 2 Oct 2026 · Product version 0.9.0
 | {#t-link-failed} **“That sign-in link did not work.” / “…has already been used or has expired”** | An invitation link works once, for 24 hours (in any browser). A link asked for on the sign-in page must be opened in the same browser that asked for it. | Sign in with the password; or **Forgot password?**; or ask the platform owner for a new invitation. |
 | {#t-hold-grey} **Hold / Shift / Resume at are grey on Go live** | No run order active *for today* in the event's time zone (an active plan for another day does not count), or already on hold / not on hold. | Run order → today's day → **Activate this plan**. See [Hold](dependencies.md#dep-hold). |
 | {#t-no-countdown} **No break countdown on the console** | “No countdown: …” says why: no active run order, no heat left, or the next heat has no start time. | Activate the plan and Pin the first start. |
-| {#t-publish-grey} **Publish is grey or refused** | The heat has not ended, or something blocks it (missing scores, missing Impression, a judge has not submitted, a tie). | End the heat; read **Before you publish**; fix, **Choose order**, or **Publish with a reason**. |
+| {#t-publish-grey} **Publish is grey or refused** | The heat has not ended, or something blocks it (missing scores, missing Impression, a judge has not submitted, a tie). | End the heat; read **Before you publish** (each line names the judge and the score); press **Fix** on a line, type the score or set the judge to **Absent**; **Choose order**; or **Publish with a reason**. A judge whose every gap you set to Absent no longer holds Publish back. |
 | {#t-out-of-attempts} **A rider is grey on the spotter screen** | The rider used every attempt the division allows (“Out of attempts · 7 / 7”). | Correct: the head judge may add one past the cap with a reason (attempt menu → Add attempt). |
 | {#t-locked-rules} **Scoring, format or Rider label cannot be changed** | A heat of the division has started; rules lock to protect results already entered. | Scoring and format: **Unlock scoring and format** with a reason. The Rider label and ticked trick blocks stay fixed. |
 | {#t-public-slow} **Public pages update slowly** | Public pages ask for news every “Live update every (seconds)” (default 7) while visible; there is no push to spectators. | Lower the number in the Event step (3 at least); refresh. |
@@ -91,11 +91,12 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Another heat is already running (‹max› at a time). End it first, or ask the organiser to allow more in the Event step” | End the other heat, or raise “Heats that can run at the same time” in the Event step. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-heat-already-running) |
 | “Another plan of this day already has that name.” | Follow the sentence. | [Organiser: Run order](errors.md#err-runorder-errors-nametaken) |
 | “Another rider in your organisation already has that email address.” | Use the rider who already has that email (Add from this organisation’s riders). | [Organiser: Riders](errors.md#err-riders-errors-emailused) |
-| “Another tab is playing this simulation.” | Close the other tab, or use it. | [Simulator](errors.md#err-simulator-play-lines-busy) |
+| “Another tab is playing this simulation.” | Close the other tab, or use it. If you see it with one tab open, reload the page. | [Simulator](errors.md#err-simulator-play-lines-busy) |
 | “at most 20 sponsors” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-sponsorsmax) |
 | “at most 6 extra leaderboards” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-leaderboardsmax) |
 | “Available once the heat has ended.” | Press End heat (or wait for the clock). | [Grey buttons on the head console](errors.md#err-controlwhy-publish) |
 | “Available while a heat is running or paused.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-live) |
+| “Available while a heat is running, paused or waiting to be published.” | Start the auto-play; the button turns on when a heat starts. | [Simulator](errors.md#err-simulator-skip-why) |
 | “Available while the heat is running, paused, ended or under review.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-cancel) |
 | “Base trick “‹label›” needs a scoring category.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-baseneedscategory) |
 | “Bib ‹bib› is given to more than one rider: ‹names›.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-repeatedbib) |
@@ -146,6 +147,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Enter your last name.” | Follow the sentence. | [Rider registration](errors.md#err-registration-errors-last) |
 | “Enter your name (2 to 60 characters).” | Follow the sentence; the organiser can regenerate a PIN in the Officials step. | [Officials joining](errors.md#err-join-selfadd-errors-invalid-name) |
 | “Every family needs a name.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-emptyfamily) |
+| “Every rider needs a score or Absent before the sheet can be submitted. Save keeps what you typed so far.” | Give every rider a score or Absent. Save keeps what you typed so far without submitting. | [Head console](errors.md#err-headlive-sheetincomplete) |
 | “Failed — tap to retry” | Tap the badge to retry. If it still fails, read the sentence; the head judge can type the score on the console. | [Judge and spotter phones](errors.md#err-live-connection-failed) |
 | “First name is missing.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-firstmissing) |
 | “Fix the highlighted settings to see the preview.” | Change the highlighted number; the preview comes back when the format can run. | [Organiser: Divisions](errors.md#err-formatsimple-fixfirst) |
@@ -189,6 +191,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “‹n› divisions have no locked draw in the copy. Lock their draw on the Draw step of the copy before pressing Start.” | Open the copy's Draw step and lock each division's draw before Start. | [Simulator](errors.md#err-simulator-notsimulation-notdrawn) |
 | “‹n› divisions have no locked draw. The simulator plays locked draws only: lock them on the Draw step.” | Draw step → Lock draw for each division (of the simulation copy). | [Simulator](errors.md#err-simulator-needlock) |
 | “‹n› judges have not submitted yet. Give a reason to go on without them.” | Wait for the judges' Submit, or Publish with a reason. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-sheets-not-submitted) |
+| “‹n› riders have no Impression / Variety score from this judge yet. Enter it, or set the judge to Absent for them.” | Enter the score for each rider shown as missing, or press Judge absent for this rider, then submit again. | [Head console](errors.md#err-headlive-sheetstillmissing) |
 | “‹n› riders have no Impression / Variety score from you yet.” | Give each rider an Impression / Variety score, then Submit. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-impression-missing) |
 | “‹n› seats in this heat still wait for a rider — finish the earlier heats first, or fill the seat in the Draw step” | Publish the earlier heat, or place a rider in the seat in the Draw step. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-seats-not-filled) |
 | “‹n› things to fix first (see Details)” | Open Details (phone) or read “Before you publish” (laptop); fix them or Publish with a reason. | [Grey buttons on the head console](errors.md#err-controlwhy-blockers) |
@@ -202,6 +205,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “No countdown: the next heat has no start time yet.” | Run order step → pin a start time on the first row. | [Head console](errors.md#err-headv2-breaknone-no-time) |
 | “No countdown: there is no active run order.” | Run order step → Activate this plan for today. | [Head console](errors.md#err-headv2-breaknone-no-plan) |
 | “No heat has been published yet.” | Follow the sentence. | [Simulator](errors.md#err-simulator-log-nopublished) |
+| “No heat is on the water, so there is nothing to skip. Start the auto-play first.” | Press Start (or Run the whole event) and skip once a heat is on the water. | [Simulator](errors.md#err-simulator-skip-noheat) |
 | “No heat is running.” | Follow the sentence. | [Simulator](errors.md#err-simulator-log-norunning) |
 | “No PIN on file for this seat (it was made before PINs could be shown). Use Regenerate PIN to make a new one.” | Regenerate PIN (the old PIN stops working and the seat's phones are signed out). | [Organiser: Officials](errors.md#err-officials-pinunknown) |
 | “No PIN on file: regenerate it first” | Regenerate PIN for that seat, then print. | [Organiser: Officials](errors.md#err-officials-printnopin) |

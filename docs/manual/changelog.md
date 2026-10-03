@@ -2,7 +2,24 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.9.1
+
+## 0.9.1 — 3 Oct 2026 {#cl-0-9-1}
+
+Polish 2 – simulator, console and organiser fixes.
+
+**What changed for users**
+- **Publish** (head judge): a blocked Publish names the judge and the exact thing (“Fawy: score for Red, attempt 2 missing”, “Fawy: Impression / Variety score for Red missing”), each with **Fix**, which opens that score. When the head judge sets every missing score of a judge to **Absent**, that judge's sheet counts as submitted and Publish needs no reason.
+- **Console, after the heat**: each judge's Impression / Variety scores per rider (done, missing, Absent). The head judge can type a judge's whole sheet: one **Save** for every rider, the next rider is picked by itself, **Save and submit** submits the sheet.
+- **Simulator**: **View as** gives the seat back when you leave (or after 90 s without a sign of life) and the panel shows who holds each seat, with **Give back**; **Pause** pauses the heat clock too (the console says “Paused by the simulator”), **Resume** resumes both, **Stop** leaves the heat paused; behaviour settings no longer reset each other; auto-play keeps its full speed; new **Skip to end of heat** and **Run the whole event**.
+- **Divisions → Scoring**: the main dials first; the settings of a choice show only with that choice; “21 more settings” (it said 53).
+- **Divisions → Format**: one **Timing per round** table (warm-up, heat length, break after each heat), the duplicate settings removed.
+- Every “?” ends with where the setting shows and what it changes.
+- **Run order**: a day without a plan offers **Create a plan for ‹day›** and **Copy ‹other day›'s plan to ‹day›**; the Day list says which plan is active or “no plan”; every grey button says why; **Clear actual times** names the pins that stay; the Go live **Fix** opens on today.
+- The Next / Previous bar stays at the bottom and the **Note** button floats above it; the up / down arrows are back on number boxes; a button that asks once (Archive, Delete, Reset…) stays grey until the page is ready, so an early tap is not lost.
+
+**Manual pages updated**
+- [Head judge console (laptop)](screens/console-laptop.md), [Simulator](screens/simulator.md), [Divisions](screens/organiser-divisions.md), [Run order](screens/organiser-run-order.md), [Event](screens/organiser-event.md), [Quick start](quick-start.md), [Event day](event-day.md), [Dependency map](dependencies.md); [Settings](settings.md), [Errors and refusals](errors.md) and [Troubleshooting](troubleshooting.md) regenerated; screenshots retaken.
 
 ## 0.9.0 — 2 Oct 2026 {#cl-0-9-0}
 

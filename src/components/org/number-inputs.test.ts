@@ -28,3 +28,15 @@ describe("number boxes", () => {
     expect(code).toMatch(/numberFieldWidth/);
   });
 });
+
+// Polish 2, item 13: the up / down spinner is back on every number box (keyboard arrows too: a native number input), still sized to its digits.
+describe("number box spinners", () => {
+  it("no stylesheet hides the spinner of a number box", () => {
+    for (const f of ["src/app/globals.css", "src/components/org/org-tokens.css"]) {
+      const css = readFileSync(f, "utf8");
+      expect(css, f).not.toMatch(/inner-spin-button[^}]*-webkit-appearance:\s*none/);
+      expect(css, f).not.toMatch(/input\[type="number"\][^{]*\{[^}]*appearance:\s*textfield/);
+      expect(css, f).not.toMatch(/\.org-number\s*\{[^}]*appearance:\s*textfield/);
+    }
+  });
+});

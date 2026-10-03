@@ -250,8 +250,9 @@ test("Warm-up, run order and timetable: warm-up 5 + heat 10, breaks of 2, pin th
   // run order: Saturday
   await page.goto(`/org/events/${eventId}/schedule`);
   await page.getByLabel("Day").selectOption({ index: 0 });
-  await page.getByLabel("Name of a new empty plan").fill("Plan A – Good wind");
-  await page.getByRole("button", { name: "New plan" }).click();
+  // Polish 2, item 14: a day with no plan offers "Create a plan for <day>" with the name pre-filled
+  await page.locator("#day-plan-name").fill("Plan A – Good wind");
+  await page.getByTestId("create-day-plan").click();
   await expect(page.getByTestId("run-header")).toContainText("Plan A – Good wind");
   await expect(page.getByTestId("unscheduled-group")).toHaveCount(4);
   for (let i = 0; i < 4; i++) await page.getByTestId("unscheduled-group").first().getByRole("button", { name: /^Add all/ }).click();

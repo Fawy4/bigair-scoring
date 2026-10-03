@@ -66,6 +66,9 @@ export function readiness({ eventId, divisions, counts }: ReadinessInput): Readi
   if (counts.activePlanToday) add("run-order", "done", T.runOrder.ok, "schedule");
   else if (counts.activePlan) add("run-order", "attention", counts.today && counts.activePlanDays?.length ? T.runOrder.otherDayNamed(shortDay(counts.today), counts.activePlanDays.map(shortDay)) : T.runOrder.otherDay, "schedule");
   else add("run-order", (counts.planCount ?? 0) > 0 ? "attention" : "not_started", (counts.planCount ?? 0) > 0 ? (counts.today ? T.runOrder.noneActiveNamed(shortDay(counts.today)) : T.runOrder.otherDay) : T.runOrder.none, "schedule");
+  // the Fix of "No run order active for today" opens the Run order step on today (Polish 2, item 14)
+  const runOrder = checks.find((c) => c.id === "run-order");
+  if (runOrder && runOrder.state !== "done" && counts.today) runOrder.fixHref = `${runOrder.fixHref}?day=${counts.today}`;
 
   const seats = counts.seatCount ?? counts.judgeSeats + counts.pendingSeats;
   const noPin = counts.seatsWithoutPin ?? 0;
