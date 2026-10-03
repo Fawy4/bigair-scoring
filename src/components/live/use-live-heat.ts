@@ -108,7 +108,7 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
 
   // When a pre-start ends every official phone asks the database to write the start down (`start_armed_if_due`: the start time is the armed moment, whoever asks, and a
   // second call changes nothing), so nothing depends on one phone staying awake. An observer only watches.
-  const dueId = rawHeats.find((h) => h.status === "scheduled" && h.armed_at && nowServer >= Date.parse(h.armed_at) + (h.prestart_sec ?? 0) * 1000)?.id ?? null;
+  const dueId = rawHeats.find((h) => h.status === "scheduled" && h.armed_at && !h.armed_paused_at && nowServer >= Date.parse(h.armed_at) + (h.prestart_sec ?? 0) * 1000)?.id ?? null;
   const mayWrite = !observed && !(viewer.kind === "seat" && viewer.role === "observer");
   useEffect(() => {
     if (!dueId || !mayWrite) return;

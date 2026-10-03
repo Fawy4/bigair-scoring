@@ -2535,6 +2535,8 @@ export const copy = {
       paused: (colour: string, heat: string) => `${colour} — ${heat} paused`,
       resumed: (colour: string, heat: string) => `${colour} — ${heat} resumed`,
       aborted: (colour: string, heat: string) => `${colour} — the start of ${heat} is aborted`,
+      prestartPaused: (colour: string, heat: string) => `${colour} — the start of ${heat} is paused`,
+      prestartResumed: (colour: string, heat: string) => `${colour} — the start of ${heat} carries on`,
       hold: (colour: string) => `${colour} — hold, times update when we resume`,
     },
     length: { oneMinute: "one minute", minutes: (n: number) => `${n} minutes`, seconds: (n: number) => `${n} seconds`, minuteSeconds: (m: number, s: number) => `${m} min ${s} s` },

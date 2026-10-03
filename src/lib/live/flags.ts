@@ -17,6 +17,10 @@ export type StoppedWhy = "finished" | "paused" | "hold" | "between" | "before_da
 export interface FlagHeat extends HeatTiming {
   armedAt: string | number | null;
   prestartSec: number | null;
+  /** The pre-start is frozen (Pause on the console or the simulator): the countdown stands still, and Resume carries on from the same remaining time. */
+  armedPausedAt?: string | number | null;
+  /** The simulator's speed this heat runs at (1 on a real event): the last-minute length is divided by it, like the heat clock and the pre-start. */
+  timeScale?: number;
 }
 
 export interface FlagState {
@@ -32,13 +36,15 @@ export interface FlagState {
   startsAtMs: number | null;
   /** Before start only: the length of this pre-start, in seconds (for the cue "one minute to the start"). */
   prestartSec: number | null;
+  /** The red flag is a frozen pre-start (the heat has not started; the countdown shows what is left of the yellow). */
+  inPrestart: boolean;
 }
 
 const ms = (t: string | number | null): number | null => (t === null ? null : typeof t === "number" ? t : Date.parse(t));
 
 /** The moment an armed heat starts by itself, or null when it is not armed. */
 export function armedStartMs(heat: Pick<FlagHeat, "status" | "armedAt" | "prestartSec">): number | null {
-  if (heat.status !== "scheduled" || heat.armedAt === null) return null;
+  if (heat.status !== "scheduled" || heat.armedAt === null || heat.armedAt === undefined) return null;
   const at = ms(heat.armedAt);
   return at === null ? null : at + (heat.prestartSec ?? 0) * 1000;
 }
@@ -46,13 +52,13 @@ export function armedStartMs(heat: Pick<FlagHeat, "status" | "armedAt" | "presta
 /** An armed heat whose pre-start is over is running, and its start time is exactly the armed time plus the pre-start. Every other heat is returned unchanged. */
 export function overlayArmed<T extends FlagHeat>(heat: T, nowMs: number): T {
   const start = armedStartMs(heat);
-  if (start === null || nowMs < start) return heat;
+  if (start === null || heat.armedPausedAt || nowMs < start) return heat;
   return { ...heat, status: "running", startedAt: new Date(start).toISOString() };
 }
 
 /** The same overlay for a heats row as the live screens read it (snake case). */
-export function overlayArmedRow<T extends { status: string; started_at: string | null; armed_at?: string | null; prestart_sec?: number | null }>(row: T, nowMs: number): T {
-  if (row.status !== "scheduled" || !row.armed_at) return row;
+export function overlayArmedRow<T extends { status: string; started_at: string | null; armed_at?: string | null; prestart_sec?: number | null; armed_paused_at?: string | null }>(row: T, nowMs: number): T {
+  if (row.status !== "scheduled" || !row.armed_at || row.armed_paused_at) return row;
   const start = Date.parse(row.armed_at) + (row.prestart_sec ?? 0) * 1000;
   return nowMs < start ? row : { ...row, status: "running", started_at: new Date(start).toISOString() };
 }
@@ -78,7 +84,7 @@ export function flagState(i: FlagInput): FlagState | null {
   const { settings, nowMs } = i;
   if (!settings.enabled) return null;
   const look = settings.states;
-  const make = (kind: FlagKind, why: StoppedWhy | null, countdownMs: number | null, extra: Partial<Pick<FlagState, "startsAtMs" | "prestartSec">> = {}): FlagState => ({
+  const make = (kind: FlagKind, why: StoppedWhy | null, countdownMs: number | null, extra: Partial<Pick<FlagState, "startsAtMs" | "prestartSec" | "inPrestart">> = {}): FlagState => ({
     kind,
     why,
     label: kind === "stopped" ? stoppedWord(why ?? "between", look.stopped.label) : look[kind].label,
@@ -86,12 +92,18 @@ export function flagState(i: FlagInput): FlagState | null {
     countdownMs,
     startsAtMs: extra.startsAtMs ?? null,
     prestartSec: extra.prestartSec ?? null,
+    inPrestart: extra.inPrestart ?? false,
   });
   const idle: StoppedWhy = i.onHold ? "hold" : i.anyHeatStarted ? "between" : "before_day";
   let heat = i.heat;
   if (!heat) return make("stopped", idle, null);
 
   const start = armedStartMs(heat);
+  if (start !== null && heat.armedPausedAt) {
+    // a frozen pre-start: red "Paused", the countdown stands where it was frozen
+    const frozen = typeof heat.armedPausedAt === "number" ? heat.armedPausedAt : Date.parse(heat.armedPausedAt);
+    return make("stopped", "paused", Math.max(0, start - frozen), { prestartSec: heat.prestartSec, inPrestart: true });
+  }
   if (start !== null && nowMs < start) return make("before_start", null, start - nowMs, { startsAtMs: start, prestartSec: heat.prestartSec });
   heat = overlayArmed(heat, nowMs);
 
@@ -109,7 +121,9 @@ export function flagState(i: FlagInput): FlagState | null {
     default: {
       const left = remainingMs(heat, nowMs);
       if (left <= 0) return make("stopped", i.onHold ? "hold" : "finished", null);
-      return make(left <= settings.lastMinuteSec * 1000 ? "last_minute" : "running", null, left);
+      // on a simulation the last minute is as short as the heat clock and the pre-start (a minute at x10 is six seconds)
+      const lastMinuteMs = (settings.lastMinuteSec * 1000) / Math.max(1, heat.timeScale ?? 1);
+      return make(left <= lastMinuteMs ? "last_minute" : "running", null, left);
     }
   }
 }
@@ -120,6 +134,7 @@ export function flagState(i: FlagInput): FlagState | null {
  */
 export function hornsFor(prev: FlagState | null, next: FlagState | null): 0 | 1 | 2 {
   if (!prev || !next || prev.kind === next.kind) return 0;
+  if (next.kind === "before_start") return 0; // the yellow carries on after a freeze: no horn
   if (next.kind === "stopped") return next.why === "finished" && (prev.kind === "running" || prev.kind === "last_minute") ? 2 : prev.kind === "before_start" && next.why === "finished" ? 2 : 0;
   // on to green or the last minute: from the yellow, from a pause (resume), or from a last minute that began at once
   return 1;
@@ -165,13 +180,13 @@ export function cueFor(prev: FlagState | null, next: FlagState | null, heatName:
   const colour = colourName(next.colour);
   switch (next.kind) {
     case "before_start":
-      return C.beforeStart(colour, lengthWords(next.prestartSec ?? 60), heatName);
+      return prev.kind === "stopped" && prev.inPrestart ? C.prestartResumed(colour, heatName) : C.beforeStart(colour, lengthWords(next.prestartSec ?? 60), heatName);
     case "running":
       return prev.kind === "stopped" ? C.resumed(colour, heatName) : C.running(colour, heatName);
     case "last_minute":
       return prev.kind === "stopped" ? C.resumed(colour, heatName) : C.lastMinute(colour, heatName);
     case "stopped":
-      if (prev.kind === "before_start") return C.aborted(colour, heatName);
+      if (prev.kind === "before_start") return next.inPrestart ? C.prestartPaused(colour, heatName) : C.aborted(colour, heatName);
       return next.why === "finished" ? C.finished(colour, heatName) : next.why === "paused" ? C.paused(colour, heatName) : next.why === "hold" ? C.hold(colour) : null;
   }
 }
@@ -197,16 +212,18 @@ export interface FlagRowLike {
   paused_total_sec: number;
   armed_at?: string | null;
   prestart_sec?: number | null;
+  armed_paused_at?: string | null;
+  time_scale?: number;
 }
 
 export function flagHeatOf(row: FlagRowLike): FlagHeat {
-  return { status: row.status, durationSec: row.duration_sec, startedAt: row.started_at, pausedAt: row.paused_at, pausedTotalSec: row.paused_total_sec, armedAt: row.armed_at ?? null, prestartSec: row.prestart_sec ?? null };
+  return { status: row.status, durationSec: row.duration_sec, startedAt: row.started_at, pausedAt: row.paused_at, pausedTotalSec: row.paused_total_sec, armedAt: row.armed_at ?? null, prestartSec: row.prestart_sec ?? null, armedPausedAt: row.armed_paused_at ?? null, timeScale: row.time_scale ?? 1 };
 }
 
-/** True while the yellow is running for this heat (armed, pre-start not over). */
+/** True while the yellow is up for this heat: armed, the pre-start not over (a frozen one counts). */
 export function isArmedNow(row: FlagRowLike, nowMs: number): boolean {
   const start = armedStartMs({ status: row.status, armedAt: row.armed_at ?? null, prestartSec: row.prestart_sec ?? null });
-  return start !== null && nowMs < start;
+  return start !== null && (Boolean(row.armed_paused_at) || nowMs < start);
 }
 
 /**

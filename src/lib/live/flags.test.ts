@@ -149,6 +149,40 @@ describe("the state machine, derived from time stamps only", () => {
   });
 });
 
+describe("a frozen pre-start and the simulator's speed", () => {
+  const frozen = (at: number, pre = 60): FlagHeat => ({ ...armed(pre), armedPausedAt: iso(at) });
+  it("a frozen yellow is red Paused and keeps the time that was left", () => {
+    expect(st(frozen(20), 20)).toMatchObject({ kind: "stopped", why: "paused", countdownMs: 40_000, inPrestart: true });
+    expect(st(frozen(20), 500)).toMatchObject({ kind: "stopped", why: "paused", countdownMs: 40_000, inPrestart: true });
+  });
+  it("a frozen yellow does not start the heat when its old start time passes", () => {
+    expect(overlayArmed(frozen(20), s(120)).status).toBe("scheduled");
+  });
+  it("after Resume the start moves later by the frozen time (the database shifts armed_at)", () => {
+    const resumed: FlagHeat = { ...armed(), armedAt: iso(30) }; // frozen 30 s ago, now 60 s from new arming
+    expect(st(resumed, 50)).toMatchObject({ kind: "before_start", countdownMs: 40_000 });
+  });
+  it("Resume into the yellow gives no horn and the cue says it carries on", () => {
+    const prev = st(frozen(20), 20);
+    const next = st({ ...armed(), armedAt: iso(30) }, 30);
+    expect(hornsFor(prev, next)).toBe(0);
+    expect(cueFor(prev, next, "Heat 1")).toMatch(/carries on/);
+  });
+  it("a freeze during the yellow is announced as paused, not aborted", () => {
+    const prev = st(armed(), 20);
+    const next = st(frozen(20), 20);
+    expect(cueFor(prev, next, "Heat 1")).toMatch(/paused/);
+  });
+  it("the last minute is as short as the speed: at x10 a minute is 6 s", () => {
+    // a 10-minute heat at x10 is stored as 60 s
+    const run = (timeScale: number): FlagHeat => ({ ...base, status: "running", durationSec: 600 / timeScale, startedAt: iso(0), timeScale });
+    expect(st(run(10), 53)?.kind).toBe("running");
+    expect(st(run(10), 55)?.kind).toBe("last_minute");
+    expect(st(run(1), 535)?.kind).toBe("running");
+    expect(st(run(1), 545)?.kind).toBe("last_minute");
+  });
+});
+
 describe("the horns", () => {
   const kinds = (a: FlagHeat | null, t0: number, t1: number) => hornsFor(st(a, t0), st(a, t1));
   const running: FlagHeat = { ...base, status: "running", startedAt: iso(0) };
@@ -236,7 +270,7 @@ describe("which heat the strip is about", () => {
     expect(isArmedNow(row("c"), s(0))).toBe(false);
   });
   it("a heat row turns into the flag input unchanged", () => {
-    expect(flagHeatOf(row("b", { armed_at: iso(0), prestart_sec: 60 }))).toEqual({ ...armed(), status: "scheduled" });
+    expect(flagHeatOf(row("b", { armed_at: iso(0), prestart_sec: 60 }))).toEqual({ ...armed(), status: "scheduled", armedPausedAt: null, timeScale: 1 });
   });
   it("a heat has started once one has a start time, or its pre-start is over", () => {
     expect(anyHeatStarted([row("a")], s(0))).toBe(false);

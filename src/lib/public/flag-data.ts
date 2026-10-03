@@ -22,11 +22,11 @@ export interface PublicFlagData {
   next: string | null;
 }
 
-const asFlagHeat = (h: TimetableHeat): FlagHeat => flagHeatOf({ id: h.id, status: h.status, duration_sec: h.duration_sec, started_at: h.started_at, paused_at: h.paused_at, paused_total_sec: h.paused_total_sec, armed_at: h.armed_at ?? null, prestart_sec: h.prestart_sec ?? null });
+const asFlagHeat = (h: TimetableHeat): FlagHeat => flagHeatOf({ id: h.id, status: h.status, duration_sec: h.duration_sec, started_at: h.started_at, paused_at: h.paused_at, paused_total_sec: h.paused_total_sec, armed_at: h.armed_at ?? null, prestart_sec: h.prestart_sec ?? null, armed_paused_at: h.armed_paused_at ?? null, time_scale: h.time_scale ?? 1 });
 
 /** The heat the flags are about: the heat in its pre-start, else the one on the water (running or paused), else the one that started last. */
 export function pickPublicFlagHeat(heats: TimetableHeat[], nowMs: number): TimetableHeat | null {
-  const armed = heats.find((h) => isArmedNow({ id: h.id, status: h.status, duration_sec: h.duration_sec, started_at: h.started_at, paused_at: h.paused_at, paused_total_sec: h.paused_total_sec, armed_at: h.armed_at ?? null, prestart_sec: h.prestart_sec ?? null }, nowMs));
+  const armed = heats.find((h) => isArmedNow({ id: h.id, status: h.status, duration_sec: h.duration_sec, started_at: h.started_at, paused_at: h.paused_at, paused_total_sec: h.paused_total_sec, armed_at: h.armed_at ?? null, prestart_sec: h.prestart_sec ?? null, armed_paused_at: h.armed_paused_at ?? null, time_scale: h.time_scale ?? 1 }, nowMs));
   if (armed) return armed;
   const onWater = heats.find((h) => h.status !== "cancelled" && (h.effective_status === "running" || h.effective_status === "paused"));
   if (onWater) return onWater;
@@ -50,7 +50,7 @@ export function publicFlagData(timetable: PublicTimetable | null, tt: PublicTime
     heatName: heat ? title(heat.id, heatLabel(heat)) : "",
     heatShort: heat ? heatLabel(heat) : "",
     onHold: tt.onHold,
-    anyHeatStarted: anyHeatStarted(timetable.heats.map((h) => ({ started_at: h.started_at, status: h.status, armed_at: h.armed_at ?? null, prestart_sec: h.prestart_sec ?? null })), nowMs),
+    anyHeatStarted: anyHeatStarted(timetable.heats.map((h) => ({ started_at: h.started_at, status: h.status, armed_at: h.armed_at ?? null, prestart_sec: h.prestart_sec ?? null, armed_paused_at: h.armed_paused_at ?? null })), nowMs),
     next: up ? (up.start ? `${up.title}, est. ${up.start}` : up.title) : null,
   };
 }

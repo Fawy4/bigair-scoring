@@ -63,6 +63,8 @@ export interface TimetableHeat {
   /** Start sequence (Flags): when the yellow was raised and its length; null when not armed. `started_at` already holds the start moment once the pre-start is over. */
   armed_at?: string | null;
   prestart_sec?: number | null;
+  armed_paused_at?: string | null;
+  time_scale?: number;
   round_last: boolean;
   break_after_heat_min: number | null;
   break_after_round_min: number | null;

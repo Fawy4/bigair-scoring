@@ -37,9 +37,13 @@ export interface HeatRow {
   /** Start sequence (Flags): when the head judge raised the yellow, and its length. The heat is running once now >= armed_at + prestart_sec. Null when not armed. */
   armed_at?: string | null;
   prestart_sec?: number | null;
+  /** The pre-start is frozen (Pause): the countdown stands still until Resume. */
+  armed_paused_at?: string | null;
+  /** The simulator's speed this heat runs at (1 on a real event). */
+  time_scale?: number;
   updated_at: string;
 }
-export const HEAT_COLUMNS = "id, division_id, round_id, number, number_suffix, name, status, duration_sec, warm_up_sec, started_at, paused_at, paused_total_sec, ended_at, draw_uid, rerun_of, public_live, reopened_at, publish_hold, paused_reason, armed_at, prestart_sec, updated_at";
+export const HEAT_COLUMNS = "id, division_id, round_id, number, number_suffix, name, status, duration_sec, warm_up_sec, started_at, paused_at, paused_total_sec, ended_at, draw_uid, rerun_of, public_live, reopened_at, publish_hold, paused_reason, armed_at, prestart_sec, armed_paused_at, time_scale, updated_at";
 
 export interface SlotRow {
   id: string;
