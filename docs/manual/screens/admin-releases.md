@@ -19,7 +19,7 @@ After every merge, the platform owner opens this page on the live address, does 
 | One card per version | Heading “‹version› — ‹date›” and a link to its **Pull request #‹n›** on GitHub; **What changed**, **What to test**, **Known issues**. The current version has a teal frame; a tested version shows a “Done” pill. |
 | A check's tick box | Saved at once (no Save button). Under a ticked check: “Ticked by ‹who›, ‹when›”. Unticking a check of a version confirmed as tested takes the tested status away. |
 | **Confirm version tested** | Grey with “Tick every check first: ‹n› left.” until every check is ticked; then it saves who signed the version off and when. |
-| **Earlier versions** | Versions with no checks: they were merged before the releases file existed (pull requests #1–#23). |
+| **Earlier versions** | Versions with no checks: they were merged before the releases file existed (pull requests #1–#23). A version that changed no screen says “Nothing to test on the live address: this version changed no screen.” and shows “‹version› — nothing to test on the live address” on Health. |
 
 Only the platform owner ticks and confirms a version as tested; staff see the page and the ticks without tick boxes they can change (“Only platform owners can do this. You can look, but not change it.”). Every tick, untick and sign-off is in the [audit log](admin-feedback.md) (“Release check ticked”, “Release check unticked”, “Version confirmed as tested”).
 
@@ -28,10 +28,10 @@ Only the platform owner ticks and confirms a version as tested; staff see the pa
 Every pull request, before it is ready to merge:
 
 1. raises `version` in `package.json`: a fix raises the last number (0.10.0 → 0.10.1), a feature the middle one (0.10.1 → 0.11.0);
-2. adds its entry at the top of `docs/RELEASES.md`: version, date, `PR: #‹number›`, **What changed** in plain words, **What to test** as 3 to 8 checks a non-developer can do on the live address in 15 minutes (`- [ ] ` lines), **Known issues**;
+2. adds its entry at the top of `docs/RELEASES.md`: version, date, `PR: #‹number›`, **What changed** in plain words, **What to test** as 3 to 8 checks a non-developer can do on the live address in 15 minutes (`- [ ] ` lines), **Known issues**. A pull request that changes no screen (tests only, docs only) still raises the version and adds its entry, and may write the single line “Nothing to test on the live address.” instead of checks;
 3. adds the matching [changelog](../changelog.md) entry with its “Release entry” link.
 
-`npm test` fails when `package.json`'s version has no entry, when an entry is incomplete, or when the current version has fewer than 3 or more than 8 checks.
+`npm test` fails when `package.json`'s version has no entry, when an entry is incomplete, or when the current version has neither 3 to 8 checks nor “Nothing to test on the live address.”
 
 A check's tick belongs to its words: changing the words of a check later makes it a new check that needs a new tick.
 

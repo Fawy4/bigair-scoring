@@ -30,11 +30,12 @@ export async function loadReleaseStatus(supabase: Client): Promise<{ ticks: Rele
   }
 }
 
-/** "0.10.0 — 2 of 6 checks done" (or "— tested", "— no checks to tick", "— no entry in the releases file"). */
+/** "0.10.0 — 2 of 6 checks done" (or "— tested", "— nothing to test on the live address", "— no checks to tick", "— no entry in the releases file"). */
 export function progressLine(p: ReleaseProgress): string {
   const c = copy.admin.releases;
   if (!p.hasEntry) return c.statusNoEntry(p.version);
   if (p.tested) return c.statusTested(p.version);
+  if (p.nothingToTest) return c.statusNothingToTest(p.version);
   if (p.total === 0) return c.statusNoChecks(p.version);
   return c.statusLine(p.version, p.done, p.total);
 }

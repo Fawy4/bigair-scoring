@@ -5,12 +5,12 @@ Every version of the product, newest first: what changed in plain words, what to
 How the numbers work:
 - The version is `version` in `package.json`. Every pull request raises it before it is merged: a fix raises the last number (0.10.0 → 0.10.1), a feature raises the middle one (0.10.1 → 0.11.0). 1.0.0 comes after the Arrow launch event.
 - Every pull request adds its entry here in the same pull request, at the top. A test fails when `package.json`'s version has no entry.
-- "What to test" is 3 to 8 checks a non-developer can do on the live address in about 15 minutes, each written as one thing to do and what you should see.
-- Pull requests #1–#25 were merged before this file existed. `package.json` said 0.1.0 until #23 set 0.9.0, and #25 did not change it. Their entries are numbered in the order they were merged, as builds of those two versions (0.1.0 to 0.1.21, then 0.9.0 and 0.9.1). From 0.10.0 on, every number is the one the pull request really set.
+- "What to test" is 3 to 8 checks a non-developer can do on the live address in about 15 minutes, each written as one thing to do and what you should see. A pull request that changes no screen (tests only, docs only) still raises the version and adds its entry, and its "What to test" may be the single line "Nothing to test on the live address." instead.
+- Pull requests #1–#25 were merged before this file existed. `package.json` said 0.1.0 until #23 set 0.9.0; #25 did not change it and #24 set 0.9.1. Their entries are numbered in the order they were merged, as builds of those versions: 0.1.0 to 0.1.21, then 0.9.0 (#23), 0.9.1 (#25) and 0.9.2 (#24, merged after #25). From 0.10.0 on, every number is the one the pull request really set.
 
 How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
-- `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check), `### Known issues` (a short list, or "None known.").
+- `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
 ## 0.10.0 — 3 Oct 2026 {#release-0-10-0}
 
@@ -37,6 +37,32 @@ PR: #26
 ### Known issues
 - A check whose words are changed later in this file counts as a new check and needs a new tick.
 - Older versions (before 0.9.1) have no checks: they were merged before this file existed.
+
+## 0.9.2 — 3 Oct 2026 {#release-0-9-2}
+
+PR: #24
+
+### What changed
+- **Publish blockers in words, with Fix**: a blocked Publish names the judge and the exact thing ("Fawy: score for Red, attempt 2 missing"), and **Fix** opens that score. Once the head judge sets every missing score of a judge to **Absent**, that judge's sheet counts as submitted.
+- **Console after the heat**: each judge's Impression / Variety scores per rider (done, missing, Absent). The head judge can type a judge's whole sheet: one **Save** per rider, the next rider is picked by itself, **Save and submit**.
+- **Simulator**: **View as** gives the seat back when you leave (or after 90 s), with **Give back to the simulator**; **Pause** pauses the heat clock too ("Paused by the simulator"), **Resume** resumes both, **Stop** leaves the heat paused; behaviour settings no longer reset each other; new **Skip to end of heat** and **Run the whole event**.
+- **Divisions**: Scoring shows the main dials first and "21 more settings"; Format has one **Timing per round** table. Every "?" ends with where the setting shows and what it changes.
+- **Run order per day**: **Create a plan for ‹day›** or copy another day's plan; the Day list says which plan is active or "no plan"; every grey control says why; **Clear actual times** names the pins that stay.
+- On every organiser step the Next / Previous bar sticks to the bottom with the **Note** button above it; number boxes have their up / down arrows again; a button that asks once (Archive, Delete, Reset…) stays grey until the page is ready, so an early tap is not lost.
+
+### What to test
+- [ ] Head console, an ended heat with a missing score, press **Publish**: you see "‹judge›: score for ‹rider›, attempt ‹n› missing" with **Fix**. Press Fix, choose **Absent**: that line goes away.
+- [ ] Do the same for a missing Impression / Variety score: once every missing one is Absent, Publish goes through without asking for a reason.
+- [ ] In the same heat's side panel, open **Enter ‹judge›'s sheet**, type a value: the next rider is picked by itself; **Save and submit** submits the sheet.
+- [ ] Simulator → **View as** Judge 1, then close that tab: within a few seconds the panel shows the seat back with the simulator (or press **Give back to the simulator**).
+- [ ] Simulator → **Start**, then **Pause**: the head console says "Paused by the simulator" and its clock stops; **Resume** starts both again.
+- [ ] Simulator → **Skip to end of heat**: the heat ends; then **Run the whole event**: the event plays on heat after heat.
+- [ ] Divisions → Scoring shows the main dials and "21 more settings"; Format shows the **Timing per round** table; tap any "?": its last sentence says where the setting shows.
+- [ ] Run order → pick a day with no plan: **Create a plan for ‹day›** and **Copy ‹day›'s plan** are offered; on a phone, the **Note** button sits above Next / Previous and number boxes have arrows.
+
+### Known issues
+- Copying a plan to another day copies **all** its heats: remove the ones that do not belong to that day.
+- Not tried on a real phone before merging.
 
 ## 0.9.1 — 3 Oct 2026 {#release-0-9-1}
 
@@ -188,6 +214,7 @@ PR: #13
 - Plan only: the organiser design plan (Phase 7a) and the owner's notes. Nothing changed on screen.
 
 ### What to test
+Nothing to test on the live address.
 
 ### Known issues
 - None known.
@@ -237,6 +264,7 @@ PR: #9
 - Plan only: the build plan for live heats (timer, spotter, judge, head judge, publish). Nothing changed on screen.
 
 ### What to test
+Nothing to test on the live address.
 
 ### Known issues
 - None known.

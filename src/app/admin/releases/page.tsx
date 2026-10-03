@@ -6,7 +6,7 @@ import { attempt } from "@/lib/platform/safe";
 import { requireAdmin } from "@/lib/platform/session";
 import { PRODUCT_VERSION } from "@/lib/product-version";
 import { loadReleases, loadReleaseStatus, progressLine } from "@/lib/releases/load";
-import { releaseProgress, type Release } from "@/lib/releases/releases";
+import { compareVersions, releaseProgress, type Release } from "@/lib/releases/releases";
 import { copy } from "@/lib/ui-copy";
 import { ReleaseChecks } from "./release-checks";
 
@@ -14,6 +14,8 @@ export const metadata = { title: copy.admin.releases.heading };
 
 const REPO = "https://github.com/Fawy4/bigair-scoring";
 const C = copy.admin.releases;
+/** The first version written under the release rule (CLAUDE.md rule 10). */
+const FIRST_UNDER_RULE = "0.10.0";
 
 /** Markdown of the releases file as HTML: the file is in the repository, written by the team, and escaped by the renderer. */
 const md = (src: string) => renderMarkdown(src, { idPrefix: "release-md-", link: (h) => h, image: (i) => i }).html;
@@ -78,7 +80,7 @@ export default async function ReleasesPage() {
                 />
               </>
             ) : (
-              <p className="text-body text-beach-muted">{C.noChecks}</p>
+              <p className="text-body text-beach-muted">{r.nothingToTest ? C.nothingToTest : C.noChecks}</p>
             )}
           </div>
           <div>
@@ -91,7 +93,8 @@ export default async function ReleasesPage() {
   };
 
   const list = releases ?? [];
-  const newer = list.filter((r) => r.version === PRODUCT_VERSION || r.checks.length > 0);
+  // "Earlier versions": the backfilled entries without checks (merged before the releases file); everything from 0.10.0 on stays in the main list
+  const newer = list.filter((r) => r.version === PRODUCT_VERSION || r.checks.length > 0 || compareVersions(r.version, FIRST_UNDER_RULE) <= 0);
   const older = list.filter((r) => !newer.includes(r));
 
   return (

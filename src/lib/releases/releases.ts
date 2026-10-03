@@ -21,6 +21,8 @@ export interface Release {
   /** The "What changed" section as Markdown. */
   changed: string;
   checks: ReleaseCheck[];
+  /** "What to test" is the single line "Nothing to test on the live address." (a pull request that changes no screen). */
+  nothingToTest: boolean;
   /** The "Known issues" section as Markdown ("" when the section is missing). */
   knownIssues: string;
   /** Problems with this entry, in words (a test fails when there is one). */
@@ -28,6 +30,9 @@ export interface Release {
 }
 
 const VERSION = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
+
+/** What a pull request that changes no screen (tests only, docs only) writes under "What to test" instead of checks. */
+export const NOTHING_TO_TEST = "Nothing to test on the live address.";
 const HEADING = /^## (\S+) — (.+?)\s*\{#([A-Za-z0-9_-]+)\}\s*$/;
 
 /** "0.10.0" → "release-0-10-0". */
@@ -78,7 +83,7 @@ export function parseReleases(source: string): Release[] {
       finish();
       section = null;
       const m = HEADING.exec(line);
-      cur = { version: m?.[1] ?? line.slice(3).trim(), date: m?.[2] ?? "", anchor: m?.[3] ?? "", pr: null, changed: "", checks: [], knownIssues: "", problems: [] };
+      cur = { version: m?.[1] ?? line.slice(3).trim(), date: m?.[2] ?? "", anchor: m?.[3] ?? "", pr: null, changed: "", checks: [], nothingToTest: false, knownIssues: "", problems: [] };
       if (!m) cur.problems.push("the heading must read “## ‹version› — ‹date› {#release-‹version with dashes›}”");
       else {
         if (!VERSION.test(cur.version)) cur.problems.push(`“${cur.version}” is not a version like 0.10.0`);
@@ -104,12 +109,14 @@ export function parseReleases(source: string): Release[] {
     else if (section === "test") {
       const m = /^- \[[ xX]\] (.+)$/.exec(line.trim());
       if (m) cur.checks.push({ key: checkKey(m[1]), text: m[1].trim() });
+      else if (line.trim() === NOTHING_TO_TEST) cur.nothingToTest = true;
       else if (line.trim()) cur.problems.push(`a check must be one line starting “- [ ] ”: “${line.trim()}”`);
     }
   }
   finish();
   for (const r of out) {
     if (r.pr === null) r.problems.push("the line “PR: #‹number›” is missing");
+    if (r.nothingToTest && r.checks.length) r.problems.push(`“${NOTHING_TO_TEST}” and checks cannot both be there`);
     const keys = new Set<string>();
     for (const c of r.checks) {
       if (keys.has(c.key)) r.problems.push(`the check “${c.text}” is written twice`);
@@ -144,6 +151,8 @@ export interface ReleaseProgress {
   hasEntry: boolean;
   done: number;
   total: number;
+  /** The entry says there is nothing to test on the live address. */
+  nothingToTest: boolean;
   /** Who marked the version tested, and when; null while it is not. */
   tested: { at: string; by: string | null } | null;
 }
@@ -154,7 +163,7 @@ export function releaseProgress(version: string, releases: Release[], ticks: Rel
   const keys = new Set(entry?.checks.map((c) => c.key) ?? []);
   const done = new Set(ticks.filter((t) => t.version === version && keys.has(t.key)).map((t) => t.key)).size;
   const s = signoffs.find((x) => x.version === version);
-  return { version, hasEntry: Boolean(entry), done, total: keys.size, tested: s ? { at: s.at, by: s.by } : null };
+  return { version, hasEntry: Boolean(entry), done, total: keys.size, nothingToTest: Boolean(entry?.nothingToTest), tested: s ? { at: s.at, by: s.by } : null };
 }
 
 /** The database's answer (admin_release_status) as typed lists; anything unexpected is left out. */
