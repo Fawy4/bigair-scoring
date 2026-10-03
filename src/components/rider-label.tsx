@@ -16,6 +16,7 @@ export function RiderLabel({
   model,
   variant = "block",
   bare = false,
+  seed,
 }: {
   scheme?: IdentificationScheme;
   rider?: LabelRider;
@@ -27,12 +28,46 @@ export function RiderLabel({
    * "block" is the organiser look. "live" is the look of the official screens: it picks its own style from the identification scheme (no manual switch):
    * a coloured block with the colour word for Lycra, rash-guard and helmet schemes, a number block for bib (and kite) schemes, the name first for name call-out.
    */
-  variant?: "block" | "live";
+  variant?: "block" | "live" | "row";
   /** Live only: no frame of its own, because the tile or card around it has one (the selected rider gets the accent border there). */
   bare?: boolean;
+  /** Row only: the rider's seed, written small after the name. */
+  seed?: number;
 }) {
   const label = model ?? riderLabelModel(scheme!, rider!);
   const p = label.primary;
+  if (variant === "row") {
+    // the Draw step: the whole label on one line, small: the colour (or number) block, the name, the seed
+    const style = labelStyleOfPrimary(p);
+    const name = label.secondary.find((x) => x.key === "name");
+    const nameText = style === "name-first" ? p.text : name?.text;
+    return (
+      <div data-testid="rider-label" data-variant="row" className={cn("flex min-w-0 items-center gap-1.5", className)}>
+        {style === "colour-block" ? (
+          <span
+            data-testid="rider-label-primary"
+            className="shrink-0 rounded px-1.5 text-sm font-bold leading-6"
+            style={{ backgroundColor: p.hex, color: p.ink, boxShadow: p.outlined ? "inset 0 0 0 2px var(--beach-ink)" : undefined }}
+          >
+            <span data-testid="rider-label-text">{p.text}</span>
+            {p.usedFallback ? <span className="ml-1 text-xs font-medium">{copy.riderLabel.fallback}</span> : null}
+          </span>
+        ) : style === "number-block" ? (
+          <span data-testid="rider-label-primary" className="max-w-[45%] shrink-0 truncate rounded border-2 border-beach-ink bg-beach-surface px-1.5 text-sm font-bold leading-5 text-beach-ink">
+            <span data-testid="rider-label-text">{p.text}</span>
+          </span>
+        ) : null}
+        <span data-testid={style === "name-first" ? "rider-label-primary" : undefined} className="min-w-0 flex-1 truncate text-sm font-semibold leading-6 text-beach-ink">
+          {style === "name-first" ? <span data-testid="rider-label-text">{nameText}</span> : nameText}
+        </span>
+        {seed != null ? (
+          <span data-testid="rider-seed" className="shrink-0 text-xs font-medium text-beach-muted">
+            #{seed}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
   if (variant === "live") {
     const style = labelStyleOfPrimary(p);
     const name = label.secondary.find((x) => x.key === "name");

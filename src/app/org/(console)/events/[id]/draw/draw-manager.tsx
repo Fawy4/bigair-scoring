@@ -319,20 +319,23 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
       {draw ? (
         <>
           {picked && pickedName ? (
-            <div role="status" className="panel sticky top-2 z-10 flex flex-wrap items-center gap-3 !border-beach-line !bg-beach-tint-grade0" data-testid="tap-bar">
-              {!target ? (
-                <span className="text-lg font-semibold">{T.tapPicked(pickedName)}</span>
-              ) : (
-                <>
-                  <span className="text-lg font-semibold">{targetName ? T.tapSwapQuestion(pickedName, targetName) : T.tapMoveQuestion(pickedName)}</span>
-                  <button type="button" className="btn btn-primary" disabled={pending} onClick={() => apply({ op: "move", from: picked, to: target })}>
-                    {targetName ? T.swap(targetName) : T.moveHere}
-                  </button>
-                </>
-              )}
-              <button type="button" className="btn" onClick={() => { setPicked(null); setTarget(null); }}>
-                {copy.common.cancel}
-              </button>
+            // pinned to the top of the window while a rider is selected: it travels with the page however far you scroll
+            <div role="status" className="no-print fixed inset-x-0 top-0 z-50 border-b-2 border-beach-line bg-beach-tint-grade0 shadow-md" data-testid="tap-bar" data-pinned="top">
+              <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3 px-4 py-2">
+                {!target ? (
+                  <span className="text-lg font-semibold">{T.tapPicked(pickedName)}</span>
+                ) : (
+                  <>
+                    <span className="text-lg font-semibold">{targetName ? T.tapSwapQuestion(pickedName, targetName) : T.tapMoveQuestion(pickedName)}</span>
+                    <button type="button" className="btn btn-primary" disabled={pending} onClick={() => apply({ op: "move", from: picked, to: target })}>
+                      {targetName ? T.swap(targetName) : T.moveHere}
+                    </button>
+                  </>
+                )}
+                <button type="button" className="btn" onClick={() => { setPicked(null); setTarget(null); }}>
+                  {copy.common.cancel}
+                </button>
+              </div>
             </div>
           ) : null}
 
@@ -422,8 +425,8 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
             renderHeatTitle={(_round, heat) => <Rename label={heatLabel(heat)} value={heatLabel(heat)} disabled={locked} onSave={(name) => apply({ op: "renameHeat", heatId: heat.id, name })} />}
             renderHeatExtra={(_round, heat) =>
               editable && heat.status === "pending" ? (
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" className="btn !min-h-[var(--org-ctl)]" disabled={pending} onClick={() => apply({ op: "addSeat", heatId: heat.id })}>
+                <div className="flex flex-wrap gap-1">
+                  <button type="button" className="btn !min-h-7 !px-2 !text-sm" disabled={pending} onClick={() => apply({ op: "addSeat", heatId: heat.id })}>
                     {T.addSeat}
                   </button>
                   <ConfirmButton
@@ -433,6 +436,7 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
                     cancelLabel={copy.common.cancel}
                     pending={pending}
                     danger
+                    compact
                     onConfirm={() => apply({ op: "removeHeat", heatId: heat.id })}
                   />
                 </div>

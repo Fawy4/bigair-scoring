@@ -1114,6 +1114,7 @@ export const copy = {
       seatPending: (name: string, placeholder: string) => `${name} · ${placeholder} · seat pending`,
       seatLabel: (heat: string, n: number, who: string) => `${heat}, seat ${n}: ${who}`,
       seatMenu: (heat: string, n: number) => `Options for ${heat}, seat ${n}`,
+      heatOptions: (heat: string) => `Options for ${heat}: add a seat, take the heat out`,
       heatTiming: (min: number, warm: number) => (warm > 0 ? `${warm} + ${min} min` : `${min} min`),
       started: "started",
       finished: "finished",

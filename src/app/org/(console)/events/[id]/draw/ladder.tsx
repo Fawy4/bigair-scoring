@@ -37,14 +37,17 @@ export interface LadderProps {
   renderHeatTitle?: (round: DrawRound, heat: DrawHeat) => React.ReactNode;
 }
 
+/** How many columns a round's heats are laid out in: two heats to a column, between one and four columns. */
+export const heatColumns = (heats: number): number => Math.min(4, Math.max(1, Math.ceil(heats / 2)));
+
 const riderOf = (draw: DivisionDraw, slot: Slot) => draw.entrants.find((e) => e.id === slot.entrantId);
 
 function SeatBody({ draw, scheme, round, slot, compact }: { draw: DivisionDraw; scheme: IdentificationScheme; round: DrawRound; slot: Slot; compact?: boolean }) {
   const rider = riderOf(draw, slot);
   if (rider) {
     return (
-      <span className="flex min-w-0 flex-wrap items-center gap-2">
-        <RiderLabel scheme={scheme} size="sm" rider={{ name: rider.name, identifiers: rider.identifiers, slotColour: slot.vestColour }} />
+      <span className="flex min-w-0 items-center gap-1.5">
+        <RiderLabel scheme={scheme} variant="row" seed={slot.seed} className="min-w-0 flex-1" rider={{ name: rider.name, identifiers: rider.identifiers, slotColour: slot.vestColour }} />
         {slot.modifier === "DNS" ? <span className="badge-note">{T.walkover}</span> : null}
         {slot.manual ? <span className="badge-note">{T.byHand}</span> : null}
         {rider.withdrawn && slot.modifier !== "DNS" ? <span className="badge-note">{T.withdrawn}</span> : null}
@@ -78,12 +81,12 @@ function Seat({ draw, scheme, round, heat, index, editable, picked, target, menu
       data-seat={seatId(key)}
       data-state={isPicked ? "picked" : isTarget ? "target" : drop.isOver ? "over" : "idle"}
       className={cn(
-        "flex items-center gap-2 rounded-lg border px-2 py-1",
+        "flex items-center gap-1.5 rounded-lg border px-1.5 py-0",
         isPicked ? "border-beach-line bg-beach-tint-grade0" : isTarget ? "border-beach-accent bg-beach-surface" : drop.isOver ? "border-beach-line bg-beach-surface" : "border-beach-line bg-beach-bg",
         !slot.entrantId && !slot.from ? "border-dashed" : "",
       )}
     >
-      <span className="w-6 shrink-0 text-center text-sm font-semibold" aria-hidden>
+      <span className="w-4 shrink-0 text-center text-xs font-semibold" aria-hidden>
         {index + 1}
       </span>
       {canEdit ? (
@@ -92,7 +95,7 @@ function Seat({ draw, scheme, round, heat, index, editable, picked, target, menu
           {...drag.attributes}
           ref={drag.setNodeRef}
           type="button"
-          className={cn("min-h-[44px] min-w-0 flex-1 cursor-pointer text-left", drag.isDragging ? "opacity-40" : "")}
+          className={cn("min-h-7 min-w-0 flex-1 cursor-pointer text-left", drag.isDragging ? "opacity-40" : "")}
           aria-pressed={isPicked}
           aria-label={T.seatLabel(heatLabel(heat), index + 1, riderOf(draw, slot)?.name ?? (slot.from ? placeholderText(draw, slot.from, round.id) : T.emptySeat))}
           onClick={() => onSeat?.(key)}
@@ -100,12 +103,12 @@ function Seat({ draw, scheme, round, heat, index, editable, picked, target, menu
           <SeatBody draw={draw} scheme={scheme} round={round} slot={slot} />
         </button>
       ) : (
-        <div className="min-h-[44px] min-w-0 flex-1 py-1">
+        <div className="min-h-7 min-w-0 flex-1 py-0">
           <SeatBody draw={draw} scheme={scheme} round={round} slot={slot} />
         </div>
       )}
       {canEdit ? (
-        <button type="button" className="btn !min-h-[var(--org-ctl)] !px-3" aria-label={T.seatMenu(heatLabel(heat), index + 1)} aria-expanded={sameSeat(menuSeat ?? null, key)} onClick={() => onMenu?.(key)}>
+        <button type="button" className="btn !min-h-7 !px-2" aria-label={T.seatMenu(heatLabel(heat), index + 1)} aria-expanded={sameSeat(menuSeat ?? null, key)} onClick={() => onMenu?.(key)}>
           ⋯
         </button>
       ) : null}
@@ -116,29 +119,40 @@ function Seat({ draw, scheme, round, heat, index, editable, picked, target, menu
 function HeatCard(props: LadderProps & { round: DrawRound; heat: DrawHeat }) {
   const { round, heat } = props;
   const pending = heat.status === "pending";
+  const extra = props.renderHeatExtra ? props.renderHeatExtra(round, heat) : null;
   return (
     <section
-      className={cn("flex w-72 shrink-0 flex-col gap-2 rounded-xl border border-beach-line bg-beach-bg p-2", !pending ? "bg-beach-surface" : "")}
+      className={cn("flex min-w-0 flex-col gap-1 rounded-xl border border-beach-line bg-beach-bg p-1.5", !pending ? "bg-beach-surface" : "")}
       aria-label={heatLabel(heat)}
       data-testid="heat-card"
       data-heat={heat.id}
       data-status={heat.status}
     >
-      <header className="flex flex-wrap items-center gap-2">
-        <h4 className="min-w-0 flex-1 text-lg font-semibold">{props.renderHeatTitle ? props.renderHeatTitle(round, heat) : heatLabel(heat)}</h4>
-        <span className="text-sm font-semibold">{T.heatTiming(heat.durationMin, heat.warmUpMin ?? 0)}</span>
+      <header className="flex items-center gap-2">
+        <h4 className="min-w-0 flex-1 truncate text-base font-semibold">{props.renderHeatTitle ? props.renderHeatTitle(round, heat) : heatLabel(heat)}</h4>
+        <span className="shrink-0 text-xs font-semibold">{T.heatTiming(heat.durationMin, heat.warmUpMin ?? 0)}</span>
+        {extra ? (
+          // + Seat and Take heat out live behind one small button, so they do not make every card taller
+          <details data-testid="heat-options" className="relative shrink-0">
+            <summary aria-label={T.heatOptions(heatLabel(heat))} className="btn !min-h-7 cursor-pointer list-none !px-2">
+              ⋯
+            </summary>
+            <div className="absolute right-0 top-full z-20 mt-1 flex w-52 flex-col gap-1 rounded-card border border-beach-border bg-beach-bg p-1.5 shadow-lg">{extra}</div>
+          </details>
+        ) : null}
       </header>
-      <div className="flex flex-wrap gap-1">
-        {heat.manualOverride ? <span className="badge-note" data-testid="by-hand">{T.byHand}</span> : null}
-        {heat.status === "running" ? <span className="badge-note">{T.started}</span> : null}
-        {heat.status === "published" ? <span className="badge-note">{T.finished}</span> : null}
-      </div>
-      <ol className="flex flex-col gap-1">
+      {heat.manualOverride || heat.status === "running" || heat.status === "published" ? (
+        <div className="flex flex-wrap gap-1">
+          {heat.manualOverride ? <span className="badge-note" data-testid="by-hand">{T.byHand}</span> : null}
+          {heat.status === "running" ? <span className="badge-note">{T.started}</span> : null}
+          {heat.status === "published" ? <span className="badge-note">{T.finished}</span> : null}
+        </div>
+      ) : null}
+      <ol className="flex flex-col gap-0.5">
         {heat.slots.map((_, i) => (
           <Seat key={i} {...props} heat={heat} index={i} />
         ))}
       </ol>
-      {props.renderHeatExtra ? props.renderHeatExtra(round, heat) : null}
     </section>
   );
 }
@@ -155,18 +169,21 @@ export function Ladder(props: LadderProps) {
     props.onMove?.(parseSeatId(String(e.active.id)), parseSeatId(String(e.over.id)));
   };
   const columns = (
-    <div className="flex items-start gap-4 overflow-x-auto pb-3" data-testid="ladder">
+    <div className="flex items-start gap-3 overflow-x-auto pb-3" data-testid="ladder">
       {draw.rounds.map((round) => (
-        <div key={round.id} className="flex shrink-0 flex-col gap-2" data-testid="round-column" data-round={round.id}>
+        <div key={round.id} className="flex shrink-0 flex-col gap-1.5" data-testid="round-column" data-round={round.id}>
           <div className="flex flex-wrap items-center gap-2">
             {props.renderRoundHeader ? props.renderRoundHeader(round) : <h3 className="text-xl font-semibold">{round.name}</h3>}
             {round.arranged ? <span className="badge-note" data-testid="round-by-hand">{T.byHand}</span> : null}
           </div>
           <p className="text-sm font-semibold">{T.roundSummary(round.heats.filter((h) => !h.bye).length, round.heats.reduce((n, h) => n + h.slots.length, 0))}</p>
-          {round.heats.length === 0 ? <p className="w-72 rounded-lg border border-dashed border-beach-line p-3 font-semibold">{T.noHeats}</p> : null}
-          {round.heats.map((heat) => (
-            <HeatCard key={heat.id} {...props} round={round} heat={heat} />
-          ))}
+          {round.heats.length === 0 ? <p className="w-56 rounded-lg border border-dashed border-beach-line p-3 font-semibold">{T.noHeats}</p> : null}
+          {/* the heats of a round sit side by side in tight columns: two to a column, at most four columns, so a round of 8 heats of 3 is two short rows */}
+          <div className="grid items-start gap-2" data-testid="round-heats" style={{ gridTemplateColumns: `repeat(${heatColumns(round.heats.length)}, 14rem)` }}>
+            {round.heats.map((heat) => (
+              <HeatCard key={heat.id} {...props} round={round} heat={heat} />
+            ))}
+          </div>
         </div>
       ))}
     </div>

@@ -8,6 +8,8 @@ Last checked: 3 Oct 2026 · Product version 0.12.0
 
 The draw puts every confirmed rider in a seat of a Round 1 heat (in seed order, with the seat's Lycra colour when Lycras change every heat) and lays out the later rounds with placeholders such as “1st H1”. **Locking** the draw makes it final: heats can start only in a locked draw, and locking saves the starting copy that a Reset goes back to.
 
+The cards are compact: a seat is one line (its number, the Lycra block, the name and the seed), the heats of a round sit side by side in tight columns, so a round of 8 heats of 3 fits a laptop screen without scrolling. While a rider is selected the banner with **Move here** / **Swap with ‹name›** and **Cancel** is pinned to the top of the window: it stays in view however far you scroll. The printed page is unchanged.
+
 ![Draw on a laptop](../img/org-draw-1280.png)
 *org-draw-1280.png — division tabs (no draw / draft / locked), the status pill, the toolbar, the ladder, the checks.*
 
