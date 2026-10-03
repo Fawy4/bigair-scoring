@@ -3706,7 +3706,6 @@ export const copy = {
       done: (starts: number, cleared: number, kept: number) => `Cleared ${starts} actual ${starts === 1 ? "start" : "starts"} and ${cleared} ${cleared === 1 ? "pin" : "pins"}. ${kept} ${kept === 1 ? "pin stays" : "pins stay"}.`,
     },
     heat: {
-      menu: "Heat menu",
       open: "Reset this heat…",
       title: (heat: string) => `Reset ${heat}`,
       intro: "Puts this heat back to not started with the same riders in the same seats. Its attempts and scores are kept for the audit as cancelled entries, and no longer count.",

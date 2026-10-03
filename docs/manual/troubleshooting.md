@@ -47,7 +47,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 |---|---|---|
 | “A ‹noun› file must contain one JSON object (starting with “{”).” | Use a file exported with Export as JSON from the same tab. | [Organiser: Divisions](errors.md#err-presets-notobject) |
 | “A block in ‹family› has no name.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-emptylabel) |
-| “A cancelled heat cannot be started. Re-run it instead.” | Heat menu → Re-run heat. | [Grey buttons on the head console](errors.md#err-controlwhy-startcancelled) |
+| “A cancelled heat cannot be started. Re-run it instead.” | Press Re-run heat. | [Grey buttons on the head console](errors.md#err-controlwhy-startcancelled) |
 | “A crash is not scored.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-not-scorable) |
 | “A demo organisation already exists, so nothing was created.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-demo-exists) |
 | “A division has no saved starting draw. Nothing was changed.” | Follow the sentence. | [Resets](errors.md#err-reset-errors-draw-copy-missing) |

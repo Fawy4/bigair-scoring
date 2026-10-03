@@ -21,11 +21,11 @@ The colours, the words of the first three states and the lengths are set per eve
 
 ## The start heat sequence {#fl-sequence}
 
-On the head judge's console (laptop and phone) **Start heat** becomes **Start heat sequence** when flags are on. Beside it is a one-tap choice of the pre-start length for this heat: the event's default (1:00), **2:00**, or **Start now**, which skips the yellow.
+On the head judge's console (laptop and phone) **Start heat** becomes **Start heat sequence** when flags are on. It is the one primary button. Next to it, in a box of its own labelled **Pre-start:**, is the setting you pick **before** pressing it: the event's default (1:00, already selected), **Other…** and **Start now** (which skips the yellow). The selected choice has a tick and a heavier border. **Other…** opens a small field: type a length as minutes and seconds (**1:30**) or as whole minutes (**2**), from **0:10** to **15:00**; anything else is refused with “The pre-start has to be between 0:10 and 15:00. Type it as minutes and seconds (1:30) or as whole minutes (2).” The typed length becomes the selected choice (it shows as, for example, **1:30**) and stays selected for the next heat until you pick another.
 
-1. Press **Start heat sequence**. The flag goes **yellow** with the pre-start countdown. The console shows **Start now** and **Abort** instead.
+1. Press **Start heat sequence**. The flag goes **yellow** with the pre-start countdown. The console shows **Start now**, **+1 min**, **Pause** and **Abort** instead.
 2. At **0:00 of the pre-start the heat starts by itself**: green, the heat clock starts, one horn. This does not depend on any phone staying awake: the database stores the moment the sequence was armed and the pre-start length, and every screen works the state out from the server's clock. A console that reloads, or a judge who opens the page late, sees the right colour at once. The heat's start time is exactly that moment.
-3. During the yellow, **Start now** makes it green at once. **Abort** puts the flag back to **red** and the heat back to “not started”; the audit log keeps the abort and the time. Judges' queues and spotters' loggers open at **green**, not at the yellow.
+3. During the yellow the head judge keeps control at every moment. **Start now** makes it green at once. **+1 min** adds exactly 60 seconds to what is left of the pre-start, as often as needed: at 0:40 it becomes 1:40, and every screen, the Flag view included, shows the new time within a second. The audit log has one line per press. It never changes the heat length or the last-minute setting. **Pause** freezes the countdown wherever it is (the flag is red with the word **Paused**; no horn) and **Resume** carries on from the same time (back to yellow, no horn). **Abort** puts the flag back to **red** and the heat back to “not started”; the audit log keeps the abort and the time. Judges' queues and spotters' loggers open at **green**, not at the yellow.
 4. When the time left reaches the last-minute length: **yellow** again, one horn.
 5. At **0:00**: **red** with the word **Finished**, two horns. The flag goes red at 0:00 even before the head judge presses **End heat**; **End heat** itself stays manual and unchanged. A jump begun before the horn is still logged and scored as before.
 6. **Pause**: red with **Paused**, no horn. **Resume**: back to green or yellow according to the time left (a resume with 20 seconds left is yellow), one horn. A wind **Hold** between heats shows red with **Hold**.
@@ -68,9 +68,13 @@ Each has a “?” saying where it shows. The full table is in [Settings](../set
 
 Only while the yellow runs: the flag goes red, the heat goes back to “not started” (it is still the next heat and can be started again), nothing is scored, and the audit log has the line “Start heat sequence aborted” with the time. It sounds no horn.
 
+## After Reset this heat {#fl-reset}
+
+**Reset this heat** puts a heat back to “not started” and also clears any start heat sequence it had: the flag shows **red / Stopped** (never “Finished” for the heat that was reset), and the console shows what any not-started heat shows: **Start heat sequence** with its **Pre-start:** choice. A reset heat can be started again; it is never left half-armed.
+
 ## The simulator {#fl-sim}
 
-Virtual officials follow the sequence: they log and score only while the heat is **Running** or **Last minute**. At ×10 a 1:00 pre-start lasts 6 seconds. **Skip to end of heat** lands on red (Finished). The scenario **Abort the start** waits for the next yellow and aborts it. See [Simulator](simulator.md).
+Virtual officials follow the sequence: they log and score only while the heat is **Running** or **Last minute**. The pre-start, the heat clock, the last minute and the break all run at the simulator's speed: at ×10 a 1:00 pre-start lasts 6 seconds and a 1:00 last minute 6 seconds. **Pause** from the simulator or from the console freezes the pre-start like the heat clock (one pause for everything), and the auto-play arms a heat only while it is playing and only when the head judge has not armed it. **Skip to end of heat** fast-forwards the virtual officials (every attempt logged and scored) and leaves the heat running; **End heat and publish** is the old skip. The scenario **Abort the start** waits for the next yellow and aborts it. See [Simulator](simulator.md).
 
 ## What it depends on {#fl-depends}
 

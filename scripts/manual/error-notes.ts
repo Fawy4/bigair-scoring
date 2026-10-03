@@ -66,7 +66,7 @@ export const SECTIONS: Record<string, Section> = {
   headV2: { title: "Head console", where: "Head console top bar", meaning: "The console explains why the countdown or the start is not as expected.", fix: "Follow the sentence." },
   publish: { title: "Head console", where: "Head console → Publish", meaning: "Publish refused.", fix: "Follow the sentence." },
   reset: { title: "Resets", where: "Go live → Reset event… (and Restore in /admin)", meaning: "The reset or restore was refused; nothing was changed.", fix: "Follow the sentence." },
-  resetParts: { title: "Resets", where: "Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console Heat menu)", meaning: "The reset was refused; nothing was changed.", fix: "Follow the sentence." },
+  resetParts: { title: "Resets", where: "Reset this division (Divisions), Clear actual times (Run order), Reset this heat (head console, beside Cancel heat)", meaning: "The reset was refused; nothing was changed.", fix: "Follow the sentence." },
   headLive: { title: "Head console", where: "Head console dialogs", meaning: "The head console needs a decision or a reason first.", fix: "Follow the sentence." },
   controlWhy: { title: "Grey buttons on the head console", where: "Under a grey button on the head console (laptop and phone)", meaning: "The button is off in this heat state.", fix: "Do what the sentence says, or pick another heat in the run order." },
   dashboard: { title: "Organiser: Go live", where: "Go live → Quick actions", meaning: "A quick action is off or refused.", fix: "Follow the sentence." },
@@ -366,7 +366,7 @@ export const NOTES: Record<string, Note> = {
   // ---- grey buttons (head console)
   "controlWhy.noPlan": { m: "Hold, Resume at and Shift are grey: no run order is active for today.", f: "Run order step → pick today → Activate this plan." },
   "controlWhy.start": { m: "Start heat is grey: the selected heat has started already.", f: "Pick the next heat in the run order." },
-  "controlWhy.startCancelled": { m: "Start heat is grey on a cancelled heat.", f: "Heat menu → Re-run heat." },
+  "controlWhy.startCancelled": { m: "Start heat is grey on a cancelled heat.", f: "Press Re-run heat." },
   "controlWhy.rerunDone": { m: "Re-run is grey: done once already." },
   "controlWhy.pause": { m: "Pause is grey: the heat is not running." },
   "controlWhy.resume": { m: "Resume is grey: the heat is not paused." },
