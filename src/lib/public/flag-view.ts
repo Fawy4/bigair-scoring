@@ -2,7 +2,7 @@ import { loadCore } from "./page-data";
 import { publicFlagData, type PublicFlagData } from "./flag-data";
 import type { LabelModel } from "@/lib/identification/rider-label";
 
-/** What the Flag view (the flag marshal's screen) asks for every two seconds. Plain values only. */
+/** What the Flag view (the flag marshal's screen) asks for every second. Plain values only. */
 export interface FlagViewPayload {
   /** The event's flags are switched on and this is the state input; null when they are off. */
   data: PublicFlagData | null;

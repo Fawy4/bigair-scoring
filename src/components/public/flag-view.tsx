@@ -13,8 +13,8 @@ import type { FlagViewPayload } from "@/lib/public/flag-view";
 import { copy } from "@/lib/ui-copy";
 
 const V = copy.flags.view;
-/** The flag screen asks every two seconds, and a screen that has heard nothing for ten seconds stops showing a colour (a stale green must never be shown). */
-export const POLL_MS = 2000;
+/** The flag screen asks every second, and a screen that has heard nothing for ten seconds stops showing a colour (a stale green must never be shown). */
+export const POLL_MS = 1000;
 export const STALE_MS = 10_000;
 const GREY = "#4B5563";
 

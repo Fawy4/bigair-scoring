@@ -37,7 +37,18 @@ test("run a heat, reset it from the console, see it not started", async ({ brows
   await head.getByTestId("end").click();
   await expect(row(head, w.heats[0])).toHaveAttribute("data-state", "ended", { timeout: 40_000 });
   await expect(head.getByTestId("reset-heat")).toBeEnabled();
+  // Reset this heat is a visible button immediately before Cancel heat (same row, same size), and there is no heat menu any more
+  await expect(head.getByTestId("heat-menu")).toHaveCount(0);
+  const resetBox = (await head.getByTestId("reset-heat").boundingBox())!;
+  const cancelBox = (await head.getByTestId("cancel").boundingBox())!;
+  expect(Math.abs(resetBox.y - cancelBox.y)).toBeLessThan(4);
+  expect(resetBox.x + resetBox.width).toBeLessThanOrEqual(cancelBox.x + 1);
+  expect(cancelBox.x - (resetBox.x + resetBox.width)).toBeLessThan(40); // immediately before
+  expect(Math.abs(resetBox.height - cancelBox.height)).toBeLessThan(2);
   await head.getByTestId("reset-heat").click();
+  // it asks once: the dialog, and nothing is reset until Save
+  await expect(head.getByTestId("console-dialog")).toHaveCount(1);
+  expect((await status(w.heats[0])).started_at).not.toBeNull();
   const dialog = head.getByTestId("console-dialog");
   await expect(dialog.getByTestId("reset-heat-line")).toContainText("1 attempt", { timeout: 30_000 });
   // live scores were on while it ran, so a reason is needed

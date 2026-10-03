@@ -47,7 +47,7 @@ An address per event, **/e/‹event›/flag**, public (the marshal has no login)
 
 - The whole screen is the state's colour; the state's word and the countdown fill it (readable from 20 metres in sunlight). Under them: the heat's name and its riders, each with the Rider label (Lycra colour written as text too).
 - **Sound on**: one tap, then the horn sounds on every change (iPhones only allow sound after a tap).
-- The screen is kept awake while the page is open, and refreshes itself every two seconds.
+- The screen is kept awake while the page is open, and refreshes itself every second.
 - **Safety rule:** if the view has had no contact with the server for **10 seconds** the whole screen turns **grey** and says “No connection — check with the head judge”. A stale green is never shown.
 - A simulation event answers “This event isn't public” to anyone but its organiser (and its observers), like the other public pages. An observer can open the Flag view; it is read-only for everybody.
 
