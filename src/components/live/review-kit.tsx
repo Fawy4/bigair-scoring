@@ -30,6 +30,7 @@ export function ReviewBar({
   onAbsent,
   onChooseOrder,
   pending,
+  error,
 }: {
   state: ReviewBarState;
   onSheet: (seatId: string) => void;
@@ -37,6 +38,8 @@ export function ReviewBar({
   onAbsent: (item: ChecklistItem) => void;
   onChooseOrder: (riders: string[]) => void;
   pending?: boolean;
+  /** What the server said when Absent from the bar was refused. */
+  error?: string | null;
 }) {
   const base = "flex w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-card border px-2 py-1 text-body font-semibold";
   if (state.kind === "running") {
@@ -86,6 +89,11 @@ export function ReviewBar({
           <button type="button" data-testid="review-bar-absent" disabled={pending} onClick={() => onAbsent(item)} className={small}>
             {R.absent}
           </button>
+        ) : null}
+        {error ? (
+          <span role="alert" data-testid="review-bar-error" className="w-full text-small font-semibold">
+            {error}
+          </span>
         ) : null}
       </div>
     );
@@ -198,7 +206,7 @@ export function ImpressionCardInline(props: CardProps) {
   const fit = room ? fitCard({ availW: room.w, availH: room.h, riders: props.riders.length, judges: props.judges.length }) : "button";
   return (
     // the region has no height of its own: the row is as tall as the rider cards, and the card is drawn inside that room
-    <div ref={region} data-testid="impression-region" data-fit={String(fit)} className="relative min-h-tap min-w-[6.5rem] flex-[1_1_6.5rem] self-stretch">
+    <div ref={region} data-testid="impression-region" data-fit={String(fit)} data-room={room ? `${room.w}x${room.h}` : ""} className="relative min-h-tap min-w-[6.5rem] flex-[1_1_6.5rem] self-stretch">
       {fit === "button" ? (
         <>
           <button type="button" data-testid="impression-button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={cn(small, "h-full min-h-tap w-full")}>

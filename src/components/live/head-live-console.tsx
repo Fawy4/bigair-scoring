@@ -159,7 +159,7 @@ export function HeadLiveConsole({
     openFix,
     openSheetDialog: (seatId, entryId) => setDialog({ kind: "impression", seatId, entryId }),
   });
-  const { bar, barPending, openSheet, markAbsent, showImpressionCard, impressionTolerance } = review;
+  const { bar, barPending, barError, openSheet, markAbsent, showImpressionCard, impressionTolerance } = review;
   const done = () => {
     setDialog(null);
     setMenu(null);
@@ -214,7 +214,7 @@ export function HeadLiveConsole({
           <Pill tone={heat.status === "published" ? "live" : "outlier"}>{copy.heatControl.status[heat.status] ?? heat.status}</Pill>
           {heat.reopened_at && heat.status === "under_review" ? <Pill tone="outlier">{H.underCorrection}</Pill> : null}
         </div>
-        {bar ? <ReviewBar state={bar} pending={barPending} onSheet={openSheet} onFix={openFix} onAbsent={(i) => void markAbsent(i)} onChooseOrder={(riders) => setDialog({ kind: "tie", riders })} /> : null}
+        {bar ? <ReviewBar state={bar} pending={barPending} error={barError} onSheet={openSheet} onFix={openFix} onAbsent={(i) => void markAbsent(i)} onChooseOrder={(riders) => setDialog({ kind: "tie", riders })} /> : null}
       </div>
       <div className="flex min-w-0 flex-col gap-2">
         {!open ? <p className="text-small font-medium text-beach-muted">{heat.status === "published" ? C.published : ""}</p> : null}

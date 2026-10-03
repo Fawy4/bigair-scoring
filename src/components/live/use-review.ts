@@ -33,6 +33,7 @@ export function useReview(i: {
   openSheetDialog: (seatId: string, entryId: string) => void;
 }) {
   const [barPending, setBarPending] = useState(false);
+  const [barError, setBarError] = useState<string | null>(null);
   const judges: BarJudge[] = i.side.judges.map((j) => {
     const seat = i.side.seats.find((x) => x.id === j.id);
     const seen = seat?.last_seen_at ? i.nowServer - Date.parse(seat.last_seen_at) : null;
@@ -51,9 +52,10 @@ export function useReview(i: {
     const t = item.target;
     if (!t) return;
     setBarPending(true);
+    setBarError(null);
     try {
-      if (t.kind === "score") await headSetScore({ attemptId: t.attemptId, seatId: t.seatId, missed: true, reason: ABSENT_REASON });
-      else if (t.kind === "impression") await headSetImpression({ heatId: i.heat.id, entryId: t.entryId, seatId: t.seatId, value: null, missed: true, reason: ABSENT_REASON });
+      const r = t.kind === "score" ? await headSetScore({ attemptId: t.attemptId, seatId: t.seatId, missed: true, reason: ABSENT_REASON }) : t.kind === "sheet" ? { ok: true as const } : await headSetImpression({ heatId: i.heat.id, entryId: t.entryId, seatId: t.seatId, value: null, missed: true, reason: ABSENT_REASON });
+      if (!r.ok) setBarError(r.message);
       i.onChanged();
     } finally {
       setBarPending(false);
@@ -62,6 +64,7 @@ export function useReview(i: {
   return {
     bar,
     barPending,
+    barError,
     openSheet,
     markAbsent,
     showImpressionCard: Boolean(scale) && (i.closing || i.heat.status === "published"),

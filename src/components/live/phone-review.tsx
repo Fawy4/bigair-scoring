@@ -82,7 +82,7 @@ export function PhoneReview({
     onChanged();
   };
   const row = open?.kind === "cell" ? head.matrix.rows.find((x) => x.attemptId === open.attemptId) : null;
-  const bar = r.bar ? <ReviewBar state={r.bar} pending={r.barPending} onSheet={r.openSheet} onFix={(t) => (t.kind === "sheet" ? r.openSheet(t.seatId) : undefined)} onAbsent={(i) => void r.markAbsent(i)} onChooseOrder={onChooseOrder} /> : null;
+  const bar = r.bar ? <ReviewBar state={r.bar} pending={r.barPending} error={r.barError} onSheet={r.openSheet} onFix={(t) => (t.kind === "sheet" ? r.openSheet(t.seatId) : undefined)} onAbsent={(i) => void r.markAbsent(i)} onChooseOrder={onChooseOrder} /> : null;
   const card = r.showImpressionCard ? (
         <ImpressionCardBlock judges={side.judges} impressions={impressions} riders={riders} tolerance={r.impressionTolerance} onCell={closing ? (seatId, entryId) => setOpen({ kind: "sheet", seatId, entryId }) : undefined} defaultOpen />
       ) : null;

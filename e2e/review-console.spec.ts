@@ -146,7 +146,8 @@ test("the Impression grid shows what the judges gave, with the outlier colour on
   await pick(page, heat);
   const card = page.getByTestId("impression-card");
   await expect(card).toBeVisible({ timeout: 60_000 });
-  await expect(card.getByRole("heading", { name: "Impression" })).toHaveCount(1);
+  await expect(card.locator("h3")).toHaveCount(1);
+  await expect(card.locator("h3")).toHaveText("Impression");
   // one column per judge with the table's short names and J-numbers, and a Panel column
   await expect(card.getByTestId("impression-judge")).toHaveCount(3);
   await expect(card.getByTestId("impression-judge").first()).toContainText("Judge 1");
@@ -191,6 +192,7 @@ test("at laptop width the card sits beside the rider cards for 2 and 3 riders, s
     await expect(region).toBeVisible({ timeout: 40_000 });
     await page.waitForTimeout(500);
     const fit = (await region.getAttribute("data-fit"))!;
+    console.log(`riders ${n}: fit ${fit}, room ${await region.getAttribute("data-room")}`);
     fits.push(fit);
     // the card (or its button) is in the same row as the rider cards, to the right of them, never below
     const r = (await region.boundingBox())!;
