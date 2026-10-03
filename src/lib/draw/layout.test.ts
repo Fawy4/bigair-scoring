@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { heatColumns } from "./ladder";
+import { heatColumns } from "./layout";
 
 describe("the heats of a round in tight columns", () => {
   it("two heats to a column, between one and four columns", () => {

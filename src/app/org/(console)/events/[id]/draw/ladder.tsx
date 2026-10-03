@@ -3,6 +3,7 @@
 import { DndContext, pointerWithin, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { useState } from "react";
 import { RiderLabel } from "@/components/rider-label";
+import { heatColumns } from "@/lib/draw/layout";
 import { heatLabel, placeholderText, provisionalSeat, type DivisionDraw, type DrawHeat, type DrawRound, type Slot } from "@/lib/engine/ladder";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
 import { copy } from "@/lib/ui-copy";
@@ -36,9 +37,6 @@ export interface LadderProps {
   renderRoundHeader?: (round: DrawRound) => React.ReactNode;
   renderHeatTitle?: (round: DrawRound, heat: DrawHeat) => React.ReactNode;
 }
-
-/** How many columns a round's heats are laid out in: two heats to a column, between one and four columns. */
-export const heatColumns = (heats: number): number => Math.min(4, Math.max(1, Math.ceil(heats / 2)));
 
 const riderOf = (draw: DivisionDraw, slot: Slot) => draw.entrants.find((e) => e.id === slot.entrantId);
 

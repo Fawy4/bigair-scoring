@@ -3973,47 +3973,6 @@ export type Database = {
         Returns: Json
       }
       sim_enable: { Args: { p_event: string }; Returns: Json }
-      sim_fast_forward: {
-        Args: { p_event: string; p_heat: string }
-        Returns: {
-          armed_at: string | null
-          armed_paused_at: string | null
-          created_at: string
-          division_id: string
-          draw_uid: string | null
-          duration_sec: number
-          ended_at: string | null
-          event_id: string
-          flag_out: Json | null
-          id: string
-          live_rev: number
-          manual_override: boolean
-          name: string | null
-          number: number
-          number_suffix: string | null
-          paused_at: string | null
-          paused_reason: string | null
-          paused_total_sec: number
-          prestart_sec: number | null
-          public_live: boolean | null
-          publish_hold: boolean
-          published_at: string | null
-          reopened_at: string | null
-          rerun_of: string | null
-          round_id: string
-          started_at: string | null
-          status: string
-          time_scale: number
-          updated_at: string
-          warm_up_sec: number
-        }
-        SetofOptions: {
-          from: "*"
-          to: "heats"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
       sim_live_heat: { Args: { p_heat: string }; Returns: Json }
       sim_log_add: {
         Args: {

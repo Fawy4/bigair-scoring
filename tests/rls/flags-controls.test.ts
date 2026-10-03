@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildFixture, ENV_OK, type Fixture } from "./helpers";
-import { ago, codeOf, heatRow, mkDivision, mkHeat, type LiveDivision } from "./live-helpers";
+import { ago, codeOf, mkDivision, mkHeat, type LiveDivision } from "./live-helpers";
 
 // The pre-start controls: Pause freezes the yellow (one pause state, console or simulator), "+1 min" adds exactly 60 s, the typed pre-start is 0:10 to 15:00, and a
-// heat that goes back to "not started" never keeps a start sequence (Reset this heat). Plus the simulator's speeds on the pre-start, the heat and Skip to end.
+// heat that goes back to "not started" never keeps a start sequence (Reset this heat).
 describe.skipIf(!ENV_OK)("Flags: pre-start controls (hosted development project)", () => {
   let f: Fixture;
   let d: LiveDivision;
