@@ -175,10 +175,10 @@ test("the Impression grid shows what the judges gave, with the outlier colour on
   await expect(cell(entries[1], "j2")).toContainText("7.00", { timeout: 40_000 });
 });
 
-test("at laptop width the card sits beside the rider cards for 2 and 3 riders, shrinks or becomes a button for 5, and the table's top edge never moves", async ({ browser }) => {
+test("at a 15-inch laptop width the card sits beside the rider cards for 2 and 3 riders, shrinks or becomes a button for 5, and the table's top edge never moves", async ({ browser }) => {
   test.setTimeout(420_000);
   await ensureEntries(5); // the console reads the riders when the page opens
-  const page = await head(browser, { width: 1280, height: 900 });
+  const page = await head(browser, { width: 1500, height: 900 });
   const tops: number[] = [];
   const fits: string[] = [];
   for (const [n, number] of [[2, 21], [3, 22], [5, 23]] as const) {

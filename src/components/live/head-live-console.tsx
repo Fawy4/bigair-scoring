@@ -220,29 +220,31 @@ export function HeadLiveConsole({
         {!open ? <p className="text-small font-medium text-beach-muted">{heat.status === "published" ? C.published : ""}</p> : null}
 
         <section data-testid="rider-strip" aria-label={V.ridersStrip} className="flex flex-wrap items-start gap-1.5" style={showImpressionCard ? { minHeight: CARD_ROW_MIN } : undefined}>
+          <div data-testid="rider-tiles" className="flex min-w-0 flex-[0_1_auto] flex-wrap items-start gap-1.5">
           {stripTiles.map(({ r, total, slot }) => (
-            <button
-              key={r.entryId}
-              type="button"
-              data-testid="rider-strip-tile"
-              data-rider={r.entryId}
-              disabled={!open}
-              aria-label={`${wordFor(r.entryId)}: ${C.riderMenu}`}
-              onClick={() => setMenu({ kind: "rider", entryId: r.entryId })}
-              className="flex min-h-tap min-w-[7rem] flex-col items-start gap-0.5 rounded-card border border-beach-line bg-beach-surface px-2 py-1 text-left"
-            >
-              <span className="min-w-0 whitespace-normal break-words">{<RiderLabel model={r.label} variant="live" bare />}</span>
-              <span className="flex w-full items-baseline justify-between gap-2">
-                <span data-testid="rider-strip-total" className="text-name font-semibold tabular-nums">
-                  {total?.totalLabel ?? copy.live.result.noTotal}
+              <button
+                key={r.entryId}
+                type="button"
+                data-testid="rider-strip-tile"
+                data-rider={r.entryId}
+                disabled={!open}
+                aria-label={`${wordFor(r.entryId)}: ${C.riderMenu}`}
+                onClick={() => setMenu({ kind: "rider", entryId: r.entryId })}
+                className="flex min-h-tap min-w-[7rem] flex-col items-start gap-0.5 rounded-card border border-beach-line bg-beach-surface px-2 py-1 text-left"
+              >
+                <span className="min-w-0 whitespace-normal break-words">{<RiderLabel model={r.label} variant="live" bare />}</span>
+                <span className="flex w-full items-baseline justify-between gap-2">
+                  <span data-testid="rider-strip-total" className="text-name font-semibold tabular-nums">
+                    {total?.totalLabel ?? copy.live.result.noTotal}
+                  </span>
+                  <span data-testid="rider-strip-attempts" className="text-small font-medium text-beach-muted tabular-nums">
+                    {V.attemptsShort(counts.get(r.entryId) ?? 0, cap)}
+                  </span>
                 </span>
-                <span data-testid="rider-strip-attempts" className="text-small font-medium text-beach-muted tabular-nums">
-                  {V.attemptsShort(counts.get(r.entryId) ?? 0, cap)}
-                </span>
-              </span>
-              {slot?.modifier ? <Pill tone="outlier">{slot.modifier}</Pill> : null}
-            </button>
-          ))}
+                {slot?.modifier ? <Pill tone="outlier">{slot.modifier}</Pill> : null}
+              </button>
+            ))}
+          </div>
           {showImpressionCard ? <ImpressionCardInline judges={side.judges} impressions={impressions} riders={riders} tolerance={impressionTolerance} onCell={open ? (seatId, entryId) => setDialog({ kind: "impression", seatId, entryId }) : undefined} /> : null}
         </section>
 
