@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /** A data-changing button with exactly one confirmation (beach rule 00.3): the first tap asks, the second tap does it. */
 export function ConfirmButton({
@@ -23,9 +23,13 @@ export function ConfirmButton({
   danger?: boolean;
 }) {
   const [asking, setAsking] = useState(false);
+  // Until the page is live a tap does nothing (the button arrives before its code on a slow connection), so it stays grey until then rather than
+  // swallowing the tap without asking.
+  const [live, setLive] = useState(false);
+  useEffect(() => setLive(true), []);
   if (!asking) {
     return (
-      <button type="button" className={`btn ${danger ? "btn-danger" : ""}`} disabled={disabled || pending} onClick={() => setAsking(true)}>
+      <button type="button" className={`btn ${danger ? "btn-danger" : ""}`} disabled={!live || disabled || pending} onClick={() => setAsking(true)}>
         {label}
       </button>
     );
