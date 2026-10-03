@@ -35,7 +35,7 @@ src/lib/supabase/   clients (server, browser, service), typed helpers
 src/components/     UI; src/components/live/ for realtime widgets
 supabase/migrations  SQL migrations; supabase/seed.sql dev data
 presets/            scoring/*.json formats/*.json schedule/*.json identification/schemes.json tricks/big-air-vocabulary.json (validated by Zod on load and in tests)
-docs/               specs; docs/STATUS.md = running progress log (update at end of every phase)
+docs/               specs; docs/STATUS.md = running progress log (update at end of every phase); docs/RELEASES.md = one entry per version (rule 10)
 docs/manual/        the product manual (Markdown + img/), rendered in the product at /help; README.md says how to update it
 ```
 
@@ -48,13 +48,14 @@ docs/manual/        the product manual (Markdown + img/), rendered in the produc
 6. **Resilience:** score submissions go through a client queue with retry + idempotency key; UI shows pending/synced state. Publishing is blocked while required scores are missing unless the head judge explicitly overrides (recorded).
 7. **Mobile first:** judge/spotter screens are one-thumb, high contrast for sunlight, sizes and rules per docs/06 §00 (beach readability standard: pad buttons ≥56px, taps only), works in Safari iOS and Chrome Android. Rider identification follows the event's configurable scheme (lycra colour per heat, fixed lycra, bib number, kite brand/model/size/colours, rash guard, photo, name call-out — docs/06 §0, presets/identification): one shared RiderLabel component everywhere, colour always shown as text too, never assume vests exist.
 8. **Wording:** every user-facing string lives in `src/lib/ui-copy.ts`, never inline in a component. House words (a test enforces them): "Rider label", "Lycra", "score", "Impression / Variety score"; never the old words for them. Every setting has a "?" (tap) with one sentence and an example.
-9. **The manual is part of the product.** Every PR that changes a screen, a setting, a sentence or a rule updates the manual pages it touches (docs/manual), retakes their screenshots (`npm run manual:shots`), and adds a changelog line (docs/manual/changelog.md). Run `npm run manual:generate` after changing ui-copy.ts, a schema or a migration's error codes; a new refusal sentence gets its meaning and fix in `scripts/manual/error-notes.ts`. Tests fail when a refusal sentence, a database code or a setting is missing from the manual. Product version = `package.json` version (0.9.0 for the Arrow launch, 1.0.0 after it).
-10. **Dependencies:** the stack above plus shadcn/ui's helper packages (Radix UI primitives, class-variance-authority, clsx, tailwind-merge, lucide-react, tailwindcss-animate) are pre-approved; anything else, ask first.
+9. **The manual is part of the product.** Every PR that changes a screen, a setting, a sentence or a rule updates the manual pages it touches (docs/manual), retakes their screenshots (`npm run manual:shots`), and adds a changelog line (docs/manual/changelog.md). Run `npm run manual:generate` after changing ui-copy.ts, a schema or a migration's error codes; a new refusal sentence gets its meaning and fix in `scripts/manual/error-notes.ts`. Tests fail when a refusal sentence, a database code or a setting is missing from the manual. Product version = `package.json` version (1.0.0 after the Arrow launch).
+10. **Every PR is a release.** Before a PR is ready to merge it raises `version` in package.json (fix +0.0.1, feature +0.1.0; rebase onto main first so the number follows the last merged one) and adds its entry at the top of `docs/RELEASES.md`: version, date, `PR: #number`, "What changed" in plain words for the owner, "What to test" as 3–8 `- [ ] ` checks a non-developer can do on the live address in 15 minutes, "Known issues". The matching `docs/manual/changelog.md` entry links to it (`/admin/releases#release-x-y-z`). A unit test fails if package.json's version has no entry. The owner ticks the checks at /admin/releases.
+11. **Dependencies:** the stack above plus shadcn/ui's helper packages (Radix UI primitives, class-variance-authority, clsx, tailwind-merge, lucide-react, tailwindcss-animate) are pre-approved; anything else, ask first.
 
 ## Workflow rules
 - Start each phase by reading `docs/STATUS.md` and ONLY the docs the prompt references. Use plan mode for multi-file work; keep plans short.
 - Small commits per phase: `feat(engine): ...`, `feat(ui): ...`, `fix: ...`, `docs: ...`. Push after each green phase (Vercel deploys `main`).
-- Before saying done: `npm run typecheck && npm test` pass; show the summary lines; list files changed; update `docs/STATUS.md` (done / not done / how to test on phone) and the manual (rule 9).
+- Before saying done: `npm run typecheck && npm test` pass; show the summary lines; list files changed; update `docs/STATUS.md` (done / not done / how to test on phone), the manual (rule 9) and the version + release entry (rule 10).
 - When the spec is ambiguous, list the options with a recommendation and ask — do not silently pick.
 - Explain in plain language; the owner is a competition judge, not an engineer.
 

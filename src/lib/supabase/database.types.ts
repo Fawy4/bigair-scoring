@@ -1670,6 +1670,51 @@ export type Database = {
           },
         ]
       }
+      release_check_ticks: {
+        Row: {
+          check_key: string
+          check_text: string
+          ticked_at: string
+          ticked_by: string | null
+          version: string
+        }
+        Insert: {
+          check_key: string
+          check_text: string
+          ticked_at?: string
+          ticked_by?: string | null
+          version: string
+        }
+        Update: {
+          check_key?: string
+          check_text?: string
+          ticked_at?: string
+          ticked_by?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
+      release_signoffs: {
+        Row: {
+          checks_total: number
+          tested_at: string
+          tested_by: string | null
+          version: string
+        }
+        Insert: {
+          checks_total: number
+          tested_at?: string
+          tested_by?: string | null
+          version: string
+        }
+        Update: {
+          checks_total?: number
+          tested_at?: string
+          tested_by?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       riders: {
         Row: {
           created_at: string
@@ -2673,6 +2718,20 @@ export type Database = {
       }
       admin_publish_preset: {
         Args: { p_id: string; p_kind: string }
+        Returns: undefined
+      }
+      admin_release_mark_tested: {
+        Args: { p_keys: string[]; p_version: string }
+        Returns: undefined
+      }
+      admin_release_status: { Args: never; Returns: Json }
+      admin_release_tick: {
+        Args: {
+          p_key: string
+          p_text: string
+          p_ticked: boolean
+          p_version: string
+        }
         Returns: undefined
       }
       admin_remove_organiser: {

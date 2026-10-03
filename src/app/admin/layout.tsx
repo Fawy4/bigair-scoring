@@ -21,6 +21,7 @@ const PLACES = [
   { href: "/admin/feedback", label: N.feedback, prefixes: ["/admin/feedback"] },
   { href: "/admin/audit", label: N.audit, prefixes: ["/admin/audit"] },
   { href: "/admin/health", label: N.health, prefixes: ["/admin/health"] },
+  { href: "/admin/releases", label: N.releases, prefixes: ["/admin/releases"] },
   { href: "/admin/settings", label: N.settings, prefixes: ["/admin/settings"] },
 ];
 

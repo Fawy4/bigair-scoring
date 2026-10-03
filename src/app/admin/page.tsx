@@ -4,6 +4,7 @@ import { getPlatformSettings } from "@/lib/platform/public-settings";
 import { attempt } from "@/lib/platform/safe";
 import { requireAdmin } from "@/lib/platform/session";
 import { isTestData } from "@/lib/platform/organisation";
+import { currentReleaseLine } from "@/lib/releases/load";
 import { copy } from "@/lib/ui-copy";
 import { DemoPanel } from "./demo-panel";
 import { OrganisationsTable } from "./organisations-table";
@@ -19,6 +20,7 @@ export default async function AdminOrganisations({ searchParams }: { searchParam
   const loaded = await attempt("Organisations", async () => await supabase.rpc("admin_organisation_overview"), { data: null, error: { message: "not loaded" } } as unknown as Awaited<ReturnType<typeof supabase.rpc<"admin_organisation_overview">>>);
   const { data, error } = loaded.value;
   const rows = data ?? [];
+  const release = await currentReleaseLine(supabase);
   const c = copy.admin.org;
   // Only when there is no demo organisation, only for owners, and never where the demo is switched off (a project with a real event).
   const showDemo = role === "owner" && !error && !rows.some((o) => o.slug === "demo" || o.slug === "demo-org") && process.env.DEMO_SEED_DISABLED !== "1";
@@ -32,6 +34,11 @@ export default async function AdminOrganisations({ searchParams }: { searchParam
         </Link>
       </div>
       <p className="max-w-[80ch] text-body font-medium text-beach-muted">{c.intro}</p>
+      <p data-testid="release-status" className="text-body font-semibold">
+        <Link href="/admin/releases" className="underline">
+          {release.line}
+        </Link>
+      </p>
       {showDemo ? <DemoPanel /> : null}
       {loaded.problem ? (
         <p role="alert" className="panel field-error">

@@ -41,6 +41,7 @@ export const MANUAL_PAGES: ManualPage[] = [
   { file: "screens/admin-settings.md", group: "Screens" },
   { file: "screens/admin-feedback.md", group: "Screens" },
   { file: "screens/admin-health.md", group: "Screens" },
+  { file: "screens/admin-releases.md", group: "Screens" },
   { file: "settings.md", group: "Reference" },
   { file: "resets-and-undo.md", group: "Reference" },
   { file: "roles.md", group: "Reference" },
