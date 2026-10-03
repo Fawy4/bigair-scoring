@@ -2,7 +2,7 @@
 
 Step 6 of an event (/org/events/‹id›/schedule): the order of the day's heats and breaks, one or more plans per day, the pinned start times, and every time that follows from them.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.9.1
 
 ## What it is for {#ro-purpose}
 

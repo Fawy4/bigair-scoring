@@ -2,7 +2,7 @@
 
 Every refusal and error sentence the product can show, word for word, with where it appears, what it means and how to fix it; then every database code.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.9.1
 
 **How to use it.** Find the sentence you see (use the search box at the top of Help, or follow the **Learn more** link that the organiser screens put after a refusal). A value the product fills in is written as ‹name›, for example “‹heat› is running. End it first.” stands for “Heat 3 is running. End it first.” The [troubleshooting page](troubleshooting.md) lists the same sentences alphabetically, and the problems that have no sentence (a grey button, a blank page, wrong times).
 

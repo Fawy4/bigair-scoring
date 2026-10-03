@@ -2,7 +2,7 @@
 
 Step 2 of an event (/org/events/‹id›/divisions): the groups that rank together, each with its scoring rules, its format (the ladder), its Rider label and its trick base.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.9.1
 
 ## What it is for {#div-purpose}
 

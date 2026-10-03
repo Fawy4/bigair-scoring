@@ -2,7 +2,7 @@
 
 The event-day runbook (docs/09, corrected to the built product): the day before, the morning minute by minute, each heat, wind holds, failures and the end of the day, with what the organiser and the head judge do side by side.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.9.1
 
 Times below assume a first heat at 10:00 and a ready call of 15 minutes; move them with your own run order. “HJ” is the head judge. Every button named here exists in version 0.9.0; the end of the page lists what docs/09 expected but the product does not have.
 

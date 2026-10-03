@@ -1013,3 +1013,35 @@ Smaller choices: the categories list is reorder-only (a new category also needs 
 
 ### How to test on the preview
 See the pull request's click-through (your done-means list, on Demo).
+
+## Polish 2 – simulator, console and organiser fixes (branch `polish-2`, 3 Oct 2026)
+
+Started from main after #22 and #23; rebased onto main after #25 (trick base editor) — the only clash was a generated table of the manual, and the database types were regenerated once for both. One commit per numbered item. Product version 0.9.1. The decisions are written in docs/06, “Decisions log – Polish 2” (P2-1 … P2-15). Trick-base-panel.tsx and its two server actions were not touched (they belonged to the parallel trick base editor).
+
+### Done
+1. **Publish blockers in words, with Fix.** “Fawy: sheet not submitted — 3 attempts unscored”, “Fawy: score for Red, attempt 2 missing”, “Fawy: Impression / Variety score for Red missing”; **Fix** opens that score (on the console side panel and in the Publish dialog). **Rule (P2-1):** when the head judge has set every missing score of a judge to Absent, that judge's sheet counts as submitted; typed values alone do not submit a sheet. Database: `impression_scores.missed` (Absent on an Impression / Variety score), `head_set_impression` can set Absent; the server's publish check uses the same rule.
+2. **View as gives the seat back.** The phone says it is alive every 5 s; leaving the page (or 90 s of silence) gives the seat back to the simulator. The panel shows who holds each seat, with **Give back**.
+3. **Pause pauses the heat clock.** Pause and Stop on the simulator pause the running heats with the same server pause as the console; the console says “Paused by the simulator”; Start / Resume resumes only those (a heat the head judge paused stays theirs).
+4. **Behaviour settings independent** (cause: an empty form filled every missing setting with its default on save). **4b. Tick lock** given back after each step (unit test: two ticks in a row both run).
+5. **Console after the heat:** each judge's Impression / Variety scores per rider — done, missing, Absent — with **Enter** per judge.
+6. **Head judge enters a judge's sheet:** one **Save** for every rider, the next missing rider is picked by itself, **Save and submit** submits the whole sheet (recorded in the audit log as submitted by the head judge).
+7. **Skip to end of heat** and **Run the whole event** on the simulator (the latter plays every day's active run order, day after day, heat after heat; without a run order it uses the order of divisions, rounds and heats).
+8. **Scoring tab:** main dials first, the settings of a choice only with that choice. It says “21 more settings”, not 12: 21 is what is left once the main dials and hidden settings are taken out (honest count, it was 53).
+9. **Every “?”** ends with where the setting shows and what it changes.
+10. **Timing per round** under Format: one table (warm-up, heat length, break after each heat), the duplicate settings removed; the “?” says these make the starting plan of the run order.
+11. **Trick categories:** nothing to change — the spotter's default grouping is already Base trick → Add-ons → Grabs & landings; a test now locks it in.
+12. **Next / Previous bar** sticks to the bottom everywhere and the **Note** button and panel sit above it (Daylight and Dark checked).
+13. **Spinners** back on every number box (boxes a bit wider to make room).
+14. **Run order per day:** a day without a plan offers **Create a plan for ‹day›** (“Plan A – ‹day›”) and **Copy ‹day›'s plan to ‹day›** (heats, breaks, hand-set pins; not actual times or the console's pins); the Day list says which plan is active or “no plan”; every grey control says why; **Clear actual times** names what stays (“Your pinned 10:05 stays”); the Go live Fix opens on today.
+15. **admin.spec Archive timeout — cause found:** the test clicked **Archive organisation** before the page was live (checked at the moment of the click: React not attached), so nothing happened. A slow phone would lose the tap the same way, so the shared one-confirmation button now stays grey until it can answer. The test is unchanged; admin.spec passes 12 of 12.
+
+### Database (applied to the hosted project with `npm run db:apply`; types regenerated with `npm run db:types`)
+`20261015100000` Absent rule · `20261015100100` View-as release · `20261015100200` simulator pause · `20261015100300` tick lock token · `20261015100400` head submits a judge's sheet.
+
+### Not done / please check
+- Not tried on a real phone.
+- Copying a plan to another day copies all its heats; remove the heats that do not belong to that day (P2-14).
+- One run of the organiser spec failed once on “Save as new version” and passed on the re-run; four RLS suites failed in setup only while a browser test used the same hosted project at the same time, and passed on their own.
+
+### How to test on the preview
+See the click-through in the pull request.

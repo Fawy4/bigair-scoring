@@ -2,7 +2,7 @@
 
 Look up the symptom: what you see, why it happens, how to fix it — first the common problems on the beach, then every sentence the product can show, alphabetically.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.9.1
 
 **One-minute method.** 1) Read the sentence on the screen: almost every refusal names its fix, and the organiser screens put a **Learn more** link after it. 2) A grey button has its reason written under it. 3) Search this manual (top of /help) for two words of the sentence. 4) Check the [dependency map](dependencies.md): most problems are a missing step before the one you are on. 5) Still stuck: /admin/health, then the server logs with the error reference.
 

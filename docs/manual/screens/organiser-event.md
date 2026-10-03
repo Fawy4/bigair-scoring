@@ -2,7 +2,7 @@
 
 Step 1 of an event (/org/events/‹id›/event, or **+ New event** on the events list): name, dates, place, time zone, branding, what the public sees, timing, registration, the officials' join details, rehearsal and visibility.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.9.1
 
 ## What it is for {#ev-purpose}
 

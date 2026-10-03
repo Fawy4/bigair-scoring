@@ -2,7 +2,7 @@
 
 Every setting an organiser can change, with its label, its “?” text, its example, its default and the values the built-in presets use.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.9.1
 
 **How to read this page.** Each row is one setting. “What it does” is the exact text of the “?” next to the setting in the product (it is the one-sentence effect). “Default” is what a new event or division gets when nobody changes the setting; “stored as” names the field, for the owner and for support. “Preset values” lists what each built-in preset sets (`all:` when every preset agrees). The tables labelled *generated* are written from the code by `npm run manual:generate`: never edit them by hand, change the code and run the command.
 

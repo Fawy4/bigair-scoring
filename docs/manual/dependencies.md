@@ -2,7 +2,7 @@
 
 For every action that can refuse: what must be true before it works, where to fix it, and the sentence the product shows when it is not true (under a grey button, in red, or in a box).
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.9.1
 
 **How to use it.** A button that is grey (a dashed frame, with a sentence under it) or an action that answers with a red sentence almost always means one link of the chain below is missing. Find the action in the table, check each condition left to right, fix the first one that is not true. The sentence column is word for word what the product shows; ‹name› is filled in on screen.
 
