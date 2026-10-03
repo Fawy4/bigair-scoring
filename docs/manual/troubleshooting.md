@@ -2,7 +2,7 @@
 
 Look up the symptom: what you see, why it happens, how to fix it — first the common problems on the beach, then every sentence the product can show, alphabetically.
 
-Last checked: 3 Oct 2026 · Product version 0.9.1
+Last checked: 3 Oct 2026 · Product version 0.9.2
 
 **One-minute method.** 1) Read the sentence on the screen: almost every refusal names its fix, and the organiser screens put a **Learn more** link after it. 2) A grey button has its reason written under it. 3) Search this manual (top of /help) for two words of the sentence. 4) Check the [dependency map](dependencies.md): most problems are a missing step before the one you are on. 5) Still stuck: /admin/health, then the server logs with the error reference.
 
@@ -247,6 +247,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Only the active run order can be changed.” | Run order step → Activate this plan. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-plan-not-active) |
 | “Only the head judge can add an attempt past the cap.” | Follow the sentence. | [Head console](errors.md#err-headlive-pastcapnotallowed) |
 | “Only the head judge or an organiser can change the wind call.” | Follow the sentence. | [Organiser: Go live](errors.md#err-windcall-errors-not-allowed) |
+| “Only the platform owner can tick release checks and confirm a version as tested.” | Sign in as the platform owner. | [Platform owner (/admin)](errors.md#err-admin-releases-codes-not-allowed) |
 | “Only your own presets can get new versions. Use “Save as new preset” for built-in ones.” | Use “Save as new preset”. | [Organiser: Divisions](errors.md#err-divisions-errors-onlyown) |
 | “Part of this page could not be loaded (‹what›). The rest still works; the details are in the server logs.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-partproblem) |
 | “Paste the text first.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-rules-pasteempty) |
@@ -288,6 +289,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “That account is not an organiser. Ask the owner to add you.” | The platform owner adds it to an organisation. | [Organiser sign-in](errors.md#err-login-notanorganiser) |
 | “That address does not look right.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-invalid-url) |
 | “That attempt no longer exists.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-attempt-not-found) |
+| “That check is not in the releases file any more. Reload the page.” | Reload the page and tick the check as it reads now. | [Platform owner (/admin)](errors.md#err-admin-releases-codes-invalid-check) |
 | “That copy is older than 30 days and can no longer be restored.” | Follow the sentence. | [Resets](errors.md#err-reset-restore-errors-snapshot-expired) |
 | “That copy no longer exists.” | Follow the sentence. | [Resets](errors.md#err-reset-restore-errors-snapshot-not-found) |
 | “That did not work. Nothing was changed; try again.” | Follow the sentence. An event with published results can only be archived. | [Organiser: event list and Event step](errors.md#err-eventlifecycle-errors-generic) |
@@ -362,6 +364,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “That trick base is not complete (it needs base tricks and modifiers).” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-codes-invalid-json) |
 | “That value is not allowed.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-errors-badvalue) |
 | “That version is already published.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-codes-already-default) |
+| “That version is not in the releases file.” | Reload the page. | [Platform owner (/admin)](errors.md#err-admin-releases-codes-invalid-version) |
 | “That version no longer exists.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-presets-errors-not-found) |
 | “That version or proposal no longer exists. Reload the page.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-codes-not-found) |
 | “That web address is already used by another event.” | Choose another web address (slug). | [Organiser: event list and Event step](errors.md#err-event-slugtaken) |
@@ -444,6 +447,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “The stored draw does not match this heat. Nothing was changed.” | Reload the page; if it repeats, tell the owner. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-draw-mismatch) |
 | “The system presets are not published yet, so the demo cannot be built. Run “npm run seed:presets” first.” | On a computer with the keys: npm run seed:presets. | [Platform owner (/admin)](errors.md#err-admin-errors-presets-missing) |
 | “The tagline can be at most 160 characters” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-settings-validation-tagline) |
+| “The tick could not be saved. Check the connection and try again.” | Check the connection and tick again; Health says whether the database is reachable. | [Platform owner (/admin)](errors.md#err-admin-releases-codes-generic) |
 | “The two passwords are not the same.” | Follow the sentence. | [Organiser sign-in](errors.md#err-setpassword-mismatch) |
 | “The vocabulary is missing: ‹parts›.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-presets-vocabularymissing) |
 | “The web address can be at most 40 characters” | Follow the sentence. Only owners and admins of the organisation may save. | [Organiser: organisation settings](errors.md#err-orgsettings-validation-slugmax) |
@@ -527,6 +531,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “This sponsor is already last.” | Nothing to fix. | [Organiser: event list and Event step](errors.md#err-event-sponsorlast) |
 | “This version is already the default.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-presets-errors-already-default) |
 | “Tick “I understand, change the address” first.” | Tick “I understand, change the address”, then Save. | [Organiser: organisation settings](errors.md#err-orgsettings-understandfirst) |
+| “Tick every check of this version before confirming it as tested.” | Reload, tick the open checks after doing them, then press Confirm version tested again. | [Platform owner (/admin)](errors.md#err-admin-releases-codes-release-checks-open) |
 | “Tick the box to continue.” | Follow the sentence. | [Rider registration](errors.md#err-registration-errors-consent) |
 | “Time is up for this heat.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-heat-time-up) |
 | “Too late to undo: ask the head judge to delete it.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-undo-too-late) |

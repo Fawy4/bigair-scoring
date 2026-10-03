@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/platform/session";
 import { copy } from "@/lib/ui-copy";
 import { RealtimeStatus } from "./realtime-status";
 import { PRODUCT_VERSION } from "@/lib/product-version";
+import { currentReleaseLine } from "@/lib/releases/load";
 
 export const metadata = { title: copy.admin.health.heading };
 
@@ -16,6 +17,7 @@ export default async function HealthPage() {
   await Promise.resolve(supabase.rpc("purge_expired_reset_snapshots")).catch(() => null);
   const { data, error } = await supabase.rpc("admin_health");
   const config = checkServerConfig(process.env);
+  const release = await currentReleaseLine(supabase);
   const settingsCheck = await attempt("Platform settings", async () => {
     const { error: e } = await supabase.from("platform_settings").select("key").limit(1);
     if (e) throw new Error(e.message);
@@ -33,6 +35,13 @@ export default async function HealthPage() {
         {copy.manual.version(PRODUCT_VERSION)} ·{" "}
         <a href="/help" className="underline">
           {copy.manual.footerHelp}
+        </a>
+      </p>
+      <p data-testid="release-status" className="panel font-semibold">
+        <span aria-hidden="true">{release.progress.tested ? "✔ " : "– "}</span>
+        {release.line} ·{" "}
+        <a href="/admin/releases" className="underline">
+          {copy.admin.releases.statusLink}
         </a>
       </p>
       <ul className="flex flex-col gap-3 text-xl font-semibold">

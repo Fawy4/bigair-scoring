@@ -2,7 +2,7 @@
 
 /admin (platform owner and staff): every customer organisation, opening one as its organiser, creating organisations, inviting their first organiser, moving, archiving and deleting.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.10.0
 
 ## What it is for {#ao-purpose}
 
@@ -21,6 +21,7 @@ The platform owner's control room. /admin answers “This page doesn't exist” 
 
 | Control | What it does |
 |---|---|
+| Version line | “‹version› — ‹n› of ‹n› checks done” (or “— tested”) above the table: the current version's testing; tap it to open [Releases](admin-releases.md). |
 | Table | Name, web address, status, plan, events (“4 (2 published)”), last activity; **Search organisations**, **Status** filter; “Test data” labels organisations left by the browser tests. |
 | Row: **Manage**, **Open as this organiser**, menu (**Rename**, **Archive** / **Restore**, **Delete**, **Invite organiser**) | Opening as an organiser shows the slim strip “Viewing as ‹organisation›” with **Back to admin**; every visit is in the audit log. |
 | **Create organisation** | Name, web address (slug, for /o/‹slug›), default time zone, logo. |

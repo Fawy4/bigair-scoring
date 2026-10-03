@@ -2,7 +2,7 @@
 
 The head judge's working screen at /head/‹event› on a laptop or tablet (1280 px and wider): division tabs, the heat's timer and buttons, the run order with times, the break countdown, the live score table, Publish and everything around it.
 
-Last checked: 3 Oct 2026 · Product version 0.9.1
+Last checked: 3 Oct 2026 · Product version 0.9.2
 
 ## What it is for {#cl-purpose}
 

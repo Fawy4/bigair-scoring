@@ -426,3 +426,44 @@ test("manual screenshots: trick base", async ({ page }) => {
     if (mine.length) await db.from("trick_vocabularies").delete().in("id", mine);
   }
 });
+
+test("manual screenshots: releases", async ({ page }) => {
+  test.setTimeout(5 * 60_000);
+  mkdirSync(OUT, { recursive: true });
+  const { PRODUCT_VERSION } = await import("../src/lib/product-version");
+  const { parseReleases } = await import("../src/lib/releases/releases");
+  const { readFileSync } = await import("node:fs");
+  const current = parseReleases(readFileSync(path.join(process.cwd(), "docs", "RELEASES.md"), "utf8")).find((r) => r.version === PRODUCT_VERSION)!;
+  const org = await createOrganiser({ platformAdmin: "owner" });
+  const db = org.db;
+  const { data: users } = await db.auth.admin.listUsers({ perPage: 1000 });
+  const me = users.users.find((u) => u.email === org.email)!.id;
+  try {
+    await db.from("organisations").update({ name: "Gouna Big Air (sample)" }).eq("id", org.orgId);
+    // two checks ticked for the picture, only ones nobody has ticked; every tick this login made is removed at the end (the owner's real ticks stay)
+    const { data: taken } = await db.from("release_check_ticks").select("check_key").eq("version", PRODUCT_VERSION);
+    const free = current.checks.filter((c) => !(taken ?? []).some((t) => t.check_key === c.key)).slice(0, 2);
+    await org.signIn(page, "/admin/releases");
+    await page.getByTestId("release-current").waitFor();
+    for (const c of free) {
+      const box = page.locator(`[data-testid=release-check][data-key="${c.key}"] input`);
+      await expect(async () => {
+        if (!(await box.isChecked())) await box.check();
+        const { data } = await db.from("release_check_ticks").select("check_key").eq("version", PRODUCT_VERSION).eq("check_key", c.key);
+        expect(data).toHaveLength(1);
+      }).toPass({ timeout: 30_000 });
+    }
+    await open(page, "/admin/releases");
+    await shot(page, "admin-releases", LAPTOP, 1500);
+    await shot(page, "admin-releases", PHONE, 1500);
+    await open(page, "/admin/health");
+    await shot(page, "admin-health", LAPTOP, 1500);
+    await open(page, `/admin?q=${encodeURIComponent("Gouna Big Air")}`);
+    const search = page.getByRole("searchbox").first();
+    if (await search.isVisible().catch(() => false)) await search.fill("Gouna Big Air");
+    await shot(page, "admin-organisations", LAPTOP, 1500);
+  } finally {
+    await db.from("release_check_ticks").delete().eq("ticked_by", me);
+    await org.cleanup();
+  }
+});

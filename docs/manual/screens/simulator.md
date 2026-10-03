@@ -2,7 +2,7 @@
 
 /org/events/‹id›/simulate: rehearse an event — play it automatically at up to ×20, press a scenario, look at each person's screen, reset.
 
-Last checked: 3 Oct 2026 · Product version 0.9.1
+Last checked: 3 Oct 2026 · Product version 0.9.2
 
 ## What it is for {#si-purpose}
 

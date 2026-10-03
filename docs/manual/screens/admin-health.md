@@ -1,8 +1,8 @@
 # Admin: health
 
-/admin/health: a quick look before an event — database, realtime, last publish, counts, server settings, product version.
+/admin/health: a quick look before an event — database, realtime, last publish, counts, server settings, product version and its testing.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.10.0
 
 ## What it is for {#ah-purpose}
 
@@ -16,6 +16,7 @@ The first page to open the day before and on the morning of the event, and the f
 | Line | What it means |
 |---|---|
 | “Product version ‹version›” · **Help** | The version the manual pages are checked against; the link opens this manual. |
+| “‹version› — ‹n› of ‹n› checks done” · **Releases** | How far the current version's “What to test” checks are ticked on [Releases](admin-releases.md); “‹version› — tested” once it is confirmed as tested. The link opens Releases. |
 | “Database: reachable” / “Database: not reachable” | Not reachable: the free database pauses after about 7 days idle — open the Supabase dashboard and press Resume. |
 | “Realtime: Connected” / “Not connected” | Live updates to phones. Not connected: phones still poll every few seconds; not blocking. |
 | “Last publish: ‹when›” | The last published heat anywhere. |

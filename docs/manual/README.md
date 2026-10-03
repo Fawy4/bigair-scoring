@@ -2,7 +2,7 @@
 
 The product manual of the Big Air scoring system: how to set up and run an event alone, how every screen works, and what to do when something goes wrong.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.10.0
 
 ## Who it is for {#readme-who}
 
@@ -22,9 +22,10 @@ Last checked: 2 Oct 2026 · Product version 0.9.0
 ## The product version {#readme-version}
 
 - The product version is the `version` in `package.json`. It is shown on the Health page (/admin/health), in the footer of the home page and at the top of /help.
-- The version starts at **0.9.0** for the Arrow launch event (El Gouna, 8–9 October 2026) and becomes **1.0.0** after it.
-- Raise the third number for a fix (0.9.1), the second for a change organisers notice (0.10.0), the first for a change that needs everybody to relearn something (1.0.0).
-- The [changelog](changelog.md) has one entry per version: the date, what changed for users, and which manual pages were updated.
+- The version was **0.9.0** when the manual was first written, two days before the Arrow launch event (El Gouna, 8–9 October 2026); it becomes **1.0.0** after the event.
+- Every pull request raises it before it is merged: the third number for a fix (0.10.1), the second for a feature (0.11.0), the first for a change that needs everybody to relearn something (1.0.0).
+- Every pull request also adds its release entry to `docs/RELEASES.md` (what changed, what to test on the live address, known issues); the platform owner ticks the checks on [Releases](screens/admin-releases.md). The rule is on that page.
+- The [changelog](changelog.md) has one entry per version: the date, what changed for users, which manual pages were updated, and a link to the release entry.
 
 ## How to keep it up to date (the rule) {#readme-update-rule}
 
@@ -35,7 +36,7 @@ In practice, in the same pull request:
 1. **Edit the pages** that describe what changed (the screen's page under `screens/`, and [Quick start](quick-start.md), [dependency map](dependencies.md), [Troubleshooting](troubleshooting.md) or [Event day](event-day.md) if the change shows there). Set their “Last checked” line to today and the new version.
 2. **Regenerate the tables** that are written from the code: `npm run manual:generate`. This rewrites the settings tables in [Settings](settings.md), the sentence and code tables in [Errors and refusals](errors.md) and the sentence index in [Troubleshooting](troubleshooting.md). A new refusal sentence needs its meaning and fix in `scripts/manual/error-notes.ts` (otherwise it gets its screen's general fix).
 3. **Retake the screenshots**: `npm run manual:shots` (needs the keys in `.env.local`; it builds a throwaway organisation on the hosted project, plays a simulation for the results, photographs every screen, and removes everything). A stale screenshot is worse than none.
-4. **Add the changelog line** in [Changelog](changelog.md) and raise `version` in `package.json` when the release is cut.
+4. **Raise the version and add the entries**: `version` in `package.json`, the release entry at the top of `docs/RELEASES.md`, and the changelog line in [Changelog](changelog.md) with its “Release entry” link ([the rule](screens/admin-releases.md#releases-rule)).
 
 Three tests stop the manual from drifting silently (`npm test`): every refusal sentence of `src/lib/ui-copy.ts` and every database code must appear in [Errors and refusals](errors.md); every setting of the scoring, format, event and division schemas must appear in [Settings](settings.md); the generated tables must be up to date. A browser test (`e2e/help.spec.ts`) opens /help, searches for “Hold”, follows every internal link and loads every picture.
 

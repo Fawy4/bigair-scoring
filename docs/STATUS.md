@@ -1016,7 +1016,7 @@ See the pull request's click-through (your done-means list, on Demo).
 
 ## Polish 2 – simulator, console and organiser fixes (branch `polish-2`, 3 Oct 2026)
 
-Started from main after #22 and #23; rebased onto main after #25 (trick base editor) — the only clash was a generated table of the manual, and the database types were regenerated once for both. One commit per numbered item. Product version 0.9.1. The decisions are written in docs/06, “Decisions log – Polish 2” (P2-1 … P2-15). Trick-base-panel.tsx and its two server actions were not touched (they belonged to the parallel trick base editor).
+Started from main after #22 and #23; rebased onto main after #25 (trick base editor) — the only clash was a generated table of the manual, and the database types were regenerated once for both. One commit per numbered item. Product version 0.9.1 at merge; renumbered 0.9.2 by the release tracker (#26), because #25 is 0.9.1. The decisions are written in docs/06, “Decisions log – Polish 2” (P2-1 … P2-15). Trick-base-panel.tsx and its two server actions were not touched (they belonged to the parallel trick base editor).
 
 ### Done
 1. **Publish blockers in words, with Fix.** “Fawy: sheet not submitted — 3 attempts unscored”, “Fawy: score for Red, attempt 2 missing”, “Fawy: Impression / Variety score for Red missing”; **Fix** opens that score (on the console side panel and in the Publish dialog). **Rule (P2-1):** when the head judge has set every missing score of a judge to Absent, that judge's sheet counts as submitted; typed values alone do not submit a sheet. Database: `impression_scores.missed` (Absent on an Impression / Variety score), `head_set_impression` can set Absent; the server's publish check uses the same rule.
@@ -1045,3 +1045,30 @@ Started from main after #22 and #23; rebased onto main after #25 (trick base edi
 
 ### How to test on the preview
 See the click-through in the pull request.
+## Release tracker (0.10.0) – what's new and what to test, per version
+
+### Done
+- **docs/RELEASES.md**: one entry per version, newest first (version, date, PR, What changed, What to test as `- [ ] ` checks, Known issues). Backfilled for every merged PR (#1–#25) in merge order; 0.10.0 (this PR) and 0.9.2 (#24, Polish 2, from its click-through) have the full 8-check lists, 0.9.1 (#25) has 4 checks; the two plan-only PRs say “Nothing to test on the live address.”
+- **Rule** (CLAUDE.md rule 10, the manual README and Admin: releases): every PR raises the version (fix +0.0.1, feature +0.1.0) and adds its entry and changelog line; a PR that changes no screen may write “Nothing to test on the live address.” instead of checks (owner's adjustment, 3 Oct). `src/lib/releases/releases.test.ts` fails when package.json's version has no entry, when an entry is incomplete, when the current version has fewer than 3 or more than 8 checks, or when a changelog version has no link to its entry.
+- **Database** (`20261013100000_release_tracker.sql`, applied to the hosted project): `release_check_ticks` (version + check key + words, who, when) and `release_signoffs`; `admin_release_tick` and `admin_release_mark_tested` (owner only; confirming is refused with `RELEASE_CHECKS_OPEN` while a check is open; unticking removes the confirmation), `admin_release_status` (platform admins; with e-mail addresses). Audit lines for each tick, untick and confirmation. Types: only these additions written in (the hosted schema also has another branch's tables).
+- **/admin/releases**: current version card, every entry as a card, tick boxes saved at once with “Ticked by ‹who›, ‹when›”, **Confirm version tested** (grey with “Tick every check first: ‹n› left.”). Staff see it read only. New rail item **Releases**.
+- **Health** and the admin home show “‹version› — ‹n› of ‹n› checks done” / “— tested”, linking to Releases.
+- **Manual**: new `screens/admin-releases.md` (with screenshots at 1280 and 390), health, organisations, roles, README, changelog (each version links to its release entry; 0.9.1 split out of 0.9.0), errors and troubleshooting regenerated, notes in `scripts/manual/error-notes.ts`.
+
+### Decisions (confirmed by the owner, 3 Oct 2026)
+- **Final numbering:** #23 = 0.9.0, #25 (trick base editor) = 0.9.1, #24 (Polish 2, merged after #25) = 0.9.2 (its changelog heading and its pages' “Last checked” lines renumbered from 0.9.1), this PR = 0.10.0.
+- **Backfilled version numbers.** Applying “+0.1.0 per feature” to #1–#25 would have ended near 0.20.0 and given 0.9.0 a second meaning (the manual and Health already say 0.9.0 = the manual release). Instead, the entries follow what package.json really said: #1–#22 are 0.1.0–0.1.21 (package.json said 0.1.0 throughout), #23 is 0.9.0 (it set that), #25 is 0.9.1, #24 is 0.9.2, and the rule starts with this PR at 0.10.0.
+- **The button is “Confirm version tested”**, not “Mark version tested”: “mark” is a banned house word (the old word for a score) and the wording test refuses it.
+- **Owner only** ticks and confirms (staff look), like the other owner-only admin actions.
+
+### Test evidence
+- After rebasing onto main with Polish 2 (#24): `npm run typecheck` clean · `npm run lint` clean · `npm test`: **180 files, 2029 tests** passed (new: 17 release tests). Conflicts: changelog (both entries kept, Polish 2 renumbered 0.9.2), STATUS (both sections kept), package.json (0.10.0), the Health and Organisations pictures (retaken after the rebase, with Releases).
+- `npm run test:rls -- tests/rls/release-tracker.test.ts`: **3 passed**.
+- Playwright after the rebase, `e2e/admin-releases.spec.ts` + `e2e/admin.spec.ts`: **14 passed** (Polish 2's Archive fix included); `e2e/admin-releases.spec.ts` alone (owner ticks, reload keeps it with e-mail, Health and admin home count it, untick; staff cannot tick). `npm run build` passes and the build ships `docs/RELEASES.md` with /admin, /admin/health and /admin/releases.
+
+### Not done / not verified
+- Not tried on a real phone (the 390 px screenshot looks right).
+- The full `npm run manual:shots` was not run (Polish 2 is running in parallel); only admin-releases, admin-health and admin-organisations were retaken (`npm run manual:shots -- -g releases`).
+
+### How to test on the live address
+The 8 checks of 0.10.0 on Admin → Releases.
