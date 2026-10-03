@@ -2,7 +2,7 @@
 
 Step 3 of an event (/org/events/‹id›/riders): who rides in each division, in seed order, with their identifiers; registrations from the public page; import and print.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#ri-purpose}
 

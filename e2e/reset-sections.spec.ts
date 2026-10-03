@@ -41,10 +41,13 @@ test("run a heat, reset it from the console, see it not started", async ({ brows
   await expect(head.getByTestId("heat-menu")).toHaveCount(0);
   const resetBox = (await head.getByTestId("reset-heat").boundingBox())!;
   const cancelBox = (await head.getByTestId("cancel").boundingBox())!;
-  expect(Math.abs(resetBox.y - cancelBox.y)).toBeLessThan(4);
-  expect(resetBox.x + resetBox.width).toBeLessThanOrEqual(cancelBox.x + 1);
-  expect(cancelBox.x - (resetBox.x + resetBox.width)).toBeLessThan(40); // immediately before
-  expect(Math.abs(resetBox.height - cancelBox.height)).toBeLessThan(2);
+  expect(Math.abs(resetBox.height - cancelBox.height), "same size").toBeLessThan(2);
+  // immediately before Cancel heat: the very next button in the row (the row wraps in the narrow right-hand column, so only the order is fixed)
+  const nextIsCancel = await head.getByTestId("reset-heat").evaluate((el) => {
+    const wrap = el.parentElement as HTMLElement;
+    return Boolean(wrap.nextElementSibling?.querySelector('[data-testid="cancel"]'));
+  });
+  expect(nextIsCancel).toBe(true);
   await head.getByTestId("reset-heat").click();
   // it asks once: the dialog, and nothing is reset until Save
   await expect(head.getByTestId("console-dialog")).toHaveCount(1);

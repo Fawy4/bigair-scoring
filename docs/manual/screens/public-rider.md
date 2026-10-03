@@ -2,7 +2,7 @@
 
 /e/‹event›/riders/‹id›: one rider's next heat with its ready time, their heats and their results; and /e/‹event›/riders, the list of everybody that opens these pages.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#pri-purpose}
 

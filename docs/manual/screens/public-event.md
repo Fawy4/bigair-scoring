@@ -2,7 +2,7 @@
 
 An event's public home (/e/‹event›): now, up next, today's timetable, divisions, sponsors and sharing; the tabs to every public page of the event.
 
-Last checked: 3 Oct 2026 · Product version 0.12.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#pe-purpose}
 

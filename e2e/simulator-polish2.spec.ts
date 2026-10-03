@@ -130,25 +130,41 @@ test("item 3: simulator Pause pauses the heat clock on the console; Resume resum
   }
 });
 
-test("item 7: Skip to end of heat ends the heat with the attempts so far; the virtual judges finish and the virtual head judge publishes it", async ({ page }) => {
+test("item 7: Skip to end of heat fast-forwards the virtual officials and leaves the heat running; End heat and publish ends and publishes it", async ({ page }) => {
   test.setTimeout(600_000);
   const w = await createLiveWorld();
   const simIds: string[] = [];
   try {
     const simId = await makeSimulation(page, w);
     simIds.push(simId);
-    // nothing on the water yet: the button is off and says why
+    // nothing on the water yet: both buttons are off and say why
     await expect(page.getByTestId("sim-skip-end")).toBeDisabled();
-    await expect(page.getByTestId("sim-skip-why")).toHaveText("Available while a heat is running, paused or waiting to be published.");
-    await startAt(page, 1); // ×1: ten minutes a heat, so only the skip can end it in time
+    await expect(page.getByTestId("sim-end-publish")).toBeDisabled();
+    await expect(page.getByTestId("sim-skip-why")).toHaveText("Available while a heat is running.");
+    await expect(page.getByTestId("sim-end-why")).toHaveText("Available while a heat is running, paused or waiting to be published.");
+    await startAt(page, 1); // ×1: ten minutes a heat, so only the buttons can finish it in time
     const live = async () => (await w.db.from("heats").select("id, status").eq("event_id", simId).in("status", ["running", "paused"]).maybeSingle()).data;
     await expect.poll(async () => (await live())?.status, { timeout: 120_000 }).toBe("running");
     const heatId = (await live())!.id as string;
-    await expect.poll(async () => (await w.db.from("trick_attempts").select("id", { count: "exact", head: true }).eq("heat_id", heatId)).count ?? 0, { timeout: 120_000 }).toBeGreaterThan(0);
+    const attempts = async () => (await w.db.from("trick_attempts").select("id", { count: "exact", head: true }).eq("heat_id", heatId)).count ?? 0;
+    await expect.poll(attempts, { timeout: 120_000 }).toBeGreaterThan(0);
+    const before = await attempts();
+    // Skip to end of heat: every rider's attempts are logged and every attempt scored by every virtual judge, and the heat is still running
     await page.getByTestId("sim-skip-end").click();
+    await expect(page.getByTestId("sim-log")).toContainText("Skipped to the end of", { timeout: 120_000 });
+    expect(await attempts()).toBeGreaterThan(before);
+    const slots = (await w.db.from("heat_slots").select("entry_id").eq("heat_id", heatId)).data ?? [];
+    const perRider = new Map<string, number>();
+    for (const a of (await w.db.from("trick_attempts").select("entry_id").eq("heat_id", heatId)).data ?? []) perRider.set(a.entry_id, (perRider.get(a.entry_id) ?? 0) + 1);
+    for (const sl of slots) expect(perRider.get(sl.entry_id as string) ?? 0, "every rider has all attempts logged").toBeGreaterThanOrEqual(3);
+    const ids = ((await w.db.from("trick_attempts").select("id").eq("heat_id", heatId)).data ?? []).map((x) => x.id);
+    const scores = (await w.db.from("trick_scores").select("attempt_id").in("attempt_id", ids)).data ?? [];
+    expect(scores.length, "every attempt scored by the three virtual judges").toBeGreaterThanOrEqual(ids.length * 3 - 3);
+    expect((await w.db.from("heats").select("status").eq("id", heatId).single()).data!.status, "the heat is still running: it waits for End heat").toBe("running");
+    expect(((await w.db.from("judge_sheets").select("submitted_at").eq("heat_id", heatId)).data ?? []).filter((x) => x.submitted_at)).toHaveLength(0);
+    // End heat and publish: the heat ends, the virtual judges finish and submit, the virtual head judge publishes
+    await page.getByTestId("sim-end-publish").click();
     await expect.poll(async () => (await w.db.from("heats").select("status").eq("id", heatId).single()).data!.status, { timeout: 120_000 }).toBe("published");
-    await expect(page.getByTestId("sim-log")).toContainText("Skipped to the end of");
-    // every virtual judge submitted, and nobody published past a blocker
     const sheets = (await w.db.from("judge_sheets").select("submitted_at").eq("heat_id", heatId)).data ?? [];
     expect(sheets.filter((x) => x.submitted_at)).toHaveLength(3);
     expect((await w.db.from("audit_log").select("id").eq("row_id", heatId).eq("action", "publish_override")).data ?? []).toHaveLength(0);

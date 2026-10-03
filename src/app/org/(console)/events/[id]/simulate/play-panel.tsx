@@ -90,7 +90,12 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
       ) : null}
       {!canSkip ? (
         <p data-testid="sim-skip-why" className="text-small font-medium text-beach-muted">
-          {T.skip.why} {T.endPublish.why}
+          {T.skip.why}
+        </p>
+      ) : null}
+      {!canEnd ? (
+        <p data-testid="sim-end-why" className="text-small font-medium text-beach-muted">
+          {T.endPublish.why}
         </p>
       ) : null}
       {status.control.blocker ? (

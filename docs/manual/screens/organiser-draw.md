@@ -2,7 +2,7 @@
 
 Step 5 of an event (/org/events/‹id›/draw): each division's ladder made from its format and its confirmed riders, moved by hand if needed, then locked.
 
-Last checked: 3 Oct 2026 · Product version 0.12.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#dr-purpose}
 
