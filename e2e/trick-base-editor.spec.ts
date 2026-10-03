@@ -12,6 +12,15 @@ test.describe.configure({ mode: "serial" });
 type Org = Awaited<ReturnType<typeof createOrganiser>>;
 const KEY = "big-air-vocabulary";
 
+// These tests start from "the newest master version is the published one". When the platform owner has an unpublished draft open on the shared master base, the editor opens
+// that draft, so the diffs and counts here would describe the owner's work, and nothing here must save over it: the tests step aside and say so.
+test.beforeEach(async () => {
+  const { createClient } = await import("@supabase/supabase-js");
+  const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+  const { data } = await db.from("trick_vocabularies").select("version").is("organisation_id", null).is("event_id", null).eq("key", KEY).is("published_at", null).limit(1);
+  test.skip((data ?? []).length > 0, "The master trick base has an unpublished draft (the owner's work in progress): publish or discard it first, then run these tests.");
+});
+
 async function newest(org: Org) {
   return (await org.db.from("trick_vocabularies").select("id, version, json, published_at").is("organisation_id", null).is("event_id", null).eq("key", KEY).order("version", { ascending: false }).limit(1).single()).data!;
 }

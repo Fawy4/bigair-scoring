@@ -21,7 +21,15 @@ test("Trick base: five families, every block ticked, categories follow the ticks
     const boxes = panel.getByRole("checkbox");
     const total = await boxes.count();
     expect(total).toBeGreaterThan(30);
-    for (let i = 0; i < total; i++) await expect(boxes.nth(i)).toBeChecked(); // all on by default: nobody types trick names
+    // every block is on by default (nobody types trick names), except the ones the master base itself switches off (defaultOn false) or retires: those are read from
+    // the newest published master version, which the owner may edit and publish at any time
+    const master = (await org.db.from("trick_vocabularies").select("json").is("organisation_id", null).is("event_id", null).eq("key", "big-air-vocabulary").not("published_at", "is", null).order("version", { ascending: false }).limit(1).single()).data!.json as Record<string, Array<{ key: string; defaultOn?: boolean; retired?: boolean }>>;
+    const off = new Set(["directions", "multipliers", "baseTricks", "modifiers"].flatMap((k) => (master[k] ?? []).filter((b) => b.defaultOn === false || b.retired === true).map((b) => b.key)));
+    for (let i = 0; i < total; i++) {
+      const id = (await boxes.nth(i).getAttribute("data-testid")) ?? "";
+      if (off.has(id.replace(/^block-[a-z_]+:/, ""))) await expect(boxes.nth(i), id).not.toBeChecked();
+      else await expect(boxes.nth(i), id).toBeChecked();
+    }
     await expect(page.getByTestId("derived-categories")).toHaveText("Handle pass · Board-off · Kiteloop · Rotation · Other"); // the vocabulary's precedence
 
     // untick the handle pass: that category goes away; it is stored as "unticked" on the division
@@ -33,7 +41,7 @@ test("Trick base: five families, every block ticked, categories follow the ticks
     await expect(page.getByTestId("block-addon:handle_pass")).not.toBeChecked();
     await expect(page.getByTestId("block-base:backroll")).toBeChecked();
     await page.getByRole("button", { name: "Tick all" }).click();
-    await expect.poll(async () => (await org.db.from("divisions").select("trick_base").eq("id", divisionId).single()).data?.trick_base).toEqual({ disabled: [] });
+    await expect.poll(async () => (await org.db.from("divisions").select("trick_base").eq("id", divisionId).single()).data?.trick_base).toMatchObject({ disabled: [] }); // Tick all also records the blocks the master base has off by default as switched on
   } finally {
     await org.cleanup();
   }
