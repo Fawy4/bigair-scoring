@@ -2,7 +2,7 @@
 
 The judge's phone at /judge/‹event›: a scoring queue during the heat, then the Impression / Variety score for every rider and Submit.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.12.0
 
 ## What it is for {#ju-purpose}
 
@@ -17,7 +17,7 @@ Judges watch the water, not the phone. Each attempt the spotter logs arrives as 
 |---|---|
 | Header | Heat and seat name, the slim timer (Running / Paused / Time up / On hold), the connection badge (**Synced**, **Pending ‹n›**, **Offline**, **Failed — tap to retry**), the time now, **Details**. |
 | Queue card | The attempt: Rider label (colour word, name), attempt number, trick name, “Repeat — 2nd time · you gave 7.0 before”. A crash needs no score (“Crashed — no score needed”). |
-| Score pad | Tap the whole number then the decimal, or type in the small box (greyed “0.0”); **Save**. With criteria (Height, Extremity…) one tab per criterion; the trick score appears when every criterion is set. Values off the scale's step are refused: the pad greys out Save and outlines the box in red, and the database refuses them too (“That score is not on the 0.1 step. Use 7.2 or 7.3.”). |
+| Score pad | Tap the whole number then the decimal, or type in the small box (greyed “0.0”); **Save**. With criteria (Height, Extremity…) one tab per criterion; the trick score appears when every criterion is set. Values off the scale's step are refused: the pad greys out Save, outlines the box in red and says why under the pad (“That score is not on the 0.1 step. Use 7.2 or 7.3.” with a **Learn more** link to [this page](#ju-pad-step)), and the database refuses them too (“That score is not on the 0.1 step. Use 7.2 or 7.3.”). |
 | **Missed** | “I did not see it. No score from me; the panel average uses the others.” |
 | **Flag** | “alert the head judge. I still score.” — That was a crash / That was a landing / Wrong rider / Duplicate / Other. |
 | History (**Scored**) | Tap a row to correct it (“Correcting attempt ‹n›”, **Back to the queue**). |
@@ -26,6 +26,10 @@ Judges watch the water, not the phone. Each attempt the spotter logs arrives as 
 | Sound, theme, size | Sound behind a tap; Daylight / Dark; Normal / Large. |
 
 After Submit, or when the head judge takes the heat into review, scores are locked (“Your sheet is locked. Ask the head judge to reopen it.”); the head judge can reopen one judge's sheet or edit a score with a reason.
+
+## A typed score that is off the step {#ju-pad-step}
+
+The pad only produces scores on the step, but the small box accepts typing. A typed score between two steps (7.25 on a 0.1 step) turns the box red, keeps **Save** grey and shows the same sentence the database would give, naming the step and the two nearest allowed scores (“Use 7.2 or 7.3.”). A score outside the scale says so (“That score is outside the scale (0 to 10).”). Type one of the allowed scores, or tap it on the pad. The head judge's score and sheet entry use the same pad and show the same sentence.
 
 ## What it depends on {#ju-depends}
 

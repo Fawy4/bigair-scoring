@@ -2,7 +2,7 @@
 
 Step 1 of an event (/org/events/‹id›/event, or **+ New event** on the events list): name, dates, place, time zone, branding, what the public sees, timing, registration, the officials' join details, rehearsal and visibility.
 
-Last checked: 3 Oct 2026 · Product version 0.9.2
+Last checked: 3 Oct 2026 · Product version 0.12.0
 
 ## What it is for {#ev-purpose}
 
@@ -27,7 +27,8 @@ Everything that belongs to the whole event rather than one division. Each settin
 | **Web address (slug)** | The last part of …/e/‹slug› and the **event code** officials type. Changing it on a published event breaks shared links and QR codes: tick “I understand, change the address” first. **Open the public page in a new tab** and **Copy link** sit next to it. |
 | **Branding** | **Event logo** and **Sponsor logos** (name, website, logo, ↑ ↓ to order, **Remove sponsor**, **+ Add sponsor**). PNG, JPEG or WebP, up to 2 MB. |
 | **Rehearsal** | **Simulation event (never public)** tick box (only before any heat has started) and the **Simulate** link to the [Simulator](simulator.md). |
-| **Timing and officials** | **Ready call (minutes before the heat)** (default 15; the one place it is set), **Live update every (seconds)** (default 7), **Big screen: seconds per page** (default 20), **Heats that can run at the same time** (default 1), **Judges may log attempts too**, **Other leaderboards** (up to 6 extra public tabs, **+ Add leaderboard**), **Show the wind-call banner on public pages and the big screen**. |
+| **Public page** | A switch for every tab of the public event page — Home, Live, Results, Ladder, Placings, Rules, one per outside leaderboard, Join — all on by default. Switch a tab off and it disappears from the page; an old link to it lands on the first tab that is left. At least one tab stays on (the last one's switch is grey; Join does not count, because it hides itself while registration is closed). The big screen is not affected. |
+| **Timing and officials** | **Ready call (minutes before the heat)** (default 15; the one place it is set), **Live update every (seconds)** (default 7), **Big screen: seconds per page** (default 20), **Big screen: colours** (Dark or Day; where the big screen opens until a browser chooses for itself; default Dark), **Heats that can run at the same time** (default 1), **Judges may log attempts too**, **Other leaderboards** (up to 6 extra public tabs, **+ Add leaderboard**), **Show the wind-call banner on public pages and the big screen**. |
 | **Rider registration** | **Registration** Open / Closed, **Closing day**, **Closing time**, **Most riders per division**, **Message shown when registration is closed**, and the link to the public registration page (it only works once the event is published). |
 | **Officials’ join details** | The join address and the **Event code**. Every official has their own PIN (made in the Officials step); there is no event-wide PIN. |
 | **Visibility** | **Published: the event is listed on the home page and its public pages work**. Unticked (draft), only your team sees it. |

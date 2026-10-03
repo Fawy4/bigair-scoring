@@ -2,7 +2,7 @@
 
 /org/events/‹id›/simulate: rehearse an event — play it automatically at up to ×20, press a scenario, look at each person's screen, reset.
 
-Last checked: 3 Oct 2026 · Product version 0.11.0
+Last checked: 3 Oct 2026 · Product version 0.12.0
 
 ## What it is for {#si-purpose}
 
@@ -20,7 +20,7 @@ A rehearsal without riders on the water: virtual spotters log attempts, virtual 
 | Control | What it does |
 |---|---|
 | **Speed** ×1 / ×5 / ×10 / ×20 | A heat's length is divided when it starts (a 10-minute heat at ×10 lasts 1 minute); every phone and the public page read the shorter length. |
-| **Auto-play**: **Start**, **Pause**, **Resume**, **Stop** | Plays the day in run order. Runs while this tab is open; the line under it says what is happening (“‹heat› is running, 2:10 left.”, “Stopped at a blocker: …”). **Pause** also pauses the heat on the water (the same pause as the console's): the console says **Paused by the simulator**. **Resume** starts both again (a heat the head judge paused stays paused). **Stop** ends auto-play and leaves the heat paused. |
+| **Auto-play**: **Start**, **Pause**, **Resume**, **Stop** | Plays the day in run order. Runs while this tab is open; the line under it says what is happening (“‹heat› is running, 2:10 left.”, “Stopped at a blocker: …”). **Pause** is the same state as the head judge's **Pause** on the console: pressing it on either side pauses the heat clock and the virtual officials, and **Resume** on either side resumes both (each control shows the real state within about a second). **Pause** also pauses the heat on the water (the same pause as the console's): the console says **Paused by the simulator**. **Resume** starts both again (a heat the head judge paused stays paused). **Stop** ends auto-play and leaves the heat paused. |
 | **Skip to end of heat** | Ends the heat on the water now with the attempts logged so far; the virtual judges finish their scores and Impression / Variety scores at once and submit; the virtual head judge publishes if nothing blocks (a real person is waited for). Grey with “Available while a heat is running, paused or waiting to be published.” when there is none. |
 | **Run the whole event** | Plays every day's active run order in turn — every division, every round — at the speed chosen, until the finals are published, then stops (“The whole event is published …” in the log). A seat set to **Real** and a run order on hold are waited for. **Start** after **Stop** plays the day again; **Resume** after **Pause** carries on in the same mode. |
 | **Who plays** | Each judge, spotter and the head judge: **Virtual** (the simulator) or **Real** (a phone joins with the PIN; the simulator leaves the seat alone). Each seat says who holds it now: **Simulator**, **You (View as) · seen 4 s ago**, **A phone (PIN) has this seat**, or **Waiting for a phone**. **Give back to the simulator** (or **Virtual**) gives a seat you or a phone hold back to the simulator at once. **Let go** frees a seat you hold. |

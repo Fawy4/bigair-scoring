@@ -2,7 +2,23 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 3 Oct 2026 · Product version 0.11.1
+Last checked: 3 Oct 2026 · Product version 0.12.0
+
+## 0.12.0 — 3 Oct 2026 {#cl-0-12-0}
+
+Release entry: [0.12.0](/admin/releases#release-0-12-0) (platform owner only)
+
+**What changed for users**
+- **One pause (simulator):** the head judge's **Pause** on the console and the simulator's **Pause** are the same state. Pausing on either side pauses the heat clock and the virtual officials; **Resume** on either side resumes both; each side shows the real state within about a second.
+- **Console:** the per-heat live-scores switch is a pill beside **Publish** on the laptop and on the phone: “Live scores: Public” or “Live scores: Hidden”, one tap to change; “Division default” under it while the heat follows the division's setting. The **More** menu keeps the held final, the agreement report and the audit log.
+- **Big screen:** **Day** and **Dark** colours. A quiet button shows on mouse move or tap and hides after three seconds; **D** switches on a laptop; the browser remembers its choice; the Event step sets the default (**Big screen: colours**, Dark).
+- **Admin → Feedback:** a date filter (From / To; Today, Last 7 days, All), tick boxes with **Select all**, **Set done** and **Reopen** for many notes at once (asks once, says how many changed), and the export follows the filter.
+- **Public event page:** the organiser chooses its tabs (Event step → **Public page**, all on by default); Join also hides while registration is closed; an old link to a hidden tab lands on the first visible tab.
+- **Run order:** **Copy ‹day›'s plan to ‹day›** brings only the heats that have not ended and never the other day's breaks or pins (audit finding A1a-7).
+- **Judge pad:** a typed score off the step shows “That score is not on the 0.1 step. Use 7.2 or 7.3.” under the box, with a Learn more link; the head judge's score and sheet entry use the same pad.
+
+**Manual pages updated**
+- [Console on a laptop](screens/console-laptop.md), [Console on a phone](screens/console-phone.md), [Big screen](screens/big-screen.md), [Admin: Feedback](screens/admin-feedback.md), [Organiser: Event step](screens/organiser-event.md), [Public event page](screens/public-event.md), [Organiser: Run order](screens/organiser-run-order.md), [Judge screen](screens/judge.md), [Simulator](screens/simulator.md), [Organiser: Draw step](screens/organiser-draw.md) (the refusals it can show and its Learn more targets), [Settings](settings.md) and [Errors](errors.md) (generated).
 
 ## 0.11.1 — 3 Oct 2026 {#cl-0-11-1}
 
