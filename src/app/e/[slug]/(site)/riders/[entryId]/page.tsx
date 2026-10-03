@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ClockText } from "@/components/clock-text";
 import { notFound } from "next/navigation";
 import { CopyLink } from "@/components/public/copy-link";
+import { Qr } from "@/components/public/qr";
 import { RiderRow } from "@/components/public/heat-summary";
 import { RiderLabel } from "@/components/rider-label";
 import { publicMetadata } from "@/lib/public/meta";
@@ -88,12 +89,24 @@ export default async function RiderPage({ params }: { params: Promise<{ slug: st
       <section data-testid="rider-share" aria-label={T.share} className="flex flex-col gap-2 rounded-card border border-beach-line bg-beach-surface p-3">
         <h2 className="text-heading font-semibold text-beach-muted">{T.share}</h2>
         <p className="text-name font-semibold">{vm.shareText}</p>
+        <div className="flex items-center gap-3">
+          <Qr url={url} size={112} />
+          <div className="flex min-w-0 flex-col gap-1">
+            <p className="text-small font-semibold text-beach-muted">{T.qrCaption}</p>
+            <a data-testid="rider-share-url" href={url} aria-label={T.addressLabel} className="break-all text-small font-semibold underline-offset-2 hover:underline">
+              {url}
+            </a>
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <a data-testid="share-whatsapp" href={whatsappLink(vm.shareText, url)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-tap items-center rounded-xl border border-beach-accent bg-beach-accent px-3 text-body font-semibold text-beach-on-accent">
             {copy.pub.share.whatsapp}
           </a>
           <CopyLink url={url} label={copy.pub.share.copy} doneLabel={copy.pub.share.copied} />
         </div>
+        <p data-testid="rider-add-home" className="text-small font-medium text-beach-muted">
+          {T.addToHome}
+        </p>
       </section>
     </>
   );

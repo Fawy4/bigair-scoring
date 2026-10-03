@@ -46,7 +46,7 @@ Last checked: 3 Oct 2026 · Product version 0.13.0
 | {#g-hold} **Hold** | Pauses the run order (not a heat) for wind; times stop moving until Resume at. *Wind drops at 11:00: Hold; Resume at 13:30.* |
 | {#g-hold-final} **Hold the final** | The final's result stays hidden until released, for the podium. *Release result after the prize-giving.* |
 | {#g-identification} **Identification scheme** | How riders are recognised: Lycra colour per heat, fixed Lycra, bib, kite, rash guard, helmet, photo, name call-out. *Arrow: Lycra colour per heat.* |
-| {#g-impression} **Impression / Variety score** | One extra score per rider for the whole heat, from every judge. *Variety 0–10, given after the heat.* |
+| {#g-impression} **Impression / Variety score** | One extra score per rider for the whole heat, from every judge. What it is called on the screens is the Event step's **Name of the impression score** (**Impression** or **Variety**). *Variety 0–10, given after the heat.* |
 | {#g-interference} **Interference** | A rider getting in another rider's way; a penalty from the rules. *Interference: the best counted trick is dropped.* |
 | {#g-join-page} **Join page** | Where officials enter the event code and PIN (/join or /e/‹event›/join). *The QR on the official's card opens it.* |
 | {#g-ladder} **Ladder** | The rounds and heats of a division and where each place goes. *R1 → SF → F.* |

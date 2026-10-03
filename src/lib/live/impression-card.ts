@@ -38,7 +38,7 @@ export function impressionGrid(input: { impressions: JudgeImpressions[]; riderOr
 /** The sizes the card can be drawn at: tighter spacing first, then smaller digits (the table's smallest text size), then it gives way to a button. */
 export type CardLevel = 0 | 1 | 2;
 export interface LevelSize {
-  /** The rider's label column, a judge's column (and the Panel column), one rider row and the header row (name over J-number), in pixels. The heading "Impression" is the header row's corner cell. */
+  /** The rider's label column, a judge's column (and the Panel column), one rider row and the header row (name over J-number), in pixels. The card's heading is above the grid (TITLE_H), not in the header row. */
   labelW: number;
   cellW: number;
   rowH: number;
@@ -53,12 +53,14 @@ export const LEVELS: Record<CardLevel, LevelSize> = {
 };
 const PAD_W = 12;
 const PAD_H = 6;
+/** The card's heading (the same heading style as the console's other sections) sits above the grid, left-aligned. */
+export const TITLE_H = 30;
 /** The row of rider cards keeps at least this height whenever the card is on the console, so the table's top edge is in the same place for every heat. */
-export const CARD_ROW_MIN = 116;
+export const CARD_ROW_MIN = 132;
 
 export const cardSize = (level: CardLevel, riders: number, judges: number): { w: number; h: number } => {
   const l = LEVELS[level];
-  return { w: l.labelW + (judges + 1) * l.cellW + PAD_W, h: l.headH + riders * l.rowH + PAD_H };
+  return { w: l.labelW + (judges + 1) * l.cellW + PAD_W, h: TITLE_H + l.headH + riders * l.rowH + PAD_H };
 };
 
 /** The first level at which the whole grid fits in the room beside the rider cards, or "button" when none does. It never asks for more room than there is. */

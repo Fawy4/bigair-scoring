@@ -105,9 +105,9 @@ test("a judge's missing Impression: the bar is red with the Publish blocker's wo
     await pick(page, heat);
     const bar = page.getByTestId("review-bar");
     await expect(bar).toHaveAttribute("data-state", "blocked", { timeout: 60_000 });
-    await expect(page.getByTestId("review-bar-text")).toContainText(/^Blocked: Judge 3: Impression \/ Variety score for .+ missing/);
+    await expect(page.getByTestId("review-bar-text")).toContainText(/^Blocked: Judge 3: Variety score for .+ missing/);
     // the same sentence the Publish blocker list has
-    await expect(page.getByTestId("blockers").getByTestId("blocker-line").filter({ hasText: /Impression \/ Variety score for .+ missing/ })).toHaveCount(1);
+    await expect(page.getByTestId("blockers").getByTestId("blocker-line").filter({ hasText: /Variety score for .+ missing/ })).toHaveCount(1);
     if (via === "fix") {
       await bar.getByTestId("review-bar-fix").click();
       const dialog = page.getByTestId("console-dialog");
@@ -147,7 +147,7 @@ test("the Impression grid shows what the judges gave, with the outlier colour on
   const card = page.getByTestId("impression-card");
   await expect(card).toBeVisible({ timeout: 60_000 });
   await expect(card.locator("h3")).toHaveCount(1);
-  await expect(card.locator("h3")).toHaveText("Impression");
+  await expect(card.locator("h3")).toHaveText("Variety"); // the division's own name for the score (the Legacy model calls it Variety)
   // one column per judge with the table's short names and J-numbers, and a Panel column
   await expect(card.getByTestId("impression-judge")).toHaveCount(3);
   await expect(card.getByTestId("impression-judge").first()).toContainText("Judge 1");
@@ -190,7 +190,8 @@ test("at a 15-inch laptop width the card sits beside the rider cards for 2 and 3
     await expect(page.getByTestId("rider-strip-tile")).toHaveCount(n, { timeout: 60_000 });
     const region = page.getByTestId("impression-region");
     await expect(region).toBeVisible({ timeout: 40_000 });
-    await page.waitForTimeout(500);
+    // the tiles settle (the totals arrive) before the room is read: the same measure twice, a moment apart
+    await expect.poll(async () => { const a = await region.getAttribute("data-room"); await page.waitForTimeout(700); return a === (await region.getAttribute("data-room")); }, { timeout: 20_000 }).toBe(true);
     const fit = (await region.getAttribute("data-fit"))!;
     const box = async (id: string) => JSON.stringify(await page.getByTestId(id).first().boundingBox());
     console.log(`riders ${n}: fit ${fit}, room ${await region.getAttribute("data-room")}; strip ${await box("rider-strip")}; tiles ${await box("rider-tiles")}; first tile ${await box("rider-strip-tile")}; region ${await box("impression-region")}`);

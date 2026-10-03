@@ -4,6 +4,7 @@ import { mergeOverrides, FORMAT_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { describePanel, describeScoringModel } from "@/lib/scoring-ui/describe";
 import { parseFormatTemplate } from "@/lib/schemas/format-template";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
+import { impressionNameOf } from "@/lib/schemas/impression-name";
 import type { ScoringModel } from "@/lib/schemas/scoring-model";
 import { copy } from "@/lib/ui-copy";
 import { modelOf } from "./results-model";
@@ -41,13 +42,14 @@ function scoringLines(m: ScoringModel): string[] {
 }
 
 function countingLines(m: ScoringModel): string[] {
+  const name = impressionNameOf(m);
   const c = m.heat.counting;
   const lines: string[] = [];
   if (c.type === "best_n") lines.push(W.bestN(c.n, c.distinctTrickNames));
   else if (c.type === "best_per_category") lines.push(W.perCategory(c.maxPerCategory, c.categoriesCounted ? W.groupsBest(c.categoriesCounted) : ""));
   else if (c.type === "single_best") lines.push(W.singleBest);
   else if (c.type === "all") lines.push(W.allCount);
-  else lines.push(W.noneCount);
+  else lines.push(W.noneCount(name));
   if (m.heat.countedWeights?.some((w) => w !== 1)) lines.push(W.weights(m.heat.countedWeights.map(num).join(" / ")));
   if (m.heat.trickWeight !== 1 && c.type !== "none") lines.push(W.trickWeight(num(m.heat.trickWeight)));
   lines.push(m.heat.maxAttemptsPerRider ? W.attemptCap(m.heat.maxAttemptsPerRider) : W.noCap);
@@ -56,7 +58,7 @@ function countingLines(m: ScoringModel): string[] {
 
 function impressionLines(m: ScoringModel): string[] {
   const i = m.heat.impression;
-  if (!i) return [W.noImpression];
+  if (!i) return [W.noImpression(impressionNameOf(m))];
   return [W.impression(i.label, num(i.scale.min), num(i.scale.max), i.weight !== 1 ? num(i.weight) : ""), ...(i.help ? [i.help] : []), ...(i.required ? [W.impressionRequired] : [])];
 }
 
@@ -89,9 +91,9 @@ export function buildRules(rules: PublicRules | null, site: PublicSite | null): 
     if (model) {
       sections.push({ key: "scoring", heading: copy.pub.rules.scoring, lines: scoringLines(model) });
       sections.push({ key: "counting", heading: copy.pub.rules.counting, lines: countingLines(model) });
-      sections.push({ key: "impression", heading: copy.pub.rules.impression, lines: impressionLines(model) });
+      sections.push({ key: "impression", heading: copy.pub.rules.impression(impressionNameOf(model)), lines: impressionLines(model) });
       sections.push({ key: "judges", heading: copy.pub.rules.judges, lines: [describePanel(model.panel), W.decimals(model.panel.decimals)] });
-      sections.push({ key: "tiebreakers", heading: copy.pub.rules.tiebreakers, lines: [W.tieIntro, ...model.tieBreakers.map((t, i) => `${i + 1}. ${W.tie[t] ?? t}`)] });
+      sections.push({ key: "tiebreakers", heading: copy.pub.rules.tiebreakers, lines: [W.tieIntro, ...model.tieBreakers.map((t, i) => `${i + 1}. ${t === "impression" ? W.tieImpression(impressionNameOf(model)) : (W.tie[t] ?? t)}`)] });
       sections.push({ key: "penalties", heading: copy.pub.rules.penalties, lines: penaltyLines(model) });
     }
     if (d.format_template) {

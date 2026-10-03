@@ -36,9 +36,9 @@ test("Publish blocked: 'Fawy: score … missing' with Fix; Absent on the score a
 
   // the side panel names the judge and the exact thing
   const lines = head.getByTestId("blockers").getByTestId("blocker-line");
-  await expect(lines.first()).toHaveText(/Fawy: sheet not submitted — 1 attempt unscored, 1 Impression \/ Variety score missing/, { timeout: 60_000 });
+  await expect(lines.first()).toHaveText(/Fawy: sheet not submitted — 1 attempt unscored, 1 Variety score missing/, { timeout: 60_000 });
   await expect(head.getByTestId("blockers")).toContainText(/Fawy: score for \w+, attempt 1 missing/);
-  await expect(head.getByTestId("blockers")).toContainText(/Fawy: Impression \/ Variety score for \w+ missing/);
+  await expect(head.getByTestId("blockers")).toContainText(/Fawy: Variety score for \w+ missing/);
 
   // Publish: the same lines, each with Fix; Fix on the score closes the dialog and opens Fawy's cell of that attempt
   await head.getByTestId("publish").click();
@@ -49,8 +49,8 @@ test("Publish blocked: 'Fawy: score … missing' with Fix; Absent on the score a
   await dialog.getByTestId("mark-absent").click();
   await expect(head.getByTestId("blockers")).not.toContainText("attempt 1 missing", { timeout: 40_000 });
   // still held back by the missing Impression / Variety score: Fix on that line opens it; Absent
-  await expect(head.getByTestId("blockers")).toContainText("Fawy: sheet not submitted — 1 Impression / Variety score missing");
-  await lines.filter({ hasText: /Impression \/ Variety score for \w+ missing/ }).getByTestId("blocker-fix").click();
+  await expect(head.getByTestId("blockers")).toContainText("Fawy: sheet not submitted — 1 Variety score missing");
+  await lines.filter({ hasText: /Variety score for \w+ missing/ }).getByTestId("blocker-fix").click();
   // the sheet opens on that rider; Absent, a reason, Save
   await expect(dialog.locator(`[data-testid="sheet-rider"][data-rider="${w.entries[0]}"]`)).toHaveAttribute("aria-pressed", "true");
   await dialog.getByTestId("mark-impression-absent").click();

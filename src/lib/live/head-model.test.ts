@@ -52,7 +52,7 @@ describe("the head judge's model of one heat", () => {
     const r = red({ skipJ3Impression: true });
     const m = build({ impressions: r.impressions });
     expect(m.owes).toEqual([{ seatId: "J3", judgeNo: 3, judge: "Fawy", entryId: "red" }]);
-    expect(m.checklist.items.map((i) => i.text)).toEqual(["Fawy: Impression / Variety score for Red missing"]);
+    expect(m.checklist.items.map((i) => i.text)).toEqual(["Fawy: Impression score for Red missing"]);
   });
   it("a judge who has not submitted blocks Publish: 'Fawy: sheet not submitted — every score is in'", () => {
     const m = build({ sheets: [sheet("J1"), sheet("J2")] });

@@ -349,6 +349,14 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
         {checkbox(T.windBanner, form.settings.windCallBanner, (v) => set(["settings", "windCallBanner"], v), "event.windBanner")}
       </section>
 
+      <section className={group} data-testid="scoring-settings">
+        <h3 className={groupTitle}>{T.scoringHeading}</h3>
+        <SettingRow id="ev-impression-name" label={T.impressionName} {...h("event.impressionName")}>
+          <input id="ev-impression-name" data-testid="impression-name" value={form.settings.impressionName} maxLength={24} placeholder={T.impressionNamePlaceholder} onChange={(e) => set(["settings", "impressionName"], e.target.value)} className={inputCls} />
+        </SettingRow>
+        {showError("settings.impressionName")}
+      </section>
+
       <section className={group} data-testid="flags-card">
         <h3 className={groupTitle}>{T.flagsHeading}</h3>
         <p className="text-body font-medium text-beach-muted">{T.flagsIntro}</p>

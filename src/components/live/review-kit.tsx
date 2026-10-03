@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CheckCircle2, CircleAlert, Hourglass, Table2, Users } from "lucide-react";
 import { RiderLabel } from "@/components/rider-label";
-import { fitCard, impressionGrid, LEVELS, type CardLevel } from "@/lib/live/impression-card";
+import { fitCard, impressionGrid, LEVELS, TITLE_H, type CardLevel } from "@/lib/live/impression-card";
 import type { JudgeImpressions } from "@/lib/live/impression-status";
 import { judgeWordOf, type JudgeName } from "@/lib/live/judge-names";
 import type { ChecklistItem, FixTarget } from "@/lib/live/publish-checklist";
@@ -107,6 +107,8 @@ export function ReviewBar({
 }
 
 interface CardProps {
+  /** What this event calls the score ("Impression", "Variety"): the card's heading, its names for assistive technology. */
+  name: string;
   judges: JudgeName[];
   impressions: JudgeImpressions[];
   riders: HeatRider[];
@@ -115,18 +117,25 @@ interface CardProps {
   onCell?: (seatId: string, entryId: string) => void;
 }
 
+/** The card's heading: the same style and size as the console's other section headings, left-aligned above the grid. */
+function CardHeading({ name, className }: { name: string; className?: string }) {
+  return (
+    <h3 data-testid="impression-heading" className={cn("truncate text-heading font-semibold leading-tight text-beach-muted", className)} style={{ height: TITLE_H }}>
+      {I.heading(name)}
+    </h3>
+  );
+}
+
 /** The grid itself, at one of the sizes of `LEVELS`: one column per judge (the table header's short name over its J-number), a Panel column, one row per rider. */
-function Grid({ judges, impressions, riders, tolerance, onCell, level, title = true }: CardProps & { level: CardLevel; title?: boolean }) {
+function Grid({ name, judges, impressions, riders, tolerance, onCell, level }: CardProps & { level: CardLevel }) {
   const size = LEVELS[level];
   const rows = impressionGrid({ impressions, riderOrder: riders.map((r) => r.entryId), tolerance, words: { missing: "—", absent: copy.headLive.sheetAbsent } });
   const cols = `${size.labelW}px repeat(${judges.length + 1}, ${size.cellW}px)`;
   const text = size.small ? "text-small" : "text-body";
   return (
-    <div data-testid="impression-grid" data-level={level} role="table" aria-label={I.heading} className={cn("grid gap-x-1 leading-none text-beach-ink", text)} style={{ gridTemplateColumns: cols }}>
+    <div data-testid="impression-grid" data-level={level} role="table" aria-label={I.heading(name)} className={cn("grid gap-x-1 leading-none text-beach-ink", text)} style={{ gridTemplateColumns: cols }}>
       <div role="row" className="contents">
-        <span role="columnheader" className="flex items-end overflow-hidden" style={{ height: size.headH }}>
-          {title ? <h3 className="truncate text-small font-semibold text-beach-muted">{I.heading}</h3> : null}
-        </span>
+        <span role="columnheader" className="overflow-hidden" style={{ height: size.headH }} />
         {judges.map((j) => (
           <span key={j.id} role="columnheader" data-testid="impression-judge" className="flex flex-col items-center justify-center overflow-hidden text-center font-semibold" style={{ height: size.headH }}>
             <span className="max-w-full truncate text-small leading-tight">{judgeWordOf(j)}</span>
@@ -153,7 +162,7 @@ function Grid({ judges, impressions, riders, tolerance, onCell, level, title = t
                   {c.tone?.delta ? <span className="text-[0.65rem] font-semibold">{c.tone.delta}</span> : null}
                 </>
               );
-              const aria = I.aria(judgeWordOf(judge), rider ? (rider.label.secondary.find((x) => x.key === "name")?.text ?? rider.label.primary.text) : "", c.label);
+              const aria = I.aria(judgeWordOf(judge), rider ? (rider.label.secondary.find((x) => x.key === "name")?.text ?? rider.label.primary.text) : "", c.label, name);
               return onCell ? (
                 <button key={c.seatId} type="button" data-testid="impression-cell" data-state={c.state} data-band={c.tone?.band} data-seat={c.seatId} data-rider={row.entryId} aria-label={aria} onClick={() => onCell(c.seatId, row.entryId)} className={cls} style={{ height: size.rowH - 2 }}>
                   {body}
@@ -209,19 +218,21 @@ export function ImpressionCardInline(props: CardProps) {
     <div ref={region} data-testid="impression-region" data-fit={String(fit)} data-room={room ? `${room.w}x${room.h}` : ""} className="relative min-h-tap min-w-[2.25rem] flex-[1_1_2.25rem] self-stretch">
       {fit === "button" ? (
         <>
-          <button type="button" data-testid="impression-button" aria-expanded={open} onClick={() => setOpen((o) => !o)} aria-label={I.button} title={I.button} className={cn(small, "flex h-full min-h-tap w-full items-center justify-center gap-1 px-1")}>
+          <button type="button" data-testid="impression-button" aria-expanded={open} onClick={() => setOpen((o) => !o)} aria-label={I.button(props.name)} title={I.button(props.name)} className={cn(small, "flex h-full min-h-tap w-full items-center justify-center gap-1 px-1")}>
             <Table2 aria-hidden className="size-4 shrink-0" />
             {/* the word shows when there is room for it; in a narrow slot the icon and the name for assistive technology stay */}
-            <span className={cn("truncate", room && room.w < 84 && "sr-only")}>{I.button}</span>
+            <span className={cn("truncate", room && room.w < 84 && "sr-only")}>{I.button(props.name)}</span>
           </button>
           {open ? (
-            <div data-testid="impression-popover" role="dialog" aria-label={I.heading} className="absolute right-0 top-full z-30 mt-1 flex flex-col gap-1 rounded-card border border-beach-border bg-beach-bg p-2 shadow-lg">
+            <div data-testid="impression-popover" role="dialog" aria-label={I.heading(props.name)} className="absolute right-0 top-full z-30 mt-1 flex flex-col gap-1 rounded-card border border-beach-border bg-beach-bg p-2 shadow-lg">
+              <CardHeading name={props.name} />
               <Grid {...props} level={0} onCell={props.onCell ? (s, e) => { setOpen(false); props.onCell!(s, e); } : undefined} />
             </div>
           ) : null}
         </>
       ) : (
-        <section data-testid="impression-card" aria-label={I.heading} className="absolute inset-0 overflow-hidden rounded-card border border-beach-line bg-beach-surface px-1.5 pt-0.5">
+        <section data-testid="impression-card" aria-label={I.heading(props.name)} className="absolute inset-0 overflow-hidden rounded-card border border-beach-line bg-beach-surface px-1.5 pt-0.5">
+          <CardHeading name={props.name} />
           <Grid {...props} level={fit} />
         </section>
       )}
@@ -233,13 +244,15 @@ export function ImpressionCardInline(props: CardProps) {
 export function ImpressionCardBlock(props: CardProps & { defaultOpen?: boolean }) {
   const [open, setOpen] = useState(props.defaultOpen ?? true);
   return (
-    <section data-testid="impression-card" data-open={open} aria-label={I.heading} className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2">
-      <button type="button" data-testid="impression-toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex min-h-tap items-center justify-between text-heading font-semibold text-beach-muted">
-        {I.heading}
-      </button>
+    <section data-testid="impression-card" data-open={open} aria-label={I.heading(props.name)} className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2">
+      <h3 data-testid="impression-heading" className="text-heading font-semibold text-beach-muted">
+        <button type="button" data-testid="impression-toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex min-h-tap w-full items-center justify-between text-left">
+          {I.heading(props.name)}
+        </button>
+      </h3>
       {open ? (
         <div className="overflow-x-auto">
-          <Grid {...props} level={0} title={false} />
+          <Grid {...props} level={0} />
         </div>
       ) : null}
     </section>

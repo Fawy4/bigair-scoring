@@ -97,7 +97,8 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “at most 6 extra leaderboards” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-leaderboardsmax) |
 | “Available once the heat has ended.” | Press End heat (or wait for the clock). | [Grey buttons on the head console](errors.md#err-controlwhy-publish) |
 | “Available while a heat is running or paused.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-live) |
-| “Available while a heat is running, paused or waiting to be published.” | Start the auto-play; the button turns on when a heat starts. | [Simulator](errors.md#err-simulator-skip-why) |
+| “Available while a heat is running, paused or waiting to be published.” | Follow the sentence. | [Simulator](errors.md#err-simulator-endpublish-why) |
+| “Available while a heat is running.” | Start the auto-play; the button turns on when a heat starts. | [Simulator](errors.md#err-simulator-skip-why) |
 | “Available while the heat is running, paused, ended or under review.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-cancel) |
 | “Base trick “‹label›” needs a scoring category.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-baseneedscategory) |
 | “Bib ‹bib› is given to more than one rider: ‹names›.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-repeatedbib) |
@@ -192,7 +193,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “‹n› divisions have no locked draw in the copy. Lock their draw on the Draw step of the copy before pressing Start.” | Open the copy's Draw step and lock each division's draw before Start. | [Simulator](errors.md#err-simulator-notsimulation-notdrawn) |
 | “‹n› divisions have no locked draw. The simulator plays locked draws only: lock them on the Draw step.” | Draw step → Lock draw for each division (of the simulation copy). | [Simulator](errors.md#err-simulator-needlock) |
 | “‹n› judges have not submitted yet. Give a reason to go on without them.” | Wait for the judges' Submit, or Publish with a reason. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-sheets-not-submitted) |
-| “‹n› riders have no Impression / Variety score from this judge yet. Enter it, or set the judge to Absent for them.” | Enter the score for each rider shown as missing, or press Judge absent for this rider, then submit again. | [Head console](errors.md#err-headlive-sheetstillmissing) |
+| “‹n› riders have no ‹name› score from this judge yet. Enter it, or set the judge to Absent for them.” | Enter the score for each rider shown as missing, or press Judge absent for this rider, then submit again. | [Head console](errors.md#err-headlive-sheetstillmissing) |
 | “‹n› riders have no Impression / Variety score from you yet.” | Give each rider an Impression / Variety score, then Submit. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-impression-missing) |
 | “‹n› seats in this heat still wait for a rider — finish the earlier heats first, or fill the seat in the Draw step” | Publish the earlier heat, or place a rider in the seat in the Draw step. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-seats-not-filled) |
 | “‹n› things to fix first (see Details)” | Open Details (phone) or read “Before you publish” (laptop); fix them or Publish with a reason. | [Grey buttons on the head console](errors.md#err-controlwhy-blockers) |
@@ -206,6 +207,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “No countdown: the next heat has no start time yet.” | Run order step → pin a start time on the first row. | [Head console](errors.md#err-headv2-breaknone-no-time) |
 | “No countdown: there is no active run order.” | Run order step → Activate this plan for today. | [Head console](errors.md#err-headv2-breaknone-no-plan) |
 | “No heat has been published yet.” | Follow the sentence. | [Simulator](errors.md#err-simulator-log-nopublished) |
+| “No heat is on the water or waiting to be published, so there is nothing to end. Start the auto-play first.” | Follow the sentence. | [Simulator](errors.md#err-simulator-endpublish-noheat) |
 | “No heat is on the water, so there is nothing to skip. Start the auto-play first.” | Press Start (or Run the whole event) and skip once a heat is on the water. | [Simulator](errors.md#err-simulator-skip-noheat) |
 | “No heat is running.” | Follow the sentence. | [Simulator](errors.md#err-simulator-log-norunning) |
 | “No PIN on file for this seat (it was made before PINs could be shown). Use Regenerate PIN to make a new one.” | Regenerate PIN (the old PIN stops working and the seat's phones are signed out). | [Organiser: Officials](errors.md#err-officials-pinunknown) |
@@ -400,6 +402,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “The heat cannot do that in its current state.” | Reload; the buttons show what the heat can do now. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-illegal-heat-transition) |
 | “The heat is not running, so nothing can be logged.” | Follow the sentence. | [Judge and spotter phones](errors.md#err-spotter-notrunning) |
 | “The heat is not running.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-heat-not-running) |
+| “The heat is still in its yellow, so there is nothing to skip yet. Wait for the green, or press Start now.” | Follow the sentence. | [Simulator](errors.md#err-simulator-skip-inyellow) |
 | “The image could not be uploaded. Check your connection and try again.” | Check the connection and choose the file again. | [Organiser: event list and Event step](errors.md#err-logo-uploadfailed) |
 | “The import did not finish. Nothing was half-saved; try again.” | Nothing was saved. Check the connection and press the button again. If it keeps failing, note the time and tell the owner (the server log names the cause). | [Organiser: Riders](errors.md#err-riders-importfailed) |
 | “The Impression / Variety score opens when the heat has ended.” | Wait for the head judge to end the heat. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-impression-not-open) |
@@ -426,7 +429,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “The photo could not be uploaded. You can register without it and send it to the organiser.” | Register without the photo and send it to the organiser. | [Rider registration](errors.md#err-registration-photofailed) |
 | “The picture could not be made. Use Print / PDF instead.” | Use Print / PDF and choose “Save as PDF”. | [Organiser: Draw](errors.md#err-draw-sheet-pngfailed) |
 | “The plan is not valid:” | Follow the sentence. | [Organiser: Run order](errors.md#err-runorder-errors-notvalid) |
-| “The pre-start has to be between 0 seconds and 10 minutes.” | Pick the event's default, 2:00 or Start now. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-bad-prestart) |
+| “The pre-start has to be between 0:10 and 15:00. Type it as minutes and seconds (1:30) or as whole minutes (2).” | Type it as 1:30 or as whole minutes (2), or pick the event's default or Start now. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-bad-prestart) |
 | “The preset could not be saved. Nothing was changed; try again.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-errors-presetsavefailed) |
 | “The preset could not be saved. Try again.” | Fix the colour or field the sentence names, then save. | [Organiser: Rider label](errors.md#err-ident-savefailed) |
 | “The preset does not match its schema.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-presets-errors-invalid) |
@@ -558,6 +561,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Type your email address above first, then press “Forgot password?” again.” | Follow the sentence. The link must be opened in the same browser that asked for it. | [Organiser sign-in](errors.md#err-login-forgotneedsemail) |
 | “Unknown event.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-errors-unknownevent) |
 | “Unlock the rules first to load a different set.” | Unlock scoring and format with a reason first. | [Organiser: Divisions](errors.md#err-rules-loadlocked) |
+| “Use 24 characters or fewer for the name of the impression score” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-impressionname) |
 | “use a date” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-usedate) |
 | “Use a number from 1 to 500, or leave it empty for no limit” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-maxperdivision) |
 | “Use a whole number” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-wholenumber) |

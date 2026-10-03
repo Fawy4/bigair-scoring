@@ -189,6 +189,8 @@ export interface PublicRulesDivision {
 }
 export interface PublicRules {
   allowed: true;
+  /** The Event step's "Name of the impression score"; null = each division's own name. */
+  impression_name?: string | null;
   divisions: PublicRulesDivision[];
 }
 

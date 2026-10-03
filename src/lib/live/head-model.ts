@@ -12,6 +12,7 @@ import { effectiveUnsubmitted } from "./sheet-rule";
 import { tieSentences, type TieSentence } from "./tie-words";
 import type { AttemptRow, FlagRow, ImpressionRow, ScoreRow, SheetRow, SlotRow } from "./types";
 import { copy } from "@/lib/ui-copy";
+import { impressionNameOf } from "@/lib/schemas/impression-name";
 
 export interface HeadModel {
   /** The engine's result on what is scored so far; null if the rows could not be scored (the console then says so). */
@@ -74,7 +75,7 @@ export function buildHeadModel(input: {
     judgeWord,
     attemptIdOf: (rider, seq) => input.attempts.find((a) => a.entry_id === rider && a.seq === seq && !a.deleted_at)?.id,
     riderLabel: input.wordFor,
-    impressionLabel: copy.checklist.impressionWord,
+    impressionLabel: copy.checklist.impressionWord(impressionNameOf(model)),
   });
   const decisions = input.decisions;
   const ties = result ? tieSentences(model, result, input.wordFor, decisions) : [];

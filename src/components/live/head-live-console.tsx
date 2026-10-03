@@ -12,6 +12,7 @@ import { ReviewButtons, VisibilityBox } from "./head-parts";
 import { AgreementReport, AuditLog, JudgesStatus, OpenFlags, useSideData } from "./head-side-panel";
 import { useReview } from "./use-review";
 import { CARD_ROW_MIN } from "@/lib/live/impression-card";
+import { impressionNameOf } from "@/lib/schemas/impression-name";
 import { ImpressionCardInline, ReviewBar } from "./review-kit";
 import { ScreenSettings } from "./live-shell";
 import type { HeadController } from "./use-head-controller";
@@ -110,6 +111,7 @@ export function HeadLiveConsole({
     writeTableOrder(typeof window === "undefined" ? null : window.localStorage, next);
   };
   const model = division.model;
+  const impressionName = impressionNameOf(model);
   const rows = head.matrix.rows;
   const tableRows = useMemo(() => orderRows(rows, order, riders.map((r) => r.entryId)), [rows, order, riders]);
   const open = editable(heat.status);
@@ -246,7 +248,7 @@ export function HeadLiveConsole({
               </button>
             ))}
           </div>
-          {showImpressionCard ? <ImpressionCardInline judges={side.judges} impressions={impressions} riders={riders} tolerance={impressionTolerance} onCell={open ? (seatId, entryId) => setDialog({ kind: "impression", seatId, entryId }) : undefined} /> : null}
+          {showImpressionCard ? <ImpressionCardInline name={impressionName} judges={side.judges} impressions={impressions} riders={riders} tolerance={impressionTolerance} onCell={open ? (seatId, entryId) => setDialog({ kind: "impression", seatId, entryId }) : undefined} /> : null}
         </section>
 
         {open && menu ? (
@@ -354,9 +356,9 @@ export function HeadLiveConsole({
         </section>
 
         {closing && model.heat.impression ? (
-          <section data-testid="owes" aria-label={H.impressionsHeading} className="flex flex-col gap-1.5 rounded-card border border-beach-line bg-beach-surface p-2">
-            <h3 className="text-heading font-semibold text-beach-muted">{H.impressionsHeading}</h3>
-            {owes.length === 0 ? <p className="text-small font-medium text-beach-muted">{C.noneOwed}</p> : null}
+          <section data-testid="owes" aria-label={H.impressionsHeading(impressionName)} className="flex flex-col gap-1.5 rounded-card border border-beach-line bg-beach-surface p-2">
+            <h3 className="text-heading font-semibold text-beach-muted">{H.impressionsHeading(impressionName)}</h3>
+            {owes.length === 0 ? <p className="text-small font-medium text-beach-muted">{C.noneOwed(impressionName)}</p> : null}
             {impressions.map((j) => (
               <div key={j.seatId} data-testid="owes-judge" data-seat={j.seatId} data-missing={j.missing} className="flex flex-col gap-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">

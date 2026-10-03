@@ -40,6 +40,8 @@ export const EventSettingsSchema = z.looseObject({
   externalLeaderboards: z.array(ExternalLeaderboardSchema).max(6, v.leaderboardsMax).default([]),
   /** No longer read (since 5b a judge's scores lock at Submit or at review); kept so older events still parse. */
   judgeGraceSec: z.number().int().min(0).max(3600).default(180),
+  /** What the separate score per rider is called on every screen (the Scoring card of the Event step): "Impression", "Variety"… Empty = each division keeps the name its own scoring gives it. */
+  impressionName: z.string().trim().max(24, v.impressionName).default(""),
   /** The flag states and the start sequence (the Flags card of the Event step). On by default. */
   flags: FlagSettingsSchema.default(() => FlagSettingsSchema.parse({})),
   /** Heats that may run (or be paused) at the same time in this event. */

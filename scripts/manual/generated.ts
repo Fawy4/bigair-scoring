@@ -138,6 +138,7 @@ const EVENT_FIELDS: Array<[string, string, string]> = [
   ["event.livePoll", copy.event.livePoll, "settings.livePollSec"],
   ["event.screenRotate", copy.event.screenRotate, "settings.screenRotateSec"],
   ["event.screenColour", copy.event.screenColour, "settings.screenColourMode"],
+  ["event.impressionName", copy.event.impressionName, "settings.impressionName"],
   ["event.flagsOn", copy.event.flagsOn, "settings.flags.enabled"],
   ["event.flagStates", copy.event.flagsHeading, "settings.flags.states"],
   ["event.prestartSec", copy.event.prestartSec, "settings.flags.prestartSec"],

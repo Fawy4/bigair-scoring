@@ -419,7 +419,7 @@ function nameOfJudge(id: string): string {
 /** What the head judge's Control tab shows behind Details: the rider totals and the list of what blocks Publish. */
 export function headPhone() {
   const rows = resultRows();
-  const blockers = [copy.live.head.blockerScore(nameOfJudge("J3"), "BLUE", 2), copy.live.head.blockerImpression(nameOfJudge("J2"), "BLUE")];
+  const blockers = [copy.live.head.blockerScore(nameOfJudge("J3"), "BLUE", 2), copy.live.head.blockerImpression(nameOfJudge("J2"), "BLUE", "Impression")];
   return {
     heatName: "Pro Men · R1 · Heat 3",
     state: "running" as const,

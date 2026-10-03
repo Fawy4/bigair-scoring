@@ -25,6 +25,7 @@ export function publicTabs(leaderboards: Array<{ title: string }>): PublicTab[] 
     { key: "live", label: N.live, path: "/live" },
     { key: "results", label: N.results, path: "/results" },
     { key: "ladder", label: N.ladder, path: "/ladder" },
+    { key: "riders", label: N.riders, path: "/riders" },
     { key: "placings", label: N.placings, path: "/placings" },
     { key: "rules", label: N.rules, path: "/rules" },
     ...leaderboards.map((l, i) => ({ key: `leaderboard-${i + 1}`, label: l.title, path: `/leaderboards/${i + 1}` })),

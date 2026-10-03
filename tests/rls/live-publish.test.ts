@@ -109,7 +109,7 @@ describe.skipIf(!ENV_OK)("Publish, re-open, ladder progression (hosted developme
     await submitAll(h);
     const blocked = await pub(h);
     expect(blocked).toMatchObject({ ok: false, code: "PUBLISH_BLOCKED", canOverride: true });
-    expect((blocked as { blockers: Array<{ text: string }> }).blockers.map((b) => b.text)).toContain("Judge 3 (off panel): Impression / Variety score for Red missing");
+    expect((blocked as { blockers: Array<{ text: string }> }).blockers.map((b) => b.text)).toContain("Judge 3 (off panel): Variety score for Red missing");
     expect(await results(h)).toHaveLength(0);
     expect((await heatRow(h)).status).toBe("ended");
     const ok = await pub(h, "Judge 3 left the beach");
@@ -117,7 +117,7 @@ describe.skipIf(!ENV_OK)("Publish, re-open, ladder progression (hosted developme
     const line = (await f.s.from("audit_log").select("reason, after").eq("row_id", h).eq("action", "publish_override")).data ?? [];
     expect(line).toHaveLength(1);
     expect(line[0].reason).toBe("Judge 3 left the beach");
-    expect(JSON.stringify(line[0].after)).toContain("Judge 3 (off panel): Impression / Variety score for Red missing");
+    expect(JSON.stringify(line[0].after)).toContain("Judge 3 (off panel): Variety score for Red missing");
   });
 
   it("a judge who has not submitted blocks Publish too, and moving to review locks nobody if the publish is refused", async () => {

@@ -307,6 +307,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
               <ImpressionCard
                 riders={impressionRiders}
                 scale={impression.scale}
+                scoreLabel={impression.label}
                 values={impressionValues}
                 submitted={submitted}
                 summaryParts={division.live.impressionSummary}
@@ -315,7 +316,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
                 onChange={(id, v) => {
                   q.enqueue("impression", `imp:${heat.id}:${id}`, { heatId: heat.id, entryId: id, value: v });
                   const word = riding.find((r) => r.entryId === id)?.label.primary.text ?? "";
-                  setSaved(copy.live.saved.impression(formatPadValue(v, impression.scale), word));
+                  setSaved(copy.live.saved.impression(formatPadValue(v, impression.scale), word, impression.label));
                 }}
                 onSubmit={() => void submit()}
               />

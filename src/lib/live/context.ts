@@ -1,4 +1,5 @@
 import { parseScoringModel, type ScoringModel } from "@/lib/schemas/scoring-model";
+import { withImpressionName } from "@/lib/schemas/impression-name";
 import { divisionScheme } from "@/lib/identification/division-scheme";
 import { effectiveScheme } from "@/lib/identification/effective";
 import { cleanIdentifiers } from "@/lib/riders/identifiers";
@@ -82,7 +83,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
     const base = (modelRows ?? []).find((m) => m.id === d.scoring_model_id)?.json;
     let model: ScoringModel;
     try {
-      model = parseScoringModel(mergeOverrides(base as never, d.scoring_overrides, SCORING_NULLABLE));
+      model = withImpressionName(parseScoringModel(mergeOverrides(base as never, d.scoring_overrides, SCORING_NULLABLE)), settings.impressionName);
     } catch {
       continue; // a division without a usable scoring model cannot be scored; it simply does not appear
     }

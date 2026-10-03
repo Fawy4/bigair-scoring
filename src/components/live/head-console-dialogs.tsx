@@ -15,6 +15,7 @@ import type { LiveMatrixRow } from "@/lib/live/matrix";
 import type { HeatRider } from "@/lib/live/screen-model";
 import type { AttemptRow, ScoreRow } from "@/lib/live/types";
 import type { ScoringModel } from "@/lib/schemas/scoring-model";
+import { impressionNameOf } from "@/lib/schemas/impression-name";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
@@ -120,6 +121,7 @@ export function ImpressionDialog({ model, heatId, seatId, judgeNo, judge, riders
   const scale = model.heat.impression?.scale;
   if (!scale) return null;
   const who = judge ?? copy.live.matrix.judge(judgeNo ?? 0);
+  const name = impressionNameOf(model);
   const set = (d: Draft) => {
     const next = { ...drafts, [entry]: d };
     setDrafts(next);
@@ -137,8 +139,8 @@ export function ImpressionDialog({ model, heatId, seatId, judgeNo, judge, riders
   const save = (submit: boolean) => run(() => headSaveImpressionSheet({ heatId, seatId, rows: changed, reason, submit }));
   const current = drafts[entry];
   return (
-    <Modal screen title={H.sheetTitle(who)} onClose={onClose}>
-      <ul data-testid="impression-sheet" aria-label={H.sheetTitle(who)} className="flex flex-col gap-1">
+    <Modal screen title={H.sheetTitle(who, name)} onClose={onClose}>
+      <ul data-testid="impression-sheet" aria-label={H.sheetTitle(who, name)} className="flex flex-col gap-1">
         {riders.map((r) => (
           <li key={r.id}>
             <button
@@ -156,7 +158,7 @@ export function ImpressionDialog({ model, heatId, seatId, judgeNo, judge, riders
           </li>
         ))}
       </ul>
-      <ScorePad key={entry} scale={scale} value={current && !current.missed ? current.value : null} label={H.sheetPadLabel(riders.find((r) => r.id === entry)?.word ?? "")} onChange={(v) => set({ value: v, missed: false })} />
+      <ScorePad key={entry} scale={scale} value={current && !current.missed ? current.value : null} label={H.sheetPadLabel(riders.find((r) => r.id === entry)?.word ?? "", name)} onChange={(v) => set({ value: v, missed: false })} />
       <button type="button" data-testid="mark-impression-absent" disabled={pending} onClick={() => set({ value: null, missed: true })} className={plain}>
         {H.absentImpression}
       </button>

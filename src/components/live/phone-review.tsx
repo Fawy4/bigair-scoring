@@ -8,6 +8,7 @@ import { ImpressionCardBlock, ReviewBar } from "./review-kit";
 import { useReview } from "./use-review";
 import type { LiveHeatState } from "./use-live-heat";
 import type { HeadModel } from "@/lib/live/head-model";
+import { impressionNameOf } from "@/lib/schemas/impression-name";
 import { impressionStatus } from "@/lib/live/impression-status";
 import { judgeWordOf } from "@/lib/live/judge-names";
 import type { FixTarget } from "@/lib/live/publish-checklist";
@@ -84,7 +85,7 @@ export function PhoneReview({
   const row = open?.kind === "cell" ? head.matrix.rows.find((x) => x.attemptId === open.attemptId) : null;
   const bar = r.bar ? <ReviewBar state={r.bar} pending={r.barPending} error={r.barError} onSheet={r.openSheet} onFix={(t) => (t.kind === "sheet" ? r.openSheet(t.seatId) : undefined)} onAbsent={(i) => void r.markAbsent(i)} onChooseOrder={onChooseOrder} /> : null;
   const card = r.showImpressionCard ? (
-        <ImpressionCardBlock judges={side.judges} impressions={impressions} riders={riders} tolerance={r.impressionTolerance} onCell={closing ? (seatId, entryId) => setOpen({ kind: "sheet", seatId, entryId }) : undefined} defaultOpen />
+        <ImpressionCardBlock name={impressionNameOf(model)} judges={side.judges} impressions={impressions} riders={riders} tolerance={r.impressionTolerance} onCell={closing ? (seatId, entryId) => setOpen({ kind: "sheet", seatId, entryId }) : undefined} defaultOpen />
       ) : null;
   return (
     <>

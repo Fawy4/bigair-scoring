@@ -10,6 +10,8 @@ import { planOfRow, type PlanRow } from "@/lib/schedule/plans";
 import type { RunItem } from "@/lib/schemas/schedule";
 import { insertRerunItem, rerunName } from "./rerun";
 import { parseScoringModel, type ScoringModel } from "@/lib/schemas/scoring-model";
+import { impressionNameOf, withImpressionName } from "@/lib/schemas/impression-name";
+import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { applyHeatStatuses } from "@/lib/draw/entrants";
 import type { DivisionDraw } from "@/lib/engine/ladder";
 import { heatResetPlan } from "@/lib/reset/plan";
@@ -33,14 +35,15 @@ type Db = Awaited<ReturnType<typeof createClient>>;
 
 /** The merged scoring model of a heat's division, read as the signed-in head judge (row security decides). */
 async function modelForHeat(db: Db, heatId: string): Promise<ScoringModel | null> {
-  const { data: heat } = await db.from("heats").select("division_id").eq("id", heatId).maybeSingle();
+  const { data: heat } = await db.from("heats").select("division_id, event_id").eq("id", heatId).maybeSingle();
   if (!heat) return null;
+  const { data: ev } = await db.from("events").select("settings").eq("id", heat.event_id).maybeSingle();
   const { data: d } = await db.from("divisions").select("scoring_model_id, scoring_overrides").eq("id", heat.division_id).maybeSingle();
   if (!d?.scoring_model_id) return null;
   const { data: m } = await db.from("scoring_models").select("json").eq("id", d.scoring_model_id).maybeSingle();
   if (!m) return null;
   try {
-    return parseScoringModel(mergeOverrides(m.json as never, d.scoring_overrides, SCORING_NULLABLE));
+    return withImpressionName(parseScoringModel(mergeOverrides(m.json as never, d.scoring_overrides, SCORING_NULLABLE)), parseEventSettings(ev?.settings).impressionName);
   } catch {
     return null;
   }
@@ -114,7 +117,7 @@ export async function headSaveImpressionSheet(input: {
     const { error } = await db.rpc("head_submit_sheet", { p_heat: input.heatId, p_seat: input.seatId, p_reason: input.reason.trim() });
     if (error) {
       const code = parseError(error.message);
-      if (code.code === "IMPRESSION_MISSING") return fail("IMPRESSION_MISSING", copy.headLive.sheetStillMissing(Number(code.detail ?? 1)));
+      if (code.code === "IMPRESSION_MISSING") return fail("IMPRESSION_MISSING", copy.headLive.sheetStillMissing(Number(code.detail ?? 1), impressionNameOf(model)));
       return from(error);
     }
   }

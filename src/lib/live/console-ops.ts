@@ -2,6 +2,7 @@ import { panelScore, roundHalfUp, type PanelInput } from "@/lib/engine/scoring";
 import { KOTA, type ConsoleRow } from "./design-fixtures";
 import { formatCell, type MatrixCell, type MatrixRow, type PanelState } from "./matrix-model";
 import { copy } from "@/lib/ui-copy";
+import { DEFAULT_IMPRESSION_NAME } from "@/lib/schemas/impression-name";
 
 /**
  * What the head judge's laptop console does to the numbers: edit a score, delete an attempt, a rider's DNS / DNF / DSQ / Interference, and the list of what
@@ -66,7 +67,7 @@ export function riderTotal(rows: MatrixRow[], impression: Array<number | null>, 
 }
 
 /** What blocks Publish, in words: a judge's missing score on a landed attempt, and a missing Impression score. A rider who did not start blocks nothing. */
-export function blockersFor(rows: ConsoleRow[], impression: Record<string, Array<number | null>>, status: Record<string, RiderStatus>, labels: Record<string, string>): string[] {
+export function blockersFor(rows: ConsoleRow[], impression: Record<string, Array<number | null>>, status: Record<string, RiderStatus>, labels: Record<string, string>, impressionName: string = DEFAULT_IMPRESSION_NAME): string[] {
   const out: string[] = [];
   for (const r of rows) {
     if (r.state !== "ok" || r.status !== "landed" || status[r.riderKey] === "DNS" || status[r.riderKey] === "DSQ") continue;
@@ -77,7 +78,7 @@ export function blockersFor(rows: ConsoleRow[], impression: Record<string, Array
   for (const [rider, values] of Object.entries(impression)) {
     if (status[rider] === "DNS" || status[rider] === "DSQ") continue;
     values.forEach((v, i) => {
-      if (v === null) out.push(copy.live.head.blockerImpression(copy.live.matrix.judge(i + 1), labels[rider]));
+      if (v === null) out.push(copy.live.head.blockerImpression(copy.live.matrix.judge(i + 1), labels[rider], impressionName));
     });
   }
   return out;
