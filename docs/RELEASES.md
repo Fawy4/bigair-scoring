@@ -12,6 +12,28 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.11.1 — 3 Oct 2026 {#release-0-11-1}
+
+PR: #29
+
+### What changed
+- **Tie with no counted trick (audit A1a-1):** two riders on the same total who both have no counted trick (for example both crashed everything and got the same Impression) are now a real tie. The console says the tie is open, Publish is blocked until the head judge decides, and the order the riders were listed in no longer picks the winner. Before, the engine said "resolved by highest counted trick" and put them in slot order. In a final of 2 that picked the winner without anyone deciding.
+- **Scores off the step (audit A1a-3):** a score that is not on the division's step (7.25 on a 0.1 step) or outside the scale is now refused by the database for every judge and for the head judge, with a sentence that names the step and the two nearest values ("That score is not on the 0.1 step. Use 7.2 or 7.3."). The scoring engine also no longer blanks a heat for such a value: it counts the nearest allowed value and the rider's explanation says "J1: Impression 7.25 is not on the 0.1 step, counted as 7.3", so every total still appears.
+- **Needs the database change:** migration `20261019100000_fix_audit_1a_score_step.sql` (applied to the hosted project; the live address needs this release deployed too). The tie fix and the engine change need nothing.
+- Not changed, on purpose: the knockout sizing rule (A1a-2), copying a plan (A1a-7), and Shift / the lateness badge (A1a-4, A1a-5; see Known issues).
+
+### What to test
+- [ ] On a test event (not Arrow, EKL or the Demo), open a heat of two riders, log only crashes for both, end the heat and give both riders the same Impression: the head console lists a tie for first place and "Before you publish" is blocked until you choose who goes ahead.
+- [ ] Choose a rider in that tie: Publish becomes available and the chosen rider is placed first.
+- [ ] On the head console of an ended heat, open "Enter ‹judge›'s sheet" for a division with a 0.1 step and type 7.25 as a rider's Impression: you see "That score is not on the 0.1 step. Use 7.2 or 7.3." and nothing is saved.
+- [ ] Type 10.5 in the same place: you see "That score is outside the scale (0 to 10)."
+- [ ] Type 7.2: it saves.
+- [ ] On a judge's phone in a running heat, type 7.25 in the small score box: Save stays grey and the box is outlined red; type 7.2: Save works.
+
+### Known issues
+- Shift +N can still move the next heat up to 59 seconds less than asked, and the lateness badge can still show 1 minute more than the two times on the board (audit A1a-4 and A1a-5). They do not share a helper. Decision: when it is built (after the event) Shift will be "never shorter than asked", like the +1 minute rule, so the board may then show N + 1 minutes. Left for after the event.
+- The knockout planner's sizing after one withdrawal (A1a-2) and "Copy plan to another day" (A1a-7) are handled by procedure for Thursday, see docs/AUDIT.md.
+- A judge's typed score that is off the step greys out Save and outlines the box in red but says no sentence; written up for Polish 2b.
 ## 0.11.0 — 3 Oct 2026 {#release-0-11-0}
 
 PR: #30

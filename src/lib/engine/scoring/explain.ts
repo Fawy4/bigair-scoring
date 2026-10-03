@@ -1,6 +1,25 @@
 import type { ScoringModel } from "@/lib/schemas/scoring-model";
 import { formatScore } from "./round";
-import type { RiderResult } from "./types";
+import type { AdjustedMark, RiderResult } from "./types";
+
+const num = (x: number) => String(Number(x.toFixed(4)));
+
+/** One line for a mark the engine could not use as given (audit A1a-3): what was entered, what was wrong, what was counted. */
+function adjustedLine(a: AdjustedMark): string {
+  const where = a.attemptSeq === null ? a.label : `${a.label} on attempt #${a.attemptSeq}`;
+  const who = `${a.judgeId}: ${where}`;
+  const used = a.used === null ? "not counted" : `counted as ${num(a.used)}`;
+  switch (a.problem) {
+    case "off_step":
+      return `${who} ${num(a.given)} is not on the ${num(a.step)} step, ${used}`;
+    case "out_of_range":
+      return `${who} is ${num(a.given)}, outside ${num(a.min)}–${num(a.max)}, ${used}`;
+    case "not_a_number":
+      return `${who} is not a number, ${used}`;
+    case "unreadable":
+      return `${who} could not be read, ${used}`;
+  }
+}
 
 /** Plain-language breakdown lines for the head judge, riders and commentators. */
 export function explain(r: RiderResult, model: ScoringModel): string[] {
@@ -63,6 +82,8 @@ export function explain(r: RiderResult, model: ScoringModel): string[] {
         : `Interference penalty: −${f(r.components.penalty)}`,
     );
   }
+
+  for (const a of r.adjustedMarks) lines.push(adjustedLine(a));
 
   lines.push(r.percent !== null ? `Total ${f(r.total)} (${f(r.percent)}%)` : `Total ${f(r.total)}`);
   if (r.flags.incomplete) lines.push("Some judges' marks are still missing.");

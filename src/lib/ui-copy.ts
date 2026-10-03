@@ -3246,8 +3246,17 @@ export const copy = {
       HEAT_ALREADY_RERUN: () => "This heat has already been re-run.",
       NOT_ON_PANEL: () => "That judge is not on this division's panel.",
       SCORE_REQUIRED: () => "Enter a score.",
-      SCORE_OFF_STEP: () => "That score is not on the scale's step.",
-      SCORE_OUT_OF_RANGE: () => "That score is outside the scale.",
+      /** Detail "step|nearest below|nearest above", e.g. "0.1|7.2|7.3" for a typed 7.25. */
+      SCORE_OFF_STEP: (detail?: string) => {
+        const [step, below, above] = (detail ?? "").split("|");
+        if (!step) return "That score is not on the scale's step.";
+        return below && above && below !== above ? `That score is not on the ${step} step. Use ${below} or ${above}.` : `That score is not on the ${step} step.`;
+      },
+      /** Detail "lowest|highest", e.g. "0|10". */
+      SCORE_OUT_OF_RANGE: (detail?: string) => {
+        const [low, high] = (detail ?? "").split("|");
+        return low && high ? `That score is outside the scale (${low} to ${high}).` : "That score is outside the scale.";
+      },
       SCORE_MISSING_CRITERION: () => "Enter every criterion.",
       NO_IMPRESSION: () => "This division's rules have no Impression / Variety score.",
       NOT_SAME_RIDER: () => "Only attempts of the same rider can be merged.",

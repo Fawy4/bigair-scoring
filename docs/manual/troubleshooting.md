@@ -348,8 +348,8 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “That role is not known.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-invalid-role) |
 | “That run order no longer exists.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-plan-not-found) |
 | “That scheme is not valid yet.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-identification-errors-invalid) |
-| “That score is not on the scale's step.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-score-off-step) |
-| “That score is outside the scale.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-score-out-of-range) |
+| “That score is not on the ‹detail› step.” | Enter one of the two values the sentence names (for example 7.2 or 7.3). The score pad only offers values on the step. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-score-off-step) |
+| “That score is outside the scale.” | Enter a value inside the range the sentence names. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-score-out-of-range) |
 | “That seat is not waiting for approval.” | Follow the sentence. | [Organiser: Officials](errors.md#err-officials-errors-notpending) |
 | “That seat no longer exists.” | Follow the sentence. | [Simulator](errors.md#err-simulator-errors-seat-not-found) |
 | “That seat was not found.” | Follow the sentence. | [Organiser: Officials](errors.md#err-officials-errors-unknownseat) |

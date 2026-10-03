@@ -307,7 +307,14 @@ export const NOTES: Record<string, Note> = {
   "liveErrors.codes.HEAT_CANCELLED": { f: "Re-run the heat instead (head console)." },
   "liveErrors.codes.HEAT_ALREADY_RERUN": { m: "A cancelled heat can be re-run once.", f: "Work on the re-run heat (for example H1R)." },
   "liveErrors.codes.NOT_ON_PANEL": { f: "Officials → Panels: tick the judge for the division." },
-  "liveErrors.codes.SCORE_OFF_STEP": { m: "The scale's step (for example 0.5) does not allow this value." },
+  "liveErrors.codes.SCORE_OFF_STEP": {
+    m: "The score sits between two steps of the division's scale (for example 7.25 on a 0.1 step). The database refuses it for a judge, for the head judge and for anything written straight to the table; the sentence names the step and the two nearest allowed values.",
+    f: "Enter one of the two values the sentence names (for example 7.2 or 7.3). The score pad only offers values on the step.",
+  },
+  "liveErrors.codes.SCORE_OUT_OF_RANGE": {
+    m: "The score is below the lowest or above the highest value of the division's scale. The sentence names the range.",
+    f: "Enter a value inside the range the sentence names.",
+  },
   "liveErrors.codes.NO_IMPRESSION": { m: "The division's scoring rules have no Impression / Variety score." },
   "liveErrors.codes.FLAG_OUT_NOT_AVAILABLE": { m: "The format has no flag-out for this round." },
   "liveErrors.codes.HEAT_NOT_STARTED": { f: "Press Start heat." },

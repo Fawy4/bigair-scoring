@@ -1107,3 +1107,22 @@ Started from main after #26 (release tracker); rebased onto main after #27 (audi
 
 ### How to test on the phone
 See the release entry 0.11.0 in docs/RELEASES.md (8 checks on Demo).
+
+## Fix session 1 — audit 1a, engine findings (0.11.1)
+
+### Done
+- **A1a-1:** riders tied on total with no counted trick are a genuine tie (`rank.ts`), flagged, explained, and Publish waits for the head judge. Test: final of 2 where both crash everything.
+- **A1a-3:** a score off the division's step or outside the scale is refused by the database (migration `20261019100000_fix_audit_1a_score_step.sql`: the four write functions plus a trigger for direct writes) with a sentence naming the step and the two nearest values; the engine never blanks a heat (rounds, notes it in the explanation, leaves out what is not a number). Reachability of an off-step score through each path is written up in docs/AUDIT.md.
+- Tests: scoring engine 167, whole suite 2119 passing, 4 expected failures left (A1a-2, A1a-4, A1a-5, A1a-7). Manual: errors and troubleshooting regenerated, judge screen page, changelog. Release entry 0.11.1.
+
+### Hosted-project results (3 Oct 2026, after rebasing onto 0.11.0)
+- Migration `20261019100000_fix_audit_1a_score_step.sql` applied with `npm run db:apply` (it first collided with the version of another session's `ask_sendbook`, so it was renumbered). The four functions and both triggers were checked on the hosted project. One fix after the first run: a model with no Impression scale is not checked at all (the database behaves as before there); `tests/rls/rls.test.ts` had caught it.
+- `npm run test:rls`, every file: all pass except `simulator.test.ts` (1 case, "Pause pauses the heat clock"), which fails because of another session's migration `20261020100000_polish2b_one_pause` that is applied on the hosted project but not on main. New: `score-step.test.ts` (7) and `score-flow.test.ts` (a whole heat through the real write functions, then Publish).
+- Browser: judge pad (tapped scores with 20 s offline, Impression and Submit) passes. `simulator.spec.ts` fails at its first step (the ×20 speed button does nothing) on a clean `main` too, and the head-judge spec expects a sentence without the "Learn more" link that main now shows; neither involves score writing.
+
+### Not done
+- A1a-4 / A1a-5 (Shift, lateness badge): after the event; owner decision recorded in docs/AUDIT.md ("never shorter than asked", the board may show N + 1). A1a-2 and A1a-7 by procedure; the silent typed-pad refusal for Polish 2b. Manual screenshots not retaken (no screen changed).
+
+### How to test
+- Release entry 0.11.1 in docs/RELEASES.md (6 checks).
+
