@@ -26,7 +26,7 @@ export default async function EditPresetPage({ params }: { params: Promise<{ kin
   const c = copy.admin.presets;
 
   return (
-    <main className="flex max-w-4xl flex-col gap-6">
+    <main className="flex flex-col gap-6">
       <Link href="/admin/presets" className="font-semibold underline">
         {c.back}
       </Link>

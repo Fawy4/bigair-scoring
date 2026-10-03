@@ -16,7 +16,7 @@ export default async function AdminFeedbackPage({ searchParams }: { searchParams
   return (
     <main className="flex flex-col gap-4">
       <h1>{copy.feedback.adminHeading}</h1>
-      <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.feedback.listIntro}</p>
+      <p className="max-w-[70ch] text-body font-medium text-beach-muted">{copy.feedback.listIntro}</p>
       {role === "owner" ? <ExportPanel filters={filters} /> : null}
       <NotesFilters action="/admin/feedback" values={filters} pages={pages} events={events} />
       <NotesList notes={notes} canManage={role === "owner"} />

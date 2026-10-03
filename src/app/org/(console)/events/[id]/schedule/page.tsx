@@ -26,7 +26,7 @@ export default async function ScheduleStepPage({ params, searchParams }: { param
 
   if ((heats ?? []).length === 0) {
     return (
-      <main className="flex max-w-4xl flex-col gap-4">
+      <main className="flex flex-col gap-4">
         <h1>{copy.runOrder.stepHeading}</h1>
         <p className="panel text-lg font-semibold">{copy.runOrder.noHeats}</p>
         <Link href={`/org/events/${id}/draw`} className="btn btn-primary w-fit">
@@ -45,7 +45,7 @@ export default async function ScheduleStepPage({ params, searchParams }: { param
   return (
     <main className="flex flex-col gap-6">
       <h1>{copy.runOrder.stepHeading}</h1>
-      <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.runOrder.intro}</p>
+      <p className="max-w-[70ch] text-body font-medium text-beach-muted">{copy.runOrder.intro}</p>
       <PartBoundary what={copy.crash.parts.runOrder}>
         <ScheduleManager
           eventId={id}

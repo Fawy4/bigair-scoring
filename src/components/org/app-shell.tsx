@@ -263,7 +263,7 @@ export function AppShell({ layout, steps, activeStep, onStep, sidebar, children,
             )
           ) : null}
           <div className="flex min-w-0 flex-1 flex-col">
-            <main className={cn("flex min-w-0 flex-1 flex-col", laptop ? "gap-4 p-6" : "gap-4 p-3")}>{children}</main>
+            <main data-testid="org-main" className={cn("mx-auto flex w-full min-w-0 max-w-[1400px] flex-1 flex-col", laptop ? "gap-4 p-6" : "gap-4 p-3")}>{children}</main>
             {footer}
           </div>
         </div>

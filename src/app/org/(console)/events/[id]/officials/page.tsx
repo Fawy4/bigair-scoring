@@ -60,9 +60,9 @@ export default async function OfficialsStepPage({ params }: { params: Promise<{ 
   const usesColours = Boolean(scheme && [scheme.primary, scheme.fallbackPrimary, ...scheme.secondary].includes("vest_colour"));
   const colours = usesColours && scheme ? scheme.palette.map((c) => ({ key: c.key, label: c.label })) : [];
   return (
-    <main className="flex max-w-5xl flex-col gap-6">
+    <main className="flex flex-col gap-6">
       <h1>{copy.officials.stepHeading}</h1>
-      <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.officials.intro}</p>
+      <p className="max-w-[70ch] text-body font-medium text-beach-muted">{copy.officials.intro}</p>
       {parseEventSettings(event.settings).flags.enabled ? <FlagMarshalCard url={`${eventUrl(await requestOrigin(), event.slug)}/flag`} path={`/e/${event.slug}/flag`} /> : null}
       <OfficialsManager
         eventId={id}

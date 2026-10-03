@@ -33,7 +33,7 @@ export default async function AdminOrganisations({ searchParams }: { searchParam
           {c.create}
         </Link>
       </div>
-      <p className="max-w-[80ch] text-body font-medium text-beach-muted">{c.intro}</p>
+      <p className="max-w-[70ch] text-body font-medium text-beach-muted">{c.intro}</p>
       <p data-testid="release-status" className="text-body font-semibold">
         <Link href="/admin/releases" className="underline">
           {release.line}

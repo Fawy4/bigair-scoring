@@ -14,7 +14,7 @@ export default async function MasterPresetsPage() {
   return (
     <main className="flex flex-col gap-8">
       <h1>{c.heading}</h1>
-      <p className="max-w-3xl text-lg font-semibold">{c.intro}</p>
+      <p className="max-w-[70ch] text-lg font-semibold">{c.intro}</p>
       {groups.map((g) => (
         <section key={g.kind} className="flex flex-col gap-3" aria-labelledby={`h-${g.kind}`}>
           <h2 id={`h-${g.kind}`} className="text-2xl font-semibold">

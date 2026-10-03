@@ -13,9 +13,9 @@ export default async function PlatformSettingsPage() {
   // the stored values themselves (not the fallbacks), so an empty product name stays empty in the form
   const stored = resolvePlatformSettings(data ?? [], { productName: "", timezone: process.env.NEXT_PUBLIC_DEFAULT_TZ || "Africa/Cairo" });
   return (
-    <main className="flex min-w-0 max-w-3xl flex-col gap-4">
+    <main className="flex min-w-0 flex-col gap-4">
       <h1 className="text-[20px] font-semibold leading-tight">{copy.admin.settings.heading}</h1>
-      <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.admin.settings.intro}</p>
+      <p className="max-w-[70ch] text-body font-medium text-beach-muted">{copy.admin.settings.intro}</p>
       {role === "owner" ? null : <p className="rounded-card border border-beach-line p-4 text-body font-semibold">{copy.admin.ownerOnly}</p>}
       <SettingsForm canEdit={role === "owner"} timeZones={knownTimeZones()} builtInName={PRODUCT_NAME} initial={stored} />
     </main>
