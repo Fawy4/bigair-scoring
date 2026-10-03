@@ -2,7 +2,20 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 3 Oct 2026 · Product version 0.10.1
+Last checked: 3 Oct 2026 · Product version 0.11.0
+
+## 0.11.0 — 3 Oct 2026 {#cl-0-11-0}
+
+Release entry: [0.11.0](/admin/releases#release-0-11-0) (platform owner only)
+
+**What changed for users**
+- **Observer** (observer-role): a read-only official seat, made on the Officials step with its own PIN and card (several allowed). After joining it sees **Whose screen** — head judge console (laptop, phone), each judge, each spotter, the announcer, the big screen, the public page — each the real screen, live, with every control disabled and the strip “Observing — read only”. The database refuses every change from it; it never counts towards a panel, never appears among the judges, is never played by the simulator and never shows on the public pages.
+- Head judge console: “‹n› observers watching” under **Judges**.
+- Simulator: **View as… → Observer**.
+- Join page: an **Observer** card.
+
+**Manual pages updated**
+- New: [Observer view](screens/observer.md). Updated: [Roles](roles.md), [Officials](screens/organiser-officials.md), [Join and register](screens/public-join.md), [Head console on a laptop](screens/console-laptop.md), [Simulator](screens/simulator.md), the README's list of screens; [Errors and refusals](errors.md) regenerated (OBSERVER_NOT_ON_PANEL); screenshots retaken.
 
 ## 0.10.1 — 3 Oct 2026 {#cl-0-10-1}
 
