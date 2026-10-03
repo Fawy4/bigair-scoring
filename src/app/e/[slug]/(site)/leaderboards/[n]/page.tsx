@@ -1,6 +1,7 @@
 import { ExternalLink } from "lucide-react";
 import { notFound } from "next/navigation";
 import { loadSite } from "@/lib/public/load";
+import { guardTab } from "@/lib/public/tab-guard";
 import { publicMetadata } from "@/lib/public/meta";
 import { requestOrigin } from "@/lib/platform/origin";
 import { copy } from "@/lib/ui-copy";
@@ -27,6 +28,7 @@ export default async function ExternalLeaderboardPage({ params }: { params: Prom
   const { slug, n } = await params;
   const got = await load(slug, n);
   if (!got) notFound();
+  guardTab(got.site, `leaderboard-${Number(n)}`);
   const { board } = got;
   return (
     <>

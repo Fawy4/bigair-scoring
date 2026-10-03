@@ -523,3 +523,21 @@ html[data-observing] input:disabled,
 html[data-observing] select:disabled {
   cursor: not-allowed;
 }
+
+
+/* The big screen (/screen): Dark = white on a dark ground, Day = dark text on a light ground for full sun. Same sizes in both; the grading colours (Lycra chips, wind call)
+   are their own solid colours and stay readable on either ground. The screen's frame sets one of these classes (Polish 2b). */
+.bs-dark {
+  --bs-bg: #0b0e0f;
+  --bs-ink: #ffffff;
+  --bs-muted: rgb(255 255 255 / 0.7);
+  --bs-line: rgb(255 255 255 / 0.3);
+  --bs-ring: #ffffff;
+}
+.bs-day {
+  --bs-bg: #fbfaf5;
+  --bs-ink: #0b0e0f;
+  --bs-muted: rgb(11 14 15 / 0.75);
+  --bs-line: rgb(11 14 15 / 0.35);
+  --bs-ring: #0b0e0f;
+}

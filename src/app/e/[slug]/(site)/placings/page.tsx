@@ -5,6 +5,7 @@ import { highestJumpLine, buildPlacings } from "@/lib/public/ladder-model";
 import { loadDraw } from "@/lib/public/load";
 import { publicMetadata } from "@/lib/public/meta";
 import { eventOg } from "@/lib/public/og";
+import { guardTab } from "@/lib/public/tab-guard";
 import { loadCore } from "@/lib/public/page-data";
 import { requestOrigin } from "@/lib/platform/origin";
 import { copy } from "@/lib/ui-copy";
@@ -24,6 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function PlacingsPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ division?: string }> }) {
   const core = await loadCore((await params).slug);
   if (!core) notFound();
+  guardTab(core.site, "placings");
   const { site, results } = core;
   const drawPayload = await loadDraw(site.event.id);
   const divisions = drawPayload?.divisions ?? [];

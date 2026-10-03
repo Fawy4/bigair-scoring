@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { guardTab } from "@/lib/public/tab-guard";
 import { loadCore } from "@/lib/public/page-data";
 import { publicMetadata } from "@/lib/public/meta";
 import { eventOg } from "@/lib/public/og";
@@ -21,6 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function RulesPage({ params }: { params: Promise<{ slug: string }> }) {
   const core = await loadCore((await params).slug);
   if (!core) notFound();
+  guardTab(core.site, "rules");
   const divisions = buildRules(core.rules, core.site);
   return (
     <>

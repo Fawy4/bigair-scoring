@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TimeZoneSchema } from "./org-settings";
 import { IdentificationSchemeSchema } from "./identification";
+import { tabsOffLeavesOne } from "@/lib/public/tabs";
 import { copy } from "@/lib/ui-copy";
 
 const v = copy.event.validation;
@@ -30,6 +31,10 @@ export const EventSettingsSchema = z.looseObject({
   livePollSec: z.number().int().min(3).max(60).default(7),
   /** Seconds each page of the big screen stays up before the next one (live heat, timetable, last results, sponsors). */
   screenRotateSec: z.number().int().min(5).max(120).default(20),
+  /** The big screen's colours when a browser has not chosen its own: dark ground with white text, or Day (dark text on a light ground). */
+  screenColourMode: z.enum(["dark", "day"]).default("dark"),
+  /** The public event page's tabs the organiser switched off (keys such as "rules", "join", "leaderboard-1"); empty = every tab is on. */
+  publicTabsOff: z.array(z.string()).default([]),
   /** Extra tabs on the public site that link to (or show) a leaderboard kept elsewhere. */
   externalLeaderboards: z.array(ExternalLeaderboardSchema).max(6, v.leaderboardsMax).default([]),
   /** No longer read (since 5b a judge's scores lock at Submit or at review); kept so older events still parse. */
@@ -98,6 +103,9 @@ export const EventFormSchema = z
   .superRefine((f, ctx) => {
     if (f.end_date < f.start_date) {
       ctx.addIssue({ code: "custom", path: ["end_date"], message: v.endBeforeStart });
+    }
+    if (!tabsOffLeavesOne(f.settings.publicTabsOff, f.settings.externalLeaderboards)) {
+      ctx.addIssue({ code: "custom", path: ["settings", "publicTabsOff"], message: v.oneTabOn });
     }
     const closes = f.settings.registrationClosesOn;
     if (f.settings.registrationClosesTime && !closes) {

@@ -23,7 +23,7 @@ const site = (scheme?: unknown): PublicSite => ({
   event: { id: "ev", name: "Test Cup", slug: "test-cup", location: "El Gouna", start_date: "2026-10-10", end_date: "2026-10-11", status: "live", timezone: "Africa/Cairo" },
   organisation: { name: "Org", slug: "org", logo_url: null },
   branding: { logoUrl: null, sponsors: [] },
-  settings: { windCallBanner: true, readyCallMin: 10, livePollSec: 7, screenRotateSec: 20, externalLeaderboards: [], identification: scheme ? { scheme, allowDivisionOverride: false } : null, publicLiveScores: "live" },
+  settings: { windCallBanner: true, readyCallMin: 10, livePollSec: 7, screenRotateSec: 20, screenColourMode: "dark", publicTabsOff: [], registrationOpen: false, externalLeaderboards: [], identification: scheme ? { scheme, allowDivisionOverride: false } : null, publicLiveScores: "live" },
   wind: null,
   divisions: [{ id: "d1", name: "Pro Men", description: null, sort_order: 1, identification: null, attempt_display: "number_score", show_percent: false, drawn: true }],
 });

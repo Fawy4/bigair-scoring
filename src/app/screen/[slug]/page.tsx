@@ -5,6 +5,7 @@ import { HeatClock } from "@/components/public/heat-clock";
 import { Logo } from "@/components/public/logo";
 import { LivePoll } from "@/components/public/poll";
 import { Qr } from "@/components/public/qr";
+import { ScreenFrame } from "@/components/public/screen-frame";
 import { ScreenRotator } from "@/components/public/screen-rotator";
 import { WindBanner } from "@/components/public/wind-banner";
 import { buildPlacings } from "@/lib/public/ladder-model";
@@ -34,11 +35,11 @@ function BigRider({ r }: { r: RiderRowVM }) {
   const p = r.label?.primary;
   const colour = p?.kind === "colour" && p.hex ? p : null;
   return (
-    <li data-testid="screen-rider" className="flex items-center gap-[2vw] border-b border-white/30 py-[0.3vw]">
+    <li data-testid="screen-rider" className="flex items-center gap-[2vw] border-b border-[var(--bs-line)] py-[0.3vw]">
       <span className="w-[5vw] text-[4.5vw] font-semibold tabular-nums">{r.place ?? ""}</span>
       <span className="flex min-w-0 flex-1 items-center gap-[1.5vw]">
         {colour ? (
-          <span className="rounded-[0.6vw] px-[1.2vw] text-[3vw] font-semibold" style={{ backgroundColor: colour.hex, color: colour.ink, boxShadow: colour.outlined ? "inset 0 0 0 0.25vw #fff" : undefined }}>
+          <span className="rounded-[0.6vw] px-[1.2vw] text-[3vw] font-semibold" style={{ backgroundColor: colour.hex, color: colour.ink, boxShadow: colour.outlined ? "inset 0 0 0 0.25vw var(--bs-ring)" : undefined }}>
             {colour.text}
           </span>
         ) : null}
@@ -107,7 +108,7 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
           <p className="text-[3.5vw] font-semibold">{S.timetable}</p>
           <ol className="flex flex-col">
             {s.rows.map((r) => (
-              <li key={r.itemId} data-testid="screen-row" className="flex items-baseline justify-between gap-[2vw] border-b border-white/30 py-[0.4vw]">
+              <li key={r.itemId} data-testid="screen-row" className="flex items-baseline justify-between gap-[2vw] border-b border-[var(--bs-line)] py-[0.4vw]">
                 <span className="truncate text-[3.2vw] font-semibold">{r.title}</span>
                 <span className="text-[4.6vw] font-semibold tabular-nums">{timeText(r)}</span>
               </li>
@@ -154,7 +155,7 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
         <div className="flex flex-wrap items-center justify-center gap-[4vw]">
           {s.sponsors.map((sp, i) =>
             sp.logoUrl ? (
-              <span key={i} className="rounded-[1vw] bg-white p-[1.2vw]">
+              <span key={i} className="rounded-[1vw] border-2 border-[var(--bs-line)] bg-white p-[1.2vw]">
                 <Logo src={sp.logoUrl} alt={sp.name} height={110} maxWidth={320} />
               </span>
             ) : (
@@ -169,16 +170,16 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
   };
 
   return (
-    <div data-testid="big-screen" className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#0b0e0f] p-[2.5vw] text-white">
+    <ScreenFrame defaultMode={site.settings.screenColourMode === "day" ? "day" : "dark"} labels={{ toggleToDay: S.modeDay, toggleToDark: S.modeDark }}>
       <LivePoll seconds={site.settings.livePollSec} />
       <header className="mb-[1.5vw] flex items-center gap-[2vw]">
         {logo ? (
-          <span className="rounded-[0.8vw] bg-white p-[0.6vw]">
+          <span className="rounded-[0.8vw] border border-[var(--bs-line)] bg-white p-[0.6vw]">
             <Logo src={logo} alt={site.event.name} height={64} maxWidth={200} priority />
           </span>
         ) : null}
         <h1 className="truncate text-[3vw] font-semibold">{site.event.name}</h1>
-        <ClockText timezone={site.event.timezone} serverNow={core.now} className="ml-auto shrink-0 !text-[2vw] !text-white/70" />
+        <ClockText timezone={site.event.timezone} serverNow={core.now} className="ml-auto shrink-0 !text-[2vw] !text-[var(--bs-muted)]" />
       </header>
       <WindBanner wind={site.wind} big />
       <div className="mt-[1.5vw] flex min-h-0 flex-1 pr-[15vw]">
@@ -198,6 +199,6 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
         <Qr url={url} size={170} dark />
         <p className="max-w-[14vw] text-center text-[1.2vw] font-semibold leading-tight">{S.qr}</p>
       </aside>
-    </div>
+    </ScreenFrame>
   );
 }

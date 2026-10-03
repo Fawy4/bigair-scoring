@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { closePhones, expect, test } from "./base";
+import { expect, test } from "./base";
 import { createLiveWorld, type LiveWorld } from "./live-world";
 
 /**
