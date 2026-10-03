@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { inDateRange } from "./dates";
 import type { FeedbackNote, FeedbackRole, FeedbackTag } from "./format";
 
 export interface NoteFilters {
@@ -7,6 +8,9 @@ export interface NoteFilters {
   status?: string;
   page?: string;
   event?: string;
+  /** First and last day ("2026-10-03") of the note's saved time; empty = no limit. */
+  from?: string;
+  to?: string;
 }
 
 export interface NoteRow extends FeedbackNote {
@@ -28,7 +32,7 @@ export async function loadNotes(supabase: SupabaseClient<Database>, filters: Not
   const pages = [...new Set(all.map((n) => n.page_label))].sort((a, b) => a.localeCompare(b, "en"));
   const events = [...new Set(all.map((n) => n.event_name).filter((e): e is string => Boolean(e)))].sort((a, b) => a.localeCompare(b, "en"));
   const shown = all.filter(
-    (n) => (!filters.tag || n.tag === filters.tag) && (!filters.status || n.status === filters.status) && (!filters.page || n.page_label === filters.page) && (!filters.event || n.event_name === filters.event),
+    (n) => (!filters.tag || n.tag === filters.tag) && (!filters.status || n.status === filters.status) && (!filters.page || n.page_label === filters.page) && (!filters.event || n.event_name === filters.event) && inDateRange(n.created_at, filters.from, filters.to),
   );
   const paths = shown.map((n) => n.screenshot_path).filter((p): p is string => Boolean(p));
   const links = new Map<string, string>();

@@ -8,7 +8,7 @@ export const metadata = { title: copy.feedback.orgHeading };
 export const dynamic = "force-dynamic";
 
 /** The reduced list: this organisation's own notes (kind, status and screen filters), no export. */
-export default async function OrgFeedbackPage({ searchParams }: { searchParams: Promise<{ tag?: string; status?: string; page?: string; event?: string }> }) {
+export default async function OrgFeedbackPage({ searchParams }: { searchParams: Promise<{ tag?: string; status?: string; page?: string; event?: string; from?: string; to?: string }> }) {
   const filters = await searchParams;
   const { supabase, current } = await getOrgContext();
   const { notes, pages, events } = await loadNotes(supabase, filters, { organisationId: current?.id ?? "00000000-0000-0000-0000-000000000000" });

@@ -135,3 +135,89 @@ test("an organiser sees the Note button and a reduced list of their own notes; n
     await org.cleanup();
   }
 });
+
+test("Polish 2b: Admin → Feedback filters by date (from / to, quick picks), ticks notes and sets three done at once, reopens, and exports only what the filter shows", async ({ page }) => {
+  test.setTimeout(540_000);
+  const owner = await createOrganiser({ platformAdmin: "owner" });
+  try {
+    const day = (ago: number) => new Date(Date.now() - ago * 86_400_000).toISOString();
+    const mk = (body: string, ago: number, tag = "bug") => ({ organisation_id: owner.orgId, author_role: "owner", page: "/org", page_label: "Events list", body: `${body} ${owner.run}`, tag, status: "open", created_at: day(ago), event_name: `Bulk Cup ${owner.run}` });
+    const { error } = await owner.db.from("feedback_notes").insert([mk("Today one", 0), mk("Today two", 0), mk("Today three", 0), mk("Last week", 3), mk("Old note", 20)] as never);
+    expect(error).toBeNull();
+    await owner.signIn(page, "/admin/feedback");
+    const mine = page.getByTestId("note-row").filter({ hasText: owner.run });
+    await expect(mine).toHaveCount(5);
+    // the owner's list holds every organisation's notes: keep to this event (the quick picks keep the event filter)
+    await page.getByLabel("Event", { exact: true }).selectOption({ label: `Bulk Cup ${owner.run}` });
+    await page.getByRole("button", { name: "Filter" }).click();
+    await expect(page.getByTestId("note-row")).toHaveCount(5);
+
+    // date filter: Today, Last 7 days, All (the quick picks) and From / To
+    await page.getByTestId("quick-today").click();
+    await expect(page).toHaveURL(/from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}/);
+    await expect(mine).toHaveCount(3);
+    await page.getByTestId("quick-last7").click();
+    await expect(mine).toHaveCount(4);
+    await page.getByTestId("quick-all").click();
+    await expect(mine).toHaveCount(5);
+    await page.getByLabel("From", { exact: true }).fill(day(30).slice(0, 10));
+    await page.getByLabel("To", { exact: true }).fill(day(10).slice(0, 10));
+    await page.getByRole("button", { name: "Filter" }).click();
+    await expect(mine).toHaveCount(1);
+    await expect(mine).toContainText("Old note");
+
+    // tick three notes and set them done at once: asked once, says how many changed
+    await page.getByTestId("quick-today").click();
+    await expect(mine).toHaveCount(3);
+    await expect(page.getByTestId("bulk-done")).toBeDisabled(); // nothing ticked
+    // a tick that comes before the page has finished loading is lost: tap Select all until it answers, then clear it
+    const count = page.getByTestId("selected-count");
+    await expect(async () => {
+      await page.getByTestId("select-all").click({ timeout: 3000 });
+      await expect(count).toHaveText("3 selected", { timeout: 1500 });
+    }).toPass({ timeout: 30_000 });
+    await page.getByTestId("select-all").click();
+    await expect(count).toHaveText("0 selected");
+    for (let i = 0; i < 3; i++) await mine.nth(i).getByTestId("note-select").check();
+    await expect(count).toHaveText("3 selected");
+    await page.getByTestId("bulk-done").click();
+    await expect(page.getByTestId("bulk-ask")).toContainText("Set 3 notes as done?");
+    await page.getByTestId("bulk-no").click();
+    await expect.poll(async () => (await owner.db.from("feedback_notes").select("id").eq("organisation_id", owner.orgId).eq("status", "done")).data?.length).toBe(0); // Cancel changed nothing
+    await page.getByTestId("bulk-done").click();
+    await page.getByTestId("bulk-yes").click();
+    await expect(page.getByTestId("bulk-result")).toHaveText("3 notes changed");
+    await expect.poll(async () => (await owner.db.from("feedback_notes").select("id").eq("organisation_id", owner.orgId).eq("status", "done")).data?.length).toBe(3);
+
+    // reopen them, again asked once
+    await page.getByLabel("Status", { exact: true }).selectOption({ label: "Done" });
+    await page.getByRole("button", { name: "Filter" }).click();
+    await expect(page.getByTestId("note-row")).toHaveCount(3);
+    await expect(async () => {
+      await page.getByTestId("select-all").click({ timeout: 3000 });
+      await expect(page.getByTestId("selected-count")).toHaveText("3 selected", { timeout: 1500 });
+    }).toPass({ timeout: 60_000 });
+    await page.getByTestId("bulk-reopen").click();
+    await expect(page.getByTestId("bulk-ask")).toContainText("Reopen");
+    await page.getByTestId("bulk-yes").click();
+    await expect(page.getByTestId("bulk-result")).toContainText("changed");
+    await expect.poll(async () => (await owner.db.from("feedback_notes").select("id").eq("organisation_id", owner.orgId).eq("status", "open")).data?.length).toBe(5);
+
+    // the export follows the filter: Today only, one line per note
+    await page.getByTestId("quick-today").click();
+    await page.getByLabel("Status", { exact: true }).selectOption({ label: "All" });
+    await page.getByRole("button", { name: "Filter" }).click();
+    await expect(page.getByTestId("note-row")).toHaveCount(3);
+    await expect(async () => {
+      await page.getByTestId("export-button").click({ timeout: 3000 }); // a tap before the page has finished loading does nothing
+      await expect(page.getByTestId("export-text")).toBeVisible({ timeout: 8000 });
+    }).toPass({ timeout: 60_000 });
+    const text = await page.getByTestId("export-text").inputValue();
+    for (const b of ["Today one", "Today two", "Today three"]) expect(text).toContain(`"${b} ${owner.run}"`);
+    expect(text).not.toContain(`Last week ${owner.run}`);
+    expect(text).not.toContain(`Old note ${owner.run}`);
+    expect(text).toMatch(new RegExp(`- \\[Events list · Bulk Cup ${owner.run} · owner\\] "Today one ${owner.run}"`));
+  } finally {
+    await owner.cleanup();
+  }
+});
