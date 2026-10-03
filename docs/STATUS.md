@@ -1168,7 +1168,15 @@ Started from main 0.12.0 (Polish 2b and fix session 1 merged); version 0.13.0 (a
 - A heat whose pre-start is over but whose start nobody has written down yet counts as running everywhere (database gates and every screen), with the start time = armed + pre-start; the next official device writes it down.
 
 ### Tests
-See the pull request description for the numbers.
+- `npm run typecheck` clean · `npm run lint` clean · `npm test`: 193 files, 2217 passed (+3 expected fails). New: `flags.test.ts` (38), `flag-data.test.ts` (5), `review-bar.test.ts` (5), `impression-card.test.ts` (7).
+- RLS on the hosted project: `tests/rls/flags.test.ts` 13 passed; with live-heat, observer (every callable function, now including arm_heat / abort_start / start_armed_if_due), simulator, public-site, live-spotter, live-judge, console-v2: 8 files, 102 passed.
+- Playwright on throwaway organisations: `flags.spec.ts` 5 passed, `review-console.spec.ts` 6 passed, `live-console.spec.ts` 8 passed, `observer.spec.ts` passed, `screen-colour.spec.ts` 5 passed, `simulator.spec.ts` passed, `simulator-polish2.spec.ts` items 2, 3 and 7 (Skip to end) passed. `one-pause.spec.ts` fails here, and fails the same way on a clean checkout of main against the migrated database; `simulator-polish2` "Run the whole event" ended with a network error in this sandbox.
+- `manual:shots`: main, releases and observer sets passed; the trick base set failed (the owner's unpublished master draft, as in Polish 2b).
+
+### Console additions (same pull request)
+1. Corrects Polish 2b item 2 (see above): live-scores switch back in More, Release result beside Publish.
+2. Review bar (laptop, under the heat header; phone, top of the Control tab) and the Impression card (laptop: beside the rider cards, shrinks to fit, a 36 px button with a pop-over when there is no room; phone: a block). The rider row keeps a fixed minimum height (116 px) while the card is on, and up to six rider cards share one line, so the table does not move.
+3. Decision: at a 1280 px window three riders already fill the row, so the card is the button there; at 1500 px two riders get the full grid and three the tighter one.
 
 ### Not done / not verified
 - Not tried on a real phone; the horn is a synthesised tone.
