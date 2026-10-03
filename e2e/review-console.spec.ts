@@ -139,10 +139,10 @@ test("while the heat is running the bar is a quiet one-liner", async ({ browser 
 test("the Impression grid shows what the judges gave, with the outlier colour on a deliberately low score; a tap corrects it", async ({ browser }) => {
   test.setTimeout(300_000);
   const { heat, entries } = await endedHeat(4, 14);
-  const given: Array<[number | null, number | null, number | null]> = [[8, 8, 1], [6, 6.5, 6], [7, null, 7], [9, 9, 9]];
+  const given: Array<[number | null, number | null, number | null]> = [[8, 8, 1], [6, 6.5, 6], [7, null, 7], [9, null, 9]];
   for (const [i, e] of entries.entries()) for (const [k, key] of keys.entries()) await imp(heat, e, key, given[i][k]);
   await w.db.from("impression_scores").insert({ heat_id: heat, entry_id: entries[3], judge_seat_id: w.seats.j2.id, value: null, missed: true, client_key: crypto.randomUUID(), client_rev: 1 }).then(() => undefined);
-  const page = await head(browser);
+  const page = await head(browser, { width: 1700, height: 1000 }); // wide enough for four riders and the grid side by side
   await pick(page, heat);
   const card = page.getByTestId("impression-card");
   await expect(card).toBeVisible({ timeout: 60_000 });

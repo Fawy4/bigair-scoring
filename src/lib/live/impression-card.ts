@@ -54,7 +54,7 @@ export const LEVELS: Record<CardLevel, LevelSize> = {
 const PAD_W = 12;
 const PAD_H = 6;
 /** The row of rider cards keeps at least this height whenever the card is on the console, so the table's top edge is in the same place for every heat. */
-export const CARD_ROW_MIN = 112;
+export const CARD_ROW_MIN = 116;
 
 export const cardSize = (level: CardLevel, riders: number, judges: number): { w: number; h: number } => {
   const l = LEVELS[level];

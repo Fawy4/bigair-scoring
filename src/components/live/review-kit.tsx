@@ -206,7 +206,7 @@ export function ImpressionCardInline(props: CardProps) {
   const fit = room ? fitCard({ availW: room.w, availH: room.h, riders: props.riders.length, judges: props.judges.length }) : "button";
   return (
     // the region has no height of its own: the row is as tall as the rider cards, and the card is drawn inside that room
-    <div ref={region} data-testid="impression-region" data-fit={String(fit)} data-room={room ? `${room.w}x${room.h}` : ""} className="relative min-h-tap min-w-[2.75rem] flex-[1_1_2.75rem] self-stretch">
+    <div ref={region} data-testid="impression-region" data-fit={String(fit)} data-room={room ? `${room.w}x${room.h}` : ""} className="relative min-h-tap min-w-[2.25rem] flex-[1_1_2.25rem] self-stretch">
       {fit === "button" ? (
         <>
           <button type="button" data-testid="impression-button" aria-expanded={open} onClick={() => setOpen((o) => !o)} aria-label={I.button} title={I.button} className={cn(small, "flex h-full min-h-tap w-full items-center justify-center gap-1 px-1")}>
