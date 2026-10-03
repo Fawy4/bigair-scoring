@@ -123,6 +123,16 @@ export async function setPlayState(eventId: string, state: "playing" | "paused" 
   });
 }
 
+/** The log line for a Pause or Resume the panel already did straight in the database (so it did not wait behind a tick). */
+export async function noteStateChange(eventId: string, state: "paused" | "playing", heats: number): Promise<Done> {
+  return wrap(eventId, async (db) => {
+    if (state === "paused") {
+      if (heats > 0) await logLine(db, eventId, "info", null, T.play.heatPaused);
+    } else await logLine(db, eventId, "info", null, heats > 0 ? T.play.statePlayingResumed : T.play.statePlaying);
+    return { ok: true };
+  });
+}
+
 /** "Run the whole event": every day's run order in turn until the finals are published, at the chosen speed (Polish 2, item 7). */
 export async function runWholeEvent(eventId: string): Promise<Done> {
   return wrap(eventId, async (db) => {

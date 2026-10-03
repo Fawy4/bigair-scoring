@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SimStatus } from "@/lib/simulator/types";
-import { getSimStatus, tick } from "./actions";
+import { createClient } from "@/lib/supabase/browser";
+import { simErrorSentence } from "@/lib/simulator/errors";
+import { getSimStatus, noteStateChange, tick } from "./actions";
 
 /**
  * A steady beat that keeps its rhythm in a background tab: a tab's own timers are slowed to once a minute after a few minutes in the background, and the owner will be
@@ -80,7 +82,31 @@ export function useSim(eventId: string, initial: SimStatus) {
     2000,
     playing,
   );
-  useBeat(() => void refresh(), 3000, !playing);
+  // one pause state: the console's Pause or Resume changes the simulator's state in the database, so the panel looks every second (Polish 2b, item 1)
+  useBeat(() => void refresh(), 1000, true);
+  // server actions of one tab run one after another, so a refresh can wait behind a tick: the state word is also read straight from the database (the organiser may
+  // read it), once a second, so a Pause or Resume pressed on the console shows here at once
+  const stateRef = useRef(status.control.state);
+  stateRef.current = status.control.state;
+  useBeat(
+    () => {
+      void createClient()
+        .from("sim_control")
+        .select("state")
+        .eq("event_id", eventId)
+        .maybeSingle()
+        .then(({ data }) => {
+          const next = data?.state;
+          if (next && next !== stateRef.current && (next === "playing" || next === "paused" || next === "stopped")) {
+            stateRef.current = next;
+            setStatus((old) => ({ ...old, control: { ...old.control, state: next } }));
+            void refresh();
+          }
+        });
+    },
+    1000,
+    true,
+  );
 
   /** Runs an action, shows its answer, refreshes the status. */
   const act = useCallback(
@@ -103,5 +129,30 @@ export function useSim(eventId: string, initial: SimStatus) {
     [refresh],
   );
 
-  return { status, line, message, pending, act, refresh, setMessage };
+  /**
+   * Pause and Resume go straight to the database from this browser (server actions of one tab wait for each other, so behind a tick they could take seconds):
+   * the simulator's state and the heats' clocks change together, the virtual officials stop at their next look, and the screen says so at once.
+   */
+  const playDirect = useCallback(
+    async (next: "paused" | "playing") => {
+      setPending(true);
+      setMessage(null);
+      try {
+        const db = createClient();
+        const set = await db.rpc("sim_set", { p_event: eventId, p_patch: { state: next } });
+        if (set.error) return setMessage({ ok: false, text: simErrorSentence(set.error.message) });
+        stateRef.current = next;
+        setStatus((old) => ({ ...old, control: { ...old.control, state: next } }));
+        const heats = await db.rpc(next === "paused" ? "sim_pause_heats" : "sim_resume_heats", { p_event: eventId });
+        if (heats.error) return setMessage({ ok: false, text: simErrorSentence(heats.error.message) });
+        void noteStateChange(eventId, next, heats.data ?? 0);
+        void refresh();
+      } finally {
+        setPending(false);
+      }
+    },
+    [eventId, refresh],
+  );
+
+  return { status, line, message, pending, act, refresh, setMessage, playDirect };
 }
