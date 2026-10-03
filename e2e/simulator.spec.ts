@@ -34,10 +34,15 @@ test("copy an event, play it at ×20 until two heats publish, look as a spectato
     await expect(page.getByTestId("sim-need-lock")).toHaveCount(0);
 
     // speed ×20, every role virtual (the default), Start
-    await page.getByTestId("sim-speed-20").click();
-    await expect(page.getByTestId("sim-speed-20")).toHaveAttribute("aria-pressed", "true");
-    await page.getByTestId("sim-start").click();
-    await expect(page.getByTestId("sim-state")).toHaveAttribute("data-state", "playing");
+    // the panel is drawn by the server first: a tap that lands before the page has finished loading does nothing, so the tap is repeated until the button answers
+    await expect(async () => {
+      await page.getByTestId("sim-speed-20").click({ timeout: 5_000 });
+      await expect(page.getByTestId("sim-speed-20")).toHaveAttribute("aria-pressed", "true", { timeout: 8_000 });
+    }).toPass({ timeout: 60_000 });
+    await expect(async () => {
+      if ((await page.getByTestId("sim-state").getAttribute("data-state")) !== "playing") await page.getByTestId("sim-start").click({ timeout: 5_000 });
+      await expect(page.getByTestId("sim-state")).toHaveAttribute("data-state", "playing", { timeout: 8_000 });
+    }).toPass({ timeout: 60_000 });
     await expect(page.getByTestId("stat-heats")).toHaveText(/^[2-9] of \d+ heats published/, { timeout: 480_000 });
 
     // the results are on the public page, seen as a spectator in another tab

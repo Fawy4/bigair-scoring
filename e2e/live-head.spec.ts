@@ -48,7 +48,9 @@ test("the head judge runs a whole heat from a phone: Start refused in plain word
   // the draw is not locked: refused, in words
   await row(head, w.heats[0]).click();
   await head.getByTestId("start").click();
-  await expect(message(head)).toHaveText("Draw for Pro Men is not locked — lock it in the Draw step");
+  // a refusal sentence carries a "Learn more" link to the manual page that explains it
+  await expect(message(head)).toContainText("Draw for Pro Men is not locked — lock it in the Draw step");
+  await expect(message(head).getByRole("link", { name: "Learn more" })).toBeVisible();
   expect((await heatRow(w.heats[0])).status).toBe("scheduled");
 
   // locked: Start works, the clock runs
