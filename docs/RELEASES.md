@@ -12,6 +12,20 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.10.1 — 3 Oct 2026 {#release-0-10-1}
+
+PR: #27
+
+### What changed
+- **Self-audit 1a (Gouna configuration):** the scoring, ladder and timetable engines were tested against the configuration of the Arrow event (24 riders, heats of 3, 4 scores per attempt, best 3 of 7 + Impression, two days). The findings, with what to do before Thursday, are in docs/AUDIT.md.
+- New tests only; no screen, setting or database change.
+
+### What to test
+Nothing to test on the live address.
+
+### Known issues
+- Nothing to test on the live address — see docs/AUDIT.md: the findings A1a-1 to A1a-7 are listed there and are not fixed in this release.
+
 ## 0.10.0 — 3 Oct 2026 {#release-0-10-0}
 
 PR: #26
