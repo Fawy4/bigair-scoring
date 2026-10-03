@@ -10,7 +10,8 @@
 -- Refusals use the live screens' error pattern: 'CODE: detail', the sentence and its "Learn more" link come from the code.
 --   SCORE_OFF_STEP: <step>|<nearest value below>|<nearest value above>      e.g. SCORE_OFF_STEP: 0.1|7.2|7.3
 --   SCORE_OUT_OF_RANGE: <lowest>|<highest>                                   e.g. SCORE_OUT_OF_RANGE: 0|10
--- The check is skipped for missed / Absent marks (they carry no value) and for a null value (other rules handle "no score").
+-- The check is skipped for missed / Absent marks (they carry no value), for a null value (other rules handle "no score"), and when the division's model has no
+-- scale to check against (no Impression scale, an entry type with no trick scale): the database then behaves as it did before.
 
 create or replace function private.check_on_scale(p_value numeric, p_scale jsonb) returns void
 language plpgsql immutable set search_path = '' as $$
@@ -45,7 +46,7 @@ begin
   if v_division is null then return; end if;
   if p_impression then
     v_scale := private.division_model_setting(v_division, array['heat', 'impression', 'scale']);
-    if v_scale is null then raise exception 'NO_IMPRESSION'; end if;
+    if v_scale is null then return; end if; -- a model with no Impression scale: nothing to check against (as before)
     perform private.check_on_scale(p_score, v_scale);
     return;
   end if;

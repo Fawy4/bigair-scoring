@@ -67,6 +67,12 @@ describe.skipIf(!ENV_OK)("A score off the division's step is refused by the data
     expect(codeOf(await c.rpc("head_set_trick_score", { p_attempt: a, p_seat: f.ids.seat_j1, p_score: 7.2, p_criteria: {}, p_missed: false, p_reason: "paper sheet" }))).toBe("");
   });
 
+  it("a division whose model has no Impression scale is left as it was: nothing to check against", async () => {
+    const none = await mkDivision(f, { name: "NoImpressionDiv", seats: ["j1", "j2"], model: { trick: { entry: "single", scale: { min: 0, max: 10, step: 0.1 } }, panel: { minJudges: 2 }, heat: {} } });
+    const h = await mkHeat(f, none, { status: "ended", started_at: ago(900), ended_at: ago(300) });
+    expect(codeOf(await imp(h, none.entries[0], 7.25))).toBe("");
+  });
+
   it("a Missed / Absent mark needs no value and is never refused", async () => {
     const h = await mkHeat(f, d, { status: "ended", started_at: ago(900), ended_at: ago(300) });
     const a = await att(h, d.entries[0], 1);
