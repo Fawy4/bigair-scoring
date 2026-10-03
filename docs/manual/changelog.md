@@ -26,7 +26,7 @@ Release entry: [0.12.0](/admin/releases#release-0-12-0) (platform owner only)
 
 **What changed for users**
 - **One pause (simulator):** the head judge's **Pause** on the console and the simulator's **Pause** are the same state. Pausing on either side pauses the heat clock and the virtual officials; **Resume** on either side resumes both; each side shows the real state within about a second.
-- **Console:** the per-heat live-scores switch is a pill beside **Publish** on the laptop and on the phone: “Live scores: Public” or “Live scores: Hidden”, one tap to change; “Division default” under it while the heat follows the division's setting. The **More** menu keeps the held final, the agreement report and the audit log.
+- **Console:** a held final's **Release result** is a visible button beside **Publish** (laptop and phone). (This entry first described the per-heat live-scores switch as a pill beside Publish; that was a mistake and is corrected in 0.13.0: the switch is back in the **More** menu.)
 - **Big screen:** **Day** and **Dark** colours. A quiet button shows on mouse move or tap and hides after three seconds; **D** switches on a laptop; the browser remembers its choice; the Event step sets the default (**Big screen: colours**, Dark).
 - **Admin → Feedback:** a date filter (From / To; Today, Last 7 days, All), tick boxes with **Select all**, **Set done** and **Reopen** for many notes at once (asks once, says how many changed), and the export follows the filter.
 - **Public event page:** the organiser chooses its tabs (Event step → **Public page**, all on by default); Join also hides while registration is closed; an old link to a hidden tab lands on the first visible tab.

@@ -46,7 +46,7 @@ PR: #31
 
 ### What changed
 - **One pause:** pausing a simulated heat from the head judge's console or from the simulator is now one state — the heat clock and the virtual officials stop together and resume together, from either place.
-- **Live scores pill** beside Publish on the console (laptop and phone), out of the More menu.
+- **Release result** is a visible button beside Publish on the console (laptop and phone) when a heat's result is held. (A first version of this entry said the live-scores switch moved out of the More menu; that was wrong and is corrected in 0.13.0.)
 - **Big screen colours:** Day and Dark; tap or move the mouse for the button, **D** on a laptop; remembered per browser; the Event step sets the default.
 - **Admin → Feedback:** date filter, tick boxes, Select all, Set done / Reopen many notes at once; the export follows the filter.
 - **Public page tabs:** the organiser switches tabs off on the Event step; an old link to a hidden tab lands on the first visible tab. Join hides itself while registration is closed (the join page itself keeps working for officials).
@@ -57,7 +57,7 @@ PR: #31
 
 ### What to test
 - [ ] On the Demo's simulation (or a throwaway one), set the speed to ×10 and Start. Open View as → Head judge laptop. Press **Pause** on the console: the simulator panel says **Paused** within a second or two and no new attempts or scores appear for 10 seconds. Press **Resume** on the simulator: both run again. Then press **Pause** on the simulator and **Resume** on the console.
-- [ ] On the head console of a started heat, find **Live scores: Public** (or Hidden) next to **Publish**, on a laptop and on a phone. Tap it: it flips; “Division default” disappears while it differs from the division's setting. Tap again: it follows the division's setting again. **More** no longer has a live switch.
+- [ ] On the head console, publish a final of an event whose results are held (Event step: results not shown on publish). Next to **Publish** a **Release result** button appears; tap it: “Result released to the public.” A heat that is not held has no such button. **More** has the **Live scores** switch (Follow division / Live / Not live) as before.
 - [ ] Open the big screen (/screen/‹event›). Move the mouse or tap: a Day / Dark button appears in the top left and goes away after three seconds. Tap it: the colours switch. Reload: the choice is remembered. Press **D**: it switches back.
 - [ ] Event step → More settings → **Big screen: colours**: choose Day, save, open the big screen in a private window: it opens in Day.
 - [ ] Admin → Feedback: click **Today**, tick three notes, press **Set done**, confirm: it says “3 notes changed”. Select them again and press **Reopen**. Press **Export for Claude**: only the notes of the filtered list are in the file.
