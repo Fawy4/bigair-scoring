@@ -22,6 +22,7 @@ PR: #32
 - **Flag strip** replaces the clock line on every live screen; the big screen gets a coloured frame and a large state word; the announcer gets a text cue for each change.
 - **Flag view** for the beach marshal at /e/‹event›/flag (linked from Go live and the Officials step, with a QR to print): the whole screen is the flag; it turns grey after 10 seconds without the server.
 - **Horns** behind **Sound on**: one at green, one at the last minute, two at red, one at resume. Nothing vibrates.
+- **Console corrections and additions (laptop and phone):** the live-scores switch is back in the **More** menu (the pill of 0.12.0 was the wrong control) and **Release result** is a visible button beside **Publish** for a held result; a **review bar** under the heat's header from End heat until Publish (amber: judges still to submit, by name; red: the first Publish blocker with Fix and Absent; green: ready to publish); an **Impression** card beside the rider cards (a button with a pop-over when there is no room).
 - **Simulator:** virtual officials follow the sequence; ×10 shortens the pre-start (1:00 → 6 s); Skip to end lands on red; scenario **Abort the start**; **View as… → Flag view**.
 - **Needs the database change** `20261021100000_flags_start_sequence.sql` (applied to the hosted project; it also switches Flags on for every existing event, Arrow, EKL and Demo included).
 
@@ -33,6 +34,9 @@ PR: #32
 - [ ] During a running heat press **Pause**: the strip and the phone show red **Paused**. Press **Resume**: the colour comes back (green, or yellow when under a minute is left) with one horn.
 - [ ] On a judge's phone and a spotter's phone (or View as… on a simulation) the clock line is the coloured strip; every button is still on screen and nothing is covered. The big screen has a coloured frame and a large word and countdown in Day and Dark.
 - [ ] Switch the phone to aeroplane mode for 12 seconds: the Flag view turns **grey** and says “No connection — check with the head judge”. Reconnect: the colour comes back.
+- [ ] End a heat on Demo (or a rehearsal) while one judge has not pressed Submit. Directly under the heat's name an **amber** bar says “Waiting for 1 of 3 judges: ‹name›”. Tap the name: that judge's sheet opens; type a reason and **Save and submit**: the bar turns **green** “All 3 judges submitted — ready to publish”.
+- [ ] Leave one Impression / Variety score of a judge empty: the bar is **red** “Blocked: …” with **Fix** and **Absent**; **Absent** turns it green. While a heat is running the bar is a plain one-liner “2 of 3 judges scoring”.
+- [ ] After End heat, an **Impression** card sits beside the rider cards: one column per judge, a Panel column, “—” for a missing score, “Absent” where marked, a clearly low score in a warning colour. Tap a cell to correct it. On a heat with five riders in a narrow window it becomes an **Impression** button that opens the grid.
 - [ ] Event step → **Flags**: switch **Flags on** off and save. The console shows plain **Start heat** again, the strip is the plain timer, the big screen has no frame. Switch it back on.
 
 ### Known issues

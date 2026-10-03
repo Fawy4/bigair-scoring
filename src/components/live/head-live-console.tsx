@@ -10,6 +10,8 @@ import { TieDialog } from "./head-dialogs";
 import { HeadMatrix } from "./head-matrix";
 import { ReviewButtons, VisibilityBox } from "./head-parts";
 import { AgreementReport, AuditLog, JudgesStatus, OpenFlags, useSideData } from "./head-side-panel";
+import { useReview } from "./use-review";
+import { ImpressionCardInline, ReviewBar } from "./review-kit";
 import { ScreenSettings } from "./live-shell";
 import type { HeadController } from "./use-head-controller";
 import type { LiveHeatState } from "./use-live-heat";
@@ -141,6 +143,22 @@ export function HeadLiveConsole({
     if (fixRequest && open) openFix(fixRequest.target);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fixRequest?.n]);
+  // ---- the review bar (from End heat until Publish) and the Impression card
+  const review = useReview({
+    heat,
+    model,
+    side,
+    live,
+    impressions,
+    blockerItems,
+    closing,
+    nowServer,
+    judgeWord,
+    onChanged,
+    openFix,
+    openSheetDialog: (seatId, entryId) => setDialog({ kind: "impression", seatId, entryId }),
+  });
+  const { bar, barPending, openSheet, markAbsent, showImpressionCard, impressionTolerance } = review;
   const done = () => {
     setDialog(null);
     setMenu(null);
@@ -189,12 +207,15 @@ export function HeadLiveConsole({
 
   return (
     <div data-testid="head-live-console" data-heat={heat.id} className="grid items-start gap-3 min-[1280px]:grid-cols-[minmax(0,1fr)_17rem]">
-      <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex min-w-0 flex-col gap-2 min-[1280px]:col-span-2">
         <div className="flex flex-wrap items-center gap-2">
           <p className="whitespace-normal break-words text-name font-semibold">{title}</p>
           <Pill tone={heat.status === "published" ? "live" : "outlier"}>{copy.heatControl.status[heat.status] ?? heat.status}</Pill>
           {heat.reopened_at && heat.status === "under_review" ? <Pill tone="outlier">{H.underCorrection}</Pill> : null}
         </div>
+        {bar ? <ReviewBar state={bar} pending={barPending} onSheet={openSheet} onFix={openFix} onAbsent={(i) => void markAbsent(i)} onChooseOrder={(riders) => setDialog({ kind: "tie", riders })} /> : null}
+      </div>
+      <div className="flex min-w-0 flex-col gap-2">
         {!open ? <p className="text-small font-medium text-beach-muted">{heat.status === "published" ? C.published : ""}</p> : null}
 
         <section data-testid="rider-strip" aria-label={V.ridersStrip} className="flex flex-wrap gap-1.5">
@@ -221,6 +242,7 @@ export function HeadLiveConsole({
               {slot?.modifier ? <Pill tone="outlier">{slot.modifier}</Pill> : null}
             </button>
           ))}
+          {showImpressionCard ? <ImpressionCardInline judges={side.judges} impressions={impressions} riders={riders} tolerance={impressionTolerance} onCell={open ? (seatId, entryId) => setDialog({ kind: "impression", seatId, entryId }) : undefined} /> : null}
         </section>
 
         {open && menu ? (
@@ -284,7 +306,7 @@ export function HeadLiveConsole({
 
       <aside data-testid="head-side" className="flex min-w-0 flex-col gap-2">
         <ReviewButtons c={c} compact visibility={false} />
-        <JudgesStatus side={side} live={live} nowServer={nowServer} heat={heat} highlight={highlight} />
+        <JudgesStatus side={side} nowServer={nowServer} highlight={highlight} />
 
         <section data-testid="blockers" className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={H.blockersHeading}>
           <h3 className="text-heading font-semibold text-beach-muted">{blockerItems.length ? C.publishBlocked : H.nothingBlocks}</h3>

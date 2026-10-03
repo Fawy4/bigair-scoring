@@ -7,7 +7,7 @@ import { Pill } from "./pill";
 import type { LiveHeatState } from "./use-live-heat";
 import { auditLine, type AuditRow } from "@/lib/live/audit-lines";
 import { resolveFlag } from "@/lib/live/head-actions";
-import { sheetSubmitted, type HeadModel } from "@/lib/live/head-model";
+import type { HeadModel } from "@/lib/live/head-model";
 import { judgeNames, judgeWordOf } from "@/lib/live/judge-names";
 import { watchingCount } from "@/lib/live/observer";
 import type { HeatRow } from "@/lib/live/types";
@@ -15,7 +15,7 @@ import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
 const H = copy.headLive;
-const SEEN_WITHIN_MS = 45_000;
+export const SEEN_WITHIN_MS = 45_000;
 
 interface SeatInfo {
   id: string;
@@ -78,8 +78,7 @@ export function useSideData(supabase: SupabaseClient, eventId: string, heat: Hea
 export type SideData = ReturnType<typeof useSideData>;
 
 /** Who is connected and who has submitted, one line per judge, by the seat's name. */
-export function JudgesStatus({ side, live, nowServer, heat, highlight }: { side: SideData; live: LiveHeatState; nowServer: number; heat: HeatRow; /** The judge a blocker's "Fix" pointed at. */ highlight?: string | null }) {
-  const ended = heat.status !== "scheduled" && heat.status !== "running" && heat.status !== "paused";
+export function JudgesStatus({ side, nowServer, highlight }: { side: SideData; nowServer: number; /** The judge a blocker's "Fix" pointed at. */ highlight?: string | null }) {
   const watching = watchingCount(side.observers, nowServer);
   return (
     <section data-testid="judges" className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={H.judgesHeading}>
@@ -88,7 +87,6 @@ export function JudgesStatus({ side, live, nowServer, heat, highlight }: { side:
         const seat = side.seats.find((s) => s.id === j.id);
         const seen = seat?.last_seen_at ? nowServer - Date.parse(seat.last_seen_at) : null;
         const liveNow = seen !== null && seen <= SEEN_WITHIN_MS;
-        const sheet = live.sheets.find((s) => s.judge_seat_id === j.id);
         return (
           <div key={j.id} data-testid="judge-row" data-seat={j.id} data-live={liveNow} data-highlight={highlight === j.id} className={cn("flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 rounded-lg", highlight === j.id && "outline outline-2 outline-beach-accent")}>
             <span className="min-w-0 whitespace-normal break-words text-body font-semibold">
@@ -97,7 +95,7 @@ export function JudgesStatus({ side, live, nowServer, heat, highlight }: { side:
             </span>
             <span className="flex flex-wrap items-center gap-1">
               <Pill tone={liveNow ? "live" : "missing"}>{liveNow ? H.judgeLive : seen === null ? H.judgeNever : H.judgeAway(Math.round(seen / 1000))}</Pill>
-              {ended ? <Pill tone={sheetSubmitted(sheet) ? "live" : "pending"}>{sheetSubmitted(sheet) ? H.judgeSubmitted : H.judgeWaiting}</Pill> : null}
+              {/* who has submitted is the review bar's job now (directly under the heat header), not this pane's */}
             </span>
           </div>
         );

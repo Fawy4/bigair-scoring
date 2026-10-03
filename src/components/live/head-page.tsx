@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnnouncerView } from "./announcer-view";
 import { AnnouncerFlags } from "./flag-cues";
+import { PhoneReview } from "./phone-review";
 import { HeadLiveConsole } from "./head-live-console";
 import type { FixTarget } from "@/lib/live/publish-checklist";
 import { TieDialog } from "./head-dialogs";
@@ -242,11 +243,13 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
 
   const practice = ctx.event.isSimulation && viewer.kind === "organiser" ? <PracticePanel ctx={ctx} heat={shown} division={heatDivision} attempts={live.attempts} riderIds={riders.filter((r) => r.riding).map((r) => r.entryId)} /> : null;
 
-  const controlColumn = (
+  const column = (bar: React.ReactNode, card: React.ReactNode) => (
     <div className="flex flex-col gap-3">
+      {bar}
       <PartBoundary what={copy.crash.parts.timetable}>
         <HeatControl c={c} divisions={ctx.divisionTabs} divisionId={divisionId} liveIds={liveIds} onPickDivision={pickDivision} announcer={announcer} />
       </PartBoundary>
+      {card}
       {!wide ? (
         <>
           <button type="button" data-testid="details-toggle" aria-expanded={details} onClick={() => setDetails((d) => !d)} className="min-h-[48px] rounded-xl border border-beach-border bg-beach-bg px-3 text-body font-semibold">
@@ -265,6 +268,15 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
       <ScreenSettings />
     </div>
   );
+  // the review bar and the Impression card on a phone (a laptop's console draws its own)
+  const controlColumn =
+    !wide && shown && heatDivision && head ? (
+      <PhoneReview ctx={ctx} heat={shown} division={heatDivision} head={head} live={live} riders={riders} wordFor={wordFor} supabase={supabase} nowServer={nowServer} refreshKey={refreshKey} closing={closing} onChanged={onChanged} onChooseOrder={setTieFor}>
+        {({ bar, card }) => column(bar, card)}
+      </PhoneReview>
+    ) : (
+      column(null, null)
+    );
 
   const header = (
     <header className="border-b border-beach-line px-3 py-2">
