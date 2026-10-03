@@ -45,6 +45,7 @@ function collect(): SettingHelp[] {
     ["simulator.viewAs", sim.viewAs.heading, sim.viewAs.help],
     ["simulator.checklist", sim.checklist.heading, sim.checklist.help],
     ["simulator.skip", sim.skip.button, sim.skip.help],
+    ["simulator.endPublish", sim.endPublish.button, sim.endPublish.help],
     ["simulator.whole", sim.whole.button, sim.whole.help],
   ];
   for (const [key, label, h] of simHelp) out.push({ key, anchor: a(key), label, text: h.text, example: h.example });

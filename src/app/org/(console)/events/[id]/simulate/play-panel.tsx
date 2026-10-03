@@ -1,14 +1,14 @@
 "use client";
 
 import React from "react";
-import { Binoculars, FastForward, Gavel, Pause, Play, ShieldCheck, SkipForward, Square } from "lucide-react";
+import { Binoculars, FastForward, Flag, Gavel, Pause, Play, ShieldCheck, SkipForward, Square } from "lucide-react";
 import { Banner } from "@/components/ui/banner";
 import { Pill } from "@/components/live/pill";
 import { SPEEDS, SPREADS, JUDGE_MODES } from "@/lib/simulator/config";
 import type { SeatView, SimStatus } from "@/lib/simulator/types";
 import { heldWords } from "@/lib/simulator/view-hold";
 import { copy } from "@/lib/ui-copy";
-import { runWholeEvent, saveSettings, setPlayState, setSeatMode, setSpeed, skipToEndOfHeat } from "./actions";
+import { endHeatAndPublish, runWholeEvent, saveSettings, setPlayState, setSeatMode, setSpeed, skipToEndOfHeat } from "./actions";
 import { Card, Choice, Field } from "./parts";
 import type { useSim } from "./use-sim";
 
@@ -29,7 +29,8 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
   const state = status.control.state;
   const stateWord = state === "playing" ? T.play.statePlaying : state === "paused" ? T.play.statePaused : T.play.stateStopped;
   const now = status.now.status;
-  const canSkip = now === "running" || now === "paused" || now === "ended" || now === "under_review";
+  const canSkip = now === "running";
+  const canEnd = now === "running" || now === "paused" || now === "ended" || now === "under_review";
   const whole = status.control.config.wholeEvent;
   return (
     <section role="toolbar" aria-label={T.toolbarLabel} data-testid="sim-toolbar" className="flex flex-col gap-3 rounded-card border border-beach-line bg-beach-bg p-4">
@@ -60,6 +61,9 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
             <Choice icon={SkipForward} data-testid="sim-skip-end" title={canSkip ? T.skip.help.text : T.skip.why} disabled={pending || !canSkip} onClick={() => void act(() => skipToEndOfHeat(eventId), (r) => r.text)}>
               {T.skip.button}
             </Choice>
+            <Choice icon={Flag} data-testid="sim-end-publish" title={canEnd ? T.endPublish.help.text : T.endPublish.why} disabled={pending || !canEnd} onClick={() => void act(() => endHeatAndPublish(eventId), (r) => r.text)}>
+              {T.endPublish.button}
+            </Choice>
             <Choice icon={FastForward} data-testid="sim-whole-event" pressed={whole} title={T.whole.help.text} disabled={pending || (whole && state === "playing")} onClick={() => void act(() => runWholeEvent(eventId))}>
               {T.whole.button}
             </Choice>
@@ -86,7 +90,7 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
       ) : null}
       {!canSkip ? (
         <p data-testid="sim-skip-why" className="text-small font-medium text-beach-muted">
-          {T.skip.why}
+          {T.skip.why} {T.endPublish.why}
         </p>
       ) : null}
       {status.control.blocker ? (

@@ -14,7 +14,7 @@ import { logLine, updateConfig } from "@/lib/simulator/io";
 import { pressScenario, reviveJudge } from "@/lib/simulator/scenario-runner";
 import { forgetContext, type SimDb } from "@/lib/simulator/snapshot";
 import { loadSimStatus, type StatusResult } from "@/lib/simulator/status";
-import { simTick, skipToEnd, type TickResult } from "@/lib/simulator/tick";
+import { endAndPublish, simTick, skipToEnd, type TickResult } from "@/lib/simulator/tick";
 import type { SeatRole } from "@/lib/simulator/types";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -145,10 +145,18 @@ export async function runWholeEvent(eventId: string): Promise<Done> {
   });
 }
 
-/** "Skip to end of heat": ends the heat now; the virtual judges finish; the virtual head judge publishes if nothing blocks (Polish 2, item 7). */
+/** "Skip to end of heat": fast-forwards the virtual officials (every attempt logged and scored); the heat keeps running and waits for End heat. */
 export async function skipToEndOfHeat(eventId: string): Promise<Done<{ text: string }>> {
   return wrap(eventId, async (db) => {
     const r = await skipToEnd(db, eventId);
+    return r.ok ? { ok: true, text: r.text } : bad(r.message);
+  });
+}
+
+/** "End heat and publish": ends the heat now; the virtual judges finish; the virtual head judge publishes if nothing blocks. */
+export async function endHeatAndPublish(eventId: string): Promise<Done<{ text: string }>> {
+  return wrap(eventId, async (db) => {
+    const r = await endAndPublish(db, eventId);
     return r.ok ? { ok: true, text: r.text } : bad(r.message);
   });
 }

@@ -213,7 +213,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “No rounds to list yet: the preview cannot run with the current settings. Check the number in "Preview with" and the ladder settings.” | Change the number in “Preview with” or the ladder settings until the preview shows rounds. | [Organiser: Divisions](errors.md#err-formatsimple-perround-empty) |
 | “No run order is active for today, so the heats are listed by division.” | Run order step → pick today → Activate this plan. | [Head console](errors.md#err-heatcontrol-noplan) |
 | “No run order is active for today. Activate one in Run order.” | Run order step → choose today's day → Activate this plan. If the plan is for another day, the Go live checklist names both days. | [Organiser: Go live](errors.md#err-org-dashboard-noplantoday) |
-| “No start sequence is running for this heat, so there is nothing to abort.” | Nothing to do: the heat is not in its pre-start. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-nothing-armed) |
+| “No start heat sequence is running for this heat, so there is nothing to abort.” | Nothing to do: the heat is not in its pre-start. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-nothing-armed) |
 | “Not a known time zone (for example Africa/Cairo)” | Pick a time zone from the list, for example Africa/Cairo. | [Organiser: event list and Event step](errors.md#err-event-validation-timezone) |
 | “Not drawn again (no format, no riders or nothing to draw): ‹names›.” | Follow the sentence. | [Simulator](errors.md#err-simulator-reset-rebuildskipped) |
 | “Not logged for ‹label›: ‹why›” | Follow the sentence. | [Judge and spotter phones](errors.md#err-spotter-refusedother) |
@@ -393,7 +393,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “The file has more than ‹n› riders. Split it into smaller files.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-toomany) |
 | “The file is empty.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-empty) |
 | “the final takes the same number of riders from each draw, so its size must be even” | Change the highlighted number; the preview comes back when the format can run. | [Organiser: Divisions](errors.md#err-formatsimple-finaleven) |
-| “The flags are switched off for this event, so there is no start sequence. Press Start heat, or switch Flags on in the Event step.” | Press Start heat, or Event step → Flags → Flags on. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-flags-off) |
+| “The flags are switched off for this event, so there is no start heat sequence. Press Start heat, or switch Flags on in the Event step.” | Press Start heat, or Event step → Flags → Flags on. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-flags-off) |
 | “The format cannot make a draw: ‹why›” | Divisions → Format tab: fix the format until its preview shows a ladder for this number of riders. | [Organiser: Draw](errors.md#err-draw-errors-badformat) |
 | “The head judge has taken this heat into review. Your scores are locked.” | Tell the head judge the correction; they edit it on the console with a reason. | [Judge and spotter phones](errors.md#err-judge-reviewlocked) |
 | “The health check could not run.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-health-loaderror) |
@@ -509,7 +509,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “This heat is already published.” | Head judge: Re-open, correct, Publish again (a new version). | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-heat-published) |
 | “This heat was cancelled and already re-run. Reset the re-run instead; the cancelled heat stays as it is.” | Reset the re-run heat instead. | [Resets](errors.md#err-resetparts-errors-heat-already-rerun) |
 | “This heat was cancelled.” | Re-run the heat instead (head console). | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-heat-cancelled) |
-| “This heat's start sequence is already running.” | Wait for the green, press Start now, or Abort. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-already-armed) |
+| “This heat's start heat sequence is already running.” | Wait for the green, press Start now, or Abort. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-already-armed) |
 | “This is already the first division.” | Nothing to fix. | [Organiser: Divisions](errors.md#err-divisions-firstdivision) |
 | “This is already the last division.” | Nothing to fix. | [Organiser: Divisions](errors.md#err-divisions-lastdivision) |
 | “This is needed” | Type a value the sentence asks for. | [Organiser: Divisions](errors.md#err-friendly-needed) |

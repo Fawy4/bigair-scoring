@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { breakCountdown, computeTimetable, startsOutOfOrder, utcToLocalHHMM, type BreakCountdown, type BreakNone, type Timetable } from "@/lib/engine/schedule";
-import { abortStart, armHeat, cancelHeat, endHeat, extendBreakAction, holdPlan, pauseHeat, resumeBreakAction, resumeHeat, resumePlanAt, shiftPlan, startHeat, type ActionResult, type PlanActionResult } from "@/lib/live/heat-actions";
+import { abortStart, armHeat, cancelHeat, endHeat, extendBreakAction, extendPrestart, holdPlan, pauseHeat, resumeBreakAction, resumeHeat, resumePlanAt, shiftPlan, startHeat, type ActionResult, type PlanActionResult } from "@/lib/live/heat-actions";
 import { controlsFor, type Control, type ControlId, type HeatState } from "@/lib/live/head-state";
 import type { ReviewProps } from "./heat-control";
 import { isLiveHeat } from "@/lib/live/division-pick";
@@ -47,6 +47,12 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
   const [startWarning, setStartWarning] = useState<{ heatId: string; text: string } | null>(null);
   // Flags: the pre-start chosen for the next Start sequence (null = the event's default)
   const [prestart, setPrestart] = useState<number | null>(null);
+  // the length typed under "Other…" (null = none typed yet); once typed it is the selected choice
+  const [otherSec, setOtherSec] = useState<number | null>(null);
+  const setOther = (sec: number) => {
+    setOtherSec(sec);
+    setPrestart(sec);
+  };
 
   const plan = activePlanFor(plans, ctx.event.timezone, nowServer);
   const planId = plan?.id ?? null;
@@ -90,9 +96,14 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
 
   // the break after a heat: only while nothing is on the water
   const second = Math.floor(nowServer / 1000);
+  // on a simulation the break is as short as the speed (the speed the last heat ran at)
+  const breakScale = useMemo(() => {
+    const last = heats.filter((h) => h.ended_at).sort((a, b) => Date.parse(b.ended_at!) - Date.parse(a.ended_at!))[0];
+    return Math.max(1, last?.time_scale ?? 1);
+  }, [heats]);
   const breakInfo: BreakCountdown | BreakNone = useMemo(
-    () => (plan ? breakCountdown(plan.plan, lives, { timezone: ctx.event.timezone, eventDay: plan.day, defaults: plan.defaults, now: new Date(second * 1000).toISOString() }) : breakCountdown(null, lives, { timezone: ctx.event.timezone, eventDay: "", defaults: { breakAfterHeatMin: 0, breakAfterRoundMin: 0, readyCallMin: 0 }, now: new Date(second * 1000).toISOString() })),
-    [plan, lives, ctx.event.timezone, second],
+    () => (plan ? breakCountdown(plan.plan, lives, { timezone: ctx.event.timezone, eventDay: plan.day, defaults: plan.defaults, now: new Date(second * 1000).toISOString(), timeScale: breakScale }) : breakCountdown(null, lives, { timezone: ctx.event.timezone, eventDay: "", defaults: { breakAfterHeatMin: 0, breakAfterRoundMin: 0, readyCallMin: 0 }, now: new Date(second * 1000).toISOString() })),
+    [plan, lives, ctx.event.timezone, second, breakScale],
   );
   const nextTitle = useMemo(() => {
     if (breakInfo.kind !== "break") return "";
@@ -106,11 +117,17 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
   const flagsOn = ctx.event.flags.enabled;
   const defaultPrestart = ctx.event.flags.prestartSec;
   const armed = Boolean(selected && flagsOn && isArmedNow(selected, nowServer));
-  const prestartOptions = useMemo(() => {
-    const opts = [defaultPrestart, ...(defaultPrestart === 120 ? [] : [120]), 0];
-    return opts.map((sec) => ({ sec, label: sec === 0 ? T.prestartNow : formatClock(sec * 1000), isDefault: sec === defaultPrestart && sec !== 0 }));
-  }, [defaultPrestart]);
   const chosenPrestart = prestart ?? defaultPrestart;
+  /** The event's default, "Other…" (its typed value once there is one) and "Start now". A typed value equal to the default simply selects the default. */
+  const prestartOptions = useMemo(() => {
+    const typed = otherSec !== null && otherSec !== defaultPrestart && otherSec !== 0 ? otherSec : null;
+    return [
+      { id: "default" as const, sec: defaultPrestart, label: formatClock(defaultPrestart * 1000), selected: chosenPrestart === defaultPrestart },
+      { id: "other" as const, sec: typed, label: typed === null ? T.prestartOther : formatClock(typed * 1000), selected: typed !== null && chosenPrestart === typed },
+      { id: "now" as const, sec: 0, label: T.prestartNow, selected: chosenPrestart === 0 },
+    ];
+  }, [defaultPrestart, otherSec, chosenPrestart]);
+  const armedFrozen = Boolean(armed && selected?.armed_paused_at);
   const liveHeatRow = heats.find((h) => isLiveHeat(h, nowServer)) ?? null;
   /** The flag strip: about the heat in its pre-start, else the heat on the water, else the heat shown. */
   const flag = useFlagStrip(ctx, heats, plans, liveHeatRow ?? selected, nowServer);
@@ -194,6 +211,8 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     prestartOptions,
     chosenPrestart,
     setPrestart,
+    setOther,
+    armedFrozen,
     dismissStart,
     breakInfo,
     nextTitle,
@@ -204,6 +223,8 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
       startNowDuringYellow: () => selected && act(T.done.startNow(title), () => startHeat(selected.id)),
       abort: () => selected && act(T.done.abort(title), () => abortStart(selected.id)),
       end: () => selected && act(T.done.end(title), () => endHeat(selected.id)),
+      /** "+1 min" on the yellow: exactly one more minute, as often as needed. */
+      extend: () => selected && act(T.done.extend(title), () => extendPrestart(selected.id)),
       pause: () => selected && act(T.done.pause(title), () => pauseHeat(selected.id)),
       resume: () => selected && act(T.done.resume(title), () => resumeHeat(selected.id)),
       hold: () => planId && act(T.done.hold, () => holdPlan(planId)),

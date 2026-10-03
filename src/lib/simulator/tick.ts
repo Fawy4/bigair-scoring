@@ -95,7 +95,7 @@ function planHeats(snap: Snapshot): PlanHeat[] {
 const riding = (slots: SlotRow[]) => slots.filter((s) => s.entry_id && !s.modifier && !s.flagged_out).sort((a, b) => a.position - b.position);
 
 /** Virtual spotters log attempts at the configured rate, through add_attempt like a phone does (or the organiser's practice path when the event has no spotter seat at all). */
-async function spotterStep(db: SimDb, snap: Snapshot, heat: HeatRow, data: HeatData): Promise<void> {
+async function spotterStep(db: SimDb, snap: Snapshot, heat: HeatRow, data: HeatData, fast = false): Promise<void> {
   const cfg = snap.control.config;
   const division = snap.ctx.divisions.find((d) => d.id === heat.division_id);
   const kit = trickKit(snap.ctx);
@@ -105,17 +105,18 @@ async function spotterStep(db: SimDb, snap: Snapshot, heat: HeatRow, data: HeatD
   const spotters = snap.seats.filter((s) => s.role === "spotter" && !s.person);
   const noSpotterSeats = !snap.seats.some((s) => s.role === "spotter");
   if (!spotters.length && !noSpotterSeats) return; // the spotters are real people: they log
-  const fraction = fractionDone(clockOf(heat), snap.nowMs);
+  // "Skip to end of heat": the officials act as if the heat were over, so every rider has all attempts logged now
+  const fraction = fast ? 1 : fractionDone(clockOf(heat), snap.nowMs);
   const tie = cfg.tie?.heatId === heat.id ? new Set([cfg.tie.entryA, cfg.tie.entryB]) : null;
   const riders = riding(snap.slots.filter((s) => s.heat_id === heat.id));
-  let budget = 8;
+  let budget = fast ? 400 : 8;
   let turn = data.attempts.length;
   for (const [index, slot] of riders.entries()) {
     const entryId = slot.entry_id as string;
     const mine = data.attempts.filter((a) => a.entry_id === entryId);
     const tied = tie?.has(entryId) ?? false;
     const perRider = tied ? Math.min(3, cap ?? 3) : cfg.attemptsPerRider;
-    const due = Math.min(2, attemptsDue({ fraction, perRider, cap, used: mine.length, riderIndex: index }));
+    const due = fast ? attemptsDue({ fraction, perRider, cap, used: mine.length, riderIndex: index }) : Math.min(2, attemptsDue({ fraction, perRider, cap, used: mine.length, riderIndex: index }));
     let last: SpotterRider["last"] = mine.length ? lastOf(mine[mine.length - 1]) : null;
     for (let k = 0; k < due && budget > 0; k++) {
       const plan = planAttempt(seedFrom(`${heat.id}|${entryId}|${mine.length + k}`), kit.vocab, enabled, { entryId, used: mine.length + k, last }, { crashShare: tied ? 0 : cfg.crashShare, repeatShare: tied ? 0 : cfg.repeatShare }, cap);
@@ -334,6 +335,8 @@ async function step(db: SimDb, snap: Snapshot): Promise<string> {
   const yellow = snap.heats.find((h) => h.status === "scheduled" && h.armed_at);
   if (yellow) {
     const name = heatName(yellow);
+    // the pre-start is frozen (Pause on the console or the simulator): nothing moves until Resume
+    if (yellow.armed_paused_at) return T.play.lines.yellowPaused(name);
     const startMs = armedStartMs({ status: yellow.status, armedAt: yellow.armed_at ?? null, prestartSec: yellow.prestart_sec ?? null });
     if (startMs !== null && snap.nowMs < startMs) {
       if (snap.control.config.armed.includes("abort_start")) {
@@ -362,8 +365,12 @@ async function step(db: SimDb, snap: Snapshot): Promise<string> {
     return T.play.lines.idle;
   }
   const heat = byId.get(next.heatId)!;
+  // Pause may have been pressed since this step began: the head judge's console or the simulator's own Pause stops the arming too
+  if (await pausedNow(db, snap.eventId)) return T.play.lines.idle;
   // with the flags on the officials follow the sequence: the yellow first, the heat starts by itself at 0:00 of the pre-start
   const started = snap.settings.flags.enabled ? await db.user.rpc("arm_heat", { p_heat: heat.id }) : await db.user.rpc("start_heat", { p_heat: heat.id });
+  // the head judge raised the yellow herself in the meantime: her sequence stands, the simulator only follows it
+  if (started.error && /ALREADY_ARMED/.test(started.error.message)) return T.play.lines.starting(heatName(heat));
   if (started.error) {
     const why = simErrorSentence(started.error.message);
     if (snap.control.blocker !== why) {
@@ -401,12 +408,8 @@ async function processArmed(db: SimDb, snap: Snapshot, heat: HeatRow, data: Heat
   }
 }
 
-/**
- * "Skip to end of heat" (Polish 2, item 7): ends the heat on the water now with the attempts logged so far, lets the virtual judges finish their scores and
- * Impression / Variety scores at once (the late and offline judge too) and submit, then the virtual head judge reviews and publishes if nothing blocks.
- * Real people are waited for, as always. One step at a time with the auto-play (the same lock).
- */
-export async function skipToEnd(db: SimDb, eventId: string): Promise<{ ok: true; text: string } | { ok: false; message: string }> {
+/** One step of a button on the panel, with the auto-play's lock: the auto-play may be half-way through a step, so wait for it a moment rather than refuse. */
+async function withSimLock<T>(db: SimDb, eventId: string, run: () => Promise<T>, busy: T): Promise<T> {
   const lock: LockRpc = {
     begin: async (ms) => {
       const r = await db.user.rpc("sim_tick_begin", { p_event: eventId, p_ms: ms });
@@ -415,20 +418,64 @@ export async function skipToEnd(db: SimDb, eventId: string): Promise<{ ok: true;
     },
     end: async (token) => !(await db.user.rpc("sim_tick_end", { p_event: eventId, p_token: token })).error,
   };
+  for (let tries = 0; tries < 20; tries++) {
+    const r = await withTickLock(lock, run);
+    if (!r.busy) return r.value;
+    await new Promise((ok) => setTimeout(ok, 500));
+  }
+  return busy;
+}
+
+type PanelResult = { ok: true; text: string } | { ok: false; message: string };
+const failedText = (e: unknown): PanelResult => ({ ok: false, message: e instanceof Error ? simErrorSentence(e.message) : T.generic });
+
+/**
+ * "Skip to end of heat": fast-forwards the virtual officials to the end of the heat on the water. The virtual spotters log every rider's attempts now and the virtual
+ * judges score all of them now; the heat itself is left alone: it keeps running (its clock is untouched), and ending, reviewing and publishing stay with
+ * whoever ends it (the head judge's End heat, or the clock). Real people are waited for, as always.
+ */
+export async function skipToEnd(db: SimDb, eventId: string): Promise<PanelResult> {
   try {
-    // the auto-play may be half-way through a step: wait for it a moment rather than refuse
-    for (let tries = 0; tries < 20; tries++) {
-      const r = await withTickLock(lock, () => skipInside(db, eventId));
-      if (!r.busy) return r.value;
-      await new Promise((ok) => setTimeout(ok, 500));
-    }
-    return { ok: false, message: T.play.lines.busy };
+    return await withSimLock<PanelResult>(db, eventId, () => skipInside(db, eventId), { ok: false, message: T.play.lines.busy });
   } catch (e) {
-    return { ok: false, message: e instanceof Error ? simErrorSentence(e.message) : T.generic };
+    return failedText(e);
   }
 }
 
-async function skipInside(db: SimDb, eventId: string): Promise<{ ok: true; text: string } | { ok: false; message: string }> {
+/** "End heat and publish": the old Skip to end. Ends the heat on the water now, the virtual judges finish and submit, the virtual head judge publishes if nothing blocks. */
+export async function endAndPublish(db: SimDb, eventId: string): Promise<PanelResult> {
+  try {
+    return await withSimLock<PanelResult>(db, eventId, () => endAndPublishInside(db, eventId), { ok: false, message: T.play.lines.busy });
+  } catch (e) {
+    return failedText(e);
+  }
+}
+
+async function skipInside(db: SimDb, eventId: string): Promise<PanelResult> {
+  const snap = await loadSnapshot(db, eventId);
+  if (!snap) return { ok: false, message: T.errors.SIM_NOT_ENABLED() };
+  await ensureVirtualSeats(db, snap);
+  const heat = snap.heats.find((h) => h.status === "running");
+  if (!heat) {
+    if (snap.heats.some((h) => h.status === "scheduled" && h.armed_at)) return { ok: false, message: T.skip.inYellow };
+    return { ok: false, message: T.skip.noHeat };
+  }
+  const name = heatName(heat);
+  const fast = { ...snap, nowMs: snap.nowMs };
+  await spotterStep(db, fast, heat, await loadHeatData(db, heat.id), true);
+  // a few rounds, each writes what is left (scores) until nothing changes
+  for (let round = 0; round < 8; round++) {
+    const before = await loadHeatData(db, heat.id);
+    await judgeStep(db, fast, heat, before, false, true);
+    const after = await loadHeatData(db, heat.id);
+    if (after.scores.size === before.scores.size) break;
+  }
+  await logLine(db, eventId, "heat", null, T.log.fastForwarded(heatPlace(heat, snap.ctx)));
+  forgetContext(eventId);
+  return { ok: true, text: T.skip.done(name) };
+}
+
+async function endAndPublishInside(db: SimDb, eventId: string): Promise<PanelResult> {
   const snap = await loadSnapshot(db, eventId);
   if (!snap) return { ok: false, message: T.errors.SIM_NOT_ENABLED() };
   await ensureVirtualSeats(db, snap);
@@ -440,7 +487,7 @@ async function skipInside(db: SimDb, eventId: string): Promise<{ ok: true; text:
     snap.heats = snap.heats.map((h) => (h.id === yellow.id ? { ...h, ...(r.data as unknown as Partial<HeatRow>) } : h));
   }
   let heat = snap.heats.find((h) => h.status === "running" || h.status === "paused") ?? snap.heats.find((h) => h.status === "ended" || h.status === "under_review");
-  if (!heat) return { ok: false, message: T.skip.noHeat };
+  if (!heat) return { ok: false, message: T.endPublish.noHeat };
   const name = heatName(heat);
   if (heat.status === "running" || heat.status === "paused") {
     const ended = await db.user.rpc("end_heat", { p_heat: heat.id });
@@ -455,7 +502,7 @@ async function skipInside(db: SimDb, eventId: string): Promise<{ ok: true; text:
     if (after.scores.size === before.scores.size && after.impressions.size === before.impressions.size && after.submitted.size === before.submitted.size) break;
   }
   const line = await headStep(db, snap, heat, await loadHeatData(db, heat.id));
-  await logLine(db, eventId, "heat", null, T.log.skipped(heatPlace(heat, snap.ctx)));
+  await logLine(db, eventId, "heat", null, T.log.endedAndPublished(heatPlace(heat, snap.ctx)));
   forgetContext(eventId);
-  return { ok: true, text: `${T.skip.done(name)} ${line}` };
+  return { ok: true, text: `${T.endPublish.done(name)} ${line}` };
 }

@@ -2,7 +2,7 @@ import { test, expect, installSupabaseProxy, closePhones } from "./base";
 import { createLiveWorld, type LiveWorld } from "./live-world";
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 
-// Flags: the start sequence and the flag states, on a throwaway organisation (removed by the ledger; Arrow, EKL and Demo are never touched).
+// Flags: the start heat sequence and the flag states, on a throwaway organisation (removed by the ledger; Arrow, EKL and Demo are never touched).
 // A short heat (30 s) with a 10 s pre-start and a 10 s last minute, so the whole sequence plays in under a minute of real time.
 let w: LiveWorld;
 const phones: BrowserContext[] = [];
@@ -44,9 +44,9 @@ test("the console arms, the marshal's screen follows: yellow, green, yellow, red
   const flag = await marshal(browser);
   await expect(head.getByTestId("run-order")).toBeVisible({ timeout: 45_000 });
   await head.locator(`[data-testid="order-row"][data-heat="${w.heats[0]}"]`).click();
-  // before anything: red, nothing running; the console says Start sequence with the pre-start choice
+  // before anything: red, nothing running; the console says Start heat sequence with the pre-start choice
   await expect(flagOf(flag)).toHaveAttribute("data-flag", "stopped", { timeout: 30_000 });
-  await expect(head.getByTestId("start")).toHaveText("Start sequence");
+  await expect(head.getByTestId("start")).toHaveText("Start heat sequence");
   await expect(head.getByTestId("prestart-choice")).toBeVisible();
   await expect(head.getByTestId("prestart-10")).toHaveAttribute("aria-checked", "true");
 
@@ -109,9 +109,9 @@ test("Abort during the yellow: red again, the heat not started, nothing armed; S
   expect(row.started_at).toBeNull();
   const { data: lines } = await w.db.from("audit_log").select("action, at").eq("row_id", w.heats[0]).eq("action", "heat_start_aborted");
   expect(lines?.length).toBe(1);
-  await expect(head.getByTestId("start")).toHaveText("Start sequence");
+  await expect(head.getByTestId("start")).toHaveText("Start heat sequence");
 
-  // Start sequence with "Start now" chosen: green at once; the pre-start button during a yellow also starts at once
+  // Start heat sequence with "Start now" chosen: green at once; the pre-start button during a yellow also starts at once
   await head.getByTestId("start").click();
   await expect(flagOf(flag)).toHaveAttribute("data-flag", "before_start", { timeout: 20_000 });
   await head.getByTestId("start-now").click();

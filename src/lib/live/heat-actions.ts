@@ -30,9 +30,16 @@ export async function startHeat(heatId: string): Promise<ActionResult> {
 /** Start sequence (Flags): raises the yellow for `prestartSec` seconds (null = the event's default, 0 = start now); the heat then starts by itself, on the database's clock. */
 export async function armHeat(heatId: string, prestartSec: number | null): Promise<ActionResult> {
   if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
-  if (prestartSec !== null && (!Number.isInteger(prestartSec) || prestartSec < 0 || prestartSec > 600)) return fail("BAD_PRESTART");
+  if (prestartSec !== null && (!Number.isInteger(prestartSec) || (prestartSec !== 0 && (prestartSec < 10 || prestartSec > 900)))) return fail("BAD_PRESTART");
   const supabase = await createClient();
   const { error } = await supabase.rpc("arm_heat", { p_heat: heatId, ...(prestartSec === null ? {} : { p_prestart: prestartSec }) });
+  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true };
+}
+/** "+1 min": one more minute on the yellow (the database adds exactly 60 s to what is left, and writes it to the audit log). */
+export async function extendPrestart(heatId: string): Promise<ActionResult> {
+  if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("extend_prestart", { p_heat: heatId });
   return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true };
 }
 export async function abortStart(heatId: string): Promise<ActionResult> {

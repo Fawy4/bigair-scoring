@@ -38,8 +38,8 @@ Last checked: 3 Oct 2026 · Product version 0.13.0
 | {#g-head-judge} **Head judge** | The official who starts heats, reviews and publishes (a seat, or an organiser). *She ends heat 2 and publishes at 10:24.* |
 | {#g-heat} **Heat** | A group of riders on the water together for a set time. *R1 · H2, 10 minutes, 4 riders.* |
 | {#g-height} **Height** | A jump's measured height in metres, when a sensor is used; can fill the Height criterion, add a bonus, or give “Highest jump”. *Highest jump: 24.1 m.* |
-| {#g-flags} **Flags** | The four flag states the clock drives: **Before start** (yellow), **Running** (green), **Last minute** (yellow), **Stopped or paused** (red). On by default for every event. *The marshal's screen turns yellow, then green when the heat starts.* See [Flags and the start sequence](screens/flags.md). |
-| {#g-start-sequence} **Start sequence** | What **Start heat** becomes with the flags on: the yellow with the pre-start countdown, then the heat starts by itself. *Press Start sequence, 1:00 of yellow, green, the clock runs.* |
+| {#g-flags} **Flags** | The four flag states the clock drives: **Before start** (yellow), **Running** (green), **Last minute** (yellow), **Stopped or paused** (red). On by default for every event. *The marshal's screen turns yellow, then green when the heat starts.* See [Flags and the start heat sequence](screens/flags.md). |
+| {#g-start-sequence} **Start heat sequence** | What **Start heat** becomes with the flags on: the yellow with the pre-start countdown, then the heat starts by itself. *Press Start heat sequence, 1:00 of yellow, green, the clock runs.* |
 | {#g-flag-view} **Flag view** | The flag marshal's screen at /e/‹event›/flag: the whole screen is the flag. *Turns grey and says “No connection — check with the head judge” after 10 seconds without the server.* |
 | {#g-flag-strip} **Flag strip** | The clock line of a live screen, filled with the flag's colour, with the state's words, the countdown and the heat name. |
 | {#g-prestart} **Pre-start** | The yellow before a heat starts: 1:00 by default, 2:00 or none (**Start now**) for one heat. |
