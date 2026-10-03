@@ -184,7 +184,7 @@ test("Event step: switching Flags off brings back plain Start heat and the plain
   await expect(page.getByTestId("flags-card")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId("flags-switch")).toBeChecked();
   await page.getByTestId("flags-switch").uncheck();
-  await page.getByRole("button", { name: /^save/i }).first().click();
+  await page.getByRole("button", { name: "Save event" }).click();
   await expect.poll(async () => ((await w.db.from("events").select("settings").eq("id", w.eventId).single()).data?.settings as { flags?: { enabled?: boolean } }).flags?.enabled, { timeout: 30_000 }).toBe(false);
 
   const head = await laptop(browser);
