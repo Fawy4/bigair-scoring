@@ -25,6 +25,7 @@ export const MANUAL_PAGES: ManualPage[] = [
   { file: "screens/judge.md", group: "Screens" },
   { file: "screens/spotter.md", group: "Screens" },
   { file: "screens/announcer.md", group: "Screens" },
+  { file: "screens/observer.md", group: "Screens" },
   { file: "screens/public-home.md", group: "Screens" },
   { file: "screens/public-event.md", group: "Screens" },
   { file: "screens/public-live.md", group: "Screens" },

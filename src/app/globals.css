@@ -516,3 +516,10 @@ body:has(.print-sheet) {
 .beach-dark [data-testid="rider-label"]:not([data-variant="stripe"]) {
   border-color: var(--beach-ink);
 }
+
+/* an observed screen (Observer seat): every control is disabled; the pointer says so on a laptop */
+html[data-observing] button:disabled,
+html[data-observing] input:disabled,
+html[data-observing] select:disabled {
+  cursor: not-allowed;
+}

@@ -1,8 +1,8 @@
 # Roles: who sees what, who may do what, how they get in
 
-Platform owner, organiser, head judge, judge, spotter, announcer, rider and spectator: what each sees, what each may do, and how each gets in.
+Platform owner, organiser, head judge, judge, spotter, announcer, observer, rider and spectator: what each sees, what each may do, and how each gets in.
 
-Last checked: 3 Oct 2026 · Product version 0.10.0
+Last checked: 3 Oct 2026 · Product version 0.11.0
 
 The database checks every action against the person's role (Row Level Security on every table): a screen never decides alone, so a stale or tampered phone is refused the same way.
 
@@ -15,6 +15,7 @@ The database checks every action against the person's role (Row Level Security o
 | {#role-judge} **Judge** | A Judge seat's PIN or QR card. Must be ticked on a division's panel to score it. | The judge screen (/judge/‹event›): the queue of the running heat of their panel, their own scores only. | Score attempts (or Missed), flag, correct their own scores until Submit or review, give Impression / Variety scores, Submit; log attempts when “Judges may log attempts too” is on. | See other judges' scores; change scores after Submit or review (the head judge reopens). |
 | {#role-spotter} **Spotter** | A Spotter seat's PIN or QR card; free, or assigned to riders. | The spotter screen (/spot/‹event›). | Log attempts (landed / CRASH) while the heat runs; undo within 10 seconds. | Log past a rider's attempt cap; act while the heat is paused or not running. |
 | {#role-announcer} **Announcer** | An Announcer seat's PIN; or an organiser at /head/‹event›?mode=announcer. | The read-only score table and trick feed of the heat on (judge columns by tag). | Read. | Change anything. |
+| {#role-observer} **Observer** | An Observer seat's PIN or QR card (Officials → Add a seat → Observer; several allowed). The organiser ends it at once with **Switch off** or **Regenerate PIN**. | The [observer view](screens/observer.md) (/observe/‹event›): every official's real screen, live — head judge console (laptop and phone), each judge (that judge's own scores), each spotter, the announcer, the big screen, the public page. | Look; switch between the screens. Its phone says “I am here” (the head judge sees “‹n› observers watching”). | Change anything: every button is disabled and the database refuses every change from an observer seat. Sit on a panel, count towards one, appear among the judges, be played by the simulator, or show on the public pages. |
 | {#role-rider} **Rider** | No login. | The public pages, their rider page, the registration page. | Register (when open); share their result. | See anything before it is published (unless live scores are on). |
 | {#role-spectator} **Spectator** | No login. | The home page, the public event pages, the big screen. | Follow and share. | See judges' individual scores (never public), drafts, simulations, archived events. |
 

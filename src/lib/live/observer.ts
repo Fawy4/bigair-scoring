@@ -66,6 +66,12 @@ export function judgeOrder(panels: readonly (readonly string[])[]): string[] {
   return [...best.entries()].sort((a, b) => a[1] - b[1]).map(([id]) => id);
 }
 
+/** A seat already named like its label ("Judge 1", "Spotter 2") is not named twice ("Judge 1 · Judge 1"). */
+function sameWord(name: string, prefix: string): boolean {
+  const p = prefix.replace(/\s*·\s*$/, "").trim().toLowerCase();
+  return name.trim().toLowerCase().startsWith(p);
+}
+
 /** Every screen the observer can switch to. */
 export function observerViews(seats: readonly ObserverSeat[], panels: readonly (readonly string[])[]): ObserverViewItem[] {
   const V = copy.observer.views;
@@ -77,8 +83,11 @@ export function observerViews(seats: readonly ObserverSeat[], panels: readonly (
   return [
     item({ kind: "head-wide" }, V.headWide, "head", "laptop"),
     item({ kind: "head-phone" }, V.headPhone, "head", "phone"),
-    ...judges.map((s, i) => item({ kind: "judge", seatId: s.id }, V.judge(i + 1, s.name), "judges", "phone")),
-    ...seats.filter((s) => s.role === "spotter").sort((a, b) => a.name.localeCompare(b.name, "en")).map((s) => item({ kind: "spotter", seatId: s.id }, V.spotter(s.name), "spotters", "phone")),
+    ...judges.map((s, i) => item({ kind: "judge", seatId: s.id }, sameWord(s.name, V.judge(i + 1, "")) ? s.name : V.judge(i + 1, s.name), "judges", "phone")),
+    ...seats
+      .filter((s) => s.role === "spotter")
+      .sort((a, b) => a.name.localeCompare(b.name, "en"))
+      .map((s) => item({ kind: "spotter", seatId: s.id }, sameWord(s.name, V.spotter("")) ? s.name : V.spotter(s.name), "spotters", "phone")),
     item({ kind: "announcer" }, V.announcer, "more", "phone"),
     item({ kind: "screen" }, V.screen, "more", "tv"),
     item({ kind: "public" }, V.public, "more", "phone"),

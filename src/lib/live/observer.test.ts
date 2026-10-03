@@ -31,6 +31,17 @@ describe("the observer's role switcher", () => {
       "Public page",
     ]);
   });
+  it("a seat already named “Judge 1” or “Spotter 2” is not named twice", () => {
+    const named = observerViews(
+      [
+        { id: "a", name: "Judge 1", role: "judge", spotterEntries: [], spotterColours: [] },
+        { id: "b", name: "Lina", role: "judge", spotterEntries: [], spotterColours: [] },
+        { id: "s", name: "Spotter 2", role: "spotter", spotterEntries: [], spotterColours: [] },
+      ],
+      [["a", "b"]],
+    );
+    expect(named.map((v) => v.label)).toEqual(expect.arrayContaining(["Judge 1", "Judge 2 · Lina", "Spotter 2"]));
+  });
   it("a judge who is on no panel is not a Judge n, and an observer never appears", () => {
     expect(views.some((v) => v.label.includes("Off panel"))).toBe(false);
     expect(views.some((v) => v.label.includes("Sponsor"))).toBe(false);
