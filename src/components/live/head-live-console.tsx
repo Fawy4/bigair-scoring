@@ -219,7 +219,7 @@ export function HeadLiveConsole({
       <div className="flex min-w-0 flex-col gap-2">
         {!open ? <p className="text-small font-medium text-beach-muted">{heat.status === "published" ? C.published : ""}</p> : null}
 
-        <section data-testid="rider-strip" aria-label={V.ridersStrip} className="flex flex-wrap items-start gap-1.5" style={showImpressionCard ? { minHeight: CARD_ROW_MIN } : undefined}>
+        <section data-testid="rider-strip" aria-label={V.ridersStrip} className="flex flex-nowrap items-start gap-1.5" style={showImpressionCard ? { minHeight: CARD_ROW_MIN } : undefined}>
           <div data-testid="rider-tiles" className="flex min-w-0 flex-[0_1_auto] flex-wrap items-start gap-1.5">
           {stripTiles.map(({ r, total, slot }) => (
               <button
