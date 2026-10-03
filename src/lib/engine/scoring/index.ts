@@ -2,7 +2,7 @@
 export { parseScoringModel, ScoringModelError } from "@/lib/schemas/scoring-model";
 export type { ScoringModel } from "@/lib/schemas/scoring-model";
 export * from "./types";
-export { roundHalfUp, assertOnStep, formatScore, ScoringInputError } from "./round";
+export { roundHalfUp, assertOnStep, nearestOnScale, formatScore, ScoringInputError, type ScaleProblem } from "./round";
 export { judgeTrickScore, mapHeight } from "./judge";
 export { panelScore, type PanelInput } from "./panel";
 export { selectCounted, type EligibleTrick } from "./counting";

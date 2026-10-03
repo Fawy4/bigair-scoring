@@ -2,6 +2,19 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
+Last checked: 3 Oct 2026 · Product version 0.11.1
+
+## 0.11.1 — 3 Oct 2026 {#cl-0-11-1}
+
+Release entry: [0.11.1](/admin/releases#release-0-11-1) (platform owner only)
+
+**What changed for users**
+- Two riders on the same total who both have no counted trick (for example both crashed everything and got the same Impression) are now a tie for the head judge to decide; Publish is blocked until that is done. Before, the engine put them in slot order.
+- A score that is not on the division's step (7.25 on a 0.1 step) or is outside the scale is refused by the database, for a judge and for the head judge. The refusal names the step and the two nearest values (“That score is not on the 0.1 step. Use 7.2 or 7.3.”) or the range.
+- If such a value is ever found in a heat (an older score), the totals still appear: it is counted as the nearest value and the rider's explanation says so.
+
+**Manual pages updated**
+- [Errors](errors.md) (generated: the two refusal sentences and their codes), [Troubleshooting](troubleshooting.md) (generated), [Judge screen](screens/judge.md).
 Last checked: 3 Oct 2026 · Product version 0.11.0
 
 ## 0.11.0 — 3 Oct 2026 {#cl-0-11-0}

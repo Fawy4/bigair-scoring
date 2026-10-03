@@ -3,8 +3,12 @@ import type { RankedResult, RiderResult, TieDecision } from "./types";
 
 const EPS = 1e-9;
 
-/** Positive when b is better (sort ascending puts the better rider first). */
+/**
+ * Positive when b is better (sort ascending puts the better rider first). "No value" is -Infinity (a rider with no counted trick);
+ * two of them are equal. -Infinity minus -Infinity is NaN, which `!== 0` would read as "decided" (audit A1a-1), so equality is checked first.
+ */
 function higherFirst(a: number, b: number): number {
+  if (a === b) return 0;
   const diff = b - a;
   return Math.abs(diff) < EPS ? 0 : diff;
 }

@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { errorSentence, parseError } from "./errors";
-import { checkImpression, checkTrickScore } from "./head-validate";
+import { impressionRefusal, trickScoreRefusal, type ScoreRefusal } from "./head-validate";
 import { defaultKeep } from "./merge-plan";
 import { publishHeatCore, type PublishResult } from "./publish-core";
 import { mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
@@ -25,6 +25,8 @@ const uuid = z.string().uuid();
 type Failure = { ok: false; code: string | null; message: string };
 const fail = (code: string | null, message?: string): Failure => ({ ok: false, code, message: message ?? errorSentence(code) });
 const from = (error: { message: string }): Failure => ({ ok: false, code: parseError(error.message).code, message: errorSentence(error.message) });
+/** A refused score: the code, and the sentence with its detail (the step, or the range). */
+const refuse = (r: ScoreRefusal): Failure => fail(r.code, errorSentence(r.detail ? `${r.code}: ${r.detail}` : r.code));
 const reasonOk = (r: string) => r.trim().length >= 3;
 
 type Db = Awaited<ReturnType<typeof createClient>>;
@@ -53,8 +55,8 @@ export async function headSetScore(input: { attemptId: string; seatId: string; s
   if (!a) return fail("ATTEMPT_NOT_FOUND");
   const model = await modelForHeat(db, a.heat_id);
   if (!model) return fail("NOT_ALLOWED");
-  const problem = checkTrickScore(model, { score: input.score, criteria: input.criteria, missed: input.missed });
-  if (problem) return fail(problem);
+  const refusal = trickScoreRefusal(model, { score: input.score, criteria: input.criteria, missed: input.missed });
+  if (refusal) return refuse(refusal);
   const { error } = await db.rpc("head_set_trick_score", {
     p_attempt: input.attemptId,
     p_seat: input.seatId,
@@ -75,8 +77,8 @@ export async function headSetImpression(input: { heatId: string; entryId: string
   const model = await modelForHeat(db, input.heatId);
   if (!model) return fail("NOT_ALLOWED");
   if (!input.missed) {
-    const problem = input.value === null ? "SCORE_REQUIRED" : checkImpression(model, input.value);
-    if (problem) return fail(problem);
+    const refusal = input.value === null ? ({ code: "SCORE_REQUIRED" } as ScoreRefusal) : impressionRefusal(model, input.value);
+    if (refusal) return refuse(refusal);
   }
   const { error } = await db.rpc("head_set_impression", { p_heat: input.heatId, p_entry: input.entryId, p_seat: input.seatId, p_value: (input.missed ? null : input.value) as never, p_reason: input.reason.trim(), p_missed: Boolean(input.missed) });
   return error ? from(error) : { ok: true };
@@ -101,8 +103,8 @@ export async function headSaveImpressionSheet(input: {
   if (!model) return fail("NOT_ALLOWED");
   for (const r of input.rows) {
     if (r.missed) continue;
-    const problem = r.value === null ? "SCORE_REQUIRED" : checkImpression(model, r.value);
-    if (problem) return fail(problem);
+    const refusal = r.value === null ? ({ code: "SCORE_REQUIRED" } as ScoreRefusal) : impressionRefusal(model, r.value);
+    if (refusal) return refuse(refusal);
   }
   for (const r of input.rows) {
     const { error } = await db.rpc("head_set_impression", { p_heat: input.heatId, p_entry: r.entryId, p_seat: input.seatId, p_value: (r.missed ? null : r.value) as never, p_reason: input.reason.trim(), p_missed: Boolean(r.missed) });

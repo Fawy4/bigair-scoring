@@ -4,7 +4,7 @@
 // Every random heat is scored twice: by computeHeat and by the brute-force scorer below, written from the rules alone
 // (integer arithmetic in hundredths, no engine import), and the two must agree on every number, place and publish blocker.
 import { describe, expect, it } from "vitest";
-import { computeHeat, explain, ScoringInputError } from "./index";
+import { computeHeat, explain, judgeTrickScore, ScoringInputError } from "./index";
 import { preset } from "./fixtures";
 import type { Attempt, HeatInput, HeatResult, ImpressionMark, JudgeMark, ModifierType, RiderInput, TieDecision } from "./types";
 
@@ -212,8 +212,8 @@ describe("Audit 1a · scoring · 3000 random Gouna heats agree with an independe
       const { input } = randomHeat(seed);
       const res = computeHeat(GOUNA, input);
       const ref = refHeat(input);
-      // A1a-1 (see its own test below): riders tied on total with NO counted trick are wrongly "resolved". Those seeds are
-      // checked for everything except place and tie flags, and counted, so this test still guards every other rule.
+      // A1a-1 (fixed in 0.11.1): riders tied on total with NO counted trick are a genuine tie. The generator still reaches that case
+      // (counted below) and the brute-force scorer, which shares nothing with rank.ts, must agree on it like on every other seed.
       const noTrickTie = ref.riders.some((a) => ref.riders.some((b) => a !== b && a.counted.length === 0 && b.counted.length === 0 && a.status !== "DNS" && a.status !== "DSQ" && b.status !== "DNS" && b.status !== "DSQ" && a.total === b.total));
       if (noTrickTie) a1a1++;
       for (const rr of ref.riders) {
@@ -226,21 +226,19 @@ describe("Audit 1a · scoring · 3000 random Gouna heats agree with an independe
         expect(hundredths(er.components.penalty), ctx).toBe(rr.penalty);
         expect(er.counted.map((c) => [c.attemptSeq, hundredths(c.score)]), ctx).toEqual(rr.counted.map((c) => [c.seq, c.score]));
         expect(er.landedCount, ctx).toBe(rr.landed);
-        if (noTrickTie) continue;
         const ranked = res.ranking.find((x) => x.riderId === rr.id)!;
         expect(ranked.place, ctx).toBe(ref.places.get(rr.id));
         expect(Boolean(ranked.tieUnresolved), ctx).toBe(ref.unresolved.has(rr.id));
       }
       expect(engineBlockers(res).sort(), `seed ${seed}: publish blockers`).toEqual([...ref.blockers].sort());
-      if (noTrickTie) continue;
       const tieBlock = res.publishBlockers.some((b) => b.type === "tie_unresolved");
       expect(tieBlock, `seed ${seed}: a tie blocks publishing exactly when one is unresolved`).toBe(ref.unresolved.size > 0);
     }
-    expect(a1a1, "the generator reaches the A1a-1 case (so the exclusion is not hiding everything)").toBeGreaterThan(0);
+    expect(a1a1, "the generator reaches the A1a-1 case (riders tied with no counted trick)").toBeGreaterThan(0);
     expect(a1a1, "…and it stays a small minority of the 3000 heats").toBeLessThan(300);
   });
 
-  it.fails("A1a-1: two riders on the same total with no counted trick are tied (not 'resolved by highest counted trick' in slot order)", () => {
+  it("A1a-1: two riders on the same total with no counted trick are tied (not 'resolved by highest counted trick' in slot order)", () => {
     // Both crashed everything and got the same Impression (5.30). −∞ − (−∞) is NaN in rank.ts higherFirst, and NaN ≠ 0 counts as "decided".
     const crash = (seq: number): Attempt => ({ seq, status: "crashed", marks: [] });
     const res = computeHeat(GOUNA, heatOf([
@@ -249,14 +247,6 @@ describe("Audit 1a · scoring · 3000 random Gouna heats agree with an independe
     ]));
     expect(res.ranking.map((r) => [r.riderId, r.place, r.tieResolvedBy])).toEqual([["yellow", 1, undefined], ["blue", 1, undefined]]);
     expect(res.publishBlockers).toContainEqual({ type: "tie_unresolved", riders: ["yellow", "blue"] });
-  });
-
-  it("A1a-1 today: the same two riders are split by slot order, and Publish is not blocked", () => {
-    const crash = (seq: number): Attempt => ({ seq, status: "crashed", marks: [] });
-    const run = (order: string[]) => computeHeat(GOUNA, heatOf(order.map((id) => ({ riderId: id, attempts: [crash(1)], impressionMarks: imp(5.3) }))));
-    expect(run(["yellow", "blue"]).ranking.map((r) => [r.riderId, r.place, r.tieResolvedBy])).toEqual([["yellow", 1, "highest_counted_trick"], ["blue", 2, "highest_counted_trick"]]);
-    expect(run(["blue", "yellow"]).ranking[0].riderId).toBe("blue");
-    expect(run(["yellow", "blue"]).publishBlockers).toEqual([]);
   });
 
   it("invariants: totals never negative, at most 3 counted, a crash never counts, nothing past attempt 7 counts", () => {
@@ -431,17 +421,16 @@ describe("Audit 1a · scoring · scale limits and off-step values", () => {
     expect(res.riders[0].percent).toBe(100);
   });
 
-  it("an off-step or out-of-range value is refused with a ScoringInputError (the engine's contract)", () => {
+  it("judgeTrickScore itself stays strict: an off-step or out-of-range value is a ScoringInputError (the low-level contract)", () => {
     for (const bad of [7.05, 10.1, -0.1, Number.NaN]) {
-      expect(() => computeHeat(GOUNA, heatOf([{ riderId: "A", attempts: [landedBy(1, { J1: bad, J2: 5, J3: 5, HJ: 5 })] }])), String(bad)).toThrow(ScoringInputError);
+      expect(() => judgeTrickScore(GOUNA, { height: bad, extremity: 5, technicality: 5, execution: 5 }), String(bad)).toThrow(ScoringInputError);
     }
-    expect(() => computeHeat(GOUNA, heatOf([{ riderId: "A", attempts: [], impressionMarks: [{ judgeId: "J1", value: 7.25 }] }]))).toThrow(ScoringInputError);
   });
 
-  it.fails("A1a-3: one off-step mark should cost only that mark (shown as a blocker), not every total of the heat", () => {
-    // The database stores numeric(5,2) with only "≥ 0" checked (impression_scores.value), so 7.25 or 10.5 can be stored.
-    // computeHeat then throws for the whole heat: the console shows no totals, the public live page shows none, Publish fails.
+  it("A1a-3: one off-step mark costs only that mark: every total of the heat still appears (fixed in 0.11.1)", () => {
+    // The database stores numeric(5,2), so before this fix 7.25 or 10.5 could be stored. computeHeat used to throw for the whole heat.
     const res = computeHeat(GOUNA, heatOf([rider("A", [9, 6, 3], 6), { riderId: "B", attempts: [flat(1, 5)], impressionMarks: [{ judgeId: "J1", value: 7.25 }] }]));
     expect(res.riders.find((r) => r.riderId === "A")?.total).toBe(24);
+    expect(res.riders.find((r) => r.riderId === "B")?.total).toBe(12.3); // 5.0 trick + the 7.25 rounded to 7.3
   });
 });

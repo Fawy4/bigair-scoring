@@ -133,6 +133,24 @@ export interface CountedTrick {
 
 export type RiderStatus = "ok" | "DNF" | "DNS" | "DSQ";
 
+/**
+ * A judge's mark the engine could not use as given (audit A1a-3). The server refuses these, so they only come from older rows or a hand-edited database.
+ * `used` is the value that went into the maths (rounded to the nearest step or end of the scale), or null when the mark was left out.
+ */
+export interface AdjustedMark {
+  judgeId: string;
+  /** null = an Impression / Variety mark. */
+  attemptSeq: number | null;
+  /** The criterion, "Trick score" or the impression's label. */
+  label: string;
+  given: number;
+  used: number | null;
+  problem: "off_step" | "out_of_range" | "not_a_number" | "unreadable";
+  step: number;
+  min: number;
+  max: number;
+}
+
 export interface RiderResult {
   riderId: string;
   status: RiderStatus;
@@ -162,6 +180,8 @@ export interface RiderResult {
     uncategorised: number[];
   };
   modifiers: Modifier[];
+  /** Marks that were rounded, brought inside the scale or left out. Empty for a clean heat. */
+  adjustedMarks: AdjustedMark[];
 }
 
 export interface RankedResult {

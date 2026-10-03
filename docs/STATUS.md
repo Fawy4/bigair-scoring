@@ -1107,3 +1107,18 @@ Started from main after #26 (release tracker); rebased onto main after #27 (audi
 
 ### How to test on the phone
 See the release entry 0.11.0 in docs/RELEASES.md (8 checks on Demo).
+
+## Fix session 1 — audit 1a, engine findings (0.11.1)
+
+### Done
+- **A1a-1:** riders tied on total with no counted trick are a genuine tie (`rank.ts`), flagged, explained, and Publish waits for the head judge. Test: final of 2 where both crash everything.
+- **A1a-3:** a score off the division's step or outside the scale is refused by the database (migration `20261016100000_fix_audit_1a_score_step.sql`: the four write functions plus a trigger for direct writes) with a sentence naming the step and the two nearest values; the engine never blanks a heat (rounds, notes it in the explanation, leaves out what is not a number). Reachability of an off-step score through each path is written up in docs/AUDIT.md.
+- Tests: scoring engine 167, whole suite 2119 passing, 4 expected failures left (A1a-2, A1a-4, A1a-5, A1a-7). Manual: errors and troubleshooting regenerated, judge screen page, changelog. Release entry 0.11.1.
+
+### Not done
+- Apply the migration to the hosted project (`npm run db:apply`) and run `npm run test:rls`: the new `tests/rls/score-step.test.ts` is written but has not been run.
+- A1a-4 / A1a-5 (Shift, lateness badge): not the same helper and need an owner decision; A1a-2 and A1a-7 by procedure; the silent typed-pad refusal for Polish 2b. Manual screenshots not retaken (no screen changed, one sentence in the judge page).
+
+### How to test
+- Release entry 0.11.1 in docs/RELEASES.md (6 checks).
+

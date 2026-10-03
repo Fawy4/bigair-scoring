@@ -4,9 +4,11 @@ import { categoryLimit, selectCounted, type EligibleTrick } from "./counting";
 import { judgeTrickScore } from "./judge";
 import { panelScore, type PanelInput } from "./panel";
 import { rankHeat } from "./rank";
-import { assertOnStep, formatScore, roundHalfUp, ScoringInputError } from "./round";
+import { formatScore, nearestOnScale, roundHalfUp, ScoringInputError } from "./round";
 import type {
+  AdjustedMark,
   AttemptResult,
+  CriteriaValues,
   HeatInput,
   HeatResult,
   IgnoredMark,
@@ -68,24 +70,63 @@ function riderStatus(rider: RiderInput): RiderStatus {
   return "ok";
 }
 
+/**
+ * The mark as the maths will use it (audit A1a-3): values off the step go to the nearest step, values outside the scale to the nearest end, and each
+ * change is written to `adjusted`. Returns null when nothing usable is left (not a number): that judge then counts as not having scored.
+ */
+function usableTrickMark(model: ScoringModel, judgeId: string, seq: number, value: number | CriteriaValues, adjusted: AdjustedMark[]): number | CriteriaValues | null {
+  const { trick } = model;
+  const note = (label: string, given: number, scale: { min: number; max: number; step: number }, n: ReturnType<typeof nearestOnScale>) => {
+    if (n.problem) adjusted.push({ judgeId, attemptSeq: seq, label, given, used: n.value, problem: n.problem, step: scale.step, min: scale.min, max: scale.max });
+  };
+  if (typeof value === "number") {
+    if (trick.entry !== "single") return value; // the wrong shape for this model: judgeTrickScore decides
+    const n = nearestOnScale(value, trick.scale);
+    note("Trick score", value, trick.scale, n);
+    return n.value;
+  }
+  if (trick.entry !== "criteria") return value;
+  const out: CriteriaValues = { ...value };
+  let usable = true;
+  for (const c of trick.criteria) {
+    const v = value[c.key];
+    if (typeof v !== "number") continue; // a missing criterion: judgeTrickScore decides
+    const n = nearestOnScale(v, c.scale);
+    note(c.label, v, c.scale, n);
+    if (n.value === null) usable = false;
+    else out[c.key] = n.value;
+  }
+  return usable ? out : null;
+}
+
 function attemptPanel(
   model: ScoringModel,
   attempt: RiderInput["attempts"][number],
   panelJudgeIds: string[],
+  adjusted: AdjustedMark[],
 ): PanelScore {
   const onPanel = new Set(panelJudgeIds);
-  const inputs: PanelInput[] = attempt.marks
-    .filter((m) => onPanel.has(m.judgeId))
-    .map((m) => {
-      if (m.value === "missed") {
-        if (!model.trick.allowNoScore) {
-          throw new ScoringInputError(`Model "${model.id}" does not allow "Missed" (judge ${m.judgeId}, attempt ${attempt.seq})`);
-        }
-        return { judgeId: m.judgeId, score: "missed" };
+  const inputs: PanelInput[] = [];
+  for (const m of attempt.marks) {
+    if (!onPanel.has(m.judgeId)) continue;
+    if (m.value === "missed") {
+      if (!model.trick.allowNoScore) {
+        throw new ScoringInputError(`Model "${model.id}" does not allow "Missed" (judge ${m.judgeId}, attempt ${attempt.seq})`);
       }
-      const j = judgeTrickScore(model, m.value, { heightM: attempt.heightM });
-      return { judgeId: m.judgeId, score: j.score, detail: j.detail };
-    });
+      inputs.push({ judgeId: m.judgeId, score: "missed" });
+      continue;
+    }
+    const mark = usableTrickMark(model, m.judgeId, attempt.seq, m.value, adjusted);
+    if (mark === null) continue; // not a number: left out
+    try {
+      const j = judgeTrickScore(model, mark, { heightM: attempt.heightM });
+      inputs.push({ judgeId: m.judgeId, score: j.score, detail: j.detail });
+    } catch (e) {
+      // A mark the model cannot read at all (a criterion missing, one it does not have): this judge counts as not having scored; the heat still scores.
+      if (!(e instanceof ScoringInputError)) throw e;
+      adjusted.push({ judgeId: m.judgeId, attemptSeq: attempt.seq, label: "Trick score", given: Number.NaN, used: null, problem: "unreadable", step: 0, min: 0, max: 0 });
+    }
+  }
   return panelScore(model, inputs, panelJudgeIds);
 }
 
@@ -101,6 +142,7 @@ export function computeRider(
   const modifiers = rider.modifiers ?? [];
   const keepsScores = status === "ok" || (status === "DNF" && model.modifiers.dnf.keepScores);
 
+  const adjusted: AdjustedMark[] = [];
   const live = rider.attempts.filter((a) => !a.deleted).sort((a, b) => a.seq - b.seq);
   const cap = model.heat.maxAttemptsPerRider;
   const repeats = repeatIndexes(live);
@@ -143,7 +185,7 @@ export function computeRider(
       r.ignored = "no_score";
       return r;
     }
-    r.panel = attemptPanel(model, a, panelJudgeIds);
+    r.panel = attemptPanel(model, a, panelJudgeIds, adjusted);
     if (r.panel.judgeScores.some((j) => j.detail?.sensorMissing)) r.sensorMissing = true;
     r.score = r.panel.score;
     if (r.score === null) {
@@ -185,11 +227,17 @@ export function computeRider(
   const imp = model.heat.impression;
   if (imp) {
     const onPanel = new Set(panelJudgeIds);
-    const marks = (rider.impressionMarks ?? []).filter((m) => onPanel.has(m.judgeId)).map((m) => {
-      if (m.value === "missed") return { judgeId: m.judgeId, score: "missed" as const };
-      assertOnStep(m.value, imp.scale, imp.label);
-      return { judgeId: m.judgeId, score: m.value };
-    });
+    const marks: Array<{ judgeId: string; score: number | "missed" }> = [];
+    for (const m of rider.impressionMarks ?? []) {
+      if (!onPanel.has(m.judgeId)) continue;
+      if (m.value === "missed") {
+        marks.push({ judgeId: m.judgeId, score: "missed" });
+        continue;
+      }
+      const n = nearestOnScale(m.value, imp.scale);
+      if (n.problem) adjusted.push({ judgeId: m.judgeId, attemptSeq: null, label: imp.label, given: m.value, used: n.value, problem: n.problem, step: imp.scale.step, min: imp.scale.min, max: imp.scale.max });
+      if (n.value !== null) marks.push({ judgeId: m.judgeId, score: n.value });
+    }
     impression = panelScore(model, marks, panelJudgeIds, imp.scale);
     if (keepsScores) impressionPts = roundHalfUp(imp.weight * (impression.score ?? 0), d);
   }
@@ -263,6 +311,7 @@ export function computeRider(
       uncategorised,
     },
     modifiers,
+    adjustedMarks: adjusted,
   };
 }
 
