@@ -2,7 +2,17 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 3 Oct 2026 · Product version 0.10.0
+Last checked: 3 Oct 2026 · Product version 0.10.1
+
+## 0.10.1 — 3 Oct 2026 {#cl-0-10-1}
+
+Release entry: [0.10.1](/admin/releases#release-0-10-1) (platform owner only)
+
+**What changed for users**
+- Nothing on screen: a self-audit of the engines for the Gouna event settings added tests and docs/AUDIT.md (findings and what to do before the event).
+
+**Manual pages updated**
+- This changelog only.
 
 ## 0.10.0 — 3 Oct 2026 {#cl-0-10-0}
 
