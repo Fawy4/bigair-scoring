@@ -50,6 +50,22 @@ Last checked: 3 Oct 2026 · Product version 0.9.2
 | {#err-trickeditor-errors-badkey} “The key of ‹label› may only use a–z, 0–9 and _ (80 characters at most).” | Admin → Master presets → Trick base (and Divisions → Trick base → Update to latest) | The master trick base could not be saved or published as it is, or the event could not move to the newest version. | Follow the sentence: fix the block it names, then press Save as a new draft again. |
 | {#err-trickeditor-errors-emptyfamily} “Every family needs a name.” | Admin → Master presets → Trick base (and Divisions → Trick base → Update to latest) | The master trick base could not be saved or published as it is, or the event could not move to the newest version. | Follow the sentence: fix the block it names, then press Save as a new draft again. |
 
+### Ask Sendbook
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-ask-errors-nokey} “Ask is not switched on: the server has no ANTHROPIC_API_KEY. The manual is at /help.” | The Ask panel (Ask button in the top bar) | The server has no ANTHROPIC_API_KEY, so Ask Sendbook is off (the Ask button is normally hidden then). | Platform owner: add ANTHROPIC_API_KEY in Vercel → Settings → Environment Variables and redeploy; Health shows whether it exists. |
+| {#err-ask-errors-signedout} “Sign in to ask. The manual is at /help.” | The Ask panel (Ask button in the top bar) | Only signed-in organisers, the platform owner and officials joined with their PIN can ask. | Sign in (organisers) or join with the PIN (officials). |
+| {#err-ask-errors-noseat} “This phone is not connected to a seat of this event. Join again with your PIN.” | The Ask panel (Ask button in the top bar) | This phone's session is not bound to an active seat of the event the screen belongs to (another event, a seat switched off, or a PIN regenerated). | Join the event again with the PIN on the join page. |
+| {#err-ask-errors-notallowed} “You cannot ask about this event.” | The Ask panel (Ask button in the top bar) | The screen belongs to an event of another organisation. | Open one of your own events and ask there. |
+| {#err-ask-errors-paused} “Ask is paused for this month — the manual is still at /help” | The Ask panel (Ask button in the top bar) | The organisation has used its monthly Ask budget. Ask is a soft stop: it starts again on the 1st of next month (UTC). | Use Help (/help). The platform owner can raise the budget on the organisation's admin page. |
+| {#err-ask-errors-toomany} “You have asked ‹n› questions in the last hour. Wait a little, or look in the manual at /help.” | The Ask panel (Ask button in the top bar) | One person may ask 30 questions an hour (ASK_SENDBOOK_HOURLY_LIMIT changes it). | Wait a few minutes, or search the manual at /help. |
+| {#err-ask-errors-empty} “Type a question first.” | The Ask panel (Ask button in the top bar) | The question box was empty. | Follow the sentence. The manual at /help answers the same questions. |
+| {#err-ask-errors-toolong} “Keep the question under 2 000 characters.” | The Ask panel (Ask button in the top bar) | Questions are limited to 2 000 characters. | Ask one thing at a time. |
+| {#err-ask-errors-failed} “No answer this time. Check the connection and ask again; the manual is at /help.” | The Ask panel (Ask button in the top bar) | The model did not answer (no connection, a time-out, or both models failed). Nothing was counted against the budget except what was used. | Ask again. If it keeps failing, the platform owner checks Health and the server log. |
+| {#err-ask-errors-ratingfailed} “Your verdict could not be saved. Try again.” | The Ask panel (Ask button in the top bar) | The thumbs could not be saved (connection, or the answer belongs to another session). | Press it again; if the page was reloaded, the verdict can no longer be given for that answer. |
+| {#err-ask-errors-ratedalready} “This answer already has a verdict.” | The Ask panel (Ask button in the top bar) | Each answer takes one verdict. | Leave a Note if there is more to say. |
+
 ### Feedback notes
 
 | Sentence on screen | Where | What it means | Fix |
@@ -542,6 +558,7 @@ Last checked: 3 Oct 2026 · Product version 0.9.2
 | {#err-admin-errors-user-not-found} “That login does not exist.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
 | {#err-admin-errors-not-a-member} “That person is not an organiser of this organisation (any more).” | Admin screens (platform owner and staff) | The person was already removed from this organisation (or never was a member). | Reload the organisation page. |
 | {#err-admin-errors-cannot-remove-self} “You cannot remove your own login.” | Admin screens (platform owner and staff) | A platform owner cannot remove their own login from an organisation. | Follow the sentence. Most admin changes need the platform owner role. |
+| {#err-admin-errors-budget-invalid} “The budget must be a whole number of tokens from 0 to 1 000 000 000.” | Admin → organisation → Ask Sendbook this month | The monthly Ask budget was not a whole number from 0 to 1 000 000 000. | Type the number of tokens without spaces or dots, e.g. 2000000. 0 switches Ask off for the organisation. |
 | {#err-admin-errors-invalid-role} “That role is not known.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
 | {#err-admin-errors-invalid-url} “That address does not look right.” | Admin screens (platform owner and staff) | The admin action was refused. | Follow the sentence. Most admin changes need the platform owner role. |
 | {#err-admin-errors-heat-running} “A heat of this event is running or paused, so it cannot be moved now. Try again when no heat is running.” | Admin screens (platform owner and staff) | The admin action was refused. | End the running heat, then move the event. |
@@ -737,6 +754,7 @@ The database refuses with a short code (for example `DRAW_NOT_LOCKED: Pro Men`);
 | {#code-bad-status} `BAD_STATUS` | [“That is not a valid state for an attempt.”](#err-liveerrors-codes-bad-status) | The database refused the action and said why. |
 | {#code-bad-tie} `BAD_TIE` | [“Choose at least two riders.”](#err-liveerrors-codes-bad-tie) | The database refused the action and said why. |
 | {#code-bad-wind-status} `BAD_WIND_STATUS` | [“Pick red, amber or green.”](#err-windcall-errors-bad-wind-status) | The wind call was not changed. |
+| {#code-budget-invalid} `BUDGET_INVALID` | [“The budget must be a whole number of tokens from 0 to 1 000 000 000.”](#err-admin-errors-budget-invalid) | The monthly Ask budget was not a whole number from 0 to 1 000 000 000. |
 | {#code-cannot-remove-self} `CANNOT_REMOVE_SELF` | [“You cannot remove your own login.”](#err-admin-errors-cannot-remove-self) | A platform owner cannot remove their own login from an organisation. |
 | {#code-client-key-reused} `CLIENT_KEY_REUSED` | [“That tap was already used for another heat.”](#err-liveerrors-codes-client-key-reused) | A queued tap from an earlier heat was sent again. |
 | {#code-demo-exists} `DEMO_EXISTS` | [“A demo organisation already exists, so nothing was created.”](#err-admin-errors-demo-exists) | The admin action was refused. |

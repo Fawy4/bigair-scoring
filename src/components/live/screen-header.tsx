@@ -48,7 +48,7 @@ export function ScreenHeader({
           {clock ? <ClockText timezone={clock.timezone} nowMs={clock.nowMs} /> : null}
         </div>
         <div className="flex items-center gap-1.5">
-          <AskLauncher variant="beach" />
+          <AskLauncher variant="beach" withHelp compact />
           {details !== undefined ? (
             <Chip data-testid="details-toggle" pressed={details} onClick={onToggleDetails}>
               {details ? (detailsLabels?.on ?? copy.live.header.detailsOn) : (detailsLabels?.off ?? copy.live.header.details)}

@@ -12,6 +12,30 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.11.0 — 3 Oct 2026 {#release-0-11-0}
+
+PR: #28
+
+### What changed
+- **Ask Sendbook**: an **Ask** button next to **Help** in the organiser and admin top bar, the head judge console's top bar and the judge and spotter headers. It opens a panel (a sheet from the bottom on a phone) where you ask about the screen you are on; the answer comes from the manual and what your screen shows, names the buttons and steps, and ends with the manual page it used.
+- **Was this right?** under every answer: either button saves a Feedback note of the new kind **Ask Sendbook** with the question, the answer and the screen.
+- **Limits**: 30 questions per person per hour, and a monthly budget per organisation (2 000 000 tokens by default). At the limit Ask says so politely and points to Help.
+- Platform owner: **Admin → Ask log** (every question and answer with tokens and a cost estimate, with search); the organisation's admin page shows this month's use and the budget; Health says whether Ask is on and which model answers.
+- Behind the scenes: the answers come from Anthropic's Claude (Sonnet 5.5; Haiku 4.5 if Sonnet fails). PINs, e-mail addresses and scores are never sent.
+
+### What to test
+- [ ] Open **Health** as the platform owner: it says "Ask Sendbook model: claude-sonnet-5-5 (if it fails: claude-haiku-4-5)".
+- [ ] As an organiser, open a simulation event's head judge console where no run order is active for today: **Hold** is grey. Press **Ask** (top bar, next to Help), type "Hold and Shift are grey on the console — why?" and press Ask: within seconds the answer names the missing active run order and the **Run order** step, and ends with "From the manual: …".
+- [ ] Tap "From the manual: …": Help opens at that part of the manual.
+- [ ] Press **No, not right** under the answer: it says "Thank you. The owner will read it…"; Admin → **Feedback** shows the note with the kind Ask Sendbook.
+- [ ] Admin → **Ask log**: your question is there with its tokens and a cost; search for "Hold" finds it.
+- [ ] On a phone (the judge or spotter screen of the same event, joined with a PIN): Ask and Help sit in the header next to Details and cover nothing; Ask opens a sheet from the bottom.
+- [ ] Switch the console to **Dark** and open Ask: the panel is dark too.
+
+### Known issues
+- No Ask button on the public pages (ASK_SENDBOOK_PUBLIC only works on the server so far).
+- The announcer's view has no header, so no Ask button there.
+
 ## 0.10.1 — 3 Oct 2026 {#release-0-10-1}
 
 PR: #27

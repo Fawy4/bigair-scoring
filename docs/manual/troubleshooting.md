@@ -92,6 +92,8 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Another plan of this day already has that name.” | Follow the sentence. | [Organiser: Run order](errors.md#err-runorder-errors-nametaken) |
 | “Another rider in your organisation already has that email address.” | Use the rider who already has that email (Add from this organisation’s riders). | [Organiser: Riders](errors.md#err-riders-errors-emailused) |
 | “Another tab is playing this simulation.” | Close the other tab, or use it. If you see it with one tab open, reload the page. | [Simulator](errors.md#err-simulator-play-lines-busy) |
+| “Ask is not switched on: the server has no ANTHROPIC_API_KEY. The manual is at /help.” | Platform owner: add ANTHROPIC_API_KEY in Vercel → Settings → Environment Variables and redeploy; Health shows whether it exists. | [Ask Sendbook](errors.md#err-ask-errors-nokey) |
+| “Ask is paused for this month — the manual is still at /help” | Use Help (/help). The platform owner can raise the budget on the organisation's admin page. | [Ask Sendbook](errors.md#err-ask-errors-paused) |
 | “at most 20 sponsors” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-sponsorsmax) |
 | “at most 6 extra leaderboards” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-leaderboardsmax) |
 | “Available once the heat has ended.” | Press End heat (or wait for the clock). | [Grey buttons on the head console](errors.md#err-controlwhy-publish) |
@@ -175,6 +177,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | ““Hide this multiplier” must be one of the multipliers, or empty.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-hidenotmultiplier) |
 | “Invalid identification scheme: ‹detail›” | Fix the colour or field the sentence names, then save. | [Organiser: Rider label](errors.md#err-ident-validation-invalid) |
 | “Keep the message to 140 letters.” | Follow the sentence. | [Organiser: Go live](errors.md#err-windcall-errors-message-too-long) |
+| “Keep the question under 2 000 characters.” | Ask one thing at a time. | [Ask Sendbook](errors.md#err-ask-errors-toolong) |
 | “Kite size “‹v›” is not a number such as 9 or 12.5.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-badkitesize) |
 | ““‹l›” already exists in that family.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-trickbase-errors-exists) |
 | “‹label› has the category “‹category›”, which is not in the category list.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-unknowncategory) |
@@ -200,6 +203,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “‹names› has already started — this correction would change who rides in it. Nothing was changed.” | Leave the result, or reset the later heat first. | [Head console](errors.md#err-publish-downstream) |
 | “Needs at least two riders.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-needtwo) |
 | “No active run order — create one in Run order & timetable.” | Run order step → pick today → Activate this plan. | [Grey buttons on the head console](errors.md#err-controlwhy-noplan) |
+| “No answer this time. Check the connection and ask again; the manual is at /help.” | Ask again. If it keeps failing, the platform owner checks Health and the server log. | [Ask Sendbook](errors.md#err-ask-errors-failed) |
 | “No connection. It will be sent when the connection is back.” | Keep the page open; move toward the hotspot. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-network) |
 | “No countdown: no heat is left in the run order.” | Follow the sentence. | [Head console](errors.md#err-headv2-breaknone-nothing-next) |
 | “No countdown: the next heat has no start time yet.” | Run order step → pin a start time on the first row. | [Head console](errors.md#err-headv2-breaknone-no-time) |
@@ -273,6 +277,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Seed ‹seed› is given to more than one rider: ‹names›. Sort or drag them afterwards.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-repeatedseed) |
 | “Seed “‹v›” is not a whole number of 1 or more.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-badseed) |
 | “Shown once the heat has ended.” | Follow the sentence. | [Head console](errors.md#err-headlive-agreementwait) |
+| “Sign in to ask. The manual is at /help.” | Sign in (organisers) or join with the PIN (officials). | [Ask Sendbook](errors.md#err-ask-errors-signedout) |
 | “Some settings need fixing.” | Follow the sentence. Only owners and admins of the organisation may save. | [Organiser: organisation settings](errors.md#err-orgsettings-fixthese) |
 | “Some settings need fixing. They are highlighted below.” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-fixthese) |
 | “Someone saved a newer version while you were editing. Reload the page; your changes were not saved.” | Reload the page, make the change again and save. | [Admin: trick base](errors.md#err-trickeditor-codes-trick-base-stale) |
@@ -370,6 +375,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “That web address is already used by another event.” | Choose another web address (slug). | [Organiser: event list and Event step](errors.md#err-event-slugtaken) |
 | “That web address is already used by another organisation.” | Choose another web address. | [Organiser: organisation settings](errors.md#err-orgsettings-slugtaken) |
 | “The banner is switched off in the Event step, so nothing shows on the public pages.” | Event step → tick “Show the wind-call banner…”. | [Organiser: Go live](errors.md#err-windcall-banneroffnote) |
+| “The budget must be a whole number of tokens from 0 to 1 000 000 000.” | Type the number of tokens without spaces or dots, e.g. 2000000. 0 switches Ask off for the organisation. | [Platform owner (/admin)](errors.md#err-admin-errors-budget-invalid) |
 | “The chosen preset is not valid.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-errors-presetinvalid) |
 | “The demo organisation was created, but its draw could not be built. Run “npm run seed:demo” to finish it.” | On a computer with the keys: npm run seed:demo. | [Platform owner (/admin)](errors.md#err-admin-demo-drawfailed) |
 | “The draw changed while the reset was being prepared. Nothing was changed; try again.” | Follow the sentence. | [Resets](errors.md#err-resetparts-errors-draw-changed) |
@@ -472,6 +478,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “These riders have almost the same kite: ‹names›.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-clash-kite) |
 | “These settings are not valid together.” | Read the list of problems above the Save button and fix each one. | [Organiser: Divisions](errors.md#err-divisions-errors-notvalidtogether) |
 | “This admin page could not be shown” | Press Try again; open Health to check the server settings; search the hosting logs for the error reference. | [Platform owner (/admin)](errors.md#err-admin-crash-heading) |
+| “This answer already has a verdict.” | Leave a Note if there is more to say. | [Ask Sendbook](errors.md#err-ask-errors-ratedalready) |
 | “This browser is signed in as an organiser. Use another browser or a private window to join as a judge or spotter.” | Use another browser or a private window to join as an official. | [Officials joining](errors.md#err-join-errors-organiser-session) |
 | “This division already has heats, so it cannot be deleted.” | Keep it, or use Reset this division. | [Organiser: Divisions](errors.md#err-divisions-errors-hasheats) |
 | “This division has heats, so it cannot be deleted.” | Keep it, or rename it. To start the division again use Reset this division. | [Organiser: Divisions](errors.md#err-divisions-hasheats) |
@@ -517,6 +524,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “This page doesn't exist” | Check the address; start from the home page. | [Public pages](errors.md#err-notfound-pagetitle) |
 | “This phone cannot keep unsent scores through a reload. Keep this page open until it says Synced.” | Keep the page open until Synced; on iPhone use the home-screen app. | [Judge and spotter phones](errors.md#err-live-queue-memoryonly) |
 | “This phone does not hold a seat yet.” | Join with the PIN. | [Officials joining](errors.md#err-seat-noseat) |
+| “This phone is not connected to a seat of this event. Join again with your PIN.” | Join the event again with the PIN on the join page. | [Ask Sendbook](errors.md#err-ask-errors-noseat) |
 | “This PIN could not be read back. Use Regenerate PIN to make a new one.” | Regenerate PIN. | [Organiser: Officials](errors.md#err-officials-pincouldnotread) |
 | “This plan is active. Activate another plan first.” | Activate another plan of that day first, then delete this one. | [Organiser: Run order](errors.md#err-runorder-errors-deleteactive) |
 | “This QR code has already been used or has expired. Ask the organiser for a new card, or type your PIN instead.” | Type the PIN instead, or print a fresh card (Officials → Print card). | [Officials joining](errors.md#err-join-errors-invalid-token) |
@@ -547,6 +555,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Two riders are tied at the cut: choose who is flagged out.” | Tick the rider to flag out. | [Head console](errors.md#err-headlive-flagoutundecided) |
 | “Type a first and a last name.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-namerequiredhint) |
 | “Type a name of at least 2 letters.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-nametooshort) |
+| “Type a question first.” | Follow the sentence. The manual at /help answers the same questions. | [Ask Sendbook](errors.md#err-ask-errors-empty) |
 | “Type numbers separated by commas, like 1, 0.75, 0.5” | Type a value the sentence asks for. | [Organiser: Divisions](errors.md#err-friendly-numberslist) |
 | “Type the code from the event's address, for example arrow-launch-2026.” | Type the last part of the event's address, for example arrow-launch-2026. | [Public pages](errors.md#err-landing-codeinvalid) |
 | “Type the web address exactly first.” | Follow the sentence. | [Resets](errors.md#err-reset-needaddress) |
@@ -581,8 +590,11 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “You are not allowed to do this.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-not-allowed) |
 | “You are not allowed to reset this event.” | Follow the sentence. | [Resets](errors.md#err-reset-errors-not-allowed) |
 | “You are not on the panel of a heat that is running.” | Organiser: Officials → Panels → tick the judge for that division. | [Judge and spotter phones](errors.md#err-judge-notonpanel) |
+| “You cannot ask about this event.” | Open one of your own events and ask there. | [Ask Sendbook](errors.md#err-ask-errors-notallowed) |
 | “You cannot remove your own login.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-cannot-remove-self) |
 | “You do not have permission to do that.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-errors-notallowed) |
+| “You have asked ‹n› questions in the last hour. Wait a little, or look in the manual at /help.” | Wait a few minutes, or search the manual at /help. | [Ask Sendbook](errors.md#err-ask-errors-toomany) |
 | “Your phone could not start a session. Check your connection and try again.” | Check the connection; on iPhone join from the home-screen app, not a private tab. | [Officials joining](errors.md#err-join-errors-no-session) |
 | “Your sheet is locked. Ask the head judge to reopen it.” | Head judge reopens the sheet. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-sheet-locked) |
+| “Your verdict could not be saved. Try again.” | Press it again; if the page was reloaded, the verdict can no longer be given for that answer. | [Ask Sendbook](errors.md#err-ask-errors-ratingfailed) |
 <!-- generated:index:end -->

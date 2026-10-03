@@ -1,10 +1,13 @@
 import type { SearchEntry } from "@/lib/manual/build";
 import { norm } from "@/lib/manual/search";
 
-/** The two pages that go with every question: what must be true before each action, and every refusal sentence with its meaning and fix. */
-export const CORE_PAGES = ["dependencies.md", "errors.md"] as const;
-/** How many pages the search adds to the core ones. */
-export const PICKED_PAGES = 5;
+/**
+ * The pages that go with every question: what must be true before each action, every refusal sentence with its meaning and fix, and the troubleshooting
+ * page's symptom → cause → fix rows (without its alphabetical index, which repeats the errors page: see forAsk).
+ */
+export const CORE_PAGES = ["dependencies.md", "errors.md", "troubleshooting.md"] as const;
+/** How many pages the search adds to the core ones (the page of the screen the person is on counts as one of them). */
+export const PICKED_PAGES = 6;
 /** Pages never picked by the search: they answer no "how" or "why" question. */
 const NEVER = new Set(["changelog.md"]);
 /** The picked pages together stay under this many characters (the core pages are never cut). Roughly 30 000 tokens. */
@@ -81,7 +84,7 @@ const ROUTES: Array<[RegExp, string]> = [
 
 /**
  * The manual pages for a question: the two core pages first, then the page of the screen the person is on, then the pages that match the question best
- * in the /help search index, 5 in all. Each section scores like /help's own search (a whole word in its heading 10, in its text 1); a page's value is
+ * in the /help search index, 6 in all. Each section scores like /help's own search (a whole word in its heading 10, in its text 1); a page's value is
  * its best section (plus 10 for each word in the page's title or summary, and up to 10 for each word the page uses at least once per 1 000 characters) plus twice the sum of its sections divided by the square root of how many sections it has.
  */
 export function pickPages(manual: AskManual, question: string, opts: { limit?: number; maxChars?: number; route?: string } = {}): AskPage[] {

@@ -191,106 +191,6 @@ export type Database = {
           },
         ]
       }
-      ask_log: {
-        Row: {
-          answer: string
-          budget_tokens: number
-          cache_read_tokens: number
-          cache_write_tokens: number
-          cited: string | null
-          context: Json
-          cost_usd: number
-          created_at: string
-          event_id: string | null
-          id: string
-          input_tokens: number
-          ip_hash: string | null
-          model: string | null
-          organisation_id: string | null
-          output_tokens: number
-          pages: string[]
-          question: string
-          rating: string | null
-          role: string
-          route: string
-          seat_id: string | null
-          status: string
-          user_id: string | null
-        }
-        Insert: {
-          answer?: string
-          budget_tokens?: number
-          cache_read_tokens?: number
-          cache_write_tokens?: number
-          cited?: string | null
-          context?: Json
-          cost_usd?: number
-          created_at?: string
-          event_id?: string | null
-          id?: string
-          input_tokens?: number
-          ip_hash?: string | null
-          model?: string | null
-          organisation_id?: string | null
-          output_tokens?: number
-          pages?: string[]
-          question: string
-          rating?: string | null
-          role: string
-          route: string
-          seat_id?: string | null
-          status?: string
-          user_id?: string | null
-        }
-        Update: {
-          answer?: string
-          budget_tokens?: number
-          cache_read_tokens?: number
-          cache_write_tokens?: number
-          cited?: string | null
-          context?: Json
-          cost_usd?: number
-          created_at?: string
-          event_id?: string | null
-          id?: string
-          input_tokens?: number
-          ip_hash?: string | null
-          model?: string | null
-          organisation_id?: string | null
-          output_tokens?: number
-          pages?: string[]
-          question?: string
-          rating?: string | null
-          role?: string
-          route?: string
-          seat_id?: string | null
-          status?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ask_log_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ask_log_organisation_id_fkey"
-            columns: ["organisation_id"]
-            isOneToOne: false
-            referencedRelation: "organisations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ask_log_seat_id_fkey"
-            columns: ["seat_id"]
-            isOneToOne: false
-            referencedRelation: "judge_seats"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       audit_log: {
         Row: {
           action: string
@@ -1454,7 +1354,6 @@ export type Database = {
       }
       organisations: {
         Row: {
-          ask_monthly_budget: number
           archived_at: string | null
           ask_monthly_budget: number
           branding: Json
@@ -1467,7 +1366,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          ask_monthly_budget?: number
           archived_at?: string | null
           ask_monthly_budget?: number
           branding?: Json
@@ -1480,7 +1378,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          ask_monthly_budget?: number
           archived_at?: string | null
           ask_monthly_budget?: number
           branding?: Json

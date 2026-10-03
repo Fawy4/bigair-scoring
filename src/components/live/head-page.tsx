@@ -271,7 +271,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
         <h1 className="whitespace-normal break-words text-name font-semibold">{shown ? heatTitle(ctx, shown) : ctx.event.name}</h1>
         <p className="text-small font-medium text-beach-muted">{[ctx.event.name, viewer.name].join(" · ")}</p>
       </div>
-      <AskLauncher variant="beach" />
+      <AskLauncher variant="beach" withHelp compact />
     </header>
   );
   // Ask Sendbook reads which heat and division the console shows

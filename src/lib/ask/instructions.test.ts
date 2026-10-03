@@ -15,11 +15,10 @@ describe("the support agent's instructions", () => {
   });
   it("send only the part below the header line", () => {
     expect(instructionsFrom("# Title\n\nAbout.\n\n---\n\nYou are X.\n")).toBe("You are X.");
-    expect(askInstructions().startsWith("You are Sendbook's support agent.")).toBe(true);
-    expect(askInstructions()).not.toContain("# Ask Sendbook — instructions");
+    expect(askInstructions().startsWith("You are Ask Sendbook, the in-product assistant of Sendbook")).toBe(true);
   });
-  it("tell the agent to cite the manual and never to handle PINs", () => {
-    expect(askInstructions()).toContain("Manual: [title](/help#anchor)");
-    expect(askInstructions()).toMatch(/Never ask for, repeat or guess a PIN/);
+  it("tell the agent to cite the manual page and never to repeat PINs", () => {
+    expect(askInstructions()).toContain("(Manual: Dependency map › Start heat)");
+    expect(askInstructions()).toContain("Never repeat PINs, e-mail addresses or another judge's scores");
   });
 });

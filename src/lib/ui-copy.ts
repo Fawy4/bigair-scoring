@@ -4110,6 +4110,7 @@ export const HELP_WHERE: Record<string, string> = {
   "platform.timeZone": "Changes only the time zone suggested for new organisations.",
   "platform.legal": "Shown on the public page /legal.",
   "admin.inviteSend": "Changes only how the invitation reaches the person: by e-mail, or a link you copy.",
+  "admin.askBudget": "Changes how many questions Ask Sendbook answers for this organisation each month; shown on the organisation's admin page and in its Organisation settings.",
   "simulator": "Changes only this simulation: the copy's heats, scores and log, never the event it was copied from.",
   "simulator.viewAs": "Opens the real screens; a seat you open is taken from the simulator until you give it back.",
   "simulator.checklist": "Changes nothing: it shows what this simulation has exercised.",

@@ -101,6 +101,15 @@ describe("findCitation", () => {
   it("accepts a full address too", () => {
     expect(findCitation("Manual: https://x.vercel.app/help#page-dependencies", anchors)).toEqual({ href: "/help#page-dependencies", title: "Dependency map" });
   });
+  it("reads the instructions' form “(Manual: Page › Section)” against the real manual", async () => {
+    const { askManual } = await import("./manual");
+    const m = askManual();
+    expect(findCitation("…and press Activate this plan.\n(Manual: Dependency map › Hold)", m)).toEqual({ href: "/help#dep-hold", title: expect.stringMatching(/^Dependency map › Hold/) });
+    expect(findCitation("(Manual: Dependency map › Start heat)", m)?.href).toBe("/help#dep-start-heat");
+    expect(findCitation("(Manual: Head judge console on a laptop)", m)?.href).toBe("/help#page-screens-console-laptop");
+    expect(findCitation("(Manual: Troubleshooting › Something that is not there)", m)?.href).toBe("/help#page-troubleshooting");
+    expect(findCitation("(Manual: A page that does not exist › Hold)", m)).toBeNull();
+  });
   it("is null when nothing is cited", () => {
     expect(findCitation("No link here.", anchors)).toBeNull();
   });

@@ -6,23 +6,31 @@ import { CORE_PAGES, pageForRoute, pickPages, questionWords } from "./pages";
 const manual = askManual();
 
 describe("pickPages", () => {
-  it("always includes the two core pages, first", () => {
+  it("always includes the dependency map and the errors page (and troubleshooting), first", () => {
     for (const q of ["why is Hold grey", "how do I print the start list", "", "zzzz qqqq", "PIN"]) {
       const files = pickPages(manual, q).map((p) => p.file);
-      expect(files.slice(0, 2)).toEqual([...CORE_PAGES]);
+      expect(files.slice(0, 3)).toEqual(["dependencies.md", "errors.md", "troubleshooting.md"]);
+      expect(CORE_PAGES).toEqual(["dependencies.md", "errors.md", "troubleshooting.md"]);
     }
   });
 
-  it("adds at most 5 other pages, never a core page twice", () => {
+  it("sends troubleshooting without its alphabetical index (the errors page has the same sentences)", () => {
+    const t = pickPages(manual, "x").find((p) => p.file === "troubleshooting.md")!;
+    expect(t.source).toContain("{#t-common}");
+    expect(t.source).not.toContain("generated:index:start");
+    expect(t.source.length).toBeLessThan(30_000);
+  });
+
+  it("adds at most 6 other pages, never a core page twice", () => {
     const files = pickPages(manual, "judge score heat publish rider PIN hold draw").map((p) => p.file);
-    expect(files.length).toBeLessThanOrEqual(7);
+    expect(files.length).toBeLessThanOrEqual(9);
     expect(new Set(files).size).toBe(files.length);
   });
 
   it("finds the console page for a question about the Hold button", () => {
     const files = pickPages(manual, "why is Hold grey").map((p) => p.file);
     expect(files).toContain("dependencies.md");
-    expect(files.some((f) => f.startsWith("screens/console") || f === "event-day.md")).toBe(true);
+    expect(files.some((f) => f.startsWith("screens/console") || f === "event-day.md" || f === "screens/organiser-go-live.md")).toBe(true);
   });
 
   it("finds the officials page for a question about PINs", () => {
@@ -39,9 +47,9 @@ describe("pickPages", () => {
 
   it("keeps the picked pages under the size limit (the core pages are never cut)", () => {
     const pages = pickPages(manual, "settings troubleshooting error sentence grey", { maxChars: 20_000 });
-    const extra = pages.slice(2).reduce((n, p) => n + p.source.length, 0);
+    const extra = pages.slice(3).reduce((n, p) => n + p.source.length, 0);
     expect(extra).toBeLessThanOrEqual(20_000);
-    expect(pages.slice(0, 2).map((p) => p.file)).toEqual([...CORE_PAGES]);
+    expect(pages.slice(0, 3).map((p) => p.file)).toEqual([...CORE_PAGES]);
   });
 });
 
@@ -57,7 +65,7 @@ describe("the page of the screen the person is on", () => {
   });
   it("goes first among the picked pages, after the core pages", () => {
     const files = pickPages(manual, "zzzz", { route: "/judge/x" }).map((p) => p.file);
-    expect(files).toEqual(["dependencies.md", "errors.md", "screens/judge.md"]);
+    expect(files).toEqual(["dependencies.md", "errors.md", "troubleshooting.md", "screens/judge.md"]);
   });
 });
 

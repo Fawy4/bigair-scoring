@@ -15,7 +15,7 @@ export interface MockRequest {
 }
 
 export const HOLD_ANSWER =
-  "Hold is grey because no run order is active for today. Go to the **Run order** step, choose today's day and press **Activate this plan**; Hold works as soon as a plan is active.\nManual: [Hold (wind hold)](/help#dep-hold)";
+  "Hold is grey because no run order is active for today. Go to the **Run order** step, choose today's day and press **Activate this plan**; Hold works as soon as a plan is active.\n(Manual: Dependency map › Hold)";
 
 const sse = (event: string, data: object) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 
@@ -32,7 +32,7 @@ export function startAskMock(): Promise<{ requests: MockRequest[]; close: () => 
       const body = JSON.parse(raw) as MockRequest;
       requests.push(body);
       const context = body.system.map((b) => b.text).join("\n");
-      const answer = /No active run order|run order is active/i.test(context) ? HOLD_ANSWER : "I do not know.\nManual: [Help](/help#page-readme)";
+      const answer = /No active run order|run order is active/i.test(context) ? HOLD_ANSWER : "The manual doesn't cover this.\n(Manual: Troubleshooting)";
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" });
       res.write(sse("message_start", { type: "message_start", message: { id: "msg_mock", type: "message", role: "assistant", model: body.model, content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 1200, output_tokens: 1, cache_creation_input_tokens: 45000, cache_read_input_tokens: 0 } } }));
       res.write(sse("content_block_start", { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }));

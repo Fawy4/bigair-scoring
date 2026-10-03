@@ -418,6 +418,7 @@ Account menu → **Organisation settings** (/org/settings). Only owners and admi
 | {#set-platform-timezone} **Default time zone** | The time zone suggested when a new organisation is created. Changes only the time zone suggested for new organisations. | Africa/Cairo | NEXT_PUBLIC_DEFAULT_TZ, else Africa/Cairo |
 | {#set-platform-legal} **Terms of use (text) / Privacy notice (text)** | Plain text shown on the public page /legal. Leave empty to show nothing. Shown on the public page /legal. | Results are provided as is… | empty |
 | {#set-admin-invitesend} **Send the sign-in email now** | Untick this if email is not working: you get a link to copy and send yourself. Changes only how the invitation reaches the person: by e-mail, or a link you copy. | The hosted plan sends only 2 sign-in emails per hour. | on |
+| {#set-admin-askbudget} **Monthly budget (input tokens)** | How many input tokens Ask Sendbook may use for this organisation each month; a manual page read again from the cache counts a tenth. At the limit Ask pauses until the 1st. 0 switches Ask off for this organisation. Changes how many questions Ask Sendbook answers for this organisation each month; shown on the organisation's admin page and in its Organisation settings. | 2000000 (about 300 questions) | 2000000 |
 <!-- generated:platform-settings:end -->
 
 ## Simulator {#settings-simulator}

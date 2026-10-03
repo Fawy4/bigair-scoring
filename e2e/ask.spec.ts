@@ -59,9 +59,10 @@ test("why is Hold grey: a streamed answer that cites the dependency map, a thumb
   // what the server sent: instructions, the two core pages, the console's page, the live context with the grey Hold reason; never a PIN or an e-mail
   const sent = lastPrompt();
   expect(sent.model).toBe("claude-sonnet-5-5");
-  expect(sent.system[0].text).toContain("You are Sendbook's support agent.");
+  expect(sent.system[0].text).toContain("You are Ask Sendbook, the in-product assistant of Sendbook");
   expect(sent.system[1].text).toContain('file="dependencies.md"');
   expect(sent.system[1].text).toContain('file="errors.md"');
+  expect(sent.system[1].text).toContain('file="troubleshooting.md"');
   expect(sent.system[1].cache_control).toEqual({ type: "ephemeral" });
   expect(sent.system[2].text).toContain('file="screens/console-laptop.md"');
   const live = sent.system[3].text;
@@ -89,7 +90,7 @@ test("why is Hold grey: a streamed answer that cites the dependency map, a thumb
   const { data: log } = await world.db.from("ask_log").select("*").eq("organisation_id", world.orgId).single();
   expect(log).toMatchObject({ status: "answered", role: "organiser", model: "claude-sonnet-5-5", input_tokens: 1200, cache_write_tokens: 45000, output_tokens: 80, rating: "down", cited: "/help#dep-hold", budget_tokens: 1200 + 56250 });
   expect(Number(log!.cost_usd)).toBeCloseTo((1200 * 2 + 45000 * 2.5 + 80 * 10) / 1e6, 6);
-  expect(log!.pages.slice(0, 3)).toEqual(["dependencies.md", "errors.md", "screens/console-laptop.md"]);
+  expect(log!.pages.slice(0, 4)).toEqual(["dependencies.md", "errors.md", "troubleshooting.md", "screens/console-laptop.md"]);
 
   // a follow-up carries the conversation
   await page.getByTestId("ask-input").fill("and on a phone?");
