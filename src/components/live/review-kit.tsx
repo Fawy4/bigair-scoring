@@ -108,7 +108,7 @@ interface CardProps {
 }
 
 /** The grid itself, at one of the sizes of `LEVELS`: one column per judge (the table header's short name over its J-number), a Panel column, one row per rider. */
-function Grid({ judges, impressions, riders, tolerance, onCell, level }: CardProps & { level: CardLevel }) {
+function Grid({ judges, impressions, riders, tolerance, onCell, level, title = true }: CardProps & { level: CardLevel; title?: boolean }) {
   const size = LEVELS[level];
   const rows = impressionGrid({ impressions, riderOrder: riders.map((r) => r.entryId), tolerance, words: { missing: "—", absent: copy.live.matrix.absent } });
   const cols = `${size.labelW}px repeat(${judges.length + 1}, ${size.cellW}px)`;
@@ -116,10 +116,12 @@ function Grid({ judges, impressions, riders, tolerance, onCell, level }: CardPro
   return (
     <div data-testid="impression-grid" data-level={level} role="table" aria-label={I.heading} className={cn("grid gap-x-1 leading-none text-beach-ink", text)} style={{ gridTemplateColumns: cols }}>
       <div role="row" className="contents">
-        <span role="columnheader" aria-hidden style={{ height: size.headH }} />
+        <span role="columnheader" className="flex items-end overflow-hidden" style={{ height: size.headH }}>
+          {title ? <h3 className="truncate text-small font-semibold text-beach-muted">{I.heading}</h3> : null}
+        </span>
         {judges.map((j) => (
           <span key={j.id} role="columnheader" data-testid="impression-judge" className="flex flex-col items-center justify-center overflow-hidden text-center font-semibold" style={{ height: size.headH }}>
-            <span className="max-w-full truncate text-small">{judgeWordOf(j)}</span>
+            <span className="max-w-full truncate text-small leading-tight">{judgeWordOf(j)}</span>
             {j.name ? <span className="max-w-full truncate text-[0.7rem] font-medium text-beach-muted">{j.tag}</span> : null}
           </span>
         ))}
@@ -204,16 +206,12 @@ export function ImpressionCardInline(props: CardProps) {
           </button>
           {open ? (
             <div data-testid="impression-popover" role="dialog" aria-label={I.heading} className="absolute right-0 top-full z-30 mt-1 flex flex-col gap-1 rounded-card border border-beach-border bg-beach-bg p-2 shadow-lg">
-              <h3 className="text-small font-semibold text-beach-muted">{I.heading}</h3>
               <Grid {...props} level={0} onCell={props.onCell ? (s, e) => { setOpen(false); props.onCell!(s, e); } : undefined} />
             </div>
           ) : null}
         </>
       ) : (
         <section data-testid="impression-card" aria-label={I.heading} className="absolute inset-0 overflow-hidden rounded-card border border-beach-line bg-beach-surface px-1.5 pt-0.5">
-          <h3 className="font-semibold text-beach-muted" style={{ height: LEVELS[fit].titleH, fontSize: "0.8125rem", lineHeight: `${LEVELS[fit].titleH}px` }}>
-            {I.heading}
-          </h3>
           <Grid {...props} level={fit} />
         </section>
       )}
@@ -231,7 +229,7 @@ export function ImpressionCardBlock(props: CardProps & { defaultOpen?: boolean }
       </button>
       {open ? (
         <div className="overflow-x-auto">
-          <Grid {...props} level={0} />
+          <Grid {...props} level={0} title={false} />
         </div>
       ) : null}
     </section>

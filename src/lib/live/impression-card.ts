@@ -38,25 +38,27 @@ export function impressionGrid(input: { impressions: JudgeImpressions[]; riderOr
 /** The sizes the card can be drawn at: tighter spacing first, then smaller digits (the table's smallest text size), then it gives way to a button. */
 export type CardLevel = 0 | 1 | 2;
 export interface LevelSize {
-  /** The rider's label column, a judge's column (and the Panel column), one rider row, the header row (name over J-number) and the heading, in pixels. */
+  /** The rider's label column, a judge's column (and the Panel column), one rider row and the header row (name over J-number), in pixels. The heading "Impression" is the header row's corner cell. */
   labelW: number;
   cellW: number;
   rowH: number;
   headH: number;
-  titleH: number;
   /** The text of the digits at this level: the body size, or the smallest size of the table. */
   small: boolean;
 }
 export const LEVELS: Record<CardLevel, LevelSize> = {
-  0: { labelW: 132, cellW: 54, rowH: 28, headH: 38, titleH: 24, small: false },
-  1: { labelW: 112, cellW: 46, rowH: 24, headH: 34, titleH: 20, small: false },
-  2: { labelW: 96, cellW: 40, rowH: 21, headH: 30, titleH: 18, small: true },
+  0: { labelW: 132, cellW: 54, rowH: 24, headH: 32, small: false },
+  1: { labelW: 112, cellW: 46, rowH: 20, headH: 28, small: false },
+  2: { labelW: 96, cellW: 40, rowH: 17, headH: 26, small: true },
 };
-const PAD = 12;
+const PAD_W = 12;
+const PAD_H = 6;
+/** The row of rider cards keeps at least this height whenever the card is on the console, so the table's top edge is in the same place for every heat. */
+export const CARD_ROW_MIN = 112;
 
 export const cardSize = (level: CardLevel, riders: number, judges: number): { w: number; h: number } => {
   const l = LEVELS[level];
-  return { w: l.labelW + (judges + 1) * l.cellW + PAD, h: l.titleH + l.headH + riders * l.rowH + PAD };
+  return { w: l.labelW + (judges + 1) * l.cellW + PAD_W, h: l.headH + riders * l.rowH + PAD_H };
 };
 
 /** The first level at which the whole grid fits in the room beside the rider cards, or "button" when none does. It never asks for more room than there is. */

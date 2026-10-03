@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardSize, fitCard, impressionGrid } from "./impression-card";
+import { CARD_ROW_MIN, cardSize, fitCard, impressionGrid } from "./impression-card";
 import type { JudgeImpressions } from "./impression-status";
 
 const status = (vals: Array<Array<number | "absent" | null>>): JudgeImpressions[] =>
@@ -42,6 +42,10 @@ describe("fitting the card beside the rider cards", () => {
   it("height counts too: many riders in a short row become the button", () => {
     expect(fitCard({ availW: 900, availH: 90, riders: 5, judges: 3 })).toBe("button");
     expect(fitCard({ availW: 900, availH: 90, riders: 1, judges: 3 })).not.toBe("button");
+  });
+  it("in the console's reserved row, 2 to 4 riders fit and 5 become the button, however wide the room", () => {
+    for (const n of [2, 3, 4]) expect(fitCard({ availW: 900, availH: CARD_ROW_MIN, riders: n, judges: 3 }), `${n} riders`).not.toBe("button");
+    expect(fitCard({ availW: 900, availH: CARD_ROW_MIN, riders: 5, judges: 3 })).toBe("button");
   });
   it("a narrow window is the button", () => {
     expect(fitCard({ availW: 120, availH: 200, riders: 2, judges: 3 })).toBe("button");

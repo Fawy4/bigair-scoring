@@ -11,6 +11,7 @@ import { HeadMatrix } from "./head-matrix";
 import { ReviewButtons, VisibilityBox } from "./head-parts";
 import { AgreementReport, AuditLog, JudgesStatus, OpenFlags, useSideData } from "./head-side-panel";
 import { useReview } from "./use-review";
+import { CARD_ROW_MIN } from "@/lib/live/impression-card";
 import { ImpressionCardInline, ReviewBar } from "./review-kit";
 import { ScreenSettings } from "./live-shell";
 import type { HeadController } from "./use-head-controller";
@@ -218,7 +219,7 @@ export function HeadLiveConsole({
       <div className="flex min-w-0 flex-col gap-2">
         {!open ? <p className="text-small font-medium text-beach-muted">{heat.status === "published" ? C.published : ""}</p> : null}
 
-        <section data-testid="rider-strip" aria-label={V.ridersStrip} className="flex flex-wrap gap-1.5">
+        <section data-testid="rider-strip" aria-label={V.ridersStrip} className="flex flex-wrap items-start gap-1.5" style={showImpressionCard ? { minHeight: CARD_ROW_MIN } : undefined}>
           {stripTiles.map(({ r, total, slot }) => (
             <button
               key={r.entryId}

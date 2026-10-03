@@ -38,11 +38,14 @@ const submit = async (heat: string, ks: SeatKey[]) => {
   for (const key of ks) await w.db.from("judge_sheets").upsert({ event_id: w.eventId, heat_id: heat, judge_seat_id: w.seats[key].id, submitted_at: new Date().toISOString() }, { onConflict: "heat_id,judge_seat_id" });
 };
 /** An ended heat of the division with `riders` riders (new ones are made when the world has fewer), every rider scored once by every judge. */
-async function endedHeat(riders: number, number: number): Promise<{ heat: string; entries: string[] }> {
+async function ensureEntries(riders: number) {
   while (w.entries.length < riders) {
     const rider = (await w.db.from("riders").insert({ organisation_id: w.orgId, first_name: `Extra${w.entries.length}`, last_name: "Rider" }).select("id").single()).data!;
     w.entries.push((await w.db.from("entries").insert({ division_id: w.divisionId, rider_id: rider.id, seed: w.entries.length + 1, status: "confirmed", source: "manual" }).select("id").single()).data!.id);
   }
+}
+async function endedHeat(riders: number, number: number): Promise<{ heat: string; entries: string[] }> {
+  await ensureEntries(riders);
   const round = (await w.db.from("rounds").select("id").eq("division_id", w.divisionId).single()).data!;
   const heat = (
     await w.db
@@ -56,7 +59,7 @@ async function endedHeat(riders: number, number: number): Promise<{ heat: string
   for (const [p, entry] of entries.entries()) {
     await w.db.from("heat_slots").insert({ heat_id: heat, position: p + 1, entry_id: entry, vest_colour: colours[p] });
     const a = (await w.db.from("trick_attempts").insert({ heat_id: heat, entry_id: entry, seq: 1, status: "landed", trick_name: "Left Backroll", direction: "left", client_key: crypto.randomUUID() }).select("id").single()).data!;
-    for (const key of keys) await w.db.from("trick_scores").insert({ attempt_id: a.id, judge_seat_id: w.seats[key].id, score: 7, client_key: crypto.randomUUID(), client_rev: 1 });
+    for (const key of keys) await w.db.from("trick_scores").insert({ attempt_id: a.id, judge_seat_id: w.seats[key].id, score: 8 - p * 0.5, client_key: crypto.randomUUID(), client_rev: 1 });
   }
   return { heat, entries };
 }
@@ -173,6 +176,7 @@ test("the Impression grid shows what the judges gave, with the outlier colour on
 
 test("at laptop width the card sits beside the rider cards for 2 and 3 riders, shrinks or becomes a button for 5, and the table's top edge never moves", async ({ browser }) => {
   test.setTimeout(420_000);
+  await ensureEntries(5); // the console reads the riders when the page opens
   const page = await head(browser, { width: 1280, height: 900 });
   const tops: number[] = [];
   const fits: string[] = [];
@@ -180,6 +184,7 @@ test("at laptop width the card sits beside the rider cards for 2 and 3 riders, s
     const { heat, entries } = await endedHeat(n, number);
     for (const key of keys) for (const e of entries) await imp(heat, e, key, 6.5);
     await submit(heat, keys);
+    await page.reload();
     await pick(page, heat);
     await expect(page.getByTestId("rider-strip-tile")).toHaveCount(n, { timeout: 60_000 });
     const region = page.getByTestId("impression-region");
