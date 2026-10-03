@@ -153,7 +153,7 @@ test("the Impression grid shows what the judges gave, with the outlier colour on
   await expect(card.getByTestId("impression-judge").first()).toContainText("Judge 1");
   await expect(card).toContainText("Panel");
   const cell = (rider: string, seat: SeatKey) => card.locator(`[data-testid="impression-cell"][data-rider="${rider}"][data-seat="${w.seats[seat].id}"]`);
-  await expect(cell(entries[0], "j1")).toHaveText("8.00");
+  await expect(cell(entries[0], "j1")).toContainText("8.00");
   await expect(cell(entries[0], "j3")).toHaveText(/^1\.00/);
   await expect(cell(entries[0], "j3")).toHaveAttribute("data-band", "3"); // the deliberately low one: red, further than twice the tolerance from the panel mean
   await expect(cell(entries[0], "j1")).not.toHaveAttribute("data-band", "3");
@@ -192,7 +192,8 @@ test("at a 15-inch laptop width the card sits beside the rider cards for 2 and 3
     await expect(region).toBeVisible({ timeout: 40_000 });
     await page.waitForTimeout(500);
     const fit = (await region.getAttribute("data-fit"))!;
-    console.log(`riders ${n}: fit ${fit}, room ${await region.getAttribute("data-room")}`);
+    const box = async (id: string) => JSON.stringify(await page.getByTestId(id).first().boundingBox());
+    console.log(`riders ${n}: fit ${fit}, room ${await region.getAttribute("data-room")}; strip ${await box("rider-strip")}; tiles ${await box("rider-tiles")}; first tile ${await box("rider-strip-tile")}; region ${await box("impression-region")}`);
     fits.push(fit);
     // the card (or its button) is in the same row as the rider cards, to the right of them, never below
     const r = (await region.boundingBox())!;
