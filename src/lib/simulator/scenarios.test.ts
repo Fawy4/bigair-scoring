@@ -6,10 +6,10 @@ const row = (scenario: string | null, kind: LogRow["kind"], n: number, text = "x
 const rider = (entryId: string, used: number, riding = true, position = 1): RiderNow => ({ entryId, used, riding, position });
 
 describe("the scenario list", () => {
-  it("is the eleven scenarios of the brief, each once", () => {
-    expect(SCENARIO_KEYS.length).toBe(11);
-    expect(new Set(SCENARIO_KEYS).size).toBe(11);
-    expect(SCENARIO_KEYS).toEqual(expect.arrayContaining(["wind_hold", "dns", "duplicate", "judge_dies", "tie", "past_cap", "reopen", "plan_b", "out_of_attempts", "hold_final", "rerun"]));
+  it("is the twelve scenarios (the eleven of the brief and Abort the start), each once", () => {
+    expect(SCENARIO_KEYS.length).toBe(12);
+    expect(new Set(SCENARIO_KEYS).size).toBe(12);
+    expect(SCENARIO_KEYS).toEqual(expect.arrayContaining(["wind_hold", "dns", "duplicate", "judge_dies", "tie", "past_cap", "reopen", "plan_b", "out_of_attempts", "hold_final", "rerun", "abort_start"]));
   });
   it("says which need a heat that is running", () => {
     expect(SCENARIOS.plan_b.needsRunningHeat).toBe(false);
@@ -22,7 +22,7 @@ describe("the scenario list", () => {
 describe("the checklist", () => {
   it("lists every scenario, ticked when it has been exercised", () => {
     const rows = checklistFromLog([row("dns", "scenario", 1, "Rider Red did not show up"), row("tie", "scenario_failed", 2, "no heat")]);
-    expect(rows.length).toBe(11);
+    expect(rows.length).toBe(12);
     expect(rows.find((r) => r.key === "dns")).toMatchObject({ done: true, count: 1, lastText: "Rider Red did not show up" });
     expect(rows.find((r) => r.key === "tie")).toMatchObject({ done: false, count: 0, failedText: "no heat" });
     expect(rows.find((r) => r.key === "rerun")).toMatchObject({ done: false, count: 0 });

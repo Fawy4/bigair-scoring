@@ -2,7 +2,7 @@
 
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
-import { Binoculars, ExternalLink, Eye, EyeOff, ScanEye, Gavel, House, Megaphone, Monitor, Radio, ShieldCheck, Smartphone, Trophy, User, Network, type LucideIcon } from "lucide-react";
+import { Binoculars, Flag, ExternalLink, Eye, EyeOff, ScanEye, Gavel, House, Megaphone, Monitor, Radio, ShieldCheck, Smartphone, Trophy, User, Network, type LucideIcon } from "lucide-react";
 import { Button, disabledWhen } from "@/components/org/button";
 import { Pill } from "@/components/live/pill";
 import { seatGroups, viewHref, type SeatRole } from "@/lib/simulator/view-as";
@@ -102,6 +102,9 @@ export function ViewAs({ eventId, sim }: { eventId: string; sim: Sim }) {
           </LinkButton>
           <LinkButton icon={Monitor} testId="view-screen" href={viewHref(eventId, { kind: "screen" })}>
             {T.screen}
+          </LinkButton>
+          <LinkButton icon={Flag} testId="view-flag" href={viewHref(eventId, { kind: "flag" })}>
+            {T.flag}
           </LinkButton>
         </div>
         {status.riders.length ? (

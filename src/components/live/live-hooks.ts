@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { beep } from "@/lib/live/beep";
+import { beep, horn } from "@/lib/live/beep";
+import { hornsFor, type FlagState } from "@/lib/live/flags";
 import { timerCues } from "@/lib/live/timer-cues";
 import { holdScreenAwake } from "@/lib/live/wake-lock";
 import { useObserving } from "./read-only";
@@ -53,4 +54,20 @@ export function useEndAtZero(supabase: SupabaseClient, heatId: string | null, ti
     const t = setInterval(call, 3000);
     return () => clearInterval(t);
   }, [supabase, heatId, timeUp, status, enabled, observing]);
+}
+
+/**
+ * The horns (Flags): one at green, one at the last minute, two at red (finished), one at resume, only when Sound is on, and never after a reload (the first
+ * reading sounds nothing). With flags off there is no state and the old beeps (`useTimerSound`) apply.
+ */
+export function useFlagHorns(state: FlagState | null, soundOn: boolean): void {
+  const prev = useRef<FlagState | null>(null);
+  const seen = useRef(false);
+  useEffect(() => {
+    const last = seen.current ? prev.current : null;
+    prev.current = state;
+    seen.current = true;
+    const n = hornsFor(last, state);
+    if (n && soundOn) horn(n);
+  }, [state?.kind, state?.why, soundOn]); // eslint-disable-line react-hooks/exhaustive-deps
 }

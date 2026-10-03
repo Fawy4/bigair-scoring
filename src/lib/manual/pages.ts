@@ -22,6 +22,7 @@ export const MANUAL_PAGES: ManualPage[] = [
   { file: "screens/organiser-access.md", group: "Screens" },
   { file: "screens/console-laptop.md", group: "Screens" },
   { file: "screens/console-phone.md", group: "Screens" },
+  { file: "screens/flags.md", group: "Screens" },
   { file: "screens/judge.md", group: "Screens" },
   { file: "screens/spotter.md", group: "Screens" },
   { file: "screens/announcer.md", group: "Screens" },

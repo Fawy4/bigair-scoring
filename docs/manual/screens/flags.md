@@ -1,0 +1,77 @@
+# Flags and the start sequence
+
+How the clock drives the flags: the four colours, the start sequence on the head judge's console, the flag strip on every live screen, the flag marshal's screen (/e/‹event›/flag), the horns, and what **Abort** does.
+
+Last checked: 3 Oct 2026 · Product version 0.13.0
+
+## Why it exists {#fl-purpose}
+
+On a Big Air beach the riders ride to flags and horns, not to a phone. The system already had the clock; with **Flags** on, the clock drives the flags. The flag marshal, who may be out of shouting distance or behind a barrier, gets a screen that **is** the flag. Flags are **on by default for every event** (Event step → **Flags**).
+
+## What each colour means {#fl-colours}
+
+| Flag | Default colour | What is happening | What the strip says |
+|---|---|---|---|
+| **Before start** | Yellow | The start sequence is running: the pre-start countdown (default 1:00). The heat has not started. | “Before start” and the countdown |
+| **Running** | Green | The heat clock is running. Judges and spotters can score and log. | “Running” and the time left |
+| **Last minute** | Yellow | The last part of the heat (default 1:00 left). One horn when it begins. | “Last minute” and the time left |
+| **Stopped or paused** | Red | No heat is running. The words say which: **Finished — next: ‹heat›, est. ‹time›** (0:00 reached or the heat has ended), **Paused**, **Hold — times update when we resume** (wind hold between heats), or “Next: ‹heat›” between heats and before the first heat of the day. | The words above; no countdown |
+
+The colours, the words of the first three states and the lengths are set per event (see [the Flags card](#fl-settings)). The words are always on the strip: colour is never the only signal. Text is black on yellow, white on green and red.
+
+## The start sequence {#fl-sequence}
+
+On the head judge's console (laptop and phone) **Start heat** becomes **Start sequence** when flags are on. Beside it is a one-tap choice of the pre-start length for this heat: the event's default (1:00), **2:00**, or **Start now**, which skips the yellow.
+
+1. Press **Start sequence**. The flag goes **yellow** with the pre-start countdown. The console shows **Start now** and **Abort** instead.
+2. At **0:00 of the pre-start the heat starts by itself**: green, the heat clock starts, one horn. This does not depend on any phone staying awake: the database stores the moment the sequence was armed and the pre-start length, and every screen works the state out from the server's clock. A console that reloads, or a judge who opens the page late, sees the right colour at once. The heat's start time is exactly that moment.
+3. During the yellow, **Start now** makes it green at once. **Abort** puts the flag back to **red** and the heat back to “not started”; the audit log keeps the abort and the time. Judges' queues and spotters' loggers open at **green**, not at the yellow.
+4. When the time left reaches the last-minute length: **yellow** again, one horn.
+5. At **0:00**: **red** with the word **Finished**, two horns. The flag goes red at 0:00 even before the head judge presses **End heat**; **End heat** itself stays manual and unchanged. A jump begun before the horn is still logged and scored as before.
+6. **Pause**: red with **Paused**, no horn. **Resume**: back to green or yellow according to the time left (a resume with 20 seconds left is yellow), one horn. A wind **Hold** between heats shows red with **Hold**.
+
+The pre-start time comes out of the gap before the heat. The run order's estimates do not change: a heat's estimated and actual start are the **green** moment.
+
+## The flag strip {#fl-strip}
+
+The clock line of every live screen is the flag strip: same height, filled with the state's colour, showing the state's words, the countdown (pre-start remaining, then heat remaining) and the heat name. It is on the head judge console (laptop and phone), the judge's and spotter's phones, the announcer, the observer's views and the public page's live tab (and the public home page). It never pushes a button off a 390 × 844 phone in Normal size.
+
+On the **big screen** a coloured frame surrounds the content in the state's colour, and the state word and countdown are large in its header, in both Day and Dark colours. The **announcer** also gets a text cue for each change: “Yellow — one minute to the start of ‹heat›”, “Green — ‹heat› is running”, “Yellow — last minute of ‹heat›”, “Red — ‹heat› finished”, “Red — ‹heat› paused”, “Green — ‹heat› resumed”, “Red — the start of ‹heat› is aborted”.
+
+## The flag marshal's screen (Flag view) {#fl-view}
+
+![The Flag view on a phone](../img/flags-view-390.png)
+*flags-view-390.png — the whole screen is the flag: the state's word and the countdown, the heat and its riders with their Lycra colours.*
+
+An address per event, **/e/‹event›/flag**, public (the marshal has no login). It is linked from **Go live** and from the **Officials** step as **Flag marshal's screen**, with a QR to print. For a simulation event the simulator's **View as…** has a **Flag view** button.
+
+- The whole screen is the state's colour; the state's word and the countdown fill it (readable from 20 metres in sunlight). Under them: the heat's name and its riders, each with the Rider label (Lycra colour written as text too).
+- **Sound on**: one tap, then the horn sounds on every change (iPhones only allow sound after a tap).
+- The screen is kept awake while the page is open, and refreshes itself every two seconds.
+- **Safety rule:** if the view has had no contact with the server for **10 seconds** the whole screen turns **grey** and says “No connection — check with the head judge”. A stale green is never shown.
+- A simulation event answers “This event isn't public” to anyone but its organiser (and its observers), like the other public pages. An observer can open the Flag view; it is read-only for everybody.
+
+## The horns {#fl-horns}
+
+One horn at green, one at the last minute, **two at red (finished)**, one at resume. Nothing at a pause or an abort. They sound only after **Sound on** on the screen that has it (the head console's setting also applies to its strip; the Flag view has its own **Sound on**). Nothing vibrates. With flags off the old beeps (one at 1:00, two at time up) apply as before.
+
+## The Flags card (Event step) {#fl-settings}
+
+Event step → **Flags**:
+- **Flags on** (default on). Off: every screen looks exactly as it did before flags: **Start heat** on the console, the plain timer, no frame on the big screen, no marshal's screen. Switching off cancels a start sequence that is running.
+- The **word** and the **colour** of each of the four states (before start, running, last minute, stopped or paused). **Finished**, **Paused** and **Hold** are always spelled out; the word of the stopped state shows between heats.
+- **Pre-start length** (default 60 seconds) and **Last-minute length** (default 60 seconds).
+
+Each has a “?” saying where it shows. The full table is in [Settings](../settings.md).
+
+## What Abort does {#fl-abort}
+
+Only while the yellow runs: the flag goes red, the heat goes back to “not started” (it is still the next heat and can be started again), nothing is scored, and the audit log has the line “Start sequence aborted” with the time. It sounds no horn.
+
+## The simulator {#fl-sim}
+
+Virtual officials follow the sequence: they log and score only while the heat is **Running** or **Last minute**. At ×10 a 1:00 pre-start lasts 6 seconds. **Skip to end of heat** lands on red (Finished). The scenario **Abort the start** waits for the next yellow and aborts it. See [Simulator](simulator.md).
+
+## What it depends on {#fl-depends}
+
+Flags on (Event step), and for **Start sequence** the same as **Start heat** ([dependency map](../dependencies.md#dep-start-sequence)). Refusals, in the usual words with **Learn more**: “Another heat is already running or starting (‹max› at a time). End it or abort its start first, or ask the organiser to allow more in the Event step” (the one-heat-at-a-time rule), “No start sequence is running for this heat, so there is nothing to abort.”, “The flags are switched off for this event, so there is no start sequence. Press Start heat, or switch Flags on in the Event step.”

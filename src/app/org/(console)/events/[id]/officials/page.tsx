@@ -4,6 +4,9 @@ import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { loadPanelOverview } from "@/lib/org/panel-overview";
 import { createServiceClient } from "@/lib/supabase/service";
 import { copy } from "@/lib/ui-copy";
+import { FlagMarshalCard } from "./flag-marshal-card";
+import { requestOrigin } from "@/lib/platform/origin";
+import { eventUrl } from "@/lib/public/share";
 import { OfficialsManager } from "./officials-manager";
 import type { RiderChoice, SeatRow } from "./seat-card";
 
@@ -13,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function OfficialsStepPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase } = await getOrgContext();
-  const { data: event } = await supabase.from("events").select("id, name, settings").eq("id", id).maybeSingle();
+  const { data: event } = await supabase.from("events").select("id, name, slug, settings").eq("id", id).maybeSingle();
   if (!event) notFound();
 
   const [{ data: seats }, { data: contacts }, overview, { data: entries }, { data: divisions }] = await Promise.all([
@@ -60,6 +63,7 @@ export default async function OfficialsStepPage({ params }: { params: Promise<{ 
     <main className="flex max-w-5xl flex-col gap-6">
       <h1>{copy.officials.stepHeading}</h1>
       <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.officials.intro}</p>
+      {parseEventSettings(event.settings).flags.enabled ? <FlagMarshalCard url={`${eventUrl(await requestOrigin(), event.slug)}/flag`} path={`/e/${event.slug}/flag`} /> : null}
       <OfficialsManager
         eventId={id}
         eventName={event.name}

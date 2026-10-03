@@ -2,7 +2,7 @@
 
 The judge's phone at /judge/‹event›: a scoring queue during the heat, then the Impression / Variety score for every rider and Submit.
 
-Last checked: 3 Oct 2026 · Product version 0.12.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#ju-purpose}
 
@@ -15,7 +15,7 @@ Judges watch the water, not the phone. Each attempt the spotter logs arrives as 
 
 | Control | What it does |
 |---|---|
-| Header | Heat and seat name, the slim timer (Running / Paused / Time up / On hold), the connection badge (**Synced**, **Pending ‹n›**, **Offline**, **Failed — tap to retry**), the time now, **Details**. |
+| Header | Heat and seat name, the slim timer — with the Flags on, the **flag strip** (the flag's colour, its words, the countdown and the heat name; the queue opens at **green**, not at the yellow; [Flags](flags.md)) —  (Running / Paused / Time up / On hold), the connection badge (**Synced**, **Pending ‹n›**, **Offline**, **Failed — tap to retry**), the time now, **Details**. |
 | Queue card | The attempt: Rider label (colour word, name), attempt number, trick name, “Repeat — 2nd time · you gave 7.0 before”. A crash needs no score (“Crashed — no score needed”). |
 | Score pad | Tap the whole number then the decimal, or type in the small box (greyed “0.0”); **Save**. With criteria (Height, Extremity…) one tab per criterion; the trick score appears when every criterion is set. Values off the scale's step are refused: the pad greys out Save, outlines the box in red and says why under the pad (“That score is not on the 0.1 step. Use 7.2 or 7.3.” with a **Learn more** link to [this page](#ju-pad-step)), and the database refuses them too (“That score is not on the 0.1 step. Use 7.2 or 7.3.”). |
 | **Missed** | “I did not see it. No score from me; the panel average uses the others.” |

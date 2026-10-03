@@ -1,6 +1,6 @@
 /** The scenario buttons of the simulator (owner brief, 1 Oct 2026). Words for the labels live in ui-copy.ts; this file is the list and the small pure choices behind it. */
 
-export const SCENARIO_KEYS = ["wind_hold", "dns", "duplicate", "judge_dies", "tie", "past_cap", "reopen", "plan_b", "out_of_attempts", "hold_final", "rerun"] as const;
+export const SCENARIO_KEYS = ["wind_hold", "dns", "duplicate", "judge_dies", "tie", "past_cap", "reopen", "plan_b", "out_of_attempts", "hold_final", "rerun", "abort_start"] as const;
 export type ScenarioKey = (typeof SCENARIO_KEYS)[number];
 export const isScenarioKey = (k: string): k is ScenarioKey => (SCENARIO_KEYS as readonly string[]).includes(k);
 
@@ -23,6 +23,8 @@ export const SCENARIOS: Record<ScenarioKey, ScenarioInfo> = {
   out_of_attempts: { needsRunningHeat: true, needsFreshHeat: false },
   hold_final: { needsRunningHeat: false, needsFreshHeat: false },
   rerun: { needsRunningHeat: true, needsFreshHeat: false },
+  /** Waits for the yellow of a start sequence, then aborts it (the heat goes back to not started, red). */
+  abort_start: { needsRunningHeat: false, needsFreshHeat: false },
 };
 
 export interface LogRow {

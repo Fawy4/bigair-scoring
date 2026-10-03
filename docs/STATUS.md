@@ -1148,3 +1148,28 @@ Started from main 0.11.0, rebased onto main 0.11.1 (fix session, #29); version 0
 ### Not done / not verified
 - Not tried on a real phone.
 - Pause shown on the console uses realtime on the live address; in this sandbox (websockets blocked) the console asks every 5 s, so the "within a second" for the console side could not be measured here.
+
+## Flags – start sequence and flag states on every screen (branch `flags`, 3 Oct 2026)
+
+Started from main 0.12.0 (Polish 2b and fix session 1 merged); version 0.13.0 (a feature).
+
+### Done
+1. **State machine** (`src/lib/live/flags.ts`, pure, tests first in `flags.test.ts`): the four states derived from time stamps only (`armed_at` + `prestart_sec`, `started_at`, `paused_*`, duration) and the server clock — Before start, Running, Last minute, Stopped or paused (Finished / Paused / Hold / between heats / before the first heat). Also the horns (`hornsFor`), the announcer's cues (`cueFor`) and the text colour (`textOn`: black on yellow, white on green and red). Settings schema `src/lib/schemas/flags.ts` on `events.settings.flags` (on by default; labels, colours, pre-start 60 s, last-minute 60 s).
+2. **Database** (`20261021100000_flags_start_sequence.sql`, applied to the hosted project): `heats.armed_at` / `prestart_sec`; `arm_heat(heat, prestart)` (null = event default, 0 = start now), `abort_start`, `start_heat` on an armed heat = Start now, `start_armed_if_due` (any official device writes the start down at the armed moment; observers refused); `heat_effective_status` already answers `running` once now ≥ armed + pre-start, so every write gate opens at green, never at the yellow; `pause_heat`, `end_heat`, `end_heat_if_due` write an armed heat's start down first; switching Flags off cancels a running start sequence; the audit log has `heat_armed` and `heat_start_aborted`; the public timetable and site functions carry the armed columns and the flag settings; the migration writes `flags.enabled = true` for every event (Arrow, EKL and Demo included) — nothing else on them was touched. The simulator's fast clock covers the pre-start (×10: 1:00 → 6 s).
+3. **Screens:** `FlagStrip` replaces the clock line (console laptop and phone, judge, spotter, announcer, observed screens, public live tab and home); big screen frame + large word and countdown (Day and Dark); announcer cues; `Flag view` at `/e/<event>/flag` (polls `/e/<event>/flag/data` every 2 s, grey after 10 s without contact, Sound on, wake lock) linked from Go live and the Officials step (QR); Event step **Flags** card; horns replace the beeps when flags are on; nothing vibrates.
+4. **Simulator:** virtual officials follow the sequence (yellow, then green); Skip to end lands on red; scenario **Abort the start** (twelve scenarios now); View as… and the observer's switcher have a **Flag view**.
+5. **Manual:** new page *Flags and the start sequence*; updated console (laptop, phone), judge, spotter, announcer, observer, big screen, public live and home, Event step, Officials, Go live, simulator, dependency map, glossary, changelog; settings and errors regenerated (four new refusals with their notes).
+
+### Decisions I made where the brief was silent
+- The stopped state's *label* (default "Stopped") shows between heats; **Finished**, **Paused** and **Hold** are always spelled out, so renaming the stopped state cannot hide why the flag is red.
+- Green default is #15803D (not #16A34A) so white text on it reads at 5:1.
+- After a heat finishes the strip keeps saying "Finished — next: …" until the next heat starts (also during a long break); a wind Hold between heats overrides it with "Hold".
+- A start sequence that is running when Flags are switched off is cancelled (audit line says so).
+- A heat whose pre-start is over but whose start nobody has written down yet counts as running everywhere (database gates and every screen), with the start time = armed + pre-start; the next official device writes it down.
+
+### Tests
+See the pull request description for the numbers.
+
+### Not done / not verified
+- Not tried on a real phone; the horn is a synthesised tone.
+- At ×10 / ×20 on the simulator the last-minute length is not shortened, so a fast heat is yellow (last minute) from its green.

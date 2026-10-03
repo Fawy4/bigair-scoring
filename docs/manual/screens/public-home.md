@@ -2,7 +2,7 @@
 
 The product's home page (/) for riders and spectators: live events, upcoming events, recent results, and a box for an event code.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#ph-purpose}
 
@@ -15,6 +15,7 @@ The front door. It lists only published, public events: live ones first (a live 
 
 | Control | What it does |
 |---|---|
+| (on an event's home page) **Flag strip** | With the Flags on, the event page shows the flag strip at the top, as the live tab does ([Flags](flags.md)). The flag marshal's screen is a separate address, /e/‹event›/flag. |
 | Event cards | Open the event's public page. |
 | **Have an event code?** + **Go** | Opens /e/‹code›; the code is the last part of the event's address (for example arrow-launch-2026). For an event that is not listed. |
 | “Organiser? **Sign in** · Official? **Join with your PIN**” | Organiser sign-in (/org/login) and the officials' join page (/join). |

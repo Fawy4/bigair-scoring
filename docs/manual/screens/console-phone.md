@@ -2,7 +2,7 @@
 
 The head judge's /head/‹event› page on a phone: the same controls as the laptop console in one column, and a Score tab when the head judge also scores.
 
-Last checked: 3 Oct 2026 · Product version 0.12.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#cp-purpose}
 
@@ -17,7 +17,8 @@ Running heats from the beach without a laptop. The score table needs a wider scr
 |---|---|
 | **Score** / **Control** tabs | Only when the head judge also scores (“Head judge also scores” in Officials): **Score** is exactly a judge's queue ([Judge](judge.md)); **Control** holds the controls. Otherwise the page is just the controls. |
 | Division selector | The same divisions as the laptop's tabs, remembered on the device. |
-| Heat buttons | **Start heat**, **Pause**, **Resume**, **End heat**, **Hold (wind)**, **Resume at** (restart time), **Shift +5**, **Shift +10**, **Cancel heat**, **Re-run heat**, **Publish**, **Re-open**, and the **Live scores: Public / Hidden** pill beside Publish (one tap changes whether spectators see this heat live; “Division default” under it means the heat follows the division's setting). A grey button says why under it. There is no timer reset: use Cancel heat (with a reason) or Re-run heat. |
+| Flag strip | The timer is the **flag strip** (flags on): the flag's colour, the state's words, the countdown and the heat name ([Flags](flags.md)). |
+| Heat buttons | **Start sequence** (**Start heat** when the Flags are off) with the pre-start choice beside it (the event's default, **2:00**, **Start now**); during the yellow **Start now** and **Abort**; **Pause**, **Resume**, **End heat**, **Hold (wind)**, **Resume at** (restart time), **Shift +5**, **Shift +10**, **Cancel heat**, **Re-run heat**, **Publish**, **Re-open**, and the **Live scores: Public / Hidden** pill beside Publish (one tap changes whether spectators see this heat live; “Division default” under it means the heat follows the division's setting). A grey button says why under it. There is no timer reset: use Cancel heat (with a reason) or Re-run heat. |
 | Run order | Pick a heat; lines show planned, started and estimated times. |
 | **Details** / **Hide details** | **Rider totals** (with the formula and attempts used), **What blocks Publish** (with **Choose order** for a tie). |
 | Screen settings | Daylight / Dark, Normal / Large, on this phone only. |

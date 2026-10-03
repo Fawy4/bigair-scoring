@@ -2,7 +2,7 @@
 
 Step 4 of an event (/org/events/‹id›/officials): the seats of judges, head judge, spotters, announcer and observers, their PINs and QR cards, which judges score which division, and which riders a spotter calls.
 
-Last checked: 3 Oct 2026 · Product version 0.11.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#of-purpose}
 
@@ -21,6 +21,7 @@ Every official has their own **seat** with their own 6-digit **PIN**. They join 
 
 | Control | What it does |
 |---|---|
+| **Flag marshal's screen** | The address of the Flag view (/e/‹event›/flag) with a **QR to print** (shown when the Flags are on). The marshal needs no login ([Flags](flags.md#fl-view)). |
 | **Panels need attention** | Lists each division whose panel is short (“Pro Men needs 3 judges, 2 assigned”), or “✔ Every division has enough judges.” |
 | Team table | Name (click to rename), Role, Status (Active / Switched off), Last seen (“just now”, “5 min ago”, “never joined”). **Search officials**; tick boxes with **Switch on**, **Switch off**, **Delete**. |
 | **Waiting for approval** | Officials who asked to be added on the join page (“Not on the list? Add your name”): **Approve and make PIN** or **Decline**. |

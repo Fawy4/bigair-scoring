@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnnouncerView } from "./announcer-view";
+import { AnnouncerFlags } from "./flag-cues";
 import { HeadLiveConsole } from "./head-live-console";
 import type { FixTarget } from "@/lib/live/publish-checklist";
 import { TieDialog } from "./head-dialogs";
@@ -9,7 +10,7 @@ import { BreakStrip, ControlMessage, DivisionTabs, HeatDialogs, RunOrderList, St
 import { HeatControl, type ReviewProps } from "./heat-control";
 import { useHeadController } from "./use-head-controller";
 import { JudgeScreen } from "./judge-screen";
-import { useEndAtZero, useTimerSound, useWakeLock } from "./live-hooks";
+import { useEndAtZero, useFlagHorns, useTimerSound, useWakeLock } from "./live-hooks";
 import { LiveShell, ScreenSettings, useLiveSettings } from "./live-shell";
 import { PracticePanel } from "./practice-panel";
 import { useLiveHeat } from "./use-live-heat";
@@ -181,7 +182,8 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   const clockRemaining = clockHeat ? remainingMs({ status: clockHeat.status, durationSec: clockHeat.duration_sec, startedAt: clockHeat.started_at, pausedAt: clockHeat.paused_at, pausedTotalSec: clockHeat.paused_total_sec }, nowServer) : 0;
   const clockRunning = clockHeat?.status === "running";
   useEndAtZero(supabase, clockHeat?.id ?? null, Boolean(clockHeat) && clockRunning && clockRemaining <= 0, clockHeat?.status);
-  useTimerSound(clockRemaining, Boolean(clockRunning), settings.soundOn);
+  useTimerSound(clockRemaining, Boolean(clockRunning) && !c.flag, settings.soundOn);
+  useFlagHorns(c.flag?.state ?? null, settings.soundOn);
   useWakeLock(Boolean(clockHeat) && (clockHeat!.status === "running" || clockHeat!.status === "paused"));
 
   const totalsList = (
@@ -289,6 +291,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
     return (
       <div data-testid="head-page" data-layout="announcer" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
+        <AnnouncerFlags model={c.flag} nowMs={nowServer} timezone={ctx.event.timezone} />
         {shown && heatDivision && head ? <AnnouncerView nowMs={nowServer} ctx={ctx} heat={shown} division={heatDivision} attempts={live.attempts} riders={riders} head={head} wordFor={wordFor} /> : <p className="px-3 py-2 text-body font-medium text-beach-muted">{H.noHeat}</p>}
       </div>
     );

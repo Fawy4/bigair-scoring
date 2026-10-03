@@ -136,7 +136,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
   for (const r of nameRows ?? []) seatNames[r.id] = r.name;
 
   return {
-    event: { id: event.id, name: event.name, slug: event.slug, timezone: event.timezone, judgesMayLogAttempts: settings.judgesMayLogAttempts, maxRunningHeats: settings.maxRunningHeats, isSimulation: Boolean(event.is_simulation), readyCallMin: settings.readyCallMin, publicLiveScores: settings.publicLiveScores },
+    event: { id: event.id, name: event.name, slug: event.slug, timezone: event.timezone, judgesMayLogAttempts: settings.judgesMayLogAttempts, maxRunningHeats: settings.maxRunningHeats, isSimulation: Boolean(event.is_simulation), readyCallMin: settings.readyCallMin, publicLiveScores: settings.publicLiveScores, flags: settings.flags },
     viewer,
     divisions,
     rounds: roundRows ?? [],

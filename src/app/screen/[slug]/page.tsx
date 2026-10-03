@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { ClockText } from "@/components/clock-text";
 import { notFound } from "next/navigation";
 import { HeatClock } from "@/components/public/heat-clock";
+import { BigScreenFlag } from "@/components/public/public-flag";
+import { publicFlagData } from "@/lib/public/flag-data";
 import { Logo } from "@/components/public/logo";
 import { LivePoll } from "@/components/public/poll";
 import { Qr } from "@/components/public/qr";
@@ -83,6 +85,7 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
   const url = eventUrl(origin, site.event.slug);
   const logo = site.branding.logoUrl ?? site.organisation.logo_url;
   const labels: Record<ScreenSlide["kind"], string> = { live: S.live, timetable: S.timetable, results: S.results, podium: S.podium, sponsors: S.sponsors };
+  const flagData = publicFlagData(timetable, tt, site.settings.flags);
   const liveHeat = tt.now?.heatId ? timetable?.heats.find((h) => h.id === tt.now!.heatId) : undefined;
 
   const render = (s: ScreenSlide) => {
@@ -179,7 +182,8 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
           </span>
         ) : null}
         <h1 className="truncate text-[3vw] font-semibold">{site.event.name}</h1>
-        <ClockText timezone={site.event.timezone} serverNow={core.now} className="ml-auto shrink-0 !text-[2vw] !text-[var(--bs-muted)]" />
+        {flagData ? <BigScreenFlag data={flagData} /> : null}
+        <ClockText timezone={site.event.timezone} serverNow={core.now} className={flagData ? "shrink-0 !text-[2vw] !text-[var(--bs-muted)]" : "ml-auto shrink-0 !text-[2vw] !text-[var(--bs-muted)]"} />
       </header>
       <WindBanner wind={site.wind} big />
       <div className="mt-[1.5vw] flex min-h-0 flex-1 pr-[15vw]">

@@ -2,14 +2,16 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { breakCountdown, computeTimetable, startsOutOfOrder, utcToLocalHHMM, type BreakCountdown, type BreakNone, type Timetable } from "@/lib/engine/schedule";
-import { cancelHeat, endHeat, extendBreakAction, holdPlan, pauseHeat, resumeBreakAction, resumeHeat, resumePlanAt, shiftPlan, startHeat, type ActionResult, type PlanActionResult } from "@/lib/live/heat-actions";
+import { abortStart, armHeat, cancelHeat, endHeat, extendBreakAction, holdPlan, pauseHeat, resumeBreakAction, resumeHeat, resumePlanAt, shiftPlan, startHeat, type ActionResult, type PlanActionResult } from "@/lib/live/heat-actions";
 import { controlsFor, type Control, type ControlId, type HeatState } from "@/lib/live/head-state";
 import type { ReviewProps } from "./heat-control";
 import { isLiveHeat } from "@/lib/live/division-pick";
 import { activePlanFor, heatTitle, livesFor, timetableOptions, type ActivePlan } from "@/lib/live/run-order";
 import { shortTitle } from "@/lib/live/run-line";
 import { driftOf, plannedTimetable } from "@/lib/schedule/drift";
-import { effectiveStatus, remainingMs } from "@/lib/live/timer";
+import { effectiveStatus, formatClock, remainingMs } from "@/lib/live/timer";
+import { isArmedNow } from "@/lib/live/flags";
+import { useFlagStrip } from "./use-flag";
 import type { HeatRow, LiveContext } from "@/lib/live/types";
 import type { Json } from "@/lib/supabase/database.types";
 import { copy } from "@/lib/ui-copy";
@@ -43,6 +45,8 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
   const [reason, setReason] = useState("");
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [startWarning, setStartWarning] = useState<{ heatId: string; text: string } | null>(null);
+  // Flags: the pre-start chosen for the next Start sequence (null = the event's default)
+  const [prestart, setPrestart] = useState<number | null>(null);
 
   const plan = activePlanFor(plans, ctx.event.timezone, nowServer);
   const planId = plan?.id ?? null;
@@ -99,6 +103,18 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
   }, [breakInfo, heats, ctx.divisionTabs, ctx.rounds, selectedId, divisionId]);
 
   /** Every press runs one server action and says what happened; a plan change also hands the new hold and pins back so the screen shows them at once. */
+  const flagsOn = ctx.event.flags.enabled;
+  const defaultPrestart = ctx.event.flags.prestartSec;
+  const armed = Boolean(selected && flagsOn && isArmedNow(selected, nowServer));
+  const prestartOptions = useMemo(() => {
+    const opts = [defaultPrestart, ...(defaultPrestart === 120 ? [] : [120]), 0];
+    return opts.map((sec) => ({ sec, label: sec === 0 ? T.prestartNow : formatClock(sec * 1000), isDefault: sec === defaultPrestart && sec !== 0 }));
+  }, [defaultPrestart]);
+  const chosenPrestart = prestart ?? defaultPrestart;
+  const liveHeatRow = heats.find((h) => isLiveHeat(h, nowServer)) ?? null;
+  /** The flag strip: about the heat in its pre-start, else the heat on the water, else the heat shown. */
+  const flag = useFlagStrip(ctx, heats, plans, liveHeatRow ?? selected, nowServer);
+
   const act = (label: string, run: () => Promise<ActionResult | PlanActionResult>, after?: () => void) =>
     startTransition(async () => {
       setMessage(null);
@@ -123,9 +139,16 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
       setStartWarning({ heatId: selected.id, text });
       return;
     }
-    act(T.done.start(title), () => startHeat(selected.id));
+    startNow();
   };
-  const confirmStart = () => selected && act(T.done.start(title), () => startHeat(selected.id));
+  /** Start heat (flags off), or Start sequence (flags on: the yellow for the chosen pre-start; "Start now" skips it). */
+  const startNow = () => {
+    if (!selected) return;
+    if (!flagsOn) return act(T.done.start(title), () => startHeat(selected.id));
+    if (chosenPrestart === 0) return act(T.done.start(title), () => armHeat(selected.id, 0));
+    act(T.done.arm(title, formatClock(chosenPrestart * 1000)), () => armHeat(selected.id, chosenPrestart));
+  };
+  const confirmStart = () => startNow();
   const dismissStart = () => setStartWarning(null);
 
   const shownWarning = startWarning && startWarning.heatId === selectedId && state === "scheduled" ? startWarning : null;
@@ -165,12 +188,21 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     startWarning: shownWarning,
     requestStart,
     confirmStart,
+    flag,
+    flagsOn,
+    armed,
+    prestartOptions,
+    chosenPrestart,
+    setPrestart,
     dismissStart,
     breakInfo,
     nextTitle,
     nowServer,
     drift,
     actions: {
+      /** Green at once, during the yellow. */
+      startNowDuringYellow: () => selected && act(T.done.startNow(title), () => startHeat(selected.id)),
+      abort: () => selected && act(T.done.abort(title), () => abortStart(selected.id)),
       end: () => selected && act(T.done.end(title), () => endHeat(selected.id)),
       pause: () => selected && act(T.done.pause(title), () => pauseHeat(selected.id)),
       resume: () => selected && act(T.done.resume(title), () => resumeHeat(selected.id)),
@@ -185,7 +217,7 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     /** Time of the hold, in event time, for the sentence "on hold since …". */
     holdSince: plan?.plan.hold ? utcToLocalHHMM(plan.plan.hold.since, ctx.event.timezone) : null,
     /** A heat that is on the water, if any (the first one found), for the "On now" chip when another division is shown. */
-    liveHeat: heats.find((h) => isLiveHeat(h, nowServer)) ?? null,
+    liveHeat: liveHeatRow,
   };
 }
 

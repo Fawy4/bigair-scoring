@@ -22,7 +22,7 @@ const SEATS: Array<[SeatKey, string, "judge" | "head" | "spotter"]> = [
 const COLOURS = ["red", "blue", "yellow", "green"];
 const NAMES = ["Sam Rivera", "Noor Haddad", "Lena Vogt", "Mia Costa"];
 
-export async function createLiveWorld(opts: { headScores?: boolean; maxRunning?: number; model?: string } = {}) {
+export async function createLiveWorld(opts: { headScores?: boolean; maxRunning?: number; model?: string; flags?: boolean } = {}) {
   const org = await createOrganiser();
   const db = org.db;
   const must = <T extends { id: string }>(r: { data: T | null; error: { message: string } | null }, what: string): T => {
@@ -43,7 +43,7 @@ export async function createLiveWorld(opts: { headScores?: boolean; maxRunning?:
         timezone: "Africa/Cairo",
         start_date: today,
         end_date: today,
-        settings: { publicLiveScores: "live", maxRunningHeats: opts.maxRunning ?? 1, identification: { scheme: lycra, allowDivisionOverride: false } } as never,
+        settings: { publicLiveScores: "live", maxRunningHeats: opts.maxRunning ?? 1, flags: { enabled: opts.flags ?? false }, identification: { scheme: lycra, allowDivisionOverride: false } } as never,
       })
       .select("id")
       .single(),

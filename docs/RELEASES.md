@@ -12,6 +12,34 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.13.0 — 3 Oct 2026 {#release-0-13-0}
+
+PR: #32
+
+### What changed
+- **Flags:** the heat clock now drives four flags — yellow before the start, green while the heat runs, yellow for the last minute, red when nothing is running (the words say Finished, Paused or Hold). On for every event, existing ones included (Event step → **Flags** to switch off, rename or recolour; pre-start and last-minute lengths).
+- **Start sequence:** on the head judge's console **Start heat** is now **Start sequence**, with a one-tap pre-start (event default, 2:00, or **Start now**). The heat starts by itself at the end of the yellow, with a horn, and does not depend on any phone staying awake. During the yellow: **Start now** and **Abort**.
+- **Flag strip** replaces the clock line on every live screen; the big screen gets a coloured frame and a large state word; the announcer gets a text cue for each change.
+- **Flag view** for the beach marshal at /e/‹event›/flag (linked from Go live and the Officials step, with a QR to print): the whole screen is the flag; it turns grey after 10 seconds without the server.
+- **Horns** behind **Sound on**: one at green, one at the last minute, two at red, one at resume. Nothing vibrates.
+- **Simulator:** virtual officials follow the sequence; ×10 shortens the pre-start (1:00 → 6 s); Skip to end lands on red; scenario **Abort the start**; **View as… → Flag view**.
+- **Needs the database change** `20261021100000_flags_start_sequence.sql` (applied to the hosted project; it also switches Flags on for every existing event, Arrow, EKL and Demo included).
+
+### What to test
+- [ ] On Demo, open the head judge console on a laptop. The button that said **Start heat** says **Start sequence**, with **1:00**, **2:00** and **Start now** beside it. On your phone open the **Flag marshal's screen** (Go live → **Flag marshal's screen**): it is red and says what comes next.
+- [ ] Press **Start sequence** on the laptop. Within a couple of seconds the phone turns **yellow** with a countdown from 1:00, and the console strip is yellow too. Press **Abort**: the phone goes **red**, the heat says “Not started” on the console, nothing was scored.
+- [ ] Press **Start sequence** again and wait. At 0:00 both turn **green** and the heat clock starts counting down from the heat length. Tap **Sound on** on the phone first: you hear one horn at green.
+- [ ] Let the heat run (or use a short heat on a rehearsal event). When 1:00 is left both turn **yellow** with one horn. At 0:00 both turn **red**, say **Finished — next: …**, and sound two horns. The console's **End heat** still works as before.
+- [ ] During a running heat press **Pause**: the strip and the phone show red **Paused**. Press **Resume**: the colour comes back (green, or yellow when under a minute is left) with one horn.
+- [ ] On a judge's phone and a spotter's phone (or View as… on a simulation) the clock line is the coloured strip; every button is still on screen and nothing is covered. The big screen has a coloured frame and a large word and countdown in Day and Dark.
+- [ ] Switch the phone to aeroplane mode for 12 seconds: the Flag view turns **grey** and says “No connection — check with the head judge”. Reconnect: the colour comes back.
+- [ ] Event step → **Flags**: switch **Flags on** off and save. The console shows plain **Start heat** again, the strip is the plain timer, the big screen has no frame. Switch it back on.
+
+### Known issues
+- Not tried on a real phone; the horn sound is a synthesised tone, not a recorded horn.
+- At ×10 or ×20 on the simulator the last-minute length is not shortened, so a fast heat is yellow (last minute) from its green.
+- The strip's words after “Finished” stay until the next heat starts, also during a long break.
+
 ## 0.12.0 — 3 Oct 2026 {#release-0-12-0}
 
 PR: #31

@@ -1,4 +1,5 @@
 import type { SchedulePlan } from "@/lib/schemas/schedule";
+import type { FlagSettings } from "@/lib/schemas/flags";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
 import type { ScoringModel } from "@/lib/schemas/scoring-model";
 import type { DivisionLive } from "@/lib/schemas/division-live";
@@ -33,9 +34,12 @@ export interface HeatRow {
   publish_hold: boolean;
   /** "simulator" while the simulator's Pause (or Stop) holds this heat (Polish 2, item 3); null otherwise. */
   paused_reason?: string | null;
+  /** Start sequence (Flags): when the head judge raised the yellow, and its length. The heat is running once now >= armed_at + prestart_sec. Null when not armed. */
+  armed_at?: string | null;
+  prestart_sec?: number | null;
   updated_at: string;
 }
-export const HEAT_COLUMNS = "id, division_id, round_id, number, number_suffix, name, status, duration_sec, warm_up_sec, started_at, paused_at, paused_total_sec, ended_at, draw_uid, rerun_of, public_live, reopened_at, publish_hold, paused_reason, updated_at";
+export const HEAT_COLUMNS = "id, division_id, round_id, number, number_suffix, name, status, duration_sec, warm_up_sec, started_at, paused_at, paused_total_sec, ended_at, draw_uid, rerun_of, public_live, reopened_at, publish_hold, paused_reason, armed_at, prestart_sec, updated_at";
 
 export interface SlotRow {
   id: string;
@@ -145,7 +149,7 @@ export interface LiveRiderInfo extends LabelRider {
 }
 
 export interface LiveContext {
-  event: { id: string; name: string; slug: string; timezone: string; judgesMayLogAttempts: boolean; maxRunningHeats: number; isSimulation: boolean; readyCallMin: number; publicLiveScores: string };
+  event: { id: string; name: string; slug: string; timezone: string; judgesMayLogAttempts: boolean; maxRunningHeats: number; isSimulation: boolean; readyCallMin: number; publicLiveScores: string; flags: FlagSettings };
   /** Who is looking: a seat, or an organiser of the event (the head page only). */
   viewer:
     | {

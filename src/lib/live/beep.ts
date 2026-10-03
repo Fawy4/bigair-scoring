@@ -62,3 +62,28 @@ export function writeSoundPref(on: boolean): void {
     /* private window: the choice lasts until the page closes */
   }
 }
+
+/**
+ * The flag horn (Flags): a low, long blast, one or two of them. Nothing vibrates. Only called behind the "Sound on" tap, like the beep, because iPhones only
+ * play sound after a tap on the page.
+ */
+export function horn(times: 1 | 2 = 1): void {
+  const a = audio();
+  if (!a) return;
+  for (let i = 0; i < times; i++) {
+    try {
+      const osc = a.createOscillator();
+      const gain = a.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.value = 220;
+      gain.gain.value = 0.25;
+      osc.connect(gain);
+      gain.connect(a.destination);
+      const at = a.currentTime + i * 0.9;
+      osc.start(at);
+      osc.stop(at + 0.7);
+    } catch {
+      /* a failed horn must never break the screen */
+    }
+  }
+}

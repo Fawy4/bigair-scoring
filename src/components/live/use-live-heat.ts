@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { pickCurrentHeat, type HeatPhase } from "@/lib/live/current-heat";
+import { overlayHeats } from "./use-flag";
 import { maskFor } from "@/lib/live/observer";
 import type { ActivePlan } from "@/lib/live/run-order";
 import { rowToPlan, type PlanRow } from "@/lib/schedule/plans";
@@ -78,7 +79,9 @@ export interface LiveHeatState extends Snapshot {
  * and then applies the stream, so nothing is lost across a dropped connection. `nowServer` is the server-clock "now" for the screen's timer.
  */
 export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServer: number, pinnedHeatId?: string | null): LiveHeatState {
-  const [heats, setHeats] = useState<HeatRow[]>(ctx.heats);
+  const [rawHeats, setHeats] = useState<HeatRow[]>(ctx.heats);
+  // a heat whose pre-start is over is running from the armed moment (the database says the same), whoever has written that down yet
+  const heats = useMemo(() => overlayHeats(rawHeats, nowServer), [rawHeats, nowServer]);
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
   const [plans, setPlans] = useState<ActivePlan[]>(() => ctx.plans.map((p) => ({ id: p.id, day: p.day, plan: p.plan, defaults: p.defaults, updatedAt: p.updatedAt })));
   const [heatsUp, setHeatsUp] = useState(false);
@@ -102,6 +105,18 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
     [heats, panels, role, seatId, nowServer, pinnedHeatId, submittedHeatIds],
   );
   const heatId = heat?.id ?? null;
+
+  // When a pre-start ends every official phone asks the database to write the start down (`start_armed_if_due`: the start time is the armed moment, whoever asks, and a
+  // second call changes nothing), so nothing depends on one phone staying awake. An observer only watches.
+  const dueId = rawHeats.find((h) => h.status === "scheduled" && h.armed_at && nowServer >= Date.parse(h.armed_at) + (h.prestart_sec ?? 0) * 1000)?.id ?? null;
+  const mayWrite = !observed && !(viewer.kind === "seat" && viewer.role === "observer");
+  useEffect(() => {
+    if (!dueId || !mayWrite) return;
+    const call = () => void Promise.resolve(supabase.rpc("start_armed_if_due", { p_heat: dueId })).catch(() => {});
+    call();
+    const t = setInterval(call, 3000);
+    return () => clearInterval(t);
+  }, [supabase, dueId, mayWrite]);
 
   // ---- the event's heats
   const refreshHeats = useCallback(async () => {

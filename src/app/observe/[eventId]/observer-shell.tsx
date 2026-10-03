@@ -22,7 +22,7 @@ export interface ShellView {
 const NATURAL: Record<FrameKind, { w: number; h: number | null }> = { laptop: { w: 1280, h: null }, tv: { w: 1280, h: 720 }, phone: { w: 390, h: null } };
 
 function frameSrc(eventId: string, v: ShellView): string {
-  if (v.key === "screen" || v.key === "public") return `/observe/${eventId}/door?to=${v.key}`;
+  if (v.key === "screen" || v.key === "public" || v.key === "flag") return `/observe/${eventId}/door?to=${v.key}`;
   return `/observe/${eventId}/screen?view=${encodeURIComponent(v.key)}`;
 }
 

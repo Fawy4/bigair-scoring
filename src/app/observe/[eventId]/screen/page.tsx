@@ -18,7 +18,7 @@ export default async function ObservedScreen({ params, searchParams }: { params:
   if (!r.ok) redirect(r.kind === "join" ? "/join" : ownScreen(eventId, r.role));
   const view = parseViewKey(key);
   if (!view) notFound();
-  if (view.kind === "screen" || view.kind === "public") redirect(`/observe/${eventId}/door?to=${view.kind}`);
+  if (view.kind === "screen" || view.kind === "public" || view.kind === "flag") redirect(`/observe/${eventId}/door?to=${view.kind}`);
   const viewer = observedViewer(view, r.data.seats, r.data.observerSeatId);
   if (!viewer) notFound();
   const ctx = { ...r.data.ctx, viewer };

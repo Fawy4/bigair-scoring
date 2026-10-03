@@ -17,7 +17,7 @@ const uuid = z.string().uuid();
 const fail = (code: string | null, message?: string): { ok: false; code: string | null; message: string } => ({ ok: false, code, message: message ?? errorSentence(code) });
 
 /** Every heat change goes through the database's own functions (they check who may, the rules, and write the audit line). */
-async function heatRpc(fn: "start_heat" | "pause_heat" | "resume_heat" | "end_heat", heatId: string): Promise<ActionResult> {
+async function heatRpc(fn: "start_heat" | "pause_heat" | "resume_heat" | "end_heat" | "abort_start", heatId: string): Promise<ActionResult> {
   if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
   const supabase = await createClient();
   const { error } = await supabase.rpc(fn, { p_heat: heatId });
@@ -26,6 +26,17 @@ async function heatRpc(fn: "start_heat" | "pause_heat" | "resume_heat" | "end_he
 
 export async function startHeat(heatId: string): Promise<ActionResult> {
   return heatRpc("start_heat", heatId);
+}
+/** Start sequence (Flags): raises the yellow for `prestartSec` seconds (null = the event's default, 0 = start now); the heat then starts by itself, on the database's clock. */
+export async function armHeat(heatId: string, prestartSec: number | null): Promise<ActionResult> {
+  if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
+  if (prestartSec !== null && (!Number.isInteger(prestartSec) || prestartSec < 0 || prestartSec > 600)) return fail("BAD_PRESTART");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("arm_heat", { p_heat: heatId, ...(prestartSec === null ? {} : { p_prestart: prestartSec }) });
+  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true };
+}
+export async function abortStart(heatId: string): Promise<ActionResult> {
+  return heatRpc("abort_start", heatId);
 }
 export async function pauseHeat(heatId: string): Promise<ActionResult> {
   return heatRpc("pause_heat", heatId);

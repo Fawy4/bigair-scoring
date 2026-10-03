@@ -2,7 +2,23 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 3 Oct 2026 · Product version 0.12.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
+
+## 0.13.0 — 3 Oct 2026 {#cl-0-13-0}
+
+Release entry: [0.13.0](/admin/releases#release-0-13-0) (platform owner only)
+
+**What changed for users**
+- **Flags:** four flag states driven by the heat clock — **Before start** (yellow), **Running** (green), **Last minute** (yellow), **Stopped or paused** (red; the words say Finished, Paused or Hold). On by default for every event, existing ones included. Event step → **Flags**: on/off, the word and colour of each state, the pre-start length and the last-minute length.
+- **Start sequence:** on the head judge's console **Start heat** becomes **Start sequence** with a one-tap pre-start choice (event default, 2:00, **Start now**). The heat starts by itself at 0:00 of the pre-start, with a horn, on the server's clock. During the yellow: **Start now** and **Abort**.
+- **Flag strip** on every live screen (console on laptop and phone, judge, spotter, announcer, observer views, the public live tab and home page); a **flag frame** and large state word on the big screen; text cues on the announcer's view.
+- **Flag view** (/e/‹event›/flag): the flag marshal's screen, linked from Go live and the Officials step (with a QR to print). Turns grey after 10 seconds without the server.
+- **Horns** (behind **Sound on**): one at green, one at the last minute, two at red, one at resume. Nothing vibrates.
+- **Simulator:** virtual officials follow the sequence; at ×10 a 1:00 pre-start lasts 6 seconds; **Skip to end of heat** lands on red; new scenario **Abort the start**; **View as…** has **Flag view**. The observer can open the Flag view.
+- New refusals, with Learn more: the flags are off, a start sequence already running, nothing to abort; the “one heat at a time” sentence now also covers a heat in its yellow.
+
+**Manual pages updated**
+- New: [Flags and the start sequence](screens/flags.md). Updated: [Console on a laptop](screens/console-laptop.md), [Console on a phone](screens/console-phone.md), [Judge](screens/judge.md), [Spotter](screens/spotter.md), [Announcer](screens/announcer.md), [Observer](screens/observer.md), [Big screen](screens/big-screen.md), [Public live](screens/public-live.md), [Public home](screens/public-home.md), [Organiser: Event step](screens/organiser-event.md), [Organiser: Officials](screens/organiser-officials.md), [Organiser: Go live](screens/organiser-go-live.md), [Simulator](screens/simulator.md), [Dependency map](dependencies.md), [Glossary](glossary.md), [Settings](settings.md) and [Errors](errors.md) (generated).
 
 ## 0.12.0 — 3 Oct 2026 {#cl-0-12-0}
 

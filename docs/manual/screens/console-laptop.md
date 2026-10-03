@@ -2,7 +2,7 @@
 
 The head judge's working screen at /head/‹event› on a laptop or tablet (1280 px and wider): division tabs, the heat's timer and buttons, the run order with times, the break countdown, the live score table, Publish and everything around it.
 
-Last checked: 3 Oct 2026 · Product version 0.12.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#cl-purpose}
 
@@ -18,7 +18,9 @@ The head judge (the head judge seat, or an organiser of the event — an organis
 | Division tabs | One division at a time (remembered on this device). A live dot with its word shows another division whose heat is running or paused; **On now: ‹heat›** jumps to it. |
 | Heat name and timer | The selected heat; time left from the server's clock (every phone shows the same time). |
 | **Start heat** / **Pause** / **Resume** / **End heat** | The heat's clock. Starting a heat that is not next in the active run order asks once: “Not the next heat in the run order — ‹heat› was next” → **Start anyway** / **Don’t start**. A grey button says why under it (“Only a heat that has not started can be started.”, “Only a running heat can be paused.”…). In a simulation, a heat the simulator's **Pause** or **Stop** holds says **Paused by the simulator**; **Resume** here, or Resume on the simulator panel, starts it again. |
-| **Sound on** | Beeps once at 1:00 and twice at time up (after one tap, as phones require). The timer never depends on sound. |
+| **Start sequence** / **Start now** / **Abort** (flags on) | With the Flags on (the default) **Start heat** is called **Start sequence**: it raises the **yellow** flag for the pre-start (the event's default, **2:00**, or **Start now** for none; the one-tap choice sits beside the button) and the heat starts **by itself** at 0:00 of the pre-start, with a horn. During the yellow the console shows **Start now** (green at once) and **Abort** (back to red, the heat not started). With the Flags off nothing changes: **Start heat**. See [Flags and the start sequence](flags.md). |
+| Flag strip | The heat's timer is the **flag strip** (flags on): filled with the flag's colour, with the state's words (Running, Last minute, Finished — next: ‹heat›, est. ‹time›, Paused, Hold), the countdown and the heat name. |
+| **Sound on** | Beeps once at 1:00 and twice at time up (after one tap, as phones require); with the flags on it sounds the **horns** instead: one at green, one at the last minute, two at red, one at resume. The timer never depends on sound. |
 | Break countdown | Between heats: “Next: ‹heat› · starts in 4:30” (end of the last heat + break + warm-up), **+1 min** (this break one minute longer, rounded up to the next whole minute), **Pause break** (holds the run order, freezes the countdown), **Resume**. When the time has passed: “ready to start · 0:45 late”. Nothing starts by itself. |
 | Drift badge and time now | “On schedule” / “6 min late” / “4 min early”, and HH:MM in the event's time zone. |
 

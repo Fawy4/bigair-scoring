@@ -62,6 +62,6 @@ export const ago = (sec: number): string => new Date(Date.now() - sec * 1000).to
 export const key = (): string => randomUUID();
 
 export async function heatRow(f: Fixture, id: string) {
-  const { data } = await f.s.from("heats").select("status, started_at, paused_at, paused_total_sec, ended_at").eq("id", id).single();
+  const { data } = await f.s.from("heats").select("status, started_at, paused_at, paused_total_sec, ended_at, armed_at, prestart_sec").eq("id", id).single();
   return data!;
 }

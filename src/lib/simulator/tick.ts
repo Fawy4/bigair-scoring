@@ -1,3 +1,4 @@
+import { armedStartMs } from "@/lib/live/flags";
 import { publishHeatCore } from "@/lib/live/publish-core";
 import { trickKit } from "@/lib/live/screen-model";
 import type { AttemptRow, HeatRow, SlotRow } from "@/lib/live/types";
@@ -328,6 +329,25 @@ async function step(db: SimDb, snap: Snapshot): Promise<string> {
     return headStep(db, snap, heat, after);
   }
 
+  // Flags: a heat in its yellow. The virtual officials wait for green (they log and score only while Running or Last minute); when the pre-start is over the start is
+  // written down at the armed moment, and the "Abort the start" scenario, if pressed, aborts it here.
+  const yellow = snap.heats.find((h) => h.status === "scheduled" && h.armed_at);
+  if (yellow) {
+    const name = heatName(yellow);
+    const startMs = armedStartMs({ status: yellow.status, armedAt: yellow.armed_at ?? null, prestartSec: yellow.prestart_sec ?? null });
+    if (startMs !== null && snap.nowMs < startMs) {
+      if (snap.control.config.armed.includes("abort_start")) {
+        const r = await attemptScenario(db, snap, "abort_start");
+        if (r.status !== "wait") await updateConfig(db, snap.eventId, (c) => ({ ...c, armed: c.armed.filter((k) => k !== "abort_start") }));
+        if (r.status === "done") return r.text;
+      }
+      return T.play.lines.yellow(name, formatLeft((startMs - snap.nowMs) / 1000));
+    }
+    await db.user.rpc("start_armed_if_due", { p_heat: yellow.id });
+    forgetContext(snap.eventId);
+    return T.play.lines.starting(name);
+  }
+
   const next = nextStep({ ordered, hold: order.hold, maxRunning: snap.event.maxRunningHeats });
   if (next.kind === "finished") {
     await db.user.rpc("sim_set", { p_event: snap.eventId, p_patch: { state: "stopped", blocker: null } });
@@ -342,7 +362,8 @@ async function step(db: SimDb, snap: Snapshot): Promise<string> {
     return T.play.lines.idle;
   }
   const heat = byId.get(next.heatId)!;
-  const started = await db.user.rpc("start_heat", { p_heat: heat.id });
+  // with the flags on the officials follow the sequence: the yellow first, the heat starts by itself at 0:00 of the pre-start
+  const started = snap.settings.flags.enabled ? await db.user.rpc("arm_heat", { p_heat: heat.id }) : await db.user.rpc("start_heat", { p_heat: heat.id });
   if (started.error) {
     const why = simErrorSentence(started.error.message);
     if (snap.control.blocker !== why) {
@@ -411,6 +432,13 @@ async function skipInside(db: SimDb, eventId: string): Promise<{ ok: true; text:
   const snap = await loadSnapshot(db, eventId);
   if (!snap) return { ok: false, message: T.errors.SIM_NOT_ENABLED() };
   await ensureVirtualSeats(db, snap);
+  // a heat still in its yellow starts at once (Start now), so that the skip has a heat to end and the flag lands on red
+  const yellow = snap.heats.find((h) => h.status === "scheduled" && h.armed_at);
+  if (yellow && !snap.heats.some((h) => h.status === "running" || h.status === "paused")) {
+    const r = await db.user.rpc("start_heat", { p_heat: yellow.id });
+    if (r.error) return { ok: false, message: simErrorSentence(r.error.message) };
+    snap.heats = snap.heats.map((h) => (h.id === yellow.id ? { ...h, ...(r.data as unknown as Partial<HeatRow>) } : h));
+  }
   let heat = snap.heats.find((h) => h.status === "running" || h.status === "paused") ?? snap.heats.find((h) => h.status === "ended" || h.status === "under_review");
   if (!heat) return { ok: false, message: T.skip.noHeat };
   const name = heatName(heat);

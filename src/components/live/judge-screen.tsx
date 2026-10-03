@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AttemptLogger, enabledIdsOf, type LoggedAttempt } from "./attempt-logger";
 import { ImpressionCard } from "./impression-card";
 import { JudgeQueueView, type FlagKind, type JudgeCard } from "./judge-queue";
-import { useEndAtZero, useOnline, useTimerSound, useWakeLock } from "./live-hooks";
+import { useEndAtZero, useFlagHorns, useOnline, useTimerSound, useWakeLock } from "./live-hooks";
+import { useFlagStrip } from "./use-flag";
 import { LiveShell, ScreenSettings, useLiveSettings } from "./live-shell";
 import { ScreenHeader } from "./screen-header";
 import { useLiveHeat } from "./use-live-heat";
@@ -91,7 +92,9 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const remaining = timing ? remainingMs(timing, nowServer) : 0;
   const ended = Boolean(heat) && live.phase === "ended";
   useEndAtZero(supabase, heat?.id ?? null, Boolean(heat) && heat?.status === "running" && remaining <= 0, heat?.status);
-  useTimerSound(remaining, live.phase === "running", settings.soundOn);
+  const flag = useFlagStrip(ctx, live.heats, live.plans, live.heat, nowServer);
+  useTimerSound(remaining, live.phase === "running" && !flag, settings.soundOn);
+  useFlagHorns(flag?.state ?? null, settings.soundOn);
   useWakeLock(live.phase === "running" || live.phase === "paused");
 
   const heatRiders = useMemo(() => ridersForHeat(ctx, division, live.slots), [ctx, division, live.slots]);
@@ -229,8 +232,8 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
 
   const badge = q.badge;
   const timeNow = { timezone: ctx.event.timezone, nowMs: nowServer };
-  const common = { seat: viewer?.name ?? "", connection: badge.status, pending: badge.pending, onRetry: () => q.queue.retryFailed(), clock: timeNow };
-  const queueCommon = { seat: viewer?.name ?? "", connection: badge.status, pendingCount: badge.pending, onRetry: () => q.queue.retryFailed(), clock: timeNow };
+  const common = { seat: viewer?.name ?? "", connection: badge.status, pending: badge.pending, onRetry: () => q.queue.retryFailed(), clock: timeNow, flag };
+  const queueCommon = { seat: viewer?.name ?? "", connection: badge.status, pendingCount: badge.pending, onRetry: () => q.queue.retryFailed(), clock: timeNow, flag };
   const noticeList =
     notices.length > 0 ? (
       <div className="flex flex-col gap-1 px-2 pt-1" data-testid="notices">

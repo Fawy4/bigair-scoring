@@ -5,6 +5,7 @@ import { Clock, Volume2, VolumeX, Wind } from "lucide-react";
 import { HoldDialog, PublishDialog, ReopenDialog, RerunDialog, ResetHeatDialog } from "./head-dialogs";
 import { ClockText } from "@/components/clock-text";
 import { DriftBadge } from "@/components/drift-badge";
+import { FlagStrip } from "./flag-strip";
 import { HeatTimer } from "./heat-timer";
 import { Pill } from "./pill";
 import { setHeatPublicLive, setPublishHold } from "@/lib/live/head-actions";
@@ -158,14 +159,28 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
             </p>
           ) : null}
         </div>
-        {selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
+        {c.flag ? <FlagStrip model={c.flag} size="head" className="min-w-[16rem] basis-72" /> : selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
         <ClockText timezone={c.ctx.event.timezone} nowMs={c.nowServer} />
         <DriftBadge drift={c.drift} />
         {selected && state !== "cancelled" ? (
           <div className="flex flex-wrap items-center gap-2">
-            <Btn compact size="bar" testId="start" tone="accent" reason={c.why("start")} disabled={c.pending || !c.on("start")} onClick={c.requestStart}>
-              {T.start}
-            </Btn>
+            {c.armed ? (
+              <>
+                <Btn compact size="bar" testId="start-now" tone="accent" disabled={c.pending} onClick={c.actions.startNowDuringYellow}>
+                  {T.startNow}
+                </Btn>
+                <Btn compact size="bar" testId="abort-start" disabled={c.pending} onClick={c.actions.abort}>
+                  {T.abort}
+                </Btn>
+              </>
+            ) : (
+              <>
+                <Btn compact size="bar" testId="start" tone="accent" reason={c.why("start")} disabled={c.pending || !c.on("start")} onClick={c.requestStart}>
+                  {c.flagsOn ? T.startSequence : T.start}
+                </Btn>
+                {c.flagsOn && c.on("start") ? <PrestartChoice c={c} /> : null}
+              </>
+            )}
             {state === "paused" ? (
               <Btn compact size="bar" testId="resume" reason={c.why("resume")} disabled={c.pending || !c.on("resume")} onClick={c.actions.resume}>
                 {T.resume}
@@ -193,6 +208,27 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
         </p>
       ) : null}
       {selected && state === "cancelled" ? <CancelledNote c={c} /> : null}
+    </div>
+  );
+}
+
+/** The one-tap choice of this heat's pre-start, beside Start sequence: the event's default, 2:00, or "Start now" (no yellow). */
+export function PrestartChoice({ c }: { c: HeadController }) {
+  return (
+    <div data-testid="prestart-choice" role="radiogroup" aria-label={T.prestartLabel} className="inline-flex items-center gap-1">
+      {c.prestartOptions.map((o) => (
+        <button
+          key={o.sec}
+          type="button"
+          role="radio"
+          aria-checked={c.chosenPrestart === o.sec}
+          data-testid={`prestart-${o.sec}`}
+          onClick={() => c.setPrestart(o.sec)}
+          className={cn("min-h-tap rounded-xl border px-3 text-small font-semibold tabular-nums", c.chosenPrestart === o.sec ? "border-beach-accent bg-beach-accent text-beach-bg" : "border-beach-border bg-beach-bg text-beach-ink")}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }

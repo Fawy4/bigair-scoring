@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, Monitor, Pause, Play, Printer, SkipForward } from "lucide-react";
+import { ExternalLink, Flag, Monitor, Pause, Play, Printer, SkipForward } from "lucide-react";
 import { Button } from "@/components/org/button";
 import { NowNextCard, ReadinessList, type CheckRow, type HeatLine } from "@/components/org/dashboard-parts";
 import { DataTable } from "@/components/org/data-table";
@@ -42,6 +42,8 @@ export interface DashboardViewProps {
   publicUrl: string;
   /** The event's address: the big screen is /screen/<slug>. */
   slug: string;
+  /** The event's flags are on: the Flag view (/e/<slug>/flag) is linked beside the big screen. */
+  flagsOn?: boolean;
   windBannerOn: boolean;
 }
 
@@ -67,7 +69,7 @@ function LiveNow({ running, held, next, after, timezone }: { running: DashboardV
 }
 
 /** Hold, Resume at, Shift, the head judge console, the big screen. Each runs on the server with the database's clock and says why when it cannot run. */
-function QuickActionsLive({ eventId, slug, plan, timezone, runningHeat }: { eventId: string; slug: string; plan: DashboardViewProps["plan"]; timezone: string; runningHeat: string | null }) {
+function QuickActionsLive({ eventId, slug, flags, plan, timezone, runningHeat }: { eventId: string; slug: string; flags: boolean; plan: DashboardViewProps["plan"]; timezone: string; runningHeat: string | null }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -152,6 +154,11 @@ function QuickActionsLive({ eventId, slug, plan, timezone, runningHeat }: { even
         <Button variant="secondary" icon={Monitor} href={`/screen/${slug}`} target="_blank">
           {orgCopy.dashboard.bigScreen}
         </Button>
+        {flags ? (
+          <Button variant="secondary" icon={Flag} href={`/e/${slug}/flag`} target="_blank" data-testid="flag-view-link">
+            {copy.flags.view.link}
+          </Button>
+        ) : null}
       </div>
       <div className="mt-3 border-t border-beach-line pt-3">
         <ResetEvent eventId={eventId} runningHeat={runningHeat} />
@@ -179,7 +186,7 @@ export function DashboardView(p: DashboardViewProps) {
         <ReadinessList checks={p.checks} />
         <LiveNow running={p.running} held={held} next={p.next} after={p.after} timezone={p.timezone} />
         <WindCallControl eventId={p.eventId} bannerOn={p.windBannerOn} />
-        <QuickActionsLive eventId={p.eventId} slug={p.slug} plan={p.plan} timezone={p.timezone} runningHeat={p.running?.label ?? null} />
+        <QuickActionsLive eventId={p.eventId} slug={p.slug} flags={p.flagsOn ?? false} plan={p.plan} timezone={p.timezone} runningHeat={p.running?.label ?? null} />
         <div className={laptop ? "col-span-2" : undefined} data-testid="dashboard-today">
           <OrgCard title={copy.dashboard.today} actions={p.finish ? <span className="text-small font-semibold text-beach-muted">{copy.runOrder.finish(p.finish)}</span> : undefined} testId="dashboard-timetable">
             {p.rows.length === 0 ? (
