@@ -28,7 +28,7 @@ export default async function HealthPage() {
   const up = !error && h?.database === true;
 
   return (
-    <main className="flex max-w-2xl flex-col gap-6">
+    <main className="flex flex-col gap-6">
       <h1>{c.heading}</h1>
       <p className="text-lg font-semibold">{c.intro}</p>
       <p data-testid="product-version" className="font-semibold">

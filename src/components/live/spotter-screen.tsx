@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AttemptLogger, enabledIdsOf, type LoggedAttempt } from "./attempt-logger";
-import { useOnline, useEndAtZero, useTimerSound, useWakeLock } from "./live-hooks";
+import { useOnline, useEndAtZero, useFlagHorns, useTimerSound, useWakeLock } from "./live-hooks";
+import { useFlagStrip } from "./use-flag";
 import { LiveShell, ScreenSettings, useLiveSettings } from "./live-shell";
 import { Pill } from "./pill";
 import { ScreenHeader } from "./screen-header";
@@ -73,7 +74,9 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
   const remaining = heat ? remainingMs({ status: heat.status, durationSec: heat.duration_sec, startedAt: heat.started_at, pausedAt: heat.paused_at, pausedTotalSec: heat.paused_total_sec }, nowServer) : 0;
   const running = live.phase === "running";
   useEndAtZero(supabase, heat?.id ?? null, Boolean(heat) && live.phase !== "paused" && remaining <= 0 && heat?.status === "running", heat?.status);
-  useTimerSound(remaining, running, settings.soundOn);
+  const flag = useFlagStrip(ctx, live.heats, live.plans, live.heat, nowServer);
+  useTimerSound(remaining, running && !flag, settings.soundOn);
+  useFlagHorns(flag?.state ?? null, settings.soundOn);
   useWakeLock(live.phase === "running" || live.phase === "paused");
 
   // what the server refused for good: say it once, in words, then forget it
@@ -132,12 +135,13 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
       pending={badge.pending}
       onRetry={() => q.queue.retryFailed()}
       clock={{ timezone: ctx.event.timezone, nowMs: nowServer }}
+      flag={flag}
       details={feedOpen}
       detailsLabels={{ off: T.feed, on: T.feedOn }}
       onToggleDetails={() => setFeedOpen((v) => !v)}
     />
   ) : (
-    <ScreenHeader heatName={ctx.event.name} seat={viewer?.name ?? ""} remainingMs={0} showTimer={false} connection={badge.status} pending={badge.pending} onRetry={() => q.queue.retryFailed()} clock={{ timezone: ctx.event.timezone, nowMs: nowServer }} details={feedOpen} detailsLabels={{ off: T.feed, on: T.feedOn }} onToggleDetails={() => setFeedOpen((v) => !v)} />
+    <ScreenHeader heatName={ctx.event.name} seat={viewer?.name ?? ""} remainingMs={0} showTimer={false} connection={badge.status} pending={badge.pending} onRetry={() => q.queue.retryFailed()} clock={{ timezone: ctx.event.timezone, nowMs: nowServer }} flag={flag} details={feedOpen} detailsLabels={{ off: T.feed, on: T.feedOn }} onToggleDetails={() => setFeedOpen((v) => !v)} />
   );
 
   const noticeList =

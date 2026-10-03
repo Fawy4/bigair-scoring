@@ -13,6 +13,7 @@ export type ObserverView =
   | { kind: "spotter"; seatId: string }
   | { kind: "announcer" }
   | { kind: "screen" }
+  | { kind: "flag" }
   | { kind: "public" };
 
 /** The size the screen is drawn at: a laptop (1280 px), a phone (390 px) or a big screen (16:9). */
@@ -46,6 +47,7 @@ export function parseViewKey(key: string | null | undefined): ObserverView | nul
     case "head-phone":
     case "announcer":
     case "screen":
+    case "flag":
     case "public":
       return seatId === undefined ? { kind } : null;
     case "judge":
@@ -90,6 +92,7 @@ export function observerViews(seats: readonly ObserverSeat[], panels: readonly (
       .map((s) => item({ kind: "spotter", seatId: s.id }, sameWord(s.name, V.spotter("")) ? s.name : V.spotter(s.name), "spotters", "phone")),
     item({ kind: "announcer" }, V.announcer, "more", "phone"),
     item({ kind: "screen" }, V.screen, "more", "tv"),
+    item({ kind: "flag" }, V.flag, "more", "phone"),
     item({ kind: "public" }, V.public, "more", "phone"),
   ];
 }

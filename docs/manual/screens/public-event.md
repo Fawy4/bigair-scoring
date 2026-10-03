@@ -2,7 +2,7 @@
 
 An event's public home (/e/‹event›): now, up next, today's timetable, divisions, sponsors and sharing; the tabs to every public page of the event.
 
-Last checked: 3 Oct 2026 · Product version 0.12.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#pe-purpose}
 
@@ -18,7 +18,7 @@ Riders check when they ride; spectators follow the day. Pages ask the server for
 
 | Control | What it does |
 |---|---|
-| Tabs | **Home**, **Live**, **Results**, **Ladder**, **Placings**, **Rules**, **Join**, and one tab per outside leaderboard set in the Event step. The organiser chooses which of them show (Event step → **Public page**): a tab that is switched off disappears, and an old link to it lands on the first tab that is left, never on a “not found”. **Join** also hides itself while registration is closed (its page still opens for officials who have a PIN link). The big screen is not affected. |
+| Tabs | **Home**, **Live**, **Results**, **Ladder**, **Riders** (everybody on the public list; each name opens that rider's page), **Placings**, **Rules**, **Join**, and one tab per outside leaderboard set in the Event step. The organiser chooses which of them show (Event step → **Public page**): a tab that is switched off disappears, and an old link to it lands on the first tab that is left, never on a “not found”. **Join** also hides itself while registration is closed (its page still opens for officials who have a PIN link). The big screen is not affected. |
 | Wind banner | “Wind: Red — stop / Amber — caution / Green — go” with the message, when the organiser or head judge set a wind call and the banner switch is on. |
 | **Now** | “Now: Pro Men · R1 · Heat 2 · 6:12 left” (the clock from the server's stamps), **Open the live heat**; or “No heat is running right now.” |
 | **Up next** | The next two heats with estimated times. |

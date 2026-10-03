@@ -98,9 +98,9 @@ export default async function ReleasesPage() {
   const older = list.filter((r) => !newer.includes(r));
 
   return (
-    <main className="flex max-w-3xl flex-col gap-6">
+    <main className="flex flex-col gap-6">
       <h1>{C.heading}</h1>
-      <p className="max-w-[80ch] text-body font-medium text-beach-muted">{C.intro}</p>
+      <p className="max-w-[70ch] text-body font-medium text-beach-muted">{C.intro}</p>
       {role === "owner" ? null : <p className="rounded-card border border-beach-line p-4 text-body font-semibold">{copy.admin.ownerOnly}</p>}
       <div data-testid="release-current" className="rounded-card border border-beach-line bg-beach-surface px-4 py-3">
         <p className="text-[18px] font-semibold">{C.currentLabel(PRODUCT_VERSION)}</p>

@@ -12,6 +12,7 @@ import type { ImpressionRider } from "@/lib/live/design-fixtures";
 import type { DivisionLive } from "@/lib/schemas/division-live";
 import type { Scale } from "@/lib/schemas/scoring-model";
 import { copy } from "@/lib/ui-copy";
+import { DEFAULT_IMPRESSION_NAME } from "@/lib/schemas/impression-name";
 
 /**
  * The judge's step after the heat: one Impression / Variety score per rider. The riders are the strip at the top (a tick once scored); the chosen
@@ -40,19 +41,31 @@ export function ImpressionCard({
   summaryParts?: DivisionLive["impressionSummary"];
   /** The server's answer to Submit, in words (for example a rider still missing). */
   error?: string | null;
-  /** The model's own name for this score ("Variety"). Defaults to the house words. */
+  /** What this event calls the score ("Impression", "Variety"): the step's heading and the pad's label. */
   scoreLabel?: string;
 }) {
   const T = copy.live.impression;
+  const heading = T.heading(scoreLabel ?? DEFAULT_IMPRESSION_NAME);
   const [active, setActive] = useState(riders[0]?.id);
   const [confirming, setConfirming] = useState(false);
   const rider = riders.find((r) => r.id === active) ?? riders[0];
   const done = riders.filter((r) => values[r.id] !== null && values[r.id] !== undefined).length;
   const complete = done === riders.length;
+  // the riders of the heat arrive a moment after the page: nothing to score yet is not an error
+  if (!rider) {
+    return (
+      <div data-testid="impression-card" className="flex flex-col gap-1.5">
+        <h3 className="text-heading font-semibold">{heading}</h3>
+        <p data-testid="impression-waiting" className="text-body font-medium text-beach-muted">
+          {T.waitingForRiders}
+        </p>
+      </div>
+    );
+  }
   return (
     <div data-testid="impression-card" className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-heading font-semibold">{scoreLabel ?? T.heading}</h3>
+        <h3 className="text-heading font-semibold">{heading}</h3>
         <span data-testid="impression-progress" className="shrink-0 whitespace-nowrap rounded-full border border-beach-line bg-beach-surface px-2 py-0 text-small font-semibold tabular-nums">
           {T.progress(done, riders.length)}
         </span>
@@ -79,7 +92,7 @@ export function ImpressionCard({
             const next = nextUnscored(riders.map((r) => r.id), values, rider.id, rider.id);
             if (next) setActive(next);
           }}
-          label={T.heading}
+          label={heading}
           caption={caption}
           disabled={submitted}
         />

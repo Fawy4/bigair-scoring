@@ -18,7 +18,7 @@ export default async function DrawStepPage({ params, searchParams }: { params: P
 
   if (!divisions?.length) {
     return (
-      <main className="flex max-w-4xl flex-col gap-4">
+      <main className="flex flex-col gap-4">
         <h1>{copy.draw.stepHeading}</h1>
         <p className="panel text-lg font-semibold">{copy.draw.noDivisions}</p>
         <Link href={`/org/events/${id}/divisions`} className="btn btn-primary w-fit">
@@ -47,7 +47,7 @@ export default async function DrawStepPage({ params, searchParams }: { params: P
   return (
     <main className="flex flex-col gap-6">
       <h1>{copy.draw.stepHeading}</h1>
-      <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.draw.intro}</p>
+      <p className="max-w-[70ch] text-body font-medium text-beach-muted">{copy.draw.intro}</p>
       <DrawManager
         key={current.id}
         eventId={id}

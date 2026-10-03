@@ -2,7 +2,7 @@
 
 The judge's phone at /judge/‹event›: a scoring queue during the heat, then the Impression / Variety score for every rider and Submit.
 
-Last checked: 3 Oct 2026 · Product version 0.12.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#ju-purpose}
 
@@ -15,14 +15,14 @@ Judges watch the water, not the phone. Each attempt the spotter logs arrives as 
 
 | Control | What it does |
 |---|---|
-| Header | Heat and seat name, the slim timer (Running / Paused / Time up / On hold), the connection badge (**Synced**, **Pending ‹n›**, **Offline**, **Failed — tap to retry**), the time now, **Details**. |
+| Header | Heat and seat name, the slim timer — with the Flags on, the **flag strip** (the flag's colour, its words, the countdown and the heat name; the queue opens at **green**, not at the yellow; [Flags](flags.md)) —  (Running / Paused / Time up / On hold), the connection badge (**Synced**, **Pending ‹n›**, **Offline**, **Failed — tap to retry**), the time now, **Details**. |
 | Queue card | The attempt: Rider label (colour word, name), attempt number, trick name, “Repeat — 2nd time · you gave 7.0 before”. A crash needs no score (“Crashed — no score needed”). |
 | Score pad | Tap the whole number then the decimal, or type in the small box (greyed “0.0”); **Save**. With criteria (Height, Extremity…) one tab per criterion; the trick score appears when every criterion is set. Values off the scale's step are refused: the pad greys out Save, outlines the box in red and says why under the pad (“That score is not on the 0.1 step. Use 7.2 or 7.3.” with a **Learn more** link to [this page](#ju-pad-step)), and the database refuses them too (“That score is not on the 0.1 step. Use 7.2 or 7.3.”). |
 | **Missed** | “I did not see it. No score from me; the panel average uses the others.” |
 | **Flag** | “alert the head judge. I still score.” — That was a crash / That was a landing / Wrong rider / Duplicate / Other. |
 | History (**Scored**) | Tap a row to correct it (“Correcting attempt ‹n›”, **Back to the queue**). |
 | **Details** | Pick a rider: all their attempts, your scores, which tricks count, left / right counts, the counter. |
-| Impression / Variety step | After the heat ends: one score per rider (a summary card above the pad: attempts, landed, crashed, repeats, left / right, landed tricks with your scores), “‹done› / ‹total› riders”, **Submit** (“Submit your scores? You cannot change them afterwards.”). Submit is on when every rider has a score. |
+| Impression step (named by the Event step's **Name of the impression score**: “Variety score”, “Impression score”) | After the heat ends: one score per rider (a summary card above the pad: attempts, landed, crashed, repeats, left / right, landed tricks with your scores), “‹done› / ‹total› riders”, **Submit** (“Submit your scores? You cannot change them afterwards.”). Submit is on when every rider has a score. |
 | Sound, theme, size | Sound behind a tap; Daylight / Dark; Normal / Large. |
 
 After Submit, or when the head judge takes the heat into review, scores are locked (“Your sheet is locked. Ask the head judge to reopen it.”); the head judge can reopen one judge's sheet or edit a score with a reason.

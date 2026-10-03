@@ -59,7 +59,7 @@ export function JudgeEnd() {
   const riders = useMemo(() => impressionRiders(), []);
   const [values, setValues] = useState<Record<string, number | null>>(() => Object.fromEntries(riders.map((r) => [r.id, r.initialValue])));
   const [submitted, setSubmitted] = useState(false);
-  const [saved, setSaved] = useState<string | null>(copy.live.saved.impression("7.5", "RED"));
+  const [saved, setSaved] = useState<string | null>(copy.live.saved.impression("7.5", "RED", "Impression"));
   const scale = KOTA.heat.impression!.scale;
   const live = useMemo(() => judgeQueue(), []);
   return (
@@ -74,7 +74,7 @@ export function JudgeEnd() {
           caption={<span className="block font-semibold text-beach-ink">{saved ?? copy.live.saved.waiting}</span>}
           onChange={(id, v) => {
             setValues((p) => ({ ...p, [id]: v }));
-            setSaved(copy.live.saved.impression(formatPadValue(v, scale), riders.find((r) => r.id === id)!.label.primary.text));
+            setSaved(copy.live.saved.impression(formatPadValue(v, scale), riders.find((r) => r.id === id)!.label.primary.text, "Impression"));
           }}
           onSubmit={() => setSubmitted(true)}
         />

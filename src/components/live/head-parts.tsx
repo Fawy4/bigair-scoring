@@ -1,20 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, Volume2, VolumeX, Wind } from "lucide-react";
+import { Check, Clock, Volume2, VolumeX, Wind } from "lucide-react";
 import { HoldDialog, PublishDialog, ReopenDialog, RerunDialog, ResetHeatDialog } from "./head-dialogs";
 import { ClockText } from "@/components/clock-text";
 import { DriftBadge } from "@/components/drift-badge";
+import { FlagStrip } from "./flag-strip";
 import { HeatTimer } from "./heat-timer";
 import { Pill } from "./pill";
 import { setHeatPublicLive, setPublishHold } from "@/lib/live/head-actions";
-import { liveScoresState, nextLiveScoresValue } from "@/lib/live/live-scores";
 import { type ActionResult } from "@/lib/live/heat-actions";
 import { nextHeatInOrder, utcToLocalHHMM } from "@/lib/engine/schedule";
 import { WindCallControl } from "@/components/wind-call-control";
 import { runLine, shortHeat } from "@/lib/live/run-line";
 import { heatLabel, livesFor } from "@/lib/live/run-order";
 import { formatClock } from "@/lib/live/timer";
+import { parsePrestart } from "@/lib/live/prestart-input";
 import { resetHeatControl, type ControlId } from "@/lib/live/head-state";
 import type { FixTarget } from "@/lib/live/publish-checklist";
 import { pausedByWords } from "@/lib/live/paused-by";
@@ -158,20 +159,35 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
             </p>
           ) : null}
         </div>
-        {selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
+        {c.flag ? <FlagStrip model={c.flag} size="head" className="min-w-[16rem] basis-72" /> : selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
         <ClockText timezone={c.ctx.event.timezone} nowMs={c.nowServer} />
         <DriftBadge drift={c.drift} />
         {selected && state !== "cancelled" ? (
           <div className="flex flex-wrap items-center gap-2">
-            <Btn compact size="bar" testId="start" tone="accent" reason={c.why("start")} disabled={c.pending || !c.on("start")} onClick={c.requestStart}>
-              {T.start}
-            </Btn>
-            {state === "paused" ? (
-              <Btn compact size="bar" testId="resume" reason={c.why("resume")} disabled={c.pending || !c.on("resume")} onClick={c.actions.resume}>
+            {c.flagsOn && !c.armed && c.on("start") ? <PrestartChoice c={c} /> : null}
+            {c.armed ? (
+              <>
+                <Btn compact size="bar" testId="start-now" tone="accent" disabled={c.pending} onClick={c.actions.startNowDuringYellow}>
+                  {T.startNow}
+                </Btn>
+                <Btn compact size="bar" testId="extend-prestart" disabled={c.pending} onClick={c.actions.extend}>
+                  {T.plusOneMin}
+                </Btn>
+                <Btn compact size="bar" testId="abort-start" disabled={c.pending} onClick={c.actions.abort}>
+                  {T.abort}
+                </Btn>
+              </>
+            ) : (
+              <Btn compact size="bar" testId="start" tone="accent" className="px-5" reason={c.why("start")} disabled={c.pending || !c.on("start")} onClick={c.requestStart}>
+                {c.flagsOn ? T.startSequence : T.start}
+              </Btn>
+            )}
+            {state === "paused" || c.armedFrozen ? (
+              <Btn compact size="bar" testId="resume" reason={c.why("resume")} disabled={c.pending || (!c.on("resume") && !c.armedFrozen)} onClick={c.actions.resume}>
                 {T.resume}
               </Btn>
             ) : (
-              <Btn compact size="bar" testId="pause" reason={c.why("pause")} disabled={c.pending || !c.on("pause")} onClick={c.actions.pause}>
+              <Btn compact size="bar" testId="pause" reason={c.why("pause")} disabled={c.pending || (!c.on("pause") && !c.armed)} onClick={c.actions.pause}>
                 {T.pause}
               </Btn>
             )}
@@ -193,6 +209,89 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
         </p>
       ) : null}
       {selected && state === "cancelled" ? <CancelledNote c={c} /> : null}
+    </div>
+  );
+}
+
+/**
+ * The pre-start for the next Start heat sequence, written as a setting you pick first: the label "Pre-start:", then the event's default, "Other…" (a small field for
+ * any length from 0:10 to 15:00, typed as 1:30 or whole minutes; once typed it is the selected choice) and "Start now" (no yellow). The chosen one carries a tick and a
+ * heavier border, so it never depends on colour alone. It sits apart from the primary button, which is the only thing that starts anything.
+ */
+export function PrestartChoice({ c }: { c: HeadController }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [bad, setBad] = useState(false);
+  const apply = () => {
+    const r = parsePrestart(text);
+    if (!r.ok) return setBad(true);
+    setBad(false);
+    setOpen(false);
+    c.setOther(r.sec);
+  };
+  return (
+    <div data-testid="prestart-choice" role="radiogroup" aria-label={T.prestartLabel} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-beach-line bg-beach-surface px-2 py-1">
+      <span id="prestart-label" className="text-small font-semibold text-beach-muted">
+        {T.prestartGroup}
+      </span>
+      {c.prestartOptions.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          role="radio"
+          aria-checked={o.selected}
+          data-testid={o.id === "other" ? "prestart-other" : `prestart-${o.sec}`}
+          onClick={() => {
+            if (o.id === "other") {
+              setOpen((v) => !v);
+              if (o.sec !== null) c.setPrestart(o.sec);
+            } else {
+              setOpen(false);
+              c.setPrestart(o.sec as number);
+            }
+          }}
+          className={cn("inline-flex min-h-tap items-center gap-1 rounded-lg border-2 px-3 text-small font-semibold tabular-nums", o.selected ? "border-beach-accent bg-beach-bg text-beach-ink" : "border-transparent bg-transparent text-beach-muted")}
+        >
+          {o.selected ? <Check aria-hidden className="size-4" /> : null}
+          {o.label}
+        </button>
+      ))}
+      {open ? (
+        <div className="flex flex-wrap items-center gap-1">
+          <label className="sr-only" htmlFor="prestart-other-input">
+            {T.prestartOtherLabel}
+          </label>
+          <input
+            id="prestart-other-input"
+            data-testid="prestart-other-input"
+            inputMode="numeric"
+            autoFocus
+            value={text}
+            placeholder={T.prestartOtherPlaceholder}
+            aria-invalid={bad}
+            aria-describedby={bad ? "prestart-other-error" : undefined}
+            onChange={(e) => {
+              setText(e.target.value);
+              setBad(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                apply();
+              }
+            }}
+            className="min-h-tap w-24 rounded-lg border border-beach-border bg-beach-bg px-2 text-body tabular-nums"
+          />
+          <Btn testId="prestart-other-set" compact onClick={apply}>
+            {T.prestartOtherSet}
+          </Btn>
+        </div>
+      ) : null}
+      {bad ? (
+        <p id="prestart-other-error" role="alert" data-testid="prestart-other-error" className="basis-full text-small font-semibold">
+          {copy.liveErrors.codes.BAD_PRESTART()}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -348,47 +447,33 @@ export function WindButton({ eventId }: { eventId: string }) {
   );
 }
 
-/** The pill beside Publish: "Live scores: Public" or "Live scores: Hidden", one tap to change (Polish 2b, item 2). A heat that follows the division's setting says so. */
-export function LiveScoresPill({ c }: { c: HeadController }) {
-  const { selected, state, review } = c;
-  if (!selected || !state || !review || state === "scheduled" || state === "cancelled") return null;
-  const division = c.ctx.divisions.find((d) => d.id === selected.division_id);
-  const input = { heat: selected.public_live, division: division?.live.publicLiveScores, event: c.ctx.event.publicLiveScores } as const;
-  const { isPublic, followsDefault } = liveScoresState(input);
-  return (
-    <button
-      type="button"
-      data-testid="live-pill"
-      data-public={isPublic ? "true" : "false"}
-      data-follows={followsDefault ? "true" : "false"}
-      title={HL.livePillTitle(isPublic, followsDefault)}
-      disabled={c.pending}
-      onClick={() => c.act(HL.saved, async () => (await setHeatPublicLive(selected.id, nextLiveScoresValue(input))) as ActionResult, review.onChanged)}
-      className={cn("inline-flex min-h-tap flex-col items-start justify-center rounded-xl border px-3 text-left text-body font-semibold leading-tight", isPublic ? "border-beach-accent bg-beach-bg text-beach-ink" : "border-beach-border bg-beach-bg text-beach-muted")}
-    >
-      <span data-testid="live-pill-text">{HL.livePill(isPublic)}</span>
-      {followsDefault ? <span data-testid="live-pill-default" className="text-small font-medium text-beach-muted">{HL.livePillDefault}</span> : null}
-    </button>
-  );
-}
-
-/** The held final (Hold result back / Release) of a published heat. For the public pages; not needed to run the heat, so on the laptop it is behind "More". The live-score switch is the pill beside Publish. */
+/** The live-score switch of the heat (follow the division / on / off) and the held final's "Hold result back". For the public pages; not needed to run the heat, so on the laptop it is behind "More". Releasing a held result is the button beside Publish. */
 export function VisibilityBox({ c }: { c: HeadController }) {
   const { selected, state, review } = c;
   if (!selected || !state || !review || state === "scheduled" || state === "cancelled") return null;
-  if (state !== "published") return null;
   return (
     <section data-testid="visibility" aria-label={HL.visibilityHeading} className="flex flex-col gap-1.5 rounded-xl border border-beach-line bg-beach-bg p-2">
+      <p className="text-small font-semibold text-beach-muted">{HL.liveHeading}</p>
+      <div role="group" aria-label={HL.liveHeading} className="grid grid-cols-3 gap-1.5">
+        {([[null, HL.liveFollow], [true, HL.liveOn], [false, HL.liveOff]] as Array<[boolean | null, string]>).map(([v, text]) => (
+          <button
+            key={String(v)}
+            type="button"
+            data-testid={`live-${v === null ? "follow" : v ? "on" : "off"}`}
+            aria-pressed={selected.public_live === v}
+            disabled={c.pending}
+            onClick={() => c.act(HL.saved, async () => (await setHeatPublicLive(selected.id, v)) as ActionResult, review.onChanged)}
+            className={cn("min-h-tap rounded-xl border px-1 text-small font-semibold", selected.public_live === v ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
       {state === "published" ? (
         selected.publish_hold ? (
-          <>
-            <p data-testid="held-note" className="text-small font-semibold">
-              {HL.heldNote}
-            </p>
-            <Btn testId="release" tone="accent" disabled={c.pending} onClick={() => c.act(HL.released, async () => (await setPublishHold(selected.id, false)) as ActionResult, review.onChanged)}>
-              {HL.release}
-            </Btn>
-          </>
+          <p data-testid="held-note" className="text-small font-semibold">
+            {HL.heldNote}
+          </p>
         ) : (
           <Btn testId="hold-result" disabled={c.pending} onClick={() => c.setDialog("hold")}>
             {HL.hold}
@@ -399,10 +484,25 @@ export function VisibilityBox({ c }: { c: HeadController }) {
   );
 }
 
+/** "Release result" beside Publish when the heat's result is held back; "Result held" (greyed, with its reason) while it cannot yet be released. Nothing for a heat that is not held. */
+export function ReleaseButton({ c, compact }: { c: HeadController; compact?: boolean }) {
+  const { selected, state, review } = c;
+  if (!selected || !review || !selected.publish_hold) return null;
+  const releasable = state === "published";
+  return releasable ? (
+    <Btn compact={compact} testId="release" tone="accent" disabled={c.pending} onClick={() => c.act(HL.released, async () => (await setPublishHold(selected.id, false)) as ActionResult, review.onChanged)}>
+      {HL.release}
+    </Btn>
+  ) : (
+    <Btn compact={compact} testId="release" reason={HL.heldCannotRelease} disabled onClick={() => undefined}>
+      {HL.heldState}
+    </Btn>
+  );
+}
+
 /** Publish, Re-open, Cancel heat and Re-run (also on a cancelled heat), the live-score switch and the held final. `compact` keeps the reasons for assistive technology only. */
 export function ReviewButtons({ c, compact = false, visibility = true }: { c: HeadController; compact?: boolean; visibility?: boolean }) {
   const { selected, state, review } = c;
-  const [menuOpen, setMenuOpen] = useState(false);
   if (!selected || !state) return null;
   const cancelled = state === "cancelled";
   const again = c.heats.find((h) => h.rerun_of === selected.id);
@@ -412,10 +512,10 @@ export function ReviewButtons({ c, compact = false, visibility = true }: { c: He
       {visibility ? <VisibilityBox c={c} /> : null}
       {review ? (
         <div className="flex flex-wrap items-start gap-1.5">
-          <LiveScoresPill c={c} />
           <Btn compact={compact} testId="publish" tone="accent" reason={c.why("publish")} disabled={c.pending || !c.on("publish")} onClick={() => c.setDialog("publish")}>
             {copy.live.console.publish}
           </Btn>
+          <ReleaseButton c={c} compact={compact} />
           <Btn compact={compact} testId="reopen" reason={c.why("reopen")} disabled={c.pending || !c.on("reopen")} onClick={() => c.setDialog("reopen")}>
             {copy.live.console.reopen}
           </Btn>
@@ -443,6 +543,11 @@ export function ReviewButtons({ c, compact = false, visibility = true }: { c: He
         </div>
       ) : (
         <div className="flex flex-wrap items-start gap-1.5">
+          {review ? (
+            <Btn compact={compact} testId="reset-heat" tone="danger" reason={resetRule.reason} disabled={c.pending || !resetRule.enabled} onClick={() => c.setDialog("reset")}>
+              {copy.resetParts.heat.open}
+            </Btn>
+          ) : null}
           {!cancelled ? (
             <Btn compact={compact} testId="cancel" tone="danger" reason={c.why("cancel")} disabled={c.pending || !c.on("cancel")} onClick={() => c.setCancelling(true)}>
               {T.cancel}
@@ -452,30 +557,6 @@ export function ReviewButtons({ c, compact = false, visibility = true }: { c: He
             <Btn compact={compact} testId="rerun" tone="danger" reason={c.why("rerun")} disabled={c.pending || !c.on("rerun")} onClick={() => c.setDialog("rerun")}>
               {cancelled && again ? copy.resetParts.alreadyRerunAs(shortHeat(again)) : copy.live.console.rerun}
             </Btn>
-          ) : null}
-          {review ? (
-            <div className="flex flex-col gap-0.5">
-              <Btn compact={compact} testId="heat-menu" onClick={() => setMenuOpen((o) => !o)}>
-                {copy.resetParts.heat.menu}
-              </Btn>
-              {menuOpen ? (
-                <div role="menu" data-testid="heat-menu-list" className="flex flex-col gap-0.5 rounded-card border border-beach-border bg-beach-surface p-1">
-                  <Btn
-                    compact={false}
-                    testId="reset-heat"
-                    tone="danger"
-                    reason={resetRule.reason}
-                    disabled={c.pending || !resetRule.enabled}
-                    onClick={() => {
-                      setMenuOpen(false);
-                      c.setDialog("reset");
-                    }}
-                  >
-                    {copy.resetParts.heat.open}
-                  </Btn>
-                </div>
-              ) : null}
-            </div>
           ) : null}
         </div>
       )}

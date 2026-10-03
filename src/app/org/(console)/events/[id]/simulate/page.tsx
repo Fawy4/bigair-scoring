@@ -37,7 +37,7 @@ export default async function SimulatePage({ params }: { params: Promise<{ id: s
 
   if (!event.is_simulation) {
     return (
-      <main className="flex max-w-3xl flex-col gap-6">
+      <main className="flex flex-col gap-6">
         {header}
         <RunAsSimulation eventId={id} eventName={event.name} />
       </main>
@@ -48,7 +48,7 @@ export default async function SimulatePage({ params }: { params: Promise<{ id: s
   if (result.kind === "denied") notFound();
   if (result.kind === "needs_setup") {
     return (
-      <main className="flex max-w-3xl flex-col gap-6">
+      <main className="flex flex-col gap-6">
         {header}
         <SetupSimulator eventId={id} />
       </main>
@@ -56,7 +56,7 @@ export default async function SimulatePage({ params }: { params: Promise<{ id: s
   }
   if (result.kind !== "ok") {
     return (
-      <main className="flex max-w-3xl flex-col gap-6">
+      <main className="flex flex-col gap-6">
         {header}
         <Banner tone="danger">{result.kind === "error" ? result.message : T.generic}</Banner>
       </main>

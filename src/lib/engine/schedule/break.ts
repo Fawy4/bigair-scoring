@@ -61,7 +61,7 @@ export type BreakCountdown = {
  * "Next: R1 · H3 · starts in 4:30". It exists from the moment a heat has ended until the next heat starts. The start is the timetable's own, worked out
  * WITHOUT the "nothing runs in the past" rule, so a head judge who is late sees "due" and how late, not a countdown that keeps running away from them.
  */
-export function breakCountdown(plan: SchedulePlan | null, heats: HeatLive[], opts: Pick<TimetableOptions, "timezone" | "eventDay" | "defaults"> & { now: string }): BreakCountdown | BreakNone {
+export function breakCountdown(plan: SchedulePlan | null, heats: HeatLive[], opts: Pick<TimetableOptions, "timezone" | "eventDay" | "defaults"> & { now: string; timeScale?: number }): BreakCountdown | BreakNone {
   if (heats.some((h) => h.startedAt && !h.endedAt && !h.cancelled)) return { kind: "none", reason: "heat-running" };
   const ended = heats.filter((h) => h.startedAt && h.endedAt);
   if (ended.length === 0) return { kind: "none", reason: "no-ended-heat" };
@@ -73,8 +73,12 @@ export function breakCountdown(plan: SchedulePlan | null, heats: HeatLive[], opt
   const { timezone, eventDay, defaults } = opts;
   const row = computeTimetable(open, heats, { timezone, eventDay, defaults }).rows.find((r) => r.itemId === next.itemId);
   if (!row?.startUtc) return { kind: "none", reason: "no-time" };
-  const start = Date.parse(row.startUtc);
-  const base = { kind: "break" as const, heatId: next.heatId, itemId: next.itemId, startUtc: row.startUtc };
+  // a simulation at x10 has a break a tenth as long: the gap between the end of the last heat and the start is divided by the speed
+  const lastEndMs = Math.max(...ended.map((h) => Date.parse(h.endedAt!)));
+  const scale = Math.max(1, opts.timeScale ?? 1);
+  const rawStart = Date.parse(row.startUtc);
+  const start = scale > 1 && rawStart > lastEndMs ? Math.round(lastEndMs + (rawStart - lastEndMs) / scale) : rawStart;
+  const base = { kind: "break" as const, heatId: next.heatId, itemId: next.itemId, startUtc: new Date(start).toISOString() };
   if (plan.hold) {
     const lastEnd = Math.max(...ended.map((h) => Date.parse(h.endedAt!)));
     const frozenAt = Math.max(Date.parse(plan.hold.since), lastEnd);

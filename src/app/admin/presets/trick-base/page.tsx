@@ -46,7 +46,7 @@ export default async function TrickBasePage({ searchParams }: { searchParams: Pr
   const proposalRows: ProposalRow[] = (proposals ?? []).map((p) => ({ eventId: p.event_id, eventName: p.event_name, organisationName: p.organisation_name, family: p.family, key: p.key, label: p.label, category: p.category }));
 
   return (
-    <main className="flex max-w-5xl flex-col gap-4">
+    <main className="flex flex-col gap-4">
       <Link href="/admin/presets" className="font-semibold underline">
         {copy.admin.presets.back}
       </Link>

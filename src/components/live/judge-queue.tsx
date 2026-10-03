@@ -11,6 +11,7 @@ import { RiderDetail } from "./rider-detail";
 import { RiderTile } from "./rider-tile";
 import { ScorePad } from "./score-pad";
 import { ScreenHeader } from "./screen-header";
+import type { FlagStripModel } from "./flag-strip";
 import { RiderLabel } from "@/components/rider-label";
 import type { LabelModel } from "@/lib/identification/rider-label";
 import { judgeQueue, KOTA } from "@/lib/live/design-fixtures";
@@ -49,6 +50,8 @@ export interface JudgeQueueViewProps {
   pendingCount?: number;
   onRetry?: () => void;
   clock?: { timezone: string; nowMs: number };
+  /** The flag strip (Flags), or none when the event has flags off. */
+  flag?: FlagStripModel | null;
   /** The screen's own settings (theme, size, sound), shown at the top of the Details view. */
   settings?: React.ReactNode;
   items: JudgeCard[];
@@ -114,6 +117,7 @@ export function JudgeQueueView(p: JudgeQueueViewProps) {
         pending={p.pendingCount}
         onRetry={p.onRetry}
         clock={p.clock}
+        flag={p.flag}
         details={details}
         onToggleDetails={() => {
           setDetails((d) => !d);

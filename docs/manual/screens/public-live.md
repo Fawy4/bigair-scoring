@@ -2,7 +2,7 @@
 
 /e/‹event›/live: the heat on the water, its clock, its riders, and — when the division allows it — live totals and attempt boxes.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#pl-purpose}
 
@@ -16,6 +16,7 @@ Spectators on the beach follow a heat as it happens.
 | Control | What it does |
 |---|---|
 | **Heats** picker | Choose a heat (defaults to the one on the water). |
+| **Flag strip** | With the Flags on, a strip above the heat in the flag's colour: the state's words, the countdown and the heat name (the same strip is on the public home page). It follows the heat from the yellow before the start to the red at 0:00 ([Flags](flags.md)). |
 | Clock and state | Running / Paused / “Ended — scores soon” / “Starts soon” / “Waiting for an earlier heat”; time left from the server's stamps, corrected at every poll. |
 | Riders | Rider labels (colour word always written). With live scores: running totals and the attempt boxes (“3 tricks logged so far · 7 attempts per rider”). Without: “Scores published after the heat.” |
 

@@ -13,6 +13,7 @@ import { blockersFor, canMerge, mergeKeepFirst, riderTotal, withCellScore, withR
 import { headConsole, KOTA, type ConsoleRow } from "@/lib/live/design-fixtures";
 import { nextHeatState } from "@/lib/live/head-state";
 import { formatCell } from "@/lib/live/matrix-model";
+import { impressionNameOf } from "@/lib/schemas/impression-name";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
@@ -98,15 +99,15 @@ export function HeadConsole() {
     const idx = impression.blue.findIndex((v) => v === null);
     const who = copy.live.matrix.judge(idx + 1);
     return (
-      <Modal title={C.enterImpression} onClose={close}>
+      <Modal title={C.enterImpression(impressionNameOf(KOTA))} onClose={close}>
         <p className="text-body font-medium text-beach-muted">{`${who} · BLUE`}</p>
-        <ScorePad scale={scale} value={value} label={copy.live.impression.heading} onChange={setValue} />
+        <ScorePad scale={scale} value={value} label={copy.live.impression.heading(impressionNameOf(KOTA))} onChange={setValue} />
         <Reason value={reason} onChange={setReason} />
         <Footer
           canSave={value !== null && reason.trim().length > 0}
           onSave={() => {
             setImpression((m) => ({ ...m, blue: m.blue.map((v, i) => (i === idx ? value : v)) }));
-            done(`${who} · BLUE · ${copy.live.impression.heading}: ${formatCell(value as number)}`, reason.trim());
+            done(`${who} · BLUE · ${copy.live.impression.heading(impressionNameOf(KOTA))}: ${formatCell(value as number)}`, reason.trim());
           }}
           onCancel={close}
         />
@@ -331,10 +332,10 @@ export function HeadConsole() {
             ))}
           </section>
           <div data-testid="owes" className="flex flex-col gap-1 rounded-xl border border-beach-line bg-beach-bg px-2 py-1 text-body font-medium">
-            <span>{owes.length ? owes.map((o) => C.owes(o.judge, o.rider)).join(" · ") : C.noneOwed}</span>
+            <span>{owes.length ? owes.map((o) => C.owes(o.judge, o.rider, impressionNameOf(KOTA))).join(" · ") : C.noneOwed(impressionNameOf(KOTA))}</span>
             {owes.length ? (
               <button type="button" data-testid="enter-impression" onClick={() => setDialog({ kind: "impression" })} className={plain}>
-                {C.enterImpression}
+                {C.enterImpression(impressionNameOf(KOTA))}
               </button>
             ) : null}
           </div>

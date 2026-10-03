@@ -2,7 +2,7 @@
 
 Step 7 of an event and its home (/org/events/‹id›): is the event ready, what is on now and next, the wind call, the quick actions (Hold, Resume at, Shift, head console, big screen, Reset), today's timetable, and the links to share.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#gl-purpose}
 
@@ -25,6 +25,7 @@ The start of event day. Read the checklist top to bottom, fix what is red, then 
 | **Resume at…** | Ends the hold at the time you type (event time zone); everything not started re-flows from it. |
 | **Shift +5 min**, **Shift +10 min** | Moves everything that has not started later. |
 | **Open head judge console** | The head console in a new tab (an organiser can act as head judge). |
+| **Flag marshal's screen** | /e/‹event›/flag in a new tab (only when the Flags are on): the whole screen is the flag, for the marshal's phone or tablet. The QR to print is on the Officials step ([Flags](flags.md#fl-view)). |
 | **Big screen** | /screen/‹event› in a new tab, for the beach screen. |
 | **Reset event…** | Wipes everything that happened and puts every ladder back to its locked draw. See [Resets and undo](../resets-and-undo.md#ru-event). |
 | **Today’s timetable** | Start, heat, state (done, live, next, est., on hold, pinned, cancelled) and the projected finish; **Open the run order**. |

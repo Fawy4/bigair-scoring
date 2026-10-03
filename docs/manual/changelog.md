@@ -2,7 +2,31 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 3 Oct 2026 · Product version 0.12.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
+
+## 0.13.0 — 3 Oct 2026 {#cl-0-13-0}
+
+Release entry: [0.13.0](/admin/releases#release-0-13-0) (platform owner only)
+
+**What changed for users**
+- **Flags:** four flag states driven by the heat clock — **Before start** (yellow), **Running** (green), **Last minute** (yellow), **Stopped or paused** (red; the words say Finished, Paused or Hold). On by default for every event, existing ones included. Event step → **Flags**: on/off, the word and colour of each state, the pre-start length and the last-minute length.
+- **Start heat sequence:** on the head judge's console **Start heat** becomes **Start heat sequence**, the one primary button. The pre-start is a labelled setting beside it, **Pre-start:** — the event's default (ticked), **Other…** (type 1:30 or whole minutes, 0:10 to 15:00; anything else is refused) and **Start now**. The heat starts by itself at 0:00 of the pre-start, with a horn, on the server's clock.
+- **During the yellow** the head judge keeps **Start now**, **+1 min** (exactly one more minute, repeatable, audited, on every screen within a second; it never changes the heat length or the last-minute setting), **Pause** / **Resume** (the countdown freezes and carries on) and **Abort**.
+- **Reset this heat** is a visible button immediately before **Cancel heat** (the heat menu is gone: it held nothing else). A reset heat shows red / Stopped and keeps no start sequence.
+- **Flag strip** on every live screen (console on laptop and phone, judge, spotter, announcer, observer views, the public live tab and home page); a **flag frame** and large state word on the big screen; text cues on the announcer's view.
+- **Flag view** (/e/‹event›/flag): the flag marshal's screen, linked from Go live and the Officials step (with a QR to print). Turns grey after 10 seconds without the server.
+- **Horns** (behind **Sound on**): one at green, one at the last minute, two at red, one at resume. Nothing vibrates.
+- **Console corrections and additions:** the per-heat live-scores switch is back in the **More** menu with **Follow division / Live / Not live** (0.12.0 moved the wrong control into a pill); **Release result** is a visible button beside **Publish** for a held result; a **review bar** under the heat's header from End heat until Publish (amber, red, green, and a quiet line while the heat runs); an **Impression** card beside the rider cards (a button with a pop-over when there is no room), and a block on the phone.
+- **Simulator:** virtual officials follow the sequence; every speed is measured: at ×10 a 1:00 pre-start lasts 6 seconds, a 1:00 last minute 6 seconds and the break countdown shrinks too. **Pause** freezes the yellow like the heat clock, and the auto-play arms a heat only while it is playing and only when the head judge has not armed it. **Skip to end of heat** now fast-forwards the virtual officials (all attempts logged and scored) and leaves the heat running; the old behaviour is the separate **End heat and publish**. New scenario **Abort the start**; **View as…** has **Flag view**. The Flag view now refreshes every second.
+- **Name of the impression score** (Event step → **Scoring settings**): Impression, Variety… used on the console's card, the judges' phones and sheets, the review bar, the public results, the rules text and the big screen; the card has a proper heading above its grid.
+- **Draw step:** compact cards (a seat is one line: Lycra block, name, seed; heats of a round in tight columns; **+ Seat** and **Take heat out** behind a small button on each card) and the selection banner is pinned to the top of the window. The printed page is unchanged.
+- **Rider page door:** a public **Riders** tab lists everybody on the public list; each name opens that rider's page, which now has a QR code, its address and an Add to home screen hint; the Riders step has **Rider links**, a printable sheet with a QR and address per rider and “Name — address” lines for WhatsApp.
+- **Wider organiser and admin screens:** the content area uses the window up to 1400 px (centred beyond), tables and cards the full width, explanatory text about 70 characters a line; the phone is unchanged.
+- **Fixed:** the judge's Impression step no longer shows “This page could not be shown” when the page opens before the heat's riders have loaded.
+- New refusals, with Learn more: the flags are off, a start heat sequence already running, nothing to abort; the “one heat at a time” sentence now also covers a heat in its yellow.
+
+**Manual pages updated**
+- New: [Flags and the start heat sequence](screens/flags.md). Updated: [Console on a laptop](screens/console-laptop.md) (review bar, Impression card, Release result, live-scores switch), [Console on a phone](screens/console-phone.md), [Judge](screens/judge.md), [Spotter](screens/spotter.md), [Announcer](screens/announcer.md), [Observer](screens/observer.md), [Big screen](screens/big-screen.md), [Public live](screens/public-live.md), [Public home](screens/public-home.md), [Organiser: Event step](screens/organiser-event.md), [Organiser: Officials](screens/organiser-officials.md), [Organiser: Go live](screens/organiser-go-live.md), [Simulator](screens/simulator.md), [Organiser: Draw](screens/organiser-draw.md), [Organiser: Riders](screens/organiser-riders.md), [Public: the rider page](screens/public-rider.md), [Public event](screens/public-event.md), [Dependency map](dependencies.md), [Glossary](glossary.md), [Settings](settings.md) and [Errors](errors.md) (generated).
 
 ## 0.12.0 — 3 Oct 2026 {#cl-0-12-0}
 
@@ -10,7 +34,7 @@ Release entry: [0.12.0](/admin/releases#release-0-12-0) (platform owner only)
 
 **What changed for users**
 - **One pause (simulator):** the head judge's **Pause** on the console and the simulator's **Pause** are the same state. Pausing on either side pauses the heat clock and the virtual officials; **Resume** on either side resumes both; each side shows the real state within about a second.
-- **Console:** the per-heat live-scores switch is a pill beside **Publish** on the laptop and on the phone: “Live scores: Public” or “Live scores: Hidden”, one tap to change; “Division default” under it while the heat follows the division's setting. The **More** menu keeps the held final, the agreement report and the audit log.
+- **Console:** a held final's **Release result** is a visible button beside **Publish** (laptop and phone). (This entry first described the per-heat live-scores switch as a pill beside Publish; that was a mistake and is corrected in 0.13.0: the switch is back in the **More** menu.)
 - **Big screen:** **Day** and **Dark** colours. A quiet button shows on mouse move or tap and hides after three seconds; **D** switches on a laptop; the browser remembers its choice; the Event step sets the default (**Big screen: colours**, Dark).
 - **Admin → Feedback:** a date filter (From / To; Today, Last 7 days, All), tick boxes with **Select all**, **Set done** and **Reopen** for many notes at once (asks once, says how many changed), and the export follows the filter.
 - **Public event page:** the organiser chooses its tabs (Event step → **Public page**, all on by default); Join also hides while registration is closed; an old link to a hidden tab lands on the first visible tab.

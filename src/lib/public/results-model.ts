@@ -1,6 +1,7 @@
 import type { LabelModel } from "@/lib/identification/rider-label";
 import { mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { parseScoringModel, type ScoringModel } from "@/lib/schemas/scoring-model";
+import { withImpressionName } from "@/lib/schemas/impression-name";
 import { copy } from "@/lib/ui-copy";
 import { toAttemptDisplay, type AttemptDisplay } from "@/lib/live/result-shading";
 import { labelFor, schemeFor } from "./schemes";
@@ -58,7 +59,7 @@ export function modelOf(rules: PublicRules | null, divisionId: string): ScoringM
   const d = rules?.divisions.find((x) => x.id === divisionId);
   if (!d?.scoring_model) return null;
   try {
-    return parseScoringModel(mergeOverrides(d.scoring_model as never, d.scoring_overrides, SCORING_NULLABLE));
+    return withImpressionName(parseScoringModel(mergeOverrides(d.scoring_model as never, d.scoring_overrides, SCORING_NULLABLE)), rules?.impression_name);
   } catch {
     return null;
   }

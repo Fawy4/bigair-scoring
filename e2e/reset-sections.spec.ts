@@ -30,17 +30,28 @@ test("run a heat, reset it from the console, see it not started", async ({ brows
   await expect(row(head, w.heats[0])).toHaveAttribute("data-state", "running", { timeout: 40_000 });
   await w.db.from("trick_attempts").insert({ heat_id: w.heats[0], entry_id: w.entries[0], seq: 1, client_key: randomUUID(), status: "landed", trick_name: "Backroll" });
 
-  // while it runs, Reset this heat is in the heat menu, off, and says why
-  await head.getByTestId("heat-menu").click();
+  // while it runs, Reset this heat is a visible button before Cancel heat, off, and says why
   await expect(head.getByTestId("reset-heat")).toBeDisabled();
   await expect(head.getByTestId("why-reset-heat")).toContainText("running");
-  await head.getByTestId("heat-menu").click();
 
   await head.getByTestId("end").click();
   await expect(row(head, w.heats[0])).toHaveAttribute("data-state", "ended", { timeout: 40_000 });
-  await head.getByTestId("heat-menu").click();
   await expect(head.getByTestId("reset-heat")).toBeEnabled();
+  // Reset this heat is a visible button immediately before Cancel heat (same row, same size), and there is no heat menu any more
+  await expect(head.getByTestId("heat-menu")).toHaveCount(0);
+  const resetBox = (await head.getByTestId("reset-heat").boundingBox())!;
+  const cancelBox = (await head.getByTestId("cancel").boundingBox())!;
+  expect(Math.abs(resetBox.height - cancelBox.height), "same size").toBeLessThan(2);
+  // immediately before Cancel heat: the very next button in the row (the row wraps in the narrow right-hand column, so only the order is fixed)
+  const nextIsCancel = await head.getByTestId("reset-heat").evaluate((el) => {
+    const wrap = el.parentElement as HTMLElement;
+    return Boolean(wrap.nextElementSibling?.querySelector('[data-testid="cancel"]'));
+  });
+  expect(nextIsCancel).toBe(true);
   await head.getByTestId("reset-heat").click();
+  // it asks once: the dialog, and nothing is reset until Save
+  await expect(head.getByTestId("console-dialog")).toHaveCount(1);
+  expect((await status(w.heats[0])).started_at).not.toBeNull();
   const dialog = head.getByTestId("console-dialog");
   await expect(dialog.getByTestId("reset-heat-line")).toContainText("1 attempt", { timeout: 30_000 });
   // live scores were on while it ran, so a reason is needed
@@ -77,7 +88,6 @@ test("a cancelled heat that was already re-run says so on its Re-run button", as
   await expect(head.getByTestId("rerun")).toBeDisabled({ timeout: 40_000 });
   await expect(head.getByTestId("rerun")).toHaveText(/Already re-run as H1R/);
   // a cancelled heat that was re-run cannot be reset: the menu says to reset the re-run
-  await head.getByTestId("heat-menu").click();
   await expect(head.getByTestId("reset-heat")).toBeDisabled();
   await expect(head.getByTestId("why-reset-heat")).toContainText("Reset the re-run instead");
 });

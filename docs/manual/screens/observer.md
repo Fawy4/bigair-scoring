@@ -2,7 +2,7 @@
 
 A read-only official's screen (/observe/‹event›): every official's real screen, live, with every control disabled — for a sponsor, an engineer, a trainee head judge, a journalist, or the owner watching a customer's event.
 
-Last checked: 3 Oct 2026 · Product version 0.11.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#ob-purpose}
 
@@ -21,7 +21,7 @@ An **Observer** seat sees exactly what each official sees, as it happens, and ca
 
 | Control | What it does |
 |---|---|
-| **Whose screen** | **Head judge console (laptop)**, **Head judge console (phone)**, **Judge 1 · ‹name›** … one per judge on a panel (in panel order; a head judge who also scores is one of them), **Spotter · ‹name›** for each spotter, **Announcer**, **Big screen**, **Public page**. The choice stays in the address, so a reload keeps it. |
+| **Whose screen** | **Head judge console (laptop)**, **Head judge console (phone)**, **Judge 1 · ‹name›** … one per judge on a panel (in panel order; a head judge who also scores is one of them), **Spotter · ‹name›** for each spotter, **Announcer**, **Big screen**, **Flag view** (the flag marshal's screen, read-only), **Public page**. Every observed screen shows the flag strip when the Flags are on. The choice stays in the address, so a reload keeps it. |
 | **Actual size** / **Fit to screen** | For the laptop console and the big screen: drawn at laptop size and shrunk to fit (default), or at full size with scrolling. Phone screens are drawn at phone width. |
 | **Observing — read only** | The strip under the bar. Every button, box and choice of the screen below is disabled and no tap reaches it; scrolling works. |
 | The screen | The official's real screen, live: the judge's queue with that judge's own scores as they land, the spotter's feed (shown open), the console's table with the outlier colours, the announcer's table, the big screen and the public page (for a simulation, the preview the organiser sees). Each screen shows only what that official's own phone gets: a judge's screen shows that judge's scores only. |

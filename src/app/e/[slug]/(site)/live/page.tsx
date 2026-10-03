@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { ChipLinks } from "@/components/public/chips";
 import { HeatClock } from "@/components/public/heat-clock";
+import { PublicFlagStrip } from "@/components/public/public-flag";
+import { publicFlagData } from "@/lib/public/flag-data";
 import { HeatSummary } from "@/components/public/heat-summary";
 import { publicMetadata } from "@/lib/public/meta";
 import { heatOg } from "@/lib/public/og";
@@ -33,7 +35,8 @@ export default async function LivePage({ params, searchParams }: { params: Promi
   const core = await loadCore((await params).slug);
   if (!core) notFound();
   guardTab(core.site, "live");
-  const { site, tabs, timetable } = core;
+  const { site, tabs, timetable, tt } = core;
+  const flagData = publicFlagData(timetable, tt, site.settings.flags);
   const base = `/e/${site.event.slug}`;
   const heatId = pickHeat(core, (await searchParams).heat);
   const tab = tabs.find((t) => t.id === heatId);
@@ -52,6 +55,7 @@ export default async function LivePage({ params, searchParams }: { params: Promi
 
   return (
     <>
+      {flagData ? <PublicFlagStrip data={flagData} /> : null}
       <h2 data-testid="live-title" className="text-heading font-semibold">
         {tab.title}
       </h2>

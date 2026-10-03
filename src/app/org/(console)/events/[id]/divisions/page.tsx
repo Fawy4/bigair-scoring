@@ -60,10 +60,10 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
   const schemes = await loadIdentificationSchemes(supabase, event.organisation_id);
   const [master, localBlocks] = await Promise.all([loadMasterVocabulary(supabase), loadEventBlocks(supabase, id)]);
   return (
-    <main className="flex max-w-4xl flex-col gap-4">
+    <main className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <h1>{copy.divisions.stepHeading}</h1>
-        <p className="max-w-[80ch] text-body font-medium text-beach-muted">{copy.divisions.intro}</p>
+        <p className="max-w-[70ch] text-body font-medium text-beach-muted">{copy.divisions.intro}</p>
       </div>
       <LockNotice />
       <DivisionsManager

@@ -6,6 +6,8 @@ import { CopyLink } from "@/components/public/copy-link";
 import { HeatClock } from "@/components/public/heat-clock";
 import { Qr } from "@/components/public/qr";
 import { SponsorStrip } from "@/components/public/sponsor-strip";
+import { PublicFlagStrip } from "@/components/public/public-flag";
+import { publicFlagData } from "@/lib/public/flag-data";
 import { StateBadge, TimetableList, timeText } from "@/components/public/timetable-list";
 import { publicMetadata } from "@/lib/public/meta";
 import { eventOg } from "@/lib/public/og";
@@ -37,10 +39,12 @@ export default async function PublicHome({ params }: { params: Promise<{ slug: s
   const url = eventUrl(origin, site.event.slug);
   const liveHeat = tt.now?.heatId ? timetable?.heats.find((h) => h.id === tt.now!.heatId) : undefined;
   const heatHref = (id: string) => `${base}/live?heat=${id}`;
+  const flagData = publicFlagData(timetable, tt, site.settings.flags);
   const day = tt.day && !tt.isToday ? formatEventDates(tt.day, tt.day) : null;
 
   return (
     <>
+      {flagData ? <PublicFlagStrip data={flagData} /> : null}
       {tt.onHold ? (
         <p data-testid="on-hold" role="status" className="rounded-card border-2 border-beach-outlier bg-beach-surface px-3 py-2 text-name font-semibold">
           {H.onHold}

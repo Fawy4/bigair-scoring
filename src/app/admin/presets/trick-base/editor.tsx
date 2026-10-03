@@ -522,7 +522,7 @@ export function TrickBaseEditor({
     <div className="flex flex-col gap-5" data-testid="trick-editor" data-ready={ready ? "true" : undefined}>
       <div className="flex flex-col gap-2">
         <h1>{C.heading}</h1>
-        <p className="max-w-[80ch] text-body font-medium text-beach-muted">{C.intro}</p>
+        <p className="max-w-[70ch] text-body font-medium text-beach-muted">{C.intro}</p>
         <p className="flex flex-wrap items-center gap-2 font-semibold" data-testid="editor-status">
           <StatusPill state={viewing || working.published ? "published" : "draft"} />
           {status}

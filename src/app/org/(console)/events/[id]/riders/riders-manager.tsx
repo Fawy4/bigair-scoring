@@ -150,6 +150,9 @@ export function RidersManager({ eventId, divisions, selectedId, scheme, schemeIs
             <Button variant="quiet" href={`/org/events/${eventId}/riders/print?division=${selected.id}`} target="_blank" data-testid="print-start-list">
               {T.printStartList}
             </Button>
+            <Button variant="quiet" href={`/org/events/${eventId}/riders/links`} target="_blank" data-testid="rider-links-button">
+              {T.links.button}
+            </Button>
           </div>
         </div>
         <p className="text-body font-medium text-beach-muted">{T.dragHint}</p>

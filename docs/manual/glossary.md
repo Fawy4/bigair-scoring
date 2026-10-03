@@ -2,7 +2,7 @@
 
 Every word the product uses that a newcomer might not know, alphabetically, one line each with a beach example.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 | Term | Meaning, with a beach example |
 |---|---|
@@ -38,10 +38,16 @@ Last checked: 2 Oct 2026 · Product version 0.9.0
 | {#g-head-judge} **Head judge** | The official who starts heats, reviews and publishes (a seat, or an organiser). *She ends heat 2 and publishes at 10:24.* |
 | {#g-heat} **Heat** | A group of riders on the water together for a set time. *R1 · H2, 10 minutes, 4 riders.* |
 | {#g-height} **Height** | A jump's measured height in metres, when a sensor is used; can fill the Height criterion, add a bonus, or give “Highest jump”. *Highest jump: 24.1 m.* |
+| {#g-flags} **Flags** | The four flag states the clock drives: **Before start** (yellow), **Running** (green), **Last minute** (yellow), **Stopped or paused** (red). On by default for every event. *The marshal's screen turns yellow, then green when the heat starts.* See [Flags and the start heat sequence](screens/flags.md). |
+| {#g-start-sequence} **Start heat sequence** | What **Start heat** becomes with the flags on: the yellow with the pre-start countdown, then the heat starts by itself. *Press Start heat sequence, 1:00 of yellow, green, the clock runs.* |
+| {#g-prestart} **Pre-start** | The length of the yellow before a heat starts by itself: the event's default, **Other…** (0:10 to 15:00, typed as 1:30 or whole minutes) or **Start now** (none), chosen in the **Pre-start:** box next to the button. During the yellow **+1 min** adds exactly one minute to what is left. *1:00, or Other… 1:30.* |
+| {#g-flag-view} **Flag view** | The flag marshal's screen at /e/‹event›/flag: the whole screen is the flag. *Turns grey and says “No connection — check with the head judge” after 10 seconds without the server.* |
+| {#g-flag-strip} **Flag strip** | The clock line of a live screen, filled with the flag's colour, with the state's words, the countdown and the heat name. |
+| {#g-prestart} **Pre-start** | The yellow before a heat starts: 1:00 by default, 2:00 or none (**Start now**) for one heat. |
 | {#g-hold} **Hold** | Pauses the run order (not a heat) for wind; times stop moving until Resume at. *Wind drops at 11:00: Hold; Resume at 13:30.* |
 | {#g-hold-final} **Hold the final** | The final's result stays hidden until released, for the podium. *Release result after the prize-giving.* |
 | {#g-identification} **Identification scheme** | How riders are recognised: Lycra colour per heat, fixed Lycra, bib, kite, rash guard, helmet, photo, name call-out. *Arrow: Lycra colour per heat.* |
-| {#g-impression} **Impression / Variety score** | One extra score per rider for the whole heat, from every judge. *Variety 0–10, given after the heat.* |
+| {#g-impression} **Impression / Variety score** | One extra score per rider for the whole heat, from every judge. What it is called on the screens is the Event step's **Name of the impression score** (**Impression** or **Variety**). *Variety 0–10, given after the heat.* |
 | {#g-interference} **Interference** | A rider getting in another rider's way; a penalty from the rules. *Interference: the best counted trick is dropped.* |
 | {#g-join-page} **Join page** | Where officials enter the event code and PIN (/join or /e/‹event›/join). *The QR on the official's card opens it.* |
 | {#g-ladder} **Ladder** | The rounds and heats of a division and where each place goes. *R1 → SF → F.* |

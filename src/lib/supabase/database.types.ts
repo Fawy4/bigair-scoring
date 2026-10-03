@@ -955,6 +955,8 @@ export type Database = {
       }
       heats: {
         Row: {
+          armed_at: string | null
+          armed_paused_at: string | null
           created_at: string
           division_id: string
           draw_uid: string | null
@@ -971,6 +973,7 @@ export type Database = {
           paused_at: string | null
           paused_reason: string | null
           paused_total_sec: number
+          prestart_sec: number | null
           public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
@@ -979,10 +982,13 @@ export type Database = {
           round_id: string
           started_at: string | null
           status: string
+          time_scale: number
           updated_at: string
           warm_up_sec: number
         }
         Insert: {
+          armed_at?: string | null
+          armed_paused_at?: string | null
           created_at?: string
           division_id: string
           draw_uid?: string | null
@@ -999,6 +1005,7 @@ export type Database = {
           paused_at?: string | null
           paused_reason?: string | null
           paused_total_sec?: number
+          prestart_sec?: number | null
           public_live?: boolean | null
           publish_hold?: boolean
           published_at?: string | null
@@ -1007,10 +1014,13 @@ export type Database = {
           round_id: string
           started_at?: string | null
           status?: string
+          time_scale?: number
           updated_at?: string
           warm_up_sec?: number
         }
         Update: {
+          armed_at?: string | null
+          armed_paused_at?: string | null
           created_at?: string
           division_id?: string
           draw_uid?: string | null
@@ -1027,6 +1037,7 @@ export type Database = {
           paused_at?: string | null
           paused_reason?: string | null
           paused_total_sec?: number
+          prestart_sec?: number | null
           public_live?: boolean | null
           publish_hold?: boolean
           published_at?: string | null
@@ -1035,6 +1046,7 @@ export type Database = {
           round_id?: string
           started_at?: string | null
           status?: string
+          time_scale?: number
           updated_at?: string
           warm_up_sec?: number
         }
@@ -2548,6 +2560,47 @@ export type Database = {
       }
     }
     Functions: {
+      abort_start: {
+        Args: { p_heat: string }
+        Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
+          created_at: string
+          division_id: string
+          draw_uid: string | null
+          duration_sec: number
+          ended_at: string | null
+          event_id: string
+          flag_out: Json | null
+          id: string
+          live_rev: number
+          manual_override: boolean
+          name: string | null
+          number: number
+          number_suffix: string | null
+          paused_at: string | null
+          paused_reason: string | null
+          paused_total_sec: number
+          prestart_sec: number | null
+          public_live: boolean | null
+          publish_hold: boolean
+          published_at: string | null
+          reopened_at: string | null
+          rerun_of: string | null
+          round_id: string
+          started_at: string | null
+          status: string
+          time_scale: number
+          updated_at: string
+          warm_up_sec: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "heats"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       activate_schedule_plan: { Args: { p_plan: string }; Returns: undefined }
       add_attempt: {
         Args: {
@@ -2811,6 +2864,47 @@ export type Database = {
         Args: { p_actor?: string; p_enc: string; p_pin: string; p_seat: string }
         Returns: Json
       }
+      arm_heat: {
+        Args: { p_heat: string; p_prestart?: number }
+        Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
+          created_at: string
+          division_id: string
+          draw_uid: string | null
+          duration_sec: number
+          ended_at: string | null
+          event_id: string
+          flag_out: Json | null
+          id: string
+          live_rev: number
+          manual_override: boolean
+          name: string | null
+          number: number
+          number_suffix: string | null
+          paused_at: string | null
+          paused_reason: string | null
+          paused_total_sec: number
+          prestart_sec: number | null
+          public_live: boolean | null
+          publish_hold: boolean
+          published_at: string | null
+          reopened_at: string | null
+          rerun_of: string | null
+          round_id: string
+          started_at: string | null
+          status: string
+          time_scale: number
+          updated_at: string
+          warm_up_sec: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "heats"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       ask_usage: { Args: { p_org: string }; Returns: Json }
       attempt_counts: {
         Args: { p_heat: string }
@@ -2831,6 +2925,8 @@ export type Database = {
       cancel_heat: {
         Args: { p_heat: string; p_reason: string }
         Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
           created_at: string
           division_id: string
           draw_uid: string | null
@@ -2847,6 +2943,7 @@ export type Database = {
           paused_at: string | null
           paused_reason: string | null
           paused_total_sec: number
+          prestart_sec: number | null
           public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
@@ -2855,6 +2952,7 @@ export type Database = {
           round_id: string
           started_at: string | null
           status: string
+          time_scale: number
           updated_at: string
           warm_up_sec: number
         }
@@ -2976,6 +3074,8 @@ export type Database = {
       end_heat: {
         Args: { p_heat: string }
         Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
           created_at: string
           division_id: string
           draw_uid: string | null
@@ -2992,6 +3092,7 @@ export type Database = {
           paused_at: string | null
           paused_reason: string | null
           paused_total_sec: number
+          prestart_sec: number | null
           public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
@@ -3000,6 +3101,7 @@ export type Database = {
           round_id: string
           started_at: string | null
           status: string
+          time_scale: number
           updated_at: string
           warm_up_sec: number
         }
@@ -3013,6 +3115,8 @@ export type Database = {
       end_heat_if_due: {
         Args: { p_heat: string }
         Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
           created_at: string
           division_id: string
           draw_uid: string | null
@@ -3029,6 +3133,7 @@ export type Database = {
           paused_at: string | null
           paused_reason: string | null
           paused_total_sec: number
+          prestart_sec: number | null
           public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
@@ -3037,6 +3142,7 @@ export type Database = {
           round_id: string
           started_at: string | null
           status: string
+          time_scale: number
           updated_at: string
           warm_up_sec: number
         }
@@ -3048,6 +3154,47 @@ export type Database = {
         }
       }
       ensure_division_panel: { Args: { p_division: string }; Returns: string }
+      extend_prestart: {
+        Args: { p_heat: string }
+        Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
+          created_at: string
+          division_id: string
+          draw_uid: string | null
+          duration_sec: number
+          ended_at: string | null
+          event_id: string
+          flag_out: Json | null
+          id: string
+          live_rev: number
+          manual_override: boolean
+          name: string | null
+          number: number
+          number_suffix: string | null
+          paused_at: string | null
+          paused_reason: string | null
+          paused_total_sec: number
+          prestart_sec: number | null
+          public_live: boolean | null
+          publish_hold: boolean
+          published_at: string | null
+          reopened_at: string | null
+          rerun_of: string | null
+          round_id: string
+          started_at: string | null
+          status: string
+          time_scale: number
+          updated_at: string
+          warm_up_sec: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "heats"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       flag_out: {
         Args: { p_entries: string[]; p_heat: string; p_reason: string }
         Returns: undefined
@@ -3229,6 +3376,8 @@ export type Database = {
       pause_heat: {
         Args: { p_heat: string }
         Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
           created_at: string
           division_id: string
           draw_uid: string | null
@@ -3245,6 +3394,7 @@ export type Database = {
           paused_at: string | null
           paused_reason: string | null
           paused_total_sec: number
+          prestart_sec: number | null
           public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
@@ -3253,6 +3403,7 @@ export type Database = {
           round_id: string
           started_at: string | null
           status: string
+          time_scale: number
           updated_at: string
           warm_up_sec: number
         }
@@ -3345,6 +3496,8 @@ export type Database = {
       reopen_heat: {
         Args: { p_heat: string; p_reason: string }
         Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
           created_at: string
           division_id: string
           draw_uid: string | null
@@ -3361,6 +3514,7 @@ export type Database = {
           paused_at: string | null
           paused_reason: string | null
           paused_total_sec: number
+          prestart_sec: number | null
           public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
@@ -3369,6 +3523,7 @@ export type Database = {
           round_id: string
           started_at: string | null
           status: string
+          time_scale: number
           updated_at: string
           warm_up_sec: number
         }
@@ -3481,6 +3636,8 @@ export type Database = {
       resume_heat: {
         Args: { p_heat: string }
         Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
           created_at: string
           division_id: string
           draw_uid: string | null
@@ -3497,6 +3654,7 @@ export type Database = {
           paused_at: string | null
           paused_reason: string | null
           paused_total_sec: number
+          prestart_sec: number | null
           public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
@@ -3505,6 +3663,7 @@ export type Database = {
           round_id: string
           started_at: string | null
           status: string
+          time_scale: number
           updated_at: string
           warm_up_sec: number
         }
@@ -3518,6 +3677,8 @@ export type Database = {
       review_heat: {
         Args: { p_heat: string; p_override_reason?: string }
         Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
           created_at: string
           division_id: string
           draw_uid: string | null
@@ -3534,6 +3695,7 @@ export type Database = {
           paused_at: string | null
           paused_reason: string | null
           paused_total_sec: number
+          prestart_sec: number | null
           public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
@@ -3542,6 +3704,7 @@ export type Database = {
           round_id: string
           started_at: string | null
           status: string
+          time_scale: number
           updated_at: string
           warm_up_sec: number
         }
@@ -3597,6 +3760,8 @@ export type Database = {
       set_heat_public_live: {
         Args: { p_heat: string; p_value: boolean }
         Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
           created_at: string
           division_id: string
           draw_uid: string | null
@@ -3613,6 +3778,7 @@ export type Database = {
           paused_at: string | null
           paused_reason: string | null
           paused_total_sec: number
+          prestart_sec: number | null
           public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
@@ -3621,6 +3787,7 @@ export type Database = {
           round_id: string
           started_at: string | null
           status: string
+          time_scale: number
           updated_at: string
           warm_up_sec: number
         }
@@ -3958,9 +4125,11 @@ export type Database = {
       sim_view_as: { Args: { p_event: string; p_seat: string }; Returns: Json }
       sim_view_beat: { Args: { p_event: string }; Returns: boolean }
       sim_view_leave: { Args: { p_event: string }; Returns: boolean }
-      start_heat: {
+      start_armed_if_due: {
         Args: { p_heat: string }
         Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
           created_at: string
           division_id: string
           draw_uid: string | null
@@ -3977,6 +4146,7 @@ export type Database = {
           paused_at: string | null
           paused_reason: string | null
           paused_total_sec: number
+          prestart_sec: number | null
           public_live: boolean | null
           publish_hold: boolean
           published_at: string | null
@@ -3985,6 +4155,48 @@ export type Database = {
           round_id: string
           started_at: string | null
           status: string
+          time_scale: number
+          updated_at: string
+          warm_up_sec: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "heats"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      start_heat: {
+        Args: { p_heat: string }
+        Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
+          created_at: string
+          division_id: string
+          draw_uid: string | null
+          duration_sec: number
+          ended_at: string | null
+          event_id: string
+          flag_out: Json | null
+          id: string
+          live_rev: number
+          manual_override: boolean
+          name: string | null
+          number: number
+          number_suffix: string | null
+          paused_at: string | null
+          paused_reason: string | null
+          paused_total_sec: number
+          prestart_sec: number | null
+          public_live: boolean | null
+          publish_hold: boolean
+          published_at: string | null
+          reopened_at: string | null
+          rerun_of: string | null
+          round_id: string
+          started_at: string | null
+          status: string
+          time_scale: number
           updated_at: string
           warm_up_sec: number
         }

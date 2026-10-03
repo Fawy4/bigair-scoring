@@ -48,7 +48,7 @@ export function EventsPanel({ orgName, events, others, isOwner }: { orgName: str
                 <th className={th}>{c.eventColumns.status}</th>
                 <th className={th}>{c.eventColumns.dates}</th>
                 <th className={th}>{c.eventColumns.divisions}</th>
-                <th className={th}>{c.eventColumns.actions}</th>
+                <th className={`${th} w-1/2`}>{c.eventColumns.actions}</th>
               </tr>
             </thead>
             <tbody>
@@ -64,7 +64,7 @@ export function EventsPanel({ orgName, events, others, isOwner }: { orgName: str
                   </td>
                   <td className={td}>{e.dates}</td>
                   <td className={td}>{e.divisions}</td>
-                  <td className={td}>
+                  <td className={`${td} w-1/2`}>
                     {isOwner ? (
                       <div className="flex flex-col gap-4">
                         <MoveEvent event={e} orgName={orgName} others={others} />

@@ -89,6 +89,7 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
         joinUrl={`${origin}/e/${event.slug}/join`}
         publicUrl={`${origin}/e/${event.slug}`}
         slug={event.slug}
+        flagsOn={parseEventSettings(event.settings).flags.enabled}
         windBannerOn={parseEventSettings(event.settings).windCallBanner}
       />
     </div>

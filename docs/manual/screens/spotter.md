@@ -2,7 +2,7 @@
 
 The spotter's phone at /spot/‹event›: log every attempt — which rider, which trick, landed or CRASH — the moment it happens.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#sp-purpose}
 
@@ -15,6 +15,7 @@ What the spotter logs is what the judges score: each attempt appears on every ju
 
 | Control | What it does |
 |---|---|
+| Header and **flag strip** | The clock line is the **flag strip** (flags on): the flag's colour, the state's words, the countdown and the heat name. The logger opens at **green** (Running), not at the yellow; at the last minute it stays open; at red (Finished) it closes as before. It covers none of the buttons ([Flags](flags.md)). |
 | Riders row | One Rider label per rider with attempts used (“5 / 7”). A rider who used every attempt turns grey: “Out of attempts · 7 / 7”, and Log is off for them. Assigned riders first when the spotter is assigned. |
 | Direction | Left / Right. |
 | Trick builder | Multiplier, base trick, add-ons, grabs & landings, in the order set in Divisions → Trick base; the composed trick name shows above. **Or type the trick** (“left double backroll”) or **Speak** (where the browser has speech recognition); an unknown word is kept as free text for the head judge. |

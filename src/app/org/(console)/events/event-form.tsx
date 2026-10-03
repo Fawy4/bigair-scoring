@@ -349,6 +349,44 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
         {checkbox(T.windBanner, form.settings.windCallBanner, (v) => set(["settings", "windCallBanner"], v), "event.windBanner")}
       </section>
 
+      <section className={group} data-testid="scoring-settings">
+        <h3 className={groupTitle}>{T.scoringHeading}</h3>
+        <SettingRow id="ev-impression-name" label={T.impressionName} {...h("event.impressionName")}>
+          <input id="ev-impression-name" data-testid="impression-name" value={form.settings.impressionName} maxLength={24} placeholder={T.impressionNamePlaceholder} onChange={(e) => set(["settings", "impressionName"], e.target.value)} className={inputCls} />
+        </SettingRow>
+        {showError("settings.impressionName")}
+      </section>
+
+      <section className={group} data-testid="flags-card">
+        <h3 className={groupTitle}>{T.flagsHeading}</h3>
+        <p className="text-body font-medium text-beach-muted">{T.flagsIntro}</p>
+        {checkbox(T.flagsOn, form.settings.flags.enabled, (v) => set(["settings", "flags", "enabled"], v), "event.flagsOn", "flags-switch")}
+        {form.settings.flags.enabled ? (
+          <>
+            <div className="flex flex-col gap-2" data-testid="flag-states">
+              <FieldLabel as="span" text={T.flagsHeading} help={help["event.flagStates"]} />
+              {(["before_start", "running", "last_minute", "stopped"] as const).map((k) => (
+                <div key={k} className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]">
+                  <span className="text-body font-semibold">{T.flagStateNames[k]}</span>
+                  <input aria-label={T.flagLabelOf(T.flagStateNames[k])} data-testid={`flag-label-${k}`} value={form.settings.flags.states[k].label} maxLength={24} onChange={(e) => set(["settings", "flags", "states", k, "label"], e.target.value)} className={inputCls} />
+                  <input type="color" aria-label={T.flagColourOf(T.flagStateNames[k])} data-testid={`flag-colour-${k}`} value={form.settings.flags.states[k].colour} onChange={(e) => set(["settings", "flags", "states", k, "colour"], e.target.value.toUpperCase())} className="h-[var(--org-ctl)] w-16 rounded-[8px] border border-beach-border bg-transparent" />
+                </div>
+              ))}
+              <p className="text-small font-medium text-beach-muted">{T.flagsStoppedNote}</p>
+              {showError("settings.flags.states")}
+            </div>
+            <SettingRow id="ev-prestart" label={T.prestartSec} {...h("event.prestartSec")}>
+              <NumberField id="ev-prestart" label={T.prestartSec} min={10} max={600} value={Number.isNaN(form.settings.flags.prestartSec) ? null : form.settings.flags.prestartSec} onChange={(v) => set(["settings", "flags", "prestartSec"], v)} unit={T.secondsUnit} />
+            </SettingRow>
+            {showError("settings.flags.prestartSec")}
+            <SettingRow id="ev-lastminute" label={T.lastMinuteSec} {...h("event.lastMinuteSec")}>
+              <NumberField id="ev-lastminute" label={T.lastMinuteSec} min={10} max={600} value={Number.isNaN(form.settings.flags.lastMinuteSec) ? null : form.settings.flags.lastMinuteSec} onChange={(v) => set(["settings", "flags", "lastMinuteSec"], v)} unit={T.secondsUnit} />
+            </SettingRow>
+            {showError("settings.flags.lastMinuteSec")}
+          </>
+        ) : null}
+      </section>
+
       <section className={group} data-testid="public-page-settings">
         <h3 className={groupTitle}>{T.publicPage}</h3>
         <div className="flex items-start gap-2">

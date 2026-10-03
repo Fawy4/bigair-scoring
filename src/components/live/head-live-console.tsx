@@ -10,6 +10,10 @@ import { TieDialog } from "./head-dialogs";
 import { HeadMatrix } from "./head-matrix";
 import { ReviewButtons, VisibilityBox } from "./head-parts";
 import { AgreementReport, AuditLog, JudgesStatus, OpenFlags, useSideData } from "./head-side-panel";
+import { useReview } from "./use-review";
+import { CARD_ROW_MIN } from "@/lib/live/impression-card";
+import { impressionNameOf } from "@/lib/schemas/impression-name";
+import { ImpressionCardInline, ReviewBar } from "./review-kit";
 import { ScreenSettings } from "./live-shell";
 import type { HeadController } from "./use-head-controller";
 import type { LiveHeatState } from "./use-live-heat";
@@ -107,6 +111,7 @@ export function HeadLiveConsole({
     writeTableOrder(typeof window === "undefined" ? null : window.localStorage, next);
   };
   const model = division.model;
+  const impressionName = impressionNameOf(model);
   const rows = head.matrix.rows;
   const tableRows = useMemo(() => orderRows(rows, order, riders.map((r) => r.entryId)), [rows, order, riders]);
   const open = editable(heat.status);
@@ -141,6 +146,22 @@ export function HeadLiveConsole({
     if (fixRequest && open) openFix(fixRequest.target);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fixRequest?.n]);
+  // ---- the review bar (from End heat until Publish) and the Impression card
+  const review = useReview({
+    heat,
+    model,
+    side,
+    live,
+    impressions,
+    blockerItems,
+    closing,
+    nowServer,
+    judgeWord,
+    onChanged,
+    openFix,
+    openSheetDialog: (seatId, entryId) => setDialog({ kind: "impression", seatId, entryId }),
+  });
+  const { bar, barPending, barError, openSheet, markAbsent, showImpressionCard, impressionTolerance } = review;
   const done = () => {
     setDialog(null);
     setMenu(null);
@@ -189,38 +210,45 @@ export function HeadLiveConsole({
 
   return (
     <div data-testid="head-live-console" data-heat={heat.id} className="grid items-start gap-3 min-[1280px]:grid-cols-[minmax(0,1fr)_17rem]">
-      <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex min-w-0 flex-col gap-2 min-[1280px]:col-span-2">
         <div className="flex flex-wrap items-center gap-2">
           <p className="whitespace-normal break-words text-name font-semibold">{title}</p>
           <Pill tone={heat.status === "published" ? "live" : "outlier"}>{copy.heatControl.status[heat.status] ?? heat.status}</Pill>
           {heat.reopened_at && heat.status === "under_review" ? <Pill tone="outlier">{H.underCorrection}</Pill> : null}
         </div>
+        {bar ? <ReviewBar state={bar} pending={barPending} error={barError} onSheet={openSheet} onFix={openFix} onAbsent={(i) => void markAbsent(i)} onChooseOrder={(riders) => setDialog({ kind: "tie", riders })} /> : null}
+      </div>
+      <div className="flex min-w-0 flex-col gap-2">
         {!open ? <p className="text-small font-medium text-beach-muted">{heat.status === "published" ? C.published : ""}</p> : null}
 
-        <section data-testid="rider-strip" aria-label={V.ridersStrip} className="flex flex-wrap gap-1.5">
+        <section data-testid="rider-strip" aria-label={V.ridersStrip} className="flex flex-nowrap items-start gap-1.5" style={showImpressionCard ? { minHeight: CARD_ROW_MIN } : undefined}>
+          {/* up to six riders share one line (the cards shrink a little before they wrap, so the table never moves); more riders wrap as before */}
+          <div data-testid="rider-tiles" className={cn("flex min-w-0 flex-[0_1_auto] items-start gap-1.5", stripTiles.length <= 6 && showImpressionCard ? "flex-nowrap" : "flex-wrap")}>
           {stripTiles.map(({ r, total, slot }) => (
-            <button
-              key={r.entryId}
-              type="button"
-              data-testid="rider-strip-tile"
-              data-rider={r.entryId}
-              disabled={!open}
-              aria-label={`${wordFor(r.entryId)}: ${C.riderMenu}`}
-              onClick={() => setMenu({ kind: "rider", entryId: r.entryId })}
-              className="flex min-h-tap min-w-[7rem] flex-col items-start gap-0.5 rounded-card border border-beach-line bg-beach-surface px-2 py-1 text-left"
-            >
-              <span className="min-w-0 whitespace-normal break-words">{<RiderLabel model={r.label} variant="live" bare />}</span>
-              <span className="flex w-full items-baseline justify-between gap-2">
-                <span data-testid="rider-strip-total" className="text-name font-semibold tabular-nums">
-                  {total?.totalLabel ?? copy.live.result.noTotal}
+              <button
+                key={r.entryId}
+                type="button"
+                data-testid="rider-strip-tile"
+                data-rider={r.entryId}
+                disabled={!open}
+                aria-label={`${wordFor(r.entryId)}: ${C.riderMenu}`}
+                onClick={() => setMenu({ kind: "rider", entryId: r.entryId })}
+                className="flex min-h-tap min-w-[7rem] flex-col items-start gap-0.5 rounded-card border border-beach-line bg-beach-surface px-2 py-1 text-left"
+              >
+                <span className="min-w-0 whitespace-normal break-words">{<RiderLabel model={r.label} variant="live" bare />}</span>
+                <span className="flex w-full items-baseline justify-between gap-2">
+                  <span data-testid="rider-strip-total" className="text-name font-semibold tabular-nums">
+                    {total?.totalLabel ?? copy.live.result.noTotal}
+                  </span>
+                  <span data-testid="rider-strip-attempts" className="text-small font-medium text-beach-muted tabular-nums">
+                    {V.attemptsShort(counts.get(r.entryId) ?? 0, cap)}
+                  </span>
                 </span>
-                <span data-testid="rider-strip-attempts" className="text-small font-medium text-beach-muted tabular-nums">
-                  {V.attemptsShort(counts.get(r.entryId) ?? 0, cap)}
-                </span>
-              </span>
-              {slot?.modifier ? <Pill tone="outlier">{slot.modifier}</Pill> : null}
-            </button>
-          ))}
+                {slot?.modifier ? <Pill tone="outlier">{slot.modifier}</Pill> : null}
+              </button>
+            ))}
+          </div>
+          {showImpressionCard ? <ImpressionCardInline name={impressionName} judges={side.judges} impressions={impressions} riders={riders} tolerance={impressionTolerance} onCell={open ? (seatId, entryId) => setDialog({ kind: "impression", seatId, entryId }) : undefined} /> : null}
         </section>
 
         {open && menu ? (
@@ -284,7 +312,7 @@ export function HeadLiveConsole({
 
       <aside data-testid="head-side" className="flex min-w-0 flex-col gap-2">
         <ReviewButtons c={c} compact visibility={false} />
-        <JudgesStatus side={side} live={live} nowServer={nowServer} heat={heat} highlight={highlight} />
+        <JudgesStatus side={side} nowServer={nowServer} highlight={highlight} />
 
         <section data-testid="blockers" className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={H.blockersHeading}>
           <h3 className="text-heading font-semibold text-beach-muted">{blockerItems.length ? C.publishBlocked : H.nothingBlocks}</h3>
@@ -328,9 +356,9 @@ export function HeadLiveConsole({
         </section>
 
         {closing && model.heat.impression ? (
-          <section data-testid="owes" aria-label={H.impressionsHeading} className="flex flex-col gap-1.5 rounded-card border border-beach-line bg-beach-surface p-2">
-            <h3 className="text-heading font-semibold text-beach-muted">{H.impressionsHeading}</h3>
-            {owes.length === 0 ? <p className="text-small font-medium text-beach-muted">{C.noneOwed}</p> : null}
+          <section data-testid="owes" aria-label={H.impressionsHeading(impressionName)} className="flex flex-col gap-1.5 rounded-card border border-beach-line bg-beach-surface p-2">
+            <h3 className="text-heading font-semibold text-beach-muted">{H.impressionsHeading(impressionName)}</h3>
+            {owes.length === 0 ? <p className="text-small font-medium text-beach-muted">{C.noneOwed(impressionName)}</p> : null}
             {impressions.map((j) => (
               <div key={j.seatId} data-testid="owes-judge" data-seat={j.seatId} data-missing={j.missing} className="flex flex-col gap-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">

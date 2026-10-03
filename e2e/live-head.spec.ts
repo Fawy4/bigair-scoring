@@ -66,7 +66,7 @@ test("the head judge runs a whole heat from a phone: Start refused in plain word
   // one running heat per event: the second one is refused, in words
   await row(head, w.heats[1]).click();
   await head.getByTestId("start").click();
-  await expect(message(head)).toContainText("Another heat is already running (1 at a time)");
+  await expect(message(head)).toContainText("Another heat is already running or starting (1 at a time)");
   await row(head, w.heats[0]).click();
 
   // Pause freezes the clock; Resume continues it

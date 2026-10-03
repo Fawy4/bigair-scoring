@@ -36,6 +36,8 @@ export interface PublicSite {
     externalLeaderboards: Array<{ title: string; url: string; embed: boolean }>;
     identification: { scheme?: unknown; allowDivisionOverride?: boolean } | null;
     publicLiveScores: string;
+    /** The Flags card (parse with parseFlagSettings: a missing value means the defaults, flags on). */
+    flags?: unknown;
   };
   wind: { status: "red" | "amber" | "green"; message: string | null; at: string } | null;
   divisions: SiteDivision[];
@@ -58,6 +60,11 @@ export interface TimetableHeat {
   duration_sec: number;
   warm_up_sec: number;
   rerun_of: string | null;
+  /** Start sequence (Flags): when the yellow was raised and its length; null when not armed. `started_at` already holds the start moment once the pre-start is over. */
+  armed_at?: string | null;
+  prestart_sec?: number | null;
+  armed_paused_at?: string | null;
+  time_scale?: number;
   round_last: boolean;
   break_after_heat_min: number | null;
   break_after_round_min: number | null;
@@ -69,6 +76,8 @@ export interface PublicTimetable {
   timezone: string;
   poll_sec: number;
   ready_call_min: number;
+  /** The event's Flags settings as stored (parse with parseFlagSettings). */
+  flags?: unknown;
   plans: Array<{ id: string; day: string; name: string; items: unknown; anchors: unknown; actual_starts: unknown; hold: unknown; defaults: unknown }>;
   divisions: Array<{ id: string; name: string; sort_order: number }>;
   rounds: Array<{ id: string; division_id: string; name: string; short_name: string | null; sort_order: number }>;
@@ -180,6 +189,8 @@ export interface PublicRulesDivision {
 }
 export interface PublicRules {
   allowed: true;
+  /** The Event step's "Name of the impression score"; null = each division's own name. */
+  impression_name?: string | null;
   divisions: PublicRulesDivision[];
 }
 

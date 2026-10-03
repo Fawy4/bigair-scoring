@@ -8,6 +8,7 @@ import { mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { parseDivisionLive } from "@/lib/schemas/division-live";
 import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { parseScoringModel } from "@/lib/schemas/scoring-model";
+import { impressionNameOf, withImpressionName } from "@/lib/schemas/impression-name";
 import { copy } from "@/lib/ui-copy";
 import { errorSentence, parseError } from "./errors";
 import { heatInputFromRows } from "./heat-input";
@@ -74,7 +75,7 @@ export async function publishHeatCore(
   const { data: modelRow } = division.scoring_model_id ? await service.from("scoring_models").select("json").eq("id", division.scoring_model_id).single() : { data: null };
   let model;
   try {
-    model = parseScoringModel(mergeOverrides(modelRow?.json as never, division.scoring_overrides, SCORING_NULLABLE));
+    model = withImpressionName(parseScoringModel(mergeOverrides(modelRow?.json as never, division.scoring_overrides, SCORING_NULLABLE)), parseEventSettings(event?.settings).impressionName);
   } catch {
     return fail(null, copy.publish.noModel);
   }
@@ -111,7 +112,7 @@ export async function publishHeatCore(
     judgeWord,
     attemptIdOf: (rider, seq) => ((attempts ?? []) as AttemptRow[]).find((a) => a.entry_id === rider && a.seq === seq && !a.deleted_at)?.id,
     riderLabel: (id) => softWord(labelOf(id)),
-    impressionLabel: copy.checklist.impressionWord,
+    impressionLabel: copy.checklist.impressionWord(impressionNameOf(model)),
   });
   const reason = opts.overrideReason?.trim() ?? "";
   if (checklist.items.length > 0) {

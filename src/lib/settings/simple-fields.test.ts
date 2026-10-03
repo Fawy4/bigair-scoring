@@ -13,9 +13,9 @@ describe("the Simple dials", () => {
   it("Event: name, dates, place, time zone, lycras yes or no, what spectators see", () => {
     expect(EVENT_SIMPLE.map((f) => f.id)).toEqual(["name", "dates", "location", "timeZone", "lycra", "visibility"]);
   });
-  it("Event, behind the fold: 17 settings, each in a group of the form", () => {
-    expect(EVENT_ADVANCED).toHaveLength(17);
-    expect(new Set(EVENT_ADVANCED).size).toBe(17);
+  it("Event, behind the fold: 18 settings, each in a group of the form", () => {
+    expect(EVENT_ADVANCED).toHaveLength(22);
+    expect(new Set(EVENT_ADVANCED).size).toBe(22);
   });
   it("every Simple dial has a label, a line of explanation and a “?” example (a “?” never opens nothing)", () => {
     for (const f of [...SCORING_SIMPLE, ...FORMAT_SIMPLE, ...EVENT_SIMPLE]) {

@@ -32,7 +32,7 @@ export default async function OrganisationPage({ params }: { params: Promise<{ i
   const status = organisationStatus(org.archived_at);
 
   return (
-    <main className="flex max-w-3xl flex-col gap-8">
+    <main className="flex flex-col gap-8">
       <Link href="/admin" className="font-semibold underline">
         {c.backToList}
       </Link>

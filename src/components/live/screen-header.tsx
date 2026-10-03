@@ -1,5 +1,6 @@
 import { ClockText } from "@/components/clock-text";
 import { HeatTimer, type TimerState } from "./heat-timer";
+import { FlagStrip, type FlagStripModel } from "./flag-strip";
 import { ConnectionBadge, type ConnectionStatus } from "./connection-badge";
 import { Chip } from "./chip";
 import { copy } from "@/lib/ui-copy";
@@ -21,7 +22,10 @@ export function ScreenHeader({
   onToggleDetails,
   showTimer = true,
   clock,
+  flag,
 }: {
+  /** The flag strip (Flags): when set, it is the clock line, in the state's colour. Null/undefined (flags off): the plain timer as before. */
+  flag?: FlagStripModel | null;
   /** The time now in the event time zone, small and muted next to the timer. */
   clock?: { timezone: string; nowMs: number };
   heatName: string;
@@ -42,8 +46,8 @@ export function ScreenHeader({
   return (
     <header data-testid="screen-header" className="flex flex-col border-b border-beach-line bg-beach-bg px-2 pb-0.5 pt-0.5">
       <div className="flex min-h-tap items-center justify-between gap-2">
-        <div className="flex items-baseline gap-2">
-          {showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className="text-name font-semibold">{copy.live.header.between}</span>}
+        <div className={flag ? "flex min-w-0 flex-1 items-center gap-2" : "flex items-baseline gap-2"}>
+          {flag ? <FlagStrip model={flag} /> : showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className="text-name font-semibold">{copy.live.header.between}</span>}
           {clock ? <ClockText timezone={clock.timezone} nowMs={clock.nowMs} /> : null}
         </div>
         {details !== undefined ? (

@@ -206,6 +206,7 @@ test("manual screenshots", async ({ page, context, browser }) => {
     }).toPass({ timeout: 30_000 });
     await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" }).catch(() => undefined);
     await page.getByTestId("public-page-settings").screenshot({ path: path.join(OUT, "org-event-public-page-1280.png") });
+    await page.getByTestId("flags-card").screenshot({ path: path.join(OUT, "org-event-flags-1280.png") });
     await open(page, `${base}/divisions`);
     await page.waitForLoadState("networkidle").catch(() => undefined);
     await page.setViewportSize(LAPTOP);
@@ -329,6 +330,10 @@ test("manual screenshots", async ({ page, context, browser }) => {
     await pub.reload();
     await shot(pub, "big-screen-day", LAPTOP, 2500, true);
     await pub.evaluate(() => window.localStorage.removeItem("bigair-screen-mode"));
+    // the flag marshal's screen (View as… → Flag view): the heat on the water is green
+    await open(pub, `/org/events/${simId}/simulate/view?as=flag`);
+    await expect(pub.getByTestId("flag-view")).toHaveAttribute("data-flag", /running|last_minute/, { timeout: 30_000 });
+    await shot(pub, "flags-view", PHONE, 1500, true);
 
     // the spotter's screen: this login takes the spotter seat (judge 1 goes back to the simulator)
     await open(judgeTab, `/org/events/${simId}/simulate/view?as=seat&seat=${spotter.id}`);

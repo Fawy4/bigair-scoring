@@ -8,7 +8,8 @@ import { createClient } from "@/lib/supabase/server";
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
-  const to = request.nextUrl.searchParams.get("to") === "screen" ? "screen" : "public";
+  const wanted = request.nextUrl.searchParams.get("to");
+  const to = wanted === "screen" ? "screen" : wanted === "flag" ? "flag" : "public";
   if (!/^[0-9a-f-]{36}$/.test(eventId)) return NextResponse.redirect(new URL("/join", request.url));
   const db = await createClient();
   const {
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { data: seat } = await db.from("judge_seats").select("id").eq("event_id", eventId).eq("auth_user_id", user.id).eq("role", "observer").eq("active", true).eq("status", "active").maybeSingle();
   const { data: event } = await db.from("events").select("id, slug, is_simulation").eq("id", eventId).maybeSingle();
   if (!seat || !event) return NextResponse.redirect(new URL("/join", request.url));
-  const response = NextResponse.redirect(new URL(to === "screen" ? `/screen/${event.slug}` : `/e/${event.slug}`, request.url));
+  const response = NextResponse.redirect(new URL(to === "screen" ? `/screen/${event.slug}` : to === "flag" ? `/e/${event.slug}/flag` : `/e/${event.slug}`, request.url));
   if (event.is_simulation) response.cookies.set(SIM_PREVIEW_COOKIE, `${event.slug}:${event.id}`, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 });
   return response;
 }

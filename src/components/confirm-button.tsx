@@ -12,6 +12,7 @@ export function ConfirmButton({
   disabled,
   pending,
   danger,
+  compact,
 }: {
   label: string;
   question: string;
@@ -21,6 +22,8 @@ export function ConfirmButton({
   disabled?: boolean;
   pending?: boolean;
   danger?: boolean;
+  /** A smaller button, for the tight cards of the draw. */
+  compact?: boolean;
 }) {
   const [asking, setAsking] = useState(false);
   // Until the page is live a tap does nothing (the button arrives before its code on a slow connection), so it stays grey until then rather than
@@ -29,13 +32,13 @@ export function ConfirmButton({
   useEffect(() => setLive(true), []);
   if (!asking) {
     return (
-      <button type="button" className={`btn ${danger ? "btn-danger" : ""}`} disabled={!live || disabled || pending} onClick={() => setAsking(true)}>
+      <button type="button" className={`btn ${danger ? "btn-danger" : ""} ${compact ? "!min-h-7 !px-2 !text-sm" : ""}`} disabled={!live || disabled || pending} onClick={() => setAsking(true)}>
         {label}
       </button>
     );
   }
   return (
-    <div role="group" aria-label={label} className="panel flex flex-col gap-3">
+    <div role="group" aria-label={label} className={compact ? "panel flex flex-col gap-2 !p-2" : "panel flex flex-col gap-3"}>
       <p className="text-body font-semibold">{question}</p>
       <div className="flex flex-wrap gap-3">
         <button

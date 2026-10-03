@@ -2,7 +2,7 @@
 
 Step 1 of an event (/org/events/‹id›/event, or **+ New event** on the events list): name, dates, place, time zone, branding, what the public sees, timing, registration, the officials' join details, rehearsal and visibility.
 
-Last checked: 3 Oct 2026 · Product version 0.12.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#ev-purpose}
 
@@ -13,6 +13,9 @@ Everything that belongs to the whole event rather than one division. Each settin
 
 ![The Event step on a phone](../img/org-event-390.png)
 *org-event-390.png — the same step on a phone: the step list is a drop-down at the top.*
+
+![The Flags card of the Event step](../img/org-event-flags-1280.png)
+*org-event-flags-1280.png — the Flags card (behind More settings): the switch, the four states, the two lengths.*
 
 ## Controls {#ev-controls}
 
@@ -28,6 +31,8 @@ Everything that belongs to the whole event rather than one division. Each settin
 | **Branding** | **Event logo** and **Sponsor logos** (name, website, logo, ↑ ↓ to order, **Remove sponsor**, **+ Add sponsor**). PNG, JPEG or WebP, up to 2 MB. |
 | **Rehearsal** | **Simulation event (never public)** tick box (only before any heat has started) and the **Simulate** link to the [Simulator](simulator.md). |
 | **Public page** | A switch for every tab of the public event page — Home, Live, Results, Ladder, Placings, Rules, one per outside leaderboard, Join — all on by default. Switch a tab off and it disappears from the page; an old link to it lands on the first tab that is left. At least one tab stays on (the last one's switch is grey; Join does not count, because it hides itself while registration is closed). The big screen is not affected. |
+| **Scoring settings** | **Name of the impression score**: what the separate score per rider is called on every screen (the console's card heading, the judges' phones, the review bar, the judges' sheets, the public results, the rules text and the big screen). Empty (the default) keeps the name each division's own scoring gives it (**Impression** for most). *Variety* is the other common choice. Up to 24 characters; longer is refused: “Use 24 characters or fewer for the name of the impression score”. |
+| **Flags** | A card with **Flags on** (on by default for every event), the **word and colour** of each of the four states (Before start, Running, Last minute, Stopped or paused), **Pre-start length** (60 seconds) and **Last-minute length** (60 seconds). Each “?” says where it shows. Off: every screen looks as it did before flags. See [Flags](flags.md). |
 | **Timing and officials** | **Ready call (minutes before the heat)** (default 15; the one place it is set), **Live update every (seconds)** (default 7), **Big screen: seconds per page** (default 20), **Big screen: colours** (Dark or Day; where the big screen opens until a browser chooses for itself; default Dark), **Heats that can run at the same time** (default 1), **Judges may log attempts too**, **Other leaderboards** (up to 6 extra public tabs, **+ Add leaderboard**), **Show the wind-call banner on public pages and the big screen**. |
 | **Rider registration** | **Registration** Open / Closed, **Closing day**, **Closing time**, **Most riders per division**, **Message shown when registration is closed**, and the link to the public registration page (it only works once the event is published). |
 | **Officials’ join details** | The join address and the **Event code**. Every official has their own PIN (made in the Officials step); there is no event-wide PIN. |

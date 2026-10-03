@@ -52,9 +52,9 @@ describe.skipIf(!ENV_OK)("What blocks Publish, and the head judge's Absent (host
     const items = (r as { blockers: Array<{ kind: string; text: string; target?: object }> }).blockers;
     const word = items[0].text.split(":")[0]; // the seat's name
     expect(items.map((i) => i.text)).toEqual([
-      `${word}: sheet not submitted — 1 attempt unscored, 1 Impression / Variety score missing`,
+      `${word}: sheet not submitted — 1 attempt unscored, 1 Variety score missing`,
       `${word}: score for L1 Blockers, attempt 2 missing`,
-      `${word}: Impression / Variety score for L1 Blockers missing`,
+      `${word}: Variety score for L1 Blockers missing`,
     ]);
     expect(items[1].target).toEqual({ kind: "score", seatId: J2(), attemptId: a2 });
     expect(items[2].target).toEqual({ kind: "impression", seatId: J2(), entryId: d.entries[0] });

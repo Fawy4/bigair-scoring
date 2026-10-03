@@ -1,4 +1,6 @@
 import { holdPlan, resumePlanAt } from "@/lib/live/heat-actions";
+import { errorSentence } from "@/lib/live/errors";
+import { isArmedNow } from "@/lib/live/flags";
 import { rerunHeat } from "@/lib/live/head-actions";
 import { publishHeatCore } from "@/lib/live/publish-core";
 import { trickKit } from "@/lib/live/screen-model";
@@ -263,6 +265,15 @@ export async function attemptScenario(db: SimDb, snap: Snapshot, key: ScenarioKe
       return done(db, snap, key, L.holdFinalHeld(heatName(final)), false);
     }
 
+    case "abort_start": {
+      if (!snap.settings.flags.enabled) return failed(db, snap, key, errorSentence("FLAGS_OFF"));
+      const yellow = snap.heats.find((h) => isArmedNow(h, snap.nowMs));
+      if (!yellow) return { status: "wait" };
+      const r = await db.user.rpc("abort_start", { p_heat: yellow.id });
+      if (r.error) return failed(db, snap, key, simErrorSentence(r.error.message));
+      forgetContext(snap.eventId);
+      return done(db, snap, key, L.abortStart(heatName(yellow)));
+    }
     case "rerun": {
       const h = heat as HeatRow;
       const r = await rerunHeat({ heatId: h.id, reason: "Simulator: kite tangle", leaveOut: {} });

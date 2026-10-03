@@ -34,7 +34,7 @@ test("the Event step lists every public tab, all on; switching Rules and Join of
   await w.org.signIn(page, `/org/events/${w.eventId}/event`);
   await openAdvanced(page);
   const card = page.getByTestId("public-page-settings");
-  for (const key of ["home", "live", "results", "ladder", "placings", "rules", "join"]) await expect(card.getByTestId(`public-tab-${key}`)).toBeChecked(); // all on by default
+  for (const key of ["home", "live", "results", "ladder", "riders", "placings", "rules", "join"]) await expect(card.getByTestId(`public-tab-${key}`)).toBeChecked(); // all on by default
   await expect(card.getByText("Join also hides itself while registration is closed.")).toBeVisible();
   await expect(card.getByRole("button", { name: /^What is/ }).or(card.getByRole("button", { name: /Public page/ })).first()).toBeVisible();
   await card.getByTestId("public-tab-rules").uncheck();
@@ -54,7 +54,7 @@ test.describe("the public page", () => {
   test("shows the tabs that are left; the old address of a hidden tab lands on the first visible tab; the others still open", async ({ page }) => {
     await setSettings({ publicTabsOff: ["rules", "join"], registrationOpen: true });
     await page.goto(`/e/${w.slug}`);
-    expect(await tabsOf(page)).toEqual(["Home", "Live", "Results", "Ladder", "Placings"]);
+    expect(await tabsOf(page)).toEqual(["Home", "Live", "Results", "Ladder", "Riders", "Placings"]);
     const res = await page.goto(`/e/${w.slug}/rules`);
     expect(res?.status()).toBe(200);
     await expect(page).toHaveURL(new RegExp(`/e/${w.slug}$`));
@@ -71,16 +71,16 @@ test.describe("the public page", () => {
     await expect(page).toHaveURL(/\/results$/);
     await page.goto(`/e/${w.slug}`);
     await expect(page).toHaveURL(/\/results$/);
-    expect(await tabsOf(page)).toEqual(["Results", "Ladder", "Placings", "Join"]);
+    expect(await tabsOf(page)).toEqual(["Results", "Ladder", "Riders", "Placings", "Join"]);
   });
 
   test("Join hides itself while registration is closed and comes back when it opens; the join page itself still opens for officials", async ({ page }) => {
     await setSettings({ publicTabsOff: [], registrationOpen: false });
     await page.goto(`/e/${w.slug}`);
-    expect(await tabsOf(page)).toEqual(["Home", "Live", "Results", "Ladder", "Placings", "Rules"]);
+    expect(await tabsOf(page)).toEqual(["Home", "Live", "Results", "Ladder", "Riders", "Placings", "Rules"]);
     await setSettings({ registrationOpen: true });
     await page.goto(`/e/${w.slug}`);
-    expect(await tabsOf(page)).toEqual(["Home", "Live", "Results", "Ladder", "Placings", "Rules", "Join"]);
+    expect(await tabsOf(page)).toEqual(["Home", "Live", "Results", "Ladder", "Riders", "Placings", "Rules", "Join"]);
     await setSettings({ registrationOpen: false });
     const join = await page.goto(`/e/${w.slug}/join`);
     expect(join?.status()).toBe(200); // the officials' PIN doors live on this address
@@ -93,7 +93,7 @@ test("at least one tab stays on: the last switch cannot be turned off (Join does
   await setSettings({ publicTabsOff: [] });
   await w.org.signIn(page, `/org/events/${w.eventId}/event`);
   await openAdvanced(page);
-  for (const key of ["home", "live", "ladder", "placings", "rules"]) await page.getByTestId(`public-tab-${key}`).uncheck();
+  for (const key of ["home", "live", "ladder", "riders", "placings", "rules"]) await page.getByTestId(`public-tab-${key}`).uncheck();
   await expect(page.getByTestId("public-tab-results")).toBeChecked();
   await expect(page.getByTestId("public-tab-results")).toBeDisabled(); // the last one (Join does not count while it can hide itself)
   await expect(page.getByTestId("public-tab-join")).toBeEnabled();

@@ -28,6 +28,7 @@ describe("the observer's role switcher", () => {
       "Spotter · Omar",
       "Announcer",
       "Big screen",
+      "Flag view",
       "Public page",
     ]);
   });
@@ -49,7 +50,7 @@ describe("the observer's role switcher", () => {
   it("frames: laptop for the console and the big screen, phone for the rest", () => {
     expect(views.find((v) => v.key === "head-wide")?.frame).toBe("laptop");
     expect(views.find((v) => v.key === "screen")?.frame).toBe("tv");
-    expect(views.filter((v) => v.frame === "phone").length).toBe(7);
+    expect(views.filter((v) => v.frame === "phone").length).toBe(8);
   });
   it("every key reads back to its view", () => {
     for (const v of views) expect(viewKey(parseViewKey(v.key)!)).toBe(v.key);

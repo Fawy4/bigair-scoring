@@ -171,6 +171,10 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
     const p = d.entries;
     const calls: Record<string, Record<string, unknown>> = {
       activate_schedule_plan: { p_plan: planId },
+      abort_start: { p_heat: running },
+      extend_prestart: { p_heat: running },
+      arm_heat: { p_heat: running, p_prestart: 30 },
+      start_armed_if_due: { p_heat: running },
       add_attempt: { p_heat: running, p_entry: p[0], p_client_key: ck(), p_status: "landed", p_trick_name: "Backroll" },
       add_penalty: { p_heat: ended, p_entry: p[0], p_type: "INT", p_reason: "blocked a rider" },
       ask_usage: { p_org: f.ids.orgA },

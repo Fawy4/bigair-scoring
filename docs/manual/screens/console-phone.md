@@ -2,7 +2,7 @@
 
 The head judge's /head/‹event› page on a phone: the same controls as the laptop console in one column, and a Score tab when the head judge also scores.
 
-Last checked: 3 Oct 2026 · Product version 0.12.0
+Last checked: 3 Oct 2026 · Product version 0.13.0
 
 ## What it is for {#cp-purpose}
 
@@ -17,7 +17,11 @@ Running heats from the beach without a laptop. The score table needs a wider scr
 |---|---|
 | **Score** / **Control** tabs | Only when the head judge also scores (“Head judge also scores” in Officials): **Score** is exactly a judge's queue ([Judge](judge.md)); **Control** holds the controls. Otherwise the page is just the controls. |
 | Division selector | The same divisions as the laptop's tabs, remembered on the device. |
-| Heat buttons | **Start heat**, **Pause**, **Resume**, **End heat**, **Hold (wind)**, **Resume at** (restart time), **Shift +5**, **Shift +10**, **Cancel heat**, **Re-run heat**, **Publish**, **Re-open**, and the **Live scores: Public / Hidden** pill beside Publish (one tap changes whether spectators see this heat live; “Division default” under it means the heat follows the division's setting). A grey button says why under it. There is no timer reset: use Cancel heat (with a reason) or Re-run heat. |
+| **Review bar** | At the top of the **Control** tab, under the heat's header, from **End heat** until **Publish**: amber “Waiting for 2 of 4 judges: …” (tap a name to open that judge's sheet: **Save and submit** or **Absent**), red “Blocked: …” with **Fix** and **Absent**, green “All 4 judges submitted — ready to publish”; a quiet “3 of 4 judges scoring” while the heat is on. |
+| **Impression** card (named by the Event step's **Name of the impression score**) | A block under the heat buttons, headed by that name, open by default once the heat has ended (not for a division without an Impression / Variety scale): one column per judge and a **Panel** column, one row per rider, outlier colours like the trick scores; tap a cell to correct it. |
+| **Release result** | Beside **Publish**, only when the heat's result is held back. |
+| Flag strip | The timer is the **flag strip** (flags on): the flag's colour, the state's words, the countdown and the heat name ([Flags](flags.md)). |
+| Heat buttons | **Start heat sequence** (**Start heat** when the Flags are off), the one primary button, with the labelled **Pre-start:** setting above or beside it (the event's default ticked, **Other…** for any length from 0:10 to 15:00 typed as 1:30 or whole minutes, **Start now**); during the yellow **Start now**, **+1 min** (one more minute on every screen within a second), **Pause** / **Resume** (the countdown freezes) and **Abort**; **End heat**, **Hold (wind)**, **Resume at** (restart time), **Shift +5**, **Shift +10**, **Reset this heat…** (immediately before **Cancel heat**, same confirmation and reason as on the laptop), **Cancel heat**, **Re-run heat**, **Publish**, **Re-open**, and **Release result** beside Publish for a held result; the **Live scores** switch (Follow division / Live / Not live) is under **More**. A grey button says why under it. |
 | Run order | Pick a heat; lines show planned, started and estimated times. |
 | **Details** / **Hide details** | **Rider totals** (with the formula and attempts used), **What blocks Publish** (with **Choose order** for a tie). |
 | Screen settings | Daylight / Dark, Normal / Large, on this phone only. |

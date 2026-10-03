@@ -25,6 +25,14 @@ describe("break countdown: 'Next: R1 · H2 · starts in …'", () => {
     expect(c).toMatchObject({ kind: "break", state: "counting", heatId: "H2", startUtc: sec("10:17:30"), remainingMs: 270_000 }); // 4:30
   });
 
+  it("on a simulation the break is as short as the speed: 7 minutes at x10 is 42 seconds, at x20 21 seconds, at x1 unchanged", () => {
+    const left = (scale: number, now: string) => breakCountdown(P, afterH1(), { ...ctx(now), timeScale: scale });
+    expect(left(1, sec("10:11:00"))).toMatchObject({ state: "counting", remainingMs: 390_000 });
+    expect(left(10, sec("10:10:30"))).toMatchObject({ state: "counting", remainingMs: 42_000, startUtc: sec("10:11:12") });
+    expect(left(20, sec("10:10:30"))).toMatchObject({ state: "counting", remainingMs: 21_000 });
+    expect(left(10, sec("10:11:20"))).toMatchObject({ state: "due", lateMs: 8_000 });
+  });
+
   it("is due, never negative, once the start has passed; it does not creep forward because of the 'nothing runs in the past' rule", () => {
     const c = breakCountdown(P, afterH1(), ctx(sec("10:19:00")));
     expect(c).toMatchObject({ kind: "break", state: "due", heatId: "H2", remainingMs: 0, lateMs: 90_000 });

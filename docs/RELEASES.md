@@ -12,13 +12,47 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.13.0 — 3 Oct 2026 {#release-0-13-0}
+
+PR: #32
+
+### What changed
+- **Flags:** the heat clock now drives four flags — yellow before the start, green while the heat runs, yellow for the last minute, red when nothing is running (the words say Finished, Paused or Hold). On for every event, existing ones included (Event step → **Flags** to switch off, rename or recolour; pre-start and last-minute lengths).
+- **Start heat sequence:** on the head judge's console **Start heat** is now **Start heat sequence**, the one primary button. The pre-start is a labelled setting beside it, **Pre-start:** — the event's default (ticked), **Other…** (type 1:30 or whole minutes, 0:10 to 15:00) and **Start now**. The heat starts by itself at the end of the yellow, with a horn, and does not depend on any phone staying awake.
+- **During the yellow** the head judge keeps control at every moment: **Start now**, **+1 min** (exactly one more minute, as often as needed, written to the audit log, on every screen within a second), **Pause** / **Resume** (the countdown freezes and carries on) and **Abort**.
+- **Reset this heat** is a visible button right before **Cancel heat** (the heat menu is gone: it held nothing else). A reset heat is not started: the flag shows red / Stopped and no start sequence is left on it.
+- **Flag strip** on every live screen, a coloured frame on the big screen, announcer cues, the **Flag view** for the beach marshal at /e/‹event›/flag (grey after 10 seconds without the server; it now refreshes every second) and **horns** behind **Sound on**.
+- **Review bar and Impression card** on the console; the live-scores switch is back in the **More** menu and **Release result** is a visible button beside **Publish**. The Impression card has a proper heading above its grid.
+- **Name of the impression score** (Event step → **Scoring settings**): Impression, Variety… used on the card, the judges' phones, the review bar, the judges' sheets, the public results and rules and the big screen. Empty keeps the name each division's scoring gives it.
+- **Simulator:** every speed is measured: the heat, the pre-start, the last minute, the break and the virtual officials all follow the speed. **Pause** freezes the yellow too, and the auto-play arms a heat only while it is playing and only if the head judge has not armed it. **Skip to end of heat** now fast-forwards the virtual officials and leaves the heat running; the old behaviour is **End heat and publish**.
+- **Draw step:** compact cards (a seat is one line; the heats of a round in tight columns: 8 heats of 3 fit a laptop screen) and the selection banner is pinned to the top of the window.
+- **Rider door:** a public **Riders** tab lists everybody and each name opens that rider's page; every rider page has a QR, its address and an Add to home screen hint; the Riders step has **Rider links** (a printable sheet with a QR and address per rider and “Name — address” lines for WhatsApp).
+- **Wider organiser and admin screens:** the content uses the window up to 1400 px; tables and cards use the full width; only explanatory text stays at about 70 characters a line.
+- **Needs the database changes** `20261021100000_flags_start_sequence.sql`, `20261022100000_flags_prestart_controls.sql` , `20261023100000_impression_name.sql` and `20261023100100_drop_unused_fast_forward.sql` (all applied to the hosted project; the first also switches Flags on for every existing event, Arrow, EKL and Demo included).
+
+### What to test
+- [ ] On Demo, open the head judge console on a laptop. The button says **Start heat sequence**, on its own; beside it a box labelled **Pre-start:** has **1:00** ticked, **Other…** and **Start now**. Pick **Other…**, type **0:05** and press Enter: a sentence says the pre-start has to be between 0:10 and 15:00. Type **1:30**: **Other…** now reads **1:30** and is ticked. On your phone open the **Flag marshal's screen** (Go live → **Flag marshal's screen**): it is red and says what comes next.
+- [ ] Press **Start heat sequence**: the phone turns **yellow** counting down from 1:30. At about 0:40 press **+1 min** on the laptop: both show about 1:40 within a second; press it again for another minute. Press **Pause**: the phone turns red and says **Paused**, the countdown stands still; **Start now**, **+1 min** and **Abort** are still there. **Resume**: yellow again from the same time. Press **Abort**: the phone is red and the heat is not started. Start again with **Start now** ticked: green at once (tap **Sound on** on the phone first to hear the horn).
+- [ ] With a heat running: at the last minute both turn **yellow** with one horn; at 0:00 both turn **red**, say **Finished — next: …** and sound two horns. On a judge's and a spotter's phone the clock line is the coloured strip and every button is still on screen; the big screen has a coloured frame. Switch the Flag view's phone to aeroplane mode for 12 seconds: it turns **grey** and says “No connection — check with the head judge”. Event step → **Flags**: switch **Flags on** off, save: plain **Start heat** and the plain timer return; switch it back on.
+- [ ] End a heat while one judge has not pressed Submit: an **amber** bar under the heat's name names the judge; a missing score makes it **red** with **Fix** and **Absent**; then **green**. An **Impression** card with its **heading above the grid** (same style as **Riders**) sits beside the rider cards. Then press **Reset this heat**: the button is on the same row as **Cancel heat** and asks once; afterwards the phone is **red / Stopped** (not Finished) and the console offers **Start heat sequence** again. A held final shows **Release result** next to **Publish**, and **More** still has the **Live scores** switch.
+- [ ] Event step → **Scoring settings** → **Name of the impression score**: type **Variety**, save. The console's card heading, a judge's phone (after the heat), the review bar's red sentence and the public results (“= tricks 15.5 + Variety 5.0”) all say **Variety**. Empty the field and save: each division's own name returns.
+- [ ] On the Demo's simulation set the speed to **×10** and Start: the yellow lasts about 6 seconds, the heat about a minute, the last minute about 6 seconds. During a yellow press the simulator's **Pause**: the countdown stops; **Resume** (on the console) carries on. During a running heat press **Skip to end of heat**: every rider's attempts and scores fill in at once but the heat keeps running until you press **End heat**. **End heat and publish** ends and publishes in one go.
+- [ ] Organiser → Draw step on a 24-rider Knockout: round 1 (8 heats of 3) shows as two short rows and fits the screen without scrolling; each seat is one line (colour block, name, seed). Tap a rider and scroll down: the banner with **Swap with…** / **Move here** and **Cancel** stays at the top of the window. **Print / PDF** looks as before. Open **/admin → Organisations → Arrow**: the table is as wide as the window and the Actions cell no longer wraps every sentence; on your phone nothing changed.
+- [ ] Open the public event page: there is a **Riders** tab listing everybody; tap a name: that rider's page has **Share** with a QR code, an address (open it: same page) and the “Add this page to your home screen” hint. In the Riders step press **Rider links**: a sheet with a QR and address per rider, and a box of “Name — address” lines with **Copy the lines** to paste into WhatsApp.
+
+### Known issues
+- Not tried on a real phone; the horn sound is a synthesised tone, not a recorded horn.
+- At ×10 the break countdown follows the speed but **+1 min** on a break still adds a whole minute of the run order.
+- The speed applies from the next heat: a heat already in its yellow or on the water keeps the speed it began with.
+- The strip's words after “Finished” stay until the next heat starts, also during a long break.
+
 ## 0.12.0 — 3 Oct 2026 {#release-0-12-0}
 
 PR: #31
 
 ### What changed
 - **One pause:** pausing a simulated heat from the head judge's console or from the simulator is now one state — the heat clock and the virtual officials stop together and resume together, from either place.
-- **Live scores pill** beside Publish on the console (laptop and phone), out of the More menu.
+- **Release result** is a visible button beside Publish on the console (laptop and phone) when a heat's result is held. (A first version of this entry said the live-scores switch moved out of the More menu; that was wrong and is corrected in 0.13.0.)
 - **Big screen colours:** Day and Dark; tap or move the mouse for the button, **D** on a laptop; remembered per browser; the Event step sets the default.
 - **Admin → Feedback:** date filter, tick boxes, Select all, Set done / Reopen many notes at once; the export follows the filter.
 - **Public page tabs:** the organiser switches tabs off on the Event step; an old link to a hidden tab lands on the first visible tab. Join hides itself while registration is closed (the join page itself keeps working for officials).
@@ -29,7 +63,7 @@ PR: #31
 
 ### What to test
 - [ ] On the Demo's simulation (or a throwaway one), set the speed to ×10 and Start. Open View as → Head judge laptop. Press **Pause** on the console: the simulator panel says **Paused** within a second or two and no new attempts or scores appear for 10 seconds. Press **Resume** on the simulator: both run again. Then press **Pause** on the simulator and **Resume** on the console.
-- [ ] On the head console of a started heat, find **Live scores: Public** (or Hidden) next to **Publish**, on a laptop and on a phone. Tap it: it flips; “Division default” disappears while it differs from the division's setting. Tap again: it follows the division's setting again. **More** no longer has a live switch.
+- [ ] On the head console, publish a final of an event whose results are held (Event step: results not shown on publish). Next to **Publish** a **Release result** button appears; tap it: “Result released to the public.” A heat that is not held has no such button. **More** has the **Live scores** switch (Follow division / Live / Not live) as before.
 - [ ] Open the big screen (/screen/‹event›). Move the mouse or tap: a Day / Dark button appears in the top left and goes away after three seconds. Tap it: the colours switch. Reload: the choice is remembered. Press **D**: it switches back.
 - [ ] Event step → More settings → **Big screen: colours**: choose Day, save, open the big screen in a private window: it opens in Day.
 - [ ] Admin → Feedback: click **Today**, tick three notes, press **Set done**, confirm: it says “3 notes changed”. Select them again and press **Reopen**. Press **Export for Claude**: only the notes of the filtered list are in the file.
