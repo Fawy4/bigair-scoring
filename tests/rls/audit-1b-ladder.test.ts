@@ -5,6 +5,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startingCopy, startingTarget } from "@/lib/reset/plan";
 import { rerunName } from "@/lib/live/rerun";
 import type { DivisionDraw } from "@/lib/engine/ladder";
+import { setEntryStatus } from "@/lib/draw/walkover";
+import { drawProjection } from "@/lib/draw/projection";
 import { anonClient, ENV_OK } from "./helpers";
 import { ago, codeOf } from "./live-helpers";
 import { buildGouna, sharedFixture, type GounaWorld } from "./audit-1b-world";
@@ -230,22 +232,50 @@ describe.skipIf(!ENV_OK)("Audit 1b — withdrawals after the draw is locked (doc
     expect(seat).toHaveLength(1);
   });
 
-  // A1b-3: the Riders step's "Withdrawn" only changes entries.status. Nothing calls set_draw_walkover (it exists, tested in draw-timetable.test.ts), so the seat
-  // never becomes a DNS walkover: the heat starts with the rider in it and the Impression / Variety score of every judge is missing for that rider.
-  it.fails("A1b-3: setting a rider to Withdrawn after the lock makes the seat a DNS walkover", async () => {
+  // A1b-3 (fixed in Fix 2): the Riders step's Withdrawn after the lock turns the seat into a DNS walkover, the engine's draw is stored, and what the engine says about
+  // the later seats (a rider left alone in a heat moves on) is written to the seats in the same step. Called the way the Riders step calls it, with the organiser's session.
+  it("A1b-3: setting a rider to Withdrawn after the lock makes the seat a DNS walkover, the stored draw says so, and the public draw shows it", async () => {
     const victim = w.entries[6];
-    await w.f.clients.orgA.from("entries").update({ status: "withdrawn" }).eq("id", victim);
-    const seat = (await w.f.s.from("heat_slots").select("modifier").eq("entry_id", victim).single()).data!;
-    expect(seat.modifier).toBe("DNS");
-  });
-
-  it("A1b-3 today: the seat keeps the rider with no modifier, and the heat can start with them in it", async () => {
-    const victim = w.entries[7];
-    await w.f.clients.orgA.from("entries").update({ status: "withdrawn" }).eq("id", victim);
+    const r = await setEntryStatus(w.f.clients.orgA, [victim], "withdrawn");
+    expect(r).toMatchObject({ ok: true, changed: 1, walkovers: 1 });
     const seat = (await w.f.s.from("heat_slots").select("modifier, heat_id").eq("entry_id", victim).single()).data!;
-    expect(seat.modifier).toBeNull();
+    expect(seat.modifier).toBe("DNS");
+    const draw = (await w.f.s.from("divisions").select("draw").eq("id", w.div).single()).data!.draw as unknown as DivisionDraw;
+    expect(draw.entrants.find((e) => e.id === victim)?.withdrawn).toBe(true);
+    expect(draw.rounds.flatMap((x) => x.heats).flatMap((h) => h.slots).filter((sl) => sl.entrantId === victim).every((sl) => sl.modifier === "DNS")).toBe(true);
+    expect((await w.f.s.from("heats").select("id").eq("division_id", w.div)).data).toHaveLength(15);
+    // the public ladder (a visitor's function) carries the walkover
+    const pub = (await anonClient().rpc("get_public_draw", { p_event: w.f.ids.evA1 })).data as unknown as { allowed: boolean; divisions?: Array<{ draw: DivisionDraw }> };
+    expect(JSON.stringify(pub)).toContain('"DNS"');
+    // the heat of 3 runs with 2: it can still start
     expect(codeOf(await w.head.rpc("start_heat", { p_heat: seat.heat_id }))).toBe("");
     await w.f.s.from("heats").update({ status: "ended", ended_at: ago(1) }).eq("id", seat.heat_id);
+  });
+
+  it("A1b-3: two riders of a heat of 3 withdraw: the third has nobody to ride against and the next seat fills as the format says; a heat that has started refuses", async () => {
+    const heat = await w.heatByUid(w.uids[0][3]);
+    const slots = await w.seats(heat.id);
+    const [a, b, c] = slots.map((x) => x.entry_id!);
+    expect(await setEntryStatus(w.f.clients.orgA, [a, b], "no_show")).toMatchObject({ ok: true, walkovers: 2 });
+    const after = await w.seats(heat.id);
+    expect(after.filter((x) => x.modifier === "DNS").map((x) => x.entry_id).sort()).toEqual([a, b].sort());
+    // where does the lone rider go? Whatever the engine says: the seats the plan wrote equal the stored draw's projection (no seat the draw disagrees with)
+    const draw = (await w.f.s.from("divisions").select("draw").eq("id", w.div).single()).data!.draw as unknown as DivisionDraw;
+    const expected = drawProjection(draw).heats.flatMap((h) => h.slots.map((x) => `${h.uid}:${x.position}:${x.entry_id ?? ""}:${x.modifier ?? ""}`)).sort();
+    const heats = (await w.f.s.from("heats").select("id, draw_uid").eq("division_id", w.div)).data!;
+    const uidOf = new Map(heats.map((h) => [h.id, h.draw_uid]));
+    const stored = ((await w.f.s.from("heat_slots").select("heat_id, position, entry_id, modifier").in("heat_id", heats.map((h) => h.id))).data ?? []).map((x) => `${uidOf.get(x.heat_id)}:${x.position}:${x.entry_id ?? ""}:${x.modifier ?? ""}`).sort();
+    const diff = expected.filter((x) => !stored.includes(x));
+    console.info("A1b-3 seats the stored draw expects but the table lacks:", diff.length, diff.slice(0, 6));
+    expect(diff).toEqual([]);
+    expect(c).toBeTruthy();
+    // a heat that has started: refused, nothing changed
+    const started = await w.heatByUid(w.uids[0][4]);
+    const sl = await w.seats(started.id);
+    await w.f.s.from("heats").update({ status: "running", started_at: ago(30) }).eq("id", started.id);
+    expect(await setEntryStatus(w.f.clients.orgA, [sl[0].entry_id!], "withdrawn")).toEqual({ ok: false, code: "HEAT_STARTED" });
+    expect((await w.f.s.from("entries").select("status").eq("id", sl[0].entry_id!).single()).data!.status).toBe("confirmed");
+    await w.f.s.from("heats").update({ status: "ended", ended_at: ago(1) }).eq("id", started.id);
   });
 
   it("the head judge's workaround works: Did not start for that rider in that heat ranks them last with no total and blocks nothing", async () => {

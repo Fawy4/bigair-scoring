@@ -16,23 +16,19 @@ describe.skipIf(!ENV_OK)("Audit 1b — data integrity", () => {
   // A1b-16: the Riders step refuses "Remove" for a rider already in the draw only when the database says 23503 (a row that points at the entry). heat_slots point
   // at entries with ON DELETE SET NULL, so a rider who has a seat but no attempt yet is removed without a word: the seat goes empty, the stored draw still names the
   // rider, and Start heat is then refused "a seat is still waiting for a place" on a locked draw nobody can re-arrange.
-  it.fails("A1b-16: removing a rider who has a seat in a locked draw is refused (the manual: 'set them to Withdrawn instead')", async () => {
-    const victim = w.entries[10];
-    const r = await w.f.clients.orgA.from("entries").delete().eq("id", victim).select("id");
-    expect(codeOf(r)).not.toBe("");
-  });
-  it("A1b-16 today: the remove goes through, the seat is empty, and Start heat is refused for that heat", async () => {
+  it("A1b-16 (fixed in Fix 2): removing a rider who has a seat in a locked draw is refused (ENTRY_IN_DRAW), nothing changes; a rider without a seat can still be removed", async () => {
     const victim = w.entries[13];
     const seat = (await w.f.s.from("heat_slots").select("heat_id, position").eq("entry_id", victim).single()).data!;
     const r = await w.f.clients.orgA.from("entries").delete().eq("id", victim).select("id");
-    expect(codeOf(r)).toBe("");
-    expect((r.data ?? []).length).toBe(1);
-    const after = (await w.f.s.from("heat_slots").select("entry_id").eq("heat_id", seat.heat_id).eq("position", seat.position).single()).data!;
-    expect(after.entry_id).toBeNull();
-    const start = await w.head.rpc("start_heat", { p_heat: seat.heat_id });
-    expect(codeOf(start)).toContain("SEATS_NOT_FILLED");
-    const draw = JSON.stringify((await w.f.s.from("divisions").select("draw").eq("id", w.div).single()).data!.draw);
-    expect(draw).toContain(victim); // the stored draw still names the removed rider
+    expect(codeOf(r)).toContain("ENTRY_IN_DRAW");
+    expect((await w.f.s.from("entries").select("id").eq("id", victim)).data).toHaveLength(1);
+    expect((await w.f.s.from("heat_slots").select("entry_id").eq("heat_id", seat.heat_id).eq("position", seat.position).single()).data!.entry_id).toBe(victim);
+    // a rider with no seat (a new entry in the division) is removed as before
+    const rider = (await w.f.s.from("riders").insert({ organisation_id: w.f.ids.orgA, first_name: "Late", last_name: "Entry" }).select("id").single()).data!;
+    const e = (await w.f.s.from("entries").insert({ division_id: w.div, rider_id: rider.id, seed: 99, status: "registered", source: "manual" }).select("id").single()).data!;
+    const ok = await w.f.clients.orgA.from("entries").delete().eq("id", e.id).select("id");
+    expect(codeOf(ok)).toBe("");
+    expect(ok.data).toHaveLength(1);
   });
 
   it("a rider with attempts cannot be removed (the 23503 path the Riders step words as 'already in the draw')", async () => {
@@ -41,7 +37,7 @@ describe.skipIf(!ENV_OK)("Audit 1b — data integrity", () => {
     await w.f.s.from("heats").update({ status: "running", started_at: ago(60) }).eq("id", h.id);
     await w.f.s.from("trick_attempts").insert({ heat_id: h.id, entry_id: slots[0].entry_id, seq: 1, status: "landed", trick_name: "Backroll", client_key: key() });
     const r = await w.f.clients.orgA.from("entries").delete().eq("id", slots[0].entry_id!).select("id");
-    expect(r.error?.code).toBe("23503");
+    expect(r.error?.message).toContain("ENTRY_IN_DRAW"); // (the guard answers before the 23503 of the attempts' foreign key)
     await w.f.s.from("heats").update({ status: "ended", ended_at: ago(1) }).eq("id", h.id);
   });
 

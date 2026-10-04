@@ -119,28 +119,19 @@ describe.skipIf(!ENV_OK)("Audit 1b — flags and the start sequence (hosted deve
 
   // A1b-18: the same trigger clears armed_at but not armed_paused_at, which breaks the heats_armed_pair check. With a FROZEN yellow (Pause during the pre-start)
   // the whole settings save is refused: the organiser cannot switch Flags off (the Event step's Save fails) and the heat stays armed.
-  it.fails("A1b-18: flags switched off while the yellow is frozen: the save goes through and nothing is left armed", async () => {
+  it("A1b-18 (fixed in Fix 2): flags switched off while the yellow is frozen: the save goes through, nothing is left armed, the heat is simply not started", async () => {
     const h = await mkHeat(f, d);
     expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: h, p_prestart: 60 }))).toBe("");
     expect(codeOf(await f.clients.head.rpc("pause_heat", { p_heat: h }))).toBe("");
     expect(codeOf(await f.clients.orgA.from("events").update({ settings: { ...settings, flags: { ...settings.flags, enabled: false } } }).eq("id", f.ids.evA1))).toBe("");
     const r = (await f.s.from("heats").select("armed_at, armed_paused_at").eq("id", h).single()).data!;
     expect(r).toEqual({ armed_at: null, armed_paused_at: null });
+    expect(await heatRow(f, h)).toMatchObject({ status: "scheduled", started_at: null, armed_at: null, prestart_sec: null });
   });
-  it("A1b-18 today: with a frozen yellow, switching Flags off is refused by the database (heats_armed_pair) and the heat stays armed", async () => {
-    const h = await mkHeat(f, d);
-    expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: h, p_prestart: 60 }))).toBe("");
-    expect(codeOf(await f.clients.head.rpc("pause_heat", { p_heat: h }))).toBe("");
-    const res = await f.clients.orgA.from("events").update({ settings: { ...settings, flags: { ...settings.flags, enabled: false } } }).eq("id", f.ids.evA1);
-    expect(codeOf(res)).toMatch(/heats_armed_pair|check constraint/);
-    expect((await f.s.from("events").select("settings").eq("id", f.ids.evA1).single()).data!.settings).toMatchObject({ flags: { enabled: true } });
-    expect((await heatRow(f, h)).armed_at).not.toBeNull();
-  });
-
   // A1b-1: the trigger that cancels an armed start when flags go off does not look at the clock. A heat whose pre-start is already over but whose start nobody
   // wrote down yet (every official phone asleep, or within the second before one asks) is "running" for every screen and every write gate — and switching flags
   // off then silently turns it back into a heat that never started, with its attempts and scores on a "not started" heat.
-  it.fails("A1b-1: flags off after 0:00 but before the start is written down keeps the heat running from the armed moment", async () => {
+  it("A1b-1 (fixed in Fix 2): flags off after 0:00 but before the start is written down keeps the heat running from the armed moment", async () => {
     const h = await mkHeat(f, d);
     await f.s.from("heats").update({ armed_at: ago(40), prestart_sec: 10 }).eq("id", h);
     await f.s.from("events").update({ settings: { ...settings, flags: { ...settings.flags, enabled: false } } }).eq("id", f.ids.evA1);
@@ -148,14 +139,24 @@ describe.skipIf(!ENV_OK)("Audit 1b — flags and the start sequence (hosted deve
     expect(row.status).toBe("running");
     expect(row.started_at).not.toBeNull();
   });
-  it("A1b-1 today: the heat that was running for 30 s is back to 'not started' and the attempt logged in it stays on a not-started heat", async () => {
+  it("A1b-1: the flag strip is simply hidden — the heat that was running for 30 s keeps running, and the attempt logged in it stays on a running heat", async () => {
     const h = await mkHeat(f, d);
     await f.s.from("heats").update({ armed_at: ago(40), prestart_sec: 10 }).eq("id", h);
     expect(codeOf(await f.clients.spotter.rpc("add_attempt", { p_heat: h, p_entry: d.entries[0], p_client_key: key(), p_status: "landed", p_trick_name: "Backroll" }))).toBe("");
     await f.s.from("events").update({ settings: { ...settings, flags: { ...settings.flags, enabled: false } } }).eq("id", f.ids.evA1);
     const row = await heatRow(f, h);
-    expect(row).toMatchObject({ status: "scheduled", started_at: null, armed_at: null });
+    expect(row).toMatchObject({ status: "running", armed_at: null, prestart_sec: null });
+    expect(Date.parse(row.started_at!)).toBeGreaterThan(Date.now() - 31_000);
+    expect(Date.parse(row.started_at!)).toBeLessThan(Date.now() - 29_000);
     expect(((await f.s.from("trick_attempts").select("id").eq("heat_id", h)).data ?? []).length).toBe(1);
+  });
+
+  it("A1b-1: a pre-start still in its yellow when Flags go off is cancelled (audited), nothing left armed", async () => {
+    const h = await mkHeat(f, d);
+    expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: h, p_prestart: 60 }))).toBe("");
+    await f.s.from("events").update({ settings: { ...settings, flags: { ...settings.flags, enabled: false } } }).eq("id", f.ids.evA1);
+    expect(await heatRow(f, h)).toMatchObject({ status: "scheduled", started_at: null, armed_at: null });
+    expect((await audit(h)).some((l) => l.action === "heat_start_aborted" && l.reason === "Flags switched off")).toBe(true);
   });
 
   it("pause inside the last minute and resume with 20 s left: the clock carries on from 20 s (the pause is rounded up to whole seconds, so never less)", async () => {
@@ -188,20 +189,33 @@ describe.skipIf(!ENV_OK)("Audit 1b — flags and the start sequence (hosted deve
   // A1b-2: the "is a heat on the water?" check of every reset only looks at status running/paused. An armed heat is 'scheduled' (yellow, or green but not yet
   // written down), so Reset this division / Reset event / Clear actual times go through, and the armed columns survive the reset (they are cleared only when the
   // status changes to scheduled, and it already is): the heat goes green by itself after the reset.
-  it.fails("A1b-2: Reset this division during the yellow is refused (or at least leaves nothing armed)", async () => {
+  it("A1b-2 (fixed in Fix 2): Reset this division during the yellow is refused with HEAT_ARMED and the heat stays in its yellow", async () => {
     const g = await gouna();
     const h = await g.heatByUid(g.uids[0][0]);
     expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: h.id, p_prestart: 60 }))).toBe("");
     const res = await f.clients.orgA.rpc("reset_division", { p_division: g.div, p_item: await itemOf(g) as never, p_reason: "audit 1b" });
-    const row = await heatRow(f, h.id);
-    expect(codeOf(res) !== "" || row.armed_at === null).toBe(true);
+    expect(codeOf(res)).toContain("HEAT_ARMED");
+    expect((await heatRow(f, h.id)).armed_at).not.toBeNull();
+    await f.clients.head.rpc("abort_start", { p_heat: h.id });
   }, 300_000);
-  it("A1b-2 today: Reset this division during the yellow succeeds and the heat stays armed", async () => {
+  it("A1b-2: Reset event, Reset this heat and Clear actual times are refused too while a heat is in its start sequence (yellow, running yellow or frozen yellow); after Abort they work and nothing is left armed", async () => {
     const g = await gouna();
     const h = await g.heatByUid(g.uids[0][1]);
+    const plan = (await f.s.from("schedule_plans").insert({ event_id: f.ids.evA1, name: "Fix2 plan", day: "2026-10-11", active: false, items: [], anchors: {} } as never).select("id").single()).data!;
     expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: h.id, p_prestart: 60 }))).toBe("");
-    expect(codeOf(await f.clients.orgA.rpc("reset_division", { p_division: g.div, p_item: await itemOf(g) as never, p_reason: "audit 1b" }))).toBe("");
-    expect((await heatRow(f, h.id)).armed_at).not.toBeNull();
+    for (const frozen of [false, true]) {
+      if (frozen) expect(codeOf(await f.clients.head.rpc("pause_heat", { p_heat: h.id }))).toBe("");
+      expect(codeOf(await f.clients.orgA.rpc("reset_event", { p_event: f.ids.evA1, p_slug: (await f.s.from("events").select("slug").eq("id", f.ids.evA1).single()).data!.slug as string, p_reason: "audit", p_draws: [] as never }))).toContain("HEAT_ARMED");
+      expect(codeOf(await f.clients.orgA.rpc("reset_heat", { p_heat: h.id, p_reason: "audit", p_before: {} as never, p_draw: {} as never, p_seats: [] as never }))).toContain("HEAT_ARMED");
+      expect(codeOf(await f.clients.orgA.rpc("clear_plan_actuals", { p_plan: plan.id }))).toContain("HEAT_ARMED");
+      expect((await heatRow(f, h.id)).armed_at).not.toBeNull();
+    }
+    expect(codeOf(await f.clients.head.rpc("abort_start", { p_heat: h.id }))).toBe("");
+    expect(codeOf(await f.clients.orgA.rpc("clear_plan_actuals", { p_plan: plan.id }))).toBe("");
+    expect(codeOf(await f.clients.orgA.rpc("reset_division", { p_division: g.div, p_item: (await itemOf(g)) as never, p_reason: "audit 1b" }))).toBe("");
+    expect(await heatRow(f, h.id)).toMatchObject({ status: "scheduled", armed_at: null, prestart_sec: null, started_at: null });
+    // nothing starts by itself afterwards: no heat of the event is armed, however long we look
+    expect(((await f.s.from("heats").select("id").eq("event_id", f.ids.evA1).not("armed_at", "is", null)).data ?? []).length).toBe(0);
   }, 300_000);
 
   let g1: GounaWorld | null = null;

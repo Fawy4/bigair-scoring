@@ -1827,7 +1827,9 @@ export const copy = {
     removeQuestion: (n: string) => `Remove ${n} from this division? The rider stays in your organisation.`,
     removeYes: "Yes, remove",
     removed: "Rider removed from the division",
-    inDraw: "This rider is already in the draw. Set them to Withdrawn instead of removing them.",
+    inDraw: "This rider has a seat in the draw — set them to Withdrawn instead",
+    withdrawHeatStarted: "This rider's heat has already started. Use Did not start on the head console instead.",
+    walkover: (n: number) => (n === 1 ? "Their seat in the draw is now a walkover." : `Their ${n} seats in the draw are now walkovers.`),
     printStartList: "Print start list",
     links: {
       button: "Rider links",
@@ -3679,6 +3681,7 @@ export const copy = {
       NOT_ALLOWED: "You are not allowed to reset this event.",
       SLUG_MISMATCH: "That is not the event’s web address. Nothing was changed.",
       HEAT_RUNNING: (heat: string) => `${heat} is running. End it first.`,
+      HEAT_ARMED: "Abort the start sequence first.",
       REASON_REQUIRED: "A reason of at least 5 characters is needed, because results of this event were shown publicly.",
       BAD_PROJECTION: "The ladders changed while the reset was being prepared. Nothing was changed; try again.",
       DRAW_COPY_MISSING: "A division has no saved starting draw. Nothing was changed.",

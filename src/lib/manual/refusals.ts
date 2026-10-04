@@ -167,6 +167,7 @@ export const EXTRA_REFUSAL_PATHS: readonly string[] = [
   "riders.importFailed",
   "riders.importNothing",
   "riders.inDraw",
+  "riders.withdrawHeatStarted",
   "riders.drawLocked",
   "riders.clash.lycra",
   "riders.clash.bib",

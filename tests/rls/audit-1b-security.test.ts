@@ -53,22 +53,49 @@ describe.skipIf(!ENV_OK)("Audit 1b — security (hosted development project)", (
       expect(errOf(await bind("604214", f.userIds.orgB, ip))).toBe("RATE_LIMITED");
     });
 
-    // A1b-7: the event-wide limit (100 wrong tries in 10 minutes from any addresses) refuses the RIGHT PIN too, for everybody. Anyone with the event's join page
-    // (it is public: the slug is the public address) can lock every official out for 10 minutes with 100 wrong guesses from rotating addresses, or a crowd of
-    // spectators on the venue Wi-Fi can do it by accident.
-    it.fails("A1b-7: wrong guesses by strangers never stop an official with the right PIN from joining", async () => {
+    // A1b-7 (fixed in Fix 2): the lockout counts per device AND address; a stranger's wrong guesses never stop an official with the right PIN.
+    it("A1b-7: 100+ wrong guesses by strangers from rotating addresses and devices never stop an official with the right PIN from joining", async () => {
       await f.s.rpc("set_seat_pin", { p_seat: f.ids.seat_spotter, p_pin: "918273" });
-      await f.s.from("join_attempts").insert(Array.from({ length: 100 }, (_, i) => ({ event_id: f.ids.evA1, ip: `stranger-${i}-${randomUUID()}`, ok: false })));
+      await f.s.from("join_attempts").insert(Array.from({ length: 120 }, (_, i) => ({ event_id: f.ids.evA1, ip: `stranger-${i}-${randomUUID()}`, user_id: randomUUID(), ok: false })));
       const u = await phone();
+      const t0 = Date.now();
       expect(errOf(await bind("918273", u, `official-${randomUUID()}`))).toBe("");
-    });
-    it("A1b-7 today: after 100 wrong guesses from 100 addresses the right PIN from a fresh address is refused RATE_LIMITED", async () => {
-      await f.s.rpc("set_seat_pin", { p_seat: f.ids.seat_spotter, p_pin: "918274" });
-      await f.s.from("join_attempts").insert(Array.from({ length: 100 }, (_, i) => ({ event_id: f.ids.evA1, ip: `stranger2-${i}-${randomUUID()}`, ok: false })));
-      const u = await phone();
-      expect(errOf(await bind("918274", u, `official-${randomUUID()}`))).toBe("RATE_LIMITED");
+      expect(Date.now() - t0).toBeLessThan(900); // a right PIN never waits for the slow brake
       await f.s.from("join_attempts").delete().eq("event_id", f.ids.evA1);
     });
+
+    it("A1b-7: the same phone on the same connection is refused after 10 wrong tries (even with the right PIN); another phone on that connection, and that phone on another connection, are not", async () => {
+      await f.s.rpc("set_seat_pin", { p_seat: f.ids.seat_spotter, p_pin: "918275" });
+      const ip = `wifi-${randomUUID()}`;
+      const bad = await phone();
+      for (let i = 0; i < 10; i++) await bind("000002", bad, ip);
+      expect(errOf(await bind("918275", bad, ip))).toBe("RATE_LIMITED");
+      const clean = await phone();
+      expect(errOf(await bind("918275", clean, ip))).toBe(""); // a clean phone on the same venue Wi-Fi
+      const bad2 = await phone();
+      for (let i = 0; i < 10; i++) await bind("000002", bad2, ip);
+      expect(errOf(await bind("918275", bad2, `other-${randomUUID()}`))).toBe(""); // the same phone, another connection
+      await f.s.from("join_attempts").delete().eq("event_id", f.ids.evA1);
+    });
+
+    it("A1b-7: the only per-event brake is slow: after 20 wrong tries a wrong guess takes about a second and only one is weighed at a time; the right PIN is never slowed; joined officials are untouched", async () => {
+      await f.s.rpc("set_seat_pin", { p_seat: f.ids.seat_spotter, p_pin: "918276" });
+      await f.s.from("join_attempts").insert(Array.from({ length: 25 }, (_, i) => ({ event_id: f.ids.evA1, ip: `s-${i}-${randomUUID()}`, user_id: randomUUID(), ok: false })));
+      const u = await phone();
+      const t0 = Date.now();
+      expect(errOf(await bind("000003", u, `ip-${randomUUID()}`))).toBe("INVALID_PIN");
+      expect(Date.now() - t0).toBeGreaterThanOrEqual(950);
+      // ten wrong guesses at the same moment: one is weighed, the others are told to wait at once
+      const outs = await Promise.all(Array.from({ length: 10 }, async () => errOf(await bind("000004", await phone(), `ip-${randomUUID()}`))));
+      expect(outs.filter((o) => o === "INVALID_PIN").length).toBeLessThanOrEqual(3);
+      expect(outs.filter((o) => o === "RATE_LIMITED").length).toBeGreaterThanOrEqual(5);
+      const t1 = Date.now();
+      expect(errOf(await bind("918276", await phone(), `ip-${randomUUID()}`))).toBe("");
+      expect(Date.now() - t1).toBeLessThan(900);
+      // an official who is already joined keeps working through all of it
+      expect((await f.clients.j1.rpc("touch_seat")).error).toBeNull();
+      await f.s.from("join_attempts").delete().eq("event_id", f.ids.evA1);
+    }, 60_000);
   });
 
   describe("an archived event", () => {

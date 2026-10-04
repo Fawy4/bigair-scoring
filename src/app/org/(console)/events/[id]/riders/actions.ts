@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { cleanIdentifiers } from "@/lib/riders/identifiers";
+import { setEntryStatus } from "@/lib/draw/walkover";
 import { copy } from "@/lib/ui-copy";
 
 const T = copy.riders.errors;
@@ -103,6 +104,12 @@ export async function saveEntry(entryId: string, patch: z.input<typeof EntryPatc
   if (parsed.data.identifiers !== undefined) update.identifiers = cleanIdentifiers(parsed.data.identifiers) as never;
   if (Object.keys(update).length === 0) return { ok: true };
   const supabase = await createClient();
+  if (update.status && Object.keys(update).length === 1) {
+    // Withdrawn / No-show after the draw is locked turns the seat into a walkover (Fix 2, A1b-3)
+    const r = await setEntryStatus(supabase, [entryId], update.status);
+    if (!r.ok) return fail(r.code === "HEAT_STARTED" ? copy.riders.withdrawHeatStarted : T.failed);
+    return r.changed ? { ok: true } : fail(T.notAllowed);
+  }
   const { data, error } = await supabase.from("entries").update(update).eq("id", entryId).select("id");
   if (error) return fail(dbError(error));
   return data?.length ? { ok: true } : fail(T.notAllowed);
@@ -178,7 +185,7 @@ export async function removeEntry(entryId: string): Promise<Result> {
   if (!Uuid.safeParse(entryId).success) return fail(T.failed);
   const supabase = await createClient();
   const { data, error } = await supabase.from("entries").delete().eq("id", entryId).select("id");
-  if (error) return fail(error.code === "23503" ? copy.riders.inDraw : dbError(error));
+  if (error) return fail(error.code === "23503" || /ENTRY_IN_DRAW/.test(error.message) ? copy.riders.inDraw : dbError(error));
   return data?.length ? { ok: true } : fail(T.notAllowed);
 }
 
@@ -187,9 +194,9 @@ export async function setEntriesStatus(entryIds: string[], status: "confirmed" |
   const ids = z.array(Uuid).min(1).max(500).safeParse(entryIds);
   if (!ids.success || !["confirmed", "withdrawn", "no_show"].includes(status)) return fail(T.failed);
   const supabase = await createClient();
-  const { data, error } = await supabase.from("entries").update({ status }).in("id", ids.data).select("id");
-  if (error) return fail(dbError(error));
-  return data?.length ? { ok: true, changed: data.length } : fail(T.notAllowed);
+  const r = await setEntryStatus(supabase, ids.data, status);
+  if (!r.ok) return fail(r.code === "HEAT_STARTED" ? copy.riders.withdrawHeatStarted : T.failed);
+  return r.changed ? { ok: true, changed: r.changed } : fail(T.notAllowed);
 }
 
 /** Takes the ticked riders out of the division. All or none: one rider already in a heat stops the whole step. */
@@ -198,6 +205,6 @@ export async function removeEntries(entryIds: string[]): Promise<Result<{ remove
   if (!ids.success) return fail(T.failed);
   const supabase = await createClient();
   const { data, error } = await supabase.from("entries").delete().in("id", ids.data).select("id");
-  if (error) return fail(error.code === "23503" ? copy.riders.inDraw : dbError(error));
+  if (error) return fail(error.code === "23503" || /ENTRY_IN_DRAW/.test(error.message) ? copy.riders.inDraw : dbError(error));
   return data?.length ? { ok: true, removed: data.length } : fail(T.notAllowed);
 }

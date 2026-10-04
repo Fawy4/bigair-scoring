@@ -338,6 +338,7 @@ const resetFrom = (error: { message: string }): Failure => {
   if (typeof mine === "function") return { ok: false, code, message: mine(detail ?? "") };
   if (typeof mine === "string") return { ok: false, code, message: mine };
   if (code === "HEAT_RUNNING") return { ok: false, code, message: copy.reset.errors.HEAT_RUNNING(detail ?? "") };
+  if (code === "HEAT_ARMED") return { ok: false, code, message: copy.reset.errors.HEAT_ARMED };
   if (code === "REASON_REQUIRED") return { ok: false, code, message: copy.reset.errors.REASON_REQUIRED };
   return from(error);
 };
