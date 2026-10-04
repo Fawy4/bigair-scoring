@@ -90,7 +90,8 @@ export async function loadFollowPayload(slug: string): Promise<FollowPayload | n
     qrUrl: eventUrl(await requestOrigin(), site.event.slug),
     defaultMode: site.settings.screenColourMode === "day" ? "day" : "dark",
     rotateSec: site.settings.followRotateSec ?? 15,
-    flag: publicFlagData(timetable, tt, site.settings.flags),
+    // the "next: …" words are left off the flag pill: the thin line at the bottom says what is next, and the pill stays one short line so the pages keep their room
+    flag: ((f) => (f ? { ...f, next: null } : null))(publicFlagData(timetable, tt, site.settings.flags)),
     phase,
     heat,
     pages,
