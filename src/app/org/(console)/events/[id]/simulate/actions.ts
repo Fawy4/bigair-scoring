@@ -16,6 +16,7 @@ import { forgetContext, type SimDb } from "@/lib/simulator/snapshot";
 import { loadSimStatus, type StatusResult } from "@/lib/simulator/status";
 import { endAndPublish, simTick, skipToEnd, type TickResult } from "@/lib/simulator/tick";
 import type { SeatRole } from "@/lib/simulator/types";
+import { signedInUser } from "@/lib/supabase/claims";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { copy } from "@/lib/ui-copy";
@@ -28,10 +29,8 @@ const bad = (message = T.generic): { ok: false; message: string } => ({ ok: fals
 /** The organiser and the server's own connection. The database decides whether this person may touch this event (organiser, simulation event) on every call. */
 async function open(): Promise<SimDb | null> {
   const user = await createClient();
-  const {
-    data: { user: me },
-  } = await user.auth.getUser();
-  if (!me || me.is_anonymous) return null;
+  const me = await signedInUser(user);
+  if (!me || me.isAnonymous) return null;
   return { user, service: createServiceClient(), userId: me.id };
 }
 

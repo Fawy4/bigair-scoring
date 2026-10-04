@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getOrgContext } from "@/lib/org/context";
+import { getDb } from "@/lib/org/context";
 import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { loadPanelOverview } from "@/lib/org/panel-overview";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -15,21 +15,20 @@ export const dynamic = "force-dynamic";
 
 export default async function OfficialsStepPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase } = await getOrgContext();
-  const { data: event } = await supabase.from("events").select("id, name, slug, settings").eq("id", id).maybeSingle();
-  if (!event) notFound();
-
-  const [{ data: seats }, { data: contacts }, overview, { data: entries }, { data: divisions }] = await Promise.all([
+  const { supabase } = await getDb();
+  // one round: the event, the seats, the panels, the riders, and which seats have a PIN on file (the PIN itself never leaves the server)
+  const [{ data: event }, { data: seats }, { data: contacts }, overview, { data: entries }, { data: divisions }, { data: withPin }] = await Promise.all([
+    supabase.from("events").select("id, name, slug, settings").eq("id", id).maybeSingle(),
     supabase.from("judge_seats").select("id, name, role, status, active, scores, spotter_assignment, auth_user_id, last_seen_at, created_at").eq("event_id", id).order("created_at"),
     supabase.rpc("get_seat_contacts", { p_event: id }),
     loadPanelOverview(supabase, id),
     supabase.from("entries").select("id, division_id, seed, riders(first_name, last_name)").eq("event_id", id).eq("status", "confirmed").order("seed", { nullsFirst: false }),
     supabase.from("divisions").select("id, name").eq("event_id", id).order("sort_order").order("created_at"),
+    createServiceClient().from("judge_seats").select("id").eq("event_id", id).not("pin_enc", "is", null),
   ]);
-
-  // which seats already have a PIN on file (the PIN itself never leaves the server)
-  const { data: withPin } = await createServiceClient().from("judge_seats").select("id").eq("event_id", id).not("pin_enc", "is", null);
-  const pinIds = new Set((withPin ?? []).map((s) => s.id));
+  if (!event) notFound();
+  const seatIdsSeen = new Set((seats ?? []).map((s) => s.id));
+  const pinIds = new Set((withPin ?? []).filter((s) => seatIdsSeen.has(s.id)).map((s) => s.id));
   const phones = new Map((contacts ?? []).map((c) => [c.seat_id, c.phone]));
 
   const rows: SeatRow[] = (seats ?? []).map((s) => {

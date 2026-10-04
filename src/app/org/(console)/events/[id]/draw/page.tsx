@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { loadDivisionContext } from "@/lib/draw/server";
-import { getOrgContext } from "@/lib/org/context";
+import { CONTEXT_ENTRY_COLUMNS, CONTEXT_HEAT_COLUMNS, DIVISION_CONTEXT_COLUMNS, divisionContextFrom, type ContextDivisionRow, type ContextEntryRow, type DivisionContext } from "@/lib/draw/server";
+import { getDb } from "@/lib/org/context";
 import { copy } from "@/lib/ui-copy";
 import { DrawManager, type DivisionSummary } from "./draw-manager";
 
@@ -11,10 +11,19 @@ export const dynamic = "force-dynamic";
 export default async function DrawStepPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ division?: string }> }) {
   const { id } = await params;
   const { division } = await searchParams;
-  const { supabase } = await getOrgContext();
-  const { data: event } = await supabase.from("events").select("id, name").eq("id", id).maybeSingle();
+  const { supabase } = await getDb();
+  // one round: the event, the divisions (the one shown comes with everything the draw is worked out from), every division's riders and heats
+  const wanted = division && /^[0-9a-f-]{36}$/.test(division) ? division : null;
+  const full = () => supabase.from("divisions").select(DIVISION_CONTEXT_COLUMNS).eq("event_id", id);
+  const [{ data: event }, { data: divisions }, { data: pickedRows }, { data: firstRows }, { data: entries }, { data: heats }] = await Promise.all([
+    supabase.from("events").select("id, name").eq("id", id).maybeSingle(),
+    supabase.from("divisions").select("id, name, draw_locked_at, format_template_id").eq("event_id", id).order("sort_order").order("created_at"),
+    wanted ? full().eq("id", wanted).limit(1) : Promise.resolve({ data: [] }),
+    full().order("sort_order").order("created_at").limit(1),
+    supabase.from("entries").select(CONTEXT_ENTRY_COLUMNS).eq("event_id", id),
+    supabase.from("heats").select(CONTEXT_HEAT_COLUMNS).eq("event_id", id).order("number"),
+  ]);
   if (!event) notFound();
-  const { data: divisions } = await supabase.from("divisions").select("id, name, draw_locked_at, format_template_id").eq("event_id", id).order("sort_order").order("created_at");
 
   if (!divisions?.length) {
     return (
@@ -28,10 +37,8 @@ export default async function DrawStepPage({ params, searchParams }: { params: P
     );
   }
   const current = divisions.find((d) => d.id === division) ?? divisions[0];
-  const [{ data: entries }, { data: heats }] = await Promise.all([
-    supabase.from("entries").select("division_id, status").eq("event_id", id),
-    supabase.from("heats").select("division_id, status, started_at").eq("event_id", id),
-  ]);
+  const currentRow = ([...(pickedRows ?? []), ...(firstRows ?? [])] as unknown as ContextDivisionRow[]).find((d) => d.id === current.id);
+  if (!currentRow) notFound();
   const summaries: DivisionSummary[] = divisions.map((d) => ({
     id: d.id,
     name: d.name,
@@ -41,8 +48,12 @@ export default async function DrawStepPage({ params, searchParams }: { params: P
     started: (heats ?? []).some((h) => h.division_id === d.id && (h.status !== "scheduled" || h.started_at)),
   }));
 
-  const ctx = await loadDivisionContext(supabase, current.id);
-  const { data: format } = current.format_template_id ? await supabase.from("format_templates").select("name").eq("id", current.format_template_id).maybeSingle() : { data: null };
+  const ctx = divisionContextFrom(
+    currentRow,
+    ((entries ?? []) as unknown as Array<ContextEntryRow & { division_id: string }>).filter((e) => e.division_id === current.id),
+    ((heats ?? []) as unknown as Array<DivisionContext["heatRows"][number] & { division_id: string }>).filter((h) => h.division_id === current.id),
+  );
+  const format = currentRow.format_templates;
 
   return (
     <main className="flex flex-col gap-6">

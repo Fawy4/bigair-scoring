@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getOrgContext } from "@/lib/org/context";
+import { getDb, getOrgContext } from "@/lib/org/context";
 import { canonicalHash } from "@/lib/presets/plan";
 import { brandingPathFromUrl } from "@/lib/branding/image";
 import { EventFormSchema, parseEventBranding, slugify } from "@/lib/schemas/event-settings";
@@ -20,9 +20,11 @@ export async function saveEvent(id: string | null, raw: unknown, status: "draft"
   const parsed = EventFormSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: copy.orgSettings.fixThese, fields: issuesToMap(parsed.error.issues) };
   const form = parsed.data;
-  const { supabase, current } = await getOrgContext();
+  const { supabase } = await getDb();
 
   if (id === null) {
+    // only a new event needs to know which organisation the organiser is working in
+    const { current } = await getOrgContext();
     if (!current) return { ok: false, error: T.noOrg };
     const { data, error } = await supabase
       .from("events")
@@ -73,7 +75,8 @@ export async function saveEvent(id: string | null, raw: unknown, status: "draft"
   const paths = gone.map((u) => brandingPathFromUrl(u, before.organisation_id)).filter((p): p is string => Boolean(p));
   if (paths.length) await supabase.storage.from("branding").remove(paths);
 
-  revalidatePath("/org", "layout");
+  // No revalidatePath here: it would make this answer wait for the server to draw the whole page again. The form already shows what it saved and refreshes the page
+  // (and the left rail's pills) in the background.
   return { ok: true, id: data[0].id, slug: data[0].slug };
 }
 
@@ -94,7 +97,7 @@ export async function saveIdentificationPreset(input: { organisationId: string; 
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const key = slugify(name) || "scheme";
   const { data: existing } = await supabase.from("presets").select("version").eq("organisation_id", input.organisationId).eq("kind", "identification").eq("key", key);
   const version = Math.max(0, ...(existing ?? []).map((r) => r.version)) + 1;

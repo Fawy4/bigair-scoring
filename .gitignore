@@ -11,3 +11,4 @@ test-results/
 # environment files: never commit secrets (only .env.example is tracked)
 .env*
 !.env.example
+speed-results/

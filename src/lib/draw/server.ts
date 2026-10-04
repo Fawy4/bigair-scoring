@@ -38,18 +38,34 @@ export interface DivisionContext {
   heatRows: Array<{ id: string; draw_uid: string | null; number: number; status: string; started_at: string | null }>;
 }
 
-/** Everything the Draw step needs to know about one division, read as the signed-in organiser (row security decides what is visible). */
-export async function loadDivisionContext(supabase: Db, divisionId: string): Promise<DivisionContext> {
-  const { data: div } = await supabase
-    .from("divisions")
-    .select("id, event_id, name, draw, draw_locked_at, format_template_id, format_params, identification, events(settings)")
-    .eq("id", divisionId)
-    .maybeSingle();
-  if (!div) throw new DrawError("not_allowed", "No such division.");
-  const [{ data: entryRows }, { data: heatRows }] = await Promise.all([
-    supabase.from("entries").select("id, seed, status, identifiers, created_at, riders(first_name, last_name)").eq("division_id", divisionId),
-    supabase.from("heats").select("id, draw_uid, number, status, started_at").eq("division_id", divisionId).order("number"),
-  ]);
+/** The columns of a division `divisionContextFrom` reads (with the event's settings and the division's format, in the same request). */
+export const DIVISION_CONTEXT_COLUMNS = "id, event_id, name, draw, draw_locked_at, format_template_id, format_params, identification, events(settings), format_templates(name, json)";
+export const CONTEXT_ENTRY_COLUMNS = "id, division_id, seed, status, identifiers, created_at, riders(first_name, last_name)";
+export const CONTEXT_HEAT_COLUMNS = "id, division_id, draw_uid, number, status, started_at";
+
+export interface ContextDivisionRow {
+  id: string;
+  event_id: string;
+  name: string;
+  draw: unknown;
+  draw_locked_at: string | null;
+  format_template_id: string | null;
+  format_params: unknown;
+  identification: unknown;
+  events: { settings: unknown } | null;
+  format_templates: { name?: string; json: unknown } | null;
+}
+export interface ContextEntryRow {
+  id: string;
+  seed: number | null;
+  status: string;
+  identifiers: unknown;
+  created_at: string;
+  riders: { first_name: string | null; last_name: string | null } | null;
+}
+
+/** The division's context from rows already read: the division (with event settings and format), its riders, its heats. */
+export function divisionContextFrom(div: ContextDivisionRow, entryRows: readonly ContextEntryRow[], heatRows: DivisionContext["heatRows"]): DivisionContext {
   const settings = parseEventSettings(div.events?.settings);
   const eventIdentification = settings.identification
     ? { scheme: settings.identification.scheme, allowDivisionOverride: settings.identification.allowDivisionOverride }
@@ -59,25 +75,22 @@ export async function loadDivisionContext(supabase: Db, divisionId: string): Pro
 
   let template: FormatTemplate | null = null;
   let templateError: string | null = null;
-  if (div.format_template_id) {
-    const { data: tpl } = await supabase.from("format_templates").select("json").eq("id", div.format_template_id).maybeSingle();
-    if (tpl) {
-      try {
-        template = parseFormatTemplate(mergeOverrides(tpl.json as never, div.format_params, FORMAT_NULLABLE));
-      } catch (e) {
-        templateError = (e as Error).message;
-      }
+  if (div.format_template_id && div.format_templates) {
+    try {
+      template = parseFormatTemplate(mergeOverrides(div.format_templates.json as never, div.format_params as never, FORMAT_NULLABLE));
+    } catch (e) {
+      templateError = (e as Error).message;
     }
   }
-  const entries: EntryInput[] = (entryRows ?? []).map((e) => ({
+  const entries: EntryInput[] = entryRows.map((e) => ({
     id: e.id,
     seed: e.seed,
-    status: e.status,
+    status: e.status as EntryInput["status"],
     name: `${e.riders?.first_name ?? ""} ${e.riders?.last_name ?? ""}`.trim() || "Rider",
     identifiers: toEntrantIdentifiers(cleanIdentifiers(e.identifiers)),
     createdAt: e.created_at,
   }));
-  const rows = heatRows ?? [];
+  const rows = heatRows;
   let draw = (div.draw as unknown as DivisionDraw | null) ?? null;
   if (draw) draw = applyHeatStatuses(syncEntrants(draw, entries), rows);
   return {
@@ -93,6 +106,17 @@ export async function loadDivisionContext(supabase: Db, divisionId: string): Pro
     started: rows.some((h) => h.status !== "scheduled" || Boolean(h.started_at)),
     heatRows: rows,
   };
+}
+
+/** Everything the Draw step needs to know about one division, read as the signed-in organiser (row security decides what is visible). Three requests at the same time. */
+export async function loadDivisionContext(supabase: Db, divisionId: string): Promise<DivisionContext> {
+  const [{ data: div }, { data: entryRows }, { data: heatRows }] = await Promise.all([
+    supabase.from("divisions").select(DIVISION_CONTEXT_COLUMNS).eq("id", divisionId).maybeSingle(),
+    supabase.from("entries").select(CONTEXT_ENTRY_COLUMNS).eq("division_id", divisionId),
+    supabase.from("heats").select(CONTEXT_HEAT_COLUMNS).eq("division_id", divisionId).order("number"),
+  ]);
+  if (!div) throw new DrawError("not_allowed", "No such division.");
+  return divisionContextFrom(div as unknown as ContextDivisionRow, (entryRows ?? []) as unknown as ContextEntryRow[], (heatRows ?? []) as DivisionContext["heatRows"]);
 }
 
 /** The database's named errors (raised by the draw functions and guards) in plain words the caller can map to screen text. */

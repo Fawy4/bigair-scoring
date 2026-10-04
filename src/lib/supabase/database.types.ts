@@ -3484,6 +3484,7 @@ export type Database = {
         }
         Returns: Json
       }
+      publish_heat_inputs: { Args: { p_heat: string }; Returns: Json }
       purge_expired_reset_snapshots: { Args: never; Returns: number }
       purge_organisation: { Args: { p_org: string }; Returns: undefined }
       regenerate_seat_pin: {

@@ -8,20 +8,29 @@ import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { rowToPlan, type PlanRow } from "@/lib/schedule/plans";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/database.types";
+import { HEAT_COLUMNS, type HeatRow } from "./types";
 
-export type ActionResult = { ok: true } | { ok: false; code: string | null; message: string };
+/** `heat`: the heat as the database has it now (the heat functions return the row they changed), so the screen shows it without waiting for the stream. */
+export type ActionResult = { ok: true; heat?: Partial<HeatRow> } | { ok: false; code: string | null; message: string };
 /** A run order change answers with the hold and pins as they are now, so the screen can show them at once. */
 export type PlanActionResult = { ok: true; hold: Json | null; anchors: Json } | { ok: false; code: string | null; message: string };
 
 const uuid = z.string().uuid();
+const HEAT_KEYS = HEAT_COLUMNS.split(", ");
+/** The columns the screens use, out of the row a heat function returned. */
+function heatOf(data: unknown): Partial<HeatRow> | undefined {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return undefined;
+  const row = data as Record<string, unknown>;
+  return typeof row.id === "string" ? (Object.fromEntries(HEAT_KEYS.filter((k) => k in row).map((k) => [k, row[k]])) as Partial<HeatRow>) : undefined;
+}
 const fail = (code: string | null, message?: string): { ok: false; code: string | null; message: string } => ({ ok: false, code, message: message ?? errorSentence(code) });
 
 /** Every heat change goes through the database's own functions (they check who may, the rules, and write the audit line). */
 async function heatRpc(fn: "start_heat" | "pause_heat" | "resume_heat" | "end_heat" | "abort_start", heatId: string): Promise<ActionResult> {
   if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
   const supabase = await createClient();
-  const { error } = await supabase.rpc(fn, { p_heat: heatId });
-  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true };
+  const { data, error } = await supabase.rpc(fn, { p_heat: heatId });
+  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, heat: heatOf(data) };
 }
 
 export async function startHeat(heatId: string): Promise<ActionResult> {
@@ -32,15 +41,15 @@ export async function armHeat(heatId: string, prestartSec: number | null): Promi
   if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
   if (prestartSec !== null && (!Number.isInteger(prestartSec) || (prestartSec !== 0 && (prestartSec < 10 || prestartSec > 900)))) return fail("BAD_PRESTART");
   const supabase = await createClient();
-  const { error } = await supabase.rpc("arm_heat", { p_heat: heatId, ...(prestartSec === null ? {} : { p_prestart: prestartSec }) });
-  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true };
+  const { data, error } = await supabase.rpc("arm_heat", { p_heat: heatId, ...(prestartSec === null ? {} : { p_prestart: prestartSec }) });
+  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, heat: heatOf(data) };
 }
 /** "+1 min": one more minute on the yellow (the database adds exactly 60 s to what is left, and writes it to the audit log). */
 export async function extendPrestart(heatId: string): Promise<ActionResult> {
   if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
   const supabase = await createClient();
-  const { error } = await supabase.rpc("extend_prestart", { p_heat: heatId });
-  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true };
+  const { data, error } = await supabase.rpc("extend_prestart", { p_heat: heatId });
+  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, heat: heatOf(data) };
 }
 export async function abortStart(heatId: string): Promise<ActionResult> {
   return heatRpc("abort_start", heatId);
@@ -59,8 +68,8 @@ export async function cancelHeat(heatId: string, reason: string): Promise<Action
   if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
   if (reason.trim().length < 3) return fail("REASON_REQUIRED");
   const supabase = await createClient();
-  const { error } = await supabase.rpc("cancel_heat", { p_heat: heatId, p_reason: reason.trim() });
-  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true };
+  const { data, error } = await supabase.rpc("cancel_heat", { p_heat: heatId, p_reason: reason.trim() });
+  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, heat: heatOf(data) };
 }
 
 // ---- the run order: Hold, Resume at and Shift on SERVER time (never the device's clock)

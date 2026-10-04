@@ -103,6 +103,9 @@ export function ViewAs({ eventId, sim }: { eventId: string; sim: Sim }) {
           <LinkButton icon={Monitor} testId="view-screen" href={viewHref(eventId, { kind: "screen" })}>
             {T.screen}
           </LinkButton>
+          <LinkButton icon={Monitor} testId="view-follow" href={viewHref(eventId, { kind: "follow" })}>
+            {T.follow}
+          </LinkButton>
           <LinkButton icon={Flag} testId="view-flag" href={viewHref(eventId, { kind: "flag" })}>
             {T.flag}
           </LinkButton>

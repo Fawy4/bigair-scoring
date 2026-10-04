@@ -10,18 +10,39 @@ import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { parseScoringModel } from "@/lib/schemas/scoring-model";
 import { impressionNameOf, withImpressionName } from "@/lib/schemas/impression-name";
 import { copy } from "@/lib/ui-copy";
+import { signedInUser } from "@/lib/supabase/claims";
 import { errorSentence, parseError } from "./errors";
 import { heatInputFromRows } from "./heat-input";
 import { judgeWordFor } from "./judge-names";
 import { publishChecklist, type ChecklistItem } from "./publish-checklist";
 import { effectiveUnsubmitted } from "./sheet-rule";
-import { ATTEMPT_COLUMNS, IMPRESSION_COLUMNS, SCORE_COLUMNS, SLOT_COLUMNS, type AttemptRow, type ImpressionRow, type ScoreRow, type SlotRow } from "./types";
+import type { AttemptRow, ImpressionRow, ScoreRow, SlotRow } from "./types";
 import { effectiveSetting, holdAtPublish } from "./visibility";
 import { softWord } from "./words";
 
 export type PublishResult =
   | { ok: true; version: number; already: boolean }
   | { ok: false; code: string | null; message: string; blockers?: ChecklistItem[]; canOverride?: boolean; detail?: string };
+
+/** What `publish_heat_inputs` answers: the heat, its division, its scoring model, and every row the result is worked out from. */
+export interface PublishInputs {
+  heat: { id: string; event_id: string; division_id: string; round_id: string; status: string; draw_uid: string | null; number: number; name: string | null };
+  latest: number;
+  event_settings: unknown;
+  division: { id: string; scoring_model_id: string | null; scoring_overrides: unknown; panel_id: string | null; live_settings: unknown; draw: unknown };
+  model: unknown;
+  slots: unknown[];
+  attempts: unknown[];
+  scores: unknown[];
+  impressions: unknown[];
+  penalties: Array<{ heat_id: string; entry_id: string; type: string; reason: string | null }>;
+  decisions: Array<{ payload: unknown; reason: string | null; at: string }>;
+  sheets: Array<{ judge_seat_id: string; submitted_at: string | null; reopened_at: string | null }>;
+  division_heats: Array<{ id: string; draw_uid: string | null; status: string; started_at: string | null }>;
+  entries: Array<{ id: string; first_name: string | null; last_name: string | null }>;
+  members: Array<{ judge_seat_id: string; seat_no: number }>;
+  seats: Array<{ id: string; name: string; active: boolean; status: string }>;
+}
 
 const fail = (code: string | null, message?: string): PublishResult => ({ ok: false, code, message: message ?? errorSentence(code) });
 
@@ -44,55 +65,41 @@ export async function publishHeatCore(
   opts: { overrideReason?: string; labels?: Record<string, string> } = {},
 ): Promise<PublishResult> {
   const { service } = db;
-  const { data: heat } = await service.from("heats").select("id, event_id, division_id, round_id, status, draw_uid, number, name").eq("id", heatId).maybeSingle();
-  if (!heat) return fail("HEAT_NOT_FOUND");
-  const { data: isHead } = await db.user.rpc("am_i_head", { p_event: heat.event_id });
-  const {
-    data: { user },
-  } = await db.user.auth.getUser();
-  if (!isHead || !user) return fail("NOT_ALLOWED");
+  // one answer holds everything the result is worked out from, and the database checks in the same call that the caller is the head judge or an organiser
+  const { data: got, error: readError } = await db.user.rpc("publish_heat_inputs", { p_heat: heatId });
+  if (readError || !got) return { ok: false, code: parseError(readError?.message ?? "HEAT_NOT_FOUND").code, message: errorSentence(readError?.message ?? "HEAT_NOT_FOUND") };
+  const user = await signedInUser(db.user);
+  if (!user) return fail("NOT_ALLOWED");
+  const read = got as unknown as PublishInputs;
+  const { heat, latest, division, model: modelJson, members, seats, entries } = read;
+  const slots = read.slots as SlotRow[];
+  const attempts = read.attempts as AttemptRow[];
+  const scores = read.scores as ScoreRow[];
+  const impressions = read.impressions as ImpressionRow[];
+  const { penalties, decisions, sheets, division_heats: divisionHeats } = read;
+  const event = { settings: read.event_settings };
 
-  const { data: latestRows } = await service.from("heat_results").select("version").eq("heat_id", heatId).order("version", { ascending: false }).limit(1);
-  const latest = latestRows?.[0]?.version ?? 0;
   if (heat.status === "published") return { ok: true, version: latest, already: true };
   if (heat.status !== "ended" && heat.status !== "under_review") return fail("HEAT_NOT_ENDED");
 
-  const [{ data: event }, { data: division }, { data: slots }, { data: attempts }, { data: scores }, { data: impressions }, { data: penalties }, { data: decisions }, { data: sheets }, { data: divisionHeats }, { data: entries }] =
-    await Promise.all([
-      service.from("events").select("settings").eq("id", heat.event_id).single(),
-      service.from("divisions").select("id, scoring_model_id, scoring_overrides, panel_id, live_settings, draw").eq("id", heat.division_id).single(),
-      service.from("heat_slots").select(SLOT_COLUMNS).eq("heat_id", heatId),
-      service.from("trick_attempts").select(ATTEMPT_COLUMNS).eq("heat_id", heatId),
-      service.from("trick_scores").select(SCORE_COLUMNS).eq("heat_id", heatId),
-      service.from("impression_scores").select(IMPRESSION_COLUMNS).eq("heat_id", heatId),
-      service.from("penalties").select("heat_id, entry_id, type, reason").eq("heat_id", heatId),
-      service.from("heat_decisions").select("payload, reason, at").eq("heat_id", heatId).eq("kind", "tie").order("at"),
-      service.from("judge_sheets").select("judge_seat_id, submitted_at, reopened_at").eq("heat_id", heatId),
-      service.from("heats").select("id, draw_uid, status, started_at").eq("division_id", heat.division_id),
-      service.from("v_entries").select("id, first_name, last_name").eq("event_id", heat.event_id),
-    ]);
-  if (!division) return fail("HEAT_NOT_FOUND");
-  const { data: modelRow } = division.scoring_model_id ? await service.from("scoring_models").select("json").eq("id", division.scoring_model_id).single() : { data: null };
   let model;
   try {
-    model = withImpressionName(parseScoringModel(mergeOverrides(modelRow?.json as never, division.scoring_overrides, SCORING_NULLABLE)), parseEventSettings(event?.settings).impressionName);
+    model = withImpressionName(parseScoringModel(mergeOverrides(modelJson as never, division.scoring_overrides as never, SCORING_NULLABLE)), parseEventSettings(event.settings).impressionName);
   } catch {
     return fail(null, copy.publish.noModel);
   }
 
   // the panel in seat order, and who has submitted
-  const { data: members } = division.panel_id ? await service.from("panel_members").select("judge_seat_id, seat_no").eq("panel_id", division.panel_id).order("seat_no") : { data: [] as Array<{ judge_seat_id: string; seat_no: number }> };
-  const { data: seats } = await service.from("judge_seats").select("id, name, active, status").in("id", (members ?? []).map((m) => m.judge_seat_id));
-  const live = new Set((seats ?? []).filter((s) => s.active && s.status === "active").map((s) => s.id));
-  const panelSeatIds = (members ?? []).map((m) => m.judge_seat_id).filter((id) => live.has(id));
-  const seatNo = new Map((members ?? []).map((m, i) => [m.judge_seat_id, i + 1] as const));
-  const judgeWord = judgeWordFor((members ?? []).map((m) => m.judge_seat_id), Object.fromEntries((seats ?? []).map((s) => [s.id, s.name] as const)));
+  const live = new Set(seats.filter((s) => s.active && s.status === "active").map((s) => s.id));
+  const panelSeatIds = members.map((m) => m.judge_seat_id).filter((id) => live.has(id));
+  const seatNo = new Map(members.map((m, i) => [m.judge_seat_id, i + 1] as const));
+  const judgeWord = judgeWordFor(members.map((m) => m.judge_seat_id), Object.fromEntries(seats.map((s) => [s.id, s.name] as const)));
 
-  const tieDecisions: TieDecision[] = (decisions ?? []).flatMap((d) => {
+  const tieDecisions: TieDecision[] = decisions.flatMap((d) => {
     const ids = (d.payload as { riderIds?: unknown } | null)?.riderIds;
     return Array.isArray(ids) ? [{ riderIds: ids.filter((x): x is string => typeof x === "string"), reason: d.reason ?? "" }] : [];
   });
-  const input = heatInputFromRows(model, panelSeatIds, (slots ?? []) as SlotRow[], (attempts ?? []) as AttemptRow[], (scores ?? []) as ScoreRow[], (impressions ?? []) as ImpressionRow[], penalties ?? [], tieDecisions);
+  const input = heatInputFromRows(model, panelSeatIds, slots, attempts, scores, impressions, penalties, tieDecisions);
   let result;
   try {
     result = computeHeat(model, input);
@@ -101,16 +108,16 @@ export async function publishHeatCore(
   }
 
   // words for the blockers: the rider's colour (or name), the judge's seat name
-  const slotColour = new Map((slots ?? []).map((s) => [s.entry_id, s.vest_colour] as const));
-  const nameOf = new Map((entries ?? []).map((e) => [e.id, `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || "Rider"] as const));
+  const slotColour = new Map(slots.map((s) => [s.entry_id, s.vest_colour] as const));
+  const nameOf = new Map(entries.map((e) => [e.id, `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || "Rider"] as const));
   const labelOf = (id: string) => opts.labels?.[id] ?? (slotColour.get(id) ? softWord(String(slotColour.get(id))) : nameOf.get(id) ?? "Rider");
   // decision P2-1: a sheet the head judge settled with Absent marks (nothing missing any more) counts as submitted
-  const unsubmitted = effectiveUnsubmitted({ panelSeatIds, sheets: sheets ?? [], blockers: result.publishBlockers, scores: (scores ?? []) as ScoreRow[], impressions: (impressions ?? []) as ImpressionRow[] });
+  const unsubmitted = effectiveUnsubmitted({ panelSeatIds, sheets, blockers: result.publishBlockers, scores, impressions });
   const checklist = publishChecklist({
     blockers: result.publishBlockers,
     unsubmitted,
     judgeWord,
-    attemptIdOf: (rider, seq) => ((attempts ?? []) as AttemptRow[]).find((a) => a.entry_id === rider && a.seq === seq && !a.deleted_at)?.id,
+    attemptIdOf: (rider, seq) => attempts.find((a) => a.entry_id === rider && a.seq === seq && !a.deleted_at)?.id,
     riderLabel: (id) => softWord(labelOf(id)),
     impressionLabel: copy.checklist.impressionWord(impressionNameOf(model)),
   });
@@ -127,7 +134,7 @@ export async function publishHeatCore(
   let projection: Array<{ uid: string; slots: Array<{ position: number; entry_id: string | null; modifier: string | null }> }> = [];
   let roundIsLast = false;
   if (draw && drawHeat) {
-    const synced = applyHeatStatuses(draw, divisionHeats ?? []);
+    const synced = applyHeatStatuses(draw, divisionHeats);
     let applied;
     try {
       applied = applyHeatResult(synced, drawHeat.id, toLadderResult(model, result));

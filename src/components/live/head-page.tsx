@@ -179,7 +179,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   }, [live]);
   const review: ReviewProps | undefined = head ? { items: blockerItems, canOverride: head.checklist.canOverride, riders: riders.map((r) => ({ entryId: r.entryId, word: wordFor(r.entryId), name: r.name })), onChooseOrder: setTieFor, onChanged, ...(wide ? { onFix: (target: FixTarget) => setFixRequest({ target, n: Date.now() }) } : {}) } : undefined;
 
-  const c = useHeadController({ ctx, heats: live.heats, plans: live.plans, nowServer, selectedId: shownId, onSelect: selectHeat, onPlanChanged: live.applyPlan, review, divisionId });
+  const c = useHeadController({ ctx, heats: live.heats, plans: live.plans, nowServer, selectedId: shownId, onSelect: selectHeat, onPlanChanged: live.applyPlan, onPatchHeat: live.patchHeat, review, divisionId });
 
   // the clock, the sound and the screen lock follow the heat that is on the water, wherever it is, else the heat shown
   const clockHeat = c.liveHeat ?? shown;

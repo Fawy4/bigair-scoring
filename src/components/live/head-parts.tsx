@@ -603,6 +603,7 @@ export function HeatDialogs({ c }: { c: HeadController }) {
           onDone={(text) => {
             close();
             c.setMessage({ ok: true, text });
+            c.patchHeat?.(selected.id, { status: "published" });
             review.onChanged();
           }}
         />
@@ -615,6 +616,7 @@ export function HeatDialogs({ c }: { c: HeadController }) {
           onDone={(text) => {
             close();
             c.setMessage({ ok: true, text });
+            c.patchHeat?.(selected.id, { status: "published" });
             review.onChanged();
           }}
         />
@@ -641,6 +643,7 @@ export function HeatDialogs({ c }: { c: HeadController }) {
           onDone={(text) => {
             close();
             c.setMessage({ ok: true, text });
+            c.patchHeat?.(selected.id, { status: "published" });
             review.onChanged();
           }}
         />

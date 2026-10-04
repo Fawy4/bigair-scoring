@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { getOrgContext } from "@/lib/org/context";
+import { getDb } from "@/lib/org/context";
 import { startingCopy, startingTarget } from "@/lib/reset/plan";
 import { copy } from "@/lib/ui-copy";
 import type { DivisionDraw } from "@/lib/engine/ladder";
@@ -35,7 +35,7 @@ function sentence(message: string): string {
 /** What a reset would do, from the database: the counts, a heat that is running, which divisions cannot be reset, and whether a reason is needed. */
 export async function previewReset(eventId: string): Promise<{ ok: true; preview: ResetPreview } | Failed> {
   if (!uuid.safeParse(eventId).success) return { ok: false, error: T.errors.failed };
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const { data, error } = await supabase.rpc("reset_event_preview", { p_event: eventId });
   if (error || !data) return { ok: false, error: sentence(error?.message ?? "") };
   const d = data as unknown as { slug: string; counts: ResetPreview["counts"]; running: string | null; ever_public: boolean; divisions: Array<{ name: string; drawn: boolean; has_copy: boolean; heat_left_scheduled: boolean }> };
@@ -58,7 +58,7 @@ export async function resetEvent(input: z.input<typeof ResetInput>): Promise<{ o
   const parsed = ResetInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: T.errors.failed };
   const { eventId, slug, reason } = parsed.data;
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const { data: divisions, error: divError } = await supabase.from("divisions").select("id, draw, draw_at_lock, draw_locked_at").eq("event_id", eventId).not("draw", "is", null);
   if (divError) return { ok: false, error: T.errors.failed };
   const draws: Array<{ division: string; draw: DivisionDraw; projection: unknown }> = [];
@@ -82,7 +82,7 @@ export async function resetEvent(input: z.input<typeof ResetInput>): Promise<{ o
 /** Platform owners only: brings back what a reset wiped. */
 export async function restoreReset(snapshotId: string): Promise<{ ok: true } | Failed> {
   if (!uuid.safeParse(snapshotId).success) return { ok: false, error: T.restore.errors.failed };
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const { error } = await supabase.rpc("restore_event_reset", { p_snapshot: snapshotId });
   if (error) {
     const code = /^([A-Z_]+)/.exec(error.message.trim())?.[1] ?? "";
@@ -109,7 +109,7 @@ export interface DivisionResetPreview {
 /** What "Reset this division" would do, from the database: counts, who is running, whether it is a rebuild, whether a reason is needed. */
 export async function previewResetDivision(divisionId: string): Promise<{ ok: true; preview: DivisionResetPreview } | Failed> {
   if (!uuid.safeParse(divisionId).success) return { ok: false, error: T.errors.failed };
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const { data, error } = await supabase.rpc("reset_division_preview", { p_division: divisionId });
   if (error || !data) return { ok: false, error: sentence(error?.message ?? "") };
   const d = data as unknown as { name: string; drawn: boolean; has_copy: boolean; counts: ResetPreview["counts"]; running: string | null; ever_public: boolean };
@@ -123,7 +123,7 @@ export async function resetDivision(input: z.input<typeof DivisionInput>): Promi
   const parsed = DivisionInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: T.errors.failed };
   const { divisionId, reason } = parsed.data;
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const { data: d, error: readError } = await supabase.from("divisions").select("id, event_id, draw, draw_at_lock, draw_locked_at").eq("id", divisionId).maybeSingle();
   if (readError || !d) return { ok: false, error: T.errors.NOT_ALLOWED };
   if (!d.draw) return { ok: false, error: PT.errors.NO_DRAW };
@@ -156,7 +156,7 @@ function partSentence(message: string): string {
 /** "Clear actual times" on one run order: actual starts and the pins written while the day ran go; pins set by hand stay (an older plan keeps all of them). */
 export async function clearPlanActuals(planId: string): Promise<{ ok: true; actualStarts: number; pins: number; kept: number } | Failed> {
   if (!uuid.safeParse(planId).success) return { ok: false, error: T.errors.failed };
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const { data: plan } = await supabase.from("schedule_plans").select("event_id").eq("id", planId).maybeSingle();
   const { data, error } = await supabase.rpc("clear_plan_actuals", { p_plan: planId });
   if (error) return { ok: false, error: partSentence(error.message) };

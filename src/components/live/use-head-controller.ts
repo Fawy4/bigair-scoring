@@ -36,8 +36,8 @@ export type DialogKind = "publish" | "reopen" | "rerun" | "hold" | "reset" | nul
  * buttons: the run order (with the real order of the timetable), the selected heat's state and controls, Start (with its out-of-order warning), Hold,
  * Resume at, Shift, the break after a heat (+1 min, Pause break, Resume), Cancel and the dialogs. Every press is a server action on the database's clock.
  */
-export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; plans: ActivePlan[]; nowServer: number; selectedId: string | null; onSelect: (id: string) => void; onPlanChanged?: (planId: string, hold: Json | null, anchors: Json) => void; review?: ReviewProps; divisionId: string | null }) {
-  const { ctx, heats, plans, nowServer, selectedId, onSelect, onPlanChanged, review, divisionId } = input;
+export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; plans: ActivePlan[]; nowServer: number; selectedId: string | null; onSelect: (id: string) => void; onPlanChanged?: (planId: string, hold: Json | null, anchors: Json) => void; onPatchHeat?: (heatId: string, patch: Partial<HeatRow>) => void; review?: ReviewProps; divisionId: string | null }) {
+  const { ctx, heats, plans, nowServer, selectedId, onSelect, onPlanChanged, onPatchHeat, review, divisionId } = input;
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [restart, setRestart] = useState("");
@@ -132,10 +132,20 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
   /** The flag strip: about the heat in its pre-start, else the heat on the water, else the heat shown. */
   const flag = useFlagStrip(ctx, heats, plans, liveHeatRow ?? selected, nowServer);
 
-  const act = (label: string, run: () => Promise<ActionResult | PlanActionResult>, after?: () => void) =>
+  /**
+   * Every press runs one server action. The screen answers at once with a guess of what the press does (`guess`, fields of the selected heat), then takes the row the
+   * database answered with; a refusal puts the guessed fields back. The stream confirms it a moment later and changes nothing.
+   */
+  const act = (label: string, run: () => Promise<ActionResult | PlanActionResult>, after?: () => void, guess?: Partial<HeatRow>) => {
+    const id = selectedId;
+    const before = id ? heats.find((h) => h.id === id) : undefined;
+    // the guess goes on the screen first, outside the transition: an update made inside an async transition is held back until the whole action has finished
+    if (guess && id) onPatchHeat?.(id, guess);
     startTransition(async () => {
       setMessage(null);
       const r = await run();
+      if (r.ok && "heat" in r && r.heat && id) onPatchHeat?.(id, r.heat);
+      if (!r.ok && guess && before && id) onPatchHeat?.(id, Object.fromEntries(Object.keys(guess).map((k) => [k, before[k as keyof HeatRow]])) as Partial<HeatRow>);
       setMessage(r.ok ? { ok: true, text: label } : { ok: false, text: r.message });
       if (r.ok && "anchors" in r && planId) onPlanChanged?.(planId, r.hold, r.anchors);
       if (r.ok) {
@@ -145,6 +155,8 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
         after?.();
       }
     });
+  };
+  const stamp = new Date(nowServer).toISOString();
 
   /** Start: any heat that has not started, in any order. When it is not the heat the run order expects, ask once (the timetable then re-flows around the real order). */
   const requestStart = () => {
@@ -161,9 +173,9 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
   /** Start heat (flags off), or Start sequence (flags on: the yellow for the chosen pre-start; "Start now" skips it). */
   const startNow = () => {
     if (!selected) return;
-    if (!flagsOn) return act(T.done.start(title), () => startHeat(selected.id));
-    if (chosenPrestart === 0) return act(T.done.start(title), () => armHeat(selected.id, 0));
-    act(T.done.arm(title, formatClock(chosenPrestart * 1000)), () => armHeat(selected.id, chosenPrestart));
+    if (!flagsOn) return act(T.done.start(title), () => startHeat(selected.id)); // no guess: the plain Start is shown from the database's own answer
+    if (chosenPrestart === 0) return act(T.done.start(title), () => armHeat(selected.id, 0), undefined, { armed_at: stamp, prestart_sec: 0, armed_paused_at: null });
+    act(T.done.arm(title, formatClock(chosenPrestart * 1000)), () => armHeat(selected.id, chosenPrestart), undefined, { armed_at: stamp, prestart_sec: chosenPrestart, armed_paused_at: null });
   };
   const confirmStart = () => startNow();
   const dismissStart = () => setStartWarning(null);
@@ -200,6 +212,7 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     act,
     onSelect,
     onPlanChanged,
+    patchHeat: onPatchHeat,
     review,
     alreadyRerun,
     startWarning: shownWarning,
@@ -221,12 +234,12 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     actions: {
       /** Green at once, during the yellow. */
       startNowDuringYellow: () => selected && act(T.done.startNow(title), () => startHeat(selected.id)),
-      abort: () => selected && act(T.done.abort(title), () => abortStart(selected.id)),
-      end: () => selected && act(T.done.end(title), () => endHeat(selected.id)),
+      abort: () => selected && act(T.done.abort(title), () => abortStart(selected.id), undefined, { armed_at: null, prestart_sec: null, armed_paused_at: null }),
+      end: () => selected && act(T.done.end(title), () => endHeat(selected.id)), // no guess: ending a heat is shown from the database's own answer
       /** "+1 min" on the yellow: exactly one more minute, as often as needed. */
-      extend: () => selected && act(T.done.extend(title), () => extendPrestart(selected.id)),
-      pause: () => selected && act(T.done.pause(title), () => pauseHeat(selected.id)),
-      resume: () => selected && act(T.done.resume(title), () => resumeHeat(selected.id)),
+      extend: () => selected && act(T.done.extend(title), () => extendPrestart(selected.id), undefined, { prestart_sec: (selected.prestart_sec ?? 0) + 60 }),
+      pause: () => selected && act(T.done.pause(title), () => pauseHeat(selected.id), undefined, armed && !armedFrozen ? { armed_paused_at: stamp } : { status: "paused", paused_at: stamp }),
+      resume: () => selected && act(T.done.resume(title), () => resumeHeat(selected.id), undefined, armedFrozen ? { armed_paused_at: null } : { status: "running", paused_at: null, paused_total_sec: selected.paused_total_sec + (selected.paused_at ? Math.max(0, Math.round((nowServer - Date.parse(selected.paused_at)) / 1000)) : 0) }),
       hold: () => planId && act(T.done.hold, () => holdPlan(planId)),
       shift: (m: number) => planId && act(T.done.shift(m), () => shiftPlan(planId, m)),
       resumeAt: () => planId && act(T.done.resumeAt(restart), () => resumePlanAt(planId, restart)),

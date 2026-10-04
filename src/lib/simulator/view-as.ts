@@ -9,6 +9,7 @@ export type ViewTarget =
   | { kind: "ladder" }
   | { kind: "rider"; entryId: string }
   | { kind: "screen" }
+  | { kind: "follow" }
   | { kind: "flag" }
   | { kind: "seat"; seatId: string }
   | { kind: "head-organiser" };
@@ -31,6 +32,7 @@ export function parseView(params: URLSearchParams): ViewTarget | null {
     case "results":
     case "ladder":
     case "screen":
+    case "follow":
     case "flag":
     case "head-organiser":
       return { kind: as };
@@ -62,6 +64,8 @@ export function destinationOf(t: ViewTarget, ev: { id: string; slug: string }, r
       return `/e/${ev.slug}/riders/${t.entryId}`;
     case "screen":
       return `/screen/${ev.slug}`;
+    case "follow":
+      return `/screen/${ev.slug}/follow`;
     case "flag":
       return `/e/${ev.slug}/flag`;
     case "head-organiser":

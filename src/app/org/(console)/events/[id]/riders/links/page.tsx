@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
 import { Qr } from "@/components/public/qr";
-import { getOrgContext } from "@/lib/org/context";
+import { getDb } from "@/lib/org/context";
 import { requestOrigin } from "@/lib/platform/origin";
 import { eventUrl } from "@/lib/public/share";
 import { copy } from "@/lib/ui-copy";
@@ -20,7 +20,7 @@ const T = copy.riders.links;
  */
 export default async function RiderLinksPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const { data: event } = await supabase.from("events").select("id, name, slug, is_simulation").eq("id", id).maybeSingle();
   if (!event) notFound();
   const [{ data: divisions }, { data: entries }] = await Promise.all([

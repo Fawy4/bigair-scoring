@@ -35,15 +35,17 @@ type Db = Awaited<ReturnType<typeof createClient>>;
 
 /** The merged scoring model of a heat's division, read as the signed-in head judge (row security decides). */
 async function modelForHeat(db: Db, heatId: string): Promise<ScoringModel | null> {
-  const { data: heat } = await db.from("heats").select("division_id, event_id").eq("id", heatId).maybeSingle();
-  if (!heat) return null;
-  const { data: ev } = await db.from("events").select("settings").eq("id", heat.event_id).maybeSingle();
-  const { data: d } = await db.from("divisions").select("scoring_model_id, scoring_overrides").eq("id", heat.division_id).maybeSingle();
-  if (!d?.scoring_model_id) return null;
-  const { data: m } = await db.from("scoring_models").select("json").eq("id", d.scoring_model_id).maybeSingle();
-  if (!m) return null;
+  // one request: the heat with its event's settings and its division's scoring rules and model (it used to be four, one after the other)
+  const { data: heat } = await db
+    .from("heats")
+    .select("id, events(settings), divisions(scoring_model_id, scoring_overrides, scoring_models(json))")
+    .eq("id", heatId)
+    .maybeSingle();
+  const d = heat?.divisions;
+  const m = d?.scoring_models;
+  if (!heat || !d?.scoring_model_id || !m) return null;
   try {
-    return withImpressionName(parseScoringModel(mergeOverrides(m.json as never, d.scoring_overrides, SCORING_NULLABLE)), parseEventSettings(ev?.settings).impressionName);
+    return withImpressionName(parseScoringModel(mergeOverrides(m.json as never, d.scoring_overrides, SCORING_NULLABLE)), parseEventSettings(heat.events?.settings).impressionName);
   } catch {
     return null;
   }
