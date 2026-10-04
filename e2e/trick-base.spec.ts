@@ -31,7 +31,7 @@ test("Trick base: five families, every block ticked, categories follow the ticks
     for (const f of (await masterNames(org)).families) await expect(panel.getByRole("group", { name: f.label }).first()).toBeVisible(); // the names of the master version in use
     const boxes = panel.getByRole("checkbox");
     const total = await boxes.count();
-    expect(total).toBeGreaterThan(30);
+    expect(total).toBeGreaterThan(20); // the master base has fewer blocks in v7 than in v6 (the count follows the version in use)
     // every block is on by default (nobody types trick names), except the ones the master base itself switches off (defaultOn false) or retires: those are read from
     // the newest published master version, which the owner may edit and publish at any time
     const master = (await org.db.from("trick_vocabularies").select("json").is("organisation_id", null).is("event_id", null).eq("key", "big-air-vocabulary").not("published_at", "is", null).order("version", { ascending: false }).limit(1).single()).data!.json as Record<string, Array<{ key: string; defaultOn?: boolean; retired?: boolean }>>;

@@ -11,7 +11,6 @@ import { expect, test } from "./base";
 import { record } from "./cleanup";
 import { createPublicWorld } from "./public-world";
 import { createOrganiser } from "./organiser";
-import { createPublicWorld } from "./public-world";
 
 /**
  * The manual's screenshots (docs/manual/img), retaken with `npm run manual:shots` after every change (docs/manual/README.md, the update rule).
