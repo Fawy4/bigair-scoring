@@ -378,6 +378,7 @@ Last checked: 3 Oct 2026 · Product version 0.9.2
 | {#err-event-validation-usetime} “Use the form 18:30” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
 | {#err-event-validation-wholenumber} “Use a whole number” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
 | {#err-event-validation-maxperdivision} “Use a number from 1 to 500, or leave it empty for no limit” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-followrotate} “Use a whole number of seconds from 5 to 120 for the pages of the Follow the heat screen” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
 | {#err-event-validation-closedmessagemax} “The message is too long (300 characters at most)” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
 | {#err-event-validation-timeneedsdate} “Choose the closing day as well as the time” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
 | {#err-event-validation-slugmin} “The web address needs at least 2 characters” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |

@@ -32,6 +32,8 @@ export const EventSettingsSchema = z.looseObject({
   livePollSec: z.number().int().min(3).max(60).default(7),
   /** Seconds each page of the big screen stays up before the next one (live heat, timetable, last results, sponsors). */
   screenRotateSec: z.number().int().min(5).max(120).default(20),
+  /** Seconds each page of "Big screen — Follow the heat" stays up in its Results / Ladder rotation. Separate from the existing big screen's setting. */
+  followRotateSec: z.number().int(v.followRotate).min(5, v.followRotate).max(120, v.followRotate).default(15),
   /** The big screen's colours when a browser has not chosen its own: dark ground with white text, or Day (dark text on a light ground). */
   screenColourMode: z.enum(["dark", "day"]).default("dark"),
   /** The public event page's tabs the organiser switched off (keys such as "rules", "join", "leaderboard-1"); empty = every tab is on. */

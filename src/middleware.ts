@@ -20,5 +20,6 @@ export const config = {
     "/head/:path*",
     { source: "/e/:slug/:path*", has: [{ type: "cookie", key: "bigair_sim_preview" }] },
     { source: "/screen/:slug", has: [{ type: "cookie", key: "bigair_sim_preview" }] },
+    { source: "/screen/:slug/follow/:path*", has: [{ type: "cookie", key: "bigair_sim_preview" }] },
   ],
 };

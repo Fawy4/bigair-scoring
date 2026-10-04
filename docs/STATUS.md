@@ -1252,3 +1252,23 @@ Started from main (0.13.1, after #33). A Fix 2 session (the audit's findings and
 
 ### How to test
 See the release entry 0.14.1 (`docs/RELEASES.md`). `npm test`; `npm run test:rls -- tests/rls/audit-1b-*.test.ts tests/rls/fix2-churn.test.ts`; Playwright against a production build: `e2e/public-cache.spec.ts`, `e2e/public-valve.spec.ts` (second server with `PUBLIC_MAX_IN_FLIGHT=2`), `e2e/trick-base-version.spec.ts`, `e2e/review-console.spec.ts`, `e2e/screen-header.spec.ts`.
+
+## Big screen — Follow the heat (branch `big-screen-follow`, 4 Oct 2026, 0.15.0)
+
+### Done
+1. **A second big-screen address, `/screen/<event>/follow`** (`src/app/screen/[slug]/follow/page.tsx`, `src/components/public/follow-screen.tsx`): live heat from the yellow until End heat (no rotation), "Judges reviewing" until Publish, then Results and Ladder alternating. The first big screen and its rotation are unchanged.
+2. **The page-choosing rule is pure and tested first:** `src/lib/public/follow-model.ts` (`followPhase`, `buildFollowPages`, `paginateResults`, `paginateLadder`, `nextLine`, `walkKeyOf`) with `src/lib/public/follow-model.test.ts`. Results of today's published heats newest first, each followed by the ladder of its division; nothing unpublished or held can get in (pages are built from released heats only).
+3. **Reuse, no new database path:** the screen's data (`src/lib/public/follow-load.ts`, answered by `/screen/<event>/follow/data`) goes through `loadCore` / `loadLive` / `loadDraw`, i.e. the shared 3-second answers and the safety valve of Fix session 2; the page has the same edge cache header and the same simulation-preview rule as the public pages. Results pages reuse the public results' `ScoreBox` and the Rider label (`RiderLabel screen`, `ScoreBox screen`: the same pieces drawn in vw for a TV).
+4. **Never shrunk:** a heat that does not fit at the TV size is split across pages; a ladder is paged round by round (costs in vw in `follow-model.ts`); the screen never zooms.
+5. **Setting:** Event step → More settings → **Follow the heat — seconds per page** (`settings.followRotateSec`, default 15, 5 to 120, refused in the house style); migration `20261026100000_big_screen_follow_setting.sql` adds it to `get_public_site`.
+6. **Go live shortcut** "Big screen — Follow the heat"; **Note button removed from the big screens** (`FeedbackGate`).
+7. Browser tests: `e2e/big-screen-follow.spec.ts` (1920 × 1080, a throwaway event with a ladder: the walk 3 → 2 → 1 → 3, the 2-second jump, Judges reviewing, public-results match, readability, keys, Reconnecting, the setting at 7), `e2e/big-screen-follow-simulation.spec.ts` (a simulation at ×20 as its own organiser).
+8. Manual: new section "Follow the heat" on the Big screen page with pictures (`e2e/manual-shots-follow.spec.ts`, part of `npm run manual:shots`), Event step, Go live, glossary, Event day, settings (generated), changelog; release entry 0.15.0.
+
+### Not done / decisions to confirm
+- **Polling, not realtime:** an anonymous visitor cannot listen to the realtime channel, so the screen asks `/follow/data` twice a second. Through the 3-second shared copy the live heat appears within about 3 to 4 seconds on the live address; within 2 seconds holds in the browser tests, whose servers run with the cache off (`PUBLIC_CACHE_MS=0`).
+- A heat whose division has no ladder gets Results only (no Ladder page). An old heat that was ended and never published stops holding "Judges reviewing" once a later heat has started.
+- The simulator's **View as** list does not offer the Follow screen (that panel belongs to another session's work); open it by adding /follow to the big screen's address.
+
+### How to test
+See the release entry 0.15.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; with `npm run dev` running: `npx playwright test e2e/big-screen-follow.spec.ts e2e/big-screen-follow-simulation.spec.ts`.

@@ -56,7 +56,7 @@ export function simpleText(f: SimpleField): { label: string; explanation: string
 
 /** Event step, behind the fold: the web address, logo and sponsors, rehearsal, the timing numbers, registration and the rider label settings (one group). */
 export const EVENT_ADVANCED: readonly string[] = [
-  "slug", "logo", "sponsors", "simulation", "readyCall", "livePoll", "screenRotate", "maxRunning", "judgesLog", "windBanner", "leaderboards",
+  "slug", "logo", "sponsors", "simulation", "readyCall", "livePoll", "screenRotate", "followRotate", "maxRunning", "judgesLog", "windBanner", "leaderboards",
   "registrationOpen", "registrationCloses", "registrationClosesTime", "registrationMax", "registrationClosedMessage", "riderLabel",
   "impressionName", "flagsOn", "flagStates", "prestartSec", "lastMinuteSec",
 ];

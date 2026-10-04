@@ -2,7 +2,7 @@
 
 Step 7 of an event and its home (/org/events/‹id›): is the event ready, what is on now and next, the wind call, the quick actions (Hold, Resume at, Shift, head console, big screen, Reset), today's timetable, and the links to share.
 
-Last checked: 4 Oct 2026 · Product version 0.14.0
+Last checked: 4 Oct 2026 · Product version 0.15.0
 
 ## What it is for {#gl-purpose}
 
@@ -27,6 +27,7 @@ The start of event day. Read the checklist top to bottom, fix what is red, then 
 | **Open head judge console** | The head console in a new tab (an organiser can act as head judge). |
 | **Flag marshal's screen** | /e/‹event›/flag in a new tab (only when the Flags are on): the whole screen is the flag, for the marshal's phone or tablet. The QR to print is on the Officials step ([Flags](flags.md#fl-view)). |
 | **Big screen** | /screen/‹event› in a new tab, for the beach screen. |
+| **Big screen — Follow the heat** | /screen/‹event›/follow in a new tab, a second beach screen that stays on the live heat while it runs, says “Judges reviewing” after End heat, then alternates the full Results of today's heats and the Ladder. See [Big screen](big-screen.md#bs-follow). |
 | **Reset event…** | Wipes everything that happened and puts every ladder back to its locked draw. See [Resets and undo](../resets-and-undo.md#ru-event). |
 | **Today’s timetable** | Start, heat, state (done, live, next, est., on hold, pinned, cancelled) and the projected finish; **Open the run order**. |
 | **Officials' join page**, **Public event page** | Each with **Copy link**, **Open** and a QR code to show on a phone or print. |

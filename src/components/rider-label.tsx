@@ -17,6 +17,7 @@ export function RiderLabel({
   variant = "block",
   bare = false,
   wrap = false,
+  screen = false,
   seed,
 }: {
   scheme?: IdentificationScheme;
@@ -34,6 +35,8 @@ export function RiderLabel({
   bare?: boolean;
   /** Live only: long text wraps onto a second line instead of being cut with "…" (the Flag view and the big screen: nothing is ever cut there). */
   wrap?: boolean;
+  /** Live only: drawn for a TV or projector (sizes in vw, colours from the big screen's Day / Dark ground; "Big screen — Follow the heat"). Never cut with "…". */
+  screen?: boolean;
   /** Row only: the rider's seed, written small after the name. */
   seed?: number;
 }) {
@@ -76,29 +79,32 @@ export function RiderLabel({
     const name = label.secondary.find((x) => x.key === "name");
     const rest = label.secondary.filter((x) => x.key !== "name");
     const nameText = style === "name-first" ? p.text : name?.text;
+    const S = screen
+      ? { gap: "gap-[1.2vw]", colour: "rounded-[0.6vw] px-[1vw] py-[0.1vw] text-[2.6vw] font-semibold leading-tight tracking-wide", number: "rounded-[0.6vw] border-[0.25vw] border-[var(--bs-ink)] bg-[var(--bs-bg)] px-[1vw] text-[2.6vw] font-semibold leading-tight text-[var(--bs-ink)]", name: "text-[2.8vw] font-semibold text-[var(--bs-ink)]", rest: "text-[1.8vw] font-medium text-[var(--bs-muted)]", ring: "var(--bs-ring)" }
+      : { gap: "gap-2", colour: "rounded-lg px-2 py-0.5 text-name font-semibold leading-tight tracking-wide", number: "rounded-lg border-2 border-beach-ink bg-beach-surface px-2 py-0.5 text-name font-semibold leading-tight text-beach-ink", name: "text-name font-semibold text-beach-ink", rest: "text-small font-medium text-beach-muted", ring: "var(--beach-ink)" };
     return (
-      <div data-testid="rider-label" data-variant="live" data-style={style} className={cn("flex min-w-0 items-center gap-2", !bare && "rounded-card border border-beach-line bg-beach-bg p-1.5", className)}>
+      <div data-testid="rider-label" data-variant="live" data-style={style} className={cn("flex min-w-0 items-center", S.gap, !bare && "rounded-card border border-beach-line bg-beach-bg p-1.5", className)}>
         {style === "colour-block" ? (
           <span
             data-testid="rider-label-primary"
-            className="shrink-0 rounded-lg px-2 py-0.5 text-name font-semibold leading-tight tracking-wide"
-            style={{ backgroundColor: p.hex, color: p.ink, boxShadow: p.outlined ? "inset 0 0 0 2px var(--beach-ink)" : undefined }}
+            className={cn("shrink-0", S.colour)}
+            style={{ backgroundColor: p.hex, color: p.ink, boxShadow: p.outlined ? `inset 0 0 0 ${screen ? "0.25vw" : "2px"} ${S.ring}` : undefined }}
           >
             <span data-testid="rider-label-text">{p.text}</span>
-            {p.usedFallback ? <span className="ml-1 text-small font-medium">{copy.riderLabel.fallback}</span> : null}
+            {p.usedFallback ? <span className={cn("ml-1 font-medium", screen ? "text-[1.8vw]" : "text-small")}>{copy.riderLabel.fallback}</span> : null}
           </span>
         ) : style === "number-block" ? (
-          <span data-testid="rider-label-primary" className={cn("max-w-[45%] shrink-0 rounded-lg border-2 border-beach-ink bg-beach-surface px-2 py-0.5 text-name font-semibold leading-tight text-beach-ink", wrap ? "break-words" : "truncate")}>
+          <span data-testid="rider-label-primary" className={cn("max-w-[45%] shrink-0", S.number, wrap ? "break-words" : "truncate")}>
             <span data-testid="rider-label-text">{p.text}</span>
           </span>
         ) : null}
-        <span className="flex min-w-0 flex-col leading-tight">
+        <span className={cn("flex min-w-0 leading-tight", screen ? "flex-row flex-wrap items-baseline gap-x-[1.2vw]" : "flex-col")}>
           {nameText ? (
-            <span data-testid={style === "name-first" ? "rider-label-primary" : undefined} className={cn(wrap ? "break-words" : "truncate", "text-name font-semibold text-beach-ink")}>
+            <span data-testid={style === "name-first" ? "rider-label-primary" : undefined} className={cn(wrap ? "break-words" : "truncate", S.name)}>
               {style === "name-first" ? <span data-testid="rider-label-text">{nameText}</span> : nameText}
             </span>
           ) : null}
-          {rest.length ? <span className={cn(wrap ? "break-words" : "truncate", "text-small font-medium text-beach-muted")}>{rest.map((x) => x.text).join(" · ")}</span> : null}
+          {rest.length ? <span className={cn(wrap ? "break-words" : "truncate", S.rest)}>{rest.map((x) => x.text).join(" · ")}</span> : null}
         </span>
       </div>
     );

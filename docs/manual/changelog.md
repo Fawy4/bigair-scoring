@@ -2,7 +2,19 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 4 Oct 2026 · Product version 0.14.1
+Last checked: 4 Oct 2026 · Product version 0.15.0
+
+## 0.15.0 — 4 Oct 2026 {#cl-0-15-0}
+
+Release entry: [0.15.0](/admin/releases#release-0-15-0) (platform owner only)
+
+**What changed for users**
+- **Big screen — Follow the heat** (/screen/‹event›/follow), a second big-screen address for a TV or projector: it stays on the heat while it is armed or running, says **Judges reviewing** until Publish, then alternates the full Results of today's published heats (newest first, one heat per page, every attempt's score as on the public Results page) and the Ladder; arming the next heat jumps straight back to the live heat. A thin “Next: ‹heat› · est. ‹time›” line, a **Reconnecting** label when the connection drops, Space to pause, F for full screen, D for Day / Dark.
+- **Event step → Follow the heat — seconds per page** (default 15, 5 to 120). **Go live** has the shortcut **Big screen — Follow the heat**.
+- **The Note button is gone from the big screen**, the first one too.
+
+**Manual pages updated**
+- [Big screen](screens/big-screen.md) (new section “Follow the heat” with pictures of each state), [Organiser: Event step](screens/organiser-event.md), [Organiser: Go live](screens/organiser-go-live.md), [Glossary](glossary.md), [Event day](event-day.md), [Settings](settings.md) (regenerated).
 
 ## 0.14.1 — 4 Oct 2026 {#cl-0-14-1}
 

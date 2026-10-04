@@ -12,6 +12,34 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.15.0 — 4 Oct 2026 {#release-0-15-0}
+
+PR: #36
+
+### What changed
+- **New: Big screen — Follow the heat** (a second big-screen address, /screen/‹event›/follow, for a TV or a projector — never a phone). While a heat is armed or running it stays on that heat: the riders with their Lycra colours, the clock, the flag frame and the state word, live totals only if the event allows live scores. When the head judge ends the heat it stays on it and says **Judges reviewing** until the result is published.
+- **Then it alternates Results and Ladder:** the result of the heat just published, the ladder, the result of the heat before, the ladder … through every heat published today, then round again (a new publish starts the walk again from it). Each Results page names its heat and when it was published and shows the full result as on the public Results page: every rider's attempts with their scores (counted ones highlighted, crashes marked), the Impression / Variety score, the total and the place. A heat or a ladder that does not fit at TV size is split across pages (“page 1 of 2”), never shrunk.
+- **The moment the next heat is armed** the screen jumps to the live heat by itself. A thin line at the bottom says “Next: ‹heat› · est. ‹time›”. If the connection drops it keeps the last page and shows a small **Reconnecting** label.
+- **New setting** on the Event step, behind **More settings**: **Follow the heat — seconds per page** (default 15, 5 to 120). The existing **Big screen: seconds per page** still controls the first big screen only.
+- **Go live** has a new shortcut, **Big screen — Follow the heat**.
+- **The Note button is gone from the big screen** (the old one too), even for a signed-in organiser. Nothing else changes on the first big screen.
+
+### What to test
+- [ ] Go live → **Big screen — Follow the heat** opens a new tab with a clean screen (no Note button, no menu, no prompts). Press **F** on a laptop: full screen on; press **F** again: off.
+- [ ] On a throwaway event with a simulation running at ×20 (Event step → Simulation, then Simulate → Start): open the screen through the simulator's **View as → Big screen** and change the address to end in /follow. While a heat runs it stays on that heat (flag frame, clock, riders with their Lycra colours) and does not rotate.
+- [ ] When the heat ends the screen says **Judges reviewing** and stays on that heat. Press **Publish** on the head console (**View as → Head judge (laptop)**): the screen switches to that heat's **Results** page (“…· published hh:mm”).
+- [ ] After the first publish, watch 40 seconds: Results and Ladder alternate every 15 seconds; after two or three heats are published each Results page is the heat before (newest, then the one before, then the one before that, then the newest again). Each Results page shows every attempt's score of every rider, the same as **Results** on the public page for that heat.
+- [ ] While it is alternating, press **Space**: the walk stops (“Paused — press space to continue”); press it again to carry on. Press **D**: Day / Dark colours switch and are remembered after a reload.
+- [ ] Event step → More settings → **Follow the heat — seconds per page**: type 4 and click elsewhere: the box holds 5; type 121: it holds 120 (nothing outside 5 to 120 can be saved). Type 7 and Save: the pages now change every 7 seconds.
+- [ ] While the walk is showing a Results page, press **Start heat sequence** on the head console (the yellow): within a few seconds the screen jumps to the live heat by itself.
+- [ ] Open the first **Big screen** (Go live → **Big screen**): it looks and rotates as before, and has no Note button.
+
+### Known issues
+- The screen asks the server twice a second, but the public pages and the big screens share a copy of the answers that is at most about 3 seconds old (Fix session 2), so on the live address the jump to the live heat and “Judges reviewing” follow the head judge's button within about 3 to 4 seconds, not two. Anonymous visitors cannot listen to the database's realtime channel, so the screen polls, as the public pages do.
+- If a heat's division has no ladder, its Results page is not followed by a Ladder page.
+- An old heat that was ended and never published stops holding the screen on “Judges reviewing” as soon as a later heat has started.
+- The Follow the heat screen is not offered in the simulator's **View as** list; open it by adding /follow to the big screen's address.
+
 ## 0.14.1 — 4 Oct 2026 {#release-0-14-1}
 
 PR: #35
