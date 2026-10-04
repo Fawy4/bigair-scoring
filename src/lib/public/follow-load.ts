@@ -49,6 +49,8 @@ export async function loadFollowPayload(slug: string): Promise<FollowPayload | n
   const { site, tt, tabs, results, rules, timetable } = core;
   const nowMs = Date.parse(core.now);
   const phase = followPhase(timetable?.heats ?? [], nowMs);
+  // the ladder's draw is asked for at the same time as the live heat (one wait, not two)
+  const drawing = loadDraw(site.event.id);
 
   let heat: FollowHeat | null = null;
   if (phase.kind !== "rotation") {
@@ -73,7 +75,7 @@ export async function loadFollowPayload(slug: string): Promise<FollowPayload | n
     }
   }
 
-  const draw = await loadDraw(site.event.id);
+  const draw = await drawing;
   const ladders = new Map<string, LadderRoundVM[]>();
   for (const d of draw?.divisions ?? []) {
     if (!d.draw) continue;
