@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, Flag, Monitor, Pause, Play, Printer, SkipForward } from "lucide-react";
+import { ExternalLink, Flag, Monitor, MonitorPlay, Pause, Play, Printer, SkipForward } from "lucide-react";
 import { Button } from "@/components/org/button";
 import { NowNextCard, ReadinessList, type CheckRow, type HeatLine } from "@/components/org/dashboard-parts";
 import { DataTable } from "@/components/org/data-table";
@@ -153,6 +153,9 @@ function QuickActionsLive({ eventId, slug, flags, plan, timezone, runningHeat }:
         </span>
         <Button variant="secondary" icon={Monitor} href={`/screen/${slug}`} target="_blank">
           {orgCopy.dashboard.bigScreen}
+        </Button>
+        <Button variant="secondary" icon={MonitorPlay} href={`/screen/${slug}/follow`} target="_blank" data-testid="follow-screen-link">
+          {copy.pub.follow.title}
         </Button>
         {flags ? (
           <Button variant="secondary" icon={Flag} href={`/e/${slug}/flag`} target="_blank" data-testid="flag-view-link">

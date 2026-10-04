@@ -137,6 +137,7 @@ const EVENT_FIELDS: Array<[string, string, string]> = [
   ["event.readyCall", copy.event.readyCall, "settings.readyCallMin"],
   ["event.livePoll", copy.event.livePoll, "settings.livePollSec"],
   ["event.screenRotate", copy.event.screenRotate, "settings.screenRotateSec"],
+  ["event.followRotate", copy.event.followRotate, "settings.followRotateSec"],
   ["event.screenColour", copy.event.screenColour, "settings.screenColourMode"],
   ["event.impressionName", copy.event.impressionName, "settings.impressionName"],
   ["event.flagsOn", copy.event.flagsOn, "settings.flags.enabled"],

@@ -11,7 +11,7 @@ const R = copy.pub.results;
 const GRADE = ["bg-beach-tint-grade0", "bg-beach-tint-grade1", "bg-beach-tint-grade2", "bg-beach-tint-grade3", "bg-beach-tint-grade4"];
 
 /** One attempt as a small box: crash red with CRASH, not counted grey, counted graded yellow to green across the heat. Always an icon or a word too. */
-export function ScoreBox({ box, counted, mode, big = false }: { box: BoxVM; counted: number[]; mode: AttemptDisplay; big?: boolean }) {
+export function ScoreBox({ box, counted, mode, big = false, screen = false }: { box: BoxVM; counted: number[]; mode: AttemptDisplay; big?: boolean; screen?: boolean }) {
   const tone = boxTone(box, counted);
   const Icon = tone.kind === "crash" ? TriangleAlert : tone.kind === "counted" ? Check : Minus;
   const text = box.status === "landed" && box.scoreLabel === null ? `${mode === "scores_only" ? "" : `${box.seq} · `}…` : boxText(box, mode);
@@ -22,13 +22,13 @@ export function ScoreBox({ box, counted, mode, big = false }: { box: BoxVM; coun
       data-grade={tone.kind === "counted" ? tone.grade : undefined}
       className={cn(
         "inline-flex items-center gap-0.5 rounded-md border px-1 font-semibold tabular-nums",
-        big ? "min-h-[40px] gap-1 px-2 text-2xl" : "min-h-[24px] text-small",
+        screen ? "min-h-[3.2vw] gap-[0.3vw] rounded-[0.5vw] border-[0.15vw] px-[0.6vw] text-[2vw] leading-none" : big ? "min-h-[40px] gap-1 px-2 text-2xl" : "min-h-[24px] text-small",
         tone.kind === "crash" && "border-beach-crash bg-beach-tint-crash text-beach-ink",
         tone.kind === "notCounted" && "border-beach-line bg-beach-tint-grey text-beach-muted",
         tone.kind === "counted" && cn("border-beach-line text-beach-ink", GRADE[tone.grade]),
       )}
     >
-      <Icon aria-hidden className={big ? "size-5 shrink-0" : "size-3 shrink-0"} />
+      <Icon aria-hidden className={screen ? "size-[1.8vw] shrink-0" : big ? "size-5 shrink-0" : "size-3 shrink-0"} />
       {text}
     </span>
   );

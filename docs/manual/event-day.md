@@ -2,7 +2,7 @@
 
 The event-day runbook (docs/09, corrected to the built product): the day before, the morning minute by minute, each heat, wind holds, failures and the end of the day, with what the organiser and the head judge do side by side.
 
-Last checked: 4 Oct 2026 · Product version 0.14.0
+Last checked: 4 Oct 2026 · Product version 0.15.0
 
 Times below assume a first heat at 10:00 and a ready call of 15 minutes; move them with your own run order. “HJ” is the head judge. Every button named here exists in version 0.9.0; the end of the page lists what docs/09 expected but the product does not have.
 
@@ -29,7 +29,7 @@ Times below assume a first heat at 10:00 and a ready call of 15 minutes; move th
 | 08:00 | Officials arrive: they join with the event code and PIN or scan their card; Officials shows “Connected” and “Last seen just now”. A missing PIN: **Show PIN**; a lost phone: **Regenerate PIN**. | Check the **Judges** list on the console: every judge “Live”. |
 | 08:30 | Wind check. Set the **Wind call** (green / amber / red, a short message) on Go live; it shows on the public pages and the big screen. | — |
 | 08:45 | Riders' briefing: Lycra colours are their identity on every screen; ready call 15 minutes before their heat; times are estimates that update live on the event page and their rider page; scoring as on the Rules page. | Judges' briefing: what a 5, 7 and 9 look like today; the phone flow (card → score → Save; Missed when you did not see it; Flag to alert the HJ); Impression / Variety at the end, then **Submit**; if a phone dies, tell the HJ — nothing is lost. |
-| 09:30 | Big screen on (/screen/‹event›, full screen). Share the public link (Go live → Public event page → Copy link / QR). | — |
+| 09:30 | Big screen on (/screen/‹event›, or /screen/‹event›/follow for [Follow the heat](screens/big-screen.md#bs-follow), full screen). Share the public link (Go live → Public event page → Copy link / QR). | — |
 | 09:45 | Ready call for the first heat (15 minutes before 10:00). | The countdown shows the first heat when the plan is active and pinned. |
 
 ## Running a heat {#ed-heat}

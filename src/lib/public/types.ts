@@ -30,6 +30,7 @@ export interface PublicSite {
     readyCallMin: number;
     livePollSec: number;
     screenRotateSec: number;
+    followRotateSec?: number;
     screenColourMode: "dark" | "day";
     publicTabsOff: string[];
     registrationOpen: boolean;

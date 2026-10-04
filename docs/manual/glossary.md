@@ -2,7 +2,7 @@
 
 Every word the product uses that a newcomer might not know, alphabetically, one line each with a beach example.
 
-Last checked: 4 Oct 2026 · Product version 0.14.0
+Last checked: 4 Oct 2026 · Product version 0.15.0
 
 | Term | Meaning, with a beach example |
 |---|---|
@@ -16,6 +16,7 @@ Last checked: 4 Oct 2026 · Product version 0.14.0
 | {#g-base-trick} **Base trick** | The main movement of a trick (a family of the trick base). *Backroll, frontroll, kiteloop, board-off.* |
 | {#g-best-n} **Best-N** | Only a rider's N best tricks count toward the total. *Best 3: a rider who landed 6 tricks is scored on the 3 highest.* |
 | {#g-big-screen} **Big screen** | /screen/‹event›, the beach TV page that rotates live heat, timetable, results, sponsors. *A laptop on the TV by the judges' tower.* |
+| {#g-big-screen-follow} **Big screen — Follow the heat** | /screen/‹event›/follow, a second beach TV page: it stays on the heat while it is armed or running, says “Judges reviewing” until Publish, then alternates the full Results of today's published heats (newest first) and the Ladder. *The TV by the water: the live heat, then Heat 6's result, the ladder, Heat 5's result…* |
 | {#g-break} **Break** | Minutes between heats (or a break row such as Lunch) in the run order. *2 minutes after each heat, 45 minutes for lunch.* |
 | {#g-call-out} **Call-out** | What the spotter says aloud for a rider, from the Rider label scheme. *“Red”, “14” or “Sam Sample”.* |
 | {#g-cancel} **Cancel (heat)** | Stops a heat for good with a reason; it takes no time on timetables. *Kite tangle in heat 3: Cancel heat, then Re-run.* |

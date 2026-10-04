@@ -291,6 +291,10 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
           <NumberField id="ev-rotate" label={T.screenRotate} min={5} max={120} value={Number.isNaN(form.settings.screenRotateSec) ? null : form.settings.screenRotateSec} onChange={(v) => set(["settings", "screenRotateSec"], v)} unit={T.secondsUnit} />
         </SettingRow>
         {showError("settings.screenRotateSec")}
+        <SettingRow id="ev-follow-rotate" label={T.followRotate} {...h("event.followRotate")}>
+          <NumberField id="ev-follow-rotate" label={T.followRotate} min={5} max={120} value={Number.isNaN(form.settings.followRotateSec) ? null : form.settings.followRotateSec} onChange={(v) => set(["settings", "followRotateSec"], v)} unit={T.secondsUnit} />
+        </SettingRow>
+        {showError("settings.followRotateSec")}
         <SettingRow id="ev-screen-colour" label={T.screenColour} {...h("event.screenColour")}>
           <div role="radiogroup" aria-label={T.screenColour} className="flex flex-wrap gap-4">
             {(["dark", "day"] as const).map((m) => (

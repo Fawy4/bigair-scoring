@@ -15,7 +15,7 @@ const storageHost = (() => {
  * The answer is exactly what a visitor may see: the database functions already leave out anything unpublished or held.
  */
 export const PUBLIC_CACHE_CONTROL = "public, max-age=0, s-maxage=3, stale-while-revalidate=1";
-const publicPages = ["/e/:slug", "/e/:slug/live", "/e/:slug/results", "/e/:slug/ladder", "/e/:slug/riders", "/e/:slug/riders/:entryId", "/e/:slug/placings", "/e/:slug/rules", "/e/:slug/leaderboards/:n", "/screen/:slug"];
+const publicPages = ["/e/:slug", "/e/:slug/live", "/e/:slug/results", "/e/:slug/ladder", "/e/:slug/riders", "/e/:slug/riders/:entryId", "/e/:slug/placings", "/e/:slug/rules", "/e/:slug/leaderboards/:n", "/screen/:slug", "/screen/:slug/follow"];
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
