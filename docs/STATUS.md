@@ -1235,3 +1235,20 @@ Started from main (0.13.1, after #33). A Fix 2 session (the audit's findings and
 
 ### How to test on a laptop
 - Go live → **Results and backup** → **Download results**, **Open printable results**, the draft box, **Download event backup**; head judge console (laptop) → the first two under the wind call. See the release entry in `docs/RELEASES.md`.
+
+## Fix session 2 – audit 1b findings, public-page cache, officials protected under load (branch `fix-2`, 4 Oct 2026, 0.14.1)
+
+### Done
+1. **Officials walled off from the crowd (A1b-0 / A1b-11, code half).** Public answers shared for about 3 s per server instance (`src/lib/public/shared-cache.ts`, used by `src/lib/public/load.ts`), edge headers `s-maxage=3, stale-while-revalidate=1` on the public pages and the big screen (`next.config.ts`; never with the simulation-preview cookie), the Flag view only joins reads in flight; the safety valve (`PUBLIC_MAX_IN_FLIGHT`, default 60 per instance) shows the calm **Updating…** page; "last seen" at most once a minute (`touch_seat` 55 s guard, `sim_view_beat` 20 s). Statement logging cannot be changed from SQL or the management API (permission denied) and already is `ddl` only with no slow-statement logging; the lever left is fewer requests (the cache). The load harness `tests/rls/fix2-load.test.ts` is written and validated at 3 spectators; it was **not run at scale** (see "Not done").
+2. **Findings:** A1b-1, A1b-2, A1b-3 (Riders step), A1b-7, A1b-16, A1b-18 fixed; their `.fails` tests are plain tests now.
+3. **Trick base T1:** + Add block listed the five built-in family names; now the event's version; the panel's layout is read from the database.
+4. **Console:** the Impression card stays a card at 1280 px and wider with 3, 4 and 5 riders.
+5. **Big screen / Flag view (item 6):** nothing cut with "…", header fits, Day / Dark control in its own corner, every page fitted (`FitSlide`).
+
+### Not done
+- The load test and the ramp at scale: the hosted database still reports `max_connections = 60` and about 224 MB of shared buffers (Micro or Nano, not Small), so by the owner's rule no load test was run.
+- Item 5 (eight stale browser tests): see the pull request.
+- The console's rider menu (per-heat DNS) does not call the walkover; a rule decision (see the pull request).
+
+### How to test
+See the release entry 0.14.1 (`docs/RELEASES.md`). `npm test`; `npm run test:rls -- tests/rls/audit-1b-*.test.ts tests/rls/fix2-churn.test.ts`; Playwright against a production build: `e2e/public-cache.spec.ts`, `e2e/public-valve.spec.ts` (second server with `PUBLIC_MAX_IN_FLIGHT=2`), `e2e/trick-base-version.spec.ts`, `e2e/review-console.spec.ts`, `e2e/screen-header.spec.ts`.

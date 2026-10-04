@@ -1,4 +1,5 @@
 import { expect, test } from "./base";
+import { MANUAL_PAGES } from "../src/lib/manual/pages";
 import { createOrganiser } from "./organiser";
 
 /**
@@ -12,7 +13,7 @@ test("the manual renders, searches, links, shows its pictures and its diagram, a
   await expect(page.getByTestId("help")).toBeVisible();
   await expect(page.getByTestId("help-version")).toContainText(/Product version \d+\.\d+\.\d+/);
   await expect(page.locator("meta[name=robots]")).toHaveAttribute("content", /noindex/);
-  await expect(page.locator("article.help-page")).toHaveCount(40);
+  await expect(page.locator("article.help-page")).toHaveCount(MANUAL_PAGES.length); // the pages of docs/manual, not a number that goes stale with every new page
 
   // search: “Hold” finds results; “grey” lands on the dependency map's Hold row
   await page.getByTestId("help-search").fill("Hold");

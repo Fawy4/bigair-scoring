@@ -1851,7 +1851,7 @@ export const copy = {
     printBack: "Back to Riders",
     printNone: "No riders to print yet.",
     printDate: (d: string) => `Printed ${d}`,
-    drawLocked: "The draw of this division is locked: changing seeds here does not change it.",
+    drawLocked: "The draw of this division is locked: changing seeds here does not change it. A rider you set to Withdrawn or No-show keeps the seat as a walkover.",
     clash: {
       heading: "Check these riders",
       lycra: (colour: string, names: string) => `Lycra colour ${colour} is given to more than one rider: ${names}. Judges could not tell them apart.`,

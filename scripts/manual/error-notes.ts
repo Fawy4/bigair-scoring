@@ -214,7 +214,7 @@ export const NOTES: Record<string, Note> = {
   "riders.seedRepeated": { f: "Press “Sort by seed number” to renumber 1, 2, 3…" },
   "riders.inDraw": { m: "Removing a rider who has a seat would leave an empty seat in the draw, so the database refuses it as soon as the rider has a seat in a heat (or a locked draw names them).", f: "Set the rider to Withdrawn: after the draw is locked their seat becomes a walkover." },
   "riders.withdrawHeatStarted": { m: "The rider's heat has started, so the draw can no longer give the seat to somebody else. Nothing was changed.", f: "On the head console use Did not start for that rider in that heat." },
-  "riders.drawLocked": { m: "The draw keeps the order it was made with; seeds changed now do not move riders.", f: "To use new seeds: Draw step → Unlock (reason) → Regenerate → Lock (only before the first heat)." },
+  "riders.drawLocked": { m: "The draw keeps the order it was made with; seeds changed now do not move riders. A rider set to Withdrawn or No-show after the lock keeps the seat as a walkover (the next seat fills as the format says).", f: "To use new seeds: Draw step → Unlock (reason) → Regenerate → Lock (only before the first heat)." },
   "riders.clash.lycra": { m: "A warning: two riders share a Lycra colour, so judges could not tell them apart. Nothing is blocked." },
   "riders.clash.name": { m: "A warning: two riders share a name, so the spotter could not call them out apart. Nothing is blocked.", f: "Add a nickname or a bib number." },
   "riders.importFailed": { m: "The import stopped; nothing was half-saved.", f: RETRY },

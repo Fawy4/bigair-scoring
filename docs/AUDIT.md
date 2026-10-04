@@ -6,6 +6,24 @@ Two self-audits so far, newest first: **1b** (the system: database, screens, sec
 
 Branch `audit-1b`, 3–4 Oct 2026, product version 0.13.0 → 0.13.1 (this PR only adds tests and this document). No application code and no database object was changed; every problem is a numbered finding (A1b-n) with a severity, a reproduction and a proposed fix, so a separate fix session can take the list. Throwaway organisations only (`rls-…`, `e2e-…`); Arrow, EKL and Demo were read, never written.
 
+## Fix session 2 (0.13.2): where each finding stands
+
+Branch `fix-2`, 4 Oct 2026. The `.fails` tests of the findings below are now plain tests (their "today" twins are gone).
+
+| Finding | Status | How (test) |
+|---|---|---|
+| A1b-0 / A1b-11, code half | **Done**; hosting half is the owner's | Shared ~3 s cache of the public answers (per server instance, reads joined while in flight) + edge `s-maxage=3` headers on the public pages and the big screen; the Flag view only joins reads in flight; a safety valve (`PUBLIC_MAX_IN_FLIGHT`, default 60 requests in flight per instance) answers the calm **Updating…** page; "last seen" written at most once a minute (`e2e/public-cache.spec.ts`, `e2e/public-valve.spec.ts`, `tests/rls/fix2-churn.test.ts`, `src/lib/public/shared-cache.test.ts`) |
+| A1b-1 | **Fixed** | `events_flags_off` writes down a heat whose pre-start is over, cancels only heats still in their yellow |
+| A1b-2 | **Fixed** | `HEAT_ARMED` in the four reset functions; resets clear every armed column |
+| A1b-3 | **Fixed** (Riders step); the console rider menu is a per-heat DNS and was left as is | `src/lib/draw/walkover.ts`, `set_draw_walkover` takes the seat changes |
+| A1b-7 | **Fixed** | per phone-and-connection lockout, slow per-event brake |
+| A1b-16 | **Fixed** | `ENTRY_IN_DRAW` guard on `entries` |
+| A1b-18 | **Fixed** | `events_flags_off` clears `armed_paused_at` |
+| T1 (trick base) | **Fixed** | + Add block read the five built-in family names; now the event's version |
+| Review console regression | **Fixed** | the card has its own room; rider cards shrink |
+| Big screen header, Flag view | **Fixed** | `e2e/screen-header.spec.ts` |
+| Not in this session | A1b-4, -5, -6, -8, -12 (stale tests), -13, -14, -15, -17, -19, -20, -21 | Polish 3 |
+
 ## Summary (one page)
 
 **Safe to run Gouna: yes, with these fixes — and not on today's hosting.** The outage during this audit changes the answer from "yes with small fixes" to "only after the hosting is changed": on the free database machine the whole system went down for 1 h 43 min under an ordinary test load, and a load ramp shows it slowing to unusable at 300 spectators.

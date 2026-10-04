@@ -3,6 +3,17 @@ import { createOrganiser } from "./organiser";
 
 type Org = Awaited<ReturnType<typeof createOrganiser>>;
 
+/** The newest published master version's family names and one block of the add-on family that is not retired (read, never hard-coded: the owner renames families in each version). */
+async function masterNames(org: Org) {
+  const json = (await org.db.from("trick_vocabularies").select("json").is("organisation_id", null).is("event_id", null).eq("key", "big-air-vocabulary").not("published_at", "is", null).order("version", { ascending: false }).limit(1).single()).data!.json as {
+    families: Array<{ key: string; label: string }>;
+    modifiers: Array<{ key: string; family?: string; retired?: boolean }>;
+  };
+  const label = (key: string) => json.families.find((f) => f.key === key)!.label;
+  const addon = json.modifiers.find((m) => !m.retired && (m.family ?? "addon") === "addon")!;
+  return { families: json.families, addonLabel: label("addon"), addonBlock: `addon:${addon.key}` };
+}
+
 async function setup(org: Org) {
   const { data: ev } = await org.db.from("events").insert({ organisation_id: org.orgId, name: `Tricks Cup ${org.run}`, slug: `e2e-tricks-${org.run}`, status: "draft" }).select("id").single();
   const { data: div } = await org.db.from("divisions").insert({ event_id: ev!.id, name: "Pro Men", sort_order: 1 }).select("id").single();
@@ -17,7 +28,7 @@ test("Trick base: five families, every block ticked, categories follow the ticks
     await org.signIn(page, `/org/events/${eventId}/divisions`);
     await page.getByRole("tab", { name: "Trick base" }).click();
     const panel = page.getByTestId("trick-base");
-    for (const f of ["Direction", "Multiplier", "Base trick", "Add-ons", "Grabs & landings"]) await expect(panel.getByRole("group", { name: f })).toBeVisible();
+    for (const f of (await masterNames(org)).families) await expect(panel.getByRole("group", { name: f.label }).first()).toBeVisible(); // the names of the master version in use
     const boxes = panel.getByRole("checkbox");
     const total = await boxes.count();
     expect(total).toBeGreaterThan(30);
@@ -73,18 +84,19 @@ test("Trick base: + Add block adds a local name, proposed to the master base; af
     await expect(page.getByText("“backroll” already exists in that family.")).toBeVisible();
 
     // a heat starts: ticked blocks are locked, unticked ones can still be ticked, new ones can still be added
-    await org.db.from("divisions").update({ trick_base: { disabled: ["addon:late"] } }).eq("id", divisionId);
+    const { addonBlock, addonLabel } = await masterNames(org);
+    await org.db.from("divisions").update({ trick_base: { disabled: [addonBlock] } }).eq("id", divisionId);
     const { data: round } = await org.db.from("rounds").insert({ division_id: divisionId, sort_order: 1, name: "Round 1", short_name: "R1", spec: {} }).select("id").single();
     await org.db.from("heats").insert({ round_id: round!.id, division_id: divisionId, event_id: eventId, number: 1, duration_sec: 600, status: "running", started_at: new Date().toISOString() });
     await page.reload();
     await page.getByRole("tab", { name: "Trick base" }).click();
     await expect(page.getByTestId("trick-base-locked")).toContainText("cannot be unticked");
     await expect(page.getByTestId("block-base:backroll")).toBeDisabled();
-    await expect(page.getByTestId("block-addon:late")).toBeEnabled();
-    await page.getByTestId("block-addon:late").check();
+    await expect(page.getByTestId(`block-${addonBlock}`)).toBeEnabled();
+    await page.getByTestId(`block-${addonBlock}`).check();
     await expect.poll(async () => (await org.db.from("divisions").select("trick_base").eq("id", divisionId).single()).data?.trick_base).toEqual({ disabled: [] });
     await page.getByTestId("add-block").click();
-    await page.getByLabel("Family", { exact: true }).selectOption({ label: "Add-ons" });
+    await page.getByLabel("Family", { exact: true }).selectOption({ label: addonLabel });
     await page.getByLabel("Name of the block").fill("Shark bite");
     await page.getByRole("button", { name: "Add block", exact: true }).click();
     await expect(page.getByTestId("block-addon:local_shark_bite")).toBeChecked();

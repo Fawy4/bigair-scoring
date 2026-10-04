@@ -2,7 +2,7 @@
 
 The event's **Join** tab (/e/‹event›/join), the officials' join page (/join), the seat page (/seat) and the riders' registration page (/e/‹event›/register).
 
-Last checked: 3 Oct 2026 · Product version 0.11.0
+Last checked: 4 Oct 2026 · Product version 0.13.2
 
 ## What it is for {#pj-purpose}
 
@@ -23,6 +23,7 @@ One door for everybody who is not a spectator: officials join with their PIN, ri
 | QR card | Scanning signs the phone in once (“Joining with your QR code…”). |
 | iPhone tip | “tap Share → Add to Home Screen first, then open the app from your home screen and join there. The home-screen app keeps its own login.” |
 | **Not on the list? Add your name** | Name, role wanted (Judge, Spotter, Announcer), phone (optional) → **Ask to be added**; the organiser approves and gives a PIN. |
+| **Wrong tries** | Wrong PINs are counted per **phone and connection**: after 10 wrong tries in 10 minutes from the same phone on the same connection, that phone is told “Too many wrong tries. Wait ten minutes, or ask the organiser for help.” — even with the right PIN, until the ten minutes are over. Any other phone, and the same phone on another connection, is not affected, so a stranger who types wrong PINs can never lock your officials out, and a replacement judge with the right PIN always gets in. The only event-wide brake is a slow one: after 20 wrong tries at the event within 10 minutes a wrong guess takes about a second (the right PIN never waits). Officials who are already joined are never affected. |
 | /seat | “Your seat”: Connected / Not connected, **Open my screen**, or **Join with a PIN**. |
 
 ## Registering as a rider {#pj-register}

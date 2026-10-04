@@ -68,3 +68,17 @@ The results of a real event must never live in one place only. Who: the organise
 
 ## H. One-page checklist (print)
 ☐ DB awake (Health) ☐ Event created, branded, published ☐ Divisions + presets ☐ Riders confirmed & seeded ☐ Officials, panels, PIN cards ☐ Draws generated, printed and locked before the first heat ☐ Plan A active, Plan B ready, exported ☐ Simulation rehearsed and deleted ☐ Blank paper sheets printed ☐ Devices charged/installed ☐ Big screen tested ☐ Briefings done ☐ First start pinned ☐ Hotspot ready ☐ Go live: Ready to run
+
+## J. Interim procedures from Audit 1b — FIXED in 0.13.2
+These were the workarounds written in `docs/AUDIT.md` until the fixes landed. From product version 0.13.2 you do **not** need them any more; they are kept so the old briefing sheets still make sense.
+| Was (until 0.13.1) | Now (0.13.2) |
+|---|---|
+| A rider withdraws after the draw is locked: the head judge set **Did not start** for that rider in each heat (A1b-3) | Riders step → **Withdrawn** (or **No-show**): the seat becomes a walkover, the next seat fills as the format says, the public ladder shows it. If the rider's heat has already started, use **Did not start** on the console, as before |
+| Always **Abort** before any reset; never switch Flags off while a heat is armed or running (A1b-1, A1b-2, A1b-18) | Resets are refused during a yellow (“Abort the start sequence first.”); switching Flags off keeps a running heat running and works during a paused yellow |
+| Use **Withdrawn**, never **Remove**, once the draw exists (A1b-16) | **Remove** on a rider with a seat is refused and points to Withdrawn |
+| A judge whose phone died may be locked out for 10 minutes if strangers typed 100 wrong PINs (A1b-7) | Wrong PINs count per phone and connection; the right PIN from a clean phone always joins |
+
+## K. When many people watch the public pages
+- The public pages and the big screen answer from a shared copy at most about 3 seconds old; a result shows within a few seconds of **Publish**, a held result never shows until it is released.
+- If a page says **Updating…** the site is very busy with spectators: it asks again by itself every few seconds. Nothing is wrong, and **the head console, the judges, the spotters, the Flag view and the organiser screens are never held back**. Do not reload them.
+- The hosting itself (Supabase Pro with the Small compute, Vercel Pro) is still the owner's job before the event: see `docs/AUDIT.md` (A1b-0, A1b-11) and "Fix session 2" there.

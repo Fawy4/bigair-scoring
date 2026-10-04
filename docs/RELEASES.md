@@ -12,6 +12,34 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.14.1 — 4 Oct 2026 {#release-0-14-1}
+
+PR: #35
+
+### What changed
+- **Fix session 2 — the audit's fix list.** The officials are walled off from the crowd: the public pages and the big screen answer from a shared copy that is at most about 3 seconds old (so 300 phones cost one set of database calls per page every 3 seconds, not 300), and past a safety limit the extra visitors get a calm **Updating…** page that retries by itself. The console, the judges, the spotters, the Flag view and the organiser screens never go through it. The "last seen" mark is written at most once a minute.
+- **A withdrawal after the draw is locked becomes a walkover** (Riders step) and the public ladder shows it; **Remove** of a rider who has a seat is refused and points to Withdrawn.
+- **Resets are refused during a yellow** (“Abort the start sequence first.”); **switching Flags off** no longer un-starts a running heat and works during a paused yellow.
+- **Joining can no longer be blocked by strangers:** wrong PINs count per phone and connection; a right PIN from a clean phone always works.
+- **Trick base:** + Add block shows the renamed families (v7), the panel and the spotter agree, saving never writes old families back.
+- **Console:** the Impression card stays a card at 1280 px and wider with 3, 4 and 5 riders.
+- **Big screen and Flag view:** no text is ever cut with “…”; the header fits the width (the heat pill whole, the event name wrapping), the Day / Dark button has its own corner.
+
+### What to test
+- [ ] On a throwaway event with a **locked** 15-heat draw: Riders step → set a rider to **Withdrawn** → the Draw step shows their seat as a walkover and the public **Ladder** page shows it too.
+- [ ] Riders step → **Remove** on a rider who has a seat → refused with “This rider has a seat in the draw — set them to Withdrawn instead” and a **Learn more** link; **Remove** on a rider without a seat still works.
+- [ ] Head console: **Start heat sequence** (yellow up) → press **Reset this heat** → refused with “Abort the start sequence first.”; press **Abort**, then reset works.
+- [ ] Start a heat sequence, **Pause** the yellow, then Event step → Flags off → Save: it saves and the heat is simply not started (nothing armed).
+- [ ] Join page: type 10 wrong PINs on one phone → that phone is told to wait; a second phone with the right PIN joins at once.
+- [ ] Divisions → **Trick base**: the family names are the newest master version's (for example “Board Variations”, “Landings”), **+ Add block** lists the same names, and the spotter shows them after you tick or untick a block.
+- [ ] Open the **big screen** for an event with a very long name on a 1920 px TV or laptop: the event name wraps, the “Next: …” pill shows the whole heat name, nothing ends in “…”, and the quiet Day / Dark button (move the mouse) sits in the bottom left corner without covering any text.
+- [ ] Head console on a 15-inch laptop (about 1366 px) with 3 riders in an ended heat: the **Impression** card is a card beside the rider cards, not a button.
+
+### Known issues
+- The **hosting** is still the owner's half of A1b-0 and A1b-11 (Supabase Pro with the Small compute; Vercel Pro). On 4 Oct the database still reported the Micro/Nano limits (60 connections), so the load numbers in the pull request were not measured on the compute the event will use.
+- The head judge's **Did not start** in the console's rider menu still sets a DNS for one heat only; Withdrawn in the Riders step is the way to make a seat a walkover.
+- Eight stale browser tests (A1b-12) are listed in the pull request: see "Tests" there.
+
 ## 0.14.0 — 4 Oct 2026 {#release-0-14-0}
 
 PR: #34

@@ -24,7 +24,9 @@ test("Publish blocked: 'Fawy: score … missing' with Fix; Absent on the score a
   const att = (await w.db.from("trick_attempts").insert({ heat_id: H, entry_id: w.entries[0], seq: 1, status: "landed", trick_name: "Left Backroll", direction: "left", client_key: crypto.randomUUID() }).select("id").single()).data!;
   for (const key of ["j2", "j3"] as const) await w.db.from("trick_scores").insert({ attempt_id: att.id, judge_seat_id: w.seats[key].id, score: 7.5, client_key: crypto.randomUUID(), client_rev: 1 });
   for (const key of ["j1", "j2", "j3"] as const)
-    for (const [i, entry] of w.entries.entries()) if (!(key === "j1" && i === 0)) await w.db.from("impression_scores").insert({ heat_id: H, entry_id: entry, judge_seat_id: w.seats[key].id, value: 6, client_key: crypto.randomUUID(), client_rev: 1 });
+    // different Impression scores per rider (7, 6.5, 6, 5.5), so nobody is tied: three riders with no landed trick and the same Impression ARE tied, and Publish is then
+    // correctly blocked until the head judge orders them (the next test checks exactly that)
+    for (const [i, entry] of w.entries.entries()) if (!(key === "j1" && i === 0)) await w.db.from("impression_scores").insert({ heat_id: H, entry_id: entry, judge_seat_id: w.seats[key].id, value: 7 - i * 0.5, client_key: crypto.randomUUID(), client_rev: 1 });
   for (const key of ["j2", "j3"] as const) await w.db.from("judge_sheets").upsert({ event_id: w.eventId, heat_id: H, judge_seat_id: w.seats[key].id, submitted_at: new Date().toISOString() }, { onConflict: "heat_id,judge_seat_id" });
 
   const context = await browser.newContext({ viewport: { width: 1500, height: 1000 } });
@@ -68,6 +70,26 @@ test("Publish blocked: 'Fawy: score … missing' with Fix; Absent on the score a
   expect((await w.db.from("heats").select("status").eq("id", H).single()).data!.status).toBe("published");
   // no override was needed
   expect((await w.db.from("audit_log").select("id").eq("row_id", H).eq("action", "publish_override")).data ?? []).toHaveLength(0);
+});
+
+test("a genuine three-way tie IS blocked: three riders with no landed trick and the same Impression are listed as tied, and Publish waits for the head judge's order", async ({ browser }) => {
+  test.setTimeout(240_000);
+  const H = w.heats[0];
+  await w.db.from("heats").update({ status: "ended", started_at: new Date(Date.now() - 900_000).toISOString(), ended_at: new Date(Date.now() - 300_000).toISOString() }).eq("id", H);
+  for (const key of ["j1", "j2", "j3"] as const) {
+    for (const [i, entry] of w.entries.entries()) await w.db.from("impression_scores").insert({ heat_id: H, entry_id: entry, judge_seat_id: w.seats[key].id, value: i === 3 ? 8 : 6, client_key: crypto.randomUUID(), client_rev: 1 });
+    await w.db.from("judge_sheets").upsert({ event_id: w.eventId, heat_id: H, judge_seat_id: w.seats[key].id, submitted_at: new Date().toISOString() }, { onConflict: "heat_id,judge_seat_id" });
+  }
+  const context = await browser.newContext({ viewport: { width: 1500, height: 1000 } });
+  contexts.push(context);
+  await installSupabaseProxy(context);
+  const head: Page = await context.newPage();
+  await w.signInAs(head, "head", `/head/${w.eventId}`);
+  await head.locator(`[data-testid="order-row"][data-heat="${H}"]`).click({ timeout: 60_000 });
+  await expect(head.getByTestId("blockers")).toContainText(/are tied — choose the order/, { timeout: 60_000 });
+  await head.getByTestId("publish").click();
+  await expect(head.getByTestId("console-dialog").getByTestId("publish-blockers")).toContainText(/are tied — choose the order/);
+  expect((await w.db.from("heats").select("status").eq("id", H).single()).data!.status).not.toBe("published");
 });
 
 test("items 5–6: after the heat, each judge's Impression / Variety scores per rider; the head judge types a judge's sheet, the next rider is picked, Save and submit", async ({ browser }) => {

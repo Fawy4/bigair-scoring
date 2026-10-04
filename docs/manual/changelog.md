@@ -2,7 +2,24 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 4 Oct 2026 · Product version 0.14.0
+Last checked: 4 Oct 2026 · Product version 0.14.1
+
+## 0.14.1 — 4 Oct 2026 {#cl-0-14-1}
+
+Release entry: [0.14.1](/admin/releases#release-0-14-1) (platform owner only)
+
+**What changed for users**
+- **The crowd cannot slow the officials:** the public pages and the big screen answer from a shared copy at most about 3 seconds old (a published result shows within seconds, a held one never shows until it is released); when very many people ask at once they get a calm **Updating…** page that asks again by itself. The head judge's console, the judges' and spotters' phones, the Flag view and the organiser screens never go through it. "Last seen" is written at most once a minute.
+- **Withdrawn after the draw is locked** turns the rider's seat into a **walkover** (Riders step); **Remove** of a rider who has a seat is refused and points to Withdrawn.
+- **Resets during a yellow are refused** (“Abort the start sequence first.”) and a reset never leaves a heat armed.
+- **Flags off:** a heat whose pre-start is over keeps running (only the strip is hidden); a paused yellow can be switched off.
+- **Joining:** wrong PINs are counted per phone and connection, so strangers can never lock the officials out; a right PIN from a clean phone always works.
+- **Trick base:** **+ Add block** shows the family names of the version the event uses; the panel starts from the stored layout.
+- **Console:** the Impression card stays a card at 1280 px and wider with 3, 4 and 5 riders.
+- **Big screen and Flag view:** nothing is ever cut with “…”; the header fits the width, the event name wraps, the heat pill shows the whole heat name, the Day / Dark button has its own corner, every page is fitted to the screen.
+
+**Manual pages updated**
+- [Riders step](screens/organiser-riders.md), [Head judge console (laptop)](screens/console-laptop.md), [Flags](screens/flags.md), [Join page](screens/public-join.md), [Public event pages](screens/public-event.md), [Divisions step](screens/organiser-divisions.md), [Big screen](screens/big-screen.md), [Resets and undo](resets-and-undo.md); the errors appendix and troubleshooting index (regenerated).
 
 ## 0.14.0 — 4 Oct 2026 {#cl-0-14-0}
 
