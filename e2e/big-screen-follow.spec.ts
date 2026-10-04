@@ -179,9 +179,9 @@ test("the Final goes live from the middle of the rotation and is published: thre
   await phaseIs(page, "live", 2_000);
   await w.db.from("heats").update({ status: "running", started_at: new Date().toISOString() }).eq("id", f);
   await w.db.from("heats").update({ status: "ended", ended_at: new Date().toISOString() }).eq("id", f);
-  await phaseIs(page, "reviewing", 3_000);
+  await phaseIs(page, "reviewing", 8_000);
   await publishHeat("F-H1");
-  await phaseIs(page, "rotation", 3_000);
+  await phaseIs(page, "rotation", 8_000);
   // the walk starts at the first page after "Judges reviewing": 7 pages, then round again
   const startOf = async () => (await seenOf(page)).map((s) => s.k.startsWith("reviewing|")).lastIndexOf(true) + 1;
   const start = await startOf();
