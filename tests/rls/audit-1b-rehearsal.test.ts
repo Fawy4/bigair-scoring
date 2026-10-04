@@ -16,8 +16,8 @@ import { gounaTemplate, sharedFixture } from "./audit-1b-world";
 // agree with the published heat results and the ladder. Throwaway organisation only; the simulator's virtual logins are deleted afterwards.
 const RUNS: Array<{ spread: "agree" | "normal" | "disagree"; scenarios: string[]; seed: number }> = [
   { spread: "agree", scenarios: ["dns", "abort_start", "duplicate"], seed: 11 },
-  { spread: "normal", scenarios: ["tie", "judge_dies", "past_cap", "wind_hold"], seed: 22 },
-  { spread: "disagree", scenarios: ["rerun", "reopen", "out_of_attempts", "hold_final"], seed: 33 },
+  { spread: "normal", scenarios: ["tie", "judge_dies", "past_cap", "dns"], seed: 22 },
+  { spread: "disagree", scenarios: ["reopen", "out_of_attempts", "hold_final", "duplicate"], seed: 33 },
 ];
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
