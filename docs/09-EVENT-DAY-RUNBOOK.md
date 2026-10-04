@@ -55,7 +55,16 @@
 | A page shows “This page could not be shown” | **Try again**; send the error reference to the owner (manual: Troubleshooting) |
 
 ## G. After the event
-Make sure every heat is published and every held final released; the public Results, Ladder and Placings pages stay online — share the link; leave notes with the **Note** button for what to change. (Results export, audit-log export and “Duplicate event” are not built yet: see docs/STATUS.md, owed.)
+Make sure every heat is published and every held final released; the public Results, Ladder and Placings pages stay online — share the link; leave notes with the **Note** button for what to change. (Audit-log export, “Duplicate event” and **Restore from backup** are not built yet: see docs/STATUS.md, owed.)
+
+### G1. Results and backup files (Export 1) — the procedure
+The results of a real event must never live in one place only. Who: the organiser (all three files) or the head judge on the laptop console (the first two). Nothing here changes the event; it can be done during a running heat.
+1. **After every published heat** (or every few): Go live → **Results and backup** → **Download results** (or the same button on the head console, under the wind call). It is a spreadsheet that opens in Excel: one row per rider per published heat, every attempt, total and place, then the placings and the ladder seats.
+2. **At the end of each day**, in this order: tick **Include heats under review (draft)** and press **Download results** (the safety copy: unpublished heats come in labelled DRAFT); press **Open printable results** and **Print or save as PDF**; press **Download event backup**.
+3. **Keep each file in two places that are not the event laptop** (own e-mail plus a shared folder or cloud drive). The backup holds riders' contact details: private, never in a group chat. It holds no PINs or passwords.
+4. **Check** once: the spreadsheet opens in Excel with names right; the printable page has the event name and “Exported ‹date› ‹time›” at the top of every page; the backup opens in a text editor and shows the event's name.
+5. **Restore from backup does not exist yet.** If the worst happens the backup is for a rebuild by a developer (docs/EXPORT-FORMAT.md, "How an import would work"); the printable results and the spreadsheet are the paper copy of every released result.
+6. A refusal in words (“Only an organiser of this event or its head judge can download the results.”, “This event is not public yet …”) is explained in the manual's Errors page; judges, spotters, announcers and observers never see the buttons.
 
 ## H. One-page checklist (print)
 ☐ DB awake (Health) ☐ Event created, branded, published ☐ Divisions + presets ☐ Riders confirmed & seeded ☐ Officials, panels, PIN cards ☐ Draws generated, printed and locked before the first heat ☐ Plan A active, Plan B ready, exported ☐ Simulation rehearsed and deleted ☐ Blank paper sheets printed ☐ Devices charged/installed ☐ Big screen tested ☐ Briefings done ☐ First start pinned ☐ Hotspot ready ☐ Go live: Ready to run

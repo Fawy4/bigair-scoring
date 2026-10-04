@@ -2,7 +2,7 @@
 
 Every word the product uses that a newcomer might not know, alphabetically, one line each with a beach example.
 
-Last checked: 3 Oct 2026 · Product version 0.13.0
+Last checked: 4 Oct 2026 · Product version 0.14.0
 
 | Term | Meaning, with a beach example |
 |---|---|
@@ -11,6 +11,7 @@ Last checked: 3 Oct 2026 · Product version 0.13.0
 | {#g-advances-without-riding} **Advances without riding** | A rider who goes to the next round without a heat (when the field does not divide evenly). *Top seed 1 advances without riding in a field of 13.* |
 | {#g-attempt} **Attempt** | One trick by one rider, logged by the spotter, landed or crashed. *Red's 4th attempt: a landed double backroll.* |
 | {#g-attempt-cap} **Attempt cap** | The most attempts a rider may log in a heat (“Attempts allowed per rider per heat”). *7: the 8th is refused; the head judge can add one with a reason.* |
+| {#g-backup} **Backup (event backup)** | One file with the whole event, downloaded from Go live, to keep somewhere safe. It holds no PINs or passwords. Restoring from it does not exist yet. *`arrow-launch-backup-2026-10-04-1800.json`, sent to yourself at the end of day 1.* |
 | {#g-audit-log} **Audit log** | The list of who changed what, when and why; it can never be edited. *“Edited attempt Red 3 — paper sheet” by the head judge at 11:42.* |
 | {#g-base-trick} **Base trick** | The main movement of a trick (a family of the trick base). *Backroll, frontroll, kiteloop, board-off.* |
 | {#g-best-n} **Best-N** | Only a rider's N best tricks count toward the total. *Best 3: a rider who landed 6 tricks is scored on the 3 highest.* |
@@ -23,10 +24,12 @@ Last checked: 3 Oct 2026 · Product version 0.13.0
 | {#g-countdown} **Countdown (break)** | On the head console between heats: “Next: R1 · H3 · starts in 4:30”. *+1 min gives the riders one more minute.* |
 | {#g-counted-trick} **Counted trick** | A trick whose score goes into the total. *Green boxes in the public results are counted; grey ones are not.* |
 | {#g-crash} **Crash** | An attempt that was not landed; it scores nothing and does not count (unless the rules count it as zero). *Spotter taps CRASH; the result box is red.* |
+| {#g-csv} **CSV (results spreadsheet)** | A plain table file that opens in Excel: the results of every published heat, one row per rider per heat. *Pressed after every published heat, so a copy exists outside the product.* |
 | {#g-custom-ladder} **Custom ladder** | A ladder you draw yourself, round by round, with a checker. *24 riders: 8 heats of 3, then 4, 2, 1 heats of 2.* |
 | {#g-direction} **Direction** | Left or right, logged with the trick. *Left backroll, right backroll: “Left 3 · Right 2”.* |
 | {#g-division} **Division** | A group that ranks together with its own rules. *Pro Men, Pro Women, Youth U16.* |
 | {#g-dns} **DNS / DNF / DSQ** | Did not start (ranked last) / did not finish (keeps or loses the scores, per rules) / disqualified (ranked last). *Blue never launched: DNS.* |
+| {#g-draft-copy} **Draft copy** | A heat added to a results file by the organiser's tick box *Include heats under review (draft)*, labelled DRAFT; it is not public and its numbers can still change. *The end-of-day safety copy shows heat 5, still under review, as DRAFT.* |
 | {#g-draw} **Draw** | Riders dealt into the heats of the ladder, then locked. *Seeds 1–4 go to four different Round 1 heats.* |
 | {#g-drift} **Drift** | How far the day is behind or ahead of the plan as written. *“6 min late” (amber), “Running about 6 min late” on the public timetable.* |
 | {#g-event-code} **Event code** | The last part of the event's address; officials type it with their PIN; anyone can type it on the home page. *arrow-gouna.* |

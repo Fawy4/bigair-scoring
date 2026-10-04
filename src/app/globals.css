@@ -541,3 +541,34 @@ html[data-observing] select:disabled {
   --bs-line: rgb(11 14 15 / 0.35);
   --bs-ring: #0b0e0f;
 }
+
+/* The printable results (/export/<event>/print): colours print, a heat is never cut between pages, the DRAFT watermark is a faint diagonal word behind the rows. */
+.results-print,
+.results-print * {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.results-print thead {
+  display: table-header-group;
+}
+.results-print-watermark {
+  transform: rotate(-24deg);
+  color: var(--beach-crash);
+  opacity: 0.14;
+  z-index: 1;
+}
+@media print {
+  .results-print-heat {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .results-print-division {
+    break-before: page;
+  }
+  .results-print-division:first-child {
+    break-before: auto;
+  }
+  @page {
+    margin: 12mm;
+  }
+}

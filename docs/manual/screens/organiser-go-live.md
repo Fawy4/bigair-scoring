@@ -2,7 +2,7 @@
 
 Step 7 of an event and its home (/org/events/‹id›): is the event ready, what is on now and next, the wind call, the quick actions (Hold, Resume at, Shift, head console, big screen, Reset), today's timetable, and the links to share.
 
-Last checked: 3 Oct 2026 · Product version 0.13.0
+Last checked: 4 Oct 2026 · Product version 0.14.0
 
 ## What it is for {#gl-purpose}
 
@@ -31,6 +31,7 @@ The start of event day. Read the checklist top to bottom, fix what is red, then 
 | **Today’s timetable** | Start, heat, state (done, live, next, est., on hold, pinned, cancelled) and the projected finish; **Open the run order**. |
 | **Officials' join page**, **Public event page** | Each with **Copy link**, **Open** and a QR code to show on a phone or print. |
 | **Print official cards** | The officials' PIN / QR cards. |
+| **Results and backup** (a card) | **Download results** (a spreadsheet of every published heat), **Open printable results** (a page to print or save as PDF), the organiser-only tick box **Include heats under review (draft)** and **Download event backup** (the whole event in one file). Not shown on a practice (simulation) event. What each file holds and when to press it: [Exporting results and backups](../exporting.md). Restoring from a backup does not exist yet. |
 
 A grey quick action says why under it: “No run order is active for today. Activate one in Run order.”, “The run order is already on hold.”, “Nothing is on hold.”, “The run order is on hold. Resume it first.” ([dependency map](../dependencies.md#dep-hold)).
 

@@ -12,6 +12,31 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.14.0 — 4 Oct 2026 {#release-0-14-0}
+
+PR: #34
+
+### What changed
+- **Download results** on the Go live step (and on the head judge's laptop console): a spreadsheet (CSV, opens in Excel) with one row per rider per published heat — division, round, heat, Rider label, name, Lycra, each attempt with its score, Landed / Crashed and whether it counted, the Impression / Variety score, the heat total, the place, the result version, who published it and when — then the division placings so far and the ladder seats.
+- **Open printable results**: a page in a new tab showing every published heat exactly as the public Results page does (same pieces, so they cannot disagree), division by division, newest heat first, with the event name and the export date and time at the top of every page. Print it or save it as PDF.
+- Only what the public sees is in the files. **Include heats under review (draft)** (organisers only) adds heats under review or held back, labelled DRAFT, for an end-of-day safety copy.
+- **Download event backup** (Go live, organisers only): one file `‹event›-backup-‹date›-‹time›.json` with the whole event — settings, divisions with scoring and trick base, riders, officials (names and roles, never PINs or passwords), the draw, run orders, heats, attempts, scores, every result version, the audit log and the notes. **Restoring from a backup does not exist yet.**
+- Judges, spotters, announcers, observers and the public never see the buttons and are refused by the addresses. A download changes nothing in the event; its only trace is one audit-log line. `docs/EXPORT-FORMAT.md` describes both files for the session that will build the restore.
+- **Database update** (migration `20261025100000_export_audit.sql`, already applied to the hosted project): two small functions, `export_role` and `log_export`. Without them the buttons answer “The file could not be made.”
+
+### What to test
+- [ ] On a test event with two published heats, open **Go live** on a laptop. In the **Results and backup** card press **Download results**. Open the file in Excel: you see one row per rider per heat, every attempt's score, each rider's total and place, then “Placings so far” and “Ladder seats”.
+- [ ] Tick **Include heats under review (draft)** (tap **?** to read what it does) and press **Download results** again: a heat that is under review appears, labelled DRAFT; unticked, it is not in the file.
+- [ ] Press **Open printable results**: a new tab shows the heats like the public Results page, with the event name and “Exported ‹date› ‹time›” at the top; use **Print or save as PDF** and check the header repeats on every page.
+- [ ] Press **Download event backup**: one file downloads; open it in a text editor and recognise your event (its name, a division, a rider) with no PIN anywhere.
+- [ ] Open the head judge console on the laptop with the head judge's PIN: **Download results** and **Open printable results** are under the wind call; there is no backup button and no draft box. Press **Download results** while a heat is running: the heat is not disturbed.
+- [ ] On a judge's phone (and a spotter's, and an observer's) look at every screen: no download button anywhere. Open `‹live address›/export/‹event id›/results.csv` on the judge's phone: it says “Only an organiser of this event or its head judge can download the results.”
+- [ ] Open the public event page as a visitor: no download button on any page.
+
+### Known issues
+- The backup holds some fields named `key`, `content_hash` or `client_key`. They are not secrets: palette colour names, fingerprints of the public scoring-model presets, and the random numbers that stop a score being saved twice. No PIN, PIN hash, QR token, link or password is in either file (searched on a test event with planted values).
+- A restore from a backup does not exist.
+
 ## 0.13.1 — 4 Oct 2026 {#release-0-13-1}
 
 PR: #33

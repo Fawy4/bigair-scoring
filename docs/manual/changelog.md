@@ -2,7 +2,21 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 4 Oct 2026 · Product version 0.13.1
+Last checked: 4 Oct 2026 · Product version 0.14.0
+
+## 0.14.0 — 4 Oct 2026 {#cl-0-14-0}
+
+Release entry: [0.14.0](/admin/releases#release-0-14-0) (platform owner only)
+
+**What changed for users**
+- **Download results** (Go live step, and the head judge's laptop console): a spreadsheet of every published heat — each attempt with its score, Landed / Crashed and whether it counted, the Impression / Variety score, total, place, result version, who published and when — followed by the division placings and the ladder seats.
+- **Open printable results**: the public Results page's own heats, division by division, newest heat first, with the event name and the export date and time on every page; print it or save it as PDF.
+- **Include heats under review (draft)**: organiser-only tick box that adds heats under review or held back, labelled DRAFT.
+- **Download event backup** (Go live, organisers only): the whole event in one file, without any PIN or password. Restoring from a backup does not exist yet.
+- Each download writes one line to the audit log. Nothing else is changed by a download.
+
+**Manual pages updated**
+- New: [Exporting results and backups](exporting.md). Updated: [Organiser: Go live](screens/organiser-go-live.md), [Head judge console on a laptop](screens/console-laptop.md), [Event day](event-day.md), [Roles](roles.md), [Glossary](glossary.md), [Errors and refusals](errors.md), [Troubleshooting](troubleshooting.md). Screenshots: the Go live card, the console buttons and the printable page.
 
 ## 0.13.1 — 4 Oct 2026 {#cl-0-13-1}
 

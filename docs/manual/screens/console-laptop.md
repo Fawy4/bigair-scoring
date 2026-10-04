@@ -2,7 +2,7 @@
 
 The head judge's working screen at /head/‹event› on a laptop or tablet (1280 px and wider): division tabs, the heat's timer and buttons, the run order with times, the break countdown, the live score table, Publish and everything around it.
 
-Last checked: 3 Oct 2026 · Product version 0.13.0
+Last checked: 4 Oct 2026 · Product version 0.14.0
 
 ## What it is for {#cl-purpose}
 
@@ -32,6 +32,7 @@ The head judge (the head judge seat, or an organiser of the event — an organis
 | **Run order · ‹division›** | One line per heat: “R1 · H2 · planned 14:05 · started 14:11 · Ended”, or “R1 · H3 · est. 14:35”; **Next** shows the next heat. Tap a line to select the heat. **Other divisions** folds the rest. |
 | **Hold**, **Resume at** (+ restart time), **Shift +5**, **Shift +10** | The same run-order actions as Go live; also usable between heats. |
 | **Wind call** | Opens the wind-call panel (red / amber / green, message, Set, Clear). |
+| **Download results**, **Open printable results** | Under the wind call, on the laptop console only (not on a phone, not for judges, spotters, announcers or observers, not on a practice event). The spreadsheet and the printable page of every published heat; pressing them changes nothing for the officials, even during a heat. The draft box and the backup are the organiser's, on [Go live](organiser-go-live.md). See [Exporting results and backups](../exporting.md). |
 
 ## The middle: riders and the score table {#cl-middle}
 

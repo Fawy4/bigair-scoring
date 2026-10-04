@@ -12,6 +12,7 @@ import { buildHeatModel, type DivisionRowDb, type HeatRowDb, type RoundRowDb } f
 import { rowToPlan, todayIn, type PlanRow } from "@/lib/schedule/plans";
 import { copy } from "@/lib/ui-copy";
 import { DashboardView, type DashboardRow } from "./dashboard-view";
+import { ExportCard } from "./export-card";
 
 export const metadata = { title: copy.layout.dashboard };
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export const dynamic = "force-dynamic";
 export default async function EventDashboard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase } = await getOrgContext();
-  const { data: event } = await supabase.from("events").select("id, name, slug, status, timezone, start_date, end_date, location, settings").eq("id", id).maybeSingle();
+  const { data: event } = await supabase.from("events").select("id, name, slug, status, timezone, start_date, end_date, location, settings, is_simulation").eq("id", id).maybeSingle();
   if (!event) notFound();
   const tz = event.timezone || "Africa/Cairo";
   const today = todayIn(tz, Date.now());
@@ -92,6 +93,7 @@ export default async function EventDashboard({ params }: { params: Promise<{ id:
         flagsOn={parseEventSettings(event.settings).flags.enabled}
         windBannerOn={parseEventSettings(event.settings).windCallBanner}
       />
+      <ExportCard eventId={id} isSimulation={Boolean(event.is_simulation)} />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { builtInSchemes } from "../src/lib/schemas/identification";
 import { expect, test } from "./base";
 import { record } from "./cleanup";
 import { createOrganiser } from "./organiser";
+import { createPublicWorld } from "./public-world";
 
 /**
  * The manual's screenshots (docs/manual/img), retaken with `npm run manual:shots` after every change (docs/manual/README.md, the update rule).
@@ -574,6 +575,29 @@ test("manual screenshots: observer", async ({ page, browser }) => {
       const { data } = await db.from("sim_seats").select("virtual_user").eq("event_id", simId);
       for (const r of data ?? []) if (r.virtual_user) await db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
     }
+    await w.cleanup();
+  }
+});
+
+/**
+ * Export 1: the head judge's laptop console with its two download buttons (a real, not a simulated, event: a practice event has none), the Go live step's
+ * Results and backup card and the printable results. Its own throwaway organisation. `npm run manual:shots -- -g "export"` runs it alone.
+ */
+test("manual screenshots: export", async ({ page }) => {
+  test.setTimeout(5 * 60_000);
+  mkdirSync(OUT, { recursive: true });
+  const w = await createPublicWorld();
+  try {
+    await w.signInAs(page, "head", `/head/${w.eventId}`);
+    await expect(page.getByTestId("export-results")).toBeVisible({ timeout: 60_000 });
+    await shot(page, "export-console", LAPTOP, 1500);
+    await w.org.signIn(page, `/org/events/${w.eventId}`);
+    await expect(page.getByTestId("export-card")).toBeVisible({ timeout: 60_000 });
+    await shot(page, "export-go-live", LAPTOP, 1500, false, () => page.getByTestId("export-card").scrollIntoViewIfNeeded());
+    await open(page, `/export/${w.eventId}/print`);
+    await expect(page.getByTestId("results-print")).toBeVisible({ timeout: 60_000 });
+    await shot(page, "export-print", LAPTOP, 1500, true);
+  } finally {
     await w.cleanup();
   }
 });
