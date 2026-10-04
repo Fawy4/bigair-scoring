@@ -1288,3 +1288,24 @@ See the release entry 0.15.0 (`docs/RELEASES.md`). `npm run typecheck && npm tes
 
 ### How to test
 Release entry 0.15.1 (`docs/RELEASES.md`). `npm test`; `npm run test:rls -- tests/rls/speed-loaders.test.ts`; measuring: `npm run build`, start with `npx next start -p 3200`, then `SPEED_MEASURE=1 E2E_BASE_URL=http://localhost:3200 npx playwright test e2e/speed.spec.ts`.
+
+## Polish 3 – dry run 1 findings (branch `polish-3`, 4 Oct 2026, 0.16.0)
+
+### Done
+1. **Skip to end of heat** ends the heat after the virtual officials are done (`skipInside` in `src/lib/simulator/tick.ts`; refusals in `src/lib/simulator/skip.ts`), sends it to review when every sheet is in, and does not publish: a `reviewHold` in the simulator's config keeps the virtual head judge from publishing that heat; "End heat and publish" clears it. The button reads "Fast-forwarding…" while it works.
+2. **Reasons are optional everywhere** (`src/lib/reason.ts`: an empty box is logged as "no reason given"). Server actions fill it in, the database's own minimum is untouched; the Publish override takes an explicit `override` flag (`publish-core.ts`). Unused "write a reason" sentences were removed from `ui-copy.ts` and the manual lists.
+3. **Auto-play respects the break** (`src/lib/simulator/break-wait.ts`, using the engine's `breakCountdown` with the speed; the public timetable shows the same speed-scaled start for the next heat, `src/lib/public/timetable.ts`).
+4. **Simulator left rail:** the cause was the page's own server-action polling queueing the router behind it; on `/simulate` the frame navigates with the browser (`src/lib/org/hard-navigation.ts`).
+5. **Clear this plan** (`clearPlan` in `src/lib/engine/schedule/run-order.ts`, migration `20261102100000_polish3_clear_plan.sql`, button in `schedule/clear-plan-button.tsx`).
+6–8. **Follow the heat:** one clock, the live heat drawn with the same row as Results (`FollowRider`), `livePages` split, no page counter.
+9. **Refresh from event** (migration `20261102100100_polish3_sim_refresh.sql`, `settings-panel.tsx`): event settings and each division's scoring model/overrides/live settings, matched by name, before any heat has started.
+10. **Event step:** placeholder from the divisions' current names (`src/lib/org/impression-names.ts`); `errorSentence(message, { impressionName })`.
+
+### Not done / to confirm
+- Both migrations were applied to the hosted project (`npm run db:apply`) while working; `db:types` was rewritten.
+- Refresh from event does not copy the draw, heat lengths, format or run order.
+- "Clear actual times" never had a reason box, so nothing changed there. The `/design` preview consoles were left as mock-ups.
+- The browser tests ran against the dev server with one worker and no retries (see the pull request).
+
+### How to test
+Release entry 0.16.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; browser: `e2e/simulator-polish3.spec.ts`, `e2e/clear-plan.spec.ts`, `e2e/simulator-polish2.spec.ts` (Polish 3 item 1), `e2e/event-reset.spec.ts`, `e2e/live-head.spec.ts`, `e2e/impression-name.spec.ts`, `e2e/big-screen-follow.spec.ts`.

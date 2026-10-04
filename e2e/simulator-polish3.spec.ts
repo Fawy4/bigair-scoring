@@ -155,3 +155,36 @@ test("item 9: the simulator follows the real event's attempt limit after 'Refres
     await w.cleanup();
   }
 });
+
+test("item 3: auto-play waits for the break — 4 min at ×10 with a 1-min pre-start: the yellow begins 18 s after the heat ended, not at once", async ({ page }) => {
+  test.setTimeout(600_000);
+  const w = await createLiveWorld({ flags: true });
+  const simIds: string[] = [];
+  try {
+    await w.db.from("schedule_plans").update({ defaults: { breakAfterHeatMin: 4, breakAfterRoundMin: 4, readyCallMin: 0 } as never }).eq("id", w.planId);
+    const simId = await makeSimulation(page, w);
+    simIds.push(simId);
+    await startAt(page, 10);
+    const heats = async () => (await w.db.from("heats").select("id, status, ended_at, published_at, armed_at, started_at, number").eq("event_id", simId).order("number")).data ?? [];
+    // heat 1 runs (1 minute at ×10), the virtual officials score it and the virtual head judge publishes it
+    await expect.poll(async () => (await heats()).find((h) => h.number === 1)?.status, { timeout: 240_000 }).toBe("published");
+    const first = (await heats()).find((h) => h.number === 1)!;
+    // the break: nothing is armed at once
+    await page.waitForTimeout(4_000);
+    expect((await heats()).find((h) => h.number === 2)!.armed_at, "not armed at once").toBeNull();
+    await expect(page.getByTestId("sim-line")).toContainText("Break:");
+    await expect.poll(async () => (await heats()).find((h) => h.number === 2)?.armed_at ?? (await heats()).find((h) => h.number === 2)?.started_at, { timeout: 60_000 }).toBeTruthy();
+    const second = (await heats()).find((h) => h.number === 2)!;
+    const yellowAt = Date.parse((second.armed_at ?? second.started_at)!);
+    const afterEnd = (yellowAt - Date.parse(first.ended_at!)) / 1000;
+    const afterPublish = (yellowAt - Date.parse(first.published_at!)) / 1000;
+    // 4 min / 10 = 24 s of break; the yellow (1 min / 10 = 6 s) ends at that start, so it begins 18 s after the heat ended (a tick is 2 s)
+    expect(afterEnd, "the yellow begins about 18 s after the heat ended").toBeGreaterThanOrEqual(17);
+    expect(afterEnd).toBeLessThanOrEqual(23);
+    expect(afterPublish, "and not at once after the publish").toBeGreaterThan(8);
+    await page.getByTestId("sim-stop").click();
+  } finally {
+    await removeSimulatorUsers(w, simIds);
+    await w.cleanup();
+  }
+});

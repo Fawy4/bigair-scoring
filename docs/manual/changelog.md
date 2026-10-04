@@ -2,7 +2,18 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 4 Oct 2026 · Product version 0.15.1
+Last checked: 4 Oct 2026 · Product version 0.16.0
+
+## 0.16.0 — 4 Oct 2026 {#cl-0-16-0}
+
+Release entry: [0.16.0](/admin/releases#release-0-16-0) (platform owner only)
+
+**What changed for users**
+- **Skip to end of heat** now ends the heat (flag red, clock 0:00) and leaves it under review, unpublished. **Reasons are optional** wherever one is asked for (“no reason given” in the audit log). The simulator's auto-play **waits for the break**; its **left rail works**; **Refresh from event** brings the simulation up to date with the real event.
+- **Clear this plan** on the Run order step. **Follow the heat** shows one clock, every trick's score as it lands, and no page counter. The Event step's empty impression-name field shows the division's name.
+
+**Manual pages updated**
+- [Simulator](screens/simulator.md), [Head judge console (laptop)](screens/console-laptop.md), [Run order](screens/organiser-run-order.md), [Big screen](screens/big-screen.md), [Event step](screens/organiser-event.md), [Divisions](screens/organiser-divisions.md), [Draw](screens/organiser-draw.md), [Admin: trick base](screens/admin-trick-base.md), [Flags](screens/flags.md), [Resets and undo](resets-and-undo.md), [Dependencies](dependencies.md), [Event day](event-day.md), [Glossary](glossary.md), the errors appendix.
 
 ## 0.15.1 — 4 Oct 2026 {#cl-0-15-1}
 
