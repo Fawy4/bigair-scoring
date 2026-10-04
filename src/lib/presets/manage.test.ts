@@ -5,7 +5,6 @@ import { canHideBuiltIn, canRetire, inUseBy, nameAfterRename, nextVersionOf, typ
 const row = (id: string, key: string, name: string, version: number, org: string | null, extra: Partial<PresetRow> = {}): PresetRow => ({ id, key, name, version, organisation_id: org, json: { name, v: version }, ...extra });
 
 describe("in-use check (delete is refused while a live division uses the preset)", () => {
-  const rows = [row("o1", "mine", "Mine", 1, "org"), row("o2", "mine", "Mine", 2, "org"), row("o3", "other", "Other", 1, "org")];
   const use = (division: string, event: string, scoring: string | null, archived = false, format: string | null = null): DivisionUse => ({ divisionName: division, eventName: event, eventArchived: archived, scoringModelId: scoring, formatTemplateId: format });
 
   it("names the division and the event, whichever version of the preset it uses", () => {
