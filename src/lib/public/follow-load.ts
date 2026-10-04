@@ -1,6 +1,7 @@
 import { isArmedNow, overlayArmedRow } from "@/lib/live/flags";
 import { requestOrigin } from "@/lib/platform/origin";
-import { buildFollowPages, followPhase, nextLine, walkKeyOf, type FollowPage, type FollowPhase } from "./follow-model";
+import type { AttemptDisplay } from "@/lib/live/result-shading";
+import { buildFollowPages, followPhase, livePages, nextLine, walkKeyOf, type FollowPage, type FollowPhase } from "./follow-model";
 import { publicFlagData, type PublicFlagData } from "./flag-data";
 import { buildLadder, type LadderRoundVM } from "./ladder-model";
 import { liveRows } from "./live-model";
@@ -14,7 +15,10 @@ import { eventUrl } from "./share";
 export interface FollowHeat {
   id: string;
   title: string;
-  riders: RiderRowVM[];
+  /** The riders in the fewest pages that fit at the TV size (the pages rotate), drawn like the public Live tab: total, formula line and each trick. */
+  pages: RiderRowVM[][];
+  /** How an attempt chip reads (score alone, number and score, or trick and score): the division's setting, as on the public pages. */
+  mode: AttemptDisplay;
   /** Live totals are shown (the event's live-scores switch allows it); otherwise the riders are listed without totals. */
   scoresShown: boolean;
   /** The heat clock's inputs; `status` is "scheduled" while the yellow is up (the clock stands at the full length). */
@@ -71,7 +75,7 @@ export async function loadFollowPayload(slug: string): Promise<FollowPayload | n
       const like = { id: row.id, status: row.status, duration_sec: row.duration_sec, started_at: row.started_at, paused_at: row.paused_at, paused_total_sec: row.paused_total_sec, armed_at: row.armed_at ?? null, prestart_sec: row.prestart_sec ?? null, armed_paused_at: row.armed_paused_at ?? null, time_scale: row.time_scale ?? 1 };
       const played = overlayArmedRow(like, nowMs);
       const status = isArmedNow(like, nowMs) ? "scheduled" : played.status === "paused" ? "paused" : played.status === "running" ? "running" : "scheduled";
-      heat = { id: tab.id, title: tab.title, riders, scoresShown, clock: { startedAt: played.started_at, durationSec: row.duration_sec, pausedAt: row.paused_at, pausedTotalSec: row.paused_total_sec, status } };
+      heat = { id: tab.id, title: tab.title, pages: livePages(riders, tab.mode, phase.kind === "reviewing"), mode: tab.mode, scoresShown, clock: { startedAt: played.started_at, durationSec: row.duration_sec, pausedAt: row.paused_at, pausedTotalSec: row.paused_total_sec, status } };
     }
   }
 

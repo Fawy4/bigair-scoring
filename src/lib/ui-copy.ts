@@ -3054,7 +3054,6 @@ export const copy = {
       results: "Results",
       ladder: "Ladder",
       publishedAt: (time: string) => `published ${time}`,
-      partOf: (part: number, parts: number) => `page ${part} of ${parts}`,
       next: (title: string, time: string | null) => `Next: ${title}${time ? ` · ${time}` : ""}`,
       est: (time: string) => `est. ${time}`,
       reconnecting: "Reconnecting",

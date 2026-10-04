@@ -50,3 +50,66 @@ test("item 4: on the simulator page the left rail opens the step you click, and 
     await w.cleanup();
   }
 });
+
+test.describe("Follow the heat shows every trick's score as it lands (items 6, 7, 8)", () => {
+  test.use({ viewport: { width: 1920, height: 1080 } });
+  test("simulation at ×20: one clock, a chip per trick with its score, no page counter; a chip reaches the TV within a few seconds of the public Live page", async ({ page, context }) => {
+    test.setTimeout(600_000);
+    const w = await createLiveWorld({ flags: true });
+    const simIds: string[] = [];
+    try {
+      const simId = await makeSimulation(page, w);
+      simIds.push(simId);
+      const slug = (await w.db.from("events").select("slug").eq("id", simId).single()).data!.slug as string;
+      // both pages count their score chips every 50 ms and keep the moment each count was first reached
+      const counter = () => {
+        const seen: Record<number, number> = {};
+        (window as unknown as { __chips: Record<number, number> }).__chips = seen;
+        setInterval(() => {
+          const n = document.querySelectorAll('[data-testid="score-box"]').length;
+          for (let k = 1; k <= n; k++) if (!(k in seen)) seen[k] = Date.now();
+        }, 50);
+      };
+      // "View as → screen" gives this browser the organiser's preview of the simulation (a simulation is never public)
+      const [tv] = await Promise.all([context.waitForEvent("page"), page.getByTestId("view-screen").click()]);
+      await tv.waitForLoadState("domcontentloaded");
+      await tv.addInitScript(counter);
+      const pub = await context.newPage();
+      await pub.addInitScript(counter);
+      await tv.goto(`/screen/${slug}/follow`);
+      await pub.goto(`/e/${slug}/live`);
+      await startAt(page, 20);
+      await expect(tv.getByTestId("follow-live-page")).toBeVisible({ timeout: 240_000 });
+      // item 6: one clock. The big black "left" clock is gone; the flag pill with the time stays
+      await expect(tv.getByTestId("heat-clock")).toHaveCount(0);
+      await expect(tv.getByTestId("screen-flag-frame")).toBeVisible();
+      // item 7: a chip per trick, with the total and the formula line, as the public Live tab
+      await expect(tv.getByTestId("score-box").first()).toBeVisible({ timeout: 240_000 });
+      await expect(tv.getByTestId("follow-formula").first()).toHaveText(/^[\d.]+ = tricks [\d.]+ \+ \w[\w \/]* [\d.]+/);
+      await expect(tv.getByTestId("follow-total").first()).toBeVisible();
+      await expect.poll(async () => tv.getByTestId("score-box").count(), { timeout: 120_000 }).toBeGreaterThan(2);
+      // nothing is cut or scrolled: a heat that does not fit is split across pages, never shrunk
+      for (let i = 0; i < 6; i++) {
+        const overflow = await tv.getByTestId("follow-body").evaluate((e) => e.scrollHeight - e.clientHeight);
+        expect(overflow, "the page body overflows").toBeLessThanOrEqual(1);
+        await tv.waitForTimeout(700);
+      }
+      // item 8: no "page 1 of 2" anywhere
+      await expect(tv.getByTestId("follow-part")).toHaveCount(0);
+      expect(await tv.getByTestId("follow-body").innerText()).not.toMatch(/page \d+ of \d+/i);
+      // the same chips as the public Live page, and each one reaches the TV within a few seconds of the public page
+      await pub.reload();
+      await expect.poll(async () => pub.getByTestId("score-box").count(), { timeout: 60_000 }).toBeGreaterThan(0);
+      await page.waitForTimeout(4_000);
+      const lag = await Promise.all([tv, pub].map((p) => p.evaluate(() => (window as unknown as { __chips: Record<number, number> }).__chips)));
+      const common = Object.keys(lag[0]).filter((k) => k in lag[1]).map(Number);
+      expect(common.length).toBeGreaterThan(0);
+      // the public page only changes when its own poll fires; the TV asks twice a second. Both read the same shared answer, so the TV is never later than one cache interval (3 s) behind it.
+      for (const k of common.slice(0, 4)) expect(lag[0][k] - lag[1][k], `chip ${k}: TV behind the public page by`).toBeLessThan(4_000);
+      await page.getByTestId("sim-stop").click();
+    } finally {
+      await removeSimulatorUsers(w, simIds);
+      await w.cleanup();
+    }
+  });
+});

@@ -4,7 +4,7 @@ import type { LadderHeatVM, LadderRoundVM } from "./ladder-model";
 import type { BoxVM, HeatVM, RiderRowVM } from "./results-model";
 import type { PublicRow } from "./timetable";
 import type { TimetableHeat } from "./types";
-import { buildFollowPages, followPhase, nextLine, paginateLadder, paginateResults, walkKeyOf, type FollowPage } from "./follow-model";
+import { buildFollowPages, followPhase, nextLine, paginateLadder, livePages, paginateResults, walkKeyOf, type FollowPage } from "./follow-model";
 
 const NOW = Date.parse("2026-10-10T12:00:00Z"); // 14:00 in Cairo (UTC+2 in October? the model only needs a fixed zone)
 const TZ = "Africa/Cairo";
@@ -140,7 +140,7 @@ describe("a Results page is never shrunk to fit: a heat that does not fit is spl
   it("an empty heat still gives one page", () => {
     expect(paginateResults([], "number_score")).toEqual([[]]);
   });
-  it("a heat split in two says so on both pages", () => {
+  it("a heat split in two is two pages, in order (the screen shows no \"page 1 of 2\" counter: the pages simply rotate)", () => {
     const pages = buildFollowPages({ tabs: [tab("h1", at("09:00"), "complete", "d1", [1, 2, 3, 4, 5].map((n) => rider(n)))], ladders: new Map(), nowMs: NOW, timezone: TZ });
     expect(pages.map((p) => (p.kind === "results" ? [p.part, p.parts] : null))).toEqual([[1, 2], [2, 2]]);
   });
@@ -212,5 +212,25 @@ describe("the Follow screen's seconds per page setting", () => {
     const s = EventFormSchema.parse({ ...base, settings: { screenRotateSec: 30 } }).settings;
     expect(s.screenRotateSec).toBe(30);
     expect(s.followRotateSec).toBe(15);
+  });
+});
+
+
+describe("the live heat is drawn like the public Live tab: every rider with the total, the formula and each trick, split rather than shrunk (Polish 3, item 7)", () => {
+  it("a 3-rider heat fits one page; a 5-rider heat with tricks logged is two pages (3 + 2), the same split a Results page makes", () => {
+    expect(livePages([1, 2, 3].map((n) => rider(n, 1)), "number_score", false).map((c) => c.length)).toEqual([3]);
+    expect(livePages([1, 2, 3, 4, 5].map((n) => rider(n, 6)), "number_score", false).map((c) => c.length)).toEqual([3, 2]);
+  });
+  it("riders keep their order and none is lost or repeated", () => {
+    const riders = [1, 2, 3, 4, 5].map((n) => rider(n, 6));
+    expect(livePages(riders, "number_score", false).flat().map((r) => r.entryId)).toEqual(riders.map((r) => r.entryId));
+  });
+  it("while the judges are reviewing, the banner takes room, so fewer riders fit on a page than while the heat runs", () => {
+    const riders = [1, 2, 3].map((n) => rider(n, 5));
+    expect(livePages(riders, "number_score", false).length).toBe(1);
+    expect(livePages(riders, "number_score", true).length).toBeGreaterThan(1);
+  });
+  it("seats with no scores yet (the live-scores switch is off) are one page", () => {
+    expect(livePages([1, 2, 3, 4, 5].map((n) => rider(n, 0, { formula: null, totalLabel: null, boxes: [] })), "number_score", false).length).toBe(1);
   });
 });
