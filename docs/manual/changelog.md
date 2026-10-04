@@ -2,7 +2,19 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 4 Oct 2026 · Product version 0.15.0
+Last checked: 4 Oct 2026 · Product version 0.15.1
+
+## 0.15.1 — 4 Oct 2026 {#cl-0-15-1}
+
+Release entry: [0.15.1](/admin/releases#release-0-15-1) (platform owner only)
+
+**What changed for users**
+- **Faster organiser screens:** each step of the left rail opens in about half a second, **Save** and **Lock draw** answer in well under a second.
+- **Faster console and simulator:** **Start heat sequence**, **Pause**, **Resume**, **Abort** and **+1 min** show at the moment you press them and the database confirms within half a second; a simulator **speed** button looks pressed at once; **Publish** asks the database twice instead of nineteen times and the heat shows as published as soon as the result is stored. A Pause pressed on the console shows on the simulator panel at once.
+- No scoring, ladder or timetable rule changed.
+
+**Manual pages updated**
+- [Head judge console (laptop)](screens/console-laptop.md), [Head judge console (phone)](screens/console-phone.md), [Simulator](screens/simulator.md), [Event step](screens/organiser-event.md). No screen changed its look, so no screenshot was retaken.
 
 ## 0.15.0 — 4 Oct 2026 {#cl-0-15-0}
 

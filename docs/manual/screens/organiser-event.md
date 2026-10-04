@@ -2,7 +2,7 @@
 
 Step 1 of an event (/org/events/‹id›/event, or **+ New event** on the events list): name, dates, place, time zone, branding, what the public sees, timing, registration, the officials' join details, rehearsal and visibility.
 
-Last checked: 4 Oct 2026 · Product version 0.15.0
+Last checked: 4 Oct 2026 · Product version 0.15.1
 
 ## What it is for {#ev-purpose}
 
@@ -37,7 +37,7 @@ Everything that belongs to the whole event rather than one division. Each settin
 | **Rider registration** | **Registration** Open / Closed, **Closing day**, **Closing time**, **Most riders per division**, **Message shown when registration is closed**, and the link to the public registration page (it only works once the event is published). |
 | **Officials’ join details** | The join address and the **Event code**. Every official has their own PIN (made in the Officials step); there is no event-wide PIN. |
 | **Visibility** | **Published: the event is listed on the home page and its public pages work**. Unticked (draft), only your team sees it. |
-| **Create event** / **Save event** | Saves the step. “● Unsaved changes” shows until you save. Problems are highlighted (“Some settings need fixing. They are highlighted below.”). |
+| **Create event** / **Save event** | Saves the step; it answers when it is stored (under a second), and the left rail catches up a moment later. “● Unsaved changes” shows until you save. Problems are highlighted (“Some settings need fixing. They are highlighted below.”). |
 | **Next: Divisions →** | Saves first, then opens Divisions; stays with the error if the save fails. |
 | **Delete or archive this event** | Platform owner only: **Archive event** (hidden everywhere, nothing deleted, **Restore event** brings it back) and **Delete event** (type the web address; only while no result was published). Organisers see “Only platform owners can delete or archive an event here.” |
 

@@ -1272,3 +1272,19 @@ See the release entry 0.14.1 (`docs/RELEASES.md`). `npm test`; `npm run test:rls
 
 ### How to test
 See the release entry 0.15.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; with `npm run dev` running: `npx playwright test e2e/big-screen-follow.spec.ts e2e/big-screen-follow-simulation.spec.ts`.
+
+## Speed 1 – organiser navigation, saves, simulator controls, Publish (branch `speed-1`, 4 Oct 2026, 0.15.1)
+
+### Done
+1. **Measured first** (production build served locally against the hosted project, throwaway organisation, 24 riders, 15 heats; `e2e/speed.spec.ts` with `SPEED_MEASURE=1`, fetch tracer `scripts/measure/trace-fetch.cjs`; numbers in `docs/perf/speed-1-before.json` / `speed-1-after.json`). Where the time went: every step page made 5–7 database requests one after another (auth check in the middleware, memberships, platform role, event, the page's lists, labels, trick base); Save asked the server to redraw the whole page before answering (43 requests); the simulator speed button waited for a 34-request status read; Publish made 19 requests (9 in a row); console buttons waited for the realtime stream.
+2. **Fixed, one commit each:** Publish (one read function + the existing one-transaction write; heat buttons answer at once), step pages (one round each; login read from its token), saves (no revalidatePath; background refresh waits for a quiet moment), simulator (optimistic speed/start/stop, status in one round, realtime on `sim_control`), bundle (QR library on demand), console middleware (no auth-server round trip on /head).
+3. Tests: `src/lib/live/publish-core.test.ts` (calls counted), `src/app/org/(console)/events/actions.test.ts`, `tests/rls/speed-loaders.test.ts` (old reads vs new reads as the organiser; a stranger gets nothing more).
+
+### Not done / decisions for the owner
+- Steps do **not** keep earlier steps' data in the browser (no prefetch / router cache): the Officials step shows judges waiting for approval and the Riders step shows registrations as they arrive, and a cached copy would hide them for minutes. Instead each step asks once and opens in about half a second.
+- `ui-copy.ts` (about 82 kB compressed) is shipped whole with every page; splitting it is its own change.
+- No index was missing for the columns the organiser pages filter by (checked against `pg_indexes`); nothing added.
+- Publish's write is the larger of its two calls and varies with the free database's load (database time itself is about 0.2 s of it).
+
+### How to test
+Release entry 0.15.1 (`docs/RELEASES.md`). `npm test`; `npm run test:rls -- tests/rls/speed-loaders.test.ts`; measuring: `npm run build`, start with `npx next start -p 3200`, then `SPEED_MEASURE=1 E2E_BASE_URL=http://localhost:3200 npx playwright test e2e/speed.spec.ts`.

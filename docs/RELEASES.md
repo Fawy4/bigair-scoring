@@ -12,6 +12,31 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.15.1 — 4 Oct 2026 {#release-0-15-1}
+
+PR: #36
+
+### What changed
+- **Speed pass.** The organiser's screens, the simulator and Publish were taking two to four seconds because each one asked the database six to nine questions one after another. On a throwaway event with 24 riders and 15 heats (production build, the real database): every step of the left rail now opens in about half a second (it was 1.5 to 2.5 seconds), **Save** on the Event step answers in about 0.4 seconds (it was 3.9), **Lock draw** in 0.3, a simulator **speed** button looks pressed at once (it was 3.3 seconds), **Start heat sequence** and **Pause** show on the console at once and the database confirms within half a second (they were 1.6 and 3.5 seconds), and **Publish** asks the database twice instead of nineteen times (3.6 seconds before; about 0.7 to 1.5 seconds now, more when the database is busy).
+- **Nothing about the rules changed.** Scoring, ladder and timetable are exactly as before; the same engine scores the heat and the same transaction writes it. The public pages, the judges, the spotters and the Flag view are untouched.
+- A press on the head judge's console is shown at once and confirmed by the database; if the database refuses, the button goes back and says why. **End heat** and the plain **Start heat** (flags off) are not guessed: they show from the database's answer, a moment later.
+- A **Pause** or **Resume** pressed on the console shows on the simulator panel the moment it is written.
+- The measuring tool used for these numbers is in the repository (`e2e/speed.spec.ts`); the before and after tables are in the pull request.
+
+### What to test
+- [ ] On the live address, open an event and click through the left rail: **Event → Divisions → Riders → Officials → Run order → Go live**. Each step opens in about half a second (under a second), with no blank wait.
+- [ ] Event step: change the event name and press **Save event**. “Event saved” appears in under a second and “● Unsaved changes” goes away; press Save again straight after a second change and it is just as quick.
+- [ ] Draw step on a throwaway division: press **Lock draw**. It says Locked in well under a second.
+- [ ] Simulator panel of a throwaway simulation event: press **×10** (then **×1**). The button looks pressed the moment you press it, and a reload shows the same speed.
+- [ ] Head console of the simulation: **Start heat sequence**, then **Pause**, then **Resume**. Each shows on the console at once (the yellow, the frozen countdown, the countdown going again) and the sentence under the buttons follows within about half a second.
+- [ ] Simulator panel open beside the head console: press **Pause** on the console. The simulator panel says **Paused** within a second without you touching it.
+- [ ] On the head console, end a throwaway heat with all scores in and press **Publish this result** → **Publish**. The heat shows as published (Re-open is available) in about a second.
+- [ ] Press **Publish** on a heat that still has a missing score: the same list of what blocks it appears as before, with the same **Fix** buttons.
+
+### Known issues
+- The numbers in this entry come from the sandbox the work was done in, which reaches the hosted database through a proxy (about 0.15 seconds per round trip); on the real address the same screens should be faster. Publish still waits for the database to write the result (the write is the larger of its two calls), so on a busy free-tier database it can take over a second.
+- The screen text file (`ui-copy.ts`, about 82 kB compressed) is still shipped whole with every page; splitting it is a large change for its own pull request. The steps do not keep earlier steps' data in the browser between clicks (see the pull request for why); each step asks the database once instead.
+- Two foreign-key columns have no index (`sim_seats.viewed_by`, `trick_attempts.possible_duplicate_of`); no organiser screen filters by them, so none was added.
 ## 0.15.0 — 4 Oct 2026 {#release-0-15-0}
 
 PR: #36
