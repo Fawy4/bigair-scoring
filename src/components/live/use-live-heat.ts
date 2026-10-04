@@ -67,6 +67,8 @@ export interface LiveHeatState extends Snapshot {
   refresh: () => Promise<void>;
   /** The active run orders, kept current (a hold or a shift made on another device arrives here). */
   plans: ActivePlan[];
+  /** Puts a change of one heat on the screen at once: a guess before the server answers, then the row the server answered with. The stream confirms it. A row older than the one held is ignored. */
+  patchHeat: (heatId: string, patch: Partial<HeatRow>) => void;
   /** Shows a hold or pins the server has just answered with, before the stream delivers them. */
   applyPlan: (planId: string, hold: Json | null, anchors: Json) => void;
   /** Puts a row the server has just returned (our own attempt, score, impression, flag or sheet) into the list at once, without waiting for the stream. */
@@ -146,6 +148,9 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
         return { ...p, plan: { ...rest, anchors: anchors as Record<string, string>, ...(hold ? { hold: hold as unknown as NonNullable<typeof p.plan.hold> } : {}) } };
       }),
     );
+  }, []);
+  const patchHeat = useCallback<LiveHeatState["patchHeat"]>((id, patch) => {
+    setHeats((l) => l.map((h) => (h.id !== id || (patch.updated_at && h.updated_at && h.updated_at > patch.updated_at) ? h : { ...h, ...patch })));
   }, []);
   useEffect(() => {
     const ch = supabase
@@ -259,5 +264,5 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
     [heatId],
   );
 
-  return { heats, heat, phase, ...shownSnap, apply, plans, applyPlan, connected: up && (typeof navigator === "undefined" || navigator.onLine), submittedHeatIds: submittedMemory.current, refresh };
+  return { heats, heat, phase, ...shownSnap, apply, plans, applyPlan, patchHeat, connected: up && (typeof navigator === "undefined" || navigator.onLine), submittedHeatIds: submittedMemory.current, refresh };
 }
