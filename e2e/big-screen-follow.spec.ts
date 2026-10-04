@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { publishLadderHeat, breakdownOf } from "../tests/rls/public-helpers";
+import { publishLadderHeat } from "../tests/rls/public-helpers";
 import { createPublicWorld, type PublicWorld } from "./public-world";
 
 /**
@@ -78,8 +78,8 @@ test("the data answer: only released heats, panel scores only, never a single ju
   const results = body.payload.pages.filter((p) => p.kind === "results");
   expect(results.map((p) => p.heatId)).toEqual([heatId("R1-H1")]); // heat 1 of the Knockout only
   expect(text).not.toContain("judgeScores");
-  expect(text).not.toContain("9.9"); // a single judge's mark
   const pagesText = JSON.stringify(body.payload.pages);
+  expect(pagesText).not.toContain("9.9"); // a single judge's mark (the clock's own digits are not in the pages)
   expect(pagesText).not.toContain(w.heats[0]); // Pro Men's unpublished heat
   expect(pagesText).not.toContain(w.reseedLadder.heats["R1-H1"]); // the held one
   expect(pagesText).not.toContain("Reseed");
