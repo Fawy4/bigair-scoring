@@ -10,7 +10,7 @@ import { createPublicWorld, type PublicWorld } from "./public-world";
  *   - requests to the app (on Vercel: function invocations for the dynamic pages) and the bytes they returned (browser ← Vercel, compressed);
  *   - requests the browser makes straight to Supabase (officials only; the public pages never do) and their bytes;
  *   - CPU time the app server spent (the Vercel "Active CPU" of those invocations), when NEXT_SERVER_PID is given.
- * The numbers go to the console as "CAPACITY …" lines; the audit's projection uses them. Nothing is asserted beyond "the page polled".
+ * Bytes are the uncompressed response bodies (the wire carries them gzipped, typically 4–6× smaller). The numbers go to the console as "CAPACITY …" lines; the audit's projection uses them. Nothing is asserted beyond "the page polled".
  */
 test.skip(process.env.AUDIT_CAPACITY !== "1", "a measurement, not a check: run with AUDIT_CAPACITY=1");
 let w: PublicWorld;
@@ -31,16 +31,15 @@ const cpuMs = (): number | null => {
 
 async function minuteOf(page: Page, context: BrowserContext, path: string, ms = 60_000) {
   const counts = { app: 0, appBytes: 0, supabase: 0, supabaseBytes: 0, ws: 0 };
-  page.on("requestfinished", async (req) => {
-    const s = await req.sizes().catch(() => null);
-    const n = s ? s.responseBodySize + s.responseHeadersSize : 0;
-    if (/supabase\.co/.test(req.url())) {
-      counts.supabase++;
-      counts.supabaseBytes += n;
-    } else if (!/\/_next\/static\//.test(req.url())) {
-      counts.app++;
-      counts.appBytes += n;
-    }
+  // counted when the request leaves (a refresh that the next one overtakes never "finishes"), bytes from the response body when it arrives
+  page.on("request", (req) => {
+    if (/supabase\.co/.test(req.url())) counts.supabase++;
+    else if (!/\/_next\/static\//.test(req.url())) counts.app++;
+  });
+  page.on("response", async (res) => {
+    const n = (await res.body().catch(() => Buffer.alloc(0))).length;
+    if (/supabase\.co/.test(res.url())) counts.supabaseBytes += n;
+    else if (!/\/_next\/static\//.test(res.url())) counts.appBytes += n;
   });
   page.on("websocket", () => counts.ws++);
   await page.goto(path, { waitUntil: "load" });

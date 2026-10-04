@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { gzipSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startingCopy, startingTarget } from "@/lib/reset/plan";
 import { rerunName } from "@/lib/live/rerun";
 import type { DivisionDraw } from "@/lib/engine/ladder";
-import { ENV_OK } from "./helpers";
+import { anonClient, ENV_OK } from "./helpers";
 import { ago, codeOf } from "./live-helpers";
 import { buildGouna, sharedFixture, type GounaWorld } from "./audit-1b-world";
 
@@ -103,6 +105,20 @@ describe.skipIf(!ENV_OK)("Audit 1b — Gouna ladder on the database: seats fill 
     // the draw stored on the division carries the same result for every heat
     const draw = (await w.f.s.from("divisions").select("draw").eq("id", w.div).single()).data!.draw as DivisionDraw;
     expect(Object.keys(draw.results ?? {})).toHaveLength(15);
+  });
+
+  it("A1b-11 measurement: what one public page refresh reads from the database for a whole Gouna event (15 heats published), raw and gzipped", async () => {
+    const slug = (await w.f.s.from("events").select("slug").eq("id", w.f.ids.evA1).single()).data!.slug as string;
+    const a = anonClient();
+    const sizes: Record<string, { raw: number; gzip: number }> = {};
+    for (const [fn, args] of [["get_public_site", { p_slug: slug }], ["get_public_timetable", { p_event: w.f.ids.evA1 }], ["get_public_results", { p_event: w.f.ids.evA1 }], ["get_public_rules", { p_event: w.f.ids.evA1 }], ["get_public_draw", { p_event: w.f.ids.evA1 }]] as const) {
+      const r = await a.rpc(fn, args as never);
+      const text = JSON.stringify(r.data);
+      sizes[fn] = { raw: text.length, gzip: gzipSync(text).length };
+    }
+    mkdirSync("test-results", { recursive: true });
+    writeFileSync("test-results/audit-1b-sizes.json", JSON.stringify(sizes, null, 1));
+    expect(sizes.get_public_results.raw).toBeGreaterThan(0);
   });
 });
 
