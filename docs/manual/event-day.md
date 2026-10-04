@@ -56,8 +56,8 @@ Times below assume a first heat at 10:00 and a ready call of 15 minutes; move th
 
 | Problem | Do this |
 |---|---|
-| A judge's phone shows Pending for more than a minute | Keep scoring; it sends when the signal is back (no duplicates). Still pending at the end: HJ types the missing scores on the console (**Edit score** with a reason) or **Enter their Impression score**. |
-| A judge's phone is dead | HJ enters that judge's scores after the heat from what they say or from paper (edit with a reason), or publishes with a reason without them. |
+| A judge's phone shows Pending for more than a minute | Keep scoring; it sends when the signal is back (no duplicates). Still pending at the end: HJ types the missing scores on the console (**Edit score**, reason optional) or **Enter their Impression score**. |
+| A judge's phone is dead | HJ enters that judge's scores after the heat from what they say or from paper (edit; reason optional), or publishes without them (past the blocker; reason optional). |
 | The app is unreachable for everyone | Run the heat on paper with the printed timetable and a stopwatch. Afterwards: start and end the heat on the console and enter the scores with reasons (the heat's times will be the real ones of the console, not the beach's). |
 | Wrong result published | **Re-open** → correct → **Publish** (version 2; both are in the audit log). Refused if a later heat filled by it has started. |
 | A rider does not show | Rider menu → **DNS (did not start)**; the heat runs with the others. |

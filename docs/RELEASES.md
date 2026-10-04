@@ -12,6 +12,39 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.16.0 — 4 Oct 2026 {#release-0-16-0}
+
+PR: #38
+
+### What changed
+- **Skip to end of heat now finishes the job.** After the virtual officials have logged and scored every attempt, the heat **ends** (the flag goes red, the clock reads 0:00) and waits **under review** for the head judge. It is **not published**: the virtual head judge leaves it alone until you press **Publish** on the console or **End heat and publish** on the panel. While it works the button reads “Fast-forwarding…”; with the auto-play paused it says so in a sentence.
+- **Reasons are optional everywhere.** Reset event, Reset this division, Reset this heat, Cancel heat, Re-run heat, Re-open, hold a result, score and attempt edits, past-the-cap, publishing past a blocker, Unlock draw, Unlock scoring and format, and dismissing a trick proposal: one click confirms. The box stays, labelled **Reason (optional, for the audit log)**; with it empty the audit line says “no reason given”. (Clear actual times never asked for one.)
+- **The simulator's auto-play respects the break.** After a heat is published it waits for the next heat's start time on the run order (break and warm-up, divided by the speed) and raises the yellow so that it *ends* at that start, never earlier. The head console's break countdown, the Flag view and **Follow the heat** show the same time. Simulator only: on the beach the head judge still raises the yellow by hand.
+- **The simulator's left rail works.** Clicking **Draw**, **Riders** … on the simulator page opens that step (the page was busy asking the server for updates and the click waited behind it).
+- **New: Clear this plan** on the Run order step. One click (reason optional) returns every heat that has not started to “Heats not in the run order”; breaks, notes and the times you pinned go with them; heats that have started, ended or been published stay (“3 heats already run stay”). The run order remains, empty.
+- **Follow the heat:** one clock only (the flag pill with the time; the big black clock is gone); the live heat shows each rider's total, the formula line and **every trick's score in a box as it lands**, exactly as the public Live tab (under the event's live-scores switch); a heat that does not fit is split across pages instead of shrunk; the “page 1 of 2” counter is gone, the pages simply rotate.
+- **New: Refresh from event** on the simulator panel (“Settings from ‹event› at hh:mm”). A simulation copy keeps the settings it was made with; Refresh copies the real event's current settings and each division's scoring rules, the attempt limit among them, before any heat has started.
+- **Event step:** the empty “Name of the impression score” field shows the name the division uses now; the refusals judges and the head judge meet about this score use the name you set.
+- **Event step: the section cards fold.** Behind **More settings**, every card (Web address, Branding and sponsor logos, Test run, Timing and the big screens, Scoring settings, Flags, Public page, Registration, Officials' join details) has a header with a small chevron: click to fold or unfold. The first card is open, the others folded; your choice is remembered in this browser; a card with a mistake in it opens by itself when you press Save. Only the layout changed: the **?** buttons, the Simple / More settings switch and everything inside the cards are as before; the phone folds the same way.
+- **The public Join tab no longer hides itself while registration is closed.** It follows its own switch on the Event step's Public page card and nothing else, so officials can always enter their PIN there. When registration is closed the new **Riders** part of the Join page says “Registration is closed” (with your closed message); when it is open it offers **Register to ride**. The Public page card's **?** says so.
+- Two small functions were added to the database (`clear_schedule_plan`, `sim_refresh_from_event`); nothing existing was changed. No scoring, ladder or timetable rule changed.
+
+### What to test
+- [ ] Simulator of a throwaway event at **×10**: **Start**, wait for a heat to run, press **Skip to end of heat**. The button says “Fast-forwarding…”, then every rider has attempts, the flag is red, the clock reads 0:00, the heat is under review, **Publish** is available on the head console, and nothing is published until you press it.
+- [ ] Head console of a throwaway heat: **Reset this heat…** and **Cancel heat** each confirm with one click and the Reason box empty; then Go live → **Reset event…** on a throwaway event: type the web address and confirm with one click. Nobody asks for a reason; the audit log says “no reason given”.
+- [ ] Simulation at ×10, after a publish: the next yellow does not start at once; it starts about 18 seconds after the heat ended (for a 4-minute break and a 1-minute pre-start) and the console's “Next: … starts in” counts down to it.
+- [ ] On the simulator page click **Draw** in the left rail: the Draw step opens with **Draw** highlighted. Then on the Run order of a throwaway event press **Clear this plan** → **Yes, clear this plan**: the run order is empty and every heat is under “Heats not in the run order”; heats that already ran stay.
+- [ ] Open **Follow the heat** (/screen/‹event›/follow) while a simulation runs: one clock (in the flag), each rider's total, the formula line and a box per trick as the scores come in, no “page 1 of 2”.
+- [ ] Event step → **More settings**: only the first card is open. Click **Branding**'s header: it folds and its fields disappear; click again and what you typed is still there. Reload the page: the cards are as you left them. Type a bad web address in a sponsor's link, fold the card, press **Save event**: the card opens by itself and shows the message.
+- [ ] Event step → Public page card: **Join** has no “hides itself” note. Close registration (Registration card), open the event's public page: the **Join** tab is still there, and on it the PIN doors work and the **Riders** part says “Registration is closed”. Open registration: the Riders part offers **Register to ride**.
+- [ ] Change the attempt limit on the real event (Divisions → Scoring), then on its simulation press **Refresh from event**: the line “Settings from …” updates and the virtual spotters stop at the new limit. The Event step's empty impression-name field shows the division's name.
+
+### Known issues
+- Refresh from event matches divisions by name and does not touch the draw, heat lengths or the run order; it is grey once a heat of the simulation has started (Reset the simulation first).
+- The platform owner's trick-proposal Dismiss also has an optional reason now; the organiser then sees “not added to the master base: no reason given”.
+- Registration still has its own page (/e/‹event›/register); the Join tab only links to it, it does not repeat the form.
+- The design preview pages (/design) keep their mock consoles; only the real consoles changed.
+
 ## 0.15.1 — 4 Oct 2026 {#release-0-15-1}
 
 PR: #37

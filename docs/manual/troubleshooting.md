@@ -60,12 +60,14 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “A heat has started, so the event was not reset.” | Follow the sentence. | [Simulator](errors.md#err-simulator-errors-not-reset) |
 | “A heat has started, so this block cannot be removed any more.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-trickbase-cannotuntick) |
 | “A heat has started: started and finished heats cannot be changed (you can still rename them), and the draw cannot be regenerated.” | Follow the sentence. | [Organiser: Draw](errors.md#err-draw-startednote) |
+| “A heat in this plan has already started, so it cannot be taken out. Nothing was changed.” | Follow the sentence. | [Organiser: Run order](errors.md#err-runorder-errors-heatstarted) |
 | “A heat is running or paused: not now.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-org-moverunning) |
 | “A heat of this division has started: blocks can still be added, but a ticked block cannot be unticked.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-trickbase-lockednote) |
 | “A heat of this division has started: the Rider label cannot be changed any more.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-identification-errors-locked) |
 | “A heat of this event has already started, so this can no longer be changed.” | Use Run as simulation on the Simulator page to rehearse a real event instead. | [Organiser: event list and Event step](errors.md#err-event-simulationlocked) |
 | “A heat of this event is running or paused, so it cannot be moved now. Try again when no heat is running.” | End the running heat, then move the event. | [Platform owner (/admin)](errors.md#err-admin-errors-heat-running) |
 | “A heat of this event is running or paused. Update when no heat is running.” | Wait until no heat of the event is running or paused (between heats), then press Update to latest. | [Admin: trick base](errors.md#err-trickeditor-event-errors-heat-running) |
+| “A heat of this simulation has started, so the settings cannot be refreshed. Reset the simulation first.” | Reset the simulation, then refresh. | [Simulator](errors.md#err-simulator-errors-heat-started) |
 | “A heat that is no longer in the draw” | Take the row out with ✕ (or Take row out of the run order), then Add the heats that are missing. | [Organiser: Run order](errors.md#err-runorder-goneheat) |
 | “A later heat has already started, so this correction would change who rides in it. Nothing was changed.” | Reset or finish the later heat first, or leave the result. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-downstream-started) |
 | “A later heat that depends on this result has already started (‹heat›). Reset that heat first, then this one.” | Reset the later heat first, then this one. | [Resets](errors.md#err-resetparts-errors-downstream-started) |
@@ -94,7 +96,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Another plan of this day already has that name.” | Follow the sentence. | [Organiser: Run order](errors.md#err-runorder-errors-nametaken) |
 | “Another rider in your organisation already has that email address.” | Use the rider who already has that email (Add from this organisation’s riders). | [Organiser: Riders](errors.md#err-riders-errors-emailused) |
 | “Another tab is playing this simulation.” | Close the other tab, or use it. If you see it with one tab open, reload the page. | [Simulator](errors.md#err-simulator-play-lines-busy) |
-| “At least one tab must stay on (Join does not count: it hides itself while registration is closed).” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-onetabon) |
+| “At least one tab must stay on.” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-onetabon) |
 | “at most 20 sponsors” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-sponsorsmax) |
 | “at most 6 extra leaderboards” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-leaderboardsmax) |
 | “Available once the heat has ended.” | Press End heat (or wait for the clock). | [Grey buttons on the head console](errors.md#err-controlwhy-publish) |
@@ -226,7 +228,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Nothing is on hold.” | Follow the sentence. | [Organiser: Go live](errors.md#err-org-dashboard-notheld) |
 | “Nothing to import yet.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-importnothing) |
 | “One of the values is not allowed. Check the highlighted fields.” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-notallowedvalue) |
-| “Only a copy made with Run as simulation can be deleted. The Demo is reset, not deleted.” | Follow the sentence. | [Simulator](errors.md#err-simulator-errors-not-a-copy) |
+| “Only a copy made with Run as simulation can be deleted or refreshed. The Demo is reset, not deleted.” | Follow the sentence. | [Simulator](errors.md#err-simulator-errors-not-a-copy) |
 | “Only a heat that has not started can be started.” | Pick the next heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-start) |
 | “Only a paused heat can be resumed.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-resume) |
 | “Only a platform owner can publish presets.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-presets-errors-not-allowed) |
@@ -276,7 +278,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “‹round›: ‹detail›. Send fewer places on, or make the heats bigger.” | Fix the red point it names; then Apply to draw is on. | [Organiser: Divisions](errors.md#err-custombuilder-eliminatesnobody) |
 | “Save or undo your changes first.” | Press Save as a new draft (or reload to drop the edits), then accept. | [Admin: trick base](errors.md#err-trickeditor-proposals-savefirst) |
 | “Save your changes first.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-savebeforepublish) |
-| “Scoring and format are locked because a heat of this division has started. Unlock them with a written reason first.” | Divisions → the division → “Unlock scoring and format” with a reason of at least 5 characters (written to the audit log). | [Organiser: Divisions](errors.md#err-divisions-errors-ruleslocked) |
+| “Scoring and format are locked because a heat of this division has started. Unlock them first (a reason is optional).” | Divisions → the division → “Unlock scoring and format” with a reason of at least 5 characters (written to the audit log). | [Organiser: Divisions](errors.md#err-divisions-errors-ruleslocked) |
 | “Seats made before PINs were stored show here. Open Officials and choose Regenerate PIN.” | Officials step → that seat → Regenerate PIN. | [Organiser: Go live](errors.md#err-readiness-pinhint) |
 | “Seed ‹seed› is given to more than one rider: ‹names›. Press “Sort by seed number” to renumber.” | Press “Sort by seed number” to renumber 1, 2, 3… | [Organiser: Riders](errors.md#err-riders-seedrepeated) |
 | “Seed ‹seed› is given to more than one rider: ‹names›. Sort or drag them afterwards.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-repeatedseed) |
@@ -586,9 +588,6 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “‹what› could not be shown (‹message›). The rest of the page still works.” | Press Try again. If it repeats, send the error reference (or the sentence) to the owner. | [Pages that fail](errors.md#err-crash-part) |
 | “With ‹n› riders: this format cannot run (‹why›)” | Change the number of riders per heat, how many advance, or pick another format. | [Organiser: Divisions](errors.md#err-ladder-cannotrun) |
 | “Write a reason (at least 5 characters).” | Write at least 5 characters, for example “wind dropped, shorter heats”. | [Organiser: Divisions](errors.md#err-divisions-errors-reason) |
-| “Write a reason first.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-proposals-reasonneeded) |
-| “Write a reason of at least 5 characters first.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-rules-unlockneedsreason) |
-| “Write a reason of at least 5 characters.” | Follow the sentence. | [Organiser: Draw](errors.md#err-draw-unlockreasonshort) |
 | “Write a reason: the organiser sees it.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-codes-reason-required) |
 | “Write something first.” | Follow the sentence. | [Feedback notes](errors.md#err-feedback-errors-empty) |
 | “Write the points for 1st, 2nd, 3rd … separated by commas, e.g. 4, 3, 2, 1” | Change the highlighted number; the preview comes back when the format can run. | [Organiser: Divisions](errors.md#err-formatsimple-pointsinvalid) |

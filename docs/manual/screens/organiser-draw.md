@@ -26,7 +26,7 @@ The cards are compact: a seat is one line (its number, the Lycra block, the name
 | Seat menu | **Place a rider here**, **This seat waits for…** (a place of an earlier heat), **Clear seat**, **Take seat out**. |
 | **+ Seat**, **+ Heat**, **+ Round after**, **Take heat out**, **Take round out** | Change the ladder's shape by hand. |
 | Round and heat names | Click to rename (kept when regenerated; used on timetables and public pages). |
-| **Lock draw** / **Unlock draw** | Lock when final. Unlock needs a reason of at least 5 characters (written to the log). |
+| **Lock draw** / **Unlock draw** | Lock when final. Unlock has an optional reason (written to the log; “no reason given” when empty). |
 | **Print / PDF** | Opens a printable page (one A4 landscape page per division, in colour, with estimated times) with **Print or save as PDF** and **Export PNG** (a picture to send on WhatsApp). |
 | **Checks** | Warnings about the whole ladder (a rider without a seat, a heat of the wrong size). “The checks warn you; they never stop you.” |
 
@@ -41,7 +41,7 @@ Each sentence below appears under the button you pressed, with a **Learn more** 
 | “Choose a format for this division first.” ([row](../errors.md#err-draw-errors-noformat)) | The division has no format: Divisions → Format. |
 | “There are no confirmed riders to draw.” ([row](../errors.md#err-draw-errors-noriders)) | Confirm riders in the Riders step first. |
 | “There is no draw yet.” ([row](../errors.md#err-draw-errors-nodraw)) | Lock and Unlock need a draw: press **Generate draw**. |
-| “Write a reason of at least 5 characters.” ([row](../errors.md#err-draw-errors-reasonrequired)) | **Unlock draw** asks why; the reason goes to the log. |
+| (no refusal) | **Unlock draw** has a **Reason (optional, for the audit log)** box. One click unlocks; with the box empty the log says “no reason given”. |
 | “The format cannot make a draw: ‹why›” ([row](../errors.md#err-draw-errors-badformat)) | The format has no ladder for this number of riders: fix it in Divisions → Format. |
 | “You are not allowed to change this draw.” ([row](../errors.md#err-draw-errors-notallowed)) | Only organisers of the event change its draw. |
 | “That did not work. Nothing was changed.” ([row](../errors.md#err-draw-errors-failed)) | Nothing was saved: try again; if it repeats, see [Troubleshooting](../troubleshooting.md). |

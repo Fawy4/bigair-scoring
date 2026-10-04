@@ -1,4 +1,5 @@
 import { armedStartMs } from "@/lib/live/flags";
+import { livesFor } from "@/lib/live/run-order";
 import { publishHeatCore } from "@/lib/live/publish-core";
 import { trickKit } from "@/lib/live/screen-model";
 import type { AttemptRow, HeatRow, SlotRow } from "@/lib/live/types";
@@ -13,10 +14,12 @@ import { parseSimConfig } from "./config";
 import { simErrorSentence } from "./errors";
 import { planImpressionWrites, planScoreWrites, type JudgeSeat, type ModeContext } from "./judges";
 import { uuidFrom } from "./random";
-import { logLine, readEventOrder, readRunOrder, updateConfig } from "./io";
+import { armDecision, breakStartFor, scaledPrestartSec } from "./break-wait";
+import { logLine, readEventOrder, readPlanContaining, readRunOrder, updateConfig } from "./io";
 import { finishPublish } from "./publish-step";
 import { attemptScenario } from "./scenario-runner";
 import { isScenarioKey } from "./scenarios";
+import { skipRefusal } from "./skip";
 import { forgetContext, heatName, heatPlace, loadSnapshot, type SimDb, type Snapshot } from "./snapshot";
 import type { SeatInfo } from "./types";
 import { SIM_VIEW_LEAVE_GRACE_SEC, SIM_VIEW_SILENT_SEC } from "./view-hold";
@@ -327,6 +330,8 @@ async function step(db: SimDb, snap: Snapshot): Promise<string> {
     // ended or under review
     await judgeStep(db, snap, heat, data, true);
     const after = await loadHeatData(db, heat.id);
+    // "Skip to end of heat" left this heat for the head judge: the virtual one waits for the Publish press
+    if (snap.control.config.reviewHold === heat.id && heat.status === "under_review") return T.play.lines.reviewHeld(name);
     return headStep(db, snap, heat, after);
   }
 
@@ -367,6 +372,18 @@ async function step(db: SimDb, snap: Snapshot): Promise<string> {
   const heat = byId.get(next.heatId)!;
   // Pause may have been pressed since this step began: the head judge's console or the simulator's own Pause stops the arming too
   if (await pausedNow(db, snap.eventId)) return T.play.lines.idle;
+  // the break is respected (Polish 3, item 3): the next heat waits for its start time on the run order, scaled by the speed, and the yellow ends at that start
+  const dayPlan = await readPlanContaining(db, snap, heat.id);
+  const planned = dayPlan
+    ? breakStartFor(dayPlan.plan, livesFor(snap.ctx, snap.heats, snap.ctx.heatMeta), { timezone: snap.event.timezone, eventDay: dayPlan.day, defaults: dayPlan.defaults, nowMs: snap.nowMs, speed: snap.control.speed })
+    : null;
+  const wait = armDecision({
+    startMs: planned && planned.heatId === heat.id ? planned.startMs : null,
+    nowMs: snap.nowMs,
+    prestartSec: scaledPrestartSec(snap.settings.flags.prestartSec, snap.control.speed),
+    flagsOn: snap.settings.flags.enabled,
+  });
+  if (wait.kind === "wait") return T.play.lines.breakWait(heatName(heat), formatLeft((wait.startMs - snap.nowMs) / 1000));
   // with the flags on the officials follow the sequence: the yellow first, the heat starts by itself at 0:00 of the pre-start
   const started = snap.settings.flags.enabled ? await db.user.rpc("arm_heat", { p_heat: heat.id }) : await db.user.rpc("start_heat", { p_heat: heat.id });
   // the head judge raised the yellow herself in the meantime: her sequence stands, the simulator only follows it
@@ -431,8 +448,8 @@ const failedText = (e: unknown): PanelResult => ({ ok: false, message: e instanc
 
 /**
  * "Skip to end of heat": fast-forwards the virtual officials to the end of the heat on the water. The virtual spotters log every rider's attempts now and the virtual
- * judges score all of them now; the heat itself is left alone: it keeps running (its clock is untouched), and ending, reviewing and publishing stay with
- * whoever ends it (the head judge's End heat, or the clock). Real people are waited for, as always.
+ * judges score all of them now. Then the heat ends (the clock reads 0:00, the flag goes red) and, when every sheet is in, goes to review. It is never published:
+ * that is "End heat and publish". Real people are waited for, as always.
  */
 export async function skipToEnd(db: SimDb, eventId: string): Promise<PanelResult> {
   try {
@@ -455,11 +472,9 @@ async function skipInside(db: SimDb, eventId: string): Promise<PanelResult> {
   const snap = await loadSnapshot(db, eventId);
   if (!snap) return { ok: false, message: T.errors.SIM_NOT_ENABLED() };
   await ensureVirtualSeats(db, snap);
-  const heat = snap.heats.find((h) => h.status === "running");
-  if (!heat) {
-    if (snap.heats.some((h) => h.status === "scheduled" && h.armed_at)) return { ok: false, message: T.skip.inYellow };
-    return { ok: false, message: T.skip.noHeat };
-  }
+  const refusal = skipRefusal({ state: snap.control.state, heats: snap.heats.map((h) => ({ status: h.status, armed: Boolean(h.armed_at) })) });
+  if (refusal) return { ok: false, message: refusal === "paused" ? T.skip.paused : refusal === "inYellow" ? T.skip.inYellow : T.skip.noHeat };
+  let heat = snap.heats.find((h) => h.status === "running")!;
   const name = heatName(heat);
   const fast = { ...snap, nowMs: snap.nowMs };
   await spotterStep(db, fast, heat, await loadHeatData(db, heat.id), true);
@@ -471,9 +486,30 @@ async function skipInside(db: SimDb, eventId: string): Promise<PanelResult> {
     const after = await loadHeatData(db, heat.id);
     if (after.scores.size === written) break;
   }
+  // the clock jumps to 0:00: the heat ends now, as the head judge's End heat does (the flag goes red)
+  const ended = await db.user.rpc("end_heat", { p_heat: heat.id });
+  if (ended.error) return { ok: false, message: simErrorSentence(ended.error.message) };
+  heat = { ...heat, status: "ended", ended_at: (ended.data as { ended_at: string | null } | null)?.ended_at ?? heat.ended_at };
+  // the virtual judges finish (Impression scores, sheets) and the heat goes to review; the virtual head judge does NOT publish: that is the other button
+  for (let round = 0; round < 8; round++) {
+    const before = await loadHeatData(db, heat.id);
+    const had = [before.scores.size, before.impressions.size, before.submitted.size];
+    await judgeStep(db, fast, heat, before, true, true);
+    const after = await loadHeatData(db, heat.id);
+    if (after.scores.size === had[0] && after.impressions.size === had[1] && after.submitted.size === had[2]) break;
+  }
+  const final = await loadHeatData(db, heat.id);
+  const panel = snap.panels.get(heat.division_id) ?? [];
+  const allIn = panel.length > 0 && panel.every((p) => final.submitted.has(p.seatId));
+  let inReview = false;
+  if (allIn) {
+    const review = await db.user.rpc("review_heat", { p_heat: heat.id });
+    inReview = !review.error;
+  }
+  await updateConfig(db, eventId, (c) => ({ ...c, reviewHold: heat.id }));
   await logLine(db, eventId, "heat", null, T.log.fastForwarded(heatPlace(heat, snap.ctx)));
   forgetContext(eventId);
-  return { ok: true, text: T.skip.done(name) };
+  return { ok: true, text: inReview ? T.skip.done(name) : T.skip.doneWaiting(name) };
 }
 
 async function endAndPublishInside(db: SimDb, eventId: string): Promise<PanelResult> {
@@ -503,6 +539,7 @@ async function endAndPublishInside(db: SimDb, eventId: string): Promise<PanelRes
     const after = await loadHeatData(db, heat.id);
     if (after.scores.size === had[0] && after.impressions.size === had[1] && after.submitted.size === had[2]) break;
   }
+  if (snap.control.config.reviewHold === heat.id) await updateConfig(db, eventId, (c) => ({ ...c, reviewHold: null }));
   const line = await headStep(db, snap, heat, await loadHeatData(db, heat.id));
   await logLine(db, eventId, "heat", null, T.log.endedAndPublished(heatPlace(heat, snap.ctx)));
   forgetContext(eventId);

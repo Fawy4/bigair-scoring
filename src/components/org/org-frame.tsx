@@ -10,6 +10,7 @@ import { copy, orgCopy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { AppShell, type ShellEvent } from "./app-shell";
 import { ShellLayoutProvider, useViewportLayout } from "./layout-context";
+import { needsHardNavigation } from "@/lib/org/hard-navigation";
 import { runNextGuard } from "./next-guard";
 import { MenuItem, MenuLabel, Popover } from "./popover";
 import { Segmented } from "./setting-controls";
@@ -72,9 +73,11 @@ export function OrgFrame({ productName, email, passwordIsSet, organisations, cur
   const activeIndex = steps ? steps.findIndex((s) => s.key === active) : -1;
   const hasFooter = Boolean(steps) && activeIndex >= 0 && !/\/events\/new\/?$/.test(path);
 
+  // the simulator page keeps the server busy, so a link there must not queue behind it (Polish 3, item 4)
+  const visit = (href: string) => (needsHardNavigation(path) ? window.location.assign(href) : router.push(href));
   const go = (href: string) => async (e?: { preventDefault: () => void }) => {
     e?.preventDefault();
-    if (await runNextGuard()) router.push(href);
+    if (await runNextGuard()) visit(href);
   };
   const prevStep = steps && activeIndex > 0 ? steps[activeIndex - 1] : null;
   const nextStep = steps && activeIndex >= 0 && activeIndex < steps.length - 1 ? steps[activeIndex + 1] : null;
@@ -142,7 +145,7 @@ export function OrgFrame({ productName, email, passwordIsSet, organisations, cur
           activeStep={active}
           onStep={(key) => {
             const s = steps?.find((x) => x.key === key);
-            if (s?.href) router.push(s.href);
+            if (s?.href) visit(s.href);
           }}
           sidebar={
             steps ? undefined : (

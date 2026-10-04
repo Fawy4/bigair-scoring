@@ -544,7 +544,7 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await expect(page.getByText("Unlock the rules first to load a different set.").first()).toBeVisible(); // the first division opens by itself
   await expect(page.getByRole("button", { name: /Save scoring for/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Delete" })).toBeDisabled(); // it has heats
-  await page.getByLabel("Reason for unlocking").fill("Wrong heat length entered");
+  await page.getByLabel("Reason (optional, for the audit log)").fill("Wrong heat length entered");
   await page.getByRole("button", { name: /^Unlock/ }).first().click();
   await expect(page.getByText("Unlocked. Your reason was written to the audit log.").first()).toBeVisible();
   const { data: audit } = await org.db.from("audit_log").select("action, reason").eq("event_id", eventId).eq("action", "rules_unlocked");

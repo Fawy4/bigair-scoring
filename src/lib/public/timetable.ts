@@ -1,4 +1,4 @@
-import { computeTimetable, type HeatLive, type RowStatus } from "@/lib/engine/schedule";
+import { breakCountdown, computeTimetable, utcToLocalHHMM, type HeatLive, type RowStatus } from "@/lib/engine/schedule";
 import { activePlanFor, type ActivePlan } from "@/lib/live/run-order";
 import { rowToPlan, todayIn } from "@/lib/schedule/plans";
 import { driftOf, plannedTimetable, type Drift } from "@/lib/schedule/drift";
@@ -119,6 +119,17 @@ export function buildPublicTimetable(t: PublicTimetable | null, nowIso: string):
       warmUpStart: r.warmUpMin > 0 ? r.warmUpStart : null,
       resultHeld: r.heatId ? heldResult.has(r.heatId) : false,
     }));
+  // a simulation at x10 has a break a tenth as long: the next heat shows the same start the head judge's break countdown and the auto-play use (Polish 3, item 3)
+  const lastEnded = t.heats.filter((h) => h.ended_at).sort((a, b) => Date.parse(b.ended_at!) - Date.parse(a.ended_at!))[0];
+  const scale = Math.max(1, lastEnded?.time_scale ?? 1);
+  if (scale > 1) {
+    const brk = breakCountdown(chosen.plan, lives, { timezone: t.timezone, eventDay: chosen.day, defaults: chosen.defaults, now: nowIso, timeScale: scale });
+    const row = brk.kind === "break" ? rows.find((r) => r.itemId === brk.itemId) : undefined;
+    if (brk.kind === "break" && row) {
+      row.startUtc = brk.startUtc;
+      row.start = utcToLocalHHMM(Date.parse(brk.startUtc), t.timezone);
+    }
+  }
   const heats = rows.filter((r) => r.kind === "heat");
   return {
     day: chosen.day,

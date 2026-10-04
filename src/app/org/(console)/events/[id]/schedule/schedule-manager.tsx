@@ -1,6 +1,7 @@
 "use client";
 
 import { ClearActualsButton } from "../reset-buttons";
+import { ClearPlanButton } from "./clear-plan-button";
 import { handPinsAfter, planActuals } from "@/lib/schedule/hand-pins";
 import { NumberField } from "@/components/org/number-field";
 import { DndContext, pointerWithin, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
@@ -331,6 +332,15 @@ export function ScheduleManager(props: ScheduleProps) {
         {currentRow ? (
           <div className="flex flex-wrap items-start gap-3" data-testid="plan-actuals">
             <ClearActualsButton planId={currentRow.id} planName={currentRow.name} {...planActuals(currentRow)} />
+            {plan ? (
+              <ClearPlanButton
+                planId={currentRow.id}
+                planName={currentRow.name}
+                plan={plan}
+                started={startedIds}
+                onCleared={(r) => setPlans((ps) => ps.map((p) => (p.id === currentRow.id ? { ...p, items: r.items, anchors: r.anchors, actual_starts: r.actualStarts, hand_pins: handPinsAfter(currentRow, r.anchors as Record<string, string>) } : p)))}
+              />
+            ) : null}
           </div>
         ) : null}
         {currentRow ? (

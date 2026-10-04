@@ -23,7 +23,7 @@ export function PublishDialog({ heatId, title, items, canOverride, onChooseOrder
   const override = answer && !answer.ok && answer.canOverride !== undefined ? answer.canOverride : canOverride;
   const go = () =>
     start(async () => {
-      const r = await publishHeat(heatId, reason.trim() || undefined);
+      const r = await publishHeat(heatId, reason.trim() || undefined, withBlockers && override);
       setAnswer(r);
       if (r.ok) onDone(r.already ? H.alreadyPublished : H.published(r.version));
     });
@@ -67,7 +67,7 @@ export function PublishDialog({ heatId, title, items, canOverride, onChooseOrder
         </p>
       ) : null}
       <Footer
-        canSave={!pending && (!withBlockers || (override && reason.trim().length >= 3))}
+        canSave={!pending && (!withBlockers || (override))}
         onSave={go}
         onCancel={onClose}
         saveLabel={pending ? H.working : withBlockers ? H.publishWithReason : H.publishYes}
@@ -91,7 +91,7 @@ export function ReopenDialog({ heatId, title, onClose, onDone }: { heatId: strin
         </p>
       ) : null}
       <Footer
-        canSave={!pending && reason.trim().length >= 3}
+        canSave={!pending}
         saveLabel={pending ? H.working : H.reopenYes}
         onCancel={onClose}
         onSave={() =>
@@ -146,7 +146,7 @@ export function TieDialog({ heatId, riders, onClose, onDone }: { heatId: string;
         </p>
       ) : null}
       <Footer
-        canSave={!pending && reason.trim().length >= 3}
+        canSave={!pending}
         saveLabel={pending ? H.working : H.tieSave}
         onCancel={onClose}
         onSave={() =>
@@ -190,7 +190,7 @@ export function RerunDialog({ heatId, title, riders, onClose, onDone }: { heatId
         </p>
       ) : null}
       <Footer
-        canSave={!pending && reason.trim().length >= 3}
+        canSave={!pending}
         saveLabel={pending ? H.working : H.rerunYes}
         onCancel={onClose}
         onSave={() =>
@@ -220,7 +220,7 @@ export function HoldDialog({ heatId, title, onClose, onDone }: { heatId: string;
         </p>
       ) : null}
       <Footer
-        canSave={!pending && reason.trim().length >= 3}
+        canSave={!pending}
         saveLabel={pending ? H.working : H.holdYes}
         onCancel={onClose}
         onSave={() =>
@@ -254,7 +254,6 @@ export function ResetHeatDialog({ heatId, title, onClose, onDone }: { heatId: st
     };
   }, [heatId]);
   const blocker = preview?.running ? copy.reset.errors.HEAT_RUNNING(preview.running) : null;
-  const needReason = Boolean(preview?.everPublic && reason.trim().length < 5);
   return (
     <Modal screen title={R.heat.title(title)} onClose={onClose}>
       <p className="text-body font-medium">{R.heat.intro}</p>
@@ -281,13 +280,13 @@ export function ResetHeatDialog({ heatId, title, onClose, onDone }: { heatId: st
         </p>
       ) : null}
       <Footer
-        canSave={Boolean(preview) && !blocker && !needReason && !pending}
+        canSave={Boolean(preview) && !blocker && !pending}
         saveLabel={pending ? R.working : R.heat.confirm}
         onCancel={onClose}
         onSave={() =>
           start(async () => {
             setError(null);
-            const r = await resetHeat({ heatId, reason: preview?.everPublic ? reason : undefined });
+            const r = await resetHeat({ heatId, reason });
             if (r.ok) onDone(R.heat.done(title));
             else setError(r.message);
           })

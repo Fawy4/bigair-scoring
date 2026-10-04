@@ -347,7 +347,7 @@ export function RulesPanel({
           </label>
           <input id={`reason-${idSuffix}`} value={reason} onChange={(e) => setReason(e.target.value)} className="h-[var(--org-ctl)] w-96 max-w-full rounded-[8px] border border-beach-border bg-transparent px-3 text-body font-semibold" />
         </div>
-        <Button variant="danger" onClick={unlock} {...gate(pending ? copy.common.saving : reason.trim().length < 5 ? R.unlockNeedsReason : null)}>
+        <Button variant="danger" onClick={unlock} {...gate(pending ? copy.common.saving : null)}>
           {R.unlock}
         </Button>
       </div>

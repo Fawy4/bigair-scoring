@@ -47,15 +47,15 @@ test("Reset: says what blocks it, asks for the address, asks for a reason only b
   await page.reload();
   await page.getByTestId("reset-open").click();
   await expect(page.getByTestId("reset-counts")).toContainText("1 published result");
-  await expect(page.getByLabel("Reason (at least 5 characters)")).toBeVisible();
+  await expect(page.getByLabel("Reason (optional, for the audit log)")).toBeVisible();
   const confirm = page.getByTestId("reset-confirm");
   await expect(confirm).toBeDisabled();
   await expect(page.getByText("Type the web address exactly first.")).toBeVisible();
   await page.getByLabel("Event web address").fill("not-it");
   await expect(confirm).toBeDisabled();
   await page.getByLabel("Event web address").fill(`e2e-live-${w.org.run}`);
-  await expect(page.getByText("Write a reason of at least 5 characters first.")).toBeVisible();
-  await page.getByLabel("Reason (at least 5 characters)").fill("Practice results were shown by mistake");
+  await expect(confirm).toBeEnabled(); // the address is right: one click is enough, the reason is optional
+  await page.getByLabel("Reason (optional, for the audit log)").fill("Practice results were shown by mistake");
   await expect(confirm).toBeEnabled();
   await confirm.click();
   await expect(page.getByText(/Event reset: /).first()).toBeVisible({ timeout: 30_000 });
@@ -94,8 +94,23 @@ test("a practice event that never published is reset without a reason", async ({
   await w.db.from("events").update({ settings: {} }).eq("id", w.eventId); // live scores off
   await w.org.signIn(page, `/org/events/${w.eventId}`);
   await page.getByTestId("reset-open").click();
-  await expect(page.getByLabel("Reason (at least 5 characters)")).toHaveCount(0);
+  await expect(page.getByLabel("Reason (optional, for the audit log)")).toHaveCount(0);
   await page.getByLabel("Event web address").fill(`e2e-live-${w.org.run}`);
   await page.getByTestId("reset-confirm").click();
   await expect(page.getByText(/Event reset: /).first()).toBeVisible({ timeout: 30_000 });
+});
+
+test("Polish 3: an event with public results is reset by typing the address and one click; the audit line says 'no reason given'", async ({ page }) => {
+  test.setTimeout(180_000);
+  await w.db.from("heats").update({ status: "ended", started_at: new Date(Date.now() - 600_000).toISOString(), ended_at: new Date().toISOString() }).eq("id", w.heats[0]);
+  await w.db.from("heats").update({ status: "published", published_at: new Date().toISOString() }).eq("id", w.heats[0]);
+  await w.db.from("heat_results").insert({ heat_id: w.heats[0], entry_id: w.entries[0], place: 1, total: 8, version: 1 });
+  await w.org.signIn(page, `/org/events/${w.eventId}`);
+  await page.getByTestId("reset-open").click();
+  await expect(page.getByLabel("Reason (optional, for the audit log)")).toBeVisible();
+  await page.getByLabel("Event web address").fill(`e2e-live-${w.org.run}`);
+  await page.getByTestId("reset-confirm").click(); // the reason box stays empty
+  await expect(page.getByText(/Event reset: /).first()).toBeVisible({ timeout: 30_000 });
+  const { data: audit } = await w.db.from("audit_log").select("reason").eq("event_id", w.eventId).eq("action", "event_reset");
+  expect(audit).toEqual([{ reason: "no reason given" }]);
 });

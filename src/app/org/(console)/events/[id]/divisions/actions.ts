@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { reasonOf } from "@/lib/reason";
 import { getDb } from "@/lib/org/context";
 import { canonicalHash } from "@/lib/presets/plan";
 import { asNewPreset, importFormatTemplate, importScoringModel, type PresetKind } from "@/lib/presets/io";
@@ -204,7 +205,7 @@ export async function unlockRules(divisionId: string, reason: string): Promise<O
   const { supabase } = await getDb();
   const d = await eventOf(supabase, divisionId);
   if (!d) return { ok: false, error: E.notFound };
-  const { error } = await supabase.rpc("unlock_division_rules", { p_division: divisionId, p_reason: reason });
+  const { error } = await supabase.rpc("unlock_division_rules", { p_division: divisionId, p_reason: reasonOf(reason) });
   if (error) return { ok: false, error: explain(error.message) };
   return { ok: true };
 }

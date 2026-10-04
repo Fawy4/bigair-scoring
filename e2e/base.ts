@@ -1,4 +1,5 @@
 import { test as base, expect, type BrowserContext } from "@playwright/test";
+import { EVENT_FOLD_IDS, foldKey } from "../src/lib/org/fold-state";
 
 /**
  * In sandboxes where all outbound HTTPS goes through a TLS-inspecting proxy, Chromium does not trust the proxy's
@@ -13,9 +14,21 @@ export async function installSupabaseProxy(context: BrowserContext): Promise<voi
   });
 }
 
-export const test = base.extend({
-  context: async ({ context }, provide) => {
+export const test = base.extend<{ foldCardsOpen: boolean }>({
+  // Polish 3, item 11: the Event step's cards start folded. Most tests are about what is inside them, so every browser starts with them remembered as open (a person's own
+  // choice, as stored by the page); e2e/fold-cards.spec.ts turns this off to see the real defaults.
+  foldCardsOpen: [true, { option: true }],
+  context: async ({ context, foldCardsOpen }, provide) => {
     await installSupabaseProxy(context);
+    if (foldCardsOpen) {
+      await context.addInitScript((keys: string[]) => {
+        try {
+          for (const k of keys) if (window.localStorage.getItem(k) === null) window.localStorage.setItem(k, "open");
+        } catch {
+          /* no storage on this page */
+        }
+      }, EVENT_FOLD_IDS.map(foldKey));
+    }
     await provide(context);
   },
 });

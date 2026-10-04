@@ -4,7 +4,7 @@ What each reset wipes and what it keeps, and every way to take something back: R
 
 Last checked: 4 Oct 2026 · Product version 0.13.2
 
-**The rule.** Every reset is refused while any heat of the event is running or paused, and names it (“Heat 3 is running. End it first.”). Every reset asks once and shows the counts first. A reason of at least 5 characters is needed when something it wipes was ever shown publicly. Every reset writes one audit line.
+**The rule.** Every reset is refused while any heat of the event is running or paused, and names it (“Heat 3 is running. End it first.”). Every reset asks once and shows the counts first. A reason is always optional: where a **Reason (optional, for the audit log)** box is shown, one click confirms with it empty and the audit line says “no reason given”. Every reset writes one audit line.
 
 ## The resets {#ru-resets}
 
@@ -23,12 +23,12 @@ Last checked: 4 Oct 2026 · Product version 0.13.2
 | {#ru-restore} **Restore results from ‹date›** | /admin → organisation → Events (platform owner only) | Brings back everything the event had before a Reset event. | Within 30 days; refused if a heat has started since the reset (“A heat has started since the reset, so it can no longer be restored.”). |
 | {#ru-reopen} **Re-open** | Head console | Takes a published result back to review (“Result under correction”); spectators keep the old result until you publish again; Publish writes the next version (version 2). | Publishing again is refused when it would change who rides in a later heat that has started. |
 | {#ru-rerun} **Re-run heat** | Head console | Cancels the heat and makes “H‹n›R” next in the run order: same riders, seats, Lycras, timing; later seats follow the re-run; everything scored stays stored for the audit. Riders who do not ride again: Disqualified or Did not start (ranked last). | Not on a published heat (Re-open instead); once per heat (“Already re-run as H1R”); not on a heat cancelled before it started. |
-| {#ru-cancel} **Cancel heat** | Head console | Stops the heat for good, with a reason. A cancelled heat takes no time on any timetable and cannot be started. | Re-run it to ride it again. |
+| {#ru-cancel} **Cancel heat** | Head console | Stops the heat for good (reason optional). A cancelled heat takes no time on any timetable and cannot be started. | Re-run it to ride it again. |
 | {#ru-spotter-undo} **Undo** | Spotter | Takes back the last logged attempt. | 10 seconds; after that the head judge deletes it. |
-| {#ru-edit} **Edit score**, **Delete**, **Merge duplicate**, **Clear status**, **Take back interference** | Head console | Corrects one score or attempt, with a reason where asked. | While the heat is not published (Re-open first). |
+| {#ru-edit} **Edit score**, **Delete**, **Merge duplicate**, **Clear status**, **Take back interference** | Head console | Corrects one score or attempt, (reason optional). | While the heat is not published (Re-open first). |
 | {#ru-sheet} Reopen a judge's sheet | Head console | Lets one judge change their scores after Submit. | — |
-| {#ru-unlock-rules} **Unlock scoring and format** | Divisions | Allows changing rules after the first heat; reason written to the audit log. | The Rider label and ticked trick blocks stay fixed. |
-| {#ru-unlock-draw} **Unlock draw** | Draw | Allows changing a locked draw; reason written to the log. | Started heats never change; no regenerate after the first heat. |
+| {#ru-unlock-rules} **Unlock scoring and format** | Divisions | Allows changing rules after the first heat; reason (optional) written to the audit log. | The Rider label and ticked trick blocks stay fixed. |
+| {#ru-unlock-draw} **Unlock draw** | Draw | Allows changing a locked draw; reason (optional) written to the log. | Started heats never change; no regenerate after the first heat. |
 | {#ru-archive} **Archive** / **Restore** an event or organisation | Event step (owner), /admin | Hides it everywhere; restore shows it again. | Delete is only possible while no result was published. |
 
 ## The audit log {#ru-audit}

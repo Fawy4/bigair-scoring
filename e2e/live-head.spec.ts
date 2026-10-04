@@ -110,7 +110,7 @@ test("the head judge runs a whole heat from a phone: Start refused in plain word
   expect(actions).toEqual(["heat_started", "heat_paused", "heat_resumed", "heat_ended"]);
 });
 
-test("Cancel heat needs a reason and keeps what ran; rider totals appear as scores come in", async ({ browser }) => {
+test("Cancel heat keeps what ran (the reason is optional); rider totals appear as scores come in", async ({ browser }) => {
   test.setTimeout(240_000);
   await w.startHeat(w.heats[0]);
   const head = await phone(browser, "head", `/head/${w.eventId}`);
@@ -125,7 +125,7 @@ test("Cancel heat needs a reason and keeps what ran; rider totals appear as scor
   await expect(totals.getByTestId("total-row").first()).toContainText("1 / 7 attempts");
 
   await head.getByTestId("cancel").click();
-  await expect(head.getByTestId("cancel-confirm")).toBeDisabled();
+  await expect(head.getByTestId("cancel-confirm")).toBeEnabled(); // a reason is optional
   await head.getByTestId("cancel-reason").fill("kite tangle");
   await head.getByTestId("cancel-confirm").click();
   await expect(message(head)).toHaveText("Pro Men · R1 · Heat 1 cancelled.");
@@ -168,4 +168,16 @@ test("the organiser's Hold, Resume at and Shift use the server's time, not the d
   await expect.poll(async () => (await w.db.from("schedule_plans").select("hold").eq("id", w.planId).single()).data?.hold, { timeout: 30_000 }).not.toBeNull();
   const held = (await w.db.from("schedule_plans").select("hold").eq("id", w.planId).single()).data!.hold as { since: string };
   expect(Math.abs(Date.parse(held.since) - Date.now())).toBeLessThan(60_000); // the database's moment, not the laptop's
+});
+
+test("Polish 3: Cancel heat with the reason box empty is one click; the audit line says 'no reason given'", async ({ browser }) => {
+  test.setTimeout(240_000);
+  await w.startHeat(w.heats[0]);
+  const head = await phone(browser, "head", `/head/${w.eventId}`);
+  await expect(head.getByTestId("selected-heat")).toHaveAttribute("data-state", "running", { timeout: 30_000 });
+  await head.getByTestId("cancel").click();
+  await head.getByTestId("cancel-confirm").click();
+  await expect(message(head)).toHaveText("Pro Men · R1 · Heat 1 cancelled.");
+  expect((await heatRow(w.heats[0])).status).toBe("cancelled");
+  expect(((await w.db.from("audit_log").select("reason").eq("row_id", w.heats[0]).eq("action", "heat_cancelled")).data ?? [])[0]?.reason).toBe("no reason given");
 });

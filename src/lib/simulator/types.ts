@@ -91,4 +91,6 @@ export interface SimStatus {
   deadJudge: string | null;
   finalHeld: boolean;
   planNames: { active: string | null; other: string | null };
+  /** The real event this copy was made from and when its settings were copied or last refreshed; null for an event that is not a copy (the Demo). */
+  settingsFrom: { eventName: string; time: string } | null;
 }

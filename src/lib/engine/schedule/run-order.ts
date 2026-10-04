@@ -178,6 +178,22 @@ export function renameItem(plan: SchedulePlan, itemId: string, label: string): S
 }
 
 /** Heats that are in no row of the plan yet, grouped by division and round in draw order (the left-hand list). */
+/**
+ * "Clear this plan": every heat that has not started goes back to "Heats not in the run order"; breaks and notes go; hand-set pins go with their heats. A heat in
+ * `stay` (started, ended or published) keeps its place, and so does a break that already started. The plan itself remains, empty or with only those.
+ */
+export function clearPlan(plan: SchedulePlan, stay: ReadonlySet<string>): { plan: SchedulePlan; heatsRemoved: number; otherRemoved: number; heatsStay: number } {
+  const keep = (i: RunItem) => (i.kind === "heat" ? stay.has(i.heatId!) : Boolean(plan.actualStarts[i.id]));
+  const kept = plan.items.filter(keep);
+  const gone = plan.items.filter((i) => !keep(i));
+  return {
+    plan: withItems(plan, kept),
+    heatsRemoved: gone.filter((i) => i.kind === "heat").length,
+    otherRemoved: gone.filter((i) => i.kind !== "heat").length,
+    heatsStay: kept.filter((i) => i.kind === "heat").length,
+  };
+}
+
 export interface UnscheduledGroup {
   division: string;
   round: string;

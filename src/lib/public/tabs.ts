@@ -2,7 +2,7 @@ import { copy } from "@/lib/ui-copy";
 
 /**
  * The tabs of the public event page, in the order the page shows them. The organiser switches tabs off on the Event step ("Public page"); the Join tab also hides
- * itself while registration is closed. The big screen is not a tab and is not affected.
+ * the Join tab is switched like every other one. The big screen is not a tab and is not affected.
  */
 export interface PublicTab {
   key: string;
@@ -15,7 +15,6 @@ export interface TabSettings {
   leaderboards: Array<{ title: string }>;
   /** The keys the organiser switched off. */
   off: string[];
-  registrationOpen: boolean;
 }
 
 export function publicTabs(leaderboards: Array<{ title: string }>): PublicTab[] {
@@ -33,18 +32,18 @@ export function publicTabs(leaderboards: Array<{ title: string }>): PublicTab[] 
   ];
 }
 
-export function isTabVisible(key: string, s: Pick<TabSettings, "off" | "registrationOpen">): boolean {
-  if (s.off.includes(key)) return false;
-  return key !== "join" || s.registrationOpen;
+/** A tab is shown unless the organiser switched it off. Join follows its own switch and nothing else: the officials' PIN entry lives there whether or not riders can register. */
+export function isTabVisible(key: string, s: Pick<TabSettings, "off">): boolean {
+  return !s.off.includes(key);
 }
 
 export function visiblePublicTabs(s: TabSettings): PublicTab[] {
   return publicTabs(s.leaderboards).filter((t) => isTabVisible(t.key, s));
 }
 
-/** True when at least one tab other than Join stays on (Join can disappear by itself while registration is closed, so it cannot be the one that stays). */
+/** True when at least one tab stays on (Join counts like any other). */
 export function tabsOffLeavesOne(off: string[], leaderboards: Array<{ title: string }>): boolean {
-  return publicTabs(leaderboards).some((t) => t.key !== "join" && !off.includes(t.key));
+  return publicTabs(leaderboards).some((t) => !off.includes(t.key));
 }
 
 /** Where an old link to a hidden tab lands: the first tab that is shown (the event's own address when Home is on). */

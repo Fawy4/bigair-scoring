@@ -73,7 +73,7 @@ test("two spotters log Red 5 s apart: the console shows the duplicate; Merge kee
   await head.getByTestId("merge-selected").click();
   await expect(dialog(head)).toContainText("first logged");
   await expect(dialog(head).getByTestId("merge-keep").first()).toBeChecked();
-  await expect(dialog(head).getByTestId("dialog-save")).toBeDisabled();
+  await expect(dialog(head).getByTestId("dialog-save")).toBeEnabled(); // a reason is optional
   await dialog(head).getByTestId("reason-input").fill("same trick logged twice");
   await dialog(head).getByTestId("dialog-save").click();
   await expect(rows(head).nth(0)).toHaveAttribute("data-row-state", "deleted", { timeout: 30_000 });
@@ -100,7 +100,7 @@ test("the head judge edits a score with a reason and sees it in the audit log; a
   // tap Judge 1's cell: new score 8.5 needs a reason
   await cells.nth(0).click();
   await pad(dialog(head), 8, "5");
-  await expect(dialog(head).getByTestId("dialog-save")).toBeDisabled();
+  await expect(dialog(head).getByTestId("dialog-save")).toBeEnabled(); // a reason is optional
   await dialog(head).getByTestId("reason-input").fill("paper sheet");
   await dialog(head).getByTestId("dialog-save").click();
   await expect(cells.nth(0)).toContainText("8.50", { timeout: 30_000 });
@@ -156,7 +156,7 @@ test("Publish is blocked until the second judge submits, then publishes; the win
   // Judge 2 has not submitted: Publish says so in words, and a reason is needed to go on
   await head.getByTestId("publish").click();
   await expect(head.getByTestId("publish-blockers")).toContainText("Judge 2: sheet not submitted");
-  await expect(dialog(head).getByTestId("dialog-save")).toBeDisabled();
+  await expect(dialog(head).getByTestId("dialog-save")).toBeEnabled(); // publishing past a blocker needs no typed reason
   await dialog(head).getByTestId("dialog-cancel").click();
   expect(await results(heat)).toHaveLength(0);
 
@@ -242,7 +242,7 @@ test("Re-run heat: a reason and one confirmation; Heat 1 is cancelled, 'Heat 1 r
   await expect(head.getByTestId("selected-heat")).toHaveAttribute("data-state", "running", { timeout: 40_000 });
   await head.getByTestId("rerun").click();
   await expect(dialog(head)).toContainText("Re-run Pro Men · R1 · Heat 1");
-  await expect(dialog(head).getByTestId("dialog-save")).toBeDisabled();
+  await expect(dialog(head).getByTestId("dialog-save")).toBeEnabled();
   await dialog(head).getByTestId("rerun-rider").nth(1).selectOption("DNS"); // Blue did not start
   await dialog(head).getByTestId("reason-input").fill("kite tangle");
   await dialog(head).getByTestId("dialog-save").click();

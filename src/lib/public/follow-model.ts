@@ -106,6 +106,14 @@ export function paginateResults(riders: RiderRowVM[], mode: AttemptDisplay, budg
   return out;
 }
 
+/** The "Judges reviewing" banner takes this much of the page body, in vw. */
+export const REVIEW_BANNER_VW = 9;
+
+/** The live heat's riders in pages: the same costing as a Results page, with the banner's room taken off while the judges review. Never shrunk. */
+export function livePages(riders: RiderRowVM[], mode: AttemptDisplay, reviewing: boolean): RiderRowVM[][] {
+  return paginateResults(riders, mode, RESULTS_BUDGET_VW - (reviewing ? REVIEW_BANNER_VW : 0));
+}
+
 /** Rows of a ladder column at the TV size (a heat card is a header row plus a row per rider, a round name is one row). */
 export const LADDER_COLUMN_ROWS = 9;
 export const LADDER_COLUMNS = 2;

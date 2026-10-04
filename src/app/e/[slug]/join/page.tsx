@@ -5,6 +5,7 @@ import { loadSite } from "@/lib/public/load";
 import { publicMetadata } from "@/lib/public/meta";
 import { requestOrigin } from "@/lib/platform/origin";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { copy } from "@/lib/ui-copy";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +38,9 @@ export default async function EventJoinPage({ params, searchParams }: { params: 
   const { data: event } = await (await createClient()).from("events").select("name").eq("slug", slug).maybeSingle();
   const site = await loadSite(slug);
   const picked = PIN_ROLES.find((r) => r === role);
+  // the riders' part follows registration (open, and not past its closing time); the officials' part above never does
+  const { data: reg } = await createServiceClient().rpc("public_registration_info", { p_slug: slug });
+  const registration = reg as unknown as { found?: boolean; open?: boolean; closedMessage?: string | null } | null;
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 p-4 text-[#111]">
       <h1 className="text-3xl font-extrabold">{event?.name ?? copy.join.joinEvent}</h1>
@@ -68,6 +72,20 @@ export default async function EventJoinPage({ params, searchParams }: { params: 
         <JoinForm slug={slug} token={t} />
       </section>
       <SelfAddForm slug={slug} />
+
+      {registration?.found ? (
+        <section aria-label={J.riders.heading} data-testid="join-riders" className="flex flex-col gap-2">
+          <h2 className="text-xl font-extrabold">{J.riders.heading}</h2>
+          {registration.open ? (
+            <Card testId="join-register-link" href={`/e/${slug}/register`} title={J.riders.registerTitle} text={J.riders.registerText} />
+          ) : (
+            <div data-testid="join-registration-closed" className="rounded-lg border-4 border-[#111] p-4">
+              <p className="text-xl font-extrabold">{copy.registration.closedTitle}</p>
+              <p className="mt-2 text-lg font-semibold">{registration.closedMessage?.trim() || copy.registration.closedDefault}</p>
+            </div>
+          )}
+        </section>
+      ) : null}
     </main>
   );
 }

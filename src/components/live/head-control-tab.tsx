@@ -105,8 +105,7 @@ export function HeadControlTab() {
           <input id="head-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={copy.live.console.reasonPlaceholder} className="min-h-tap rounded-lg border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink" />
           <div className="flex gap-1.5">
             <Chip
-              variant={reason.trim() ? "accent" : "muted"}
-              disabled={!reason.trim()}
+              variant="accent"
               onClick={() => {
                 setAsking(null);
                 setReason("");

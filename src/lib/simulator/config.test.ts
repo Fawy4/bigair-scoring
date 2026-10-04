@@ -62,3 +62,11 @@ describe("behaviour settings are independent", () => {
     expect(parseSettingsPatch({ armed: ["x"] } as never)).toBeNull();
   });
 });
+
+describe("Skip to end of heat's review hold (Polish 3, item 1)", () => {
+  it("is empty by default and survives a save of another setting", () => {
+    const c = defaultSimConfig();
+    expect(c.reviewHold).toBeNull();
+    expect(withSettings({ ...c, reviewHold: "h1" }, { attemptsPerRider: 6 }).reviewHold).toBe("h1");
+  });
+});

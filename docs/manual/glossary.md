@@ -19,7 +19,7 @@ Last checked: 4 Oct 2026 · Product version 0.15.0
 | {#g-big-screen-follow} **Big screen — Follow the heat** | /screen/‹event›/follow, a second beach TV page: it stays on the heat while it is armed or running, says “Judges reviewing” until Publish, then alternates the full Results of today's published heats (newest first) and the Ladder. *The TV by the water: the live heat, then Heat 6's result, the ladder, Heat 5's result…* |
 | {#g-break} **Break** | Minutes between heats (or a break row such as Lunch) in the run order. *2 minutes after each heat, 45 minutes for lunch.* |
 | {#g-call-out} **Call-out** | What the spotter says aloud for a rider, from the Rider label scheme. *“Red”, “14” or “Sam Sample”.* |
-| {#g-cancel} **Cancel (heat)** | Stops a heat for good with a reason; it takes no time on timetables. *Kite tangle in heat 3: Cancel heat, then Re-run.* |
+| {#g-cancel} **Cancel (heat)** | Stops a heat for good (reason optional); it takes no time on timetables. *Kite tangle in heat 3: Cancel heat, then Re-run.* |
 | {#g-category} **Category** | A group of tricks for counting rules (handle pass, board-off, kiteloop, rotation, other). *Best per category: at most one kiteloop counts.* |
 | {#g-checks} **Checks / checker** | Warnings under the draw or the custom ladder; they warn, never block (except red points before Apply to draw). *“Heat 4 has 5 riders.”* |
 | {#g-countdown} **Countdown (break)** | On the head console between heats: “Next: R1 · H3 · starts in 4:30”. *+1 min gives the riders one more minute.* |
@@ -56,7 +56,7 @@ Last checked: 4 Oct 2026 · Product version 0.15.0
 | {#g-join-page} **Join page** | Where officials enter the event code and PIN (/join or /e/‹event›/join). *The QR on the official's card opens it.* |
 | {#g-ladder} **Ladder** | The rounds and heats of a division and where each place goes. *R1 → SF → F.* |
 | {#g-live-scores} **Live scores** | Totals shown to spectators during a heat (when allowed). *On for the Pro final on the big screen.* |
-| {#g-lock} **Lock (draw, rules)** | A locked draw is final and heats can start; rules lock at a division's first heat. *Unlock with a written reason.* |
+| {#g-lock} **Lock (draw, rules)** | A locked draw is final and heats can start; rules lock at a division's first heat. *Unlock; a reason is optional.* |
 | {#g-lycra} **Lycra / Lycra colour** | The coloured top a rider wears, shown as a coloured block with the colour word. *Rider in seat 1 wears RED.* |
 | {#g-missed} **Missed** | A judge did not see an attempt; no score from them, the panel uses the others. *A judge looked at the kite of another rider.* |
 | {#g-multiplier} **Multiplier** | A family of the trick base: double, triple. *Double backroll.* |

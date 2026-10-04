@@ -144,4 +144,15 @@ describe("running about N minutes late", () => {
     const done = (n: number, from: string, to: string) => heat(n, { status: "published", started_at: at(from), ended_at: at(to) });
     expect(buildPublicTimetable(payload([done(1, "10:00", "10:10"), done(2, "10:12", "10:22")]), at("10:30")).drift).toBeNull();
   });
+
+  it("Polish 3: in a simulation at x10 the next heat's time is the console's break countdown (the gap after the last heat is a tenth as long); at x1 nothing changes", () => {
+    // Heat 1 ran 10:00 to 10:10:30; the break is 2 minutes: 10:12:30 at x1, 10:10:42 at x10
+    const heats = (scale: number) => [heat(1, { status: "ended", started_at: "2026-10-10T07:00:00Z", ended_at: "2026-10-10T07:10:30Z", time_scale: scale }), heat(2), heat(3)];
+    const x1 = buildPublicTimetable(payload(heats(1)), "2026-10-10T07:10:35Z");
+    const x10 = buildPublicTimetable(payload(heats(10)), "2026-10-10T07:10:35Z");
+    expect(x1.upNext[0].startUtc).toBe("2026-10-10T07:12:30.000Z");
+    expect(x10.upNext[0].startUtc).toBe("2026-10-10T07:10:42.000Z");
+    expect(x10.upNext[0].start).toBe("10:10");
+    expect(x10.upNext[0].heat).toBe("Heat 2");
+  });
 });

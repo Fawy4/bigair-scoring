@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { reasonOf } from "@/lib/reason";
 import { drawProjection } from "@/lib/draw/projection";
 import { applyHeatStatuses } from "@/lib/draw/entrants";
 import { applyHeatResult, type DivisionDraw, type DrawHeat } from "@/lib/engine/ladder";
@@ -62,7 +63,7 @@ function scrub<T>(value: T, seatNo: Map<string, number>): T {
 export async function publishHeatCore(
   db: { user: SupabaseClient; service: SupabaseClient },
   heatId: string,
-  opts: { overrideReason?: string; labels?: Record<string, string> } = {},
+  opts: { overrideReason?: string; /** The head judge confirmed publishing past the blockers: the reason is optional. */ override?: boolean; labels?: Record<string, string> } = {},
 ): Promise<PublishResult> {
   const { service } = db;
   // one answer holds everything the result is worked out from, and the database checks in the same call that the caller is the head judge or an organiser
@@ -121,7 +122,7 @@ export async function publishHeatCore(
     riderLabel: (id) => softWord(labelOf(id)),
     impressionLabel: copy.checklist.impressionWord(impressionNameOf(model)),
   });
-  const reason = opts.overrideReason?.trim() ?? "";
+  const reason = opts.override && checklist.items.length > 0 ? reasonOf(opts.overrideReason) : (opts.overrideReason?.trim() ?? "");
   if (checklist.items.length > 0) {
     if (!checklist.canOverride) return { ok: false, code: "PUBLISH_BLOCKED", message: errorSentence("PUBLISH_BLOCKED"), blockers: checklist.items, canOverride: false };
     if (reason.length < 3) return { ok: false, code: "PUBLISH_BLOCKED", message: errorSentence("PUBLISH_BLOCKED"), blockers: checklist.items, canOverride: true };

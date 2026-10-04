@@ -5,7 +5,6 @@ import type { PublicSite } from "./types";
 export const tabSettingsOf = (site: PublicSite): TabSettings => ({
   leaderboards: site.settings.externalLeaderboards,
   off: site.settings.publicTabsOff ?? [],
-  registrationOpen: Boolean(site.settings.registrationOpen),
 });
 
 /** An old link to a tab the organiser switched off lands on the first tab that is shown, never on a "not found". Nothing to land on (no tab shown): the page stays. */

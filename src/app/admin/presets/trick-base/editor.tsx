@@ -404,7 +404,7 @@ function ProposalItem({ p, model, isOwner, dirty, baseVersion }: { p: ProposalRo
             <input value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} className="w-full max-w-xl" data-testid="proposal-reason" placeholder={P.reasonPlaceholder} />
           </label>
           <div className="flex flex-wrap gap-2">
-            <Button variant="primary" data-testid="proposal-dismiss-confirm" {...disabledWhen((pending && C.working) || (!reason.trim() && P.reasonNeeded))} onClick={() => run(() => dismissTrickProposal({ eventId: p.eventId, family: p.family, key: p.key, reason }), P.dismissed)}>
+            <Button variant="primary" data-testid="proposal-dismiss-confirm" {...disabledWhen(pending && C.working)} onClick={() => run(() => dismissTrickProposal({ eventId: p.eventId, family: p.family, key: p.key, reason }), P.dismissed)}>
               {P.dismissConfirm}
             </Button>
             <Button variant="quiet" onClick={() => setMode("idle")}>

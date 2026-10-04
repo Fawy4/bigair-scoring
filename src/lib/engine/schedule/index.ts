@@ -19,6 +19,7 @@ export {
   setWarmUp,
   renameItem,
   unscheduledHeats,
+  clearPlan,
   duplicatePlan,
   activate,
   deletePlan,

@@ -82,7 +82,7 @@ export function HeadConsole() {
         <ScorePad scale={KOTA.trick.scale} value={value} label={C.newScore} caption={<span>{C.nowScore(cell.label)}</span>} onChange={setValue} />
         <Reason value={reason} onChange={setReason} />
         <Footer
-          canSave={value !== null && value !== cell.value && reason.trim().length > 0}
+          canSave={value !== null && value !== cell.value}
           onSave={() => {
             patch(rowId, (r) => withCellScore(r, judgeId, value as number));
             done(`${who} · ${word} ${row.seq}: ${cell.label} → ${formatCell(value as number)}`, reason.trim());
@@ -104,7 +104,7 @@ export function HeadConsole() {
         <ScorePad scale={scale} value={value} label={copy.live.impression.heading(impressionNameOf(KOTA))} onChange={setValue} />
         <Reason value={reason} onChange={setReason} />
         <Footer
-          canSave={value !== null && reason.trim().length > 0}
+          canSave={value !== null}
           onSave={() => {
             setImpression((m) => ({ ...m, blue: m.blue.map((v, i) => (i === idx ? value : v)) }));
             done(`${who} · BLUE · ${copy.live.impression.heading(impressionNameOf(KOTA))}: ${formatCell(value as number)}`, reason.trim());
@@ -120,7 +120,7 @@ export function HeadConsole() {
       <Modal title={title} onClose={close}>
         {text}
         <Reason value={reason} onChange={setReason} />
-        <Footer canSave={reason.trim().length > 0} onSave={() => { apply(); done(what, reason.trim()); }} onCancel={close} saveLabel={saveLabel ?? title} />
+        <Footer canSave onSave={() => { apply(); done(what, reason.trim()); }} onCancel={close} saveLabel={saveLabel ?? title} />
       </Modal>
     );
   }
@@ -143,7 +143,7 @@ export function HeadConsole() {
         ))}
         <Reason value={reason} onChange={setReason} />
         <Footer
-          canSave={reason.trim().length > 0}
+          canSave
           onSave={() => {
             patch(keep === "first" ? dup.id : first.id, (r) => withRowState(r, "deleted"));
             patch(keep === "first" ? first.id : dup.id, (r) => withRowState(r, "ok"));
@@ -187,7 +187,7 @@ export function HeadConsole() {
         </div>
         <Reason value={reason} onChange={setReason} />
         <Footer
-          canSave={reason.trim().length > 0 && trick.trim().length > 0}
+          canSave={trick.trim().length > 0}
           onSave={() => {
             const label = riders.find((r) => r.key === rider)!.label;
             const cells = (r: ConsoleRow) =>
@@ -224,7 +224,7 @@ export function HeadConsole() {
         ))}
         <Reason value={reason} onChange={setReason} />
         <Footer
-          canSave={reason.trim().length > 0}
+          canSave
           onSave={() => {
             setCancelled(true);
             done(`${C.rerun}: ${Object.entries(out).filter(([, v]) => v).map(([r, v]) => `${r.toUpperCase()} ${v}`).join(", ") || "all ride again"}`, reason.trim());

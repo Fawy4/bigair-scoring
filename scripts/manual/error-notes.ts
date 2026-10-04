@@ -145,7 +145,6 @@ export const NOTES: Record<string, Note> = {
   "divisions.errors.notValidTogether": { f: "Read the list of problems above the Save button and fix each one." },
   // ---- rules
   "rules.loadLocked": { m: "The Load… menu is grey because the rules are locked (a heat has started).", f: "Unlock scoring and format with a reason first." },
-  "rules.unlockNeedsReason": { m: "The Unlock button is grey until a reason is typed." },
   "rules.saveInvalid": { m: "The Save button is grey while a setting has a problem." },
   // ---- format
   "formatSimple.perRound.empty": { f: "Change the number in “Preview with” or the ladder settings until the preview shows rounds." },
@@ -155,7 +154,6 @@ export const NOTES: Record<string, Note> = {
   // ---- draw
   "draw.noFormat": { m: "Generate draw is grey: the division has no format yet.", f: "Divisions → the division → Format tab → choose a format → Save format." },
   "draw.noRiders": { m: "Generate draw is grey: no rider of the division is Confirmed.", f: "Riders step → set riders to Confirmed (or approve registrations)." },
-  "draw.unlockReasonShort": { m: "Unlock is grey until the reason has at least 5 characters." },
   "draw.regenerateRefusedStarted": { m: "Once a heat of the division has started, the draw can no longer be made again.", f: "Change single seats by hand, or Reset this division (Divisions step) to start the division over." },
   "draw.regenerateRefusedLocked": { m: "A locked draw cannot be regenerated.", f: "Unlock draw (with a reason), regenerate, lock again." },
   "draw.startedNote": { m: "Heats that started or finished are fixed; later heats can still be changed by hand." },
@@ -280,11 +278,13 @@ export const NOTES: Record<string, Note> = {
   "headLive.sheetIncomplete": { m: "Shown on a judge's Impression / Variety sheet while a rider has neither a score nor Absent: Save and submit stays grey.", f: "Give every rider a score or Absent. Save keeps what you typed so far without submitting." },
   "simulator.skip.noHeat": { m: "Skip to end of heat was pressed while no heat was running, paused or waiting to be published.", f: "Press Start (or Run the whole event) and skip once a heat is on the water." },
   "simulator.skip.why": { m: "Skip to end of heat is grey: no heat is on the water or waiting to be published.", f: "Start the auto-play; the button turns on when a heat starts." },
+  "simulator.skip.paused": { m: "Skip to end of heat was pressed while the auto-play was paused (or the heat was paused on the water).", f: "Press Resume, then skip." },
   "simulator.play.lines.busy": { m: "Another tab asked for a step while this one was still working on its own (two panel tabs of the same simulation). With one tab open you should not see it.", f: "Close the other tab, or use it. If you see it with one tab open, reload the page." },
   "simulator.log.noCap": { f: "Divisions → Scoring → set “Attempts per rider”." },
   "simulator.needTyped": { m: "The Reset or Delete button is grey until the event's web address is typed.", f: "Type the address shown under the box." },
   "simulator.reset.noBaseline": { m: "No copy of the locked draw was saved (the Demo was played before Reset existed).", f: "Use “Wipe and draw again”." },
-  "simulator.errors.NOT_A_COPY": { m: "Delete is only for copies made with Run as simulation." },
+  "simulator.errors.NOT_A_COPY": { m: "Delete or Refresh from event was pressed on a simulation that is not a copy made with Run as simulation (the Demo)." },
+  "simulator.errors.HEAT_STARTED": { m: "Refresh from event was pressed after a heat of the simulation started.", f: "Reset the simulation, then refresh." },
   "simulator.errors.SOURCE_ALREADY_RUN": { f: "Copy the event before its first heat, or reset it first." },
   "simulator.errors.NO_KEY": { f: "Owner: set SUPABASE_SERVICE_ROLE_KEY (or SEAT_PIN_KEY) on the host." },
   // ---- wind
@@ -360,7 +360,6 @@ export const NOTES: Record<string, Note> = {
   // ---- resets
   "reset.blocked": { m: "The list under it names what stops the reset (for example a division to unlock and lock again)." },
   "reset.needAddress": { m: "The confirm button is grey until the event's web address is typed exactly." },
-  "reset.needReason": { m: "The confirm button is grey: results were public, so a reason is needed." },
   "reset.errors.HEAT_RUNNING": { f: "End the heat on the head console, then reset." },
   "reset.errors.HEAT_ARMED": { m: "A heat of this event is in its start sequence (the yellow is up, running or paused). A reset now would leave it armed and it would start by itself on the reset event, so every reset and Clear actual times is refused.", f: "On the head console press Abort while the yellow is up, then reset. Nothing was changed." },
   "reset.errors.DRAW_COPY_MISSING": { m: "A division has no saved starting copy (locked before Reset existed)." },

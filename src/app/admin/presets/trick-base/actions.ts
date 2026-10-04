@@ -8,6 +8,7 @@ import type { Json } from "@/lib/supabase/database.types";
 import { MASTER_VOCABULARY_KEY } from "@/lib/org/trick-vocabulary";
 import type { BuiltInFamily, VocabularyJson } from "@/lib/trick-base";
 import { diffModels, KEY_PATTERN, publishedIds, toModel, toVocabulary, validateModel, type MasterBlock } from "@/lib/trick-base/master";
+import { reasonOf } from "@/lib/reason";
 import { copy } from "@/lib/ui-copy";
 
 type Fail = { ok: false; error: string; errors?: string[] };
@@ -128,9 +129,8 @@ export async function dismissTrickProposal(input: { eventId: string; family: str
   const { supabase, role } = await requireAdmin();
   if (role !== "owner") return { ok: false, error: C.codes.NOT_ALLOWED };
   const ref = ProposalRef.safeParse(input);
-  const reason = typeof input.reason === "string" ? input.reason.trim().slice(0, 300) : "";
+  const reason = reasonOf(typeof input.reason === "string" ? input.reason.slice(0, 300) : "");
   if (!ref.success) return { ok: false, error: C.codes.generic };
-  if (!reason) return { ok: false, error: C.codes.REASON_REQUIRED };
   const { error } = await supabase.rpc("admin_set_proposal_status", { p_event: ref.data.eventId, p_family: ref.data.family, p_key: ref.data.key, p_status: "declined", p_reason: reason });
   if (error) return refusal(error.message);
   revalidatePath(PATH);

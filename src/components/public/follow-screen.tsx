@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { ClockText } from "@/components/clock-text";
 import { Logo } from "@/components/public/logo";
 import { RiderLabel } from "@/components/rider-label";
-import { HeatClock } from "@/components/public/heat-clock";
 import { BigScreenFlag } from "@/components/public/public-flag";
 import { ScoreBox } from "@/components/public/heat-summary";
 import { ScreenFrame } from "@/components/public/screen-frame";
+import type { AttemptDisplay } from "@/lib/live/result-shading";
 import type { FollowHeat, FollowPayload } from "@/lib/public/follow-load";
 import type { FollowPage } from "@/lib/public/follow-model";
 import type { LadderHeatVM } from "@/lib/public/ladder-model";
@@ -24,47 +24,69 @@ const LOST_AFTER_MS = 5000;
 
 const nameOf = (r: RiderRowVM): string => r.placeholder ?? "";
 
-/** The riders of the heat on the water or waiting for the judges: place (when live totals are shown), Rider label with its Lycra colour, total. */
-function LiveRiders({ riders }: { riders: RiderRowVM[] }) {
+/**
+ * One rider as the public Live and Results pages draw them (place, Rider label, total, the formula line, each attempt as a chip), drawn in vw for a TV. The live heat
+ * and a published result use this same row, so the screen and the public pages never disagree.
+ */
+function FollowRider({ rider, counted, mode, totalSize }: { rider: RiderRowVM; counted: number[]; mode: AttemptDisplay; totalSize: string }) {
   return (
-    <ol data-testid="follow-live-riders" className="flex flex-col">
-      {riders.map((r, i) => (
-        <li key={r.entryId ?? `seat-${i}`} data-testid="follow-rider" className="flex items-center gap-[2vw] border-b border-[var(--bs-line)] py-[0.5vw]">
-          <span className="w-[4vw] shrink-0 text-center text-[3.4vw] font-semibold leading-none tabular-nums">{r.place ?? ""}</span>
-          <div className="min-w-0 flex-1">{r.label ? <RiderLabel model={r.label} variant="live" bare wrap screen /> : <span className="break-words text-[2.8vw] font-semibold">{nameOf(r)}</span>}</div>
-          {r.totalLabel ? <span data-testid="follow-total" className="shrink-0 text-[5vw] font-semibold leading-none tabular-nums">{r.totalLabel}</span> : null}
-        </li>
-      ))}
-    </ol>
+    <article data-testid="follow-rider" data-place={rider.place ?? undefined} className="flex flex-col gap-[0.15vw] border-b border-[var(--bs-line)] py-[0.15vw]">
+      <div className="flex items-center gap-[1.5vw]">
+        <span className="w-[4vw] shrink-0 text-center text-[3vw] font-semibold leading-none tabular-nums" aria-label={rider.place !== null ? R.place(rider.place) : undefined}>
+          {rider.place ?? ""}
+        </span>
+        <div className="min-w-0 flex-1">{rider.label ? <RiderLabel model={rider.label} variant="live" bare wrap screen /> : <span className="break-words text-[2.8vw] font-semibold">{nameOf(rider)}</span>}</div>
+        {rider.state !== "ok" ? <span className="shrink-0 rounded-[0.5vw] border-[0.15vw] border-[var(--bs-line)] px-[0.8vw] text-[2vw] font-semibold">{R.notRiding[rider.state]}</span> : null}
+        {rider.totalLabel ? <span data-testid="follow-total" className={`shrink-0 font-semibold leading-none tabular-nums ${totalSize}`}>{rider.totalLabel}</span> : null}
+      </div>
+      {rider.formula ? (
+        <p data-testid="follow-formula" className="break-words pl-[5.5vw] text-[1.8vw] font-medium leading-[1.1] text-[var(--bs-muted)]">
+          {rider.formula}
+          {rider.percentLabel ? ` · ${rider.percentLabel}` : ""}
+        </p>
+      ) : null}
+      {rider.boxes.length ? (
+        <div className="flex flex-wrap gap-[0.5vw] pl-[5.5vw]">
+          {rider.boxes.map((b) => (
+            <ScoreBox key={b.seq} box={b} counted={counted} mode={mode} screen />
+          ))}
+        </div>
+      ) : null}
+    </article>
   );
 }
 
-function LiveHeat({ heat, serverNow, reviewing }: { heat: FollowHeat; serverNow: string; reviewing: boolean }) {
+/** The heat on the water or waiting for the judges: one clock only, the flag pill in the header (Polish 3, item 6). The riders rotate in pages when they do not fit (item 8: no page counter). */
+function LiveHeat({ heat, reviewing, page }: { heat: FollowHeat; reviewing: boolean; page: number }) {
+  const all = heat.pages.flat();
+  // as the public Live page does: the counted scores of the whole heat shade every chip, not just this page's
+  const counted = all.flatMap((r) => r.boxes.filter((b) => b.counted && b.score !== null).map((b) => b.score as number));
+  const riders = heat.pages[Math.min(page, heat.pages.length - 1)] ?? [];
   return (
-    <div data-testid={reviewing ? "follow-reviewing-page" : "follow-live-page"} data-heat={heat.id} className="flex h-full flex-col gap-[1.2vw]">
-      <div className="flex items-baseline justify-between gap-[2vw]">
-        <h2 data-testid="follow-title" className="min-w-0 break-words text-[3.4vw] font-semibold leading-tight">
-          {heat.title}
-        </h2>
-        {reviewing ? null : <HeatClock leftWord={copy.pub.home.left} pausedWord={copy.pub.home.paused} startedAt={heat.clock.startedAt} durationSec={heat.clock.durationSec} pausedAt={heat.clock.pausedAt} pausedTotalSec={heat.clock.pausedTotalSec} status={heat.clock.status} serverNow={serverNow} className="shrink-0 text-[7.5vw] font-semibold leading-none tabular-nums" />}
-      </div>
+    <div data-testid={reviewing ? "follow-reviewing-page" : "follow-live-page"} data-heat={heat.id} className="flex h-full flex-col gap-[0.8vw]">
+      <h2 data-testid="follow-title" className="min-w-0 break-words text-[3vw] font-semibold leading-tight">
+        {heat.title}
+      </h2>
       {reviewing ? (
         <p data-testid="follow-reviewing" role="status" className="rounded-[1vw] border-[0.35vw] border-[var(--bs-ink)] px-[2vw] py-[0.8vw] text-center text-[6vw] font-semibold leading-tight">
           {F.reviewing}
         </p>
       ) : null}
       {!heat.scoresShown && !reviewing ? <p className="text-[2.4vw] font-semibold">{copy.pub.live.scoresAfter}</p> : null}
-      <LiveRiders riders={heat.riders} />
+      <div data-testid="follow-live-riders" className="flex flex-col">
+        {riders.map((r, i) => (
+          <FollowRider key={r.entryId ?? `seat-${i}`} rider={r} counted={counted} mode={heat.mode} totalSize="text-[3.2vw]" />
+        ))}
+      </div>
     </div>
   );
 }
 
-function PageHead({ title, aside, part, parts, testId }: { title: string; aside?: string; part: number; parts: number; testId: string }) {
+function PageHead({ title, aside, testId }: { title: string; aside?: string; testId: string }) {
   return (
     <h2 data-testid={testId} className="mb-[0.8vw] flex flex-wrap items-baseline gap-x-[1.5vw] text-[3vw] font-semibold leading-tight">
       <span className="min-w-0 break-words">{title}</span>
       {aside ? <span data-testid="follow-published" className="text-[2.4vw] font-semibold text-[var(--bs-muted)]">{aside}</span> : null}
-      {parts > 1 ? <span data-testid="follow-part" className="text-[2.4vw] font-semibold text-[var(--bs-muted)]">{F.partOf(part, parts)}</span> : null}
     </h2>
   );
 }
@@ -73,31 +95,9 @@ function PageHead({ title, aside, part, parts, testId }: { title: string; aside?
 function ResultsPage({ page }: { page: Extract<FollowPage, { kind: "results" }> }) {
   return (
     <div data-testid="follow-results-page" data-heat={page.heatId} className="flex h-full flex-col">
-      <PageHead testId="follow-title" title={page.title} aside={F.publishedAt(page.publishedAt)} part={page.part} parts={page.parts} />
+      <PageHead testId="follow-title" title={page.title} aside={F.publishedAt(page.publishedAt)} />
       {page.riders.map((r, i) => (
-        <article key={r.entryId ?? `seat-${i}`} data-testid="follow-rider" data-place={r.place ?? undefined} className="flex flex-col gap-[0.15vw] border-b border-[var(--bs-line)] py-[0.15vw]">
-          <div className="flex items-center gap-[1.5vw]">
-            <span className="w-[4vw] shrink-0 text-center text-[3vw] font-semibold leading-none tabular-nums" aria-label={r.place !== null ? R.place(r.place) : undefined}>
-              {r.place ?? ""}
-            </span>
-            <div className="min-w-0 flex-1">{r.label ? <RiderLabel model={r.label} variant="live" bare wrap screen /> : <span className="break-words text-[2.8vw] font-semibold">{nameOf(r)}</span>}</div>
-            {r.state !== "ok" ? <span className="shrink-0 rounded-[0.5vw] border-[0.15vw] border-[var(--bs-line)] px-[0.8vw] text-[2vw] font-semibold">{R.notRiding[r.state]}</span> : null}
-            {r.totalLabel ? <span data-testid="follow-total" className="shrink-0 text-[3.2vw] font-semibold leading-none tabular-nums">{r.totalLabel}</span> : null}
-          </div>
-          {r.formula ? (
-            <p data-testid="follow-formula" className="break-words pl-[5.5vw] text-[1.8vw] font-medium leading-[1.1] text-[var(--bs-muted)]">
-              {r.formula}
-              {r.percentLabel ? ` · ${r.percentLabel}` : ""}
-            </p>
-          ) : null}
-          {r.boxes.length ? (
-            <div className="flex flex-wrap gap-[0.5vw] pl-[5.5vw]">
-              {r.boxes.map((b) => (
-                <ScoreBox key={b.seq} box={b} counted={page.countedScores} mode={page.mode} screen />
-              ))}
-            </div>
-          ) : null}
-        </article>
+        <FollowRider key={r.entryId ?? `seat-${i}`} rider={r} counted={page.countedScores} mode={page.mode} totalSize="text-[3.2vw]" />
       ))}
     </div>
   );
@@ -136,7 +136,7 @@ function LadderCard({ heat }: { heat: LadderHeatVM }) {
 function LadderPage({ page }: { page: Extract<FollowPage, { kind: "ladder" }> }) {
   return (
     <div data-testid="follow-ladder-page" data-division={page.divisionId} className="flex h-full flex-col">
-      <PageHead testId="follow-title" title={`${F.ladder} · ${page.title}`} part={page.part} parts={page.parts} />
+      <PageHead testId="follow-title" title={`${F.ladder} · ${page.title}`} />
       <div className="grid grid-cols-2 gap-[2vw]">
         {page.columns.map((col, ci) => (
           <div key={ci} className="flex min-w-0 flex-col gap-[0.8vw]">
@@ -215,12 +215,15 @@ export function FollowScreen({ slug, initial, qr, pollMs = FOLLOW_POLL_MS }: { s
   }, [slug, pollMs]);
 
   // a new heat published, or the screen has just come back to the rotation: the walk starts again from the newest heat
-  useEffect(() => setIndex(0), [walkKey, phase.kind]);
+  useEffect(() => setIndex(0), [walkKey, phase.kind, payload.heat?.id]);
+  // the pages simply rotate: the Results and Ladder pages of the rotation, or the pages of a live heat whose riders do not fit on one
+  const liveParts = phase.kind !== "rotation" ? (payload.heat?.pages.length ?? 0) : 0;
+  const cycle = phase.kind === "rotation" ? count : liveParts;
   useEffect(() => {
-    if (paused || phase.kind !== "rotation" || count < 2) return;
-    const id = setInterval(() => setIndex((i) => (i + 1) % count), Math.max(5, rotateSec) * 1000);
+    if (paused || cycle < 2) return;
+    const id = setInterval(() => setIndex((i) => (i + 1) % cycle), Math.max(5, rotateSec) * 1000);
     return () => clearInterval(id);
-  }, [paused, phase.kind, count, rotateSec, walkKey]);
+  }, [paused, cycle, rotateSec, walkKey]);
 
   const toggleFullscreen = useCallback(() => {
     try {
@@ -267,7 +270,7 @@ export function FollowScreen({ slug, initial, qr, pollMs = FOLLOW_POLL_MS }: { s
         </header>
         <main data-testid="follow-body" className="min-h-0 flex-1 overflow-hidden">
           {phase.kind !== "rotation" && payload.heat ? (
-            <LiveHeat heat={payload.heat} serverNow={payload.serverNow} reviewing={phase.kind === "reviewing"} />
+            <LiveHeat heat={payload.heat} reviewing={phase.kind === "reviewing"} page={index} />
           ) : page ? (
             page.kind === "results" ? <ResultsPage page={page} /> : <LadderPage page={page} />
           ) : (
@@ -276,7 +279,7 @@ export function FollowScreen({ slug, initial, qr, pollMs = FOLLOW_POLL_MS }: { s
             </p>
           )}
         </main>
-        {paused && inRotation ? (
+        {paused && (inRotation || liveParts > 1) ? (
           <p data-testid="screen-paused" className="absolute bottom-[1vw] left-1/2 z-10 -translate-x-1/2 rounded-full border-[0.2vw] border-[var(--bs-ink)] bg-[var(--bs-bg)] px-[2vw] py-[0.3vw] text-[1.8vw] font-semibold">
             {F.pause}
           </p>

@@ -2083,6 +2083,7 @@ export type Database = {
           event_id: string
           last_tick_at: string | null
           run_no: number
+          settings_from_at: string | null
           speed: number
           state: string
           stats: Json
@@ -2097,6 +2098,7 @@ export type Database = {
           event_id: string
           last_tick_at?: string | null
           run_no?: number
+          settings_from_at?: string | null
           speed?: number
           state?: string
           stats?: Json
@@ -2111,6 +2113,7 @@ export type Database = {
           event_id?: string
           last_tick_at?: string | null
           run_no?: number
+          settings_from_at?: string | null
           speed?: number
           state?: string
           stats?: Json
@@ -2967,6 +2970,16 @@ export type Database = {
         }
       }
       clear_plan_actuals: { Args: { p_plan: string }; Returns: Json }
+      clear_schedule_plan: {
+        Args: {
+          p_actual: Json
+          p_anchors: Json
+          p_items: Json
+          p_plan: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
       clone_event_as_simulation: {
         Args: { p_event: string; p_name?: string }
         Returns: Json
@@ -4008,6 +4021,7 @@ export type Database = {
         Args: { p_event: string; p_slug_confirm: string }
         Returns: Json
       }
+      sim_refresh_from_event: { Args: { p_event: string }; Returns: Json }
       sim_release_stale_views: {
         Args: {
           p_event: string
@@ -4026,6 +4040,7 @@ export type Database = {
           event_id: string
           last_tick_at: string | null
           run_no: number
+          settings_from_at: string | null
           speed: number
           state: string
           stats: Json

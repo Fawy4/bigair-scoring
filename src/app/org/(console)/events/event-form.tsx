@@ -20,6 +20,8 @@ import { LogoField } from "@/components/org/logo-field";
 import { SlugLink } from "@/components/slug-link";
 import { toast } from "@/hooks/use-toast";
 import { issuesToMap, moveIn, removeIn, setIn } from "@/lib/form/path";
+import { FoldCard } from "@/components/org/fold-card";
+import { impressionPlaceholder } from "@/lib/org/impression-names";
 import { EventFormSchema, slugify, type EventForm as EventFormValues } from "@/lib/schemas/event-settings";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
 import { copy, help, orgCopy } from "@/lib/ui-copy";
@@ -36,7 +38,7 @@ export interface EventFormInitial {
   savedSlug: string | null;
 }
 
-export function EventForm({ initial, timeZones, schemes }: { initial: EventFormInitial; timeZones: string[]; schemes: IdentificationScheme[] }) {
+export function EventForm({ initial, timeZones, schemes, impressionNames = [] }: { initial: EventFormInitial; timeZones: string[]; schemes: IdentificationScheme[]; /** What the event's divisions call their separate score now; shown in the empty field. */ impressionNames?: string[] }) {
   const router = useRouter();
   const refreshSoon = useRefreshSoon();
   const laptop = useShellLayout() === "laptop";
@@ -187,8 +189,7 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
 
   const advanced = (
     <div className="org-new flex flex-col py-1">
-      <section className={group}>
-        <h3 className={groupTitle}>{T.slug}</h3>
+      <FoldCard id="slug" title={T.slug} first className={group} titleClassName={groupTitle}>
         <FieldLabel htmlFor="ev-slug" text={T.slug} help={help["event.slug"]} />
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-body font-semibold">{origin || "https://…"}/e/</span>
@@ -220,10 +221,9 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
             </label>
           </div>
         ) : null}
-      </section>
+      </FoldCard>
 
-      <section className={group}>
-        <h3 className={groupTitle}>{T.branding}</h3>
+      <FoldCard id="branding" title={T.branding} className={group} titleClassName={groupTitle}>
         <LogoField orgId={initial.organisationId} purpose="event-logo" label={T.eventLogo} value={form.branding.logoUrl} onChange={(u) => set(["branding", "logoUrl"], u ?? undefined)} />
         <div className="flex flex-col gap-3">
           <FieldLabel as="span" text={T.sponsors} help={help["event.sponsors"]} />
@@ -266,10 +266,9 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
             </Button>
           </div>
         </div>
-      </section>
+      </FoldCard>
 
-      <section className={group} aria-label={T.simulationHeading}>
-        <h3 className={groupTitle}>{T.simulationHeading}</h3>
+      <FoldCard id="simulation" title={T.simulationHeading} className={group} titleClassName={groupTitle}>
         {checkbox(T.simulation, form.isSimulation, (v) => set(["isSimulation"], v), "event.simulation", "simulation-switch")}
         {showError("isSimulation")}
         {initial.id ? (
@@ -277,10 +276,9 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
             {copy.simulator.link}
           </Link>
         ) : null}
-      </section>
+      </FoldCard>
 
-      <section className={group}>
-        <h3 className={groupTitle}>{T.timing}</h3>
+      <FoldCard id="timing" title={T.timing} className={group} titleClassName={groupTitle}>
         <SettingRow id="ev-ready" label={T.readyCall} {...h("event.readyCall")}>
           <NumberField id="ev-ready" label={T.readyCall} min={0} max={120} value={Number.isNaN(form.settings.readyCallMin) ? null : form.settings.readyCallMin} onChange={(v) => set(["settings", "readyCallMin"], v)} unit={T.minutesUnit} />
         </SettingRow>
@@ -353,18 +351,16 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
           ) : null}
         </div>
         {checkbox(T.windBanner, form.settings.windCallBanner, (v) => set(["settings", "windCallBanner"], v), "event.windBanner")}
-      </section>
+      </FoldCard>
 
-      <section className={group} data-testid="scoring-settings">
-        <h3 className={groupTitle}>{T.scoringHeading}</h3>
+      <FoldCard id="scoring" title={T.scoringHeading} className={group} titleClassName={groupTitle} testId="scoring-settings">
         <SettingRow id="ev-impression-name" label={T.impressionName} {...h("event.impressionName")}>
-          <input id="ev-impression-name" data-testid="impression-name" value={form.settings.impressionName} maxLength={24} placeholder={T.impressionNamePlaceholder} onChange={(e) => set(["settings", "impressionName"], e.target.value)} className={inputCls} />
+          <input id="ev-impression-name" data-testid="impression-name" value={form.settings.impressionName} maxLength={24} placeholder={impressionPlaceholder(impressionNames, T.impressionNamePlaceholder)} onChange={(e) => set(["settings", "impressionName"], e.target.value)} className={inputCls} />
         </SettingRow>
         {showError("settings.impressionName")}
-      </section>
+      </FoldCard>
 
-      <section className={group} data-testid="flags-card">
-        <h3 className={groupTitle}>{T.flagsHeading}</h3>
+      <FoldCard id="flags" title={T.flagsHeading} className={group} titleClassName={groupTitle} testId="flags-card">
         <p className="text-body font-medium text-beach-muted">{T.flagsIntro}</p>
         {checkbox(T.flagsOn, form.settings.flags.enabled, (v) => set(["settings", "flags", "enabled"], v), "event.flagsOn", "flags-switch")}
         {form.settings.flags.enabled ? (
@@ -391,10 +387,9 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
             {showError("settings.flags.lastMinuteSec")}
           </>
         ) : null}
-      </section>
+      </FoldCard>
 
-      <section className={group} data-testid="public-page-settings">
-        <h3 className={groupTitle}>{T.publicPage}</h3>
+      <FoldCard id="public-page" title={T.publicPage} className={group} titleClassName={groupTitle} testId="public-page-settings">
         <div className="flex items-start gap-2">
           <p className="text-body font-medium text-beach-muted">{T.publicTabsIntro}</p>
           <HelpButton what={T.publicPage} help={help["event.publicTabs"]} />
@@ -403,8 +398,8 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
           {publicTabs(form.settings.externalLeaderboards).map((tab) => {
             const on = !form.settings.publicTabsOff.includes(tab.key);
             const label = tab.label.trim() || T.publicTabUntitled;
-            // the last tab that is on cannot be switched off (Join does not count: it hides itself while registration is closed)
-            const last = on && tab.key !== "join" && !tabsOffLeavesOne([...form.settings.publicTabsOff, tab.key], form.settings.externalLeaderboards);
+            // the last tab that is on cannot be switched off (Join counts like the others)
+            const last = on && !tabsOffLeavesOne([...form.settings.publicTabsOff, tab.key], form.settings.externalLeaderboards);
             return (
               <li key={tab.key}>
                 <label className="flex min-h-[var(--org-ctl)] items-center gap-3 text-body font-semibold">
@@ -417,17 +412,15 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
                     onChange={(e) => set(["settings", "publicTabsOff"], e.target.checked ? form.settings.publicTabsOff.filter((k) => k !== tab.key) : [...form.settings.publicTabsOff, tab.key])}
                   />
                   {T.publicTabOn(label)}
-                  {tab.key === "join" ? <span className="text-small font-medium text-beach-muted">{T.publicTabJoinNote}</span> : null}
                 </label>
               </li>
             );
           })}
         </ul>
         {showError("settings.publicTabsOff")}
-      </section>
+      </FoldCard>
 
-      <section className={group} data-testid="registration-settings">
-        <h3 className={groupTitle}>{T.registration}</h3>
+      <FoldCard id="registration" title={T.registration} className={group} titleClassName={groupTitle} testId="registration-settings">
         <fieldset className="flex flex-col gap-1">
           <legend>
             <FieldLabel as="span" text={T.registrationStatus} help={help["event.registrationOpen"]} />
@@ -472,19 +465,18 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
           <p className="text-small font-medium text-beach-muted">{T.registrationClosedMessageHint}</p>
           {showError("settings.registrationClosedMessage")}
         </div>
-      </section>
+      </FoldCard>
 
       <section className={group}>
         <IdentificationEditor value={ident} onChange={(v) => set(["settings", "identification"], v)} presets={schemes} organisationId={initial.organisationId} errors={identErrors} hideLycraQuestion />
       </section>
 
-      <section className={group}>
-        <h3 className={groupTitle}>{T.joinHeading}</h3>
+      <FoldCard id="join" title={T.joinHeading} className={group} titleClassName={groupTitle}>
         <p className="text-body font-medium">{T.joinText(origin || "…", form.slug || "…")}</p>
         <p className="text-body font-medium">
           {T.eventCode} <strong data-testid="event-code">{form.slug || "…"}</strong>
         </p>
-      </section>
+      </FoldCard>
     </div>
   );
 

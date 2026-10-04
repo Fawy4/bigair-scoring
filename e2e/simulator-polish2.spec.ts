@@ -130,7 +130,7 @@ test("item 3: simulator Pause pauses the heat clock on the console; Resume resum
   }
 });
 
-test("item 7: Skip to end of heat fast-forwards the virtual officials and leaves the heat running; End heat and publish ends and publishes it", async ({ page }) => {
+for (const speed of [1, 10] as const) test(`Polish 3 item 1 at ×${speed}: Skip to end of heat fast-forwards the officials, ends the heat and leaves it under review, unpublished; End heat and publish then publishes it`, async ({ page }) => {
   test.setTimeout(600_000);
   const w = await createLiveWorld();
   const simIds: string[] = [];
@@ -142,7 +142,7 @@ test("item 7: Skip to end of heat fast-forwards the virtual officials and leaves
     await expect(page.getByTestId("sim-end-publish")).toBeDisabled();
     await expect(page.getByTestId("sim-skip-why")).toHaveText("Available while a heat is running.");
     await expect(page.getByTestId("sim-end-why")).toHaveText("Available while a heat is running, paused or waiting to be published.");
-    await startAt(page, 1); // ×1: ten minutes a heat, so only the buttons can finish it in time
+    await startAt(page, speed);
     const live = async () => (await w.db.from("heats").select("id, status").eq("event_id", simId).in("status", ["running", "paused"]).maybeSingle()).data;
     await expect.poll(async () => (await live())?.status, { timeout: 120_000 }).toBe("running");
     const heatId = (await live())!.id as string;
@@ -161,9 +161,15 @@ test("item 7: Skip to end of heat fast-forwards the virtual officials and leaves
     const landed = ((await w.db.from("trick_attempts").select("id").eq("heat_id", heatId).eq("status", "landed")).data ?? []).map((x) => x.id);
     const scores = (await w.db.from("trick_scores").select("attempt_id").in("attempt_id", landed)).data ?? [];
     expect(scores.length, "every landed attempt scored by the three virtual judges").toBe(landed.length * 3);
-    expect((await w.db.from("heats").select("status").eq("id", heatId).single()).data!.status, "the heat is still running: it waits for End heat").toBe("running");
-    expect(((await w.db.from("judge_sheets").select("submitted_at").eq("heat_id", heatId)).data ?? []).filter((x) => x.submitted_at)).toHaveLength(0);
-    // End heat and publish: the heat ends, the virtual judges finish and submit, the virtual head judge publishes
+    // the heat has ended (the clock reads 0:00, the flag is red) and is under review, waiting for the head judge: nothing is published
+    await expect.poll(async () => (await w.db.from("heats").select("status").eq("id", heatId).single()).data!.status, { timeout: 60_000 }).toBe("under_review");
+    expect(((await w.db.from("judge_sheets").select("submitted_at").eq("heat_id", heatId)).data ?? []).filter((x) => x.submitted_at)).toHaveLength(3);
+    await expect(page.getByTestId("sim-end-publish")).toBeEnabled();
+    // the auto-play keeps going and still does not publish it: that is the other button
+    await page.waitForTimeout(8_000);
+    expect((await w.db.from("heats").select("status").eq("id", heatId).single()).data!.status, "not published by the auto-play").toBe("under_review");
+    expect((await w.db.from("heat_results").select("id", { count: "exact", head: true }).eq("heat_id", heatId)).count ?? 0).toBe(0);
+    // End heat and publish publishes it
     await page.getByTestId("sim-end-publish").click();
     await expect.poll(async () => (await w.db.from("heats").select("status").eq("id", heatId).single()).data!.status, { timeout: 120_000 }).toBe("published");
     const sheets = (await w.db.from("judge_sheets").select("submitted_at").eq("heat_id", heatId)).data ?? [];

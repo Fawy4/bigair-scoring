@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./base";
 import { publishLadderHeat } from "../tests/rls/public-helpers";
 import { createPublicWorld, type PublicWorld } from "./public-world";
 
@@ -148,7 +149,8 @@ test("heat 2: arming brings the live heat back within two seconds, mid-rotation;
   await expect(page.getByTestId("follow-live-page")).toHaveAttribute("data-heat", h);
   await expect(page.getByTestId("screen-flag-frame")).toHaveAttribute("data-flag", "before_start");
   await expect(page.getByTestId("follow-live-riders").getByTestId("follow-rider")).toHaveCount(3);
-  await expect(page.getByTestId("heat-clock")).toBeVisible();
+  await expect(page.getByTestId("heat-clock")).toHaveCount(0); // one clock only: the flag pill in the header (Polish 3, item 6)
+  await expect(page.getByTestId("screen-flag-frame")).toBeVisible();
   await expect(page.getByTestId("follow-next")).toHaveText(""); // no Next line while a heat is live
   // no rotation while live: stay on the same page for longer than the page time
   await page.waitForTimeout((SECONDS + 2) * 1000);
@@ -273,7 +275,8 @@ test("a heat that does not fit at the TV size is split across two pages, not shr
   expect(mine.flatMap((p) => p.riders ?? []).length).toBe(4);
   await page.goto(followUrl());
   await expect(page.locator(`[data-testid="follow-results-page"][data-heat="${h1}"]`)).toBeVisible({ timeout: (SECONDS + 1) * 12 * 1000 });
-  await expect(page.getByTestId("follow-part")).toHaveText("page 1 of 2");
+  await expect(page.getByTestId("follow-part")).toHaveCount(0); // no "page 1 of 2" counter (Polish 3, item 8): the pages simply rotate
+  expect(await page.getByTestId("follow-results-page").innerText()).not.toMatch(/page \d+ of \d+/i);
   await expect(page.getByTestId("follow-title")).toContainText("Pro Men");
   await expect(page.getByTestId("follow-title")).toContainText("published");
 });
@@ -288,7 +291,7 @@ async function assertReadable(page: Page) {
     const key = document.querySelector('[data-testid="follow-results-page"],[data-testid="follow-ladder-page"],[data-testid="follow-live-page"],[data-testid="follow-reviewing-page"]')?.getAttribute("data-testid") ?? "none";
     return {
       key,
-      id: `${key}|${document.querySelector('[data-testid="follow-results-page"]')?.getAttribute("data-heat") ?? ""}|${document.querySelector('[data-testid="follow-part"]')?.textContent ?? ""}`,
+      id: `${key}|${document.querySelector('[data-testid="follow-results-page"]')?.getAttribute("data-heat") ?? ""}|${document.querySelector('[data-testid="follow-results-page"] [data-testid="follow-rider"]')?.textContent?.slice(0, 40) ?? ""}`,
       overflowY: main.scrollHeight - main.clientHeight,
       mainBottom: main.getBoundingClientRect().bottom,
       footerTop: footer.getBoundingClientRect().top,

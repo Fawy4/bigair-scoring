@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Banner } from "@/components/ui/banner";
 import { getDb } from "@/lib/org/context";
@@ -29,9 +28,10 @@ export default async function SimulatePage({ params }: { params: Promise<{ id: s
     <header className="flex flex-col gap-1">
       <h1 className="text-3xl font-extrabold">{T.title}</h1>
       <p className="font-semibold">{T.intro}</p>
-      <Link href={`/org/events/${id}/event`} className="w-fit underline">
+      {/* a plain link: the panel keeps the server busy, a client-side link would wait behind it (Polish 3, item 4) */}
+      <a href={`/org/events/${id}/event`} className="w-fit underline">
         {T.backToEvent}
-      </Link>
+      </a>
     </header>
   );
 
