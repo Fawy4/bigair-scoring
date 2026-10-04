@@ -273,6 +273,7 @@ async function assertReadable(page: Page) {
     const key = document.querySelector('[data-testid="follow-results-page"],[data-testid="follow-ladder-page"],[data-testid="follow-live-page"],[data-testid="follow-reviewing-page"]')?.getAttribute("data-testid") ?? "none";
     return {
       key,
+      id: `${key}|${document.querySelector('[data-testid="follow-results-page"]')?.getAttribute("data-heat") ?? ""}|${document.querySelector('[data-testid="follow-part"]')?.textContent ?? ""}`,
       overflowY: main.scrollHeight - main.clientHeight,
       mainBottom: main.getBoundingClientRect().bottom,
       footerTop: footer.getBoundingClientRect().top,
@@ -293,11 +294,10 @@ test("readable from 10 m on 1920 × 1080: every page of the walk fits without sh
   const until = Date.now() + (SECONDS + 1) * 11 * 1000;
   while (Date.now() < until) {
     const r = await assertReadable(page);
-    const id = `${r.key}:${await page.getByTestId("follow-title").innerText().catch(() => "")}:${await page.getByTestId("follow-part").innerText().catch(() => "")}`;
-    if (!checked.has(id)) checked.set(id, r);
+    if (!checked.has(r.id)) checked.set(r.id, r);
     await page.waitForTimeout(700);
   }
-  expect([...checked.keys()], "pages seen").toHaveLength(7); // 4 heats' results (one split in two) and the ladder, as the walk of this event goes
+  expect([...checked.keys()], "pages seen").toHaveLength(6); // 4 heats' results (one split in two) and the ladder, as the walk of this event goes
   for (const [id, r] of checked) {
     expect(r.overflowY, `${id} overflows its room`).toBeLessThanOrEqual(1);
     expect(r.mainBottom, `${id} runs into the bottom line`).toBeLessThanOrEqual(r.footerTop + 1);
