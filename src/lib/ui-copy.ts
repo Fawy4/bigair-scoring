@@ -725,6 +725,7 @@ export const copy = {
 
   rules: {
     saveAsBuiltIn: "Save as built-in",
+    builtInSaved: (name: string) => `“${name}” is now a built-in preset for every organisation.`,
     loadLocked: "Unlock the rules first to load a different set.",
     saveInvalid: "Fix the problems listed above first.",
     presetNeedsName: "Give the preset a name of at least 2 characters first.",

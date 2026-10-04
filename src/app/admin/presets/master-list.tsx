@@ -76,9 +76,11 @@ export function MasterList({ kind, slug, rows, isOwner }: { kind: "scoring_model
                             {M.setDefault}
                           </button>
                         )}
+                        {r.isDefault ? null : (
                         <button type="button" className="btn" disabled={pending} onClick={() => run(r.key, async () => { const res = await setMasterPresetRetired({ kind, key: r.key, retired: true }); return res.ok ? { ok: true, text: M.retired(r.name) } : res; })}>
                           {M.retire}
                         </button>
+                        )}
                       </>
                     )}
                     <button type="button" className="btn" aria-expanded={open?.key === r.key && open.mode === "delete"} onClick={() => setOpen(open?.key === r.key && open.mode === "delete" ? null : { key: r.key, mode: "delete" })}>

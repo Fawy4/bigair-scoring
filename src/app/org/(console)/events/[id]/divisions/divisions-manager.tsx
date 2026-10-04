@@ -2,6 +2,7 @@
 
 import { ResetDivisionButton } from "../reset-buttons";
 import { useState, useTransition } from "react";
+import { saveMasterPreset } from "@/app/admin/actions";
 import { useRefreshSoon } from "@/lib/use-refresh-soon";
 import { toast } from "@/hooks/use-toast";
 import type { PresetRow } from "@/lib/presets/options";
@@ -66,6 +67,7 @@ export function DivisionsManager({
   initialFormats,
   hiddenBuiltIns,
   defaultBuiltIns,
+  canSaveAsBuiltIn,
 }: {
   eventId: string;
   organisationId: string;
@@ -80,6 +82,8 @@ export function DivisionsManager({
   /** Built-in presets this organisation hid from its Load… menus (by key), and the owner's DEFAULT built-in of each kind. */
   hiddenBuiltIns: { scoring_model: string[]; format_template: string[] };
   defaultBuiltIns: { scoring_model: string | null; format_template: string | null };
+  /** The platform owner is opened as this organisation: "Save as built-in" is offered next to "Save as preset". */
+  canSaveAsBuiltIn?: boolean;
 }) {
   const refreshSoon = useRefreshSoon();
   const [divisions, setDivisions] = useState(initialDivisions);
@@ -100,6 +104,10 @@ export function DivisionsManager({
     refreshSoon(); // the left rail's "what is missing" list follows
   };
   const fail = (text: string) => setError(text);
+  const saveBuiltIn = async (kind: "scoring_model" | "format_template", name: string, json: unknown) => {
+    const res = await saveMasterPreset({ kind, key: null, name, json });
+    return res.ok ? { ok: true as const, message: copy.rules.builtInSaved(name.trim()) } : { ok: false as const, error: res.error };
+  };
   const sorted = [...divisions].sort((a, b) => a.sort_order - b.sort_order);
 
   function add() {
@@ -276,6 +284,7 @@ export function DivisionsManager({
                       organisationId={organisationId}
                       onPresetAdded={(row) => setScoring((s) => [...s, row])}
                       onPresetsChange={setScoring}
+                      saveAsBuiltIn={canSaveAsBuiltIn ? saveBuiltIn : undefined}
                       hiddenKeys={hidden.scoring_model}
                       onHiddenChange={(keys) => setHidden((h) => ({ ...h, scoring_model: keys }))}
                       defaultKey={defaultBuiltIns.scoring_model}
@@ -320,6 +329,7 @@ export function DivisionsManager({
                       organisationId={organisationId}
                       onPresetAdded={(row) => setFormats((s) => [...s, row])}
                       onPresetsChange={setFormats}
+                      saveAsBuiltIn={canSaveAsBuiltIn ? saveBuiltIn : undefined}
                       hiddenKeys={hidden.format_template}
                       onHiddenChange={(keys) => setHidden((h) => ({ ...h, format_template: keys }))}
                       defaultKey={defaultBuiltIns.format_template}

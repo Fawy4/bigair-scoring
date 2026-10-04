@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getDb } from "@/lib/org/context";
+import { getDb, getOrgContext } from "@/lib/org/context";
 import { loadEventBlocks, loadMasterVocabulary } from "@/lib/org/trick-vocabulary";
 import { identificationSchemesFrom } from "@/lib/org/presets";
 import { divisionScheme } from "@/lib/identification/division-scheme";
@@ -15,6 +15,7 @@ export const metadata = { title: copy.wizard.steps.divisions };
 export default async function DivisionsStepPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase } = await getDb();
+  const { platformRole, impersonating } = await getOrgContext();
   // everything the page shows is asked for at the same time (one round, not four): the event with its organisation's saved Rider labels, the divisions, the heats,
   // the rule and format presets, the riders and the trick base
   const [{ data: event }, { data: divisions }, { data: started }, { data: withHeats }, { data: models }, { data: formats }, { data: entryRows }, master, localBlocks, { data: hiddenRows }, { data: defaultRows }] = await Promise.all([
@@ -81,6 +82,7 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
         initialDivisions={rows}
         initialScoring={(models ?? []) as PresetRow[]}
         initialFormats={(formats ?? []) as PresetRow[]}
+        canSaveAsBuiltIn={platformRole === "owner" && Boolean(impersonating)}
         hiddenBuiltIns={{ scoring_model: (hiddenRows ?? []).filter((h) => h.organisation_id === event.organisation_id && h.kind === "scoring_model").map((h) => h.key), format_template: (hiddenRows ?? []).filter((h) => h.organisation_id === event.organisation_id && h.kind === "format_template").map((h) => h.key) }}
         defaultBuiltIns={{ scoring_model: (defaultRows ?? []).find((d) => d.kind === "scoring_model")?.key ?? null, format_template: (defaultRows ?? []).find((d) => d.kind === "format_template")?.key ?? null }}
       />
