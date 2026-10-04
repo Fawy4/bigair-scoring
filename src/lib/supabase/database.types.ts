@@ -2967,6 +2967,16 @@ export type Database = {
         }
       }
       clear_plan_actuals: { Args: { p_plan: string }; Returns: Json }
+      clear_schedule_plan: {
+        Args: {
+          p_actual: Json
+          p_anchors: Json
+          p_items: Json
+          p_plan: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
       clone_event_as_simulation: {
         Args: { p_event: string; p_name?: string }
         Returns: Json

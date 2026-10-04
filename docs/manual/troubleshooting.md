@@ -60,6 +60,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “A heat has started, so the event was not reset.” | Follow the sentence. | [Simulator](errors.md#err-simulator-errors-not-reset) |
 | “A heat has started, so this block cannot be removed any more.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-trickbase-cannotuntick) |
 | “A heat has started: started and finished heats cannot be changed (you can still rename them), and the draw cannot be regenerated.” | Follow the sentence. | [Organiser: Draw](errors.md#err-draw-startednote) |
+| “A heat in this plan has already started, so it cannot be taken out. Nothing was changed.” | Follow the sentence. | [Organiser: Run order](errors.md#err-runorder-errors-heatstarted) |
 | “A heat is running or paused: not now.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-org-moverunning) |
 | “A heat of this division has started: blocks can still be added, but a ticked block cannot be unticked.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-trickbase-lockednote) |
 | “A heat of this division has started: the Rider label cannot be changed any more.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-identification-errors-locked) |

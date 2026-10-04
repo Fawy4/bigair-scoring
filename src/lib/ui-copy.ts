@@ -1324,6 +1324,19 @@ export const copy = {
       unknownHeat: "That plan names a heat that is not in this event.",
       notValid: "The plan is not valid:",
       deleteActive: "This plan is active. Activate another plan first.",
+      heatStarted: "A heat in this plan has already started, so it cannot be taken out. Nothing was changed.",
+    },
+    /** "Clear this plan" (Polish 3, item 5): every heat that has not started goes back to "Heats not in the run order". */
+    clearPlan: {
+      open: "Clear this plan",
+      title: (name: string) => `Clear this plan: ${name}`,
+      intro: "Takes every heat and round that has not started out of this run order and puts them back under “Heats not in the run order”. Breaks and notes are removed, and the times you pinned go with their heats. The run order itself stays, empty. Heats that have started, ended or been published stay where they ran.",
+      lines: (heats: number, others: number, stay: number) =>
+        `This will return ${heats} ${heats === 1 ? "heat" : "heats"} to “Heats not in the run order” and remove ${others} ${others === 1 ? "break or note" : "breaks and notes"}.${stay > 0 ? ` ${stay} ${stay === 1 ? "heat already run stays" : "heats already run stay"}.` : ""}`,
+      confirm: "Yes, clear this plan",
+      nothing: "There is nothing in this run order that can be taken out.",
+      reasonWhy: "It is saved in the audit log. With no reason, the log says “no reason given”.",
+      done: (heats: number, stay: number) => `Plan cleared: ${heats} ${heats === 1 ? "heat" : "heats"} returned to “Heats not in the run order”.${stay > 0 ? ` ${stay} ${stay === 1 ? "heat already run stays" : "heats already run stay"}.` : ""}`,
     },
   },
 

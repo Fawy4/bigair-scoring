@@ -1,7 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { duplicatePlan, RunOrderError } from "@/lib/engine/schedule";
+import { clearPlan, duplicatePlan, RunOrderError } from "@/lib/engine/schedule";
+import { reasonOf } from "@/lib/reason";
 import { copyPlanToDay } from "@/lib/schedule/day-plans";
 import { planOfRow, planToRow, type PlanRow } from "@/lib/schedule/plans";
 import { ScheduleDefaultsSchema, SchedulePlanSchema, type SchedulePlan } from "@/lib/schemas/schedule";
@@ -155,4 +156,19 @@ export async function deletePlanAction(planId: string): Promise<Result> {
   if (row.active) return fail(T.deleteActive);
   const { error } = await supabase.from("schedule_plans").delete().eq("id", planId);
   return error ? fail(dbMessage(error.message)) : { ok: true };
+}
+
+/** "Clear this plan": the heats that have not started go back to "Heats not in the run order"; the heats that ran (started, in the yellow, ended, published) stay. One audit line; the reason is optional. */
+export async function clearPlanAction(planId: string, reason?: string): Promise<Result<{ items: Json; anchors: Json; actualStarts: Json; heatsRemoved: number; heatsStay: number }>> {
+  if (!Uuid.safeParse(planId).success) return fail(T.failed);
+  const supabase = await createClient();
+  const { data: row } = await supabase.from("schedule_plans").select(COLUMNS).eq("id", planId).maybeSingle();
+  if (!row) return fail(T.notAllowed);
+  const { data: heats } = await supabase.from("heats").select("id, status, started_at, armed_at").eq("event_id", row.event_id);
+  const stay = new Set((heats ?? []).filter((h) => h.status !== "scheduled" || h.started_at !== null || h.armed_at !== null).map((h) => h.id));
+  const cleared = clearPlan(planOfRow(row as unknown as PlanRow), stay);
+  const values = planToRow(cleared.plan);
+  const { error } = await supabase.rpc("clear_schedule_plan", { p_plan: planId, p_items: values.items as Json, p_anchors: values.anchors as Json, p_actual: values.actual_starts as Json, p_reason: reasonOf(reason) });
+  if (error) return fail(/HEAT_ALREADY_STARTED/.test(error.message) ? T.heatStarted : dbMessage(error.message));
+  return { ok: true, items: values.items as Json, anchors: values.anchors as Json, actualStarts: values.actual_starts as Json, heatsRemoved: cleared.heatsRemoved, heatsStay: cleared.heatsStay };
 }

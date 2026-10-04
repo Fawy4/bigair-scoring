@@ -12,7 +12,10 @@ export interface SectionView {
   lines: string[];
   blockers: string[];
   note?: string;
+  /** Show the (optional) reason box. */
   reasonNeeded: boolean;
+  /** The sentence under the box; the default one is for results that were shown publicly. */
+  reasonWhy?: string;
 }
 
 /**
@@ -124,7 +127,7 @@ export function ResetSection({
               <label htmlFor={`${testId}-reason`} className="font-bold">
                 {T.reasonLabel}
               </label>
-              <p className="text-small font-medium">{T.reasonWhy}</p>
+              <p className="text-small font-medium">{data.reasonWhy ?? T.reasonWhy}</p>
               <input id={`${testId}-reason`} data-testid={`${testId}-reason`} value={reason} onChange={(e) => setReason(e.target.value)} className="w-full max-w-xl" />
             </div>
           ) : null}

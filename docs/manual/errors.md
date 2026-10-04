@@ -522,6 +522,7 @@ Last checked: 3 Oct 2026 · Product version 0.9.2
 | {#err-runorder-errors-unknownheat} “That plan names a heat that is not in this event.” | Run order & timetable step (step 6) | The plan names a heat that is not in this event (it was removed by a re-draw). | Take the row out and add the heat again. |
 | {#err-runorder-errors-notvalid} “The plan is not valid:” | Run order & timetable step (step 6) | The run order (plan) could not be changed. | Follow the sentence. |
 | {#err-runorder-errors-deleteactive} “This plan is active. Activate another plan first.” | Run order & timetable step (step 6) | The run order (plan) could not be changed. | Activate another plan of that day first, then delete this one. |
+| {#err-runorder-errors-heatstarted} “A heat in this plan has already started, so it cannot be taken out. Nothing was changed.” | Run order & timetable step (step 6) | The run order (plan) could not be changed. | Follow the sentence. |
 
 ### Other
 
@@ -777,6 +778,7 @@ The database refuses with a short code (for example `DRAW_NOT_LOCKED: Pro Men`);
 | {#code-flag-out-too-many} `FLAG_OUT_TOO_MANY` | [“This format flags out at most ‹n› riders.”](#err-liveerrors-codes-flag-out-too-many) | The database refused the action and said why. |
 | {#code-heat-already-rerun} `HEAT_ALREADY_RERUN` | [“This heat has already been re-run.”](#err-liveerrors-codes-heat-already-rerun) · [“This heat was cancelled and already re-run. Reset the re-run instead; the cancelled heat stays as it is.”](#err-resetparts-errors-heat-already-rerun) | A cancelled heat can be re-run once. |
 | {#code-heat-already-running} `HEAT_ALREADY_RUNNING` | [“Another heat is already running or starting (‹max› at a time). End it or abort its start first, or ask the organiser to allow more in the Event step”](#err-liveerrors-codes-heat-already-running) | The event allows only this many heats running, paused or in their yellow (start heat sequence) at once: the “one heat at a time” rule. |
+| {#code-heat-already-started} `HEAT_ALREADY_STARTED` | the screen's general “That did not work” sentence | Not described yet: add it to scripts/manual/error-notes.ts. |
 | {#code-heat-armed} `HEAT_ARMED` | [“Abort the start sequence first.”](#err-reset-errors-heat-armed) | A heat of this event is in its start sequence (the yellow is up, running or paused). A reset now would leave it armed and it would start by itself on the reset event, so every reset and Clear actual times is refused. |
 | {#code-heat-cancelled} `HEAT_CANCELLED` | [“This heat was cancelled.”](#err-liveerrors-codes-heat-cancelled) | The database refused the action and said why. |
 | {#code-heat-not-ended} `HEAT_NOT_ENDED` | [“End the heat before publishing it.”](#err-liveerrors-codes-heat-not-ended) | The database refused the action and said why. |
