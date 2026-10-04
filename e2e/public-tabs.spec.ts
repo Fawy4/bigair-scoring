@@ -1,9 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./base";
 import { createPublicWorld, type PublicWorld } from "./public-world";
 
 /**
  * Polish 2b, item 5 — the organiser chooses the tabs of the public event page ("Public page" card on the Event step). Switch two tabs off: the public page shows the rest, the old
- * address of a hidden tab lands on the first visible tab (never a 404), Join also hides itself while registration is closed, and one tab always stays on.
+ * address of a hidden tab lands on the first visible tab (never a 404), the Join tab follows its own switch only (Polish 3, item 12), and one tab always stays on.
  */
 test.describe.configure({ mode: "serial" });
 
@@ -35,7 +35,6 @@ test("the Event step lists every public tab, all on; switching Rules and Join of
   await openAdvanced(page);
   const card = page.getByTestId("public-page-settings");
   for (const key of ["home", "live", "results", "ladder", "riders", "placings", "rules", "join"]) await expect(card.getByTestId(`public-tab-${key}`)).toBeChecked(); // all on by default
-  await expect(card.getByText("Join also hides itself while registration is closed.")).toBeVisible();
   await expect(card.getByRole("button", { name: /^What is/ }).or(card.getByRole("button", { name: /Public page/ })).first()).toBeVisible();
   await card.getByTestId("public-tab-rules").uncheck();
   await card.getByTestId("public-tab-join").uncheck();
@@ -74,27 +73,33 @@ test.describe("the public page", () => {
     expect(await tabsOf(page)).toEqual(["Results", "Ladder", "Riders", "Placings", "Join"]);
   });
 
-  test("Join hides itself while registration is closed and comes back when it opens; the join page itself still opens for officials", async ({ page }) => {
+  test("Polish 3, item 12: the Join tab follows its own switch only; with registration closed the tab stays, the officials' part works and the riders' part says Registration is closed", async ({ page }) => {
     await setSettings({ publicTabsOff: [], registrationOpen: false });
     await page.goto(`/e/${w.slug}`);
-    expect(await tabsOf(page)).toEqual(["Home", "Live", "Results", "Ladder", "Riders", "Placings", "Rules"]);
+    expect(await tabsOf(page)).toEqual(["Home", "Live", "Results", "Ladder", "Riders", "Placings", "Rules", "Join"]); // closed registration does not hide it
+    await page.goto(`/e/${w.slug}/join`);
+    await expect(page.getByTestId("role-judge")).toBeVisible(); // the officials' PIN doors
+    await expect(page.getByTestId("join-registration-closed")).toContainText("Registration is closed");
+    await expect(page.getByTestId("join-register-link")).toHaveCount(0);
+    // open: the riders' part offers the registration page instead
     await setSettings({ registrationOpen: true });
-    await page.goto(`/e/${w.slug}`);
-    expect(await tabsOf(page)).toEqual(["Home", "Live", "Results", "Ladder", "Riders", "Placings", "Rules", "Join"]);
-    await setSettings({ registrationOpen: false });
-    const join = await page.goto(`/e/${w.slug}/join`);
-    expect(join?.status()).toBe(200); // the officials' PIN doors live on this address
+    await page.goto(`/e/${w.slug}/join`);
+    await expect(page.getByTestId("join-register-link")).toBeVisible();
+    await expect(page.getByTestId("join-registration-closed")).toHaveCount(0);
     await expect(page.getByTestId("role-judge")).toBeVisible();
+    // its own switch is the only thing that hides it
+    await setSettings({ publicTabsOff: ["join"] });
+    await page.goto(`/e/${w.slug}`);
+    expect(await tabsOf(page)).not.toContain("Join");
   });
 });
 
-test("at least one tab stays on: the last switch cannot be turned off (Join does not count)", async ({ page }) => {
+test("at least one tab stays on: the last switch cannot be turned off (Join counts like the others)", async ({ page }) => {
   test.setTimeout(180_000);
   await setSettings({ publicTabsOff: [] });
   await w.org.signIn(page, `/org/events/${w.eventId}/event`);
   await openAdvanced(page);
-  for (const key of ["home", "live", "ladder", "riders", "placings", "rules"]) await page.getByTestId(`public-tab-${key}`).uncheck();
+  for (const key of ["home", "live", "ladder", "riders", "placings", "rules", "join"]) await page.getByTestId(`public-tab-${key}`).uncheck();
   await expect(page.getByTestId("public-tab-results")).toBeChecked();
-  await expect(page.getByTestId("public-tab-results")).toBeDisabled(); // the last one (Join does not count while it can hide itself)
-  await expect(page.getByTestId("public-tab-join")).toBeEnabled();
+  await expect(page.getByTestId("public-tab-results")).toBeDisabled(); // the last one, Join included`)
 });

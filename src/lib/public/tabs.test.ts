@@ -11,31 +11,33 @@ describe("the public event page's tabs (Polish 2b, item 5)", () => {
     expect(publicTabs(lb).find((t) => t.key === "leaderboard-2")?.label).toBe("Longest Ride");
   });
 
-  it("everything is on by default; Join is hidden on its own while registration is closed", () => {
-    const open = visiblePublicTabs({ leaderboards: [], off: [], registrationOpen: true }).map((t) => t.key);
-    expect(open).toContain("join");
-    const closed = visiblePublicTabs({ leaderboards: [], off: [], registrationOpen: false }).map((t) => t.key);
-    expect(closed).not.toContain("join");
-    expect(closed).toHaveLength(open.length - 1);
+  it("everything is on by default; Join follows its own switch and nothing else (Polish 3, item 12: it no longer hides while registration is closed)", () => {
+    const on = visiblePublicTabs({ leaderboards: [], off: [] }).map((t) => t.key);
+    expect(on).toContain("join");
+    expect(on).toHaveLength(8);
+    // a registrationOpen value, however old the caller, changes nothing
+    expect(visiblePublicTabs({ leaderboards: [], off: [], registrationOpen: false } as never).map((t) => t.key)).toEqual(on);
+    expect(visiblePublicTabs({ leaderboards: [], off: ["join"] }).map((t) => t.key)).not.toContain("join");
   });
 
   it("the organiser's switches hide a tab; an unknown key in the list changes nothing", () => {
-    const keys = visiblePublicTabs({ leaderboards: [], off: ["rules", "join", "nonsense"], registrationOpen: true }).map((t) => t.key);
+    const keys = visiblePublicTabs({ leaderboards: [], off: ["rules", "join", "nonsense"] }).map((t) => t.key);
     expect(keys).toEqual(["home", "live", "results", "ladder", "riders", "placings"]);
   });
 
-  it("at least one tab stays on: Join does not count while it can be hidden by registration", () => {
-    expect(tabsOffLeavesOne(["home", "live", "results", "ladder", "riders", "placings", "rules"], [])).toBe(false); // only Join would be left
+  it("at least one tab stays on, and Join counts as a tab like the others", () => {
+    expect(tabsOffLeavesOne(["home", "live", "results", "ladder", "riders", "placings", "rules"], [])).toBe(true); // Join is left, and it stays shown
+    expect(tabsOffLeavesOne(["home", "live", "results", "ladder", "riders", "placings", "rules", "join"], [])).toBe(false);
     expect(tabsOffLeavesOne(["home", "live", "results", "ladder", "riders", "placings"], [])).toBe(true);
     expect(tabsOffLeavesOne(["home", "live", "results", "ladder", "riders", "placings", "rules"], [{ title: "x" }])).toBe(true); // a leaderboard is still on
     expect(tabsOffLeavesOne([], [])).toBe(true);
   });
 
   it("an old link to a hidden tab lands on the first visible tab, never a 404; a visible tab stays where it is", () => {
-    const settings = { leaderboards: [], off: ["home", "live"], registrationOpen: false };
+    const settings = { leaderboards: [], off: ["home", "live"] };
     expect(isTabVisible("results", settings)).toBe(true);
     expect(isTabVisible("live", settings)).toBe(false);
-    expect(isTabVisible("join", settings)).toBe(false);
+    expect(isTabVisible("join", settings)).toBe(true);
     expect(firstVisibleHref("/e/arrow", settings)).toBe("/e/arrow/results");
     expect(firstVisibleHref("/e/arrow", { ...settings, off: [] })).toBe("/e/arrow");
   });
@@ -43,7 +45,8 @@ describe("the public event page's tabs (Polish 2b, item 5)", () => {
   it("the form refuses to switch every tab off", () => {
     const base = { name: "Arrow", slug: "arrow", start_date: "2026-10-02", end_date: "2026-10-04", timezone: "Africa/Cairo", settings: {}, branding: {} };
     expect(EventFormSchema.safeParse(base).success).toBe(true);
-    expect(EventFormSchema.safeParse({ ...base, settings: { publicTabsOff: ["home", "live", "results", "ladder", "riders", "placings", "rules"] } }).success).toBe(false);
+    expect(EventFormSchema.safeParse({ ...base, settings: { publicTabsOff: ["home", "live", "results", "ladder", "riders", "placings", "rules", "join"] } }).success).toBe(false); // Join counts too
+    expect(EventFormSchema.safeParse({ ...base, settings: { publicTabsOff: ["home", "live", "results", "ladder", "riders", "placings", "rules"] } }).success).toBe(true); // only Join left
     expect(EventFormSchema.safeParse({ ...base, settings: { publicTabsOff: ["rules", "join"] } }).success).toBe(true);
   });
 

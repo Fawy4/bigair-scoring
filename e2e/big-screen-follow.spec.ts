@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./base";
 import { publishLadderHeat } from "../tests/rls/public-helpers";
 import { createPublicWorld, type PublicWorld } from "./public-world";
 

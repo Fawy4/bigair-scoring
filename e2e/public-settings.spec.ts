@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./base";
 import { createOrganiser } from "./organiser";
 
 // Phase 6 settings on the Event step: the big screen's page time and the outside leaderboards that become tabs on the public site.

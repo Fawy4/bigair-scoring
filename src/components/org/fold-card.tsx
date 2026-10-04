@@ -54,7 +54,7 @@ export function FoldCard({ id, title, first = false, className, titleClassName, 
           <ChevronDown aria-hidden className={cn("size-4 shrink-0 transition-transform", open ? "rotate-180" : "")} />
         </button>
       </h3>
-      <div id={bodyId} ref={body} hidden={!open} className="flex flex-col gap-3">
+      <div id={bodyId} ref={body} hidden={!open} className={open ? "flex flex-col gap-3" : "hidden"}>
         {children}
       </div>
     </section>

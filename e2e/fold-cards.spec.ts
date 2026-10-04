@@ -52,7 +52,10 @@ test("the choice is remembered in this browser", async ({ page }) => {
   await page.getByTestId("fold-slug").click(); // fold the first one
   await page.reload();
   await expect(page.getByTestId("event-panel")).toBeVisible({ timeout: 60_000 });
-  if ((await page.getByTestId("advanced-toggle").getAttribute("aria-expanded")) !== "true") await page.getByTestId("advanced-toggle").click();
+  await expect(async () => {
+    if (!(await page.getByTestId("fold-flags").isVisible())) await page.getByTestId("advanced-toggle").click({ timeout: 3000 });
+    await expect(page.getByTestId("fold-flags")).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 30_000 });
   await expect(page.getByTestId("fold-flags")).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByTestId("fold-slug")).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByTestId("fold-timing")).toHaveAttribute("aria-expanded", "false");
@@ -61,14 +64,15 @@ test("the choice is remembered in this browser", async ({ page }) => {
 test("a card holding an error unfolds itself when Save finds it", async ({ page }) => {
   test.setTimeout(240_000);
   await openEventStep(page);
-  await page.getByTestId("fold-timing").click();
-  await page.locator("#ev-ready").fill("999"); // the ready call is 0 to 120 minutes
-  await page.getByTestId("fold-timing").click(); // fold it with the mistake inside
-  await expect(page.locator("#ev-ready")).toBeHidden();
+  await page.getByTestId("fold-branding").click();
+  await page.getByRole("button", { name: "Add sponsor" }).click();
+  await page.locator("#sp-url-0").fill("not a web address"); // a sponsor's link must be a web address
+  await page.getByTestId("fold-branding").click(); // fold it with the mistake inside
+  await expect(page.locator("#sp-url-0")).toBeHidden();
   await page.getByRole("button", { name: "Save event" }).click();
-  await expect(page.getByTestId("fold-timing")).toHaveAttribute("aria-expanded", "true", { timeout: 15_000 });
-  await expect(page.locator("#ev-ready")).toBeVisible();
-  await expect(page.locator("#ev-ready").locator("xpath=ancestor::section[1]").locator(".field-error").first()).toBeVisible();
+  await expect(page.getByTestId("fold-branding")).toHaveAttribute("aria-expanded", "true", { timeout: 15_000 });
+  await expect(page.locator("#sp-url-0")).toBeVisible();
+  await expect(page.getByTestId("fold-branding").locator("xpath=ancestor::section[1]").locator(".field-error").first()).toBeVisible();
 });
 
 test.describe("on a phone", () => {
