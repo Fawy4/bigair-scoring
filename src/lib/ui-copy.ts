@@ -8,6 +8,8 @@
 import type { LabelMap } from "@/lib/schema-form/nodes";
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+/** The separate score as a refusal names it: the event's own name for it ("Style score"), or the house words when no name is known. */
+const scoreName = (c?: { impressionName?: string }) => (c?.impressionName?.trim() ? `${c.impressionName.trim()} score` : "Impression / Variety score");
 
 export interface Help {
   text: string;
@@ -3432,7 +3434,7 @@ export const copy = {
         return low && high ? `That score is outside the scale (${low} to ${high}).` : "That score is outside the scale.";
       },
       SCORE_MISSING_CRITERION: () => "Enter every criterion.",
-      NO_IMPRESSION: () => "This division's rules have no Impression / Variety score.",
+      NO_IMPRESSION: (_d?: string, c?: { impressionName?: string }) => `This division's rules have no ${scoreName(c)}.`,
       NOT_SAME_RIDER: () => "Only attempts of the same rider can be merged.",
       BAD_MERGE: () => "Choose two different attempts.",
       BAD_STATUS: () => "That is not a valid state for an attempt.",
@@ -3458,14 +3460,14 @@ export const copy = {
       CLIENT_KEY_REUSED: () => "That tap was already used for another heat.",
       UNDO_TOO_LATE: () => "Too late to undo: ask the head judge to delete it.",
       SHEET_LOCKED: () => "Your sheet is locked. Ask the head judge to reopen it.",
-      IMPRESSION_MISSING: (n?: string) => `${n && n !== "1" ? `${n} riders have` : "A rider has"} no Impression / Variety score from you yet.`,
-      IMPRESSION_NOT_OPEN: () => "The Impression / Variety score opens when the heat has ended.",
+      IMPRESSION_MISSING: (n?: string, c?: { impressionName?: string }) => `${n && n !== "1" ? `${n} riders have` : "A rider has"} no ${scoreName(c)} from you yet.`,
+      IMPRESSION_NOT_OPEN: (_d?: string, c?: { impressionName?: string }) => `The ${scoreName(c)} opens when the heat has ended.`,
       NOT_SCORABLE: () => "A crash is not scored.",
       FLAG_NOT_APPLICABLE: () => "That flag does not fit this attempt.",
       BAD_FLAG: () => "That flag is not valid.",
       ENTRY_NOT_IN_DIVISION: () => "That rider is not in this division.",
       PARENT_NOT_FOUND: () => "That item no longer exists.",
-    } as Record<string, (detail?: string) => string>,
+    } as Record<string, (detail?: string, context?: { impressionName?: string }) => string>,
   },
   /** The judge's phone (docs/PLAN-phase-5 step 3). */
   judge: {

@@ -18,6 +18,7 @@ import { criteriaRows, criteriaScore } from "@/lib/live/criteria";
 import type { ImpressionRider } from "@/lib/live/design-fixtures";
 import { errorSentence } from "@/lib/live/errors";
 import { buildJudgeItems, type LiveAttemptRow, type MyScoreRow } from "@/lib/live/judge-items";
+import { impressionNameOf } from "@/lib/schemas/impression-name";
 import { formatCell } from "@/lib/live/matrix-model";
 import { myCountedSeqs, type MyScoreEntry } from "@/lib/live/my-sheet";
 import { nextHeat } from "@/lib/live/next-heat";
@@ -85,6 +86,8 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const scale = useMemo(() => model?.trick.scale ?? { min: 0, max: 10, step: 0.1 }, [model]);
   const entry = model?.trick.entry ?? "single";
   const impression = model?.heat.impression ?? null;
+  // the refusals about the separate score use the name the event gives it (Event step)
+  const impressionCtx = model && impression ? { impressionName: impressionNameOf(model) } : {};
   const max = division?.maxAttempts ?? null;
   const kit = useMemo(() => trickKit(ctx), [ctx]);
 
@@ -142,7 +145,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   useEffect(() => {
     const refused = q.items.filter((i) => i.state === "refused");
     if (!refused.length) return;
-    setNotices((n) => [...n, ...refused.map((i) => ({ key: i.clientKey, text: errorSentence(i.code ?? i.message) }))]);
+    setNotices((n) => [...n, ...refused.map((i) => ({ key: i.clientKey, text: errorSentence(i.code ?? i.message, impressionCtx) }))]);
     for (const i of refused) q.queue.clearRefused(i.clientKey);
   }, [q.items, q.queue]);
 
@@ -216,7 +219,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
       return;
     }
     const r = await supabase.rpc("submit_sheet", { p_heat: heat.id });
-    if (r.error) setSubmitError(errorSentence(r.error.message));
+    if (r.error) setSubmitError(errorSentence(r.error.message, impressionCtx));
     else setSubmittedLocal((s) => new Set(s).add(heat.id));
   };
 

@@ -27,9 +27,9 @@ export type { PublishResult };
 const uuid = z.string().uuid();
 type Failure = { ok: false; code: string | null; message: string };
 const fail = (code: string | null, message?: string): Failure => ({ ok: false, code, message: message ?? errorSentence(code) });
-const from = (error: { message: string }): Failure => ({ ok: false, code: parseError(error.message).code, message: errorSentence(error.message) });
+const from = (error: { message: string }, impressionName?: string): Failure => ({ ok: false, code: parseError(error.message).code, message: errorSentence(error.message, impressionName ? { impressionName } : {}) });
 /** A refused score: the code, and the sentence with its detail (the step, or the range). */
-const refuse = (r: ScoreRefusal): Failure => fail(r.code, errorSentence(r.detail ? `${r.code}: ${r.detail}` : r.code));
+const refuse = (r: ScoreRefusal, impressionName?: string): Failure => fail(r.code, errorSentence(r.detail ? `${r.code}: ${r.detail}` : r.code, impressionName ? { impressionName } : {}));
 
 type Db = Awaited<ReturnType<typeof createClient>>;
 
@@ -83,10 +83,10 @@ export async function headSetImpression(input: { heatId: string; entryId: string
   if (!model) return fail("NOT_ALLOWED");
   if (!input.missed) {
     const refusal = input.value === null ? ({ code: "SCORE_REQUIRED" } as ScoreRefusal) : impressionRefusal(model, input.value);
-    if (refusal) return refuse(refusal);
+    if (refusal) return refuse(refusal, impressionNameOf(model));
   }
   const { error } = await db.rpc("head_set_impression", { p_heat: input.heatId, p_entry: input.entryId, p_seat: input.seatId, p_value: (input.missed ? null : input.value) as never, p_reason: input.reason.trim(), p_missed: Boolean(input.missed) });
-  return error ? from(error) : { ok: true };
+  return error ? from(error, impressionNameOf(model)) : { ok: true };
 }
 
 /**
@@ -109,18 +109,18 @@ export async function headSaveImpressionSheet(input: {
   for (const r of input.rows) {
     if (r.missed) continue;
     const refusal = r.value === null ? ({ code: "SCORE_REQUIRED" } as ScoreRefusal) : impressionRefusal(model, r.value);
-    if (refusal) return refuse(refusal);
+    if (refusal) return refuse(refusal, impressionNameOf(model));
   }
   for (const r of input.rows) {
     const { error } = await db.rpc("head_set_impression", { p_heat: input.heatId, p_entry: r.entryId, p_seat: input.seatId, p_value: (r.missed ? null : r.value) as never, p_reason: input.reason.trim(), p_missed: Boolean(r.missed) });
-    if (error) return from(error);
+    if (error) return from(error, impressionNameOf(model));
   }
   if (input.submit) {
     const { error } = await db.rpc("head_submit_sheet", { p_heat: input.heatId, p_seat: input.seatId, p_reason: input.reason.trim() });
     if (error) {
       const code = parseError(error.message);
       if (code.code === "IMPRESSION_MISSING") return fail("IMPRESSION_MISSING", copy.headLive.sheetStillMissing(Number(code.detail ?? 1), impressionNameOf(model)));
-      return from(error);
+      return from(error, impressionNameOf(model));
     }
   }
   return { ok: true };

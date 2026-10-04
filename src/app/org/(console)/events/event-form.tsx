@@ -20,6 +20,7 @@ import { LogoField } from "@/components/org/logo-field";
 import { SlugLink } from "@/components/slug-link";
 import { toast } from "@/hooks/use-toast";
 import { issuesToMap, moveIn, removeIn, setIn } from "@/lib/form/path";
+import { impressionPlaceholder } from "@/lib/org/impression-names";
 import { EventFormSchema, slugify, type EventForm as EventFormValues } from "@/lib/schemas/event-settings";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
 import { copy, help, orgCopy } from "@/lib/ui-copy";
@@ -36,7 +37,7 @@ export interface EventFormInitial {
   savedSlug: string | null;
 }
 
-export function EventForm({ initial, timeZones, schemes }: { initial: EventFormInitial; timeZones: string[]; schemes: IdentificationScheme[] }) {
+export function EventForm({ initial, timeZones, schemes, impressionNames = [] }: { initial: EventFormInitial; timeZones: string[]; schemes: IdentificationScheme[]; /** What the event's divisions call their separate score now; shown in the empty field. */ impressionNames?: string[] }) {
   const router = useRouter();
   const refreshSoon = useRefreshSoon();
   const laptop = useShellLayout() === "laptop";
@@ -358,7 +359,7 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
       <section className={group} data-testid="scoring-settings">
         <h3 className={groupTitle}>{T.scoringHeading}</h3>
         <SettingRow id="ev-impression-name" label={T.impressionName} {...h("event.impressionName")}>
-          <input id="ev-impression-name" data-testid="impression-name" value={form.settings.impressionName} maxLength={24} placeholder={T.impressionNamePlaceholder} onChange={(e) => set(["settings", "impressionName"], e.target.value)} className={inputCls} />
+          <input id="ev-impression-name" data-testid="impression-name" value={form.settings.impressionName} maxLength={24} placeholder={impressionPlaceholder(impressionNames, T.impressionNamePlaceholder)} onChange={(e) => set(["settings", "impressionName"], e.target.value)} className={inputCls} />
         </SettingRow>
         {showError("settings.impressionName")}
       </section>

@@ -31,4 +31,16 @@ describe("error sentences (docs/08 §1G-12)", () => {
     const missing = [...codes].filter((c) => !quiet.has(c) && !copy.liveErrors.codes[c]);
     expect(missing).toEqual([]);
   });
+
+  it("Polish 3, item 10: the refusals about the separate score use the name the event gives it, and the house words when no name is known", () => {
+    expect(errorSentence("IMPRESSION_MISSING: 2")).toBe("2 riders have no Impression / Variety score from you yet.");
+    expect(errorSentence("IMPRESSION_MISSING: 2", { impressionName: "Style" })).toBe("2 riders have no Style score from you yet.");
+    expect(errorSentence("IMPRESSION_MISSING", { impressionName: "Style" })).toBe("A rider has no Style score from you yet.");
+    expect(errorSentence("IMPRESSION_NOT_OPEN", { impressionName: "Style" })).toBe("The Style score opens when the heat has ended.");
+    expect(errorSentence("IMPRESSION_NOT_OPEN")).toBe("The Impression / Variety score opens when the heat has ended.");
+    expect(errorSentence("NO_IMPRESSION", { impressionName: "Style" })).toBe("This division's rules have no Style score.");
+    expect(errorSentence("NO_IMPRESSION", { impressionName: "  " })).toBe("This division's rules have no Impression / Variety score.");
+    // other sentences are untouched by the context
+    expect(errorSentence("NOT_SCORABLE", { impressionName: "Style" })).toBe("A crash is not scored.");
+  });
 });

@@ -102,3 +102,19 @@ test("Name of the impression score = Variety: the card heading, the judge's phon
   await expect(pub.getByTestId("public-formula").first()).toContainText("Variety", { timeout: 60_000 });
   await expect(pub.getByTestId("public-formula").first()).not.toContainText("Impression");
 });
+
+test("Polish 3: the empty 'Name of the impression score' field shows what the division calls the score now", async ({ page }) => {
+  test.setTimeout(300_000);
+  await w.org.signIn(page, `/org/events/${w.eventId}/event`);
+  await expect(page.getByTestId("event-panel")).toBeVisible({ timeout: 60_000 });
+  if (!(await page.getByTestId("impression-name").isVisible())) await page.getByTestId("advanced-toggle").click();
+  await expect(page.getByTestId("impression-name")).toHaveValue("");
+  await expect(page.getByTestId("impression-name")).toHaveAttribute("placeholder", "Impression"); // the division's own name here (set in beforeEach)
+  // the division is renamed on the Divisions step: the empty field follows it
+  await w.db.from("divisions").update({ scoring_overrides: { heat: { maxAttemptsPerRider: 7, impression: { label: "Style" } }, panel: { requireAllJudges: true } } as never }).eq("id", w.divisionId);
+  await page.reload();
+  await expect(page.getByTestId("event-panel")).toBeVisible({ timeout: 60_000 });
+  await page.waitForTimeout(1_000);
+  if (!(await page.getByTestId("impression-name").isVisible())) await page.getByTestId("advanced-toggle").click();
+  await expect(page.getByTestId("impression-name")).toHaveAttribute("placeholder", "Style", { timeout: 30_000 });
+});

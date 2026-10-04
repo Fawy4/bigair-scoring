@@ -5,6 +5,7 @@ import { knownTimeZones } from "@/lib/schemas/org-settings";
 import { copy } from "@/lib/ui-copy";
 import { valuesFromRow } from "@/lib/schemas/event-values";
 import { EventLifecycle } from "@/components/event-lifecycle";
+import { divisionImpressionNames } from "@/lib/org/impression-names";
 import { EventForm } from "../../event-form";
 
 export const metadata = { title: copy.wizard.steps.event };
@@ -13,7 +14,7 @@ export default async function EventStepPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const { supabase } = await getDb();
   // everything the page shows is asked for at the same time: the event with its organisation's saved Rider labels, and whether anything was published
-  const [{ data: event }, { count: resultLines }, { count: publishedHeats }] = await Promise.all([
+  const [{ data: event }, { count: resultLines }, { count: publishedHeats }, { data: divisionRows }] = await Promise.all([
     supabase
       .from("events")
       .select("id, organisation_id, name, slug, location, timezone, start_date, end_date, status, settings, branding, archived_at, is_simulation, organisations(presets(key, version, json))")
@@ -23,6 +24,8 @@ export default async function EventStepPage({ params }: { params: Promise<{ id: 
     // any published result (a result line, or a published heat) makes the event permanent: then only Archive is offered
     supabase.from("heat_results").select("id", { count: "exact", head: true }).eq("event_id", id),
     supabase.from("heats").select("id", { count: "exact", head: true }).eq("event_id", id).eq("status", "published"),
+    // what each division calls its separate score now: the empty "Name of the impression score" field shows it (Polish 3, item 10)
+    supabase.from("divisions").select("scoring_overrides, scoring_models(json)").eq("event_id", id).order("sort_order"),
   ]);
   if (!event) notFound();
   const schemes = identificationSchemesFrom(event.organisations?.presets ?? []);
@@ -34,6 +37,7 @@ export default async function EventStepPage({ params }: { params: Promise<{ id: 
         initial={{ id: event.id, organisationId: event.organisation_id, status: event.status, values: valuesFromRow(event), savedSlug: event.slug }}
         timeZones={knownTimeZones()}
         schemes={schemes}
+        impressionNames={divisionImpressionNames(divisionRows ?? [])}
       />
       <section className="org-new flex flex-col gap-3 rounded-card border border-beach-line p-4" aria-labelledby="lifecycle-h">
         <h2 id="lifecycle-h" className="text-[14px] font-semibold">
