@@ -84,5 +84,5 @@ test("the pictures of Follow the heat", async ({ page }) => {
   await page.goto(`/org/events/${w.eventId}`);
   await expect(page.getByTestId("follow-screen-link")).toBeVisible({ timeout: 30_000 });
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; } [data-testid=note-button] { display: none !important; }" }).catch(() => undefined);
-  await page.getByTestId("follow-screen-link").locator("xpath=../..").screenshot({ path: path.join(OUT, "follow-go-live-shortcut-1280.png") });
+  await page.getByTestId("follow-screen-link").locator("xpath=ancestor::*[.//*[contains(text(),'Reset event')]][1]").screenshot({ path: path.join(OUT, "follow-go-live-shortcut-1280.png") });
 });
