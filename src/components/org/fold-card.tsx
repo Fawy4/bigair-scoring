@@ -47,7 +47,7 @@ export function FoldCard({ id, title, first = false, className, titleClassName, 
   };
 
   return (
-    <section data-testid={testId} data-fold={open ? "open" : "closed"} aria-label={title} className={className}>
+    <section data-testid={testId} data-fold={open ? "open" : "closed"} className={className}>
       <h3 className={cn("m-0", titleClassName)}>
         <button type="button" onClick={toggle} aria-expanded={open} aria-controls={bodyId} data-testid={`fold-${id}`} className="flex min-h-[var(--org-ctl)] w-full items-center justify-between gap-2 text-left font-semibold">
           <span>{title}</span>
