@@ -14,7 +14,7 @@ How to write an entry (copy the newest one):
 
 ## 0.15.0 — 4 Oct 2026 {#release-0-15-0}
 
-PR: #PRNUMBER
+PR: #36
 
 ### What changed
 - **New: Big screen — Follow the heat** (a second big-screen address, /screen/‹event›/follow, for a TV or a projector — never a phone). While a heat is armed or running it stays on that heat: the riders with their Lycra colours, the clock, the flag frame and the state word, live totals only if the event allows live scores. When the head judge ends the heat it stays on it and says **Judges reviewing** until the result is published.
