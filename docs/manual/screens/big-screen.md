@@ -52,7 +52,7 @@ It always shows one of three things, chosen by what the head judge does:
 ![Follow the heat: Judges reviewing](../img/follow-reviewing-1280.png)
 *follow-reviewing-1280.png — after End heat, until Publish.*
 
-**A Results page** names its heat and when it was published (“Pro Men · R1 · Heat 6 · published 14:20”) and shows the full result exactly as the [public Results page](public-results.md) does — it is made from the same pieces, so the two cannot disagree: every rider's row with the place, the Rider label, the total, the formula in words (the Impression / Variety score under its name) and every attempt's score in its box (counted attempts highlighted, crashes marked, uncounted attempts shown as on the public page, in the attempt-box mode the event uses). Only the panel's scores are shown, never a single judge's marks, and only heats that are published and released: a heat that is not published, under review or held back never appears (the final follows the same release rule as the public pages). The type is large enough to read from 10 metres on a 1920 × 1080 screen and is never made smaller to fit: a heat with more riders or attempts than fit on one page is split across two (“page 1 of 2”).
+**A Results page** names its heat and when it was published (“Pro Men · R1 · Heat 6 · published 14:20”) and shows the full result exactly as the [public Results page](public-results.md) does — it is made from the same pieces, so the two cannot disagree: every rider's row with the place, the Rider label, the total, the formula in words (the Impression / Variety score under its name) and every attempt's score in its box (counted attempts highlighted, crashes shown as CRASH, uncounted attempts shown as on the public page, in the attempt-box mode the event uses). Only the panel's scores are shown, never a single judge's scores, and only heats that are published and released: a heat that is not published, under review or held back never appears (the final follows the same release rule as the public pages). The type is large enough to read from 10 metres on a 1920 × 1080 screen and is never made smaller to fit: a heat with more riders or attempts than fit on one page is split across two (“page 1 of 2”).
 
 ![Follow the heat: a Results page](../img/follow-results-1280.png)
 *follow-results-1280.png — a Results page: every attempt of every rider.*
@@ -81,7 +81,7 @@ It always shows one of three things, chosen by what the head judge does:
 
 **No text is ever cut with “…”** here: headings, heat names, rider names and the Next line fit the width or wrap onto a second line.
 
-**If the connection drops** the screen keeps the last good page and shows a small **Reconnecting** mark in the header; it never goes blank and never shows an error page, and it carries on by itself when the connection is back. A simulation event is shown only to its own organiser (through **View as**), like the public pages.
+**If the connection drops** the screen keeps the last good page and shows a small **Reconnecting** label in the header; it never goes blank and never shows an error page, and it carries on by itself when the connection is back. A simulation event is shown only to its own organiser (through **View as**), like the public pages.
 
 The setting is on the Event step, behind **More settings**, beside “Big screen: seconds per page” (which controls the first big screen only):
 
