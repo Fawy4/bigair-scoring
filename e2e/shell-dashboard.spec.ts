@@ -108,7 +108,7 @@ test("Hold, Resume at and Shift work from the dashboard; without a run order the
   await expect(actions.getByRole("button", { name: "Hold", exact: true })).toBeDisabled();
   await expect(actions.getByText("No run order is active for today. Activate one in Run order.").first()).toBeVisible();
   // the big screen link and the wind call (Phase 6) are on the dashboard
-  await expect(actions.getByRole("link", { name: "Big screen" })).toHaveAttribute("href", `/screen/e2e-live-${w.org.run}`);
+  await expect(actions.getByRole("link", { name: "Big screen", exact: true })).toHaveAttribute("href", `/screen/e2e-live-${w.org.run}`);
   await expect(page.getByTestId("wind-call")).toBeVisible();
   await page.getByTestId("wind-green").click();
   await page.getByTestId("wind-set").click();
