@@ -192,6 +192,8 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
       get_seat_contacts: { p_event: f.ids.evA1 },
       head_set_impression: { p_heat: ended, p_entry: p[0], p_seat: f.ids.seat_j1, p_value: 7, p_reason: "paper sheet" },
       head_set_trick_score: { p_attempt: attE1, p_seat: f.ids.seat_j1, p_score: 2, p_criteria: {}, p_missed: false, p_reason: "paper sheet" },
+      export_role: { p_event: f.ids.evA1 }, // a read: for an observer it answers nobody (null), the same as a judge or a spotter
+      log_export: { p_event: f.ids.evA1, p_kind: "results_csv" }, // refused NOT_ALLOWED: an observer may not export, nor write the export's audit line
       head_submit_sheet: { p_heat: ended, p_seat: f.ids.seat_j2, p_reason: "paper sheet" },
       import_riders: { p_division: d.div, p_rows: [{ first: "Ivy", last: "Obs" }] },
       lock_division_draw: { p_division: d.div },
@@ -259,7 +261,7 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
     const accepted: string[] = [];
     for (const [name, args] of Object.entries(calls)) {
       const r = await obs.rpc(name as never, args as never);
-      const refused = Boolean(r.error) || (r.data && typeof r.data === "object" && (r.data as { ok?: unknown }).ok === false) || name === "sim_view_beat" || name === "sim_view_leave";
+      const refused = Boolean(r.error) || (r.data && typeof r.data === "object" && (r.data as { ok?: unknown }).ok === false) || name === "sim_view_beat" || name === "sim_view_leave" || (name === "export_role" && r.data === null);
       if (!refused) accepted.push(name);
     }
     // sim_view_beat / sim_view_leave only touch the View-as rows the caller itself holds (it holds none): the world below proves nothing changed
