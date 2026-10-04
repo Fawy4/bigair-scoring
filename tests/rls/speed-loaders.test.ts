@@ -192,4 +192,30 @@ describe.skipIf(!ENV_OK)("Speed 1 — the new reads give the same answers, to th
     expect(refused).toMatchObject({ ok: false, code: "NOT_ALLOWED" });
     expect((await f.s.from("heat_results").select("id").eq("heat_id", h2)).data).toHaveLength(0);
   });
+
+  it("the head judge's scoring rules for a heat (heat, event settings, division and model in one request) are the four-step reading's answer; a judge sees the same, another organisation nothing", async () => {
+    const heat = f.ids.H3;
+    type OneRequest = { events: { settings: unknown } | null; divisions: { scoring_overrides: unknown; scoring_models: { json: unknown } | null } | null } | null;
+    const oneRequest = async (c: typeof f.clients.head) =>
+      (await c.from("heats").select("id, events(settings), divisions(scoring_model_id, scoring_overrides, scoring_models(json))").eq("id", heat).maybeSingle()).data as unknown as OneRequest;
+    const old = async (c: typeof f.clients.head) => {
+      const { data: h } = await c.from("heats").select("division_id, event_id").eq("id", heat).maybeSingle();
+      if (!h) return null;
+      const { data: ev } = await c.from("events").select("settings").eq("id", h.event_id).maybeSingle();
+      const { data: d } = await c.from("divisions").select("scoring_model_id, scoring_overrides").eq("id", h.division_id).maybeSingle();
+      const { data: m } = d?.scoring_model_id ? await c.from("scoring_models").select("json").eq("id", d.scoring_model_id).maybeSingle() : { data: null };
+      return { settings: ev?.settings, overrides: d?.scoring_overrides, model: m?.json };
+    };
+    for (const who of ["head", "orgA"] as const) {
+      const a = await oneRequest(f.clients[who]);
+      const b = await old(f.clients[who]);
+      expect(a?.divisions?.scoring_models?.json, who).toEqual(b?.model);
+      expect(a?.divisions?.scoring_overrides, who).toEqual(b?.overrides);
+      expect(a?.events?.settings, who).toEqual(b?.settings);
+      expect(a?.divisions?.scoring_models?.json, who).toBeTruthy();
+    }
+    // another organisation's private model and rules stay private
+    const other = await oneRequest(f.clients.orgB);
+    expect(other?.divisions?.scoring_models ?? null).toBeNull();
+  });
 });
