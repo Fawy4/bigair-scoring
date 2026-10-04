@@ -78,9 +78,10 @@ test("the pictures of Follow the heat", async ({ page }) => {
   const rows = ["setting-ev-poll", "setting-ev-rotate", "setting-ev-follow-rotate", "setting-ev-screen-colour"].map((id) => page.getByTestId(id));
   await rows[2].scrollIntoViewIfNeeded();
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; } [data-testid=note-button] { display: none !important; }" }).catch(() => undefined);
+  const scrollY = await page.evaluate(() => window.scrollY); // the clip is in page coordinates
   const first = (await rows[0].boundingBox())!;
   const last = (await rows[3].boundingBox())!;
-  await page.screenshot({ path: path.join(OUT, "follow-event-setting-1280.png"), clip: { x: Math.max(0, first.x - 8), y: Math.max(0, first.y - 8), width: first.width + 16, height: last.y + last.height - first.y + 16 }, fullPage: true });
+  await page.screenshot({ path: path.join(OUT, "follow-event-setting-1280.png"), clip: { x: Math.max(0, first.x - 8), y: Math.max(0, first.y + scrollY - 8), width: first.width + 16, height: last.y + last.height - first.y + 16 }, fullPage: true });
 
   // Go live: the shortcut beside Big screen
   await page.goto(`/org/events/${w.eventId}`);
