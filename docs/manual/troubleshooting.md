@@ -575,6 +575,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “use a date” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-usedate) |
 | “Use a number from 1 to 500, or leave it empty for no limit” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-maxperdivision) |
 | “Use a whole number” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-wholenumber) |
+| “Use a whole number of seconds from 5 to 120 for the pages of the Follow the heat screen” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-followrotate) |
 | “Use at least ‹n› characters.” | Follow the sentence. | [Organiser sign-in](errors.md#err-setpassword-tooshort) |
 | “Use only lowercase letters, numbers and hyphens, starting with a letter or number” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-slugchars) |
 | “Use the form 18:30” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-usetime) |
