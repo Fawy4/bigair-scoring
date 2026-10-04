@@ -394,12 +394,15 @@ test("Event step: 'Follow the heat — seconds per page' (default 15, 5 to 120, 
   await page.getByTestId("advanced-toggle").click();
   const field = page.getByLabel("Follow the heat — seconds per page", { exact: true });
   await expect(page.getByLabel("Big screen: seconds per page", { exact: true })).toBeVisible(); // beside the existing one
-  await page.getByRole("button", { name: /Help: Follow the heat/ }).click();
-  await expect(page.getByRole("note").filter({ hasText: "Big screen — Follow the heat" })).toBeVisible();
-  for (const bad of ["4", "121"]) {
-    await field.fill(bad);
-    await page.getByRole("button", { name: /Save event/ }).click();
-    await expect(page.getByText("Use a whole number of seconds from 5 to 120 for the pages of the Follow the heat screen")).toBeVisible();
+  await page.getByRole("button", { name: /About “Follow the heat/ }).click();
+  await expect(page.getByTestId("setting-ev-follow-rotate")).toContainText("Big screen — Follow the heat"); // the line under the label says where it shows
+  await expect(page.getByTestId("setting-ev-follow-rotate").getByRole("note")).toContainText("15 seconds"); // the example, and the screen it changes
+  await expect(page.getByTestId("setting-ev-follow-rotate").getByTestId("setting-where")).toContainText("Follow the heat");
+  // outside 5 to 120 the field holds the nearest allowed number (the house way of every number box); the schema's own refusal sentence is in the unit tests
+  for (const [typed, held] of [["4", "5"], ["121", "120"]] as const) {
+    await field.fill(typed);
+    await field.blur();
+    await expect(field).toHaveValue(held);
   }
   await field.fill("7");
   await page.getByRole("button", { name: /Save event/ }).click();

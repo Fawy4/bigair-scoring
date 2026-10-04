@@ -204,7 +204,9 @@ describe("the Follow screen's seconds per page setting", () => {
   });
   it("refuses 4 and 121", () => {
     expect(EventFormSchema.safeParse({ ...base, settings: { followRotateSec: 4 } }).success).toBe(false);
-    expect(EventFormSchema.safeParse({ ...base, settings: { followRotateSec: 121 } }).success).toBe(false);
+    const refused = EventFormSchema.safeParse({ ...base, settings: { followRotateSec: 121 } });
+    expect(refused.success).toBe(false);
+    expect(JSON.stringify(refused.error?.issues)).toContain("Use a whole number of seconds from 5 to 120 for the pages of the Follow the heat screen");
   });
   it("is separate from the existing big screen's setting", () => {
     const s = EventFormSchema.parse({ ...base, settings: { screenRotateSec: 30 } }).settings;

@@ -72,7 +72,7 @@ test("the pictures of Follow the heat", async ({ page }) => {
   await w.org.signIn(page, `/org/events/${w.eventId}/event`);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByTestId("advanced-toggle").click();
-  await page.getByRole("button", { name: /Help: Follow the heat/ }).click();
+  await page.getByRole("button", { name: /About “Follow the heat/ }).click();
   const group = page.locator("section", { has: page.getByLabel("Follow the heat — seconds per page", { exact: true }) }).first();
   await group.scrollIntoViewIfNeeded();
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; } [data-testid=note-button] { display: none !important; }" }).catch(() => undefined);
