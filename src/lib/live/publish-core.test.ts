@@ -125,4 +125,19 @@ describe("Publish makes two database calls: one to read, one to write", () => {
     expect(ok).toMatchObject({ ok: true });
     expect((forced.committed() as { p_override_reason: string }).p_override_reason).toBe("paper sheet");
   });
+
+  it("Polish 3: publishing past a missing sheet needs no typed reason; an empty box is written as 'no reason given'", async () => {
+    const missing = inputs({ sheets: J.slice(0, 2).map((s) => ({ judge_seat_id: s, submitted_at: "2026-10-04T10:04:00Z", reopened_at: null })) });
+    for (const typed of ["", "   ", undefined]) {
+      const forced = fake(missing);
+      expect(await publishHeatCore(forced.db, "h1", { override: true, overrideReason: typed })).toMatchObject({ ok: true });
+      expect((forced.committed() as { p_override_reason: string }).p_override_reason).toBe("no reason given");
+    }
+    // a heat with nothing blocking never carries an override reason, even when the flag is on
+    const clean = fake(inputs());
+    await publishHeatCore(clean.db, "h1", { override: true });
+    expect((clean.committed() as { p_override_reason: unknown }).p_override_reason).toBeNull();
+    // without the flag the old rule stands: blockers come back
+    expect(await publishHeatCore(fake(missing).db, "h1")).toMatchObject({ ok: false, code: "PUBLISH_BLOCKED" });
+  });
 });

@@ -49,7 +49,6 @@ export function ResetEvent({ eventId, runningHeat }: { eventId: string; runningH
   };
   const c = preview?.counts;
   const addressOk = preview ? typed.trim().toLowerCase() === preview.slug : false;
-  const reasonOk = !preview?.everPublic || reason.trim().length >= 5;
   const blocked = Boolean(preview && preview.running);
 
   const confirm = () =>
@@ -116,7 +115,7 @@ export function ResetEvent({ eventId, runningHeat }: { eventId: string; runningH
         </p>
       ) : null}
       <div className="flex flex-wrap items-start gap-2">
-        <Button variant="danger" onClick={confirm} data-testid="reset-confirm" {...disabledWhen(!preview ? T.loading : pending ? T.working : blocked ? T.blocked : !addressOk ? T.needAddress : !reasonOk ? T.needReason : null)}>
+        <Button variant="danger" onClick={confirm} data-testid="reset-confirm" {...disabledWhen(!preview ? T.loading : pending ? T.working : blocked ? T.blocked : !addressOk ? T.needAddress : null)}>
           {T.confirmButton}
         </Button>
         <Button variant="quiet" onClick={close}>

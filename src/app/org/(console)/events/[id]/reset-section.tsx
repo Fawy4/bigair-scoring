@@ -92,7 +92,6 @@ export function ResetSection({
     );
   }
   const blocked = Boolean(data && data.blockers.length > 0);
-  const needReason = Boolean(data?.reasonNeeded && reason.trim().length < 5);
   return (
     <div data-testid={`${testId}-panel`} role="group" aria-label={title} className="panel flex w-full flex-col gap-3 border-2">
       <h4 className="font-extrabold">{title}</h4>
@@ -137,16 +136,16 @@ export function ResetSection({
         </p>
       ) : null}
       <div className="flex flex-wrap items-start gap-2">
-        <button type="button" className="btn btn-danger" onClick={confirm} data-testid={`${testId}-confirm`} disabled={!data || pending || blocked || needReason} aria-describedby={`${testId}-confirm-why`}>
+        <button type="button" className="btn btn-danger" onClick={confirm} data-testid={`${testId}-confirm`} disabled={!data || pending || blocked} aria-describedby={`${testId}-confirm-why`}>
           {pending ? T.working : confirmLabel}
         </button>
         <button type="button" className="btn" onClick={close}>
           {copy.common.cancel}
         </button>
       </div>
-      {!data || pending || blocked || needReason ? (
+      {!data || pending || blocked ? (
         <p id={`${testId}-confirm-why`} className="text-small font-medium">
-          {!data ? T.loading : pending ? T.working : blocked ? T.blocked : T.needReason}
+          {!data ? T.loading : pending ? T.working : T.blocked}
         </p>
       ) : null}
     </div>

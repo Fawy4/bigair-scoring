@@ -95,7 +95,7 @@ export function CellDialog({ model, attemptId, seatId, judgeNo, judge, who, curr
       <Reason value={reason} onChange={setReason} />
       <ErrorLine error={error} />
       <Footer
-        canSave={!pending && complete && reason.trim().length >= 3}
+        canSave={!pending && complete}
         saveLabel={pending ? H.working : C.save}
         onCancel={onClose}
         onSave={() => run(() => headSetScore({ attemptId, seatId, ...(criteria ? { criteria: values as Record<string, number> } : { score: single }), reason }))}
@@ -135,7 +135,6 @@ export function ImpressionDialog({ model, heatId, seatId, judgeNo, judge, riders
   };
   const changed = Object.entries(drafts).map(([entryId, d]) => ({ entryId, value: d.missed ? null : d.value, missed: d.missed }));
   const complete = riders.every((r) => drafts[r.id] || r.now.state !== "missing");
-  const reasonOk = reason.trim().length >= 3;
   const save = (submit: boolean) => run(() => headSaveImpressionSheet({ heatId, seatId, rows: changed, reason, submit }));
   const current = drafts[entry];
   return (
@@ -165,11 +164,11 @@ export function ImpressionDialog({ model, heatId, seatId, judgeNo, judge, riders
       <Reason value={reason} onChange={setReason} />
       <ErrorLine error={error} />
       {!complete ? <p className="text-small font-medium text-beach-muted">{H.sheetIncomplete}</p> : null}
-      <button type="button" data-testid="impression-submit" disabled={pending || !reasonOk || !complete} onClick={() => save(true)} className={!pending && reasonOk && complete ? primary : off}>
+      <button type="button" data-testid="impression-submit" disabled={pending || !complete} onClick={() => save(true)} className={!pending && complete ? primary : off}>
         {pending ? H.working : H.sheetSaveSubmit(who)}
       </button>
       <div className="grid grid-cols-2 gap-1.5">
-        <button type="button" data-testid="impression-save" disabled={pending || !reasonOk || changed.length === 0} onClick={() => save(false)} className={!pending && reasonOk && changed.length > 0 ? plain : off}>
+        <button type="button" data-testid="impression-save" disabled={pending || changed.length === 0} onClick={() => save(false)} className={!pending && changed.length > 0 ? plain : off}>
           {H.sheetSave(changed.length)}
         </button>
         <button type="button" data-testid="dialog-cancel" onClick={onClose} className={plain}>
@@ -189,7 +188,7 @@ export function DeleteDialog({ rows, wordFor, onClose, onDone }: { rows: LiveMat
       <p className="text-body font-semibold">{rows.length === 1 ? C.confirmDelete : rows.map((r) => H.attemptWord(wordFor(r.riderKey), r.seq)).join(", ")}</p>
       <Reason value={reason} onChange={setReason} />
       <ErrorLine error={error} />
-      <Footer canSave={!pending && reason.trim().length >= 3} saveLabel={pending ? H.working : rows.length === 1 ? C.delete : C.deleteSelected} onCancel={onClose} onSave={() => run(() => deleteAttempts(rows.map((r) => r.attemptId), reason))} />
+      <Footer canSave={!pending} saveLabel={pending ? H.working : rows.length === 1 ? C.delete : C.deleteSelected} onCancel={onClose} onSave={() => run(() => deleteAttempts(rows.map((r) => r.attemptId), reason))} />
     </Modal>
   );
 }
@@ -252,7 +251,7 @@ export function MergeDialog({ model, rows, attempts, scores, panelSeatIds, judge
       ) : null}
       <Reason value={reason} onChange={setReason} />
       <ErrorLine error={error} />
-      <Footer canSave={!pending && drops.length > 0 && reason.trim().length >= 3} saveLabel={pending ? H.working : C.merge} onCancel={onClose} onSave={() => run(() => mergeAttempts({ keep, drops, choices, reason }))} />
+      <Footer canSave={!pending && drops.length > 0} saveLabel={pending ? H.working : C.merge} onCancel={onClose} onSave={() => run(() => mergeAttempts({ keep, drops, choices, reason }))} />
     </Modal>
   );
 }
@@ -289,7 +288,7 @@ export function EditAttemptDialog({ attempt, riders, counts, cap, wordFor, onClo
       <Reason value={reason} onChange={setReason} />
       <ErrorLine error={error} />
       <Footer
-        canSave={!pending && changed && trick.trim().length > 0 && reason.trim().length >= 3}
+        canSave={!pending && changed && trick.trim().length > 0}
         saveLabel={pending ? H.working : C.save}
         onCancel={onClose}
         onSave={() =>
@@ -346,7 +345,7 @@ export function AddAttemptDialog({ heatId, riders, counts, cap, role, hasActiveH
       ) : null}
       <ErrorLine error={error} />
       <Footer
-        canSave={!pending && Boolean(entry) && trick.trim().length > 0 && (!full || (allowed && reason.trim().length >= 3))}
+        canSave={!pending && Boolean(entry) && trick.trim().length > 0 && (!full || (allowed))}
         saveLabel={pending ? H.working : C.add}
         onCancel={onClose}
         onSave={() => run(() => addAttemptByHead({ heatId, entryId: entry, trickName: trick, status, ...(direction ? { direction } : {}), ...(full ? { reason } : {}) }))}
@@ -366,7 +365,7 @@ export function StatusDialog({ heatId, entryId, who, status, penaltyId, onClose,
       <Reason value={reason} onChange={setReason} />
       <ErrorLine error={error} />
       <Footer
-        canSave={!pending && reason.trim().length >= 3}
+        canSave={!pending}
         saveLabel={pending ? H.working : title}
         onCancel={onClose}
         onSave={() =>
@@ -397,7 +396,7 @@ export function FlagOutDialog({ heatId, riders, preselected, undecided, count, w
         ))}
       <Reason value={reason} onChange={setReason} />
       <ErrorLine error={error} />
-      <Footer canSave={!pending && picked.length > 0 && picked.length <= count && reason.trim().length >= 3} saveLabel={pending ? H.working : H.flagOutSave} onCancel={onClose} onSave={() => run(() => flagOutRiders(heatId, picked, reason))} />
+      <Footer canSave={!pending && picked.length > 0 && picked.length <= count} saveLabel={pending ? H.working : H.flagOutSave} onCancel={onClose} onSave={() => run(() => flagOutRiders(heatId, picked, reason))} />
     </Modal>
   );
 }

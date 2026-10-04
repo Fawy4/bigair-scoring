@@ -294,7 +294,7 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
             </label>
             <input id="unlock-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={T.unlockReasonPlaceholder} className="max-w-xl" />
             <div className="flex flex-wrap gap-2">
-              <Button variant="primary" {...disabledWhen(pending ? copy.common.saving : reason.trim().length < 5 && T.unlockReasonShort)} onClick={runUnlock}>
+              <Button variant="primary" {...disabledWhen(pending ? copy.common.saving : null)} onClick={runUnlock}>
                 {T.unlockConfirm}
               </Button>
               <Button variant="quiet" onClick={() => { setUnlocking(false); setReason(""); }}>

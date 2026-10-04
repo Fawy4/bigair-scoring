@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { reasonOf } from "@/lib/reason";
 import { getDb } from "@/lib/org/context";
 import { startingCopy, startingTarget } from "@/lib/reset/plan";
 import { copy } from "@/lib/ui-copy";
@@ -72,7 +73,7 @@ export async function resetEvent(input: z.input<typeof ResetInput>): Promise<{ o
   } catch (e) {
     return { ok: false, error: e instanceof Error && e.message === T.rebuildArranged ? e.message : T.errors.failed };
   }
-  const { data, error } = await supabase.rpc("reset_event", { p_event: eventId, p_slug: slug, p_reason: reason ?? "", p_draws: draws as never });
+  const { data, error } = await supabase.rpc("reset_event", { p_event: eventId, p_slug: slug, p_reason: reasonOf(reason), p_draws: draws as never });
   if (error) return { ok: false, error: sentence(error.message) };
   revalidatePath(`/org/events/${eventId}`, "layout");
   const out = data as unknown as ResetPreview["counts"] & { rebuilt?: string[] };
@@ -135,7 +136,7 @@ export async function resetDivision(input: z.input<typeof DivisionInput>): Promi
   } catch (e) {
     return { ok: false, error: e instanceof Error && e.message === T.rebuildArranged ? e.message : T.errors.failed };
   }
-  const { data, error } = await supabase.rpc("reset_division", { p_division: divisionId, p_reason: reason ?? "", p_item: item as never });
+  const { data, error } = await supabase.rpc("reset_division", { p_division: divisionId, p_reason: reasonOf(reason), p_item: item as never });
   if (error) return { ok: false, error: partSentence(error.message) };
   revalidatePath(`/org/events/${d.event_id}`, "layout");
   const out = data as unknown as ResetPreview["counts"] & { rebuilt: boolean };

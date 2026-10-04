@@ -6,6 +6,7 @@ import { extendBreakPlan, holdPlan as holdPlanPure, resumeBreakPlan, resumePlanA
 import { buildHeatModel, type DivisionRowDb, type HeatRowDb, type RoundRowDb } from "@/lib/schedule/model";
 import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { rowToPlan, type PlanRow } from "@/lib/schedule/plans";
+import { reasonOf } from "@/lib/reason";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/database.types";
 import { HEAT_COLUMNS, type HeatRow } from "./types";
@@ -66,9 +67,8 @@ export async function endHeat(heatId: string): Promise<ActionResult> {
 
 export async function cancelHeat(heatId: string, reason: string): Promise<ActionResult> {
   if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
-  if (reason.trim().length < 3) return fail("REASON_REQUIRED");
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("cancel_heat", { p_heat: heatId, p_reason: reason.trim() });
+  const { data, error } = await supabase.rpc("cancel_heat", { p_heat: heatId, p_reason: reasonOf(reason) });
   return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, heat: heatOf(data) };
 }
 

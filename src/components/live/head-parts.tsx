@@ -533,7 +533,7 @@ export function ReviewButtons({ c, compact = false, visibility = true }: { c: He
             <input data-testid="cancel-reason" value={c.reason} onChange={(e) => c.setReason(e.target.value)} placeholder={T.cancelReasonPlaceholder} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body" />
           </label>
           <div className="flex gap-1.5">
-            <Btn testId="cancel-confirm" tone="danger" disabled={c.pending || c.reason.trim().length < 3} onClick={c.actions.cancel}>
+            <Btn testId="cancel-confirm" tone="danger" disabled={c.pending} onClick={c.actions.cancel}>
               {T.cancelConfirm}
             </Btn>
             <Btn testId="cancel-back" onClick={() => c.setCancelling(false)}>

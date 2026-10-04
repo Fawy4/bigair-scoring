@@ -311,7 +311,7 @@ test("head judge who also scores: two tabs; Score is exactly a judge's queue; Co
   await ctl.locator('[data-control="cancel"]').click();
   await expect(c.getByRole("alertdialog")).toBeVisible();
   await expect(c.getByRole("button", { name: "Save" })).toBeDisabled();
-  await c.getByLabel("Reason (required)").fill("kite tangle");
+  await c.getByLabel("Reason (optional, for the audit log)").fill("kite tangle");
   await c.getByRole("button", { name: "Save" }).click();
   await expect(ctl.locator('[data-control="start"]')).toBeEnabled();
   await ctl.locator('[data-control="start"]').click();
@@ -391,7 +391,7 @@ test("laptop console is a working tool: edit a score with a reason, rider menu, 
   await expect(dlg).toContainText("Edit score");
   await expect(dlg.getByTestId("dialog-save")).toBeDisabled();
   await score(dlg, 8, "0");
-  await expect(dlg.getByTestId("dialog-save")).toBeDisabled(); // a reason is required
+  await expect(dlg.getByTestId("dialog-save")).toBeEnabled(); // a reason is optional
   await dlg.getByTestId("reason-input").fill("paper sheet");
   await dlg.getByTestId("dialog-save").click();
   await expect(k.getByTestId("audit")).toContainText("7.25 → 8.00 — paper sheet");

@@ -92,7 +92,7 @@ An organiser who misses a block adds it in Divisions → Trick base → **+ Add 
 | Control | What it does |
 |---|---|
 | **Accept into a family** | Edit its **Name** and **Aliases**, choose the **Family** (and the category), then **Accept into ‹family›**. It goes into a new draft and reaches customers with the next **Publish to all customers**. The block keeps its key, so the event's own block and the master one are the same block. Save or undo your own edits first (“Save or undo your changes first.”). |
-| **Dismiss** | Write a reason, then **Dismiss with this reason**. The block stays in that event only, and the organiser sees “not added to the master base: ‹reason›” next to it. |
+| **Dismiss** | A reason is optional, then **Dismiss with this reason**. The block stays in that event only, and the organiser sees “not added to the master base: ‹reason›” next to it. |
 
 ## Advanced: edit as JSON {#at-json}
 

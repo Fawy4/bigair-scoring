@@ -127,8 +127,8 @@ test("Draw: generate the 24-rider Knockout, drag and tap riders, hand-place, war
   await expect(page.getByTestId("draw-status")).toHaveText("Locked");
   await expect(page.getByRole("button", { name: /Options for Heat 1/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Unlock draw" }).click();
-  await expect(page.getByRole("button", { name: "Unlock", exact: true })).toBeDisabled();
-  await page.getByLabel(/Why are you unlocking/).fill("Rider 7 is injured");
+  await expect(page.getByRole("button", { name: "Unlock", exact: true })).toBeEnabled(); // a reason is optional
+  await page.getByLabel(/Reason \(optional, for the audit log\)/).fill("Rider 7 is injured");
   await page.getByRole("button", { name: "Unlock", exact: true }).click();
   await expect(page.getByTestId("draw-status")).toHaveText("Draft — you can still change it");
   const { data: unlock } = await org.db.from("audit_log").select("reason").eq("row_id", divisionId).eq("action", "draw_unlocked");

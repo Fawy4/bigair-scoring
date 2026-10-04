@@ -276,7 +276,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “‹round›: ‹detail›. Send fewer places on, or make the heats bigger.” | Fix the red point it names; then Apply to draw is on. | [Organiser: Divisions](errors.md#err-custombuilder-eliminatesnobody) |
 | “Save or undo your changes first.” | Press Save as a new draft (or reload to drop the edits), then accept. | [Admin: trick base](errors.md#err-trickeditor-proposals-savefirst) |
 | “Save your changes first.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-savebeforepublish) |
-| “Scoring and format are locked because a heat of this division has started. Unlock them with a written reason first.” | Divisions → the division → “Unlock scoring and format” with a reason of at least 5 characters (written to the audit log). | [Organiser: Divisions](errors.md#err-divisions-errors-ruleslocked) |
+| “Scoring and format are locked because a heat of this division has started. Unlock them first (a reason is optional).” | Divisions → the division → “Unlock scoring and format” with a reason of at least 5 characters (written to the audit log). | [Organiser: Divisions](errors.md#err-divisions-errors-ruleslocked) |
 | “Seats made before PINs were stored show here. Open Officials and choose Regenerate PIN.” | Officials step → that seat → Regenerate PIN. | [Organiser: Go live](errors.md#err-readiness-pinhint) |
 | “Seed ‹seed› is given to more than one rider: ‹names›. Press “Sort by seed number” to renumber.” | Press “Sort by seed number” to renumber 1, 2, 3… | [Organiser: Riders](errors.md#err-riders-seedrepeated) |
 | “Seed ‹seed› is given to more than one rider: ‹names›. Sort or drag them afterwards.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-repeatedseed) |
@@ -586,9 +586,6 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “‹what› could not be shown (‹message›). The rest of the page still works.” | Press Try again. If it repeats, send the error reference (or the sentence) to the owner. | [Pages that fail](errors.md#err-crash-part) |
 | “With ‹n› riders: this format cannot run (‹why›)” | Change the number of riders per heat, how many advance, or pick another format. | [Organiser: Divisions](errors.md#err-ladder-cannotrun) |
 | “Write a reason (at least 5 characters).” | Write at least 5 characters, for example “wind dropped, shorter heats”. | [Organiser: Divisions](errors.md#err-divisions-errors-reason) |
-| “Write a reason first.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-proposals-reasonneeded) |
-| “Write a reason of at least 5 characters first.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-rules-unlockneedsreason) |
-| “Write a reason of at least 5 characters.” | Follow the sentence. | [Organiser: Draw](errors.md#err-draw-unlockreasonshort) |
 | “Write a reason: the organiser sees it.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-codes-reason-required) |
 | “Write something first.” | Follow the sentence. | [Feedback notes](errors.md#err-feedback-errors-empty) |
 | “Write the points for 1st, 2nd, 3rd … separated by commas, e.g. 4, 3, 2, 1” | Change the highlighted number; the preview comes back when the format can run. | [Organiser: Divisions](errors.md#err-formatsimple-pointsinvalid) |

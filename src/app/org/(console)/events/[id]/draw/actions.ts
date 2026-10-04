@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { DrawError, edit, generate, lock, unlock, type EditOutcome, type GenerateResult } from "@/lib/draw/server";
 import type { DrawEdit } from "@/lib/engine/ladder";
+import { reasonOf } from "@/lib/reason";
 import { createClient } from "@/lib/supabase/server";
 import { copy } from "@/lib/ui-copy";
 
@@ -48,7 +49,7 @@ function message(e: unknown): string {
       case "no_draw":
         return T.noDraw;
       case "reason":
-        return T.reasonRequired;
+        return T.failed;
       case "bad_format":
         return T.badFormat(e.message);
       default:
@@ -91,11 +92,10 @@ export async function lockDraw(divisionId: string): Promise<Result> {
   }
 }
 
-/** Unlocking needs a written reason (at least 5 characters); it is audited with who and why. */
+/** Unlocking is audited with who and why; the reason is optional ("no reason given" when the box is empty). */
 export async function unlockDraw(divisionId: string, reason: string): Promise<Result> {
   if (!Uuid.safeParse(divisionId).success) return fail(T.failed);
-  const text = String(reason ?? "").trim();
-  if (text.length < 5) return fail(T.reasonRequired);
+  const text = reasonOf(reason);
   try {
     await unlock(await createClient(), divisionId, text.slice(0, 500));
     return { ok: true };
