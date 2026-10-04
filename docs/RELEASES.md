@@ -14,13 +14,14 @@ How to write an entry (copy the newest one):
 
 ## 0.15.1 — 4 Oct 2026 {#release-0-15-1}
 
-PR: #36
+PR: #37
 
 ### What changed
 - **Speed pass.** The organiser's screens, the simulator and Publish were taking two to four seconds because each one asked the database six to nine questions one after another. On a throwaway event with 24 riders and 15 heats (production build, the real database): every step of the left rail now opens in about half a second (it was 1.5 to 2.5 seconds), **Save** on the Event step answers in about 0.4 seconds (it was 3.9), **Lock draw** in 0.3, a simulator **speed** button looks pressed at once (it was 3.3 seconds), **Start heat sequence** and **Pause** show on the console at once and the database confirms within half a second (they were 1.6 and 3.5 seconds), and **Publish** asks the database twice instead of nineteen times (3.6 seconds before; about 0.7 to 1.5 seconds now, more when the database is busy).
 - **Nothing about the rules changed.** Scoring, ladder and timetable are exactly as before; the same engine scores the heat and the same transaction writes it. The public pages, the judges, the spotters and the Flag view are untouched.
 - A press on the head judge's console is shown at once and confirmed by the database; if the database refuses, the button goes back and says why. **End heat** and the plain **Start heat** (flags off) are not guessed: they show from the database's answer, a moment later.
 - A **Pause** or **Resume** pressed on the console shows on the simulator panel the moment it is written.
+- **View as…** on the simulator panel lists **Big screen — Follow the heat**, opening the new address for the simulation event.
 - The measuring tool used for these numbers is in the repository (`e2e/speed.spec.ts`); the before and after tables are in the pull request.
 
 ### What to test

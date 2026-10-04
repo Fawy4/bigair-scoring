@@ -3258,6 +3258,7 @@ export const copy = {
       riderPage: "Rider page",
       pickRider: "Rider",
       screen: "Big screen",
+      follow: "Big screen — Follow the heat",
       flag: "Flag view",
       officials: "Officials",
       headLaptop: "Head judge (laptop)",
