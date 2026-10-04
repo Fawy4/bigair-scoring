@@ -36,7 +36,7 @@ PR: #35
 - [ ] Head console on a 15-inch laptop (about 1366 px) with 3 riders in an ended heat: the **Impression** card is a card beside the rider cards, not a button.
 
 ### Known issues
-- The **hosting** is still the owner's half of A1b-0 and A1b-11 (Supabase Pro with the Small compute; Vercel Pro). On 4 Oct the database still reported the Micro/Nano limits (60 connections), so the load numbers in the pull request were not measured on the compute the event will use.
+- The **hosting** is still the owner's half of A1b-0 and A1b-11 (Supabase Pro with the Small compute; Vercel Pro). The load proof (300 spectators, ramp to 300) was measured on 4 Oct on the compute as it was (60 connections, not the Small compute): the officials stayed fast and nothing failed; the tables are in the pull request and `docs/AUDIT.md`.
 - The head judge's **Did not start** in the console's rider menu still sets a DNS for one heat only; Withdrawn in the Riders step is the way to make a seat a walkover.
 - Eight stale browser tests (A1b-12) are listed in the pull request: see "Tests" there.
 

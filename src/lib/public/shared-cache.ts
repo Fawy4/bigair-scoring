@@ -49,13 +49,18 @@ export function createSharedCache(opts: { ttlMs: number; now?: () => number; max
   };
 }
 
-export function createValve(max: number) {
+export function createValve(max: number, onPeak?: (peak: number) => void) {
   let n = 0;
+  let peak = 0;
   return {
     /** A place, or null when full. The returned function gives the place back (once). */
     enter(): (() => void) | null {
       if (n >= max) return null;
       n++;
+      if (n > peak) {
+        peak = n;
+        onPeak?.(peak);
+      }
       let left = false;
       return () => {
         if (left) return;
@@ -64,5 +69,6 @@ export function createValve(max: number) {
       };
     },
     inFlight: () => n,
+    peak: () => peak,
   };
 }

@@ -26,8 +26,12 @@ const shared = createSharedCache({ ttlMs: PUBLIC_CACHE_MS });
 export const freshReads = new AsyncLocalStorage<boolean>();
 
 /** The safety valve: how many public requests one server instance works on at once before the rest get the calm "Updating…" page. */
-const PUBLIC_MAX_IN_FLIGHT = Number(process.env.PUBLIC_MAX_IN_FLIGHT ?? 60);
-const valve = createValve(PUBLIC_MAX_IN_FLIGHT);
+// Default 130: measured on 4 Oct 2026 (docs/AUDIT.md, Fix session 2), 300 spectators refreshing every 7 s kept at most 25, 39 and 65 public requests in flight on one server
+// instance in three runs (the peak is the start-up burst, when the shared answers are still cold), so 130 is about twice the busiest moment seen; past it the extra visitors
+// get the Updating page.
+const PUBLIC_MAX_IN_FLIGHT = Number(process.env.PUBLIC_MAX_IN_FLIGHT ?? 130);
+// PUBLIC_VALVE_LOG=1 writes each new peak of requests in flight to the server log (how the limit was chosen from a measurement; off by default)
+const valve = createValve(PUBLIC_MAX_IN_FLIGHT, process.env.PUBLIC_VALVE_LOG === "1" ? (peak) => console.info(`PUBLIC_VALVE_PEAK ${peak}`) : undefined);
 /** Decided once per request. A refused request starts no database work at all; the layout shows the Updating page. Officials' paths never call this. */
 export const admitPublicRequest = cache(async (): Promise<boolean> => {
   const place = valve.enter();

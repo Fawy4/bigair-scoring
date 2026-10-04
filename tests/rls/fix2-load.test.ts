@@ -19,6 +19,8 @@ import { buildGouna, type GounaWorld } from "./audit-1b-world";
 const BASE = process.env.FIX2_BASE_URL ?? "http://localhost:3200";
 const ON = process.env.FIX2_LOAD === "1";
 const POLL_MS = 7000;
+/** Set when the hosted project's own answers stay slower than 2 s for a minute (a probe every 5 s): everything stops and where it happened is recorded. */
+const ABORT: { stop: boolean; why: string } = { stop: false, why: "" };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, Math.max(0, ms)));
 const pct = (xs: number[], q: number) => {
   const s = [...xs].sort((a, b) => a - b);
@@ -97,7 +99,11 @@ describe.skipIf(!ENV_OK || !ON)("Fix 2 — the officials under a crowd (FIX2_LOA
       const t0 = performance.now();
       const err = await fn();
       t[name].push(performance.now() - t0);
-      if (err) errors.push(`${name}: ${err}`);
+      if (err) {
+        errors.push(`${name}: ${err}`);
+        ABORT.stop = true;
+        ABORT.why ||= `first error: ${name}: ${err}`.slice(0, 160);
+      }
     };
     let liveHeat = await mkHeat(f, live, { status: "running", started_at: ago(30) }, { riders: 4 });
     let n = 0; // attempts in this heat
@@ -106,7 +112,7 @@ describe.skipIf(!ENV_OK || !ON)("Fix 2 — the officials under a crowd (FIX2_LOA
     let tick = 0;
     const end = Date.now() + seconds * 1000;
     const head = (async () => {
-      while (Date.now() < end) {
+      while (Date.now() < end && !ABORT.stop) {
         const t0 = Date.now();
         const step = tick++ % 3;
         if (step === 0) await timed("head_start_sequence", async () => codeOf(await f.clients.head.rpc("arm_heat", { p_heat: armHeat, p_prestart: 60 })));
@@ -121,7 +127,7 @@ describe.skipIf(!ENV_OK || !ON)("Fix 2 — the officials under a crowd (FIX2_LOA
     })();
     const spotter = (async () => {
       let i = 0;
-      while (Date.now() < end) {
+      while (Date.now() < end && !ABORT.stop) {
         const t0 = Date.now();
         if (n >= 24) {
           await f.s.from("heats").update({ status: "ended", ended_at: ago(1) }).eq("id", liveHeat);
@@ -139,7 +145,7 @@ describe.skipIf(!ENV_OK || !ON)("Fix 2 — the officials under a crowd (FIX2_LOA
     const judge = (async () => {
       let rev = 0;
       await sleep(2500);
-      while (Date.now() < end) {
+      while (Date.now() < end && !ABORT.stop) {
         const t0 = Date.now();
         if (attempt) await timed("judge_score", async () => { const v = 5 + (++rev % 4); return codeOf(await f.clients.j1.rpc("submit_trick_score", { p_attempt: attempt, p_client_key: key(), p_client_rev: rev, p_criteria: crit(v) as never, p_flag: null as never, p_missed: false, p_score: v })); });
         await sleep(5000 - (Date.now() - t0));
@@ -150,21 +156,49 @@ describe.skipIf(!ENV_OK || !ON)("Fix 2 — the officials under a crowd (FIX2_LOA
     return Object.assign(t, { errors });
   }
 
+  /** The hosted project's own answer time, a probe every 5 s (one tiny call, the server's clock): 12 in a row slower than 2 s (a whole minute) stops everything. */
+  function startProbe(): { times: number[]; stop: () => void } {
+    const times: number[] = [];
+    let slow = 0;
+    let on = true;
+    void (async () => {
+      while (on) {
+        const t0 = performance.now();
+        await f.s.rpc("server_now");
+        const ms = performance.now() - t0;
+        times.push(ms);
+        slow = ms > 2000 ? slow + 1 : 0;
+        if (slow >= 12 && !ABORT.stop) {
+          ABORT.stop = true;
+          ABORT.why = `the hosted project answered slower than 2 s for a minute (last probe ${Math.round(ms)} ms)`;
+        }
+        await sleep(5000 - (performance.now() - t0));
+      }
+    })();
+    return { times, stop: () => void (on = false) };
+  }
+
   /** `n` spectators until `stopAt`; every refresh alternates the live and the results page. */
   async function crowd(n: number, stopAt: number, out: { times: number[]; updating: number; errors: string[] }) {
     const one = async (i: number) => {
       await sleep(Math.random() * POLL_MS);
       let k = i;
-      while (Date.now() < stopAt && out.errors.length < 5) {
+      while (Date.now() < stopAt && out.errors.length < 1 && !ABORT.stop) {
         const t0 = performance.now();
         try {
           const res = await fetch(`${BASE}/e/${slug}/${k++ % 2 ? "results" : "live"}`, { headers: { RSC: "1" } });
           const body = await res.text();
-          if (!res.ok) out.errors.push(`HTTP ${res.status}`);
+          if (!res.ok) {
+            out.errors.push(`HTTP ${res.status}`);
+            ABORT.stop = true;
+            ABORT.why ||= `first spectator error: HTTP ${res.status}`;
+          }
           else if (body.includes("public-updating")) out.updating++;
           out.times.push(performance.now() - t0);
         } catch (e) {
           out.errors.push(String(e).slice(0, 80));
+          ABORT.stop = true;
+          ABORT.why ||= `first spectator error: ${String(e).slice(0, 80)}`;
         }
         await sleep(POLL_MS - (performance.now() - t0));
       }
@@ -176,10 +210,15 @@ describe.skipIf(!ENV_OK || !ON)("Fix 2 — the officials under a crowd (FIX2_LOA
     const seconds = Number(process.env.FIX2_SECONDS ?? 180);
     const spectators = Number(process.env.FIX2_SPECTATORS ?? 300);
     const out = { times: [] as number[], updating: 0, errors: [] as string[] };
+    const idle0 = await commits();
+    await sleep(15_000);
+    const idleRate = ((await commits()) - idle0) / 15; // what the project does with nobody asking (background and the probe)
+    const probe = startProbe();
     const c0 = await commits();
     const started = Date.now();
     const [off] = await Promise.all([officials(seconds), crowd(spectators, started + seconds * 1000, out)]);
     const c1 = await commits();
+    probe.stop();
     const secs = (Date.now() - started) / 1000;
     const report = {
       at: new Date().toISOString(), spectators, seconds,
@@ -187,6 +226,9 @@ describe.skipIf(!ENV_OK || !ON)("Fix 2 — the officials under a crowd (FIX2_LOA
       officialErrors: off.errors.slice(0, 10),
       thisMachine: { databaseRoundTripMs: Math.round(rttMs), publishDatabaseCalls: publishCalls, publishAloneMs: Math.round(publishAloneMs) },
       spectatorsRefresh: stat(out.times), spectatorsUpdatingPage: out.updating, spectatorErrors: out.errors.slice(0, 5),
+      aborted: ABORT.stop ? ABORT.why : null,
+      hostedProjectProbe: stat(probe.times),
+      idleTransactionsPerSec: Math.round(idleRate * 10) / 10,
       databaseTransactionsPerSec: Number.isFinite(c1 - c0) ? Math.round(((c1 - c0) / secs) * 10) / 10 : null,
     };
     console.info("FIX2 officials under load:", JSON.stringify(report, null, 1));
@@ -207,7 +249,9 @@ describe.skipIf(!ENV_OK || !ON)("Fix 2 — the officials under a crowd (FIX2_LOA
     const levels = (process.env.FIX2_LEVELS ?? "50,100,150,300").split(",").map(Number);
     const ms = Number(process.env.FIX2_LEVEL_MS ?? 60_000);
     const report: Array<Record<string, unknown>> = [];
+    const probe = startProbe();
     for (const n of levels) {
+      if (ABORT.stop) break;
       const out = { times: [] as number[], updating: 0, errors: [] as string[] };
       const c0 = await commits();
       const t0 = Date.now();
@@ -217,9 +261,12 @@ describe.skipIf(!ENV_OK || !ON)("Fix 2 — the officials under a crowd (FIX2_LOA
       console.info("FIX2 ramp level:", JSON.stringify(report.at(-1)));
       mkdirSync("test-results", { recursive: true });
       writeFileSync("test-results/fix2-ramp.json", JSON.stringify({ at: new Date().toISOString(), levels: report }, null, 1));
-      if (out.errors.length) break;
+      if (out.errors.length || ABORT.stop) break;
       await sleep(15_000);
     }
+    probe.stop();
+    report.push({ hostedProjectProbe: stat(probe.times), aborted: ABORT.stop ? ABORT.why : null });
+    writeFileSync("test-results/fix2-ramp.json", JSON.stringify({ at: new Date().toISOString(), levels: report }, null, 1));
     expect(report.length).toBeGreaterThan(0);
   }, 1_800_000);
 });
