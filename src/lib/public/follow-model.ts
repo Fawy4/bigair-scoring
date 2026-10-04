@@ -52,7 +52,7 @@ export type FollowPage =
 
 /** The height of the page body in vw (the screen is 16:9, so 1920 × 1080 is 100 × 56.25): what the header, title and Next line leave. Rows below are costed in the same unit. */
 export const RESULTS_BUDGET_VW = 30.5;
-const ROW = { head: 3.6, boxLine: 3.4, formula: 2.2, pad: 0.6, wrapped: 2.8 };
+const ROW = { head: 3.5, boxLine: 3.2, formula: 2.0, pad: 0.6, wrapped: 2.8 };
 /** How many attempt boxes one line holds at the TV size: a score alone is narrow, "3 · 7.50" wider, a trick name wide. */
 const BOXES_PER_LINE: Record<AttemptDisplay, number> = { scores_only: 10, number_score: 7, trick_score: 4 };
 

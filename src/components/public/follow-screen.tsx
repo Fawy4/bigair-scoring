@@ -75,7 +75,7 @@ function ResultsPage({ page }: { page: Extract<FollowPage, { kind: "results" }> 
     <div data-testid="follow-results-page" data-heat={page.heatId} className="flex h-full flex-col">
       <PageHead testId="follow-title" title={page.title} aside={F.publishedAt(page.publishedAt)} part={page.part} parts={page.parts} />
       {page.riders.map((r, i) => (
-        <article key={r.entryId ?? `seat-${i}`} data-testid="follow-rider" data-place={r.place ?? undefined} className="flex flex-col gap-[0.3vw] border-b border-[var(--bs-line)] py-[0.3vw]">
+        <article key={r.entryId ?? `seat-${i}`} data-testid="follow-rider" data-place={r.place ?? undefined} className="flex flex-col gap-[0.15vw] border-b border-[var(--bs-line)] py-[0.15vw]">
           <div className="flex items-center gap-[1.5vw]">
             <span className="w-[4vw] shrink-0 text-center text-[3vw] font-semibold leading-none tabular-nums" aria-label={r.place !== null ? R.place(r.place) : undefined}>
               {r.place ?? ""}
@@ -85,7 +85,7 @@ function ResultsPage({ page }: { page: Extract<FollowPage, { kind: "results" }> 
             {r.totalLabel ? <span data-testid="follow-total" className="shrink-0 text-[3.2vw] font-semibold leading-none tabular-nums">{r.totalLabel}</span> : null}
           </div>
           {r.formula ? (
-            <p data-testid="follow-formula" className="break-words pl-[5.5vw] text-[1.8vw] font-medium leading-tight text-[var(--bs-muted)]">
+            <p data-testid="follow-formula" className="break-words pl-[5.5vw] text-[1.8vw] font-medium leading-[1.1] text-[var(--bs-muted)]">
               {r.formula}
               {r.percentLabel ? ` · ${r.percentLabel}` : ""}
             </p>

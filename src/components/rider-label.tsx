@@ -98,7 +98,7 @@ export function RiderLabel({
             <span data-testid="rider-label-text">{p.text}</span>
           </span>
         ) : null}
-        <span className="flex min-w-0 flex-col leading-tight">
+        <span className={cn("flex min-w-0 leading-tight", screen ? "flex-row flex-wrap items-baseline gap-x-[1.2vw]" : "flex-col")}>
           {nameText ? (
             <span data-testid={style === "name-first" ? "rider-label-primary" : undefined} className={cn(wrap ? "break-words" : "truncate", S.name)}>
               {style === "name-first" ? <span data-testid="rider-label-text">{nameText}</span> : nameText}
