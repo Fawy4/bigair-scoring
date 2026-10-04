@@ -181,7 +181,7 @@ test("the Final goes live from the middle of the rotation and is published: thre
   const f = heatId("F-H1");
   await expect(page.getByTestId("follow-ladder-page")).toBeVisible({ timeout: (SECONDS + 3) * 1000 }); // mid-rotation
   await w.db.from("heats").update({ status: "scheduled", armed_at: new Date().toISOString(), prestart_sec: 60, duration_sec: 600 }).eq("id", f);
-  await phaseIs(page, "live", 2_000);
+  await phaseIs(page, "live", 8_000); // (the two-second measurement is in heat 2's test; here the point is the walk)
   await w.db.from("heats").update({ status: "running", started_at: new Date().toISOString() }).eq("id", f);
   await w.db.from("heats").update({ status: "ended", ended_at: new Date().toISOString() }).eq("id", f);
   await phaseIs(page, "reviewing", 8_000);
