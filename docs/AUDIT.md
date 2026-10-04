@@ -286,7 +286,7 @@ Pure logic (`src/lib/live/audit-1b-flags.test.ts`, 11 green) and on the database
 | Run | Judge spread | Scenarios pressed | Minutes | Result |
 |---|---|---|---|---|
 | 1 | agree | dns (done), abort_start (armed, fired at the next yellow), duplicate (armed) | 12.3 | **all checks pass** |
-| 2 | normal | past_cap (done: an 8th attempt over the cap of 7 refused, then logged with the head judge's reason), dns (done), abort_start (armed), duplicate (armed) | 12.3 | **all checks pass** |
+| 2 | normal | past_cap (done), dns (done), abort_start (armed), duplicate (armed) | 12.3 | **all checks pass** |
 | 3 | disagree | duplicate (done), reopen (done: a published heat re-opened and published as version 2), hold_final (armed: the final held, then released), out_of_attempts (refused: "no virtual spotter to do it") | 12.9 | **all checks pass** (the re-opened heat's version 2 is the one the ladder uses) |
 
 Transient blockers (a virtual judge's late score, sheets not yet submitted) cleared by themselves in every run. Placings were consistent with the published results and the ladder in every completed run.
