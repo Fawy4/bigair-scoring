@@ -3130,6 +3130,7 @@ export const copy = {
         paused: (heat: string) => `${heat} is paused.`,
         review: (heat: string) => `${heat} has ended: scores are coming in, then the head judge publishes.`,
         publishing: (heat: string) => `Publishing ${heat}.`,
+        breakWait: (heat: string, left: string) => `Break: ${heat} starts in ${left}, as the run order says.`,
         reviewHeld: (heat: string) => `${heat} is under review, waiting for the head judge to publish it (the console's Publish, or End heat and publish here).`,
         waitHead: (heat: string) => `${heat} is waiting for the head judge, who is a real person. Review and publish it on the head console.`,
         waitJudges: (heat: string, names: string) => `${heat} is waiting for ${names} (a real person) to submit.`,

@@ -1,3 +1,4 @@
+import { rowToPlan, type DayPlan, type PlanRow } from "@/lib/schedule/plans";
 import { parseSimConfig, type SimConfig } from "./config";
 import { eventOrder } from "./event-order";
 import type { SimDb, Snapshot } from "./snapshot";
@@ -29,4 +30,16 @@ export async function readRunOrder(db: SimDb, snap: Pick<Snapshot, "eventId" | "
 export async function readEventOrder(db: SimDb, eventId: string): Promise<{ heatIds: string[] | null; held: Set<string> }> {
   const { data } = await db.service.from("schedule_plans").select("day, items, hold, active").eq("event_id", eventId).eq("active", true);
   return eventOrder(data ?? []);
+}
+
+/** The active run order that lists this heat, with its pins and break defaults (read fresh: +1 min and Pause break change it from the console). Null when none lists it or the plan is damaged. */
+export async function readPlanContaining(db: SimDb, snap: Pick<Snapshot, "eventId" | "event">, heatId: string): Promise<DayPlan | null> {
+  const { data } = await db.service.from("schedule_plans").select("id, event_id, day, name, items, anchors, actual_starts, hold, defaults, active, updated_at").eq("event_id", snap.eventId).eq("active", true);
+  const row = (data ?? []).find((p) => (Array.isArray(p.items) ? (p.items as Array<{ kind?: string; heatId?: string }>) : []).some((i) => i.kind === "heat" && i.heatId === heatId));
+  if (!row) return null;
+  try {
+    return rowToPlan(row as unknown as PlanRow, snap.event.readyCallMin);
+  } catch {
+    return null;
+  }
 }

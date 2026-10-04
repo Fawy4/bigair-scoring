@@ -1,4 +1,5 @@
 import { armedStartMs } from "@/lib/live/flags";
+import { livesFor } from "@/lib/live/run-order";
 import { publishHeatCore } from "@/lib/live/publish-core";
 import { trickKit } from "@/lib/live/screen-model";
 import type { AttemptRow, HeatRow, SlotRow } from "@/lib/live/types";
@@ -13,7 +14,8 @@ import { parseSimConfig } from "./config";
 import { simErrorSentence } from "./errors";
 import { planImpressionWrites, planScoreWrites, type JudgeSeat, type ModeContext } from "./judges";
 import { uuidFrom } from "./random";
-import { logLine, readEventOrder, readRunOrder, updateConfig } from "./io";
+import { armDecision, breakStartFor, scaledPrestartSec } from "./break-wait";
+import { logLine, readEventOrder, readPlanContaining, readRunOrder, updateConfig } from "./io";
 import { finishPublish } from "./publish-step";
 import { attemptScenario } from "./scenario-runner";
 import { isScenarioKey } from "./scenarios";
@@ -370,6 +372,18 @@ async function step(db: SimDb, snap: Snapshot): Promise<string> {
   const heat = byId.get(next.heatId)!;
   // Pause may have been pressed since this step began: the head judge's console or the simulator's own Pause stops the arming too
   if (await pausedNow(db, snap.eventId)) return T.play.lines.idle;
+  // the break is respected (Polish 3, item 3): the next heat waits for its start time on the run order, scaled by the speed, and the yellow ends at that start
+  const dayPlan = await readPlanContaining(db, snap, heat.id);
+  const planned = dayPlan
+    ? breakStartFor(dayPlan.plan, livesFor(snap.ctx, snap.heats, snap.ctx.heatMeta), { timezone: snap.event.timezone, eventDay: dayPlan.day, defaults: dayPlan.defaults, nowMs: snap.nowMs, speed: snap.control.speed })
+    : null;
+  const wait = armDecision({
+    startMs: planned && planned.heatId === heat.id ? planned.startMs : null,
+    nowMs: snap.nowMs,
+    prestartSec: scaledPrestartSec(snap.settings.flags.prestartSec, snap.control.speed),
+    flagsOn: snap.settings.flags.enabled,
+  });
+  if (wait.kind === "wait") return T.play.lines.breakWait(heatName(heat), formatLeft((wait.startMs - snap.nowMs) / 1000));
   // with the flags on the officials follow the sequence: the yellow first, the heat starts by itself at 0:00 of the pre-start
   const started = snap.settings.flags.enabled ? await db.user.rpc("arm_heat", { p_heat: heat.id }) : await db.user.rpc("start_heat", { p_heat: heat.id });
   // the head judge raised the yellow herself in the meantime: her sequence stands, the simulator only follows it
