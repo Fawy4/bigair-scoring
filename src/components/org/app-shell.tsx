@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import QRCode from "qrcode";
 import { Check, CircleUser, Copy, ExternalLink, KeyRound, LogOut, MessageSquare, QrCode } from "lucide-react";
 import { QR_COLOURS } from "@/lib/org-design/qr";
 import { orgCopy } from "@/lib/ui-copy";
@@ -59,10 +58,13 @@ function QrImage({ url }: { url: string }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let live = true;
-    QRCode.toDataURL(url, { margin: 1, width: 176, color: QR_COLOURS }).then(
-      (data) => live && setSrc(data),
-      () => live && setSrc(null),
-    );
+    // the QR library is fetched when the link menu is opened, not with every organiser page
+    import("qrcode")
+      .then((m) => m.default.toDataURL(url, { margin: 1, width: 176, color: QR_COLOURS }))
+      .then(
+        (data) => live && setSrc(data),
+        () => live && setSrc(null),
+      );
     return () => {
       live = false;
     };

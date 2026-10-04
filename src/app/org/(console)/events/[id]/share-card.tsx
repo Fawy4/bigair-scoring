@@ -1,6 +1,5 @@
 "use client";
 
-import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { Button } from "@/components/org/button";
@@ -14,7 +13,11 @@ export function ShareCard({ title, text, url, testId }: { title: string; text: s
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     let live = true;
-    QRCode.toDataURL(url, { margin: 1, width: 240, color: QR_COLOURS }).then((d) => live && setQr(d)).catch(() => live && setQr(null));
+    // the QR library is loaded after the page is on screen, so it is not part of the page's first download
+    import("qrcode")
+      .then((m) => m.default.toDataURL(url, { margin: 1, width: 240, color: QR_COLOURS }))
+      .then((d) => live && setQr(d))
+      .catch(() => live && setQr(null));
     return () => {
       live = false;
     };
