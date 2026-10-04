@@ -283,7 +283,8 @@ export const NOTES: Record<string, Note> = {
   "simulator.log.noCap": { f: "Divisions → Scoring → set “Attempts per rider”." },
   "simulator.needTyped": { m: "The Reset or Delete button is grey until the event's web address is typed.", f: "Type the address shown under the box." },
   "simulator.reset.noBaseline": { m: "No copy of the locked draw was saved (the Demo was played before Reset existed).", f: "Use “Wipe and draw again”." },
-  "simulator.errors.NOT_A_COPY": { m: "Delete is only for copies made with Run as simulation." },
+  "simulator.errors.NOT_A_COPY": { m: "Delete or Refresh from event was pressed on a simulation that is not a copy made with Run as simulation (the Demo)." },
+  "simulator.errors.HEAT_STARTED": { m: "Refresh from event was pressed after a heat of the simulation started.", f: "Reset the simulation, then refresh." },
   "simulator.errors.SOURCE_ALREADY_RUN": { f: "Copy the event before its first heat, or reset it first." },
   "simulator.errors.NO_KEY": { f: "Owner: set SUPABASE_SERVICE_ROLE_KEY (or SEAT_PIN_KEY) on the host." },
   // ---- wind

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Radio } from "lucide-react";
 import { Banner } from "@/components/ui/banner";
 import { Pill } from "@/components/live/pill";
@@ -10,6 +9,7 @@ import { Checklist, LogCard } from "./checklist-panel";
 import { Behaviour, Roles, Toolbar } from "./play-panel";
 import { ResetPanel } from "./reset-panel";
 import { ScenarioPanel } from "./scenario-panel";
+import { SettingsFrom } from "./settings-panel";
 import { useSim } from "./use-sim";
 import { ViewAs } from "./view-as-panel";
 
@@ -41,14 +41,15 @@ export function SimConsole({ eventId, initial }: { eventId: string; initial: Sim
       {unlocked > 0 ? (
         <Banner tone="warning" role="note" data-testid="sim-need-lock">
           {T.needLock(unlocked)}{" "}
-          <Link href={`/org/events/${eventId}/draw`} className="underline">
+          <a href={`/org/events/${eventId}/draw`} className="underline">
             {T.needLockLink}
-          </Link>
+          </a>
         </Banner>
       ) : null}
       <Toolbar eventId={eventId} sim={sim} />
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-4">
+          <SettingsFrom eventId={eventId} sim={sim} />
           <Roles eventId={eventId} sim={sim} />
           <Behaviour eventId={eventId} sim={sim} />
           <ScenarioPanel eventId={eventId} sim={sim} />

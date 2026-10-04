@@ -3088,6 +3088,16 @@ export const copy = {
     settingUp: "Setting up the simulator…",
     busy: "Working…",
     toolbarLabel: "Simulator controls",
+    /** Item 9 of Polish 3: the simulation follows the real event's current settings. */
+    settingsFrom: {
+      heading: "Settings",
+      line: (event: string, time: string) => `Settings from ${event} at ${time}`,
+      button: "Refresh from event",
+      working: "Refreshing…",
+      help: { text: "Copies the real event's current settings (live scores, flags …) and each division's scoring rules, the attempt limit among them, onto this simulation. Divisions are matched by name. The draw and the run order are not touched.", example: "You lowered the attempt limit to 3 on the real event: press Refresh and the virtual spotters stop at 3." } as Help,
+      locked: "A heat of this simulation has started, so the settings are kept as they are. Reset the simulation to refresh them.",
+      done: (event: string, divisions: number) => `Settings refreshed from ${event}: ${divisions} ${divisions === 1 ? "division follows" : "divisions follow"} the event.`,
+    },
     needLock: (n: number) => `${n === 1 ? "A division has" : `${n} divisions have`} no locked draw. The simulator plays locked draws only: lock ${n === 1 ? "it" : "them"} on the Draw step.`,
     needLockLink: "Open the Draw step",
     speed: {
@@ -3335,7 +3345,8 @@ export const copy = {
     errors: {
       NOT_ALLOWED: () => "You are not allowed to do that.",
       NOT_A_SIMULATION: () => "This is not a simulation event.",
-      NOT_A_COPY: () => "Only a copy made with Run as simulation can be deleted. The Demo is reset, not deleted.",
+      NOT_A_COPY: () => "Only a copy made with Run as simulation can be deleted or refreshed. The Demo is reset, not deleted.",
+      HEAT_STARTED: () => "A heat of this simulation has started, so the settings cannot be refreshed. Reset the simulation first.",
       SIM_NOT_ENABLED: () => "The simulator is not set up for this event yet.",
       SEAT_IS_REAL: () => "A person has that seat.",
       SEAT_NOT_FOUND: () => "That seat no longer exists.",

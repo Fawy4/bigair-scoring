@@ -92,6 +92,17 @@ export async function enableSimulator(eventId: string): Promise<Done> {
   });
 }
 
+/** "Refresh from event": the simulation takes the real event's current settings and each division's scoring rules (the attempt limit among them), before any heat has started. */
+export async function refreshSettings(eventId: string): Promise<Done<{ text: string }>> {
+  return wrap(eventId, async (db) => {
+    const { data, error } = await db.user.rpc("sim_refresh_from_event", { p_event: eventId });
+    if (error) return bad(simErrorSentence(error.message));
+    forgetContext(eventId); // the rules are read again on the next tick, not after 30 seconds
+    const out = data as { divisions?: number; source?: string } | null;
+    return { ok: true, text: T.settingsFrom.done(out?.source ?? "", out?.divisions ?? 0) };
+  });
+}
+
 export async function setSpeed(eventId: string, speed: number): Promise<Done> {
   return wrap(eventId, async (db) => {
     if (!isSpeed(speed)) return bad(T.errors.BAD_SPEED());

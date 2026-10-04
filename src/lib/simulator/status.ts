@@ -3,6 +3,7 @@ import { remainingSec, type HeatClock } from "./clock";
 import { checklistFromLog, type LogRow } from "./scenarios";
 import { heatName, heatPlace, loadSnapshot, type SimDb, type Snapshot } from "./snapshot";
 import { simErrorCode, simErrorSentence } from "./errors";
+import { settingsFrom } from "./settings-from";
 import { heldByOf } from "./view-hold";
 import type { LogLine, NowView, SeatView, SimStats, SimStatus } from "./types";
 
@@ -31,11 +32,12 @@ export async function loadSimStatus(db: SimDb, eventId: string): Promise<StatusR
   // Everything is asked for at the same time (one round, not four). The organiser check (`sim_stats`) travels with the rest and is looked at first: nothing that was read is
   // shown unless it passed.
   const extras = Promise.all([
-    db.service.from("events").select("simulation_of").eq("id", eventId).maybeSingle(),
+    db.service.from("events").select("simulation_of, created_at").eq("id", eventId).maybeSingle(),
     db.service.from("sim_log").select("id, at, kind, scenario, text, run_no").eq("event_id", eventId).order("at", { ascending: false }).limit(400),
     db.service.from("schedule_plans").select("name, active, day").eq("event_id", eventId),
     db.service.from("judge_seats").select("id, name").eq("event_id", eventId).eq("role", "observer").eq("active", true).eq("status", "active").order("name"),
     db.service.from("sim_seats").select("seat_id, viewed_by, view_seen_at").eq("event_id", eventId),
+    db.service.from("sim_control").select("settings_from_at").eq("event_id", eventId).maybeSingle(),
   ]);
   const [stats, snap] = await Promise.all([db.user.rpc("sim_stats", { p_event: eventId }), loadSnapshot(db, eventId)]);
   if (stats.error) {
@@ -46,7 +48,9 @@ export async function loadSimStatus(db: SimDb, eventId: string): Promise<StatusR
   }
   if (!snap) return { kind: "needs_setup" };
 
-  const [eventRes, logRes, plansRes, { data: observerRows }, { data: views }] = await extras;
+  const [eventRes, logRes, plansRes, { data: observerRows }, { data: views }, controlRes] = await extras;
+  const sourceId = eventRes.data?.simulation_of ?? null;
+  const source = sourceId ? (await db.service.from("events").select("name").eq("id", sourceId).maybeSingle()).data : null;
   const logRows = (logRes.data ?? []) as Array<{ id: string; at: string; kind: LogRow["kind"]; scenario: string | null; text: string; run_no: number }>;
   const checklist = checklistFromLog(logRows.map((r) => ({ scenario: r.scenario, kind: r.kind, at: r.at, text: r.text, runNo: r.run_no })));
   const log: LogLine[] = logRows.slice(0, 40).map((r) => ({ id: r.id, at: r.at, kind: r.kind, scenario: r.scenario, text: r.text }));
@@ -92,6 +96,7 @@ export async function loadSimStatus(db: SimDb, eventId: string): Promise<StatusR
       deadJudge: deadSeat?.name ?? null,
       finalHeld: Boolean(cfg.finalHeldHeat),
       planNames: { active: active?.name ?? null, other: other?.name ?? null },
+      settingsFrom: settingsFrom({ eventName: source?.name ?? null, at: controlRes.data?.settings_from_at ?? null, createdAt: eventRes.data?.created_at ?? null, timezone: snap.event.timezone }),
     },
   };
 }

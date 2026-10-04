@@ -113,3 +113,45 @@ test.describe("Follow the heat shows every trick's score as it lands (items 6, 7
     }
   });
 });
+
+test("item 9: the simulator follows the real event's attempt limit after 'Refresh from event'", async ({ page }) => {
+  test.setTimeout(480_000);
+  const w = await createLiveWorld();
+  const simIds: string[] = [];
+  try {
+    const simId = await makeSimulation(page, w);
+    simIds.push(simId);
+    const eventName = (await w.db.from("events").select("name").eq("id", w.eventId).single()).data!.name as string;
+    await expect(page.getByTestId("sim-settings-line")).toHaveText(new RegExp(`^Settings from ${eventName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} at \\d\\d:\\d\\d$`));
+    const limitOf = async (eventId: string) => {
+      const d = (await w.db.from("divisions").select("scoring_overrides").eq("event_id", eventId)).data ?? [];
+      return d.map((x) => (x.scoring_overrides as { heat?: { maxAttemptsPerRider?: number } } | null)?.heat?.maxAttemptsPerRider);
+    };
+    expect(await limitOf(simId)).toEqual([7]); // the copy has the limit the event had when it was copied
+    // the limit is lowered on the real event; the simulation still has the old one until Refresh
+    const div = (await w.db.from("divisions").select("id, scoring_overrides").eq("event_id", w.eventId).single()).data!;
+    await w.db.from("divisions").update({ scoring_overrides: { ...(div.scoring_overrides as object), heat: { maxAttemptsPerRider: 3 } } as never }).eq("id", div.id);
+    expect(await limitOf(simId)).toEqual([7]);
+    await page.getByTestId("sim-refresh-settings").click();
+    await expect(page.getByTestId("sim-message")).toContainText("Settings refreshed from", { timeout: 60_000 });
+    expect(await limitOf(simId)).toEqual([3]);
+    // the virtual spotters now stop at 3: play a heat and skip to its end
+    await startAt(page, 1);
+    const live = async () => (await w.db.from("heats").select("id, status").eq("event_id", simId).eq("status", "running").maybeSingle()).data;
+    await expect.poll(async () => (await live())?.id, { timeout: 120_000 }).toBeTruthy();
+    const heatId = (await live())!.id as string;
+    await page.getByTestId("sim-skip-end").click();
+    await expect(page.getByTestId("sim-log")).toContainText("Skipped to the end of", { timeout: 120_000 });
+    const per = new Map<string, number>();
+    for (const a of (await w.db.from("trick_attempts").select("entry_id").eq("heat_id", heatId)).data ?? []) per.set(a.entry_id, (per.get(a.entry_id) ?? 0) + 1);
+    expect(per.size).toBeGreaterThan(0);
+    for (const n of per.values()) expect(n, "every rider stops at the event's new limit").toBe(3);
+    // once a heat has started the settings are kept, and the button says why
+    await expect(page.getByTestId("sim-refresh-settings")).toBeDisabled();
+    await expect(page.getByTestId("sim-refresh-why")).toBeVisible();
+    await page.getByTestId("sim-stop").click();
+  } finally {
+    await removeSimulatorUsers(w, simIds);
+    await w.cleanup();
+  }
+});

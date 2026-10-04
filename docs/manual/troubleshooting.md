@@ -67,6 +67,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “A heat of this event has already started, so this can no longer be changed.” | Use Run as simulation on the Simulator page to rehearse a real event instead. | [Organiser: event list and Event step](errors.md#err-event-simulationlocked) |
 | “A heat of this event is running or paused, so it cannot be moved now. Try again when no heat is running.” | End the running heat, then move the event. | [Platform owner (/admin)](errors.md#err-admin-errors-heat-running) |
 | “A heat of this event is running or paused. Update when no heat is running.” | Wait until no heat of the event is running or paused (between heats), then press Update to latest. | [Admin: trick base](errors.md#err-trickeditor-event-errors-heat-running) |
+| “A heat of this simulation has started, so the settings cannot be refreshed. Reset the simulation first.” | Reset the simulation, then refresh. | [Simulator](errors.md#err-simulator-errors-heat-started) |
 | “A heat that is no longer in the draw” | Take the row out with ✕ (or Take row out of the run order), then Add the heats that are missing. | [Organiser: Run order](errors.md#err-runorder-goneheat) |
 | “A later heat has already started, so this correction would change who rides in it. Nothing was changed.” | Reset or finish the later heat first, or leave the result. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-downstream-started) |
 | “A later heat that depends on this result has already started (‹heat›). Reset that heat first, then this one.” | Reset the later heat first, then this one. | [Resets](errors.md#err-resetparts-errors-downstream-started) |
@@ -227,7 +228,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Nothing is on hold.” | Follow the sentence. | [Organiser: Go live](errors.md#err-org-dashboard-notheld) |
 | “Nothing to import yet.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-importnothing) |
 | “One of the values is not allowed. Check the highlighted fields.” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-notallowedvalue) |
-| “Only a copy made with Run as simulation can be deleted. The Demo is reset, not deleted.” | Follow the sentence. | [Simulator](errors.md#err-simulator-errors-not-a-copy) |
+| “Only a copy made with Run as simulation can be deleted or refreshed. The Demo is reset, not deleted.” | Follow the sentence. | [Simulator](errors.md#err-simulator-errors-not-a-copy) |
 | “Only a heat that has not started can be started.” | Pick the next heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-start) |
 | “Only a paused heat can be resumed.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-resume) |
 | “Only a platform owner can publish presets.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-presets-errors-not-allowed) |
