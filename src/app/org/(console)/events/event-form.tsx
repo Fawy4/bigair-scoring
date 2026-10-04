@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useRefreshSoon } from "@/lib/use-refresh-soon";
 import { FieldLabel, HelpButton } from "@/components/help-button";
 import { Button, disabledWhen } from "@/components/org/button";
 import { registerNextGuard } from "@/components/org/next-guard";
@@ -37,6 +38,7 @@ export interface EventFormInitial {
 
 export function EventForm({ initial, timeZones, schemes }: { initial: EventFormInitial; timeZones: string[]; schemes: IdentificationScheme[] }) {
   const router = useRouter();
+  const refreshSoon = useRefreshSoon();
   const laptop = useShellLayout() === "laptop";
   const [form, setForm] = useState<EventFormValues>(initial.values);
   const [published, setPublished] = useState(initial.status === "published");
@@ -84,7 +86,7 @@ export function EventForm({ initial, timeZones, schemes }: { initial: EventFormI
       setSaved(JSON.stringify({ form, published }));
       toast({ title: initial.id ? T.saved : T.created });
       if (!initial.id) router.push(`/org/events/${res.id}/event`);
-      else router.refresh();
+      else refreshSoon();
       return true;
     }
     setServerError(res.error);

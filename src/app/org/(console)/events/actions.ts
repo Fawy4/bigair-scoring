@@ -75,7 +75,8 @@ export async function saveEvent(id: string | null, raw: unknown, status: "draft"
   const paths = gone.map((u) => brandingPathFromUrl(u, before.organisation_id)).filter((p): p is string => Boolean(p));
   if (paths.length) await supabase.storage.from("branding").remove(paths);
 
-  revalidatePath("/org", "layout");
+  // No revalidatePath here: it would make this answer wait for the server to draw the whole page again. The form already shows what it saved and refreshes the page
+  // (and the left rail's pills) in the background.
   return { ok: true, id: data[0].id, slug: data[0].slug };
 }
 

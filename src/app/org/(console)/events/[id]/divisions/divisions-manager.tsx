@@ -2,7 +2,7 @@
 
 import { ResetDivisionButton } from "../reset-buttons";
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRefreshSoon } from "@/lib/use-refresh-soon";
 import { toast } from "@/hooks/use-toast";
 import type { PresetRow } from "@/lib/presets/options";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
@@ -76,7 +76,7 @@ export function DivisionsManager({
   initialScoring: PresetRow[];
   initialFormats: PresetRow[];
 }) {
-  const router = useRouter();
+  const refreshSoon = useRefreshSoon();
   const [divisions, setDivisions] = useState(initialDivisions);
   const [scoring, setScoring] = useState(initialScoring);
   const [localBlocks, setLocalBlocks] = useState(initialLocalBlocks);
@@ -91,7 +91,7 @@ export function DivisionsManager({
 
   const patch = (id: string, p: Partial<DivisionRow>) => {
     setDivisions((ds) => ds.map((d) => (d.id === id ? { ...d, ...p } : d)));
-    router.refresh(); // the left rail's "what is missing" list follows
+    refreshSoon(); // the left rail's "what is missing" list follows
   };
   const fail = (text: string) => setError(text);
   const sorted = [...divisions].sort((a, b) => a.sort_order - b.sort_order);
@@ -105,7 +105,7 @@ export function DivisionsManager({
       setOpenId(res.id);
       setNewName("");
       toast({ title: copy.divisions.added });
-      router.refresh();
+      refreshSoon();
     });
   }
 
@@ -127,7 +127,7 @@ export function DivisionsManager({
       setDivisions((ds) => [...ds, { ...src, id: res.id, name: res.name, sort_order: Math.max(...ds.map((d) => d.sort_order)) + 1, started: false, hasHeats: false, locked: false, riders: [], drawLocked: false }]);
       setOpenId(res.id);
       toast({ title: copy.divisions.duplicated(res.name) });
-      router.refresh();
+      refreshSoon();
     });
   }
 
@@ -140,7 +140,7 @@ export function DivisionsManager({
       setDivisions((ds) => ds.filter((d) => d.id !== id));
       if (openId === id) setOpenId(null);
       toast({ title: copy.divisions.deleted });
-      router.refresh();
+      refreshSoon();
     });
   }
 

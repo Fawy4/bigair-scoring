@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/lib/org/context";
 import { canonicalHash } from "@/lib/presets/plan";
@@ -42,9 +41,8 @@ async function eventOf(supabase: Supabase, divisionId: string) {
   return data;
 }
 
-const refresh = (eventId: string) => {
-  revalidatePath(`/org/events/${eventId}`, "layout");
-};
+// A save answers as soon as it is stored: no revalidatePath, which would make the answer wait for the server to draw the whole page again. The screen shows what it
+// saved by itself and refreshes the page (and the left rail) in the background.
 
 export async function addDivision(eventId: string, name: string): Promise<Ok<{ id: string; sortOrder: number }> | Fail> {
   const parsed = Name.safeParse(name);
@@ -55,7 +53,6 @@ export async function addDivision(eventId: string, name: string): Promise<Ok<{ i
   const { data, error } = await supabase.from("divisions").insert({ event_id: eventId, name: parsed.data, sort_order: sortOrder }).select("id").single();
   if (error) return { ok: false, error: explain(error.message) };
   await supabase.rpc("ensure_division_panel", { p_division: data.id }); // the scoring head judge is on every panel
-  refresh(eventId);
   return { ok: true, id: data.id, sortOrder };
 }
 
@@ -67,7 +64,6 @@ export async function renameDivision(divisionId: string, name: string): Promise<
   if (!d) return { ok: false, error: E.notFound };
   const { error } = await supabase.from("divisions").update({ name: parsed.data }).eq("id", divisionId);
   if (error) return { ok: false, error: explain(error.message) };
-  refresh(d.event_id);
   return { ok: true };
 }
 
@@ -86,7 +82,6 @@ export async function moveDivision(divisionId: string, direction: -1 | 1): Promi
     const { error } = await supabase.from("divisions").update({ sort_order: i + 1 }).eq("id", id);
     if (error) return { ok: false, error: explain(error.message) };
   }
-  refresh(d.event_id);
   return { ok: true, order: ids };
 }
 
@@ -119,7 +114,6 @@ export async function duplicateDivision(divisionId: string): Promise<Ok<{ id: st
     .single();
   if (error) return { ok: false, error: explain(error.message) };
   await supabase.rpc("ensure_division_panel", { p_division: data.id });
-  refresh(src.event_id);
   return { ok: true, id: data.id, name };
 }
 
@@ -131,7 +125,6 @@ export async function deleteDivision(divisionId: string): Promise<Ok<object> | F
   if ((count ?? 0) > 0) return { ok: false, error: explain("DIVISION_HAS_HEATS") };
   const { error } = await supabase.from("divisions").delete().eq("id", divisionId);
   if (error) return { ok: false, error: explain(error.message) };
-  refresh(d.event_id);
   return { ok: true };
 }
 
@@ -161,7 +154,6 @@ export async function saveDivisionRules(input: { divisionId: string; kind: Prese
   const patch = input.kind === "scoring_model" ? { scoring_model_id: input.presetId, scoring_overrides: overrides as never } : { format_template_id: input.presetId, format_params: overrides as never };
   const { error } = await supabase.from("divisions").update(patch).eq("id", input.divisionId);
   if (error) return { ok: false, error: explain(error.message) };
-  refresh(d.event_id);
   return { ok: true };
 }
 
@@ -214,7 +206,6 @@ export async function unlockRules(divisionId: string, reason: string): Promise<O
   if (!d) return { ok: false, error: E.notFound };
   const { error } = await supabase.rpc("unlock_division_rules", { p_division: divisionId, p_reason: reason });
   if (error) return { ok: false, error: explain(error.message) };
-  refresh(d.event_id);
   return { ok: true };
 }
 
@@ -234,7 +225,6 @@ export async function saveDivisionIdentification(input: { divisionId: string; sc
   if (!d) return { ok: false, error: E.notFound };
   const { data, error } = await supabase.from("divisions").update({ identification: stored as never }).eq("id", input.divisionId).select("id");
   if (error || !data?.length) return { ok: false, error: I.failed };
-  refresh(d.event_id);
   return { ok: true };
 }
 
@@ -247,7 +237,6 @@ export async function saveDivisionDescription(divisionId: string, text: string):
   if (!d) return { ok: false, error: E.notFound };
   const { data, error } = await supabase.from("divisions").update({ description: value || null }).eq("id", divisionId).select("id");
   if (error || !data?.length) return { ok: false, error: E.failed };
-  refresh(d.event_id);
   return { ok: true };
 }
 
@@ -275,7 +264,6 @@ export async function saveTrickBase(divisionId: string, disabled: string[], layo
   const { data, error } = await supabase.from("divisions").update({ trick_base: value as never }).eq("id", divisionId).select("id");
   if (error) return { ok: false, error: error.message.includes("TRICK_BASE_LOCKED") ? T.locked : T.failed };
   if (!data?.length) return { ok: false, error: T.failed };
-  refresh(d.event_id);
   return { ok: true };
 }
 
@@ -289,7 +277,6 @@ export async function saveLiveSettings(divisionId: string, settings: unknown): P
   if (!d) return { ok: false, error: E.notFound };
   const { data, error } = await supabase.from("divisions").update({ live_settings: parsed.data as never }).eq("id", divisionId).select("id");
   if (error || !data?.length) return { ok: false, error: E.failed };
-  refresh(d.event_id);
   return { ok: true, settings: parsed.data };
 }
 
@@ -313,6 +300,5 @@ export async function addTrickBlock(eventId: string, input: { family: BuiltInFam
     ? await supabase.from("trick_vocabularies").update({ json: json as never, content_hash: hash }).eq("id", row[0].id)
     : await supabase.from("trick_vocabularies").insert({ organisation_id: event.organisation_id, event_id: eventId, key: EVENT_VOCABULARY_KEY, json: json as never, content_hash: hash });
   if (error) return { ok: false, error: T.failed };
-  refresh(eventId);
   return { ok: true, block: made.block };
 }
