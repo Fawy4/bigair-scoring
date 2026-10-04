@@ -15,7 +15,8 @@ import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
 const H = copy.headLive;
-export const SEEN_WITHIN_MS = 45_000;
+/** A phone says "here" every 30 s but the database stores it at most once a minute (Fix 2), so "connected" means seen within 90 s. */
+export const SEEN_WITHIN_MS = 90_000;
 
 interface SeatInfo {
   id: string;

@@ -2891,6 +2891,8 @@ export const copy = {
   /** The public event site, the big screen and the share texts (Phase 6). */
   pub: {
     nav: { home: "Home", live: "Live", results: "Results", ladder: "Ladder", riders: "Riders", placings: "Placings", rules: "Rules", timetable: "Timetable", join: "Join", menu: "Pages of this event" },
+    /** The calm page shown when too many phones ask at once (Fix 2): it asks again by itself. */
+    updating: { title: "Updating…", body: "Many people are watching right now. This page will try again by itself in a few seconds.", testId: "public-updating" },
     common: { poweredBy: "Scores by", back: "Back", notFound: "This event is not on the public site.", noEvents: "Nothing here yet.", at: (t: string) => `at ${t}`, est: "est.", viewAll: "See all", dayLabel: (d: string) => d },
     home: {
       now: "Now",

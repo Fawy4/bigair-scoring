@@ -12,7 +12,8 @@ import { ScreenRotator } from "@/components/public/screen-rotator";
 import { WindBanner } from "@/components/public/wind-banner";
 import { buildPlacings } from "@/lib/public/ladder-model";
 import { liveRows } from "@/lib/public/live-model";
-import { loadDraw, loadLive } from "@/lib/public/load";
+import { Updating } from "@/components/public/updating";
+import { admitPublicRequest, loadDraw, loadLive } from "@/lib/public/load";
 import { loadCore } from "@/lib/public/page-data";
 import { modelOf, type RiderRowVM } from "@/lib/public/results-model";
 import { buildScreenSlides, type ScreenSlide } from "@/lib/public/screen-model";
@@ -54,6 +55,7 @@ function BigRider({ r }: { r: RiderRowVM }) {
 
 /** The big screen for the beach or the tent: white on dark, huge digits, rotating pages, QR to the public site. No login, nothing that moves on its own except the page change. */
 export default async function BigScreen({ params }: { params: Promise<{ slug: string }> }) {
+  if (!(await admitPublicRequest())) return <Updating />;
   const core = await loadCore((await params).slug);
   if (!core) notFound();
   const { site, tt, tabs, results, rules, timetable } = core;
