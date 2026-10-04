@@ -198,9 +198,8 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
     [supabase],
   );
   const refresh = useCallback(async () => {
-    await refreshHeats();
-    await refreshPlans();
-    if (heatId) await fetchSnapshot(heatId);
+    // asked for at the same time: three rounds one after another made every "refresh after a change" wait for all of them
+    await Promise.all([refreshHeats(), refreshPlans(), heatId ? fetchSnapshot(heatId) : Promise.resolve()]);
   }, [refreshHeats, refreshPlans, fetchSnapshot, heatId]);
 
   useEffect(() => {
