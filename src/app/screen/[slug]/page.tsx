@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { HeatClock } from "@/components/public/heat-clock";
 import { BigScreenFlag } from "@/components/public/public-flag";
 import { publicFlagData } from "@/lib/public/flag-data";
+import { FitSlide } from "@/components/public/fit-slide";
 import { Logo } from "@/components/public/logo";
 import { LivePoll } from "@/components/public/poll";
 import { Qr } from "@/components/public/qr";
@@ -46,7 +47,7 @@ function BigRider({ r }: { r: RiderRowVM }) {
             {colour.text}
           </span>
         ) : null}
-        <span className="truncate text-[4vw] font-semibold">{nameOf(r)}</span>
+        <span className="min-w-0 break-words text-[4vw] font-semibold">{nameOf(r)}</span>
       </span>
       <span className="text-[7vw] font-semibold tabular-nums">{r.totalLabel ?? ""}</span>
     </li>
@@ -95,7 +96,7 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
       return (
         <div className="flex h-full flex-col gap-[1vw]">
           <div className="flex items-baseline justify-between gap-[2vw]">
-            <p className="truncate text-[3.2vw] font-semibold">{s.title}</p>
+            <p className="min-w-0 break-words text-[3.2vw] font-semibold">{s.title}</p>
             {liveHeat ? <HeatClock leftWord={copy.pub.home.left} pausedWord={copy.pub.home.paused} startedAt={liveHeat.started_at} durationSec={liveHeat.duration_sec} pausedAt={liveHeat.paused_at} pausedTotalSec={liveHeat.paused_total_sec} status={liveHeat.paused_at ? "paused" : "running"} serverNow={timetable!.server_now} className="shrink-0 text-[7.5vw] font-semibold leading-none tabular-nums" /> : null}
           </div>
           {!s.scoresShown ? <p className="text-[2.6vw] font-semibold">{copy.pub.live.scoresAfter}</p> : null}
@@ -114,7 +115,7 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
           <ol className="flex flex-col">
             {s.rows.map((r) => (
               <li key={r.itemId} data-testid="screen-row" className="flex items-baseline justify-between gap-[2vw] border-b border-[var(--bs-line)] py-[0.4vw]">
-                <span className="truncate text-[3.2vw] font-semibold">{r.title}</span>
+                <span className="min-w-0 break-words text-[3.2vw] font-semibold">{r.title}</span>
                 <span className="text-[4.6vw] font-semibold tabular-nums">{timeText(r)}</span>
               </li>
             ))}
@@ -147,7 +148,7 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
             {s.places.map((p, i) => (
               <li key={i} className="flex items-baseline gap-[3vw]">
                 <span className="w-[8vw] text-[8vw] font-semibold tabular-nums">{p.label}</span>
-                <span className="truncate text-[7vw] font-semibold">{p.name}</span>
+                <span className="min-w-0 break-words text-[7vw] font-semibold">{p.name}</span>
               </li>
             ))}
           </ol>
@@ -177,24 +178,25 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
   return (
     <ScreenFrame defaultMode={site.settings.screenColourMode === "day" ? "day" : "dark"} labels={{ toggleToDay: S.modeDay, toggleToDark: S.modeDark }}>
       <LivePoll seconds={site.settings.livePollSec} />
-      <header className="mb-[1.5vw] flex items-center gap-[2vw]">
+      {/* the header fits the width, never cuts a word: the heat's flag pill takes the room it needs first, the event name takes the rest and wraps (onto its own line when it must), the clock keeps its corner */}
+      <header data-testid="screen-header" className="mb-[1.5vw] flex flex-wrap items-center gap-x-[2vw] gap-y-[0.8vw]">
         {logo ? (
           <span className="rounded-[0.8vw] border border-[var(--bs-line)] bg-white p-[0.6vw]">
             <Logo src={logo} alt={site.event.name} height={64} maxWidth={200} priority />
           </span>
         ) : null}
-        <h1 className="truncate text-[3vw] font-semibold">{site.event.name}</h1>
+        <h1 data-testid="screen-event-name" className={`min-w-[26vw] flex-1 basis-[26vw] break-words font-semibold ${site.event.name.length > 28 ? "text-[2.4vw]" : "text-[3vw]"}`}>
+          {site.event.name}
+        </h1>
         {flagData ? <BigScreenFlag data={flagData} /> : null}
         <ClockText timezone={site.event.timezone} serverNow={core.now} className={flagData ? "shrink-0 !text-[2vw] !text-[var(--bs-muted)]" : "ml-auto shrink-0 !text-[2vw] !text-[var(--bs-muted)]"} />
       </header>
       <WindBanner wind={site.wind} big />
-      <div className="mt-[1.5vw] flex min-h-0 flex-1 pr-[15vw]">
+      <div className="mt-[1.5vw] flex min-h-0 flex-1 pb-[5.5vw] pr-[15vw]">
         {slides.length ? (
           <ScreenRotator pausedLabel={S.pause} seconds={site.settings.screenRotateSec} labels={slides.map((s) => labels[s.kind])}>
             {slides.map((s, i) => (
-              <div key={i} className="h-full">
-                {render(s)}
-              </div>
+              <FitSlide key={i}>{render(s)}</FitSlide>
             ))}
           </ScreenRotator>
         ) : (
@@ -203,7 +205,7 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
       </div>
       <aside className="absolute bottom-[2.5vw] right-[2.5vw] flex flex-col items-center gap-[0.6vw]">
         <Qr url={url} size={170} dark />
-        <p className="max-w-[14vw] text-center text-[1.2vw] font-semibold leading-tight">{S.qr}</p>
+        <p data-testid="screen-qr-note" className="max-w-[14vw] break-words text-center text-[1.4vw] font-semibold leading-tight">{S.qr}</p>
       </aside>
     </ScreenFrame>
   );

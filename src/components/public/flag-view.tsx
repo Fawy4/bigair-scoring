@@ -87,7 +87,7 @@ export function FlagView({ slug, initial, pollMs = POLL_MS, staleMs = STALE_MS }
       className="fixed inset-0 flex flex-col overflow-hidden px-[4vw] py-[3vh]"
     >
       <header className="flex items-center justify-between gap-3 text-[clamp(1rem,2.4vw,1.6rem)] font-semibold">
-        <span data-testid="flag-event" className="min-w-0 truncate">
+        <span data-testid="flag-event" className="min-w-0 break-words">
           {payload.eventName}
         </span>
         <button
@@ -136,13 +136,13 @@ export function FlagView({ slug, initial, pollMs = POLL_MS, staleMs = STALE_MS }
 
       {!stale && payload.data?.heatName ? (
         <footer className="rounded-2xl bg-white p-3 text-black">
-          <p data-testid="flag-heat" className="truncate text-[clamp(1.25rem,3vw,2.2rem)] font-bold">
+          <p data-testid="flag-heat" className="break-words text-[clamp(1.25rem,3vw,2.2rem)] font-bold">
             {payload.data.heatName}
           </p>
           <ul data-testid="flag-riders" className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
             {payload.riders.map((r) => (
               <li key={r.key} data-testid="flag-rider" className="min-w-0">
-                {r.label ? <RiderLabel model={r.label} variant="live" bare /> : <span className="text-name font-semibold">{r.text}</span>}
+                {r.label ? <RiderLabel model={r.label} variant="live" bare wrap /> : <span className="text-name font-semibold">{r.text}</span>}
               </li>
             ))}
           </ul>

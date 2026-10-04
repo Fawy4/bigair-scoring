@@ -4,6 +4,8 @@ import { defineConfig } from "@playwright/test";
 const production = process.env.E2E_PRODUCTION === "1";
 const baseURL = process.env.E2E_BASE_URL ?? (production ? "http://localhost:3200" : "http://localhost:3000");
 
+// The servers this config starts run with the shared 3-second cache of the public answers switched off (PUBLIC_CACHE_MS=0): a test that changes the database and
+// opens a public page straight away must see the change. e2e/public-cache.spec.ts and public-valve.spec.ts check the cache and the valve against servers started normally.
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/global-setup.ts",
@@ -22,6 +24,6 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : production
-      ? { command: "npm run build && npx next start -p 3200", url: baseURL, reuseExistingServer: true, timeout: 600_000 }
-      : { command: "npm run dev", url: baseURL, reuseExistingServer: true },
+      ? { command: "npm run build && PUBLIC_CACHE_MS=0 npx next start -p 3200", url: baseURL, reuseExistingServer: true, timeout: 600_000 }
+      : { command: "PUBLIC_CACHE_MS=0 npm run dev", url: baseURL, reuseExistingServer: true },
 });

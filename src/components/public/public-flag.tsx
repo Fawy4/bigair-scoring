@@ -52,10 +52,10 @@ export function BigScreenFlag({ data }: { data: PublicFlagData }) {
         data-flag={state.kind}
         data-why={state.why ?? ""}
         role="status"
-        className={cn("ml-auto flex shrink-0 items-baseline gap-[1.5vw] rounded-[1vw] px-[2vw] py-[0.4vw]")}
+        className={cn("ml-auto flex max-w-[64vw] shrink-0 flex-wrap items-baseline gap-x-[1.5vw] rounded-[1vw] px-[2vw] py-[0.4vw]")}
         style={{ backgroundColor: state.colour, color: textOn(state.colour) }}
       >
-        <span data-testid="screen-flag-word" className="max-w-[40vw] truncate text-[3.4vw] font-bold">
+        <span data-testid="screen-flag-word" className="min-w-0 break-words text-[3.4vw] font-bold">
           {words}
         </span>
         {state.countdownMs !== null ? (
