@@ -30,7 +30,7 @@ PR: #PRNUMBER
 - [ ] When the heat ends the screen says **Judges reviewing** and stays on that heat. Press **Publish** on the head console (**View as → Head judge (laptop)**): the screen switches to that heat's **Results** page (“…· published hh:mm”).
 - [ ] After the first publish, watch 40 seconds: Results and Ladder alternate every 15 seconds; after two or three heats are published each Results page is the heat before (newest, then the one before, then the one before that, then the newest again). Each Results page shows every attempt's score of every rider, the same as **Results** on the public page for that heat.
 - [ ] While it is alternating, press **Space**: the walk stops (“Paused — press space to continue”); press it again to carry on. Press **D**: Day / Dark colours switch and are remembered after a reload.
-- [ ] Event step → More settings → **Follow the heat — seconds per page**: type 4, then 121, then Save: each is refused with “Use a whole number of seconds from 5 to 120 for the pages of the Follow the heat screen”. Type 7 and Save: the pages now change every 7 seconds.
+- [ ] Event step → More settings → **Follow the heat — seconds per page**: type 4 and click elsewhere: the box holds 5; type 121: it holds 120 (nothing outside 5 to 120 can be saved). Type 7 and Save: the pages now change every 7 seconds.
 - [ ] While the walk is showing a Results page, press **Start heat sequence** on the head console (the yellow): within a few seconds the screen jumps to the live heat by itself.
 - [ ] Open the first **Big screen** (Go live → **Big screen**): it looks and rotates as before, and has no Note button.
 
