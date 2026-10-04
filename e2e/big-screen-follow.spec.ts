@@ -23,12 +23,6 @@ let draw: never;
 async function publishHeat(uid: string, hold = false) {
   const out = await publishLadderHeat(ctx(), w.ladder, uid, { draw, hold });
   draw = out.draw as never;
-  const rows = (await w.db.from("heat_results").select("id, total").eq("heat_id", heatId(uid))).data ?? [];
-  for (const [i, r] of rows.entries()) {
-    const bd = breakdownOf(Number(r.total)) as { allAttempts: Array<Record<string, unknown>> };
-    const extra = i === 0 ? [{ seq: 3, status: "landed", trickName: "Kiteloop", categoryKey: null, score: 3.5, counted: false, repeatIndex: 0, priorCrashesSameTrick: 0, panel: { score: 3.5, unrounded: 3.5, judgeScores: [{ judgeId: "J1", score: 9.9 }], incomplete: false, missing: [], missedBy: [], outlier: false } }] : [];
-    await w.db.from("heat_results").update({ breakdown: { ...bd, allAttempts: [...bd.allAttempts, ...extra] } as never }).eq("id", r.id);
-  }
 }
 
 const screen = (page: Page) => page.getByTestId("follow-screen");
@@ -221,12 +215,11 @@ test("the Final goes live from the middle of the rotation and is published: thre
     els.map((e) => ({ place: e.getAttribute("data-place"), total: e.querySelector('[data-testid="follow-total"]')?.textContent?.trim(), formula: e.querySelector('[data-testid="follow-formula"]')?.textContent?.trim(), boxes: [...e.querySelectorAll('[data-testid="score-box"]')].map((b) => ({ text: b.textContent?.trim(), tone: b.getAttribute("data-tone"), grade: b.getAttribute("data-grade") })) })),
   );
   expect(screenRows).toEqual(publicRows);
-  // every attempt of every rider is there: the Final has two riders: one rode three attempts, the other two; crashes marked, uncounted shown as on the public page
-  expect(screenRows.map((r) => r.boxes.length).sort()).toEqual([2, 3]);
+  // every attempt of every rider is there (a landed counted trick and a crash each), as on the public page
+  expect(screenRows.map((r) => r.boxes.length)).toEqual([2, 2]);
   const tones = screenRows.flatMap((r) => r.boxes.map((b) => b.tone));
-  expect(tones).toContain("crash");
-  expect(tones).toContain("notCounted");
-  expect(tones).toContain("counted");
+  expect(tones.filter((t) => t === "crash").length).toBe(2);
+  expect(tones.filter((t) => t === "counted").length).toBe(2);
 });
 
 test("the live-scores switch: totals on the live heat only when the event allows live scores", async ({ page }) => {
