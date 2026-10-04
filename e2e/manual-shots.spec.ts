@@ -577,3 +577,27 @@ test("manual screenshots: observer", async ({ page, browser }) => {
     await w.cleanup();
   }
 });
+
+/**
+ * Export 1: the head judge's laptop console with its two download buttons (a real, not a simulated, event: a practice event has none), the Go live step's
+ * Results and backup card and the printable results. Its own throwaway organisation. `npm run manual:shots -- -g "export"` runs it alone.
+ */
+test("manual screenshots: export", async ({ page }) => {
+  test.setTimeout(5 * 60_000);
+  mkdirSync(OUT, { recursive: true });
+  const { createPublicWorld } = await import("./public-world");
+  const w = await createPublicWorld();
+  try {
+    await w.signInAs(page, "head", `/head/${w.eventId}`);
+    await expect(page.getByTestId("export-results")).toBeVisible({ timeout: 60_000 });
+    await shot(page, "export-console", LAPTOP, 1500);
+    await w.org.signIn(page, `/org/events/${w.eventId}`);
+    await expect(page.getByTestId("export-card")).toBeVisible({ timeout: 60_000 });
+    await shot(page, "export-go-live", LAPTOP, 1500);
+    await open(page, `/export/${w.eventId}/print`);
+    await expect(page.getByTestId("results-print")).toBeVisible({ timeout: 60_000 });
+    await shot(page, "export-print", LAPTOP, 1500);
+  } finally {
+    await w.cleanup();
+  }
+});

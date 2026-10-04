@@ -22,6 +22,14 @@ export interface Refusal {
 
 /** Sentences outside an errors / codes / validation object that are refusals or problems too. */
 export const EXTRA_REFUSAL_PATHS: readonly string[] = [
+  "exportFiles.refused.results",
+  "exportFiles.refused.backup",
+  "exportFiles.refused.draft",
+  "exportFiles.refused.signIn",
+  "exportFiles.refused.simulation",
+  "exportFiles.refused.failed",
+  "exportFiles.refused.notFound",
+  "exportFiles.refused.notPublic",
   "notFound.eventTitle",
   "headLive.sheetStillMissing",
   "headLive.sheetIncomplete",

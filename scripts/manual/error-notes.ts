@@ -196,6 +196,15 @@ export const NOTES: Record<string, Note> = {
   "admin.health.databaseDown": { m: "The server cannot reach the database (free projects pause after about 7 days idle).", f: "Open the Supabase dashboard and press Resume; load the home page once." },
   "admin.health.realtimeOff": { m: "The browser could not open a live connection. Phones fall back to asking every few seconds.", f: "Reload; check the hotspot. Not blocking: screens still update by polling." },
   "admin.health.settingsUnreadable": { m: "The platform settings could not be read, so the built-in name and texts are shown." },
+  // ---- exporting results and backups
+  "exportFiles.refused.results": { m: "Only an organiser of the event or its head judge may download results. Judges, spotters, announcers, observers and the public never can.", f: "Sign in as an organiser, or open the head judge console with the head judge's PIN." },
+  "exportFiles.refused.backup": { m: "The event backup holds everything about the event, so only an organiser may download it (the head judge may not).", f: "Sign in as an organiser and press Download event backup on the Go live step." },
+  "exportFiles.refused.draft": { m: "Heats under review can only be added to a file by an organiser.", f: "Download without the tick box, or sign in as an organiser." },
+  "exportFiles.refused.signIn": { m: "The session has ended, so the file was not made.", f: "Sign in again and press the button again." },
+  "exportFiles.refused.simulation": { m: "A practice (simulation) event never produces result files, so a rehearsal cannot end up on a real result sheet.", f: "Nothing to fix: export from the real event." },
+  "exportFiles.refused.failed": { m: "The file could not be made, or the line in the audit log could not be written. Nothing in the event was changed.", f: "Wait a minute and press the button again. If it repeats, check the Health page and send the error to the owner." },
+  "exportFiles.refused.notFound": { m: "The event in the address does not exist, or it is not yours.", f: "Open the event from your events list and press the button there." },
+  "exportFiles.refused.notPublic": { m: "The event is still a draft (or is archived), so no result is published and the public sees none.", f: "Publish the event; the files then hold every released heat." },
   // ---- riders
   "riders.noDivisions": { f: "Divisions step → + Add division." },
   "riders.needTwo": { m: "Shuffle and Sort are grey with fewer than two riders." },

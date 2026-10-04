@@ -2860,6 +2860,8 @@ export type Database = {
         }[]
       }
       am_i_head: { Args: { p_event: string }; Returns: boolean }
+      export_role: { Args: { p_event: string }; Returns: string }
+      log_export: { Args: { p_event: string; p_heats?: number; p_include_draft?: boolean; p_kind: string }; Returns: undefined }
       approve_seat: {
         Args: { p_actor?: string; p_enc: string; p_pin: string; p_seat: string }
         Returns: Json

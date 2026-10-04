@@ -14,6 +14,7 @@ import { JudgeScreen } from "./judge-screen";
 import { useEndAtZero, useFlagHorns, useTimerSound, useWakeLock } from "./live-hooks";
 import { LiveShell, ScreenSettings, useLiveSettings } from "./live-shell";
 import { PracticePanel } from "./practice-panel";
+import { ExportButtons } from "@/components/export/export-buttons";
 import { useLiveHeat } from "./use-live-heat";
 import { useServerClock, useTick } from "./use-server-clock";
 import { SeatHeartbeat } from "@/app/seat/heartbeat";
@@ -81,6 +82,8 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   const viewer = ctx.viewer;
   const seatId = viewer.kind === "seat" ? viewer.seatId : null;
   const scores = Boolean(seatId && ctx.divisions.some((d) => d.panelSeatIds.includes(seatId)));
+  // Download results: the head judge's seat or an organiser, on the laptop console only (this column does not exist on a phone); never the announcer, never a practice event
+  const canExport = !announcer && !ctx.event.isSimulation && (viewer.kind === "organiser" || (viewer.kind === "seat" && viewer.role === "head"));
   const role = viewer.kind === "seat" ? (viewer.role as "head" | "judge" | "spotter" | "announcer") : "organiser";
   const [headExists, setHeadExists] = useState(viewer.kind === "seat");
   useEffect(() => {
@@ -372,6 +375,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
           </PartBoundary>
           <TimingButtons c={c} />
           <WindButton eventId={ctx.event.id} />
+          {canExport ? <ExportButtons eventId={ctx.event.id} role="head" /> : null}
         </div>
         <div className="min-w-0">
           {shown && heatDivision && head ? (

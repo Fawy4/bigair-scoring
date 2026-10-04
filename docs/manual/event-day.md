@@ -2,7 +2,7 @@
 
 The event-day runbook (docs/09, corrected to the built product): the day before, the morning minute by minute, each heat, wind holds, failures and the end of the day, with what the organiser and the head judge do side by side.
 
-Last checked: 3 Oct 2026 · Product version 0.9.2
+Last checked: 4 Oct 2026 · Product version 0.14.0
 
 Times below assume a first heat at 10:00 and a ready call of 15 minutes; move them with your own run order. “HJ” is the head judge. Every button named here exists in version 0.9.0; the end of the page lists what docs/09 expected but the product does not have.
 
@@ -71,13 +71,14 @@ Times below assume a first heat at 10:00 and a ready call of 15 minutes; move th
 - Make sure every heat is published and every held final released (Placings complete).
 - The public Results, Ladder and Placings pages stay online; share the link.
 - Archive the event only when it should disappear from the public site (platform owner).
+- **Download results** after every published heat, and at the end of each day **Download results** (draft box ticked), **Open printable results** (save as PDF) and **Download event backup**; keep each file in two places that are not the event laptop ([Exporting results and backups](exporting.md)).
 - Leave notes with the **Note** button for what to change; the owner exports them.
 
 ## Not in version 0.9.0 {#ed-not-built}
 
 Do these by hand; they are owed for a later version (docs/STATUS.md):
 
-- Results export (CSV / PDF per division), audit-log export, “Duplicate event” as a template for the next event.
+- Audit-log export, “Duplicate event” as a template for the next event, and **Restore from backup** (the event backup file exists; loading it back does not).
 - Printed **paper judge sheets**: print blank sheets yourself.
 - Starting or ending a heat with typed times: the console always uses the server's clock.
 - There is no separate “tabulator mode”: the head judge enters missing scores with **Edit score** (with a reason) and **Enter their Impression score**.

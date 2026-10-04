@@ -1210,3 +1210,28 @@ Started from main 0.12.0 (Polish 2b and fix session 1 merged); version 0.13.0 (a
 ### How to test
 - Nothing to see on the live address.
 - On a laptop: `npm test` (unit, includes the audit's 4 files); `npm run test:rls -- tests/rls/audit-1b-ladder.test.ts` (one RLS file at a time); `AUDIT_LOAD=1 npm run test:rls -- tests/rls/audit-1b-load.test.ts` only on a project you may load.
+
+## Export 1 – results CSV, printable results, event backup (branch `export-1`, 4 Oct 2026, 0.14.0)
+
+Started from main (0.13.1, after #33). A Fix 2 session (the audit's findings and the public-page cache) runs in parallel on different files: this branch does not touch the public pages, the console, the flags or the Riders step beyond two buttons (Go live card, head console left column). Whoever merges second rebases onto main and takes the next version.
+
+### Done
+- **Routes** `src/app/export/[eventId]/`: `results.csv`, `print` (the printable page) and `backup.json`. Who: `export_role` (new database function: organiser, head, or nobody); the backup and the draft box are organisers only. `401` signed out, `403` anybody else (print: `404`), `409` for a practice event.
+- **Results = the public's rules.** The files read `get_public_results / rules / draw / site` as the person pressing the button, so the visibility rules are the public's own. The printable page draws every heat with the public page's own `buildHeatTabs` + `HeatSummary`. Draft heats (organiser's tick box) are laid in as released rows: a heat under review is scored with the same engine and reader as Publish; a held heat uses its stored result; both through `toPublicBreakdown`, which mirrors `private.public_breakdown` (panel scores only, never a judge's marks).
+- **Backup**: `BackupSchema` (Zod), allow-listed seat columns, `stripSecrets` on free-form JSON, `findSecrets` inside the schema. One file, `<slug>-backup-<date>-<hhmm>.json`.
+- **Audit**: `log_export` writes `results_exported` / `backup_downloaded` (who, when, kind, draft box, heats). No file is given if the line cannot be written. Nothing else is written.
+- **Docs**: `docs/EXPORT-FORMAT.md` (columns, JSON structure, examples, "How an import would work"); manual page "Exporting results and backups"; Go live, console, event day, roles, glossary, errors; runbook docs/09 §G1.
+- **Folders**: the repo's guard test requires every file in `src/lib/exports/` to call `excludeSimulations`. The entry points that load an event (`access.ts`, `load-results.ts`, `load-backup.ts`) live there and call it; the pure formatting code lives in `src/lib/export-format/`.
+
+### Tests
+- Unit (`src/lib/export-format/*.test.ts`): the docs/08 §1A heat produces exactly the expected header and row (scores, counted flags, impression, total, place); a heat under review, held or cancelled is never in the file; the draft heat says DRAFT; the print order; the backup round-trips through the schema and holds none of seven planted secrets (as key or value).
+- Written but **not run** (this sandbox has no database keys): `tests/rls/export.test.ts` (export_role, log_export), `e2e/export.spec.ts` (two heats published, one under review: CSV, draft box, printable page equals the public page, backup is one file with no PIN, the head judge's laptop and phone, judge / spotter / observer / visitor refused). Run both before relying on this version.
+
+### Owed
+- Apply the migration `20261024100000_export_audit.sql` to the hosted project (`npm run db:apply`), then `npm run db:types` (the two function types were added by hand).
+- Retake the manual screenshots (`npm run manual:shots`); the Go live card appears in the next `org-go-live` shot. The new shots `export-*` are in the `export` test of `e2e/manual-shots.spec.ts` and are not yet referenced from a page.
+- Restore from backup (the format is written down for it).
+- `e2e/help.spec.ts` counts the manual's pages (40; it was already out of date before this version).
+
+### How to test on a laptop
+- Go live → **Results and backup** → **Download results**, **Open printable results**, the draft box, **Download event backup**; head judge console (laptop) → the first two under the wind call. See the release entry in `docs/RELEASES.md`.

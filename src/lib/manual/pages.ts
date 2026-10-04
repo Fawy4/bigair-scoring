@@ -11,6 +11,7 @@ export const MANUAL_PAGES: ManualPage[] = [
   { file: "quick-start.md", group: "Start" },
   { file: "dependencies.md", group: "Start" },
   { file: "event-day.md", group: "Start" },
+  { file: "exporting.md", group: "Start" },
   { file: "troubleshooting.md", group: "Start" },
   { file: "screens/organiser-event.md", group: "Screens" },
   { file: "screens/organiser-divisions.md", group: "Screens" },

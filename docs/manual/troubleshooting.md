@@ -72,6 +72,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “A later round was arranged by hand, so its seats cannot be rebuilt from the current draw. Nothing was changed.” | Follow the sentence. | [Resets](errors.md#err-reset-rebuildarranged) |
 | “A newer version is already the default, so this older one cannot be published. Save its content as a new version instead.” | Save the content as a new version; that version can be published. | [Platform owner (/admin)](errors.md#err-admin-presets-errors-not-newer) |
 | “A person has that seat.” | Follow the sentence. | [Simulator](errors.md#err-simulator-errors-seat-is-real) |
+| “A practice (simulation) event has no results to export.” | Nothing to fix: export from the real event. | [Other](errors.md#err-exportfiles-refused-simulation) |
 | “A preset must be a JSON object.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-presets-errors-not-object) |
 | “A reason is required.” | Type a reason; it is written to the audit log. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-reason-required) |
 | “A reason of at least 5 characters is needed, because results of this event were shown publicly.” | Follow the sentence. | [Resets](errors.md#err-reset-errors-reason-required) |
@@ -232,6 +233,9 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Only a running heat can be paused.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-pause) |
 | “Only a running or paused heat can be ended.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-end) |
 | “Only a version newer than the published one can be published.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-codes-not-newer) |
+| “Only an organiser can include heats under review.” | Download without the tick box, or sign in as an organiser. | [Other](errors.md#err-exportfiles-refused-draft) |
+| “Only an organiser of this event can download the event backup.” | Sign in as an organiser and press Download event backup on the Go live step. | [Other](errors.md#err-exportfiles-refused-backup) |
+| “Only an organiser of this event or its head judge can download the results.” | Sign in as an organiser, or open the head judge console with the head judge's PIN. | [Other](errors.md#err-exportfiles-refused-results) |
 | “Only attempts of the same rider can be merged.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-not-same-rider) |
 | “Only owners and admins can change organisation settings.” | Follow the sentence. Only owners and admins of the organisation may save. | [Organiser: organisation settings](errors.md#err-orgsettings-notallowed) |
 | “Only owners and admins can change these settings. You can look, but not save.” | Follow the sentence. Only owners and admins of the organisation may save. | [Organiser: organisation settings](errors.md#err-orgsettings-readonly) |
@@ -277,6 +281,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Seed ‹seed› is given to more than one rider: ‹names›. Sort or drag them afterwards.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-repeatedseed) |
 | “Seed “‹v›” is not a whole number of 1 or more.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-badseed) |
 | “Shown once the heat has ended.” | Follow the sentence. | [Head console](errors.md#err-headlive-agreementwait) |
+| “Sign in first.” | Sign in again and press the button again. | [Other](errors.md#err-exportfiles-refused-signin) |
 | “Some settings need fixing.” | Follow the sentence. Only owners and admins of the organisation may save. | [Organiser: organisation settings](errors.md#err-orgsettings-fixthese) |
 | “Some settings need fixing. They are highlighted below.” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-fixthese) |
 | “Someone saved a newer version while you were editing. Reload the page; your changes were not saved.” | Reload the page, make the change again and save. | [Admin: trick base](errors.md#err-trickeditor-codes-trick-base-stale) |
@@ -305,6 +310,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “That email address is not registered as an organiser. Ask the owner to add you.” | The platform owner invites the address (Admin → organisation → Invite organiser). | [Organiser sign-in](errors.md#err-login-notregistered) |
 | “That event code or PIN is not recognised. Check the card you were given and try again.” | Check the event code (the last part of the event address) and the PIN on the card. The organiser sees every PIN in Officials → Show PIN, or makes a new one with Regenerate PIN. | [Officials joining](errors.md#err-join-errors-invalid-pin) |
 | “That event was not found, or you do not have access to it.” | Pick the organisation in the switcher at the top, then open the event from the events list. | [Organiser: event list and Event step](errors.md#err-event-notfound) |
+| “That event was not found.” | Open the event from your events list and press the button there. | [Other](errors.md#err-exportfiles-refused-notfound) |
 | “That file is empty.” | Use a PNG, JPEG or WebP file of at most 2 MB. | [Organiser: event list and Event step](errors.md#err-logo-empty) |
 | “That file is larger than 512 KB, far more than a trick base needs. Is it the right file?” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-jsontoolarge) |
 | “That file is not a PNG, JPEG or WebP image. Save the logo as one of those and try again.” | Use a PNG, JPEG or WebP file of at most 2 MB. | [Organiser: event list and Event step](errors.md#err-logo-wrongtype) |
@@ -391,6 +397,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “The event is already in that organisation.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-same-organisation) |
 | “The event list could not be loaded just now. Try again in a minute.” | Wait a minute and reload. On the free plan the owner wakes the database before the event. | [Public pages](errors.md#err-landing-loaderror) |
 | “the fallback must differ from the primary identifier” | Choose a different fallback, or No fallback. | [Organiser: Rider label](errors.md#err-ident-validation-fallbackdiffers) |
+| “The file could not be made. Try again in a minute; nothing has been changed.” | Wait a minute and press the button again. If it repeats, check the Health page and send the error to the owner. | [Other](errors.md#err-exportfiles-refused-failed) |
 | “The file has a header but no riders under it.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-norows) |
 | “The file has more than ‹n› riders. Split it into smaller files.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-toomany) |
 | “The file is empty.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-empty) |
@@ -497,6 +504,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “This event has published results, so it cannot be deleted. Archive it instead.” | Follow the sentence. An event with published results can only be archived. | [Organiser: event list and Event step](errors.md#err-eventlifecycle-errors-published-results) |
 | “This event is not available.” | As organiser: Event step → Published; not a simulation; not archived. | [Public pages](errors.md#err-publicsite-eventnotfound) |
 | “This event is not on the public site.” | As organiser: check Published, and that the rider is in a locked draw. | [Public pages](errors.md#err-pub-common-notfound) |
+| “This event is not public yet, so no result has been published and there is nothing to export.” | Publish the event; the files then hold every released heat. | [Other](errors.md#err-exportfiles-refused-notpublic) |
 | “This event is not taking registrations.” | Follow the sentence. | [Rider registration](errors.md#err-registration-archived) |
 | “This event is not taking requests.” | Follow the sentence; the organiser can regenerate a PIN in the Officials step. | [Officials joining](errors.md#err-join-selfadd-errors-event-not-found) |
 | “This event isn't public” | Event step → tick “Published” and Save event. A simulation event is never public; an archived event or organisation is hidden. | [Public pages](errors.md#err-notfound-eventtitle) |

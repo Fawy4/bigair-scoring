@@ -525,6 +525,19 @@ Last checked: 3 Oct 2026 · Product version 0.9.2
 | {#err-runorder-errors-notvalid} “The plan is not valid:” | Run order & timetable step (step 6) | The run order (plan) could not be changed. | Follow the sentence. |
 | {#err-runorder-errors-deleteactive} “This plan is active. Activate another plan first.” | Run order & timetable step (step 6) | The run order (plan) could not be changed. | Activate another plan of that day first, then delete this one. |
 
+### Other
+
+| Sentence on screen | Where | What it means | Fix |
+|---|---|---|---|
+| {#err-exportfiles-refused-results} “Only an organiser of this event or its head judge can download the results.” | — | Only an organiser of the event or its head judge may download results. Judges, spotters, announcers, observers and the public never can. | Sign in as an organiser, or open the head judge console with the head judge's PIN. |
+| {#err-exportfiles-refused-backup} “Only an organiser of this event can download the event backup.” | — | The event backup holds everything about the event, so only an organiser may download it (the head judge may not). | Sign in as an organiser and press Download event backup on the Go live step. |
+| {#err-exportfiles-refused-draft} “Only an organiser can include heats under review.” | — | Heats under review can only be added to a file by an organiser. | Download without the tick box, or sign in as an organiser. |
+| {#err-exportfiles-refused-signin} “Sign in first.” | — | The session has ended, so the file was not made. | Sign in again and press the button again. |
+| {#err-exportfiles-refused-simulation} “A practice (simulation) event has no results to export.” | — | A practice (simulation) event never produces result files, so a rehearsal cannot end up on a real result sheet. | Nothing to fix: export from the real event. |
+| {#err-exportfiles-refused-failed} “The file could not be made. Try again in a minute; nothing has been changed.” | — | The file could not be made, or the line in the audit log could not be written. Nothing in the event was changed. | Wait a minute and press the button again. If it repeats, check the Health page and send the error to the owner. |
+| {#err-exportfiles-refused-notfound} “That event was not found.” | — | The event in the address does not exist, or it is not yours. | Open the event from your events list and press the button there. |
+| {#err-exportfiles-refused-notpublic} “This event is not public yet, so no result has been published and there is nothing to export.” | — | The event is still a draft (or is archived), so no result is published and the public sees none. | Publish the event; the files then hold every released heat. |
+
 ### Pages that fail
 
 | Sentence on screen | Where | What it means | Fix |
