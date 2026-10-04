@@ -25,6 +25,16 @@ async function publishHeat(uid: string, hold = false) {
   draw = out.draw as never;
 }
 
+/** A change to a heat, written the way the head judge's button would: tried again when the hosted database is slow, and the test stops if it never lands. */
+async function setHeat(id: string, patch: Record<string, unknown>) {
+  for (let i = 0; ; i++) {
+    const { error } = await w.db.from("heats").update(patch as never).eq("id", id);
+    if (!error) return;
+    if (i >= 3) throw new Error(`heats update: ${error.message}`);
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+}
+
 const screen = (page: Page) => page.getByTestId("follow-screen");
 const phaseIs = (page: Page, phase: string, timeout = 15_000) => expect(screen(page)).toHaveAttribute("data-phase", phase, { timeout });
 
@@ -51,7 +61,7 @@ test.beforeAll(async () => {
   // Pro Men: not published, not running (result rows left behind on purpose: an unpublished heat must never show them)
   await w.db.from("heats").update({ status: "scheduled", started_at: null, ended_at: null, published_at: null }).in("id", [h1, h2]);
   // the Reseed ladder's first heat is published but HELD back
-  await w.db.from("heats").update({ publish_hold: true }).eq("id", w.reseedLadder.heats["R1-H1"]);
+  await setHeat(w.reseedLadder.heats["R1-H1"], { publish_hold: true });
   draw = (await w.db.from("divisions").select("draw").eq("id", w.ladder.div).single()).data!.draw as never;
 });
 test.afterAll(async () => {
@@ -131,7 +141,7 @@ test("heat 2: arming brings the live heat back within two seconds, mid-rotation;
   await expect(screen(page)).toHaveAttribute("data-index", /.*/);
   const h = heatId("R1-H2");
   // the head judge arms the heat (the yellow, a one-minute pre-start)
-  await w.db.from("heats").update({ status: "scheduled", armed_at: new Date().toISOString(), prestart_sec: 60, duration_sec: 600, ended_at: null }).eq("id", h);
+  await setHeat(h, { status: "scheduled", armed_at: new Date().toISOString(), prestart_sec: 60, duration_sec: 600, ended_at: null });
   const armedAt = Date.now(); // the arming is committed
   await phaseIs(page, "live", 2_000 + answerMs);
   expect(Date.now() - armedAt).toBeLessThan(2_600 + answerMs);
@@ -144,12 +154,12 @@ test("heat 2: arming brings the live heat back within two seconds, mid-rotation;
   await page.waitForTimeout((SECONDS + 2) * 1000);
   await phaseIs(page, "live", 1_000);
   // the green
-  await w.db.from("heats").update({ status: "running", started_at: new Date().toISOString() }).eq("id", h);
+  await setHeat(h, { status: "running", started_at: new Date().toISOString() });
   await expect(page.getByTestId("screen-flag-frame")).toHaveAttribute("data-flag", /running|last_minute/, { timeout: 5_000 });
   await phaseIs(page, "live", 1_000);
   // End heat
   const endedAt = Date.now();
-  await w.db.from("heats").update({ status: "ended", ended_at: new Date().toISOString() }).eq("id", h);
+  await setHeat(h, { status: "ended", ended_at: new Date().toISOString() });
   await phaseIs(page, "reviewing", 2_500);
   expect(Date.now() - endedAt).toBeLessThan(3_000);
   await expect(page.getByTestId("follow-reviewing")).toHaveText("Judges reviewing");
@@ -180,10 +190,10 @@ test("the Final goes live from the middle of the rotation and is published: thre
   await phaseIs(page, "rotation");
   const f = heatId("F-H1");
   await expect(page.getByTestId("follow-ladder-page")).toBeVisible({ timeout: (SECONDS + 3) * 1000 }); // mid-rotation
-  await w.db.from("heats").update({ status: "scheduled", armed_at: new Date().toISOString(), prestart_sec: 60, duration_sec: 600 }).eq("id", f);
+  await setHeat(f, { status: "scheduled", armed_at: new Date().toISOString(), prestart_sec: 60, duration_sec: 600 });
   await phaseIs(page, "live", 8_000); // (the two-second measurement is in heat 2's test; here the point is the walk)
-  await w.db.from("heats").update({ status: "running", started_at: new Date().toISOString() }).eq("id", f);
-  await w.db.from("heats").update({ status: "ended", ended_at: new Date().toISOString() }).eq("id", f);
+  await setHeat(f, { status: "running", started_at: new Date().toISOString() });
+  await setHeat(f, { status: "ended", ended_at: new Date().toISOString() });
   await phaseIs(page, "reviewing", 8_000);
   await publishHeat("F-H1");
   await phaseIs(page, "rotation", 8_000);
@@ -235,7 +245,7 @@ test("the live-scores switch: totals on the live heat only when the event allows
     const { data } = await w.db.from("events").select("settings").eq("id", w.eventId).single();
     await w.db.from("events").update({ settings: { ...(data!.settings as object), publicLiveScores } as never }).eq("id", w.eventId);
   };
-  await w.db.from("heats").update({ status: "running", started_at: ago(60), ended_at: null }).eq("id", h2);
+  await setHeat(h2, { status: "running", started_at: ago(60), ended_at: null });
   try {
     await settings("live");
     await page.goto(followUrl());
@@ -250,13 +260,13 @@ test("the live-scores switch: totals on the live heat only when the event allows
     await expect(page.getByTestId("follow-live-riders").getByTestId("rider-label-text").first()).toHaveText(/RED|BLUE|YELLOW|GREEN/i);
   } finally {
     await settings("live");
-    await w.db.from("heats").update({ status: "scheduled", started_at: null }).eq("id", h2);
+    await setHeat(h2, { status: "scheduled", started_at: null });
   }
 });
 
 test("a heat that does not fit at the TV size is split across two pages, not shrunk", async ({ page, request }) => {
   const [h1] = w.heats;
-  await w.db.from("heats").update({ status: "published", started_at: ago(4300), ended_at: ago(3700), published_at: ago(3600) }).eq("id", h1);
+  await setHeat(h1, { status: "published", started_at: ago(4300), ended_at: ago(3700), published_at: ago(3600) });
   const body = (await (await request.get(`${followUrl()}/data`)).json()) as { payload: { pages: Array<{ kind: string; heatId?: string; part?: number; parts?: number; riders?: unknown[] }> } };
   const mine = body.payload.pages.filter((p) => p.kind === "results" && p.heatId === h1);
   expect(mine.map((p) => [p.part, p.parts])).toEqual([[1, 2], [2, 2]]);
