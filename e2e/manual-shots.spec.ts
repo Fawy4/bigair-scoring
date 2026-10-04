@@ -10,6 +10,7 @@ import { builtInSchemes } from "../src/lib/schemas/identification";
 import { expect, test } from "./base";
 import { record } from "./cleanup";
 import { createOrganiser } from "./organiser";
+import { createPublicWorld } from "./public-world";
 
 /**
  * The manual's screenshots (docs/manual/img), retaken with `npm run manual:shots` after every change (docs/manual/README.md, the update rule).
@@ -585,7 +586,6 @@ test("manual screenshots: observer", async ({ page, browser }) => {
 test("manual screenshots: export", async ({ page }) => {
   test.setTimeout(5 * 60_000);
   mkdirSync(OUT, { recursive: true });
-  const { createPublicWorld } = await import("./public-world");
   const w = await createPublicWorld();
   try {
     await w.signInAs(page, "head", `/head/${w.eventId}`);
@@ -593,10 +593,10 @@ test("manual screenshots: export", async ({ page }) => {
     await shot(page, "export-console", LAPTOP, 1500);
     await w.org.signIn(page, `/org/events/${w.eventId}`);
     await expect(page.getByTestId("export-card")).toBeVisible({ timeout: 60_000 });
-    await shot(page, "export-go-live", LAPTOP, 1500);
+    await shot(page, "export-go-live", LAPTOP, 1500, false, () => page.getByTestId("export-card").scrollIntoViewIfNeeded());
     await open(page, `/export/${w.eventId}/print`);
     await expect(page.getByTestId("results-print")).toBeVisible({ timeout: 60_000 });
-    await shot(page, "export-print", LAPTOP, 1500);
+    await shot(page, "export-print", LAPTOP, 1500, true);
   } finally {
     await w.cleanup();
   }

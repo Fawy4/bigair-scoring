@@ -22,7 +22,7 @@ PR: #34
 - Only what the public sees is in the files. **Include heats under review (draft)** (organisers only) adds heats under review or held back, labelled DRAFT, for an end-of-day safety copy.
 - **Download event backup** (Go live, organisers only): one file `‹event›-backup-‹date›-‹time›.json` with the whole event — settings, divisions with scoring and trick base, riders, officials (names and roles, never PINs or passwords), the draw, run orders, heats, attempts, scores, every result version, the audit log and the notes. **Restoring from a backup does not exist yet.**
 - Judges, spotters, announcers, observers and the public never see the buttons and are refused by the addresses. A download changes nothing in the event; its only trace is one audit-log line. `docs/EXPORT-FORMAT.md` describes both files for the session that will build the restore.
-- **Needs the database update** (`npm run db:apply`): two small functions, `export_role` and `log_export`. Until it is applied the buttons answer “The file could not be made.”
+- **Database update** (migration `20261025100000_export_audit.sql`, already applied to the hosted project): two small functions, `export_role` and `log_export`. Without them the buttons answer “The file could not be made.”
 
 ### What to test
 - [ ] On a test event with two published heats, open **Go live** on a laptop. In the **Results and backup** card press **Download results**. Open the file in Excel: you see one row per rider per heat, every attempt's score, each rider's total and place, then “Placings so far” and “Ladder seats”.
@@ -34,8 +34,7 @@ PR: #34
 - [ ] Open the public event page as a visitor: no download button on any page.
 
 ### Known issues
-- The screenshots of the new Go live card and the console buttons are not in the manual yet (they need the browser run `npm run manual:shots` against the live project, which could not be run where this version was written).
-- The browser tests of this version (`e2e/export.spec.ts`) and the database test (`tests/rls/export.test.ts`) were written but could not be run where this version was written (no database keys there); run them before relying on the version.
+- The backup holds some fields named `key`, `content_hash` or `client_key`. They are not secrets: palette colour names, fingerprints of the public scoring-model presets, and the random numbers that stop a score being saved twice. No PIN, PIN hash, QR token, link or password is in either file (searched on a test event with planted values).
 - A restore from a backup does not exist.
 
 ## 0.13.1 — 4 Oct 2026 {#release-0-13-1}

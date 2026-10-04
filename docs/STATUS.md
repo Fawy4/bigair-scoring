@@ -1225,11 +1225,11 @@ Started from main (0.13.1, after #33). A Fix 2 session (the audit's findings and
 
 ### Tests
 - Unit (`src/lib/export-format/*.test.ts`): the docs/08 §1A heat produces exactly the expected header and row (scores, counted flags, impression, total, place); a heat under review, held or cancelled is never in the file; the draft heat says DRAFT; the print order; the backup round-trips through the schema and holds none of seven planted secrets (as key or value).
-- Written but **not run** (this sandbox has no database keys): `tests/rls/export.test.ts` (export_role, log_export), `e2e/export.spec.ts` (two heats published, one under review: CSV, draft box, printable page equals the public page, backup is one file with no PIN, the head judge's laptop and phone, judge / spotter / observer / visitor refused). Run both before relying on this version.
+- **Run against the hosted project** (4 Oct): `tests/rls/export.test.ts` 3/3 and `e2e/export.spec.ts` 2/2 pass. The shared test world publishes three heats (Pro Men 1, Knockout 1, Reseed 1) with Pro Men 2 under review; the first version of the spec expected two, and the score label is "7.0" (the public page's own label), both fixed in the spec, not the export. Hand check on a throwaway event: CSV opens (BOM, CRLF, 30 columns), printable page equals the public page for all three heats and carries the export time, the backup holds none of 19 planted PIN / hash / token values, audit log has one line per press.
 
 ### Owed
-- Apply the migration `20261024100000_export_audit.sql` to the hosted project (`npm run db:apply`), then `npm run db:types` (the two function types were added by hand).
-- Retake the manual screenshots (`npm run manual:shots`); the Go live card appears in the next `org-go-live` shot. The new shots `export-*` are in the `export` test of `e2e/manual-shots.spec.ts` and are not yet referenced from a page.
+- The migration is applied and the types are regenerated (`npm run db:types`). It was renamed `20261024100000` → `20261025100000`: Fix 2's `fix2_less_churn` already holds version `20261024100000` on the hosted project, and today's calendar date would sort before 20 applied migrations.
+- Screenshots `export-go-live`, `export-console` and `export-print` are taken (`npm run manual:shots -- -g export`) and shown on the manual page "Exporting results and backups".
 - Restore from backup (the format is written down for it).
 - `e2e/help.spec.ts` counts the manual's pages (40; it was already out of date before this version).
 

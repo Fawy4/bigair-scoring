@@ -6,7 +6,7 @@ import { closePhones, expect, installSupabaseProxy, test } from "./base";
 import { createPublicWorld, type PublicWorld } from "./public-world";
 
 /**
- * Export 1 on a throwaway event (Arrow, EKL and Demo are never touched): Pro Men heat 1 and the Knockout's first heat are published, Pro Men heat 2 is under review.
+ * Export 1 on a throwaway event (Arrow, EKL and Demo are never touched): Pro Men heat 1, the Knockout's first heat and the Reseed ladder's first heat are published, Pro Men heat 2 is under review.
  * The organiser downloads the results CSV (two heats; the third only with the draft box), opens the printable page (it carries the export time and its heat rows match the
  * public results page), and downloads one backup file with no PIN in it. The head judge has the results buttons on the laptop and nothing on a phone; judges,
  * spotters and observers never see a button, and every route refuses them.
@@ -39,7 +39,7 @@ function heatRows(csv: string): Array<Record<string, string>> {
   return lines.slice(1, end === -1 ? undefined : end).map((l) => Object.fromEntries(l.split(",").map((v, i) => [head[i], v])));
 }
 
-test("Download results gives the two published heats and not the one under review unless the draft box is ticked; the printable page matches the public page; the backup is one file", async ({ browser }) => {
+test("Download results gives the three published heats and not the one under review unless the draft box is ticked; the printable page matches the public page; the backup is one file", async ({ browser }) => {
   test.setTimeout(300_000);
   const page = await open(browser, { width: 1280, height: 900 });
   await w.org.signIn(page, `/org/events/${w.eventId}`);
@@ -61,7 +61,9 @@ test("Download results gives the two published heats and not the one under revie
   expect(csv.startsWith("﻿")).toBe(true);
   const rows = heatRows(csv);
   const heatsInFile = new Set(rows.map((r) => `${r["Division"]}|${r["Round"]}|${r["Heat"]}`));
-  expect(heatsInFile.size).toBe(2);
+  expect(heatsInFile.size).toBe(3);
+  expect(heatsInFile.has("Knockout|R1|Heat 1")).toBe(true);
+  expect(heatsInFile.has("Reseed|R1|Heat 1")).toBe(true);
   expect(heatsInFile.has("Pro Men|R1|Heat 1")).toBe(true);
   expect(heatsInFile.has("Pro Men|R1|Heat 2")).toBe(false);
   expect(rows.every((r) => r["Draft"] === "")).toBe(true);
@@ -69,7 +71,7 @@ test("Download results gives the two published heats and not the one under revie
   expect(first["Heat total"]).toBe("20.5");
   expect(first["Attempt 1 trick"]).toBe("Backroll");
   expect(first["Attempt 1 result"]).toBe("Landed");
-  expect(first["Attempt 1 score"]).toBe("7");
+  expect(first["Attempt 1 score"]).toBe("7.0"); // the same label the public results page shows (the model's own decimals)
   expect(first["Attempt 1 counted"]).toBe("Yes");
   expect(first["Attempt 4 result"]).toBe("Crashed");
   expect(csv).toContain("Ladder seats");
@@ -80,7 +82,7 @@ test("Download results gives the two published heats and not the one under revie
   const draftRows = heatRows(await readDownload(draftDownload));
   const draftHeats = new Set(draftRows.filter((r) => r["Draft"] === "DRAFT").map((r) => r["Heat"]));
   expect([...draftHeats]).toEqual(["Heat 2"]);
-  expect(new Set(draftRows.map((r) => `${r["Division"]}|${r["Heat"]}`)).size).toBe(3);
+  expect(new Set(draftRows.map((r) => `${r["Division"]}|${r["Heat"]}`)).size).toBe(4);
 
   // the printable page: export time in the header; every published heat's rows are the public page's rows
   await page.getByTestId("export-draft").uncheck();
@@ -88,7 +90,7 @@ test("Download results gives the two published heats and not the one under revie
   await expect(popup.getByTestId("results-print")).toBeVisible({ timeout: 60_000 });
   await expect(popup.getByTestId("print-header")).toContainText(`E2E Live ${w.org.run}`);
   await expect(popup.getByTestId("print-exported-at")).toContainText(/Exported \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
-  await expect(popup.getByTestId("print-heat")).toHaveCount(2);
+  await expect(popup.getByTestId("print-heat")).toHaveCount(3);
   await expect(popup.locator('[data-draft="true"]')).toHaveCount(0);
   const printed = await popup.locator(`[data-heat-id="${w.published}"] [data-testid="public-rider"]`).allInnerTexts();
   const pub = await open(browser, { width: 420, height: 900 });
@@ -101,7 +103,7 @@ test("Download results gives the two published heats and not the one under revie
   // with the draft box the page carries the DRAFT word and watermark on the heat under review only
   const draftPage = await open(browser, { width: 1280, height: 900 });
   await w.org.signIn(draftPage, `/export/${w.eventId}/print?draft=1`);
-  await expect(draftPage.getByTestId("print-heat")).toHaveCount(3, { timeout: 60_000 });
+  await expect(draftPage.getByTestId("print-heat")).toHaveCount(4, { timeout: 60_000 });
   await expect(draftPage.locator('[data-draft="true"]')).toHaveCount(1);
   await expect(draftPage.getByTestId("print-watermark")).toHaveCount(1);
   await expect(draftPage.getByTestId("print-draft-word")).toHaveText("DRAFT");

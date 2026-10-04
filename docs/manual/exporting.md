@@ -14,6 +14,14 @@ The results of a real event must never live in one place only. Two buttons on th
 | **Open printable results** | A page in a new tab that looks like the public Results page: every published heat, division by division, newest heat first, with the event name and the date and time of the export at the top of every page. Press **Print or save as PDF** (or Ctrl/Cmd + P) and choose **Save as PDF** to keep it. | An organiser; the head judge |
 | **Download event backup** | One file (JSON) with the whole event: settings, divisions with their scoring and trick base, riders, officials (names and roles only), the draw and ladder, every run order, heats, attempts, scores, Impression / Variety scores, every version of every result, the audit log and the feedback notes. Open it in a text editor and you will recognise your event. | An organiser only (Go live step) |
 
+The **Go live** step, with the **Results and backup** card at the bottom:
+
+![The Results and backup card on the Go live step](img/export-go-live-1280.png)
+
+The head judge's console on a laptop has the first two buttons, under the run order:
+
+![Download results and Open printable results on the head judge's console](img/export-console-1280.png)
+
 Judges, spotters, announcers, observers and the public never see these buttons, and the addresses behind them refuse them. A practice (simulation) event has no buttons: a rehearsal can never end up on a real result sheet.
 
 ## What is in the results, and what is not {#exp-what}
@@ -23,6 +31,10 @@ Judges, spotters, announcers, observers and the public never see these buttons, 
 - **Times** are in the event's own time zone, never the device's.
 - **Pressing a button changes nothing.** You can press it during a running heat: nothing on any official's screen changes. The only thing written is one line in the audit log (“Results exported” or “Event backup downloaded”, who and when).
 - **Speed.** A 24-rider, 15-heat event takes a few seconds. If a file takes longer than a minute, wait and press again.
+
+The printable page, with the event name and the time of the export at the top:
+
+![The printable results](img/export-print-1280.png)
 
 ## When to press them {#exp-when}
 

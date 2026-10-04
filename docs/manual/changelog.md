@@ -16,7 +16,7 @@ Release entry: [0.14.0](/admin/releases#release-0-14-0) (platform owner only)
 - Each download writes one line to the audit log. Nothing else is changed by a download.
 
 **Manual pages updated**
-- New: [Exporting results and backups](exporting.md). Updated: [Organiser: Go live](screens/organiser-go-live.md), [Head judge console on a laptop](screens/console-laptop.md), [Event day](event-day.md), [Roles](roles.md), [Glossary](glossary.md), [Errors and refusals](errors.md), [Troubleshooting](troubleshooting.md). Screenshots of the new card and buttons are owed (see the release entry).
+- New: [Exporting results and backups](exporting.md). Updated: [Organiser: Go live](screens/organiser-go-live.md), [Head judge console on a laptop](screens/console-laptop.md), [Event day](event-day.md), [Roles](roles.md), [Glossary](glossary.md), [Errors and refusals](errors.md), [Troubleshooting](troubleshooting.md). Screenshots: the Go live card, the console buttons and the printable page.
 
 ## 0.13.1 — 4 Oct 2026 {#cl-0-13-1}
 

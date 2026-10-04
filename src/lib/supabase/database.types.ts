@@ -1167,6 +1167,7 @@ export type Database = {
           ip: string
           ok: boolean
           seat_id: string | null
+          user_id: string | null
         }
         Insert: {
           at?: string
@@ -1175,6 +1176,7 @@ export type Database = {
           ip: string
           ok: boolean
           seat_id?: string | null
+          user_id?: string | null
         }
         Update: {
           at?: string
@@ -1183,6 +1185,7 @@ export type Database = {
           ip?: string
           ok?: boolean
           seat_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -2860,8 +2863,6 @@ export type Database = {
         }[]
       }
       am_i_head: { Args: { p_event: string }; Returns: boolean }
-      export_role: { Args: { p_event: string }; Returns: string }
-      log_export: { Args: { p_event: string; p_heats?: number; p_include_draft?: boolean; p_kind: string }; Returns: undefined }
       approve_seat: {
         Args: { p_actor?: string; p_enc: string; p_pin: string; p_seat: string }
         Returns: Json
@@ -3156,6 +3157,7 @@ export type Database = {
         }
       }
       ensure_division_panel: { Args: { p_division: string }; Returns: string }
+      export_role: { Args: { p_event: string }; Returns: string }
       extend_prestart: {
         Args: { p_heat: string }
         Returns: {
@@ -3335,6 +3337,15 @@ export type Database = {
         Returns: Json
       }
       lock_division_draw: { Args: { p_division: string }; Returns: undefined }
+      log_export: {
+        Args: {
+          p_event: string
+          p_heats?: number
+          p_include_draft?: boolean
+          p_kind: string
+        }
+        Returns: undefined
+      }
       merge_attempts: {
         Args: {
           p_choices: Json
@@ -3744,7 +3755,12 @@ export type Database = {
         Returns: undefined
       }
       set_draw_walkover: {
-        Args: { p_division: string; p_draw: Json; p_entry: string }
+        Args: {
+          p_division: string
+          p_draw: Json
+          p_entry: string
+          p_projection?: Json
+        }
         Returns: undefined
       }
       set_entry_order: {
