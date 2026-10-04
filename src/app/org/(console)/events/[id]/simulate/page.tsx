@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Banner } from "@/components/ui/banner";
-import { getOrgContext } from "@/lib/org/context";
+import { getDb } from "@/lib/org/context";
 import { loadSimStatus } from "@/lib/simulator/status";
 import { createServiceClient } from "@/lib/supabase/service";
 import { copy } from "@/lib/ui-copy";
@@ -21,7 +21,7 @@ const T = copy.simulator;
 export default async function SimulatePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
-  const { supabase, user } = await getOrgContext();
+  const { supabase, user } = await getDb();
   const { data: event } = await supabase.from("events").select("id, name, slug, is_simulation").eq("id", id).maybeSingle();
   if (!event) notFound();
 

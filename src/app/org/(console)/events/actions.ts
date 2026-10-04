@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getOrgContext } from "@/lib/org/context";
+import { getDb, getOrgContext } from "@/lib/org/context";
 import { canonicalHash } from "@/lib/presets/plan";
 import { brandingPathFromUrl } from "@/lib/branding/image";
 import { EventFormSchema, parseEventBranding, slugify } from "@/lib/schemas/event-settings";
@@ -20,9 +20,11 @@ export async function saveEvent(id: string | null, raw: unknown, status: "draft"
   const parsed = EventFormSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: copy.orgSettings.fixThese, fields: issuesToMap(parsed.error.issues) };
   const form = parsed.data;
-  const { supabase, current } = await getOrgContext();
+  const { supabase } = await getDb();
 
   if (id === null) {
+    // only a new event needs to know which organisation the organiser is working in
+    const { current } = await getOrgContext();
     if (!current) return { ok: false, error: T.noOrg };
     const { data, error } = await supabase
       .from("events")
@@ -94,7 +96,7 @@ export async function saveIdentificationPreset(input: { organisationId: string; 
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const key = slugify(name) || "scheme";
   const { data: existing } = await supabase.from("presets").select("version").eq("organisation_id", input.organisationId).eq("kind", "identification").eq("key", key);
   const version = Math.max(0, ...(existing ?? []).map((r) => r.version)) + 1;

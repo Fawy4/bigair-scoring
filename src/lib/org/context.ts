@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { parseOrgSettings, type OrgSettings } from "@/lib/schemas/org-settings";
 import { readPlatformSession } from "@/lib/platform/session";
+import { signedInUser } from "@/lib/supabase/claims";
 
 export const ORG_COOKIE = "bigair_org";
 
@@ -19,23 +20,29 @@ export interface OrgSummary {
 }
 
 /**
+ * The signed-in organiser's database connection and who they are, from the login token (no request to the auth server: see `signedInUser`). This is all a page or an action
+ * needs to read and write as the organiser; the database decides what the organiser may see. Read once per request.
+ */
+export const getDb = cache(async () => {
+  const supabase = await createClient();
+  const user = await signedInUser(supabase);
+  if (!user || user.isAnonymous) redirect("/org/login");
+  return { supabase, user };
+});
+
+/**
  * Signed-in organiser, all their organisations, and the one they are working in (cookie, else the first). Also who they are on
  * the platform: an admin sees the header switch, and while "Open as this organiser" is active that organisation is the current one.
- * Read once per request (layout and page share it).
+ * Read once per request (layout and page share it). The organisations and the platform role are asked for at the same time.
  */
 export const getOrgContext = cache(async () => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user || user.is_anonymous) redirect("/org/login");
+  const { supabase, user } = await getDb();
 
   // Only the caller's own memberships (an organisation admin may also read the other members' rows).
-  const { data } = await supabase
-    .from("memberships")
-    .select("role, organisations(id, name, slug, settings, branding)")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: true });
+  const [{ data }, platform] = await Promise.all([
+    supabase.from("memberships").select("role, organisations(id, name, slug, settings, branding)").eq("user_id", user.id).order("created_at", { ascending: true }),
+    readPlatformSession(supabase),
+  ]);
   const orgs: OrgSummary[] = (data ?? []).flatMap((m) =>
     m.organisations
       ? [
@@ -51,7 +58,6 @@ export const getOrgContext = cache(async () => {
       : [],
   );
 
-  const platform = await readPlatformSession(supabase);
   const inside = platform.impersonating;
   if (inside && !orgs.some((o) => o.id === inside.organisationId)) {
     const { data: o } = await supabase.from("organisations").select("id, name, slug, settings, branding").eq("id", inside.organisationId).maybeSingle();

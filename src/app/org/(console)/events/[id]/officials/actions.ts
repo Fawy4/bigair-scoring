@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { getOrgContext } from "@/lib/org/context";
+import { getDb } from "@/lib/org/context";
 import { generatePin, generateQrToken, joinUrl } from "@/lib/join/pin";
 import { decryptPin, encryptPin, tryPinKey } from "@/lib/officials/pin-crypto";
 import { joinAddress } from "@/lib/officials/share";
@@ -26,7 +26,7 @@ export interface IssuedPin {
 
 async function seatOf(seatId: string) {
   if (!Uuid.safeParse(seatId).success) return null;
-  const { supabase, user } = await getOrgContext();
+  const { supabase, user } = await getDb();
   // the caller's own rights decide whether this seat is theirs to touch
   const { data } = await supabase.from("judge_seats").select("id, event_id, name, role, status, events(slug, name, end_date)").eq("id", seatId).maybeSingle();
   return data ? { supabase, user, seat: data } : null;
@@ -72,7 +72,7 @@ export async function addSeat(input: z.input<typeof NewSeat>): Promise<Result<{ 
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? T.failed);
   const v = parsed.data;
   if (!tryPinKey()) return fail(T.noKey);
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const scores = v.role === "head" && v.headAlsoScores === true;
   const { data: seat, error } = await supabase.from("judge_seats").insert({ event_id: v.eventId, name: v.name, role: v.role, scores: false, status: "active", active: true }).select("id, name, role, events(slug, end_date)").single();
   if (error || !seat) return fail(/row-level|permission/i.test(error?.message ?? "") ? T.notAllowed : T.failed);
@@ -177,7 +177,7 @@ export async function savePanel(divisionId: string, seatIds: string[]): Promise<
   if (!Uuid.safeParse(divisionId).success) return fail(T.failed);
   const ids = z.array(Uuid).max(50).safeParse(seatIds);
   if (!ids.success) return fail(T.failed);
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const { error } = await supabase.rpc("set_division_panel", { p_division: divisionId, p_seat_ids: ids.data });
   return error ? fail(/NOT_ALLOWED/.test(error.message) ? T.notAllowed : T.failed) : { ok: true };
 }
@@ -211,7 +211,7 @@ export interface CardData {
  */
 export async function prepareCards(eventId: string, seatId: string | null): Promise<Result<{ eventName: string; joinUrl: string; cards: CardData[] }>> {
   if (!Uuid.safeParse(eventId).success || (seatId !== null && !Uuid.safeParse(seatId).success)) return fail(T.failed);
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const { data: event } = await supabase.from("events").select("id, name, slug, end_date").eq("id", eventId).maybeSingle();
   if (!event) return fail(T.notAllowed);
   let query = supabase.from("judge_seats").select("id, name, role, created_at").eq("event_id", eventId).eq("status", "active").eq("active", true).order("created_at");

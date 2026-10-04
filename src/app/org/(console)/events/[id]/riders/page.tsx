@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getOrgContext } from "@/lib/org/context";
+import { getDb } from "@/lib/org/context";
 import { effectiveScheme } from "@/lib/identification/effective";
 import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { defaultScheme } from "@/lib/schemas/identification";
@@ -16,10 +16,23 @@ export const dynamic = "force-dynamic";
 export default async function RidersStepPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ division?: string }> }) {
   const { id } = await params;
   const { division } = await searchParams;
-  const { supabase } = await getOrgContext();
-  const { data: event } = await supabase.from("events").select("id, organisation_id, name, settings").eq("id", id).maybeSingle();
+  const { supabase } = await getDb();
+  // one round: the event with the organisation's riders, the divisions, and the confirmed or not riders of every division (the chosen division is picked out below)
+  const [{ data: event }, { data: divisions }, { data: allEntryRows }] = await Promise.all([
+    supabase
+      .from("events")
+      .select("id, organisation_id, name, settings, organisations(riders(id, first_name, last_name, email, nationality))")
+      .eq("id", id)
+      .order("last_name", { referencedTable: "organisations.riders" })
+      .order("first_name", { referencedTable: "organisations.riders" })
+      .maybeSingle(),
+    supabase.from("divisions").select("id, name, sort_order, identification, draw_locked_at, seed_shuffle_seed").eq("event_id", id).order("sort_order").order("created_at"),
+    supabase
+      .from("entries")
+      .select("id, division_id, rider_id, seed, status, source, identifiers, decline_reason, created_at, riders(first_name, last_name, nationality, email, phone, sponsor, photo_url)")
+      .eq("event_id", id),
+  ]);
   if (!event) notFound();
-  const { data: divisions } = await supabase.from("divisions").select("id, name, sort_order, identification, draw_locked_at, seed_shuffle_seed").eq("event_id", id).order("sort_order").order("created_at");
 
   if (!divisions?.length) {
     return (
@@ -33,14 +46,8 @@ export default async function RidersStepPage({ params, searchParams }: { params:
     );
   }
   const current = divisions.find((d) => d.id === division) ?? divisions[0];
-
-  const [{ data: entryRows }, { data: riderRows }] = await Promise.all([
-    supabase
-      .from("entries")
-      .select("id, rider_id, seed, status, source, identifiers, decline_reason, created_at, riders(first_name, last_name, nationality, email, phone, sponsor, photo_url)")
-      .eq("division_id", current.id),
-    supabase.from("riders").select("id, first_name, last_name, email, nationality").eq("organisation_id", event.organisation_id).order("last_name").order("first_name"),
-  ]);
+  const entryRows = (allEntryRows ?? []).filter((e) => e.division_id === current.id);
+  const riderRows = event.organisations?.riders ?? [];
 
   // stored photos sit in a private folder: each gets a link that works for an hour
   const stored = (entryRows ?? []).map((e) => e.riders?.photo_url).filter((p): p is string => Boolean(p) && !/^https?:\/\//i.test(p!));

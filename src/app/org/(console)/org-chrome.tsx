@@ -9,8 +9,7 @@ import { switchOrganisation } from "./actions";
 /** The server half of the organiser frame: finds out who is signed in and which organisation is current, then hands it to the client frame. */
 export async function OrgChrome({ children, event, steps }: { children: React.ReactNode; event?: ShellEvent; steps?: readonly RailStep[] }) {
   const { supabase, user, orgs, current, platformRole, impersonating } = await getOrgContext();
-  const { data: passwordIsSet } = await supabase.rpc("has_password");
-  const productName = await getProductName();
+  const [{ data: passwordIsSet }, productName] = await Promise.all([supabase.rpc("has_password"), getProductName()]);
   return (
     <OrgFrame
       productName={productName}

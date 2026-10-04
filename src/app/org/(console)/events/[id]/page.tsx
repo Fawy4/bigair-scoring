@@ -3,9 +3,9 @@ import { ClockText } from "@/components/clock-text";
 import { DriftBadge } from "@/components/drift-badge";
 import { scheduleDrift, type Drift } from "@/lib/schedule/drift";
 import { computeTimetable } from "@/lib/engine/schedule";
-import { getOrgContext } from "@/lib/org/context";
+import { getDb } from "@/lib/org/context";
 import { readiness } from "@/lib/org/readiness";
-import { loadSetupCounts } from "@/lib/org/setup-counts";
+import { loadSetupRows, setupCountsFrom } from "@/lib/org/setup-counts";
 import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { requestOrigin } from "@/lib/platform/origin";
 import { buildHeatModel, type DivisionRowDb, type HeatRowDb, type RoundRowDb } from "@/lib/schedule/model";
@@ -20,18 +20,20 @@ export const dynamic = "force-dynamic";
 /** Go live: the start of event day. What is still missing, what is running now and next, Hold and Shift, the head judge console, the links to share. */
 export default async function EventDashboard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase } = await getOrgContext();
-  const { data: event } = await supabase.from("events").select("id, name, slug, status, timezone, start_date, end_date, location, settings, is_simulation").eq("id", id).maybeSingle();
-  if (!event) notFound();
-  const tz = event.timezone || "Africa/Cairo";
-  const today = todayIn(tz, Date.now());
-  const [{ data: divisions }, { data: rounds }, { data: heats }, { data: plans }, counts] = await Promise.all([
+  const { supabase } = await getDb();
+  // one round: the event and everything the page is worked out from (the time zone is only needed afterwards, for "today")
+  const [{ data: event }, { data: divisions }, { data: rounds }, { data: heats }, { data: plans }, setupRows] = await Promise.all([
+    supabase.from("events").select("id, name, slug, status, timezone, start_date, end_date, location, settings, is_simulation").eq("id", id).maybeSingle(),
     supabase.from("divisions").select("id, name, sort_order, draw, scoring_model_id, format_template_id").eq("event_id", id).order("sort_order"),
     supabase.from("rounds").select("id, division_id, name, short_name, sort_order").eq("event_id", id),
     supabase.from("heats").select("id, division_id, round_id, draw_uid, number, name, status, started_at, paused_at, ended_at, duration_sec, warm_up_sec, paused_total_sec").eq("event_id", id),
     supabase.from("schedule_plans").select("id, event_id, day, name, items, anchors, actual_starts, hold, defaults, active").eq("event_id", id),
-    loadSetupCounts(supabase, id, tz),
+    loadSetupRows(supabase, id),
   ]);
+  if (!event) notFound();
+  const tz = event.timezone || "Africa/Cairo";
+  const today = todayIn(tz, Date.now());
+  const counts = setupCountsFrom(setupRows, tz);
 
   const model = buildHeatModel((divisions ?? []) as DivisionRowDb[], (rounds ?? []) as RoundRowDb[], (heats ?? []) as HeatRowDb[]);
   const todays = ((plans ?? []) as PlanRow[]).find((p) => p.day === today && p.active);

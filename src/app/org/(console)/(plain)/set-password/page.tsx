@@ -1,4 +1,4 @@
-import { getOrgContext } from "@/lib/org/context";
+import { getDb } from "@/lib/org/context";
 import { copy } from "@/lib/ui-copy";
 import { SetPasswordForm } from "./set-password-form";
 
@@ -6,7 +6,7 @@ export const metadata = { title: copy.setPassword.title };
 export const dynamic = "force-dynamic";
 
 export default async function SetPasswordPage() {
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const { data: passwordIsSet } = await supabase.rpc("has_password");
   const change = Boolean(passwordIsSet);
   return (

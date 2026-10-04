@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { getOrgContext } from "@/lib/org/context";
+import { getDb } from "@/lib/org/context";
 import { loadEventBlocks, loadMasterVocabulary } from "@/lib/org/trick-vocabulary";
-import { loadIdentificationSchemes } from "@/lib/org/presets";
+import { identificationSchemesFrom } from "@/lib/org/presets";
 import { divisionScheme } from "@/lib/identification/division-scheme";
 import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { defaultScheme } from "@/lib/schemas/identification";
@@ -14,11 +14,11 @@ export const metadata = { title: copy.wizard.steps.divisions };
 
 export default async function DivisionsStepPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase } = await getOrgContext();
-  const { data: event } = await supabase.from("events").select("id, organisation_id, settings").eq("id", id).maybeSingle();
-  if (!event) notFound();
-
-  const [{ data: divisions }, { data: started }, { data: withHeats }, { data: models }, { data: formats }, { data: entryRows }] = await Promise.all([
+  const { supabase } = await getDb();
+  // everything the page shows is asked for at the same time (one round, not four): the event with its organisation's saved Rider labels, the divisions, the heats,
+  // the rule and format presets, the riders and the trick base
+  const [{ data: event }, { data: divisions }, { data: started }, { data: withHeats }, { data: models }, { data: formats }, { data: entryRows }, master, localBlocks] = await Promise.all([
+    supabase.from("events").select("id, organisation_id, settings, organisations(presets(key, version, json))").eq("id", id).eq("organisations.presets.kind", "identification").maybeSingle(),
     supabase
       .from("divisions")
       .select("id, name, sort_order, scoring_model_id, scoring_overrides, format_template_id, format_params, rules_unlocked_at, description, identification, trick_base, live_settings, draw_locked_at")
@@ -30,7 +30,10 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
     supabase.from("scoring_models").select("id, key, name, version, organisation_id, json"),
     supabase.from("format_templates").select("id, key, name, version, organisation_id, json"),
     supabase.from("entries").select("id, division_id, seed, created_at, riders(first_name, last_name)").eq("event_id", id).eq("status", "confirmed"),
+    loadMasterVocabulary(supabase),
+    loadEventBlocks(supabase, id),
   ]);
+  if (!event) notFound();
   const startedIds = new Set((started ?? []).map((h) => h.division_id));
   const heatIds = new Set((withHeats ?? []).map((h) => h.division_id));
 
@@ -57,8 +60,7 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
   }));
 
   const settings = parseEventSettings(event.settings);
-  const schemes = await loadIdentificationSchemes(supabase, event.organisation_id);
-  const [master, localBlocks] = await Promise.all([loadMasterVocabulary(supabase), loadEventBlocks(supabase, id)]);
+  const schemes = identificationSchemesFrom(event.organisations?.presets ?? []);
   return (
     <main className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">

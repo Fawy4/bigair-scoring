@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOrgContext } from "@/lib/org/context";
+import { getDb } from "@/lib/org/context";
 import { buildHeatModel, type DivisionRowDb, type HeatRowDb, type RoundRowDb } from "@/lib/schedule/model";
 import { eventDays, todayIn, type PlanRow } from "@/lib/schedule/plans";
 import { parseEventBranding, parseEventSettings } from "@/lib/schemas/event-settings";
@@ -14,15 +14,15 @@ export const dynamic = "force-dynamic";
 export default async function ScheduleStepPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ day?: string }> }) {
   const { id } = await params;
   const { day: askedDay } = await searchParams;
-  const { supabase } = await getOrgContext();
-  const { data: event } = await supabase.from("events").select("id, name, timezone, start_date, end_date, settings, branding").eq("id", id).maybeSingle();
-  if (!event) notFound();
-  const [{ data: divisions }, { data: rounds }, { data: heats }, { data: plans }] = await Promise.all([
+  const { supabase } = await getDb();
+  const [{ data: event }, { data: divisions }, { data: rounds }, { data: heats }, { data: plans }] = await Promise.all([
+    supabase.from("events").select("id, name, timezone, start_date, end_date, settings, branding").eq("id", id).maybeSingle(),
     supabase.from("divisions").select("id, name, sort_order, draw").eq("event_id", id).order("sort_order").order("created_at"),
     supabase.from("rounds").select("id, division_id, name, short_name, sort_order").eq("event_id", id),
     supabase.from("heats").select("id, division_id, round_id, draw_uid, number, name, status, started_at, ended_at, duration_sec, warm_up_sec, paused_total_sec").eq("event_id", id),
     supabase.from("schedule_plans").select("id, event_id, day, name, items, anchors, actual_starts, hold, defaults, active, hand_pins").eq("event_id", id).order("created_at"),
   ]);
+  if (!event) notFound();
 
   if ((heats ?? []).length === 0) {
     return (

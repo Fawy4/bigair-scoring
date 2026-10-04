@@ -4,7 +4,7 @@ import { loadDrawTimes } from "@/lib/draw/print-times";
 import { PrintActions } from "@/lib/draw/print-actions";
 import { buildPrintSheet, type PrintHeader } from "@/lib/draw/print-sheet";
 import { PrintSheetView } from "@/lib/draw/print-sheet-view";
-import { getOrgContext } from "@/lib/org/context";
+import { getDb } from "@/lib/org/context";
 import { parseEventBranding } from "@/lib/schemas/event-settings";
 import { copy } from "@/lib/ui-copy";
 
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 export default async function DrawPrintPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ division?: string }> }) {
   const { id } = await params;
   const { division } = await searchParams;
-  const { supabase } = await getOrgContext();
+  const { supabase } = await getDb();
   const { data: event } = await supabase.from("events").select("id, name, branding, timezone, start_date").eq("id", id).maybeSingle();
   if (!event || !division || !/^[0-9a-f-]{36}$/.test(division)) notFound();
   const ctx = await loadDivisionContext(supabase, division);
