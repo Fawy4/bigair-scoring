@@ -281,7 +281,17 @@ Pure logic (`src/lib/live/audit-1b-flags.test.ts`, 11 green) and on the database
 
 ## Part 8 — Event-day rehearsal at ×20
 
-⟪rehearsal⟫
+`tests/rls/audit-1b-rehearsal.test.ts`: the Arrow format (24 riders, 15 heats over Thursday and Friday run orders, KOTA, J1–J3 + a head judge who scores, two spotters, flags on with a 1:00 pre-start and a 1:00 last minute) copied with "Run as simulation" and played by the whole-event auto-play at ×20, scenario buttons pressed at random ticks. After each run the test checks: one live heat per draw position, all 15 published, nothing armed, running or paused, round k+1's riders = round k's winners (latest result version), 15 results in the stored draw, the final's 1st and 2nd = the division placings' 1 and 2, every rider placed exactly once.
+
+| Run | Judge spread | Scenarios pressed | Minutes | Result |
+|---|---|---|---|---|
+| 1 | agree | dns (done), abort_start (armed, fired at the next yellow), duplicate (armed) | 12.3 | **all checks pass** |
+| 2 | normal | past_cap (done: an 8th attempt over the cap of 7 refused, then logged with the head judge's reason), dns (done), abort_start (armed), duplicate (armed) | 12.3 | **all checks pass** |
+| 3 | disagree | duplicate (done), reopen (done: a published heat re-opened and published as version 2), hold_final (armed: the final held, then released), out_of_attempts (refused: "no virtual spotter to do it") | 12.9 | **all checks pass** (the re-opened heat's version 2 is the one the ladder uses) |
+
+Transient blockers (a virtual judge's late score, sheets not yet submitted) cleared by themselves in every run. Placings were consistent with the published results and the ladder in every completed run.
+
+Not run here, and why: **tie** and **judge_dies** block Publish until the head judge decides (by design; the runner does not play the head judge; a first attempt stopped at heat 4 waiting for exactly that — "Yellow and Blue are tied — choose the order"). In that attempt "Judge's phone is back" did not fill in the dead judge's missing scores for the heat that had already ended, so the head judge had to settle them (simulator only, noted for the simulator, not for the event). **wind_hold** and **rerun** call server actions that need a Next.js request, so they cannot run outside the app; they are covered in the browser by `simulator.spec.ts` (wind hold) and `live-console.spec.ts:236` / `rerun.test.ts` (re-run), all green.
 
 ## Part 9 — Event-day capacity against the hosting plans (A1b-11)
 
@@ -381,7 +391,7 @@ Database, hosted development project (run by `npm run test:rls`; throwaway organ
 - `tests/rls/audit-1b-security.test.ts` — 6 green, 1 `.fails` (A1b-7).
 - `tests/rls/audit-1b-concurrency.test.ts` — 5 green, 1 skipped scenario (A1b-19, timing-dependent).
 - `tests/rls/audit-1b-integrity.test.ts` — 4 green, 2 `.fails` (A1b-15, A1b-16).
-- `tests/rls/audit-1b-rehearsal.test.ts` — ⟪rehearsal-count⟫.
+- `tests/rls/audit-1b-rehearsal.test.ts` — 3 runs at ×20 (Part 8); about 13 minutes each.
 - `tests/rls/audit-1b-load.test.ts` — the load ramp; runs only with `AUDIT_LOAD=1` (it loads the shared project); writes `test-results/audit-1b-load.json`.
 
 Browser (run by `npm run test:e2e`):

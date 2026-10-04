@@ -14,9 +14,11 @@ import { gounaTemplate, sharedFixture } from "./audit-1b-world";
 // who scores, 2 spotters, flags on with a 1:00 pre-start and a 1:00 last minute) is copied three times with "Run as simulation" and played from the first heat to
 // the final with the whole-event auto-play, each run with another judge spread and scenario buttons pressed at random moments. After each run: the final placings
 // agree with the published heat results and the ladder. Throwaway organisation only; the simulator's virtual logins are deleted afterwards.
+// "tie", "judge_dies", "wind_hold" and "rerun" are left out: the first two block Publish until the head judge decides (a person, not this runner); the last two
+// call server actions that need a Next request. They are exercised in the browser (simulator.spec.ts, live-console.spec.ts, publish-blockers tests).
 const RUNS: Array<{ spread: "agree" | "normal" | "disagree"; scenarios: string[]; seed: number }> = [
   { spread: "agree", scenarios: ["dns", "abort_start", "duplicate"], seed: 11 },
-  { spread: "normal", scenarios: ["tie", "judge_dies", "past_cap", "dns"], seed: 22 },
+  { spread: "normal", scenarios: ["past_cap", "dns", "duplicate", "abort_start"], seed: 22 },
   { spread: "disagree", scenarios: ["reopen", "out_of_attempts", "hold_final", "duplicate"], seed: 33 },
 ];
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
