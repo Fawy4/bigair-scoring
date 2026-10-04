@@ -134,6 +134,8 @@ test("Absent from the bar turns it green within four seconds, as fast as before 
   await pick(page, heat);
   const bar = page.getByTestId("review-bar");
   await expect(bar).toHaveAttribute("data-state", "blocked", { timeout: 60_000 });
+  // wait for the whole picture (only Judge 3's score is missing) before pressing Absent: while the rows are still arriving the bar can briefly name another judge
+  await expect(page.getByTestId("review-bar-text")).toContainText(/^Blocked: Judge 3: Variety score for .+ missing/, { timeout: 30_000 });
   await expect(page.getByTestId("review-bar-absent")).toBeEnabled();
   const t0 = Date.now();
   await bar.getByTestId("review-bar-absent").click();
