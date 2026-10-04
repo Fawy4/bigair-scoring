@@ -16,6 +16,7 @@ export function RiderLabel({
   model,
   variant = "block",
   bare = false,
+  wrap = false,
   seed,
 }: {
   scheme?: IdentificationScheme;
@@ -31,6 +32,8 @@ export function RiderLabel({
   variant?: "block" | "live" | "row";
   /** Live only: no frame of its own, because the tile or card around it has one (the selected rider gets the accent border there). */
   bare?: boolean;
+  /** Live only: long text wraps onto a second line instead of being cut with "…" (the Flag view and the big screen: nothing is ever cut there). */
+  wrap?: boolean;
   /** Row only: the rider's seed, written small after the name. */
   seed?: number;
 }) {
@@ -85,17 +88,17 @@ export function RiderLabel({
             {p.usedFallback ? <span className="ml-1 text-small font-medium">{copy.riderLabel.fallback}</span> : null}
           </span>
         ) : style === "number-block" ? (
-          <span data-testid="rider-label-primary" className="max-w-[45%] shrink-0 truncate rounded-lg border-2 border-beach-ink bg-beach-surface px-2 py-0.5 text-name font-semibold leading-tight text-beach-ink">
+          <span data-testid="rider-label-primary" className={cn("max-w-[45%] shrink-0 rounded-lg border-2 border-beach-ink bg-beach-surface px-2 py-0.5 text-name font-semibold leading-tight text-beach-ink", wrap ? "break-words" : "truncate")}>
             <span data-testid="rider-label-text">{p.text}</span>
           </span>
         ) : null}
         <span className="flex min-w-0 flex-col leading-tight">
           {nameText ? (
-            <span data-testid={style === "name-first" ? "rider-label-primary" : undefined} className="truncate text-name font-semibold text-beach-ink">
+            <span data-testid={style === "name-first" ? "rider-label-primary" : undefined} className={cn(wrap ? "break-words" : "truncate", "text-name font-semibold text-beach-ink")}>
               {style === "name-first" ? <span data-testid="rider-label-text">{nameText}</span> : nameText}
             </span>
           ) : null}
-          {rest.length ? <span className="truncate text-small font-medium text-beach-muted">{rest.map((x) => x.text).join(" · ")}</span> : null}
+          {rest.length ? <span className={cn(wrap ? "break-words" : "truncate", "text-small font-medium text-beach-muted")}>{rest.map((x) => x.text).join(" · ")}</span> : null}
         </span>
       </div>
     );

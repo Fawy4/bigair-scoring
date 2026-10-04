@@ -233,10 +233,10 @@ export function HeadLiveConsole({
                 disabled={!open}
                 aria-label={`${wordFor(r.entryId)}: ${C.riderMenu}`}
                 onClick={() => setMenu({ kind: "rider", entryId: r.entryId })}
-                className="flex min-h-tap min-w-[7rem] flex-col items-start gap-0.5 rounded-card border border-beach-line bg-beach-surface px-2 py-1 text-left"
+                className="flex min-h-tap min-w-[4.5rem] shrink flex-col items-start gap-0.5 rounded-card border border-beach-line bg-beach-surface px-2 py-1 text-left"
               >
                 <span className="min-w-0 whitespace-normal break-words">{<RiderLabel model={r.label} variant="live" bare />}</span>
-                <span className="flex w-full items-baseline justify-between gap-2">
+                <span className="flex w-full flex-wrap items-baseline justify-between gap-x-2">
                   <span data-testid="rider-strip-total" className="text-name font-semibold tabular-nums">
                     {total?.totalLabel ?? copy.live.result.noTotal}
                   </span>

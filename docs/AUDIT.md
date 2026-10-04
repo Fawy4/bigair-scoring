@@ -6,6 +6,48 @@ Two self-audits so far, newest first: **1b** (the system: database, screens, sec
 
 Branch `audit-1b`, 3–4 Oct 2026, product version 0.13.0 → 0.13.1 (this PR only adds tests and this document). No application code and no database object was changed; every problem is a numbered finding (A1b-n) with a severity, a reproduction and a proposed fix, so a separate fix session can take the list. Throwaway organisations only (`rls-…`, `e2e-…`); Arrow, EKL and Demo were read, never written.
 
+## Fix session 2 (0.13.2): where each finding stands
+
+Branch `fix-2`, 4 Oct 2026. The `.fails` tests of the findings below are now plain tests (their "today" twins are gone).
+
+| Finding | Status | How (test) |
+|---|---|---|
+| A1b-0 / A1b-11, code half | **Done**; hosting half is the owner's | Shared ~3 s cache of the public answers (per server instance, reads joined while in flight) + edge `s-maxage=3` headers on the public pages and the big screen; the Flag view only joins reads in flight; a safety valve (`PUBLIC_MAX_IN_FLIGHT`, default 130 requests in flight per instance, set from the measurement (peaks of 25, 39 and 65 at 300 spectators in three runs)) answers the calm **Updating…** page; "last seen" written at most once a minute (`e2e/public-cache.spec.ts`, `e2e/public-valve.spec.ts`, `tests/rls/fix2-churn.test.ts`, `src/lib/public/shared-cache.test.ts`) |
+| A1b-1 | **Fixed** | `events_flags_off` writes down a heat whose pre-start is over, cancels only heats still in their yellow |
+| A1b-2 | **Fixed** | `HEAT_ARMED` in the four reset functions; resets clear every armed column |
+| A1b-3 | **Fixed** (Riders step); the console rider menu is a per-heat DNS and was left as is | `src/lib/draw/walkover.ts`, `set_draw_walkover` takes the seat changes |
+| A1b-7 | **Fixed** | per phone-and-connection lockout, slow per-event brake |
+| A1b-16 | **Fixed** | `ENTRY_IN_DRAW` guard on `entries` |
+| A1b-18 | **Fixed** | `events_flags_off` clears `armed_paused_at` |
+| T1 (trick base) | **Fixed** | + Add block read the five built-in family names; now the event's version |
+| Review console regression | **Fixed** | the card has its own room; rider cards shrink |
+| Big screen header, Flag view | **Fixed** | `e2e/screen-header.spec.ts` |
+| Not in this session | A1b-4, -5, -6, -8, -12 (stale tests), -13, -14, -15, -17, -19, -20, -21 | Polish 3 |
+
+**The load proof of Fix session 2 (4 Oct 2026).** Compute: the hosted project **as it was that day, still the free-tier machine (max_connections 60, about 224 MB of shared buffers; no Small compute)**; the app server was this sandbox's production build (`next start`, 4 cores), 155 ms from the database. Spectators = a page refresh of the live or results page every 7 s from a random phase, through the app server, shared cache on (3 s).
+
+| Spectators | Refreshes | Median | p95 | Max | Errors | Database transactions / s |
+|---|---|---|---|---|---|---|
+| 50 | 427 | 15 ms | 316 ms | 729 ms | 0 | 2.2 |
+| 100 | 856 | 15 ms | 220 ms | 706 ms | 0 | 2.3 |
+| 150 | 1,284 | 12 ms | 254 ms | 525 ms | 0 | 2.1 |
+| 300 | 2,573 | 16 ms | 180 ms | 568 ms | 0 | 2.5 |
+
+The project does about 2–3 transactions a second with nobody asking (background and the probe), so the crowd added essentially nothing. The hosted project's own answer time (a probe every 5 s) stayed at a median of 207 ms, p95 363 ms, max 441 ms during the ramp.
+
+300 spectators for 3 minutes with the officials timed every 5 s (two runs; the second with the final valve default):
+
+| Action (timed from this sandbox) | Run 1 median / p95 | Run 2 median / p95 |
+|---|---|---|
+| Head: Start heat sequence (arm) | 157 / 165 ms | 148 / 170 ms |
+| Head: Abort | 148 / 162 ms | 183 / 272 ms |
+| Head: Publish (19 database calls) | 1,773 / 1,895 ms | 1,747 / 1,851 ms |
+| Judge: score save | 147 / 211 ms | 148 / 222 ms |
+| Spotter: log an attempt | 147 / 229 ms | 158 / 230 ms |
+| Spectators' refresh | 19 / 231 ms (max 960) | 20 / 239 ms (max 1,350) |
+
+Publish alone, with no crowd, takes 1.9–2.1 s from here, so the crowd did not slow it; it is the 19 calls at this machine's 155 ms distance, not a measurement of the console's own Publish, which runs next to the database. Nothing was refused, no spectator saw the Updating page, and no probe went over 2 s. Peak public requests in flight on the server: 25, 39 and 65 in three runs.
+
 ## Summary (one page)
 
 **Safe to run Gouna: yes, with these fixes — and not on today's hosting.** The outage during this audit changes the answer from "yes with small fixes" to "only after the hosting is changed": on the free database machine the whole system went down for 1 h 43 min under an ordinary test load, and a load ramp shows it slowing to unusable at 300 spectators.

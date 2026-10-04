@@ -15,7 +15,7 @@ test("the spotter screen shows the division's layout: a favourite on top, a move
   const { error } = await w.db
     .from("divisions")
     .update({
-      trick_base: { disabled: [], layout: { families: ["direction", "multiplier", "base", "grab_landing", "addon"], moved: { "addon:tic_tac": "base" }, order: {}, favourites: ["base:megaloop"] } } as never,
+      trick_base: { disabled: [], layout: { families: ["direction", "multiplier", "base", "grab_landing", "addon"], moved: { "addon:tic_tac": "base" }, order: {}, favourites: ["base:backroll"] } } as never,
     })
     .eq("id", w.divisionId);
   expect(error).toBeNull();
@@ -25,7 +25,7 @@ test("the spotter screen shows the division's layout: a favourite on top, a move
   await expect(page.getByTestId("trick-builder")).toBeVisible({ timeout: 30_000 });
 
   const baseIds = await page.getByTestId("base-list").locator("[data-block]").evaluateAll((els) => els.map((e) => e.getAttribute("data-block")));
-  expect(baseIds[0]).toBe("base:megaloop");
+  expect(baseIds[0]).toBe("base:backroll"); // a block that stays in the Base trick family in every master version (Megaloop moved to Kiteloop in v7)
   expect(baseIds).toContain("addon:tic_tac");
 
   const all = await page.getByTestId("trick-builder").locator("[data-block]").evaluateAll((els) => els.map((e) => e.getAttribute("data-block")));

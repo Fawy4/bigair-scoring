@@ -222,6 +222,44 @@ test("at a 15-inch laptop width the card sits beside the rider cards for 2 and 3
   }
 });
 
+test("Fix 2: at 1280 px and 1366 px the Impression card stays a card, beside the rider cards, with 3, 4 and 5 riders (the rider cards shrink, never the card)", async ({ browser }) => {
+  test.setTimeout(600_000);
+  await ensureEntries(5);
+  let number = 40;
+  for (const width of [1280, 1366]) {
+    const page = await head(browser, { width, height: 900 });
+    for (const n of [3, 4, 5]) {
+      const { heat, entries } = await endedHeat(n, ++number);
+      for (const key of keys) for (const e of entries) await imp(heat, e, key, 6.5);
+      await submit(heat, keys);
+      await page.reload();
+      await pick(page, heat);
+      await expect(page.getByTestId("rider-strip-tile")).toHaveCount(n, { timeout: 60_000 });
+      const region = page.getByTestId("impression-region");
+      await expect(region).toBeVisible({ timeout: 40_000 });
+      await expect.poll(async () => { const a = await region.getAttribute("data-room"); await page.waitForTimeout(700); return a === (await region.getAttribute("data-room")); }, { timeout: 20_000 }).toBe(true);
+      const label = `${width}px, ${n} riders`;
+      expect(await region.getAttribute("data-fit"), `${label}: still a card`).not.toBe("button");
+      await expect(page.getByTestId("impression-card"), label).toBeVisible();
+      // beside the rider cards, never below them, nothing cut off inside, and the rider cards do not overlap the card
+      const card = (await page.getByTestId("impression-card").boundingBox())!;
+      const tiles = await page.getByTestId("rider-strip-tile").all();
+      for (const t of tiles) {
+        const b = (await t.boundingBox())!;
+        expect(b.x + b.width, `${label}: a rider card overlaps the Impression card (tile ${Math.round(b.x)}+${Math.round(b.width)}, card at ${Math.round(card.x)}, tiles ${JSON.stringify(await Promise.all(tiles.map(async (x) => Math.round((await x.boundingBox())!.width))))}, strip ${JSON.stringify(await page.getByTestId("rider-strip").boundingBox())})`).toBeLessThanOrEqual(card.x + 1);
+        expect(Math.abs(b.y - card.y) < 160, `${label}: rider cards and card share the row`).toBe(true);
+      }
+      const table = (await page.getByTestId("matrix-scroll").boundingBox())!;
+      expect(card.y + card.height, label).toBeLessThanOrEqual(table.y + 1);
+      const sizes = await page.getByTestId("impression-card").evaluate((el) => ({ sw: el.scrollWidth, cw: el.clientWidth, sh: el.scrollHeight, ch: el.clientHeight }));
+      expect(sizes.sw <= sizes.cw + 1 && sizes.sh <= sizes.ch + 1, `${label}: nothing cut off in the card ${JSON.stringify(sizes)} fit ${await region.getAttribute("data-fit")} room ${await region.getAttribute("data-room")}`).toBe(true);
+      // the page itself does not scroll sideways
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), `${label}: no sideways scroll`).toBe(true);
+    }
+    await page.context().close();
+  }
+});
+
 test("on a phone the Control tab has the review bar under the heat's header and the Impression card open under the rider controls", async ({ browser }) => {
   test.setTimeout(300_000);
   const { heat, entries } = await endedHeat(3, 31);

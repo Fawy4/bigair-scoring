@@ -27,6 +27,7 @@ function sentence(message: string): string {
   const code = m?.[1] ?? "";
   const detail = m?.[2] ?? "";
   if (code === "HEAT_RUNNING") return T.errors.HEAT_RUNNING(detail);
+  if (code === "HEAT_ARMED") return T.errors.HEAT_ARMED;
   const plain: Record<string, string> = { NOT_ALLOWED: T.errors.NOT_ALLOWED, SLUG_MISMATCH: T.errors.SLUG_MISMATCH, REASON_REQUIRED: T.errors.REASON_REQUIRED, BAD_PROJECTION: T.errors.BAD_PROJECTION };
   return plain[code] ?? T.errors.failed;
 }

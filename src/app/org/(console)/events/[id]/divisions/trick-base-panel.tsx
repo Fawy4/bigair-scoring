@@ -178,7 +178,7 @@ export function TrickBasePanel(props: PanelProps) {
           router.refresh();
         }}
       />
-      <TrickBaseTicks key={base.version} {...props} vocabulary={base.vocabulary} />
+      <TrickBaseTicks key={`${base.version}-${round}`} {...props} vocabulary={base.vocabulary} freshTrickBase={base.divisionTrickBases[props.divisionId]} />
     </div>
   );
 }
@@ -187,10 +187,10 @@ export function TrickBasePanel(props: PanelProps) {
  * The ticks and the spotter's layout of one division in the version this event uses. Blocks the master base retired are not shown; blocks it has off for
  * new events start unticked (ticking one stores it in `enabled`).
  */
-function TrickBaseTicks({ eventId, divisionId, vocabulary, localBlocks, onBlockAdded, trickBase, started, modelCategories }: PanelProps) {
+function TrickBaseTicks({ eventId, divisionId, vocabulary, localBlocks, onBlockAdded, trickBase, freshTrickBase, started, modelCategories }: PanelProps & { freshTrickBase?: unknown }) {
   const families = useMemo(() => familiesOf(vocabulary), [vocabulary]);
   const familyKeys = useMemo(() => families.map((f) => f.key), [families]);
-  const initial = parseTrickBase(trickBase);
+  const initial = parseTrickBase(freshTrickBase ?? trickBase);
   const [disabled, setDisabled] = useState<string[]>(() => initial.disabled);
   const [enabled, setEnabled] = useState<string[]>(() => initial.enabled ?? []);
   const [layout, setLayout] = useState<TrickLayout>(() => parseLayout(initial.layout, familyKeys));
@@ -353,7 +353,8 @@ function TrickBaseTicks({ eventId, divisionId, vocabulary, localBlocks, onBlockA
               {T.addFamily}
             </label>
             <select id={`blk-family-${divisionId}`} value={family} onChange={(e) => setFamily(e.target.value as BuiltInFamily)}>
-              {FAMILIES.map((f) => (
+              {/* the names of the version this event uses (the same list as the panel and the spotter), for the families a local block can join */}
+              {families.filter((f) => FAMILIES.some((b) => b.key === f.key)).map((f) => (
                 <option key={f.key} value={f.key}>
                   {f.label}
                 </option>

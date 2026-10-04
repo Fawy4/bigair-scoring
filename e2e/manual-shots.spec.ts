@@ -9,8 +9,8 @@ import { parseFormatTemplate } from "../src/lib/schemas/format-template";
 import { builtInSchemes } from "../src/lib/schemas/identification";
 import { expect, test } from "./base";
 import { record } from "./cleanup";
-import { createOrganiser } from "./organiser";
 import { createPublicWorld } from "./public-world";
+import { createOrganiser } from "./organiser";
 
 /**
  * The manual's screenshots (docs/manual/img), retaken with `npm run manual:shots` after every change (docs/manual/README.md, the update rule).
@@ -445,6 +445,36 @@ test("manual screenshots: trick base", async ({ page }) => {
     await track();
     await org.cleanup();
     if (mine.length) await db.from("trick_vocabularies").delete().in("id", mine);
+  }
+});
+
+test("manual screenshots: Fix 2 (the Updating page, a long event name on the big screen)", async ({ browser }) => {
+  test.setTimeout(10 * 60_000);
+  mkdirSync(OUT, { recursive: true });
+  const w = await createPublicWorld({ settings: { screenRotateSec: 60, flags: { enabled: true, prestartSec: 60, lastMinuteSec: 60 } } });
+  try {
+    await w.db.from("events").update({ name: "Arrow Big Air El Gouna Launch Event 2026" }).eq("id", w.eventId);
+    await w.db.from("heats").update({ status: "ended", ended_at: new Date().toISOString() }).eq("id", w.running);
+    await w.db.from("heats").update({ name: "Advanced Men Semi Final Heat 7" }).eq("id", w.ladder.heats["R1-H2"]);
+    await w.db.from("divisions").update({ name: "Advanced Women Freestyle" }).eq("id", w.ladder.div);
+    const big = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+    const page = await big.newPage();
+    await open(page, `/screen/${w.slug}`);
+    await page.getByTestId("screen-flag").waitFor();
+    await shot(page, "big-screen-long-name", { width: 1280, height: 720 }, 1500);
+    await big.close();
+    // the calm page for a busy moment: a server started with PUBLIC_MAX_IN_FLIGHT=0 answers every public request with it
+    const valve = process.env.MANUAL_VALVE_URL;
+    if (valve) {
+      const phone = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const p2 = await phone.newPage();
+      await open(p2, `${valve}/e/${w.slug}`);
+      await p2.getByTestId("public-updating").waitFor();
+      await shot(p2, "public-updating", { width: 390, height: 844 }, 800);
+      await phone.close();
+    }
+  } finally {
+    await w.cleanup();
   }
 });
 

@@ -1827,7 +1827,9 @@ export const copy = {
     removeQuestion: (n: string) => `Remove ${n} from this division? The rider stays in your organisation.`,
     removeYes: "Yes, remove",
     removed: "Rider removed from the division",
-    inDraw: "This rider is already in the draw. Set them to Withdrawn instead of removing them.",
+    inDraw: "This rider has a seat in the draw — set them to Withdrawn instead",
+    withdrawHeatStarted: "This rider's heat has already started. Use Did not start on the head console instead.",
+    walkover: (n: number) => (n === 1 ? "Their seat in the draw is now a walkover." : `Their ${n} seats in the draw are now walkovers.`),
     printStartList: "Print start list",
     links: {
       button: "Rider links",
@@ -1849,7 +1851,7 @@ export const copy = {
     printBack: "Back to Riders",
     printNone: "No riders to print yet.",
     printDate: (d: string) => `Printed ${d}`,
-    drawLocked: "The draw of this division is locked: changing seeds here does not change it.",
+    drawLocked: "The draw of this division is locked: changing seeds here does not change it. A rider you set to Withdrawn or No-show keeps the seat as a walkover.",
     clash: {
       heading: "Check these riders",
       lycra: (colour: string, names: string) => `Lycra colour ${colour} is given to more than one rider: ${names}. Judges could not tell them apart.`,
@@ -2891,6 +2893,8 @@ export const copy = {
   /** The public event site, the big screen and the share texts (Phase 6). */
   pub: {
     nav: { home: "Home", live: "Live", results: "Results", ladder: "Ladder", riders: "Riders", placings: "Placings", rules: "Rules", timetable: "Timetable", join: "Join", menu: "Pages of this event" },
+    /** The calm page shown when too many phones ask at once (Fix 2): it asks again by itself. */
+    updating: { title: "Updating…", body: "Many people are watching right now. This page will try again by itself in a few seconds.", testId: "public-updating" },
     common: { poweredBy: "Scores by", back: "Back", notFound: "This event is not on the public site.", noEvents: "Nothing here yet.", at: (t: string) => `at ${t}`, est: "est.", viewAll: "See all", dayLabel: (d: string) => d },
     home: {
       now: "Now",
@@ -3677,6 +3681,7 @@ export const copy = {
       NOT_ALLOWED: "You are not allowed to reset this event.",
       SLUG_MISMATCH: "That is not the event’s web address. Nothing was changed.",
       HEAT_RUNNING: (heat: string) => `${heat} is running. End it first.`,
+      HEAT_ARMED: "Abort the start sequence first.",
       REASON_REQUIRED: "A reason of at least 5 characters is needed, because results of this event were shown publicly.",
       BAD_PROJECTION: "The ladders changed while the reset was being prepared. Nothing was changed; try again.",
       DRAW_COPY_MISSING: "A division has no saved starting draw. Nothing was changed.",

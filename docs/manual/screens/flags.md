@@ -2,7 +2,7 @@
 
 How the clock drives the flags: the four colours, the start heat sequence on the head judge's console, the flag strip on every live screen, the flag marshal's screen (/e/‹event›/flag), the horns, and what **Abort** does.
 
-Last checked: 3 Oct 2026 · Product version 0.13.0
+Last checked: 4 Oct 2026 · Product version 0.13.2
 
 ## Why it exists {#fl-purpose}
 
@@ -58,7 +58,7 @@ One horn at green, one at the last minute, **two at red (finished)**, one at res
 ## The Flags card (Event step) {#fl-settings}
 
 Event step → **Flags**:
-- **Flags on** (default on). Off: every screen looks exactly as it did before flags: **Start heat** on the console, the plain timer, no frame on the big screen, no marshal's screen. Switching off cancels a start heat sequence that is running.
+- **Flags on** (default on). Off: every screen looks exactly as it did before flags: **Start heat** on the console, the plain timer, no frame on the big screen, no marshal's screen. Switching off while a start sequence is up: a heat still in its **yellow** (running or paused) is cancelled and goes back to not started with nothing left armed; a heat whose pre-start is already over is **running** (the start is the server's, not a phone's), so it keeps running from its green moment and only the flag strip is hidden.
 - The **word** and the **colour** of each of the four states (before start, running, last minute, stopped or paused). **Finished**, **Paused** and **Hold** are always spelled out; the word of the stopped state shows between heats.
 - **Pre-start length** (default 60 seconds) and **Last-minute length** (default 60 seconds).
 
@@ -78,4 +78,4 @@ Virtual officials follow the sequence: they log and score only while the heat is
 
 ## What it depends on {#fl-depends}
 
-Flags on (Event step), and for **Start heat sequence** the same as **Start heat** ([dependency map](../dependencies.md#dep-start-sequence)). Refusals, in the usual words with **Learn more**: “Another heat is already running or starting (‹max› at a time). End it or abort its start first, or ask the organiser to allow more in the Event step” (the one-heat-at-a-time rule), “No start heat sequence is running for this heat, so there is nothing to abort.”, “The flags are switched off for this event, so there is no start heat sequence. Press Start heat, or switch Flags on in the Event step.”
+Flags on (Event step), and for **Start heat sequence** the same as **Start heat** ([dependency map](../dependencies.md#dep-start-sequence)). Refusals, in the usual words with **Learn more** (“Abort the start sequence first.” is the one a reset gives while a heat is in its start sequence): “Another heat is already running or starting (‹max› at a time). End it or abort its start first, or ask the organiser to allow more in the Event step” (the one-heat-at-a-time rule), “No start heat sequence is running for this heat, so there is nothing to abort.”, “The flags are switched off for this event, so there is no start heat sequence. Press Start heat, or switch Flags on in the Event step.”

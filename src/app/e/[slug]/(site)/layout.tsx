@@ -4,7 +4,8 @@ import { LivePoll } from "@/components/public/poll";
 import { Logo } from "@/components/public/logo";
 import { PublicNav } from "@/components/public/nav";
 import { WindBanner } from "@/components/public/wind-banner";
-import { loadSite } from "@/lib/public/load";
+import { Updating } from "@/components/public/updating";
+import { admitPublicRequest, loadSite } from "@/lib/public/load";
 import { tabSettingsOf } from "@/lib/public/tab-guard";
 import { visiblePublicTabs } from "@/lib/public/tabs";
 import { formatEventDates } from "@/lib/platform/event-label";
@@ -16,6 +17,7 @@ import { copy } from "@/lib/ui-copy";
  */
 export default async function SiteLayout({ children, params }: { children: React.ReactNode; params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  if (!(await admitPublicRequest())) return <Updating />;
   const site = await loadSite(slug);
   if (!site) notFound();
   const base = `/e/${site.event.slug}`;

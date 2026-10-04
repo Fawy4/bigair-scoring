@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CheckCircle2, CircleAlert, Hourglass, Table2, Users } from "lucide-react";
 import { RiderLabel } from "@/components/rider-label";
-import { fitCard, impressionGrid, LEVELS, TITLE_H, type CardLevel } from "@/lib/live/impression-card";
+import { cardMinWidth, cardWantedWidth, fitCard, impressionGrid, LEVELS, TITLE_H, type CardLevel } from "@/lib/live/impression-card";
 import type { JudgeImpressions } from "@/lib/live/impression-status";
 import { judgeWordOf, type JudgeName } from "@/lib/live/judge-names";
 import type { ChecklistItem, FixTarget } from "@/lib/live/publish-checklist";
@@ -215,7 +215,7 @@ export function ImpressionCardInline(props: CardProps) {
   const fit = room ? fitCard({ availW: room.w, availH: room.h, riders: props.riders.length, judges: props.judges.length }) : "button";
   return (
     // the region has no height of its own: the row is as tall as the rider cards, and the card is drawn inside that room
-    <div ref={region} data-testid="impression-region" data-fit={String(fit)} data-room={room ? `${room.w}x${room.h}` : ""} className="relative min-h-tap min-w-[2.25rem] flex-[1_1_2.25rem] self-stretch">
+    <div ref={region} data-testid="impression-region" data-fit={String(fit)} data-room={room ? `${room.w}x${room.h}` : ""} className="relative min-h-tap self-stretch" style={{ minWidth: cardMinWidth(props.riders.length, props.judges.length), flex: `1 1 ${cardWantedWidth(props.riders.length, props.judges.length)}px` }}>
       {fit === "button" ? (
         <>
           <button type="button" data-testid="impression-button" aria-expanded={open} onClick={() => setOpen((o) => !o)} aria-label={I.button(props.name)} title={I.button(props.name)} className={cn(small, "flex h-full min-h-tap w-full items-center justify-center gap-1 px-1")}>

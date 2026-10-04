@@ -79,6 +79,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “A reset is not possible yet:” | Follow the sentence. | [Resets](errors.md#err-reset-blocked) |
 | “A rider needs a first and a last name.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-errors-namerequired) |
 | “A tie is settled by choosing the order, never by a reason.” | Press Choose order and set the order of the tied riders. | [Head console](errors.md#err-headlive-publishnooverride) |
+| “Abort the start sequence first.” | On the head console press Abort while the yellow is up, then reset. Nothing was changed. | [Resets](errors.md#err-reset-errors-heat-armed) |
 | “Add a division first (Step 2), then come back to add riders.” | Divisions step → + Add division. | [Organiser: Riders](errors.md#err-riders-nodivisions) |
 | “Add a division first.” | Follow the sentence. | [Organiser: Officials](errors.md#err-officials-panelsnodivisions) |
 | “Add confirmed riders first (Riders step).” | Follow the sentence. | [Organiser: Divisions](errors.md#err-builder-applynoriders) |
@@ -387,7 +388,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “The draw is locked: seats, heats and rounds cannot be changed. Unlock it with a reason if you must.” | Unlock draw with a reason only if you must change it. | [Organiser: Draw](errors.md#err-draw-lockedhelp) |
 | “The draw is locked. Unlock it (with a reason) to change it.” | Unlock draw (with a reason), change it, lock again. | [Organiser: Draw](errors.md#err-draw-errors-locked) |
 | “The draw is locked. Unlock it (with a reason) to regenerate.” | Unlock draw (with a reason), regenerate, lock again. | [Organiser: Draw](errors.md#err-draw-regeneraterefusedlocked) |
-| “The draw of this division is locked: changing seeds here does not change it.” | To use new seeds: Draw step → Unlock (reason) → Regenerate → Lock (only before the first heat). | [Organiser: Riders](errors.md#err-riders-drawlocked) |
+| “The draw of this division is locked: changing seeds here does not change it. A rider you set to Withdrawn or No-show keeps the seat as a walkover.” | To use new seeds: Draw step → Unlock (reason) → Regenerate → Lock (only before the first heat). | [Organiser: Riders](errors.md#err-riders-drawlocked) |
 | “The e-mail to ‹email› could not be sent. The login was created. Send them this link yourself.” | Copy the sign-in link shown and send it privately. | [Platform owner (/admin)](errors.md#err-admin-org-inviteemailfailed-other) |
 | “The e-mail to ‹email› was not sent: the built-in sender of this plan only writes to your own team's addresses. The login was created. Send them this link yourself.” | Copy the sign-in link shown and send it privately. A custom e-mail sender (SMTP) removes this limit. | [Platform owner (/admin)](errors.md#err-admin-org-inviteemailfailed-not-authorised) |
 | “The e-mail to ‹email› was not sent: this plan allows only ‹n› sign-in e-mails per hour and that limit is used up. The login was created. Send them this link yourself, or invite them again in an hour.” | Copy the sign-in link shown and send it privately (WhatsApp); it works once, for 24 hours. Or invite again after an hour. | [Platform owner (/admin)](errors.md#err-admin-org-inviteemailfailed-rate-limit) |
@@ -536,8 +537,9 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “This PIN could not be read back. Use Regenerate PIN to make a new one.” | Regenerate PIN. | [Organiser: Officials](errors.md#err-officials-pincouldnotread) |
 | “This plan is active. Activate another plan first.” | Activate another plan of that day first, then delete this one. | [Organiser: Run order](errors.md#err-runorder-errors-deleteactive) |
 | “This QR code has already been used or has expired. Ask the organiser for a new card, or type your PIN instead.” | Type the PIN instead, or print a fresh card (Officials → Print card). | [Officials joining](errors.md#err-join-errors-invalid-token) |
-| “This rider is already in the draw. Set them to Withdrawn instead of removing them.” | Set the rider to Withdrawn. | [Organiser: Riders](errors.md#err-riders-indraw) |
+| “This rider has a seat in the draw — set them to Withdrawn instead” | Set the rider to Withdrawn: after the draw is locked their seat becomes a walkover. | [Organiser: Riders](errors.md#err-riders-indraw) |
 | “This rider is not on the public list.” | Lock the division's draw; open the rider from the Results or Ladder page. | [Public pages](errors.md#err-pub-rider-notfound) |
+| “This rider's heat has already started. Use Did not start on the head console instead.” | On the head console use Did not start for that rider in that heat. | [Organiser: Riders](errors.md#err-riders-withdrawheatstarted) |
 | “This row has ‹got› values but the header has ‹columns› columns. Check for a missing quote or an extra comma.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-toomanyvalues) |
 | “This seat already gave scores, so it cannot be deleted. Switch it off instead.” | Switch the seat off instead. | [Organiser: Officials](errors.md#err-officials-errors-hasscores) |
 | “✖ This seat has been switched off by the organiser.” | Organiser: Officials → the seat → Switch on. | [Officials joining](errors.md#err-seat-switchedoff) |

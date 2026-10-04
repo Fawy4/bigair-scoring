@@ -43,9 +43,9 @@ describe("fitting the card beside the rider cards", () => {
     expect(fitCard({ availW: 900, availH: 90, riders: 5, judges: 3 })).toBe("button");
     expect(fitCard({ availW: 900, availH: 90, riders: 1, judges: 3 })).not.toBe("button");
   });
-  it("in the console's reserved row, 2 to 4 riders fit and 5 become the button, however wide the room", () => {
-    for (const n of [2, 3, 4]) expect(fitCard({ availW: 900, availH: CARD_ROW_MIN, riders: n, judges: 3 }), `${n} riders`).not.toBe("button");
-    expect(fitCard({ availW: 900, availH: CARD_ROW_MIN, riders: 5, judges: 3 })).toBe("button");
+  it("in the console's reserved row, 2 to 5 riders fit (Fix 2: the card stays a card), and 6 become the button", () => {
+    for (const n of [2, 3, 4, 5]) expect(fitCard({ availW: 900, availH: CARD_ROW_MIN, riders: n, judges: 3 }), `${n} riders`).not.toBe("button");
+    expect(fitCard({ availW: 900, availH: CARD_ROW_MIN, riders: 6, judges: 3 })).toBe("button");
   });
   it("a narrow window is the button", () => {
     expect(fitCard({ availW: 120, availH: 200, riders: 2, judges: 3 })).toBe("button");

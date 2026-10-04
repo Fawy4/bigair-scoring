@@ -51,12 +51,19 @@ export const LEVELS: Record<CardLevel, LevelSize> = {
   1: { labelW: 112, cellW: 46, rowH: 20, headH: 28, small: false },
   2: { labelW: 96, cellW: 40, rowH: 17, headH: 26, small: true },
 };
-const PAD_W = 12;
+const PAD_W = 24; // the card's own padding and border (12 + 2) plus the room the cells take beyond their nominal width (measured: 10 px)
 const PAD_H = 6;
 /** The card's heading (the same heading style as the console's other sections) sits above the grid, left-aligned. */
 export const TITLE_H = 30;
-/** The row of rider cards keeps at least this height whenever the card is on the console, so the table's top edge is in the same place for every heat. */
-export const CARD_ROW_MIN = 132;
+/**
+ * The row of rider cards keeps at least this height whenever the card is on the console, so the table's top edge is in the same place for every heat. Fix 2: tall enough
+ * for five riders and four judges at the smallest level (147 px), because the card stays a card at 1280 px and wider with 3, 4 and 5 riders.
+ */
+export const CARD_ROW_MIN = 148;
+/** The least width the card is given beside the rider cards (smallest level); the rider cards shrink or wrap, never the card. */
+export const cardMinWidth = (riders: number, judges: number): number => cardSize(2, riders, judges).w;
+/** The width it would like (the tighter-spacing level), so a wide screen still gets a comfortable card. */
+export const cardWantedWidth = (riders: number, judges: number): number => cardSize(1, riders, judges).w;
 
 export const cardSize = (level: CardLevel, riders: number, judges: number): { w: number; h: number } => {
   const l = LEVELS[level];

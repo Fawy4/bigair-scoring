@@ -61,7 +61,7 @@ export function ScreenFrame({ defaultMode, children, labels }: { defaultMode: Sc
             choose(next);
             wake();
           }}
-          className="absolute left-[2.5vw] top-[2.5vw] z-10 inline-flex items-center gap-[0.6vw] rounded-full border-2 border-[var(--bs-ink)] bg-[var(--bs-bg)] px-[1.4vw] py-[0.5vw] text-[1.6vw] font-semibold text-[var(--bs-ink)]"
+          className="absolute bottom-[2vw] left-[2.5vw] z-10 inline-flex items-center gap-[0.6vw] rounded-full border-2 border-[var(--bs-ink)] bg-[var(--bs-bg)] px-[1.4vw] py-[0.5vw] text-[1.6vw] font-semibold text-[var(--bs-ink)]"
         >
           {next === "day" ? <Sun aria-hidden className="size-[1.8vw]" /> : <Moon aria-hidden className="size-[1.8vw]" />}
           {next === "day" ? labels.toggleToDay : labels.toggleToDark}

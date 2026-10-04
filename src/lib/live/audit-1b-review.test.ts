@@ -1,6 +1,6 @@
 // Audit 1b, part 3b — the review bar and the Impression card against awkward panels (docs/AUDIT.md). The Gouna panel: J1, J2, J3 and the head judge (4 seats).
 import { describe, expect, it } from "vitest";
-import { CARD_ROW_MIN, fitCard, impressionGrid } from "./impression-card";
+import { CARD_ROW_MIN, cardMinWidth, fitCard, impressionGrid } from "./impression-card";
 import { impressionStatus } from "./impression-status";
 import type { ImpressionRow, SlotRow } from "./types";
 
@@ -37,9 +37,14 @@ describe("A1b 3b — Impression card", () => {
     expect(status[0].cells.map((c) => c.entryId)).toEqual(["r", "g"]);
   });
 
-  it("a 5-rider heat with 4 judges at 1280 px: the card never asks for more room than the reserved row; it becomes the button", () => {
-    // at 1280 px the room beside five rider cards is narrow; even a generous width cannot fit five rows into the reserved height
-    for (const availW of [200, 420, 800]) expect(fitCard({ availW, availH: CARD_ROW_MIN, riders: 5, judges: 4 })).toBe("button");
-    expect(fitCard({ availW: 800, availH: CARD_ROW_MIN, riders: 3, judges: 4 })).not.toBe("button");
+  it("Fix 2: at 1280 px and wider the card stays a card with 3, 4 and 5 riders and 4 judges: the room it is always given fits it at the smallest level", () => {
+    for (const riders of [3, 4, 5]) {
+      expect(fitCard({ availW: cardMinWidth(riders, 4), availH: CARD_ROW_MIN, riders, judges: 4 })).not.toBe("button");
+      expect(cardMinWidth(riders, 4)).toBeLessThanOrEqual(320);
+    }
+    // the rider cards at their narrowest (4.5 rem = 72 px) plus the card's own minimum fit the left column of a 1280 px window (720 px: the side menu takes 264 px)
+    expect(5 * 72 + 4 * 6 + cardMinWidth(5, 4) + 6).toBeLessThanOrEqual(720);
+    // a wide room still gets the comfortable level
+    expect(fitCard({ availW: 800, availH: CARD_ROW_MIN, riders: 3, judges: 4 })).toBe(0);
   });
 });
