@@ -38,7 +38,7 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
         <div data-testid="sim-speed">
           <Field label={T.speed.heading} help={T.speed.help}>
             {SPEEDS.map((n) => (
-              <Choice key={n} data-testid={`sim-speed-${n}`} pressed={status.control.speed === n} disabled={pending} onClick={() => void act(() => setSpeed(eventId, n))}>
+              <Choice key={n} data-testid={`sim-speed-${n}`} pressed={status.control.speed === n} disabled={pending} onClick={() => void act(() => setSpeed(eventId, n), undefined, (s) => ({ ...s, control: { ...s.control, speed: n } }))}>
                 {T.speed.option(n)}
               </Choice>
             ))}
@@ -47,7 +47,7 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
         <div data-testid="sim-play">
           <Field label={T.play.heading} help={T.play.help}>
             {state !== "playing" ? (
-              <Choice primary icon={Play} data-testid="sim-start" disabled={pending} onClick={() => void (state === "paused" ? sim.playDirect("playing") : act(() => setPlayState(eventId, "playing")))}>
+              <Choice primary icon={Play} data-testid="sim-start" disabled={pending} onClick={() => void (state === "paused" ? sim.playDirect("playing") : act(() => setPlayState(eventId, "playing"), undefined, (s) => ({ ...s, control: { ...s.control, state: "playing" } })))}>
                 {state === "paused" ? T.play.resume : T.play.start}
               </Choice>
             ) : (
@@ -55,7 +55,7 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
                 {T.play.pause}
               </Choice>
             )}
-            <Choice icon={Square} data-testid="sim-stop" disabled={pending || state === "stopped"} onClick={() => void act(() => setPlayState(eventId, "stopped"))}>
+            <Choice icon={Square} data-testid="sim-stop" disabled={pending || state === "stopped"} onClick={() => void act(() => setPlayState(eventId, "stopped"), undefined, (s) => ({ ...s, control: { ...s.control, state: "stopped" } }))}>
               {T.play.stop}
             </Choice>
             <Choice icon={SkipForward} data-testid="sim-skip-end" title={canSkip ? T.skip.help.text : T.skip.why} disabled={pending || !canSkip} onClick={() => void act(() => skipToEndOfHeat(eventId), (r) => r.text)}>
@@ -170,7 +170,7 @@ export function Behaviour({ eventId, sim }: { eventId: string; sim: Sim }) {
   const c = status.control.config;
   const B = T.behaviour;
   const judges = status.seats.filter((s) => s.role === "judge").sort((a, b) => (a.seatNo ?? 99) - (b.seatNo ?? 99));
-  const save = (patch: Parameters<typeof saveSettings>[1]) => void act(() => saveSettings(eventId, patch));
+  const save = (patch: Parameters<typeof saveSettings>[1]) => void act(() => saveSettings(eventId, patch), undefined, (s) => ({ ...s, control: { ...s.control, config: { ...s.control.config, ...patch } } }));
   return (
     <Card title={B.heading} testId="sim-behaviour">
       <Field label={B.attemptsPerRider} help={B.attemptsHelp}>

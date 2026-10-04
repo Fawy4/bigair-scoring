@@ -108,19 +108,28 @@ export function useSim(eventId: string, initial: SimStatus) {
     true,
   );
 
-  /** Runs an action, shows its answer, refreshes the status. */
+  /**
+   * Runs an action and shows its answer. With `guess` the screen changes at once (the button that was pressed looks pressed before the server has heard of it) and goes
+   * back if the server refuses; the status is read again in the background to confirm, and the buttons are free again as soon as the server has answered.
+   */
+  const statusNow = useRef(status);
+  statusNow.current = status;
   const act = useCallback(
-    async <R extends { ok: boolean }>(run: () => Promise<R>, okText?: (r: Extract<R, { ok: true }>) => string | null): Promise<R> => {
+    async <R extends { ok: boolean }>(run: () => Promise<R>, okText?: (r: Extract<R, { ok: true }>) => string | null, guess?: (s: SimStatus) => SimStatus): Promise<R> => {
       setPending(true);
       setMessage(null);
+      const before = statusNow.current;
+      if (guess) setStatus(guess(before));
       try {
         const r = await run();
-        if (!r.ok) setMessage({ ok: false, text: (r as unknown as { message: string }).message });
-        else {
+        if (!r.ok) {
+          setMessage({ ok: false, text: (r as unknown as { message: string }).message });
+          if (guess) setStatus((now) => (JSON.stringify(now.control) === JSON.stringify(guess(before).control) ? before : now));
+        } else {
           const text = okText?.(r as Extract<R, { ok: true }>);
           if (text) setMessage({ ok: true, text });
         }
-        await refresh();
+        void refresh();
         return r;
       } finally {
         setPending(false);
@@ -128,6 +137,24 @@ export function useSim(eventId: string, initial: SimStatus) {
     },
     [refresh],
   );
+
+  // The state and speed are also followed on the realtime channel: a Pause or Resume pressed on the head judge's console shows here the moment it is written, not at
+  // the next look (the once-a-second look above stays as the safety net).
+  useEffect(() => {
+    const db = createClient();
+    const ch = db
+      .channel(`sim-control-${eventId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "sim_control", filter: `event_id=eq.${eventId}` }, (p) => {
+        const row = p.new as { state?: string; speed?: number } | undefined;
+        if (!row) return;
+        const state = row.state === "playing" || row.state === "paused" || row.state === "stopped" ? row.state : null;
+        if (state) stateRef.current = state;
+        setStatus((old) => ({ ...old, control: { ...old.control, ...(state ? { state } : {}), ...(typeof row.speed === "number" ? { speed: row.speed } : {}) } }));
+        void refresh();
+      })
+      .subscribe();
+    return () => void db.removeChannel(ch);
+  }, [eventId, refresh]);
 
   /**
    * Pause and Resume go straight to the database from this browser (server actions of one tab wait for each other, so behind a tick they could take seconds):
