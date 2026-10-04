@@ -2,7 +2,7 @@
 
 How an organiser gets in (invitation, the e-mailed link, a password of their own), how the platform owner removes one, and the organiser's frame: the events list (/org), the organisation switcher, the account menu, Organisation settings and Feedback.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 4 Oct 2026 · Product version 0.17.0
 
 ## Getting in {#oa-getting-in}
 
@@ -25,11 +25,19 @@ Set a password on the first day: the hosted e-mail plan sends only 2 sign-in e-m
 | Account menu | **On this device**: Daylight / Dark and Normal / Large (remembered on this device only); **Note**; **Set or change password**; **Sign out**; inside an event also the links to the events list, Organisation settings and Feedback. |
 | **‹organisation›: events** | Your events with dates and state; **Open setup**; **+ New event**. Archived events are hidden behind **Show archived events (‹n›)**. |
 | **Organisation settings** | Name, web address (slug), logo, default time zone. Only owners and admins of the organisation can save; others can look (“Only owners and admins can change these settings. You can look, but not save.”). See [Settings](../settings.md#settings-organisation). |
+| **Presets** (a card on Organisation settings) | Your organisation's own scoring and format presets and the built-in ones, in two lists. **⋯** on an entry: **Rename**, **Delete** (refused with “This preset cannot be deleted: it is used by …” while a live division uses it) for your own; **Hide** / **Show** for built-in ones (the DEFAULT cannot be hidden; hidden ones are tagged “hidden”). Everybody in the organisation can use it; the actions are the same as in the Load… menu ([Divisions](organiser-divisions.md#div-presets)). |
 | **Feedback** | The notes your team left with the **Note** button, with filters (kind, status, screen, event). |
 | **Note** (floating button) | Leave a note about the screen you are on (type or **Dictate**, optional screenshot, kind: Bug, Wording, Layout, New rule, Idea). The page, event, division, heat and your role are saved with it. |
 
 ![The events list](../img/org-events-1280.png)
 *org-events-1280.png — the events list.*
+
+## Presets card {#oa-presets}
+
+![Presets card](../img/org-presets-card-1280.png)
+*org-presets-card-1280.png — the Presets card with “Manage Kids best 2” open.*
+
+The card on **Organisation settings** is the one place to look after your presets without opening an event. Changing, hiding or deleting a preset never changes a division that already loaded it. See [Divisions → Presets](organiser-divisions.md#div-presets) for what each action does.
 
 ## Roles inside an organisation {#oa-roles}
 

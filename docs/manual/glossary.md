@@ -69,7 +69,9 @@ Last checked: 4 Oct 2026 · Product version 0.15.0
 | {#g-placeholder} **Placeholder** | A seat that waits for a place of an earlier heat. *“1st H1” until heat 1 is published.* |
 | {#g-plan} **Plan** | One run order for a day; a day can have several. *Plan A – Good wind, Plan B – Bad wind.* |
 | {#g-practice-heat} **Practice heat** | A made-up spotter feed into a running heat on a simulation event. *Judges practise scoring the day before.* |
-| {#g-preset} **Preset** | A ready-made set of settings (scoring, format, identification). *“KOTA-style: best 3 tricks + impression”.* |
+| {#g-preset} **Preset** | A ready-made set of settings (scoring, format, identification). Loading one copies its settings into the division, so a later change to the preset never changes a division that already loaded it. *“KOTA-style: best 3 tricks + impression”.* |
+| {#g-built-in} **Built-in preset** | A preset the platform owner provides to every organisation; organisers cannot change it, but each organisation can **Hide** one from its own Load… menus. One of each kind is the **DEFAULT** (never hidden). *“Club quick: single score per trick, best 2 count”.* |
+| {#g-retired} **Retired (preset)** | A built-in preset the platform owner took out of every new event and every Load… menu; divisions already using it keep their copy. It can be restored. *Retiring an old format before the season.* |
 | {#g-public-page} **Public page** | Pages anyone can open without a login (/e/‹event›…). *Riders check their ready time there.* |
 | {#g-publish} **Publish** | The head judge makes a heat's result official; it fills the next seats and (if allowed) appears in public. *Publish at 10:24; version 1.* |
 | {#g-ready-call} **Ready call** | Minutes before a heat riders are called to the ready area (one Event setting). *15: “be ready 10:45” for an 11:00 heat.* |

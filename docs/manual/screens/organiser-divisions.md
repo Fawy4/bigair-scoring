@@ -2,7 +2,7 @@
 
 Step 2 of an event (/org/events/‹id›/divisions): the groups that rank together, each with its scoring rules, its format (the ladder), its Rider label and its trick base.
 
-Last checked: 4 Oct 2026 · Product version 0.13.2
+Last checked: 4 Oct 2026 · Product version 0.17.0
 
 ## What it is for {#div-purpose}
 
@@ -33,6 +33,24 @@ A division (Pro Men, Pro Women, Youth U16) has its own rules. Each division is a
 | **Rider label** tab | Use the event's identification, or (when the Event step allows it) this division's own scheme; **Save this division’s Rider label**. Fixed once a heat of the division started. |
 | **Trick base** tab | “This event uses version ‹n› of the master trick base.”; when a newer one is published, what changed in words and **Update to latest** (the whole event moves at once; refused while a heat is running). Tick the building blocks the spotter may use (Direction, Multiplier, Base trick, Add-ons, Grabs & landings, and any family the platform owner added); blocks the owner set off for new events start unticked; retired blocks are not shown; **Tick all**; **+ Add block** (its Family list shows the family names of the version this event uses, like the panel and the spotter's screen, so a renamed family shows its new name everywhere once the event is updated to latest; saving the panel starts from the layout stored in the database and never writes old families back); the spotter's screen order (drag ⠿, arrows, **Move to…**, ★ favourite first, **Reset the order**). After the first heat, blocks can be added but a ticked block cannot be unticked. Proposed blocks go to the platform owner's [trick base](admin-trick-base.md#at-proposals); a dismissed one shows the owner's reason. |
 | **Unlock scoring and format** | After the first heat: **Reason (optional, for the audit log)**; one click unlocks, an empty box is logged as “no reason given”. |
+
+## Presets: load, rename, update, delete, hide {#div-presets}
+
+The **Load…** menu of the Scoring and Format tabs lists **My organisation’s** presets (the ones you saved with **Save as preset…**) above the **Built-in** ones. Loading **copies** the preset's settings into the division, so changing, renaming, hiding or deleting a preset later never changes a division that already loaded it. The menu opens upwards when there is more room above the button than below, and always stays on the screen.
+
+![The Load… menu with a preset's actions](../img/org-presets-menu-1280.png)
+*org-presets-menu-1280.png — Load… with “Manage Club evening heats” open: Rename, Update preset from this division, Delete.*
+
+Each entry has a small **⋯** button (“Manage ‹preset›”):
+
+| Action | What it does |
+|---|---|
+| **Rename** (your own presets) | Type a new name (2 to 80 characters) → **Save name**. Every version of the preset gets the name; the settings are not touched. |
+| **Update preset from this division** (your own presets) | Replaces the preset's settings with this division's settings as they are now: one click on **Yes, update the preset**; **Reason (optional)** goes to the audit log. The preset gets its next version (“‹name› now has this division’s settings (version 2).”) and this division uses it. Divisions that loaded an earlier version keep what they loaded. |
+| **Delete** (your own presets) | **Yes, delete** removes it. Refused while a division of an event that is not archived has it selected: “This preset cannot be deleted: it is used by Pro Men in Arrow Big Air. Give that division another preset first.” (with **Learn more**). A preset that only archived events still use disappears from the menus but stays for those divisions. |
+| **Hide** / **Show** (built-in presets) | **Hide** takes a built-in preset out of **your organisation's** Load… menus (nobody else's). **Show hidden (‹n›)** at the bottom of the menu lists the hidden ones again (tagged “hidden”); **Show** puts one back. The **DEFAULT** built-in cannot be hidden (“The DEFAULT built-in preset cannot be hidden.”). A division that already uses a hidden built-in keeps it. |
+
+The same list is on [Organisation settings → Presets](organiser-access.md#oa-presets) (rename, delete, hide and show there; “Update preset from this division” needs a division, so it is only in the Load… menu). While the platform owner is opened as your organisation, **Save as built-in** also appears next to **Save as preset…**: it makes the settings a built-in preset for everybody ([Admin: master presets](admin-presets.md#ap-manage)).
 
 ## What it depends on {#div-depends}
 

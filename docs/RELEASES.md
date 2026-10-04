@@ -12,6 +12,32 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.17.0 — 4 Oct 2026 {#release-0-17-0}
+
+PR: #39
+
+### What changed
+- **Presets you can manage (organisers).** Open **Load…** on a division's Scoring or Format tab, or the new **Presets** card on Organisation settings. Your own presets get **Rename**, **Delete** and (from the Load… menu) **Update preset from this division**; built-in presets get **Hide** / **Show**. Delete is refused, in plain words and naming the division, while a division of a live event uses the preset. A division that already loaded a preset is never changed by anything done to the preset afterwards.
+- **Hiding built-in presets.** A hidden built-in is gone from your organisation's Load… menus only; **Show hidden (‹n›)** at the bottom of the menu brings it back. The owner's DEFAULT built-in cannot be hidden.
+- **Built-in presets without JSON (owner).** Admin → Master presets lists scoring models and formats with **Add a preset**, **Edit** (the organisers' own Simple / More settings form), **Rename**, **Retire** / **Restore**, **Set as DEFAULT** and **Delete** (refused while any division uses it). **Save as built-in** appears on a division's settings while you are opened as an organisation. JSON import and export stay under Advanced.
+- **The Load… menu stays on screen.** Every menu of that kind on the organiser and admin screens opens upwards when there is no room below and never runs off the edge.
+- **A new home page.** The product name large, a jump arc, the live event first as a larger card with a gently pulsing dot, then Coming up and Results, the event code field and the quiet links; light or dark as the phone says. No sign-up, no new addresses, nothing else on the site changed.
+- Under the hood: two new tables (which built-ins an organisation hid, which built-in is the DEFAULT), a "retired" mark on presets and a few database functions; nothing existing was changed.
+
+### What to test
+- [ ] On a throwaway organisation, open a division's Scoring tab → **Load…** → **⋯** beside one of **My organisation’s** presets → **Rename**: type a new name, **Save name**. The new name shows in the Load… menu.
+- [ ] Give a division one of your presets, then try **Delete** on that preset: you are refused with “This preset cannot be deleted: it is used by ‹division› in ‹event›…” and a **Learn more** link. Delete a preset no division uses: it disappears.
+- [ ] Change a number on a division that uses one of your presets, open **Load…** → **⋯** on that preset → **Update preset from this division** → **Yes, update the preset**: it says “now has this division’s settings (version 2)”. Another division that loaded the preset earlier still shows its old numbers.
+- [ ] In **Load…** → **⋯** on a built-in preset → **Hide**: it is gone from the menu and **Show hidden (1)** appears; press it, then **Show** on the entry: it is back. The preset marked DEFAULT has no Hide button.
+- [ ] Scroll the Divisions page until the **Load…** button is near the bottom of the screen and open it: the whole menu is on screen (it opens upwards).
+- [ ] As platform owner, Admin → **Master presets** → **Add a preset**: **Load…** a built-in, type a name, **Save**. Then **Edit** it, **Rename** it, **Retire** it (it vanishes from an organiser's Load… menu), **Restore** it, and **Delete** it. A division that loaded it earlier is unchanged.
+- [ ] Open the home page on a phone and on a laptop, light and dark: the arc, one orange accent, the live or next event as a clear card, the **Have an event code?** field and the quiet links; dark mode follows the phone.
+
+### Known issues
+- “Update preset from this division” is only in the Load… menu (it needs a division); the Presets card offers Rename, Delete, Hide and Show.
+- “Set as DEFAULT” only protects a built-in (never hidden, never retired); it does not preselect anything for a new division.
+- The brand brief (branding/LOGO-BRIEF.md) is not in the repository; the colours (#111111, #FF6A00) and shapes follow the pull request's description of it.
+
 ## 0.16.0 — 4 Oct 2026 {#release-0-16-0}
 
 PR: #38

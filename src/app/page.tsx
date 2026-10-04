@@ -97,7 +97,7 @@ export default async function Home() {
 
         <footer className="home-footer">
           <span data-testid="product-version">{copy.manual.version(PRODUCT_VERSION)}</span>
-          <Link href="/help" data-testid="help-link">
+          <Link href="/help" prefetch={false} data-testid="help-link">
             {copy.manual.footerHelp}
           </Link>
           {hasLegal ? <Link href="/legal">{copy.publicSite.legalLink}</Link> : null}
