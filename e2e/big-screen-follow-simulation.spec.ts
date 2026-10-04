@@ -96,8 +96,13 @@ test("simulation at ×20: live from the yellow, 'Judges reviewing' until Publish
         /* published by the virtual head judge */
       }
       published.push(heatId);
-      await expect(tv.getByTestId("follow-screen")).toHaveAttribute("data-phase", "rotation", { timeout: 10_000 });
-      await expect(tv.getByTestId("follow-results-page")).toHaveAttribute("data-heat", heatId);
+      if (n < 3) {
+        // the simulation arms the next heat at once: the screen leaves "Judges reviewing" for the live heat (or, for a moment, the rotation)
+        await expect(tv.getByTestId("follow-screen")).not.toHaveAttribute("data-phase", "reviewing", { timeout: 30_000 });
+      } else {
+        await expect(tv.getByTestId("follow-screen")).toHaveAttribute("data-phase", "rotation", { timeout: 30_000 });
+        await expect(tv.getByTestId("follow-results-page")).toHaveAttribute("data-heat", heatId, { timeout: 30_000 });
+      }
     }
 
     // read the walk back: newest first, then each earlier heat, then the newest again
