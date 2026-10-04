@@ -2,7 +2,17 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 3 Oct 2026 · Product version 0.13.0
+Last checked: 4 Oct 2026 · Product version 0.13.1
+
+## 0.13.1 — 4 Oct 2026 {#cl-0-13-1}
+
+Release entry: [0.13.1](/admin/releases#release-0-13-1) (platform owner only)
+
+**What changed for users**
+- Nothing: this version adds tests and the self-audit report (`docs/AUDIT.md`), no screen, setting or rule changed.
+
+**Manual pages updated**
+- None.
 
 ## 0.13.0 — 3 Oct 2026 {#cl-0-13-0}
 

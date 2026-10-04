@@ -1195,3 +1195,18 @@ Started from main 0.12.0 (Polish 2b and fix session 1 merged); version 0.13.0 (a
 ### Not done / not verified
 - Not tried on a real phone; the horn is a synthesised tone.
 - At ×10 / ×20 on the simulator the last-minute length is not shortened, so a fast heat is yellow (last minute) from its green.
+
+## Self-audit 1b – the system, for Gouna (branch `audit-1b`, 3–4 Oct 2026, 0.13.1)
+
+### Done
+- `docs/AUDIT.md` → "Self-audit 1b": a one-page summary ("safe to run Gouna: yes, with these fixes — and not on today's hosting"), the outage of 3 Oct (21:42–23:25 UTC) with its cause (the free database machine ran out of disk capacity: 453 MB memory, constant disk reads), the full browser suite on main with every red classified, 22 findings (A1b-0 … A1b-21) with severity, reproduction and proposed fix, the deferred Audit 1a scenarios on the database, flags, concurrency, security, data integrity, UI invariants, a ×20 rehearsal and a capacity projection against the Supabase and Vercel plans.
+- New tests only (no application code, no database change): 4 unit files (`src/lib/**/audit-1b-*.test.ts`), 8 RLS files (`tests/rls/audit-1b-*.ts`), 2 browser specs (`e2e/audit-1b-*.spec.ts`). Tests that describe a fault are marked `.fails` / `test.fail` with the finding number.
+
+### Not done
+- The full RLS suite and the full browser suite with this audit's own specs were not run end to end after the outage (to spare the project); each audit file was run on its own (results in `docs/AUDIT.md` → "Test files of this audit").
+- Large text on the judge and spotter phones, Audit 1a's 1b-3 (the head judge's marks in the mean) and 1b-8 (public timetable inputs) were not re-tested.
+- Nothing is fixed here: the fix session takes the list in `docs/AUDIT.md`.
+
+### How to test
+- Nothing to see on the live address.
+- On a laptop: `npm test` (unit, includes the audit's 4 files); `npm run test:rls -- tests/rls/audit-1b-ladder.test.ts` (one RLS file at a time); `AUDIT_LOAD=1 npm run test:rls -- tests/rls/audit-1b-load.test.ts` only on a project you may load.
