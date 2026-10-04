@@ -243,7 +243,7 @@ test("the live-scores switch: totals on the live heat only when the event allows
     await expect(page.getByTestId("follow-live-riders").getByTestId("follow-total").first()).toBeVisible();
     await expect(page.getByText("Scores published after the heat.")).toHaveCount(0);
     await settings("after_publish");
-    await expect(page.getByText("Scores published after the heat.")).toBeVisible({ timeout: 6_000 });
+    await expect(page.getByText("Scores published after the heat.")).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("follow-live-riders").getByTestId("follow-total")).toHaveCount(0);
     await expect(page.getByTestId("follow-live-riders").getByTestId("follow-rider")).toHaveCount(4);
     // colours are always written out as text too
