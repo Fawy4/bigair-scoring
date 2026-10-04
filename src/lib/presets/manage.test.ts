@@ -37,7 +37,7 @@ describe("copy on load: a later change to a preset never alters what a division 
   it("renaming changes the name of every version and nothing else in the rules", () => {
     const rows = [v1, row("o2", "mine", "Mine", 2, "org", { json: { name: "Mine", counted: 2 } })];
     const renamed = rows.map((r) => ({ ...r, name: nameAfterRename("New name"), json: { ...(r.json as object), name: "New name" } }));
-    expect(renamed.map((r) => (r.json as { counted: number }).counted)).toEqual([3, 2]);
+    expect(renamed.map((r) => (r.json as unknown as { counted: number }).counted)).toEqual([3, 2]);
     expect(renamed.every((r) => r.name === "New name")).toBe(true);
   });
   it("a trimmed name is what gets stored", () => {

@@ -3,12 +3,15 @@ import { defaultVersion, MASTER_KINDS } from "@/lib/platform/master-presets";
 import { loadPresetSummaries } from "@/lib/platform/preset-rows";
 import { requireAdmin } from "@/lib/platform/session";
 import { copy } from "@/lib/ui-copy";
+import { MasterList } from "./master-list";
 
 export const metadata = { title: copy.admin.presets.heading };
 
 export default async function MasterPresetsPage() {
-  const { supabase } = await requireAdmin();
+  const { supabase, role } = await requireAdmin();
   const groups = await Promise.all(MASTER_KINDS.map(async (k) => ({ ...k, presets: await loadPresetSummaries(supabase, k.kind) })));
+  const { data: defaults } = await supabase.from("platform_default_presets").select("kind, key");
+  const defaultKey = (kind: string) => (defaults ?? []).find((d) => d.kind === kind)?.key ?? null;
   const proposals = ((await supabase.rpc("admin_trick_proposals")).data ?? []).length;
   const c = copy.admin.presets;
   return (
@@ -21,6 +24,21 @@ export default async function MasterPresetsPage() {
             {g.label}
           </h2>
           {g.presets.length === 0 ? <p className="font-semibold">{c.none}</p> : null}
+          {g.kind === "scoring_model" || g.kind === "format_template" ? (
+            <MasterList
+              kind={g.kind}
+              slug={g.slug}
+              isOwner={role === "owner"}
+              rows={g.presets.map((p) => ({
+                key: p.key,
+                name: p.name,
+                latestVersion: p.versions[0]?.version ?? 1,
+                hasDraft: p.versions.some((v) => !v.published_at),
+                retired: p.versions.some((v) => v.retired_at),
+                isDefault: p.key === defaultKey(g.kind),
+              }))}
+            />
+          ) : (
           <ul className="flex flex-col gap-2">
             {g.presets.map((p) => {
               const def = defaultVersion(p.versions);
@@ -41,6 +59,7 @@ export default async function MasterPresetsPage() {
               );
             })}
           </ul>
+          )}
         </section>
       ))}
     </main>

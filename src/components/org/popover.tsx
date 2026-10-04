@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button, type ButtonVariant } from "./button";
@@ -20,11 +20,60 @@ interface PopoverProps {
   children: ReactNode | ((close: () => void) => ReactNode);
 }
 
-/** A button that opens a small panel under it. Closes on a tap outside, on Escape and when an item says so. */
+const EDGE = 8; // the gap kept between the panel and the screen's edge
+
+interface Placement {
+  up: boolean;
+  end: boolean;
+  maxHeight: number;
+}
+
+/**
+ * A button that opens a small panel under it. Closes on a tap outside, on Escape and when an item says so.
+ * The panel always opens inside the screen: upwards when there is more room above than below, as tall as the room allows (it scrolls inside itself beyond that), and
+ * flipped to the other side when it would run off the left or right edge. It is measured again when the page scrolls, the window changes or its content grows.
+ */
 export function Popover({ label, ariaLabel, icon, iconOnly, variant = "secondary", align = "start", panelRole = "group", testId, panelClassName, children }: PopoverProps) {
   const [open, setOpen] = useState(false);
+  const [place, setPlace] = useState<Placement | null>(null);
   const box = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
   const panelId = useId();
+  const measure = useCallback(() => {
+    const b = box.current;
+    const p = panel.current;
+    if (!b || !p) return;
+    const r = b.getBoundingClientRect();
+    const vh = window.innerHeight;
+    const vw = window.innerWidth;
+    const below = vh - r.bottom - EDGE - 4;
+    const above = r.top - EDGE - 4;
+    const natural = p.scrollHeight + 2;
+    const up = natural > below && above > below;
+    const width = p.offsetWidth;
+    let end = align === "end";
+    if (!end && r.left + width > vw - EDGE && r.right - width >= EDGE) end = true;
+    if (end && r.right - width < EDGE && r.left + width <= vw - EDGE) end = false;
+    const next = { up, end, maxHeight: Math.max(96, Math.min(natural, up ? above : below)) };
+    setPlace((cur) => (cur && cur.up === next.up && cur.end === next.end && cur.maxHeight === next.maxHeight ? cur : next));
+  }, [align]);
+  useLayoutEffect(() => {
+    if (open) measure();
+    else setPlace(null);
+  }, [open, measure]);
+  useEffect(() => {
+    if (!open) return;
+    const again = () => measure();
+    window.addEventListener("resize", again);
+    window.addEventListener("scroll", again, true);
+    const watcher = typeof ResizeObserver !== "undefined" && panel.current ? new ResizeObserver(again) : null;
+    if (watcher && panel.current) watcher.observe(panel.current);
+    return () => {
+      window.removeEventListener("resize", again);
+      window.removeEventListener("scroll", again, true);
+      watcher?.disconnect();
+    };
+  }, [open, measure]);
   useEffect(() => {
     if (!open) return;
     const outside = (e: PointerEvent) => {
@@ -49,10 +98,13 @@ export function Popover({ label, ariaLabel, icon, iconOnly, variant = "secondary
       </Button>
       {open ? (
         <div
+          ref={panel}
           id={panelId}
           role={panelRole === "menu" ? "menu" : "group"}
           aria-label={ariaLabel ?? label}
-          className={cn("absolute z-40 mt-1 w-72 max-w-[calc(100vw-32px)] rounded-card border border-beach-border bg-beach-bg p-2", align === "end" ? "right-0" : "left-0", panelClassName)}
+          data-placement={place ? (place.up ? "up" : "down") : undefined}
+          style={place ? { maxHeight: place.maxHeight } : undefined}
+          className={cn("absolute z-40 w-72 max-w-[calc(100vw-32px)] overflow-y-auto rounded-card border border-beach-border bg-beach-bg p-2", place?.up ? "bottom-full mb-1" : "top-full mt-1", (place ? place.end : align === "end") ? "right-0" : "left-0", panelClassName)}
         >
           {typeof children === "function" ? children(close) : children}
         </div>

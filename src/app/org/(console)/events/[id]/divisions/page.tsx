@@ -17,7 +17,7 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
   const { supabase } = await getDb();
   // everything the page shows is asked for at the same time (one round, not four): the event with its organisation's saved Rider labels, the divisions, the heats,
   // the rule and format presets, the riders and the trick base
-  const [{ data: event }, { data: divisions }, { data: started }, { data: withHeats }, { data: models }, { data: formats }, { data: entryRows }, master, localBlocks] = await Promise.all([
+  const [{ data: event }, { data: divisions }, { data: started }, { data: withHeats }, { data: models }, { data: formats }, { data: entryRows }, master, localBlocks, { data: hiddenRows }, { data: defaultRows }] = await Promise.all([
     supabase.from("events").select("id, organisation_id, settings, organisations(presets(key, version, json))").eq("id", id).eq("organisations.presets.kind", "identification").maybeSingle(),
     supabase
       .from("divisions")
@@ -27,11 +27,13 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
       .order("created_at"),
     supabase.from("heats").select("division_id").eq("event_id", id).not("started_at", "is", null),
     supabase.from("heats").select("division_id").eq("event_id", id),
-    supabase.from("scoring_models").select("id, key, name, version, organisation_id, json"),
-    supabase.from("format_templates").select("id, key, name, version, organisation_id, json"),
+    supabase.from("scoring_models").select("id, key, name, version, organisation_id, json, retired_at"),
+    supabase.from("format_templates").select("id, key, name, version, organisation_id, json, retired_at"),
     supabase.from("entries").select("id, division_id, seed, created_at, riders(first_name, last_name)").eq("event_id", id).eq("status", "confirmed"),
     loadMasterVocabulary(supabase),
     loadEventBlocks(supabase, id),
+    supabase.from("organisation_hidden_presets").select("organisation_id, kind, key"),
+    supabase.from("platform_default_presets").select("kind, key"),
   ]);
   if (!event) notFound();
   const startedIds = new Set((started ?? []).map((h) => h.division_id));
@@ -79,6 +81,8 @@ export default async function DivisionsStepPage({ params }: { params: Promise<{ 
         initialDivisions={rows}
         initialScoring={(models ?? []) as PresetRow[]}
         initialFormats={(formats ?? []) as PresetRow[]}
+        hiddenBuiltIns={{ scoring_model: (hiddenRows ?? []).filter((h) => h.organisation_id === event.organisation_id && h.kind === "scoring_model").map((h) => h.key), format_template: (hiddenRows ?? []).filter((h) => h.organisation_id === event.organisation_id && h.kind === "format_template").map((h) => h.key) }}
+        defaultBuiltIns={{ scoring_model: (defaultRows ?? []).find((d) => d.kind === "scoring_model")?.key ?? null, format_template: (defaultRows ?? []).find((d) => d.kind === "format_template")?.key ?? null }}
       />
     </main>
   );

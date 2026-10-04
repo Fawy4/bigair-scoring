@@ -3441,6 +3441,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      log_org_preset_update: {
+        Args: {
+          p_key: string
+          p_kind: string
+          p_org: string
+          p_reason: string
+          p_version: number
+        }
+        Returns: undefined
+      }
       merge_attempts: {
         Args: {
           p_choices: Json

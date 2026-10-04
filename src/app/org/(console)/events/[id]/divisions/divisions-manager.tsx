@@ -64,6 +64,8 @@ export function DivisionsManager({
   initialDivisions,
   initialScoring,
   initialFormats,
+  hiddenBuiltIns,
+  defaultBuiltIns,
 }: {
   eventId: string;
   organisationId: string;
@@ -75,12 +77,16 @@ export function DivisionsManager({
   initialDivisions: DivisionRow[];
   initialScoring: PresetRow[];
   initialFormats: PresetRow[];
+  /** Built-in presets this organisation hid from its Load… menus (by key), and the owner's DEFAULT built-in of each kind. */
+  hiddenBuiltIns: { scoring_model: string[]; format_template: string[] };
+  defaultBuiltIns: { scoring_model: string | null; format_template: string | null };
 }) {
   const refreshSoon = useRefreshSoon();
   const [divisions, setDivisions] = useState(initialDivisions);
   const [scoring, setScoring] = useState(initialScoring);
   const [localBlocks, setLocalBlocks] = useState(initialLocalBlocks);
   const [formats, setFormats] = useState(initialFormats);
+  const [hidden, setHidden] = useState(hiddenBuiltIns);
   const [openId, setOpenId] = useState<string | null>(initialDivisions[0]?.id ?? null);
   const [tab, setTab] = useState<Tab>("scoring");
   const [newName, setNewName] = useState("");
@@ -269,6 +275,10 @@ export function DivisionsManager({
                       presets={scoring}
                       organisationId={organisationId}
                       onPresetAdded={(row) => setScoring((s) => [...s, row])}
+                      onPresetsChange={setScoring}
+                      hiddenKeys={hidden.scoring_model}
+                      onHiddenChange={(keys) => setHidden((h) => ({ ...h, scoring_model: keys }))}
+                      defaultKey={defaultBuiltIns.scoring_model}
                       onDivisionChange={(p) => patch(d.id, p)}
                       advancedExtra={<LiveSettingsPanel key={`l-${d.id}`} divisionId={d.id} initial={d.liveSettings} readOnly={false} />}
                     />
@@ -309,6 +319,10 @@ export function DivisionsManager({
                       presets={formats}
                       organisationId={organisationId}
                       onPresetAdded={(row) => setFormats((s) => [...s, row])}
+                      onPresetsChange={setFormats}
+                      hiddenKeys={hidden.format_template}
+                      onHiddenChange={(keys) => setHidden((h) => ({ ...h, format_template: keys }))}
+                      defaultKey={defaultBuiltIns.format_template}
                       onDivisionChange={(p) => patch(d.id, p)}
                     />
                   )}

@@ -4,15 +4,15 @@ import type { MasterKind, MasterRow } from "./master-presets";
 
 /** All versions (drafts included) of one system preset, newest first. Admins can read drafts through RLS. */
 export async function loadVersions(supabase: SupabaseClient<Database>, kind: MasterKind, key: string): Promise<MasterRow[]> {
-  const columns = "id, key, name, version, published_at, created_at";
+  const columns = kind === "scoring_model" || kind === "format_template" ? "id, key, name, version, published_at, created_at, retired_at" : "id, key, name, version, published_at, created_at";
   if (kind === "trick_vocabulary") {
     const { data } = await supabase.from("trick_vocabularies").select("id, key, version, published_at, created_at").is("organisation_id", null).is("event_id", null).eq("key", key).order("version", { ascending: false });
     return (data ?? []).map((r) => ({ ...r, name: r.key }));
   }
   const table = kind === "scoring_model" ? "scoring_models" : kind === "format_template" ? "format_templates" : "presets";
-  const query = supabase.from(table as "scoring_models").select(columns).is("organisation_id", null).eq("key", key);
+  const query = supabase.from(table as "scoring_models").select(columns as "id").is("organisation_id", null).eq("key", key);
   const { data } = await (kind === "identification" ? query.eq("kind" as never, "identification") : query).order("version", { ascending: false });
-  return (data ?? []) as MasterRow[];
+  return (data ?? []) as unknown as MasterRow[];
 }
 
 export interface PresetSummary {
@@ -29,9 +29,10 @@ export async function loadPresetSummaries(supabase: SupabaseClient<Database>, ki
     rows = (data ?? []).map((r) => ({ ...r, name: r.key }));
   } else {
     const table = kind === "scoring_model" ? "scoring_models" : kind === "format_template" ? "format_templates" : "presets";
-    const query = supabase.from(table as "scoring_models").select("id, key, name, version, published_at").is("organisation_id", null);
+    const columns = kind === "scoring_model" || kind === "format_template" ? "id, key, name, version, published_at, retired_at" : "id, key, name, version, published_at";
+    const query = supabase.from(table as "scoring_models").select(columns as "id").is("organisation_id", null);
     const { data } = await (kind === "identification" ? query.eq("kind" as never, "identification") : query);
-    rows = (data ?? []) as MasterRow[];
+    rows = (data ?? []) as unknown as MasterRow[];
   }
   const groups = new Map<string, MasterRow[]>();
   for (const r of rows) groups.set(r.key, [...(groups.get(r.key) ?? []), r]);
