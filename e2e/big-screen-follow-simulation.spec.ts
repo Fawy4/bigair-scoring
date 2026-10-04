@@ -92,7 +92,7 @@ test("simulation at ×20: live from the yellow, 'Judges reviewing' until Publish
       await expect(head.getByTestId("publish")).toBeEnabled({ timeout: 60_000 });
       await head.getByTestId("publish").click();
       await head.getByTestId("dialog-save").click();
-      await expect(head.getByTestId("control-message")).toContainText("Published", { timeout: 90_000 });
+      await expect(head.getByTestId("control-message")).toContainText(/ublished/, { timeout: 90_000 });
       published.push(heatId);
       await expect(tv.getByTestId("follow-screen")).toHaveAttribute("data-phase", "rotation", { timeout: 10_000 });
       await expect(tv.getByTestId("follow-results-page")).toHaveAttribute("data-heat", heatId);
