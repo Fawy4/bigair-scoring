@@ -25,7 +25,9 @@ test.beforeAll(async () => {
   w = await createPublicWorld({ settings: { followRotateSec: 15, flags: { enabled: true } } });
   // Pro Men heat 1 is not part of the walk; heat 2 is on the water with its scores logged
   await w.db.from("heats").update({ status: "scheduled", started_at: null, ended_at: null, published_at: null }).eq("id", w.heats[0]);
-  await w.db.from("heats").update({ publish_hold: true }).eq("id", w.reseedLadder.heats["R1-H1"]);
+  await w.db.from("heats").update({ publish_hold: true, started_at: ago(3600), ended_at: ago(3000) }).eq("id", w.reseedLadder.heats["R1-H1"]);
+  // the Knockout's first heat ran earlier today (heat 2 starts after it, so "Judges reviewing" belongs to heat 2)
+  await w.db.from("heats").update({ started_at: ago(3500), ended_at: ago(2900) }).eq("id", w.ladder.heats["R1-H1"]);
   // the Knockout's first heat: a fuller result, five attempts a rider
   const rows = (await w.db.from("heat_results").select("id, total, breakdown").eq("heat_id", w.ladder.heats["R1-H1"])).data ?? [];
   const tricks: Array<[string, number | null, boolean]> = [["Backroll", 7.5, true], ["Frontroll", 6, true], ["Kiteloop", 4.5, false], ["Megaloop", null, false], ["Handlepass", 5.5, true]];
