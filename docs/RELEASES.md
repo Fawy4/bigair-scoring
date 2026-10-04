@@ -12,6 +12,22 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.13.1 — 4 Oct 2026 {#release-0-13-1}
+
+PR: #33
+
+### What changed
+- **Self-audit 1b (no change to the product):** the system was tested end to end for the Gouna configuration — the ladder on the real database, the flags and start sequence, phones racing each other, security, data integrity, the screens, a virtual rehearsal at ×20 and the hosting limits. The findings, with a fix list in order, are in `docs/AUDIT.md`; the new tests are in the test suites (those that describe a fault are marked to fail until it is fixed).
+- **The headline:** the database machine of the free hosting fell over for 1 h 43 min during the audit (3 Oct, 21:42–23:25 UTC, every screen and the live address down), and a load test shows it slowing to unusable at 300 spectators. The hosting must be upgraded before Thursday (A1b-0, A1b-11 in the audit).
+- Nothing on any screen, setting or database object changed.
+
+### What to test
+Nothing to test on the live address.
+
+### Known issues
+- Everything in `docs/AUDIT.md` → "Findings by severity", A1b-0 to A1b-21, for the next fix session.
+- Eight browser tests are red on main because they are wrong or out of date (the master trick base v7 renamed families; the manual has 43 pages; publish-blockers builds an accidental tie; the e-mail link test cannot run in a sandbox) — A1b-12.
+
 ## 0.13.0 — 3 Oct 2026 {#release-0-13-0}
 
 PR: #32

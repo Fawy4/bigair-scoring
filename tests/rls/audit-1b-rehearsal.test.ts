@@ -76,10 +76,10 @@ describe.skipIf(!ENV_OK)("Audit 1b — event-day rehearsal at ×20, three runs",
       await updateConfig(db, sim, (c) => ({ ...c, spread: run.spread, wholeEvent: true }));
       expect(codeOf(await f.clients.orgA.rpc("sim_set", { p_event: sim, p_patch: { speed: 20, state: "playing", blocker: null } }))).toBe("");
 
-      // when each scenario button is pressed: at a random tick between 5 and 400
+      // when each scenario button is pressed: at a random tick between 5 and 105 (a whole run is about 135 ticks)
       let x = run.seed;
       const rnd = () => ((x = (x * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
-      const pressAt = new Map(run.scenarios.map((k) => [k, 5 + Math.floor(rnd() * 400)]));
+      const pressAt = new Map(run.scenarios.map((k) => [k, 5 + Math.floor(rnd() * 100)]));
       const pressed: Record<string, string> = {};
       const blockers: string[] = [];
       const started = Date.now();
