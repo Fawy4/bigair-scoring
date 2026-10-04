@@ -26,5 +26,5 @@ export default async function FollowPage({ params }: { params: Promise<{ slug: s
   const slug = (await params).slug;
   const payload = await loadFollowPayload(slug);
   if (!payload) notFound();
-  return <FollowScreen slug={slug} initial={payload} qr={<Qr url={payload.qrUrl} size={124} dark />} />;
+  return <FollowScreen slug={slug} initial={payload} qr={<Qr url={payload.qrUrl} size={112} dark />} />;
 }

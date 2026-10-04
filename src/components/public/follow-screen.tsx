@@ -248,7 +248,7 @@ export function FollowScreen({ slug, initial, qr, pollMs = FOLLOW_POLL_MS }: { s
   return (
     <ScreenFrame defaultMode={payload.defaultMode} labels={{ toggleToDay: F.modeDay, toggleToDark: F.modeDark }}>
       <div data-testid="follow-screen" data-phase={phase.kind} data-index={index} data-paused={paused} data-offline={offline} className="flex min-h-0 flex-1 flex-col">
-        <header data-testid="screen-header" className="mb-[1.2vw] flex flex-wrap items-center gap-x-[2vw] gap-y-[0.6vw]">
+        <header data-testid="screen-header" className="mb-[0.8vw] flex flex-wrap items-center gap-x-[2vw] gap-y-[0.6vw]">
           {payload.logoUrl ? (
             <span className="rounded-[0.8vw] border border-[var(--bs-line)] bg-white p-[0.5vw]">
               <Logo src={payload.logoUrl} alt={payload.eventName} height={48} maxWidth={160} priority />
@@ -281,7 +281,7 @@ export function FollowScreen({ slug, initial, qr, pollMs = FOLLOW_POLL_MS }: { s
             {F.pause}
           </p>
         ) : null}
-        <footer className="mt-[1vw] flex items-end gap-[2vw]">
+        <footer className="mt-[0.5vw] flex items-end gap-[2vw]">
           {/* the left corner stays empty: the quiet Day / Dark control appears there and never lands on text */}
           <div aria-hidden className="w-[16vw] shrink-0" />
           <p data-testid="follow-next" className="min-w-0 flex-1 break-words text-[2.4vw] font-semibold leading-tight">
