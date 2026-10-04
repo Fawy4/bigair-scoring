@@ -132,8 +132,8 @@ test("heat 2: arming brings the live heat back within two seconds, mid-rotation;
   await expect(screen(page)).toHaveAttribute("data-index", /.*/);
   const h = heatId("R1-H2");
   // the head judge arms the heat (the yellow, a one-minute pre-start)
-  const armedAt = Date.now();
   await w.db.from("heats").update({ status: "scheduled", armed_at: new Date().toISOString(), prestart_sec: 60, duration_sec: 600, ended_at: null }).eq("id", h);
+  const armedAt = Date.now(); // the arming is committed
   await phaseIs(page, "live", 2_000);
   expect(Date.now() - armedAt).toBeLessThan(2_600);
   await expect(page.getByTestId("follow-live-page")).toHaveAttribute("data-heat", h);

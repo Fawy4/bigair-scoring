@@ -64,7 +64,7 @@ It always shows one of three things, chosen by what the head judge does:
 
 **The bottom line.** During the rotation one thin line at the bottom reads “Next: ‹heat name› · est. ‹time›”, from the run order (no “est.” when the time is fixed, no time while the run order is on hold).
 
-**The moment the next heat is armed** the screen jumps straight to the live heat, in the middle of the rotation, without waiting for the page timer. It asks the server every second; with the 3-second shared copy of the public pages (see [Public event pages](public-event.md)) the jump follows within a few seconds on the live address.
+**The moment the next heat is armed** the screen jumps straight to the live heat, in the middle of the rotation, without waiting for the page timer. It asks the server twice a second; with the 3-second shared copy of the public pages (see [Public event pages](public-event.md)) the jump follows within a few seconds on the live address.
 
 | Key / control | What it does |
 |---|---|

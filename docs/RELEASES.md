@@ -35,7 +35,7 @@ PR: #PRNUMBER
 - [ ] Open the first **Big screen** (Go live → **Big screen**): it looks and rotates as before, and has no Note button.
 
 ### Known issues
-- The screen asks the server once a second, but the public pages and the big screens share a copy of the answers that is at most about 3 seconds old (Fix session 2), so on the live address the jump to the live heat and “Judges reviewing” follow the head judge's button within about 3 to 4 seconds, not two. Anonymous visitors cannot listen to the database's realtime channel, so the screen polls, as the public pages do.
+- The screen asks the server twice a second, but the public pages and the big screens share a copy of the answers that is at most about 3 seconds old (Fix session 2), so on the live address the jump to the live heat and “Judges reviewing” follow the head judge's button within about 3 to 4 seconds, not two. Anonymous visitors cannot listen to the database's realtime channel, so the screen polls, as the public pages do.
 - If a heat's division has no ladder, its Results page is not followed by a Ladder page.
 - An old heat that was ended and never published stops holding the screen on “Judges reviewing” as soon as a later heat has started.
 - The Follow the heat screen is not offered in the simulator's **View as** list; open it by adding /follow to the big screen's address.

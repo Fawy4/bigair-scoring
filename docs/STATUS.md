@@ -1266,7 +1266,7 @@ See the release entry 0.14.1 (`docs/RELEASES.md`). `npm test`; `npm run test:rls
 8. Manual: new section "Follow the heat" on the Big screen page with pictures (`e2e/manual-shots-follow.spec.ts`, part of `npm run manual:shots`), Event step, Go live, glossary, Event day, settings (generated), changelog; release entry 0.15.0.
 
 ### Not done / decisions to confirm
-- **Polling, not realtime:** an anonymous visitor cannot listen to the realtime channel, so the screen asks `/follow/data` every second. Through the 3-second shared copy the live heat appears within about 3 to 4 seconds on the live address; within 2 seconds holds in the browser tests, whose servers run with the cache off (`PUBLIC_CACHE_MS=0`).
+- **Polling, not realtime:** an anonymous visitor cannot listen to the realtime channel, so the screen asks `/follow/data` twice a second. Through the 3-second shared copy the live heat appears within about 3 to 4 seconds on the live address; within 2 seconds holds in the browser tests, whose servers run with the cache off (`PUBLIC_CACHE_MS=0`).
 - A heat whose division has no ladder gets Results only (no Ladder page). An old heat that was ended and never published stops holding "Judges reviewing" once a later heat has started.
 - The simulator's **View as** list does not offer the Follow screen (that panel belongs to another session's work); open it by adding /follow to the big screen's address.
 

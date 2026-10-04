@@ -18,8 +18,8 @@ const F = copy.pub.follow;
 const R = copy.pub.results;
 const L = copy.pub.ladder;
 
-/** The screen asks for fresh data every second (the shared 3-second answers on the server keep that cheap); a request that has not answered in 5 seconds counts as lost. */
-export const FOLLOW_POLL_MS = 1000;
+/** The screen asks for fresh data twice a second (the shared 3-second answers on the server keep that cheap); a request that has not answered in 5 seconds counts as lost. */
+export const FOLLOW_POLL_MS = 500;
 const LOST_AFTER_MS = 5000;
 
 const nameOf = (r: RiderRowVM): string => r.placeholder ?? "";
@@ -158,7 +158,7 @@ function LadderPage({ page }: { page: Extract<FollowPage, { kind: "ladder" }> })
 /**
  * "Big screen — Follow the heat": a TV page that stays on the heat while it is armed or running, says "Judges reviewing" until the head judge publishes, and then
  * walks Results (the newest published heat, then each earlier one of the day) and Ladder; arming the next heat takes it straight back to the live heat. It asks the
- * server every second and keeps the last good page when the connection drops (a small "Reconnecting" mark, never a blank or an error page). Space pauses the walk, F
+ * server twice a second and keeps the last good page when the connection drops (a small "Reconnecting" mark, never a blank or an error page). Space pauses the walk, F
  * toggles full screen, D (or the quiet control on mouse move) switches Day / Dark.
  */
 export function FollowScreen({ slug, initial, qr, pollMs = FOLLOW_POLL_MS }: { slug: string; initial: FollowPayload; qr: React.ReactNode; pollMs?: number }) {
@@ -170,34 +170,44 @@ export function FollowScreen({ slug, initial, qr, pollMs = FOLLOW_POLL_MS }: { s
   const count = pages.length;
 
   useEffect(() => {
-    let busy = false;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let running = false;
     const tick = async () => {
-      if (busy || document.visibilityState === "hidden") return;
-      busy = true;
-      const ctl = new AbortController();
-      const timer = setTimeout(() => ctl.abort(), LOST_AFTER_MS);
-      try {
-        const res = await fetch(`/screen/${encodeURIComponent(slug)}/follow/data`, { cache: "no-store", signal: ctl.signal });
-        if (!res.ok) throw new Error(String(res.status));
-        const body = (await res.json()) as { payload?: FollowPayload };
-        if (!body.payload) throw new Error("empty");
-        setPayload(body.payload);
-        setOffline(false);
-      } catch {
-        setOffline(true); // keep the last good page
-      } finally {
-        clearTimeout(timer);
-        busy = false;
+      if (running || stopped) return;
+      running = true;
+      if (timer) clearTimeout(timer);
+      if (document.visibilityState !== "hidden") {
+        const ctl = new AbortController();
+        const lost = setTimeout(() => ctl.abort(), LOST_AFTER_MS);
+        try {
+          const res = await fetch(`/screen/${encodeURIComponent(slug)}/follow/data`, { cache: "no-store", signal: ctl.signal });
+          if (!res.ok) throw new Error(String(res.status));
+          const body = (await res.json()) as { payload?: FollowPayload };
+          if (!body.payload) throw new Error("empty");
+          if (!stopped) {
+            setPayload(body.payload);
+            setOffline(false);
+          }
+        } catch {
+          if (!stopped) setOffline(true); // keep the last good page
+        } finally {
+          clearTimeout(lost);
+        }
       }
+      running = false;
+      // the next question goes out a short while after the last answer arrived, so a slow answer never doubles the wait
+      if (!stopped) timer = setTimeout(() => void tick(), pollMs);
     };
-    const id = setInterval(() => void tick(), pollMs);
     const onBack = () => void tick();
     const onOffline = () => setOffline(true);
+    timer = setTimeout(() => void tick(), pollMs);
     document.addEventListener("visibilitychange", onBack);
     window.addEventListener("online", onBack);
     window.addEventListener("offline", onOffline);
     return () => {
-      clearInterval(id);
+      stopped = true;
+      if (timer) clearTimeout(timer);
       document.removeEventListener("visibilitychange", onBack);
       window.removeEventListener("online", onBack);
       window.removeEventListener("offline", onOffline);
