@@ -398,8 +398,8 @@ export function EventForm({ initial, timeZones, schemes, impressionNames = [] }:
           {publicTabs(form.settings.externalLeaderboards).map((tab) => {
             const on = !form.settings.publicTabsOff.includes(tab.key);
             const label = tab.label.trim() || T.publicTabUntitled;
-            // the last tab that is on cannot be switched off (Join does not count: it hides itself while registration is closed)
-            const last = on && tab.key !== "join" && !tabsOffLeavesOne([...form.settings.publicTabsOff, tab.key], form.settings.externalLeaderboards);
+            // the last tab that is on cannot be switched off (Join counts like the others)
+            const last = on && !tabsOffLeavesOne([...form.settings.publicTabsOff, tab.key], form.settings.externalLeaderboards);
             return (
               <li key={tab.key}>
                 <label className="flex min-h-[var(--org-ctl)] items-center gap-3 text-body font-semibold">
@@ -412,7 +412,6 @@ export function EventForm({ initial, timeZones, schemes, impressionNames = [] }:
                     onChange={(e) => set(["settings", "publicTabsOff"], e.target.checked ? form.settings.publicTabsOff.filter((k) => k !== tab.key) : [...form.settings.publicTabsOff, tab.key])}
                   />
                   {T.publicTabOn(label)}
-                  {tab.key === "join" ? <span className="text-small font-medium text-beach-muted">{T.publicTabJoinNote}</span> : null}
                 </label>
               </li>
             );

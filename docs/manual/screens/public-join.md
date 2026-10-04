@@ -26,6 +26,13 @@ One door for everybody who is not a spectator: officials join with their PIN, ri
 | **Wrong tries** | Wrong PINs are counted per **phone and connection**: after 10 wrong tries in 10 minutes from the same phone on the same connection, that phone is told “Too many wrong tries. Wait ten minutes, or ask the organiser for help.” — even with the right PIN, until the ten minutes are over. Any other phone, and the same phone on another connection, is not affected, so a stranger who types wrong PINs can never lock your officials out, and a replacement judge with the right PIN always gets in. The only event-wide brake is a slow one: after 20 wrong tries at the event within 10 minutes a wrong guess takes about a second (the right PIN never waits). Officials who are already joined are never affected. |
 | /seat | “Your seat”: Connected / Not connected, **Open my screen**, or **Join with a PIN**. |
 
+## Riders on the Join tab {#pj-riders}
+
+At the foot of the Join tab, a **Riders** part follows registration: while it is open there is a **Register to ride** button that opens the registration page; when it is closed (or past its closing time) the part says **Registration is closed** and the organiser's closed message instead. The officials' part above it (the PIN doors, Leaderboard, Ladder, Timetable, “Not on the list?”) works whether or not registration is open.
+
+![Join tab with registration closed](../img/public-join-closed-390.png)
+*public-join-closed-390.png — the Join tab on a phone with registration closed: the officials' doors above, “Registration is closed” in the Riders part.*
+
 ## Registering as a rider {#pj-register}
 
 **Register to ride**: division (with its level description; “— full, ask the organiser” when full), first and last name, email, phone (WhatsApp), nationality, sponsor, WOO ID (optional), gear (kite brand, model, size, colours; rash guard colour), a photo (shrunk on the phone, 2 MB at most), the consent box → **Register**. The organiser confirms the place in the Riders step (“Registered — awaiting confirmation”).

@@ -96,7 +96,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Another plan of this day already has that name.” | Follow the sentence. | [Organiser: Run order](errors.md#err-runorder-errors-nametaken) |
 | “Another rider in your organisation already has that email address.” | Use the rider who already has that email (Add from this organisation’s riders). | [Organiser: Riders](errors.md#err-riders-errors-emailused) |
 | “Another tab is playing this simulation.” | Close the other tab, or use it. If you see it with one tab open, reload the page. | [Simulator](errors.md#err-simulator-play-lines-busy) |
-| “At least one tab must stay on (Join does not count: it hides itself while registration is closed).” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-onetabon) |
+| “At least one tab must stay on.” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-onetabon) |
 | “at most 20 sponsors” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-sponsorsmax) |
 | “at most 6 extra leaderboards” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-leaderboardsmax) |
 | “Available once the heat has ended.” | Press End heat (or wait for the clock). | [Grey buttons on the head console](errors.md#err-controlwhy-publish) |

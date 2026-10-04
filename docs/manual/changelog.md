@@ -10,10 +10,11 @@ Release entry: [0.16.0](/admin/releases#release-0-16-0) (platform owner only)
 
 **What changed for users**
 - **Skip to end of heat** now ends the heat (flag red, clock 0:00) and leaves it under review, unpublished. **Reasons are optional** wherever one is asked for (“no reason given” in the audit log). The simulator's auto-play **waits for the break**; its **left rail works**; **Refresh from event** brings the simulation up to date with the real event.
+- **Event step:** the section cards fold (first open, others folded, remembered per browser, open by themselves on an error). **Join tab:** no longer hides while registration is closed; its Riders part says “Registration is closed” or offers **Register to ride**.
 - **Clear this plan** on the Run order step. **Follow the heat** shows one clock, every trick's score as it lands, and no page counter. The Event step's empty impression-name field shows the division's name.
 
 **Manual pages updated**
-- [Simulator](screens/simulator.md), [Head judge console (laptop)](screens/console-laptop.md), [Run order](screens/organiser-run-order.md), [Big screen](screens/big-screen.md), [Event step](screens/organiser-event.md), [Divisions](screens/organiser-divisions.md), [Draw](screens/organiser-draw.md), [Admin: trick base](screens/admin-trick-base.md), [Flags](screens/flags.md), [Resets and undo](resets-and-undo.md), [Dependencies](dependencies.md), [Event day](event-day.md), [Glossary](glossary.md), the errors appendix.
+- [Simulator](screens/simulator.md), [Head judge console (laptop)](screens/console-laptop.md), [Run order](screens/organiser-run-order.md), [Big screen](screens/big-screen.md), [Event step](screens/organiser-event.md), [Public: event page](screens/public-event.md), [Public: join and register](screens/public-join.md), [Divisions](screens/organiser-divisions.md), [Draw](screens/organiser-draw.md), [Admin: trick base](screens/admin-trick-base.md), [Flags](screens/flags.md), [Resets and undo](resets-and-undo.md), [Dependencies](dependencies.md), [Event day](event-day.md), [Glossary](glossary.md), the errors appendix.
 
 ## 0.15.1 — 4 Oct 2026 {#cl-0-15-1}
 

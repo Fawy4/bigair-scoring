@@ -370,7 +370,7 @@ Last checked: 3 Oct 2026 · Product version 0.9.2
 | {#err-event-validation-pickdate} “Pick a date” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
 | {#err-event-validation-endbeforestart} “The last day cannot be before the first day” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
 | {#err-event-validation-closesafterend} “Registration cannot close after the event has ended” | Event step (step 1) | The Event step could not be saved as it is. | Set the closing day on or before the event's last day. |
-| {#err-event-validation-onetabon} “At least one tab must stay on (Join does not count: it hides itself while registration is closed).” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
+| {#err-event-validation-onetabon} “At least one tab must stay on.” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
 | {#err-event-validation-usetime} “Use the form 18:30” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
 | {#err-event-validation-wholenumber} “Use a whole number” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |
 | {#err-event-validation-maxperdivision} “Use a number from 1 to 500, or leave it empty for no limit” | Event step (step 1) | The Event step could not be saved as it is. | Fix the highlighted field and press Save event again. |

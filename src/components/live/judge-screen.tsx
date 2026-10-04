@@ -87,7 +87,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const entry = model?.trick.entry ?? "single";
   const impression = model?.heat.impression ?? null;
   // the refusals about the separate score use the name the event gives it (Event step)
-  const impressionCtx = model && impression ? { impressionName: impressionNameOf(model) } : {};
+  const impressionCtx = useMemo(() => (model && impression ? { impressionName: impressionNameOf(model) } : {}), [model, impression]);
   const max = division?.maxAttempts ?? null;
   const kit = useMemo(() => trickKit(ctx), [ctx]);
 
@@ -147,7 +147,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
     if (!refused.length) return;
     setNotices((n) => [...n, ...refused.map((i) => ({ key: i.clientKey, text: errorSentence(i.code ?? i.message, impressionCtx) }))]);
     for (const i of refused) q.queue.clearRefused(i.clientKey);
-  }, [q.items, q.queue]);
+  }, [q.items, q.queue, impressionCtx]);
 
   // ---- what the judge does
   const onScore = (id: string | number, score: number | "missed", criteria?: Record<string, number>) => {

@@ -505,7 +505,6 @@ export const copy = {
     publicPage: "Public page",
     publicTabsIntro: "Switch off the tabs you do not want on the public event page. The big screen is not affected.",
     publicTabOn: (tab: string) => `Show the ${tab} tab`,
-    publicTabJoinNote: "Join also hides itself while registration is closed.",
     publicTabLast: "At least one tab stays on.",
     publicTabUntitled: "Leaderboard (no title yet)",
     registration: "Rider registration",
@@ -549,7 +548,7 @@ export const copy = {
       pickDate: "Pick a date",
       endBeforeStart: "The last day cannot be before the first day",
       closesAfterEnd: "Registration cannot close after the event has ended",
-      oneTabOn: "At least one tab must stay on (Join does not count: it hides itself while registration is closed).",
+      oneTabOn: "At least one tab must stay on.",
       useTime: "Use the form 18:30",
       wholeNumber: "Use a whole number",
       maxPerDivision: "Use a number from 1 to 500, or leave it empty for no limit",
@@ -3030,6 +3029,12 @@ export const copy = {
       },
       pinNote: "Enter your PIN on the next screen.",
       or: "or",
+      /** Riders' part of the Join tab (Polish 3, item 12): the registration page when it is open, the closed notice when it is not. */
+      riders: {
+        heading: "Riders",
+        registerTitle: "Register to ride",
+        registerText: "Sign up for a division. The organiser confirms your place.",
+      },
     },
     leaderboards: { title: (t: string) => t, open: "Open the leaderboard", opens: "Opens the website of the organiser of this leaderboard in a new tab.", embedFallback: "If nothing shows below, open it in its own tab:" },
     screen: {
@@ -4164,7 +4169,7 @@ export const help: Record<string, Help> = {
   "event.impressionName": { text: "What the separate score per rider is called on every screen: the console's card, the judges' phones, the review bar, the rider sheet, the public results and the big screen. Leave it empty to keep the name each division's scoring gives it (Impression for most).", example: "Variety" },
   "event.lastMinuteSec": { text: "How much time must be left in the heat for the flag to go yellow again, with one horn.", example: "1:00 (60 seconds)" },
   "event.screenColour": { text: "The colours the big screen opens in: Dark (white on a dark ground) or Day (dark text on a light ground, for bright sun). A screen can switch with a tap or the D key, and it remembers its own choice.", example: "Dark for a tent, Day for the open beach" },
-  "event.publicTabs": { text: "Every tab of the public event page has a switch. A tab you switch off disappears, and an old link to it lands on the first tab that is left.", example: "Switch off Rules if the rules are read out on the beach." },
+  "event.publicTabs": { text: "Every tab of the public event page has a switch. A tab you switch off disappears, and an old link to it lands on the first tab that is left. The Join tab follows its own switch only: it stays while registration is closed, because officials enter their PIN there; riders then read “Registration is closed”.", example: "Switch off Rules if the rules are read out on the beach." },
   "event.windBanner": { text: "Show the current wind call at the top of public pages and the big screen.", example: "“Wind: light, heats on hold”" },
   "event.registrationOpen": { text: "Open lets riders sign up on the event’s registration page. It is closed until you switch it on, and it only works once the event is published.", example: "Open it two weeks before the event." },
   "event.registrationCloses": { text: "The last day riders can register. Without a closing time the whole day counts.", example: "1 Oct for an event starting on 2 Oct" },

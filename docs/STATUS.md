@@ -1301,7 +1301,11 @@ Release entry 0.15.1 (`docs/RELEASES.md`). `npm test`; `npm run test:rls -- test
 9. **Refresh from event** (migration `20261102100100_polish3_sim_refresh.sql`, `settings-panel.tsx`): event settings and each division's scoring model/overrides/live settings, matched by name, before any heat has started.
 10. **Event step:** placeholder from the divisions' current names (`src/lib/org/impression-names.ts`); `errorSentence(message, { impressionName })`.
 
+11. **Collapsible Event step cards** (`src/components/org/fold-card.tsx`, `src/lib/org/fold-state.ts`, nine cards in `event-form.tsx`); the other organiser settings pages (organisation, platform) have no cards of this kind, only the Simple / More settings panel. Browser tests start with the cards remembered as open (`e2e/base.ts`, option `foldCardsOpen`); `e2e/fold-cards.spec.ts` uses the real defaults.
+12. **Join tab follows its own switch** (`src/lib/public/tabs.ts`); the Join page got a Riders part (`src/app/e/[slug]/join/page.tsx`): the registration link when open, "Registration is closed" when not.
+
 ### Not done / to confirm
+- The Join page had no rider part before; the Riders part was added (link, not the form).
 - Both migrations were applied to the hosted project (`npm run db:apply`) while working; `db:types` was rewritten.
 - Refresh from event does not copy the draw, heat lengths, format or run order.
 - "Clear actual times" never had a reason box, so nothing changed there. The `/design` preview consoles were left as mock-ups.
