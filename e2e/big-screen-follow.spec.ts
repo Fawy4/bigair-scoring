@@ -183,7 +183,9 @@ test("the Final goes live from the middle of the rotation and is published: thre
   await publishHeat("F-H1");
   await phaseIs(page, "rotation", 8_000);
   // the walk starts at the first page after "Judges reviewing": 7 pages, then round again
-  const startOf = async () => (await seenOf(page)).map((s) => s.k.startsWith("reviewing|")).lastIndexOf(true) + 1;
+  // (a poll that lands between the database's own steps of Publish can show the old newest page for a split second: the walk is counted from the Final's page)
+  const startOf = async () => (await seenOf(page)).findIndex((s, i, all) => s.k === `rotation|results|${f}` && all.slice(0, i).some((x) => x.k.startsWith("reviewing|")));
+  await expect.poll(startOf, { timeout: 8_000 }).toBeGreaterThanOrEqual(0);
   const start = await startOf();
   await expect.poll(async () => (await seenOf(page)).length - start, { timeout: (SECONDS + 2) * 9 * 1000, intervals: [500] }).toBeGreaterThanOrEqual(8);
   const walk = (await seenOf(page)).slice(start, start + 8);
