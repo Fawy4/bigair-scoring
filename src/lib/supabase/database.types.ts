@@ -669,6 +669,7 @@ export type Database = {
           name: string
           organisation_id: string | null
           published_at: string | null
+          retired_at: string | null
           updated_at: string
           version: number
         }
@@ -681,6 +682,7 @@ export type Database = {
           name: string
           organisation_id?: string | null
           published_at?: string | null
+          retired_at?: string | null
           updated_at?: string
           version?: number
         }
@@ -693,6 +695,7 @@ export type Database = {
           name?: string
           organisation_id?: string | null
           published_at?: string | null
+          retired_at?: string | null
           updated_at?: string
           version?: number
         }
@@ -1367,6 +1370,35 @@ export type Database = {
           },
         ]
       }
+      organisation_hidden_presets: {
+        Row: {
+          hidden_at: string
+          key: string
+          kind: string
+          organisation_id: string
+        }
+        Insert: {
+          hidden_at?: string
+          key: string
+          kind: string
+          organisation_id: string
+        }
+        Update: {
+          hidden_at?: string
+          key?: string
+          kind?: string
+          organisation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organisation_hidden_presets_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organisations: {
         Row: {
           archived_at: string | null
@@ -1576,6 +1608,24 @@ export type Database = {
           role?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      platform_default_presets: {
+        Row: {
+          key: string
+          kind: string
+          set_at: string
+        }
+        Insert: {
+          key: string
+          kind: string
+          set_at?: string
+        }
+        Update: {
+          key?: string
+          kind?: string
+          set_at?: string
         }
         Relationships: []
       }
@@ -1903,6 +1953,7 @@ export type Database = {
           name: string
           organisation_id: string | null
           published_at: string | null
+          retired_at: string | null
           updated_at: string
           version: number
         }
@@ -1915,6 +1966,7 @@ export type Database = {
           name: string
           organisation_id?: string | null
           published_at?: string | null
+          retired_at?: string | null
           updated_at?: string
           version?: number
         }
@@ -1927,6 +1979,7 @@ export type Database = {
           name?: string
           organisation_id?: string | null
           published_at?: string | null
+          retired_at?: string | null
           updated_at?: string
           version?: number
         }
@@ -2728,6 +2781,10 @@ export type Database = {
         Args: { p_org: string; p_slug_confirm: string }
         Returns: undefined
       }
+      admin_delete_preset: {
+        Args: { p_key: string; p_kind: string }
+        Returns: Json
+      }
       admin_health: { Args: never; Returns: Json }
       admin_move_event: {
         Args: { p_event: string; p_target_org: string }
@@ -2801,6 +2858,10 @@ export type Database = {
         Args: { p_name: string; p_org: string }
         Returns: undefined
       }
+      admin_rename_preset: {
+        Args: { p_key: string; p_kind: string; p_name: string }
+        Returns: undefined
+      }
       admin_save_platform_settings: {
         Args: { p_values: Json }
         Returns: undefined
@@ -2809,12 +2870,20 @@ export type Database = {
         Args: { p_org: string; p_tokens: number }
         Returns: undefined
       }
+      admin_set_default_preset: {
+        Args: { p_key: string; p_kind: string }
+        Returns: undefined
+      }
       admin_set_organisation_archived: {
         Args: { p_archived: boolean; p_org: string }
         Returns: undefined
       }
       admin_set_organisation_logo: {
         Args: { p_logo_url: string; p_org: string }
+        Returns: undefined
+      }
+      admin_set_preset_retired: {
+        Args: { p_key: string; p_kind: string; p_retired: boolean }
         Returns: undefined
       }
       admin_set_proposal_status: {
@@ -3041,6 +3110,10 @@ export type Database = {
       }
       delete_event: {
         Args: { p_event: string; p_slug_confirm: string }
+        Returns: Json
+      }
+      delete_org_preset: {
+        Args: { p_key: string; p_kind: string; p_org: string }
         Returns: Json
       }
       edit_attempt: {
@@ -3345,6 +3418,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      hide_builtin_preset: {
+        Args: {
+          p_hidden: boolean
+          p_key: string
+          p_kind: string
+          p_org: string
+        }
+        Returns: undefined
+      }
       import_riders: {
         Args: { p_division: string; p_rows: Json }
         Returns: Json
@@ -3518,6 +3600,10 @@ export type Database = {
       }
       remove_penalty: {
         Args: { p_penalty: string; p_reason: string }
+        Returns: undefined
+      }
+      rename_org_preset: {
+        Args: { p_key: string; p_kind: string; p_name: string; p_org: string }
         Returns: undefined
       }
       reopen_heat: {
