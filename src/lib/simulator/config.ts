@@ -38,6 +38,8 @@ export const SimConfigSchema = z.object({
   finalHeldHeat: z.string().nullable().default(null),
   /** "Run the whole event": every day's run order in turn, until every heat (the finals too) is published (Polish 2, item 7). */
   wholeEvent: z.boolean().default(false),
+  /** "Skip to end of heat" left this heat in review: the virtual head judge does not publish it; whoever presses Publish (or "End heat and publish") does (Polish 3, item 1). */
+  reviewHold: z.string().nullable().default(null),
 });
 export type SimConfig = z.infer<typeof SimConfigSchema>;
 

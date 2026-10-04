@@ -32,6 +32,7 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
   const canSkip = now === "running";
   const canEnd = now === "running" || now === "paused" || now === "ended" || now === "under_review";
   const whole = status.control.config.wholeEvent;
+  const [skipping, setSkipping] = React.useState(false);
   return (
     <section role="toolbar" aria-label={T.toolbarLabel} data-testid="sim-toolbar" className="flex flex-col gap-3 rounded-card border border-beach-line bg-beach-bg p-4">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
@@ -58,8 +59,8 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
             <Choice icon={Square} data-testid="sim-stop" disabled={pending || state === "stopped"} onClick={() => void act(() => setPlayState(eventId, "stopped"), undefined, (s) => ({ ...s, control: { ...s.control, state: "stopped" } }))}>
               {T.play.stop}
             </Choice>
-            <Choice icon={SkipForward} data-testid="sim-skip-end" title={canSkip ? T.skip.help.text : T.skip.why} disabled={pending || !canSkip} onClick={() => void act(() => skipToEndOfHeat(eventId), (r) => r.text)}>
-              {T.skip.button}
+            <Choice icon={SkipForward} data-testid="sim-skip-end" title={canSkip ? T.skip.help.text : T.skip.why} disabled={pending || skipping || !canSkip} onClick={() => { setSkipping(true); void act(() => skipToEndOfHeat(eventId), (r) => r.text).finally(() => setSkipping(false)); }}>
+              {skipping ? T.skip.working : T.skip.button}
             </Choice>
             <Choice icon={Flag} data-testid="sim-end-publish" title={canEnd ? T.endPublish.help.text : T.endPublish.why} disabled={pending || !canEnd} onClick={() => void act(() => endHeatAndPublish(eventId), (r) => r.text)}>
               {T.endPublish.button}

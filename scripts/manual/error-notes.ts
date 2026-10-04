@@ -280,6 +280,7 @@ export const NOTES: Record<string, Note> = {
   "headLive.sheetIncomplete": { m: "Shown on a judge's Impression / Variety sheet while a rider has neither a score nor Absent: Save and submit stays grey.", f: "Give every rider a score or Absent. Save keeps what you typed so far without submitting." },
   "simulator.skip.noHeat": { m: "Skip to end of heat was pressed while no heat was running, paused or waiting to be published.", f: "Press Start (or Run the whole event) and skip once a heat is on the water." },
   "simulator.skip.why": { m: "Skip to end of heat is grey: no heat is on the water or waiting to be published.", f: "Start the auto-play; the button turns on when a heat starts." },
+  "simulator.skip.paused": { m: "Skip to end of heat was pressed while the auto-play was paused (or the heat was paused on the water).", f: "Press Resume, then skip." },
   "simulator.play.lines.busy": { m: "Another tab asked for a step while this one was still working on its own (two panel tabs of the same simulation). With one tab open you should not see it.", f: "Close the other tab, or use it. If you see it with one tab open, reload the page." },
   "simulator.log.noCap": { f: "Divisions → Scoring → set “Attempts per rider”." },
   "simulator.needTyped": { m: "The Reset or Delete button is grey until the event's web address is typed.", f: "Type the address shown under the box." },

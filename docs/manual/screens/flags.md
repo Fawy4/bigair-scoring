@@ -74,7 +74,7 @@ Only while the yellow runs: the flag goes red, the heat goes back to “not star
 
 ## The simulator {#fl-sim}
 
-Virtual officials follow the sequence: they log and score only while the heat is **Running** or **Last minute**. The pre-start, the heat clock, the last minute and the break all run at the simulator's speed: at ×10 a 1:00 pre-start lasts 6 seconds and a 1:00 last minute 6 seconds. **Pause** from the simulator or from the console freezes the pre-start like the heat clock (one pause for everything), and the auto-play arms a heat only while it is playing and only when the head judge has not armed it. **Skip to end of heat** fast-forwards the virtual officials (every attempt logged and scored) and leaves the heat running; **End heat and publish** is the old skip. The scenario **Abort the start** waits for the next yellow and aborts it. See [Simulator](simulator.md).
+Virtual officials follow the sequence: they log and score only while the heat is **Running** or **Last minute**. The pre-start, the heat clock, the last minute and the break all run at the simulator's speed: at ×10 a 1:00 pre-start lasts 6 seconds and a 1:00 last minute 6 seconds. **Pause** from the simulator or from the console freezes the pre-start like the heat clock (one pause for everything), and the auto-play arms a heat only while it is playing and only when the head judge has not armed it. **Skip to end of heat** fast-forwards the virtual officials (every attempt logged and scored) and then ends the heat (flag red, clock 0:00) and leaves it under review, unpublished; **End heat and publish** ends and publishes it. The scenario **Abort the start** waits for the next yellow and aborts it. See [Simulator](simulator.md).
 
 ## What it depends on {#fl-depends}
 
