@@ -297,7 +297,7 @@ test("readable from 10 m on 1920 × 1080: every page of the walk fits without sh
     if (!checked.has(id)) checked.set(id, r);
     await page.waitForTimeout(700);
   }
-  expect(checked.size).toBeGreaterThanOrEqual(8); // 4 results pages (one split in two) and the ladder
+  expect([...checked.keys()], "pages seen").toHaveLength(7); // 4 heats' results (one split in two) and the ladder, as the walk of this event goes
   for (const [id, r] of checked) {
     expect(r.overflowY, `${id} overflows its room`).toBeLessThanOrEqual(1);
     expect(r.mainBottom, `${id} runs into the bottom line`).toBeLessThanOrEqual(r.footerTop + 1);
