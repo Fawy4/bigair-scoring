@@ -16,6 +16,8 @@ export interface EventTrickBase {
   latest: number;
   /** From this event's version to the newest published one, in words; null when the event is on the newest. */
   diff: VocabularyDiff | null;
+  /** Each division's stored trick base as it is in the database now, so the panel never starts from a page that was drawn before an update or another tab's save. */
+  divisionTrickBases: Record<string, unknown>;
 }
 
 /** The master version this event uses, and what "Update to latest" would change (the same words the owner saw when publishing). */
@@ -29,7 +31,9 @@ export async function loadEventTrickBase(eventId: string): Promise<{ ok: true; b
     const latest = await loadMasterVocabulary(supabase);
     if (latest) diff = diffVocabularies(mine.vocabulary, latest.vocabulary);
   }
-  return { ok: true, base: { vocabulary: mine.vocabulary, version: mine.version, latest: mine.latest, diff } };
+  const { data: divisions } = await supabase.from("divisions").select("id, trick_base").eq("event_id", eventId);
+  const divisionTrickBases = Object.fromEntries((divisions ?? []).map((d) => [d.id, d.trick_base]));
+  return { ok: true, base: { vocabulary: mine.vocabulary, version: mine.version, latest: mine.latest, diff, divisionTrickBases } };
 }
 
 /** "Update to latest": the whole event moves to the newest published version (refused while a heat is running or paused). */
