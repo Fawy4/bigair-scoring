@@ -80,7 +80,11 @@ describe.skipIf(!ENV_OK)("Audit 1b — flags and the start sequence (hosted deve
       if (codeOf(start) === "") expect(row.status).toBe("running");
       outcomes.push(`start:${codeOf(start) || "ok"} abort:${codeOf(abort) || "ok"} → ${row.status} [${lines.join(",")}]`);
       // A1b-6: when Abort lands first, the Start now press becomes a plain Start heat: the heat starts at once with no yellow (see docs/AUDIT.md)
-      if (codeOf(abort) === "" && codeOf(start) === "") expect(lines).toEqual(["heat_start_aborted", "heat_started"]);
+      // (the audit lines are stamped with each transaction's start time, so the Start that waited for the Abort's lock can be listed first: A1b-6)
+      if (codeOf(abort) === "" && codeOf(start) === "") {
+        expect([...lines].sort()).toEqual(["heat_start_aborted", "heat_started"]);
+        expect(row.status).toBe("running");
+      }
     }
     console.info("A1b 3b race before 0:00:", outcomes);
   }, 180_000);
@@ -105,20 +109,32 @@ describe.skipIf(!ENV_OK)("Audit 1b — flags and the start sequence (hosted deve
     expect((await audit(h)).filter((l) => l.action === "heat_started")).toHaveLength(1);
   }, 120_000);
 
-  it("flags switched off while the yellow is up (also a frozen yellow): the start is cancelled and nothing is left armed", async () => {
+  it("flags switched off while the yellow is up: the start is cancelled and nothing is left armed; nothing can arm while off", async () => {
     const h = await mkHeat(f, d);
     expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: h, p_prestart: 60 }))).toBe("");
-    await f.s.from("events").update({ settings: { ...settings, flags: { ...settings.flags, enabled: false } } }).eq("id", f.ids.evA1);
+    expect(codeOf(await f.s.from("events").update({ settings: { ...settings, flags: { ...settings.flags, enabled: false } } }).eq("id", f.ids.evA1))).toBe("");
     expect(await heatRow(f, h)).toMatchObject({ status: "scheduled", armed_at: null, prestart_sec: null });
-    await clean();
-    const h2 = await mkHeat(f, d);
-    expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: h2, p_prestart: 60 }))).toBe("");
-    expect(codeOf(await f.clients.head.rpc("pause_heat", { p_heat: h2 }))).toBe("");
-    await f.s.from("events").update({ settings: { ...settings, flags: { ...settings.flags, enabled: false } } }).eq("id", f.ids.evA1);
-    const r2 = (await f.s.from("heats").select("status, armed_at, prestart_sec, armed_paused_at").eq("id", h2).single()).data!;
-    expect(r2).toEqual({ status: "scheduled", armed_at: null, prestart_sec: null, armed_paused_at: null });
-    // nothing can arm while off
-    expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: h2, p_prestart: 60 }))).toContain("FLAGS_OFF");
+    expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: h, p_prestart: 60 }))).toContain("FLAGS_OFF");
+  });
+
+  // A1b-18: the same trigger clears armed_at but not armed_paused_at, which breaks the heats_armed_pair check. With a FROZEN yellow (Pause during the pre-start)
+  // the whole settings save is refused: the organiser cannot switch Flags off (the Event step's Save fails) and the heat stays armed.
+  it.fails("A1b-18: flags switched off while the yellow is frozen: the save goes through and nothing is left armed", async () => {
+    const h = await mkHeat(f, d);
+    expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: h, p_prestart: 60 }))).toBe("");
+    expect(codeOf(await f.clients.head.rpc("pause_heat", { p_heat: h }))).toBe("");
+    expect(codeOf(await f.clients.orgA.from("events").update({ settings: { ...settings, flags: { ...settings.flags, enabled: false } } }).eq("id", f.ids.evA1))).toBe("");
+    const r = (await f.s.from("heats").select("armed_at, armed_paused_at").eq("id", h).single()).data!;
+    expect(r).toEqual({ armed_at: null, armed_paused_at: null });
+  });
+  it("A1b-18 today: with a frozen yellow, switching Flags off is refused by the database (heats_armed_pair) and the heat stays armed", async () => {
+    const h = await mkHeat(f, d);
+    expect(codeOf(await f.clients.head.rpc("arm_heat", { p_heat: h, p_prestart: 60 }))).toBe("");
+    expect(codeOf(await f.clients.head.rpc("pause_heat", { p_heat: h }))).toBe("");
+    const res = await f.clients.orgA.from("events").update({ settings: { ...settings, flags: { ...settings.flags, enabled: false } } }).eq("id", f.ids.evA1);
+    expect(codeOf(res)).toMatch(/heats_armed_pair|check constraint/);
+    expect((await f.s.from("events").select("settings").eq("id", f.ids.evA1).single()).data!.settings).toMatchObject({ flags: { enabled: true } });
+    expect((await heatRow(f, h)).armed_at).not.toBeNull();
   });
 
   // A1b-1: the trigger that cancels an armed start when flags go off does not look at the clock. A heat whose pre-start is already over but whose start nobody

@@ -78,8 +78,10 @@ describe.skipIf(!ENV_OK)("Audit 1b — Gouna ladder on the database: seats fill 
           expect(changed, "the final feeds nothing").toHaveLength(0);
         } else {
           expect(changed.map((c) => c.entry_id), `publishing ${uid} fills one seat with its winner`).toEqual([winner]);
-          // that seat's label says where it came from: "1st … Heat <n>"
-          expect(JSON.stringify(changed[0].source ?? "")).toMatch(new RegExp(`H(eat )?${heat.number}\\b`));
+          // that seat says where it came from: 1st of this heat of this round
+          const src = changed[0].source as { round?: string; heat?: number; place?: number };
+          expect(src).toMatchObject({ round: uid.split("-")[0], place: 1 });
+          expect([heat.number, Number(uid.split("-H")[1])]).toContain(src.heat);
         }
       }
     }
