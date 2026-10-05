@@ -37,7 +37,7 @@ const nextSeconds = async (p: Page, id: string) => {
   const m = /Next heat in (\d+):(\d\d)/.exec((await p.getByTestId(id).first().innerText()).trim());
   return m ? Number(m[1]) * 60 + Number(m[2]) : -1;
 };
-const headLaptop = (browser: Browser) => open(browser, { width: 1280, height: 800 }, (p) => w.signInAs(p, "head", `/head/${w.eventId}`));
+const headLaptop = (browser: Browser) => open(browser, { width: 1600, height: 850 }, (p) => w.signInAs(p, "head", `/head/${w.eventId}`));
 
 test("G: End heat asks once; Cancel leaves the heat running; Confirm ends it", async ({ browser }) => {
   test.setTimeout(240_000);
@@ -45,6 +45,7 @@ test("G: End heat asks once; Cancel leaves the heat running; Confirm ends it", a
   const head = await headLaptop(browser);
   await expect(head.getByTestId("run-order")).toBeVisible({ timeout: 45_000 });
   await head.locator(`[data-testid="order-row"][data-heat="${w.heats[0]}"]`).click();
+  if (process.env.SHOT_DIR) await head.screenshot({ path: `${process.env.SHOT_DIR}/running-laptop.png` });
   await head.getByTestId("end").click();
   await expect(head.getByTestId("end-panel")).toContainText("End this heat now? The clock stops and the heat goes to review.");
   expect((await heatRow(w.heats[0])).status).toBe("running"); // nothing ended yet
@@ -175,14 +176,16 @@ test("I: the red banner says Finished and counts down Next heat in …; +1 min, 
   await expect.poll(async () => nextSeconds(marshal, "flag-next-heat"), { timeout: 20_000 }).toBeLessThanOrEqual(150);
   await expect.poll(async () => nextSeconds(follow, "screen-flag-next"), { timeout: 20_000 }).toBeLessThanOrEqual(150);
 
-  // the banner is never covered: the Break group and the Start controls are below it
+  // nothing covers the banner: the Break group (top row), the banner and the Start controls do not overlap
   const banner = await head.getByTestId("heat-timer").first().boundingBox();
   const group = await head.getByTestId("break-choice").boundingBox();
-  expect(banner && group && group.y >= banner.y + banner.height - 1).toBe(true);
+  const apart = (a: { x: number; y: number; width: number; height: number } | null, b: { x: number; y: number; width: number; height: number } | null) => Boolean(a && b && (a.y + a.height <= b.y + 1 || b.y + b.height <= a.y + 1 || a.x + a.width <= b.x + 1 || b.x + b.width <= a.x + 1));
+  expect(apart(banner, group)).toBe(true);
   // Pre-start stays right beside Start heat sequence (same line, Pre-start to its left)
   const pre = await head.getByTestId("prestart-choice").boundingBox();
   const go = await head.getByTestId("start").boundingBox();
-  expect(pre && go && group && Math.abs(pre.y + pre.height / 2 - (go.y + go.height / 2)) < 40 && pre.x < go.x && group.y > go.y).toBe(true);
+  expect(pre && go && Math.abs(pre.y + pre.height / 2 - (go.y + go.height / 2)) < 40 && pre.x < go.x).toBe(true);
+  expect(apart(banner, pre) && apart(banner, go) && apart(group, pre) && apart(group, go)).toBe(true);
   if (process.env.SHOT_DIR) await head.screenshot({ path: `${process.env.SHOT_DIR}/break-laptop.png` });
 
   // at 0:00: "Next heat due", and nothing has started or armed (the break is cut to nothing behind the screen's back)

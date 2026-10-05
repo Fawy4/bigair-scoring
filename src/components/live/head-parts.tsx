@@ -106,7 +106,7 @@ export function StartWarning({ c }: { c: HeadController }) {
 }
 
 /** "Next: R1 · H3 · starts in 4:30" after a heat has ended, with "+1 min" and "Pause break". Nothing starts by itself. Hidden while a heat is on; with no run order, one line says why. */
-export function BreakStrip({ c }: { c: HeadController }) {
+export function BreakStrip({ c, inline = false }: { c: HeadController; inline?: boolean }) {
   const info = c.breakInfo;
   if (info.kind === "none") {
     const line = V.breakNone[info.reason];
@@ -119,18 +119,18 @@ export function BreakStrip({ c }: { c: HeadController }) {
   const late = info.state === "due" ? formatClock(info.lateMs) : "";
   const text = info.state === "counting" ? V.breakNext(c.nextTitle, formatClock(info.remainingMs)) : info.state === "due" ? V.breakDue(c.nextTitle, late) : V.breakPaused(c.nextTitle, formatClock(info.remainingMs));
   return (
-    <div data-testid="break-strip" data-state={info.state} className="flex flex-wrap items-center gap-2 rounded-card border border-beach-line bg-beach-surface px-2 py-1">
+    <div data-testid="break-strip" data-state={info.state} className={cn("flex flex-wrap items-center gap-2 rounded-card border border-beach-line bg-beach-surface px-2 py-0.5", inline && "min-w-0")}>
       <Clock aria-hidden className="size-4 shrink-0" />
-      <p data-testid="break-text" aria-live="off" className="min-w-0 flex-1 text-body font-semibold tabular-nums">
+      <p data-testid="break-text" aria-live="off" className="min-w-0 flex-1 text-small font-semibold tabular-nums">
         {text}
       </p>
       {info.state === "paused" ? (
-        <Btn testId="break-resume" tone="accent" disabled={c.pending || !c.planId} onClick={c.actions.resumeBreak}>
+        <Btn compact size="bar" testId="break-resume" tone="accent" disabled={c.pending || !c.planId} onClick={c.actions.resumeBreak}>
           {V.resumeBreak}
         </Btn>
       ) : (
         <>
-          <Btn testId="break-pause" disabled={c.pending || !c.planId} onClick={c.actions.pauseBreak}>
+          <Btn compact size="bar" testId="break-pause" disabled={c.pending || !c.planId} onClick={c.actions.pauseBreak}>
             {V.pauseBreak}
           </Btn>
         </>
@@ -139,8 +139,31 @@ export function BreakStrip({ c }: { c: HeadController }) {
   );
 }
 
+/** Why a grey Start / End button is grey, as one small line (the laptop console puts it in the top row, beside the messages). */
+export function WhyLine({ c }: { c: HeadController }) {
+  const { selected, state } = c;
+  const first = (["start", "end"] as ControlId[]).find((id) => !c.on(id));
+  const reason = first ? c.why(first) : undefined;
+  if (!selected || state === "cancelled" || state === "running" || state === "paused" || !reason) return null;
+  return (
+    <p data-testid="why-line" className="text-small font-medium text-beach-muted">
+      {reason}
+    </p>
+  );
+}
+
+/** "Sound on" / "Sound off": a small button that sits in the top row of the laptop console, or at the end of the timer bar. */
+export function SoundToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" data-testid="sound-toggle" aria-pressed={on} onClick={onToggle} className="inline-flex min-h-bar items-center gap-1 rounded-xl border border-beach-border bg-beach-bg px-2 text-small font-semibold text-beach-ink">
+      {on ? <Volume2 aria-hidden className="size-4" /> : <VolumeX aria-hidden className="size-4" />}
+      {on ? copy.live.timer.soundOn : copy.live.timer.soundOff}
+    </button>
+  );
+}
+
 /** The heat's name, the timer large (48 px) and Start / Pause / Resume / End right beside it. `withSound` adds "Sound on" (the laptop; the phone has it under Details). */
-export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadController; withSound?: boolean; onSoundToggle?: () => void; soundOn?: boolean }) {
+export function TimerBar({ c, withSound, onSoundToggle, soundOn, bar = false }: { c: HeadController; withSound?: boolean; onSoundToggle?: () => void; soundOn?: boolean; bar?: boolean }) {
   const { selected, state } = c;
   const live = state === "running" || state === "paused";
   const first = (["start", "end"] as ControlId[]).find((id) => !c.on(id));
@@ -162,9 +185,9 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
         <ClockText timezone={c.ctx.event.timezone} nowMs={c.nowServer} />
         <DriftBadge drift={c.drift} />
         {/* the banner has its own full-width line: nothing sits beside it or on top of it, so its words (state, break countdown, next heat) are never cut */}
-        {c.flag ? <FlagStrip model={c.flag} size="head" className="w-full basis-full" /> : selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
+        {c.flag ? <FlagStrip model={c.flag} size="head" className={bar ? "min-w-[18rem] flex-1 basis-80" : "w-full basis-full"} /> : selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
         {selected && state !== "cancelled" ? (
-          <div className="flex w-full basis-full flex-wrap items-center gap-2">
+          <div className={cn("flex flex-wrap items-center gap-2", bar ? "" : "w-full basis-full")}>
             {c.ctl && c.ctl.id !== selected.id && c.on("start") ? (
               <span data-testid="start-target" className="text-small font-semibold text-beach-muted">
                 {T.startNext(c.ctlTitle)}
@@ -205,15 +228,11 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
             <Btn compact size="bar" testId="end" reason={c.why("end")} disabled={c.pending || !c.on("end")} onClick={() => { c.setReason(""); c.setConfirmingEnd(true); }}>
               {T.end}
             </Btn>
-            {!c.armed ? <BreakChoice c={c} /> : null}
+            {!bar && !c.armed ? <BreakChoice c={c} /> : null}
+            {bar ? <BreakStrip c={c} inline /> : null}
           </div>
         ) : null}
-        {withSound && onSoundToggle ? (
-          <button type="button" data-testid="sound-toggle" aria-pressed={!!soundOn} onClick={onSoundToggle} className="inline-flex min-h-tap items-center gap-1 rounded-xl border border-beach-border bg-beach-bg px-3 text-small font-semibold text-beach-ink">
-            {soundOn ? <Volume2 aria-hidden className="size-4" /> : <VolumeX aria-hidden className="size-4" />}
-            {soundOn ? copy.live.timer.soundOn : copy.live.timer.soundOff}
-          </button>
-        ) : null}
+        {withSound && onSoundToggle ? <SoundToggle on={!!soundOn} onToggle={onSoundToggle} /> : null}
       </div>
       {selected && c.confirmingEnd && c.on("end") ? (
         <div data-testid="end-panel" role="group" aria-label={T.endQuestion} className="flex flex-col gap-1.5 rounded-xl border border-beach-border bg-beach-surface p-2">
@@ -232,7 +251,7 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
           </div>
         </div>
       ) : null}
-      {selected && state !== "cancelled" && !live && reason ? (
+      {!bar && selected && state !== "cancelled" && !live && reason ? (
         <p data-testid="why-line" className="text-small font-medium text-beach-muted">
           {reason}
         </p>
@@ -247,7 +266,7 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
  * (ticked, with its length), "+1 min", "+ Other…" (adds the typed time, like +1 min) and "Set length…" (the whole break, counted from the end of the last heat). A small field opens
  * under the buttons for the last two, one at a time. Each press changes the REAL break (the run order's), so the next heat's planned start moves on every screen; nothing starts.
  */
-export function BreakChoice({ c }: { c: HeadController }) {
+export function BreakChoice({ c, compact = false }: { c: HeadController; compact?: boolean }) {
   const info = c.breakInfo;
   const [mode, setMode] = useState<"add" | "set" | null>(null);
   const [text, setText] = useState("");
@@ -269,7 +288,7 @@ export function BreakChoice({ c }: { c: HeadController }) {
   };
   const id = mode === "add" ? "break-add" : "break-set";
   return (
-    <div data-testid="break-choice" role="group" aria-label={V.breakGroup} className="flex w-full basis-full flex-col gap-1 rounded-xl border border-beach-line bg-beach-surface px-2 py-1">
+    <div data-testid="break-choice" role="group" aria-label={V.breakGroup} className={cn("flex flex-col gap-1 rounded-xl border border-beach-line bg-beach-surface px-2 py-1", compact ? "" : "w-full basis-full")}>
       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
         <span className="text-small font-semibold text-beach-muted">{V.breakGroup}</span>
         <span data-testid="break-length" aria-current="true" className="inline-flex min-h-tap items-center gap-1 rounded-lg border-2 border-beach-accent bg-beach-bg px-2 text-small font-semibold tabular-nums text-beach-ink">
@@ -680,7 +699,7 @@ export function ReviewButtons({ c, compact = false, visibility = true }: { c: He
 export function ControlMessage({ c }: { c: HeadController }) {
   const { message, pending } = c;
   return (
-    <p data-testid="control-message" data-ok={message?.ok ?? ""} role={message && !message.ok ? "alert" : "status"} aria-live="polite" className={cn("min-h-[1.5rem] text-body font-semibold", message && !message.ok && "rounded-lg border border-beach-failed bg-beach-surface px-2 py-1")}>
+    <p data-testid="control-message" data-ok={message?.ok ?? ""} role={message && !message.ok ? "alert" : "status"} aria-live="polite" className={cn("min-h-[1.5rem] text-small font-semibold", message && !message.ok && "rounded-lg border border-beach-failed bg-beach-surface px-2 py-1")}>
       {pending ? T.working : (message?.text ?? "")}
     </p>
   );
