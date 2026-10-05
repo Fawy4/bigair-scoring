@@ -6,7 +6,7 @@ Last checked: 4 Oct 2026 · Product version 0.17.0
 
 ## What it is for {#ph-purpose}
 
-The front door. At the top: the product name large, the tagline on one line and the **jump arc** (a thick arc drawn in the brand's one accent colour, electric orange). Under it, only published, public events: **Live now** first (the first live event is a larger card with a gently pulsing dot and “Now: Pro Men · R1 · Heat 3”), then **Coming up**, then **Results** (a quiet “Results” tag on each finished event). Every card is one tap target that opens the event page. Simulation and archived events never appear. The page follows the phone's light or dark setting.
+The front door. At the top: the product name large, the tagline on one line; the only accent colour on the page (electric orange) is the **Go** button. Under it, only published, public events: **Live now** first (the first live event is a larger card with a gently pulsing dot and “Now: Pro Men · R1 · Heat 3”), then **Coming up**, then **Results** (a quiet “Results” tag on each finished event). Every card is one tap target that opens the event page. Simulation and archived events never appear. The page follows the phone's light or dark setting.
 
 ![Home page: a live event, light, laptop](../img/public-home-live-light-1280.png)
 *public-home-live-light-1280.png — a live event first and larger, then the event code field.*

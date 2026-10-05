@@ -1,5 +1,4 @@
-/* The front door (Polish 4). Its own small set of tokens, scoped to .home: near-black #111111, one accent (electric orange #FF6A00) used for the jump arc and the primary
-   action only, 1 px frames, 16 px cards, no shadows, no gradients. Dark and light follow the device. Text pairs are at least 7:1 (the beach standard):
+/* The front door (Polish 4). Its own small set of tokens, scoped to .home: near-black #111111, one accent (electric orange #FF6A00) used for the primary action only, 1 px frames, 16 px cards, no shadows, no gradients. Dark and light follow the device. Text pairs are at least 7:1 (the beach standard):
    ink on bg 17:1 / 17:1, muted on bg 8.4:1 / 10:1, black on the accent 7.4:1. The only movement on the page is the live dot (see .home-dot). */
 .home {
   --h-bg: #ffffff;
@@ -46,17 +45,11 @@
   }
 }
 
-/* hero: the wordmark large, the tagline in one line, the jump arc beside or under it */
+/* hero: the wordmark large, the tagline in one line */
 .home-hero {
   display: grid;
   gap: 16px;
   align-items: center;
-}
-@media (min-width: 880px) {
-  .home-hero {
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-    gap: 32px;
-  }
 }
 .home-logo {
   height: 48px;
@@ -77,16 +70,6 @@
   font-size: clamp(15px, 4vw, 18px);
   font-weight: 500;
   color: var(--h-muted);
-}
-.home-arc {
-  width: 100%;
-  height: auto;
-  max-height: 260px;
-  display: block;
-  color: var(--h-ink);
-}
-.home-arc .arc {
-  stroke: var(--h-accent);
 }
 
 /* section labels: 13 px uppercase */

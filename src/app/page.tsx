@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { HomeEventCode } from "@/components/home/home-event-code";
-import { JumpArc } from "@/components/home/arc";
 import { EventsView } from "@/components/home/events-view";
 import type { LandingEvent } from "@/components/landing-event-card";
 import "./home.css";
@@ -58,7 +57,7 @@ async function Events() {
   return <EventsView groups={groups} nowLines={nows} failed={Boolean(error)} />;
 }
 
-/** For riders and spectators. The hero (wordmark, tagline, the jump arc) does not wait for the events: the list streams in under it. */
+/** For riders and spectators. The hero (wordmark, tagline) does not wait for the events: the list streams in under it. */
 export default async function Home() {
   const settings = await getPlatformSettings();
   const hasLegal = Boolean(settings.legalTexts.terms || settings.legalTexts.privacy);
@@ -74,7 +73,6 @@ export default async function Home() {
             <h1 className="home-wordmark">{settings.productName}</h1>
             <p className="home-tagline">{settings.tagline}</p>
           </div>
-          <JumpArc />
         </header>
 
         <Suspense fallback={<div className="home-skeleton" aria-hidden />}>
