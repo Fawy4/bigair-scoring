@@ -3472,8 +3472,10 @@ export const copy = {
   },
   windCall: {
     heading: "Wind call",
-    help: "The call shows as a banner at the top of the public pages and the big screen. Pick a colour, add a short message if you like, and press Set.",
-    states: { red: "Red — stop", amber: "Amber — caution", green: "Green — go" } as Record<string, string>,
+    help: "The call shows as a banner at the top of the public pages and the big screen. Pick a colour (the filled, ticked button is the one picked; “On now” marks the call that is showing), add a short message if you like, and press Set. With no message the banner shows Stop, Hold or LETS GO!.",
+    states: { red: "Red — Stop", amber: "Amber — Hold", green: "Green — LETS GO!" } as Record<string, string>,
+    /** Beside the button of the call that is showing now (the ticked, filled button is the one picked to be set). */
+    showingTag: "On now",
     message: "Message (shown with the call)",
     messagePlaceholder: "Light wind — heats on hold",
     set: "Set wind call",

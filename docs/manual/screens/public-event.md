@@ -21,7 +21,7 @@ Riders check when they ride; spectators follow the day. Pages ask the server for
 | Control | What it does |
 |---|---|
 | Tabs | **Home**, **Live**, **Results**, **Ladder**, **Riders** (everybody on the public list; each name opens that rider's page), **Placings**, **Rules**, **Join**, and one tab per outside leaderboard set in the Event step. The organiser chooses which of them show (Event step → **Public page**): a tab that is switched off disappears, and an old link to it lands on the first tab that is left, never on a “not found”. **Join** follows its own switch and nothing else: it stays when registration is closed, because officials enter their PIN there. The big screen is not affected. |
-| Wind banner | “Wind: Red — stop / Amber — caution / Green — go” with the message, when the organiser or head judge set a wind call and the banner switch is on. |
+| Wind banner | “Wind Call: ‹message›” (or, with no message, “Wind Call: Stop / Hold / LETS GO!”), when the organiser or head judge set a wind call and the banner switch is on. |
 | **Now** | “Now: Pro Men · R1 · Heat 2 · 6:12 left” (the clock from the server's stamps), **Open the live heat**; or “No heat is running right now.” |
 | **Up next** | The next two heats with estimated times. |
 | **Today’s timetable** | Every row with its state: Done, Live, Next, Estimated, On hold, Pinned (“Not before this time”), Cancelled; “Times are estimates and update live.”; on hold: “Competition on hold — times will update when we resume.”; when the day has slipped: “Running about 6 min late”. A row with no length or whose heat left the draw is hidden. |

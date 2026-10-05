@@ -135,7 +135,7 @@ for (const mode of MODES) {
     await expect(page.getByTestId("screen-rider").first()).toBeVisible();
     const digit = await page.getByTestId("screen-rider").first().locator("span").last().evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
     expect(digit).toBeGreaterThanOrEqual(100); // the same sizes in both modes
-    await expect(page.getByTestId("wind-banner")).toContainText("Green — go");
+    await expect(page.getByTestId("wind-banner")).toHaveText("Wind Call: Good to go");
     await shot("running");
     // the Lycra chip of the first rider is its own solid colour, with the word beside it
     await expect(page.getByTestId("screen-rider").first()).toContainText(/RED/i);
@@ -153,7 +153,7 @@ for (const mode of MODES) {
     await w.db.from("schedule_plans").update({ hold: { since: new Date().toISOString(), reason: "wind" } as never }).eq("id", plan!.id);
     await page.reload();
     await check();
-    await expect(page.getByTestId("wind-banner")).toContainText("Red");
+    await expect(page.getByTestId("wind-banner")).toHaveText("Wind Call: Wind hold — heats paused");
     await slide("Timetable");
     await shot("wind-hold");
     await w.db.from("schedule_plans").update({ hold: null }).eq("id", plan!.id);

@@ -1,4 +1,5 @@
 import { devices, expect, test, type Page } from "@playwright/test";
+import { installSupabaseProxy } from "./base";
 import { createPublicWorld, type PublicWorld } from "./public-world";
 
 // Phase 6: the public event site as a visitor on a phone sees it (no login anywhere). One throwaway event: Pro Men with a published heat and a heat on the water
@@ -276,13 +277,44 @@ test("the big screen shows a podium once the final is released, and nothing whil
   await expect(page.locator('[data-testid="placing-row"][data-place="3="]').first()).toBeVisible();
 });
 
+test("the wind call buttons show which one is picked (ticked, filled, thick border) and which one is on now; amber says Hold", async ({ page }) => {
+  await installSupabaseProxy(page.context()); // the control reads the current call from the browser (this sandbox cannot reach the database directly)
+  await w.org.signIn(page, `/org/events/${w.eventId}`);
+  await expect(page.getByTestId("wind-amber")).toHaveText(/Amber — Hold/);
+  await expect(page.getByTestId("wind-red")).toHaveText(/Red — Stop/);
+  await expect(page.getByTestId("wind-green")).toHaveText(/Green — LETS GO!/);
+  const width = (id: string) => page.getByTestId(id).evaluate((e) => parseFloat(getComputedStyle(e).borderTopWidth));
+  await page.getByTestId("wind-red").click();
+  await expect(page.getByTestId("wind-red")).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByTestId("wind-amber")).toHaveAttribute("aria-checked", "false");
+  await expect(page.getByTestId("wind-green")).toHaveAttribute("aria-checked", "false");
+  expect(await width("wind-red")).toBeGreaterThanOrEqual(3);
+  expect(await width("wind-amber")).toBeLessThanOrEqual(1);
+  await page.getByTestId("wind-green").click();
+  await expect(page.getByTestId("wind-green")).toHaveAttribute("data-selected", "true");
+  await expect(page.getByTestId("wind-red")).toHaveAttribute("data-selected", "false");
+  // set amber: the button says it is on now, and after a reload the picked one is the one that is showing
+  await page.getByTestId("wind-amber").click();
+  await page.getByTestId("wind-set").click();
+  await expect(page.getByTestId("wind-note")).toHaveText("Wind call updated.");
+  await expect(page.getByTestId("wind-live-amber")).toHaveText("On now");
+  await expect(page.getByTestId("wind-live-red")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByTestId("wind-amber")).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByTestId("wind-live-amber")).toBeVisible();
+  await page.getByTestId("wind-green").click(); // picked: green, showing now: amber
+  if (process.env.SHOT_DIR) await page.getByTestId("wind-call").screenshot({ path: `${process.env.SHOT_DIR}/wind-control.png` });
+  await page.getByTestId("wind-clear").click();
+  await expect(page.getByTestId("wind-live-amber")).toHaveCount(0);
+});
+
 test("the organiser sets the wind call on the dashboard and visitors see the banner on their next poll", async ({ page, browser }) => {
   await w.org.signIn(page, `/org/events/${w.eventId}`);
   await page.getByTestId("wind-red").click();
   await page.getByLabel("Message (shown with the call)").fill("Gusts — all stop");
   await page.getByTestId("wind-set").click();
   await expect(page.getByTestId("wind-note")).toHaveText("Wind call updated.");
-  await expect(page.getByTestId("wind-now")).toContainText("Red — stop");
+  await expect(page.getByTestId("wind-now")).toContainText("Red — Stop");
   const visitor = await browser.newPage({ ...devices["Pixel 5"] });
   await visitor.goto(url());
   await expect(visitor.getByTestId("wind-banner")).toContainText("Gusts — all stop");
