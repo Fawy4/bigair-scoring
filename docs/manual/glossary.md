@@ -42,6 +42,7 @@ Last checked: 4 Oct 2026 · Product version 0.15.0
 | {#g-grab} **Grab / landing** | A family of the trick base for grabs and landing styles. *Tail grab; landed blind.* |
 | {#g-head-judge} **Head judge** | The official who starts heats, reviews and publishes (a seat, or an organiser). *She ends heat 2 and publishes at 10:24.* |
 | {#g-heat} **Heat** | A group of riders on the water together for a set time. *R1 · H2, 10 minutes, 4 riders.* |
+| {#g-heat-length} **Heat length** | How long a heat's clock runs. The draw gives every heat the length from **Timing per round**; the length on the heat's row in the run order replaces it until the heat starts, and the clock runs that. *Drawn at 10 minutes, set to 6 in the run order: it runs 6.* |
 | {#g-height} **Height** | A jump's measured height in metres, when a sensor is used; can fill the Height criterion, add a bonus, or give “Highest jump”. *Highest jump: 24.1 m.* |
 | {#g-flags} **Flags** | The four flag states the clock drives: **Before start** (yellow), **Running** (green), **Last minute** (yellow), **Stopped or paused** (red). On by default for every event. *The marshal's screen turns yellow, then green when the heat starts.* See [Flags and the start heat sequence](screens/flags.md). |
 | {#g-start-sequence} **Start heat sequence** | What **Start heat** becomes with the flags on: the yellow with the pre-start countdown, then the heat starts by itself. *Press Start heat sequence, 1:00 of yellow, green, the clock runs.* |
@@ -85,7 +86,7 @@ Last checked: 4 Oct 2026 · Product version 0.15.0
 | {#g-resume-at} **Resume at** | Ends a hold at a chosen time. *Resume at 13:30.* |
 | {#g-rider-label} **Rider label** | How a rider appears on every screen, from the identification scheme; the colour is always written too. *RED · Sam Rivera · EG.* |
 | {#g-round} **Round** | A step of the ladder: all heats that ride before the next step. *Round 1, Second-chance round, Semi-finals, Final.* |
-| {#g-run-order} **Run order** | The order of heats and breaks of a day with their times. *Pro Men R1 H1–H4, Pro Women R1, lunch, …* |
+| {#g-run-order} **Run order** | The order of heats and breaks of a day with their times. It is the live value for every heat that has not started: **the length on a heat's row is what the heat runs**, and so is the break after it; Timing per round is only the starting plan. *Pro Men R1 H1–H4, Pro Women R1, lunch, …* |
 | {#g-score} **Score** | A judge's number for a trick or the Impression / Variety. *7.5.* |
 | {#g-seat} **Seat** | (1) A place in a heat for one rider. *Seat 1 of R1 H2.* (2) An official's place in the event with its PIN. *“Judge 1”.* |
 | {#g-second-chance} **Second-chance round** | Riders who did not win a heat get one more heat to qualify. *Knockout with a second chance.* |

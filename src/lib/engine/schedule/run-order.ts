@@ -256,6 +256,17 @@ export function changeHeatLength(plan: SchedulePlan, heatId: string, minutes: nu
   return setDuration(plan, item.id, minutes, heats);
 }
 
+/**
+ * The length the heat clock runs, in seconds: the run order's length for a heat that has a row with a length of its own, else the heat's own copy (the length the draw
+ * gave it). The same rule as the database (`private.plan_length_sec` / `sync_heat_length`, applied when a run order changes and again when the start sequence begins),
+ * so the run order, the heat row, the clock and every screen read one number.
+ */
+export function clockLengthSec(plan: Pick<SchedulePlan, "items"> | null | undefined, heatId: string, ownCopySec: number): number {
+  const row = plan?.items.find((i) => i.kind === "heat" && i.heatId === heatId);
+  const min = row?.kind === "heat" ? row.durationMin : undefined;
+  return typeof min === "number" && Number.isFinite(min) && min > 0 ? Math.round(min * 60) : ownCopySec;
+}
+
 // ── the run order as the header and exports show it ─────────────────────────────
 
 /** "5 + 10 min" or "10 min" */

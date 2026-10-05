@@ -12,6 +12,26 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.17.1 — 6 Oct 2026 {#release-0-17-1}
+
+PR: #40
+
+### What changed
+- **The heat clock runs the run order's length.** Fault seen on the live address: you changed a heat's length in the run order and the run order showed the new length and re-flowed, but when the head judge started the heat the clock ran the old length, the one the draw had given it. Now the length on a heat's run order row is the one source: the moment you type it, the heat carries it, and when the heat starts (or its start sequence begins) its clock counts down from it. A heat that is in no run order, or whose row has no length of its own, still runs the length the draw gave it. Clearing a row's length gives the draw's length back.
+- **Every screen shows the same length before and during the heat:** the head console, the judges' and spotters' phones, the Flag view, both big screens and the public pages. **+1 min** and the last-minute yellow work on top of it, and a simulation at any speed divides the run order's length (6 minutes at ×10 runs 36 seconds).
+- **Heats that have started, ended or been published never change**, whatever is edited in the run order afterwards.
+- Under the hood: one new column on a heat (the length the draw gave it, remembered while the run order overrides it) and database functions that keep a not-started heat in step with its run order row. Nothing else was changed.
+- **Not in this version:** an “Apply to the not-started heats of this round” button next to Timing per round. It needs the Timing per round table to be editable after the draw is locked (it is read-only then), which is a bigger change; until then, set the length of a heat on its run order row.
+
+### What to test
+- [ ] Run order → set an un-run heat to **6** minutes (the draw says 10), press Start heat on the head console: the console, a judge's phone, the Flag view and the public live page all count down from **6:00**, and the heat ends at 0:00 after six minutes.
+- [ ] On the same run order, clear that heat's length box before starting another heat: that heat runs the length its round was drawn with (for example 10:00).
+- [ ] While a heat is running, change its length in the run order: the row is locked (a heat that started cannot be changed) and the clock keeps its own time; **+1 min** still adds a minute.
+
+### Known issues
+- “Apply to the not-started heats of this round” (Timing per round) is not built yet; change a heat's length on its run order row.
+- A simulation shows the public live page only to its organiser, so the Flag view and public live page were checked at ×1; at ×10 the console and a judge's phone were checked.
+
 ## 0.17.0 — 4 Oct 2026 {#release-0-17-0}
 
 PR: #39

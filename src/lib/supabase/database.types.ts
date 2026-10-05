@@ -962,6 +962,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null
@@ -995,6 +996,7 @@ export type Database = {
           armed_paused_at?: string | null
           created_at?: string
           division_id: string
+          draw_duration_sec?: number | null
           draw_uid?: string | null
           duration_sec?: number
           ended_at?: string | null
@@ -1028,6 +1030,7 @@ export type Database = {
           armed_paused_at?: string | null
           created_at?: string
           division_id?: string
+          draw_duration_sec?: number | null
           draw_uid?: string | null
           duration_sec?: number
           ended_at?: string | null
@@ -2629,6 +2632,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null
@@ -2950,6 +2954,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null
@@ -3009,6 +3014,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null
@@ -3174,6 +3180,7 @@ export type Database = {
               armed_paused_at: string | null
               created_at: string
               division_id: string
+              draw_duration_sec: number | null
               draw_uid: string | null
               duration_sec: number
               ended_at: string | null
@@ -3216,6 +3223,7 @@ export type Database = {
               armed_paused_at: string | null
               created_at: string
               division_id: string
+              draw_duration_sec: number | null
               draw_uid: string | null
               duration_sec: number
               ended_at: string | null
@@ -3258,6 +3266,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null
@@ -3302,6 +3311,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null
@@ -3344,6 +3354,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null
@@ -3592,6 +3603,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null
@@ -3718,6 +3730,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null
@@ -3859,6 +3872,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null
@@ -3901,6 +3915,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null
@@ -3990,6 +4005,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null
@@ -4392,6 +4408,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null
@@ -4434,6 +4451,7 @@ export type Database = {
           armed_paused_at: string | null
           created_at: string
           division_id: string
+          draw_duration_sec: number | null
           draw_uid: string | null
           duration_sec: number
           ended_at: string | null

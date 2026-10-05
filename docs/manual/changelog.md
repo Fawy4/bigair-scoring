@@ -2,7 +2,16 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 4 Oct 2026 · Product version 0.17.0
+Last checked: 6 Oct 2026 · Product version 0.17.1
+
+## 0.17.1 — 6 Oct 2026 {#cl-0-17-1}
+
+Release entry: [0.17.1](/admin/releases#release-0-17-1) (platform owner only)
+
+**What changed for users**
+- **The heat clock runs the run order's length.** Setting a heat to 6 minutes in the run order (the draw said 10) now makes the clock count down from 6:00 when the heat starts, on every screen; before, only the run order itself showed the 6. A heat with no run order row, or a row with no length, runs the draw's length. Started, ended and published heats never change; **+1 min** and a simulation's speed work on top.
+
+**Manual pages updated:** [Run order & timetable](screens/organiser-run-order.md), [Divisions](screens/organiser-divisions.md), [Glossary](glossary.md).
 
 ## 0.17.0 — 4 Oct 2026 {#cl-0-17-0}
 
