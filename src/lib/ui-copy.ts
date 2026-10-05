@@ -3766,7 +3766,6 @@ export const copy = {
     startAnyway: "Start anyway",
     startKeep: "Don\u2019t start",
     breakNext: (title: string, left: string) => `Next: ${title} \u00b7 starts in ${left}`,
-    breakElapsed: (time: string) => `break so far ${time}`,
     breakDue: (title: string, late: string) => `Next: ${title} \u00b7 ready to start \u00b7 ${late} late`,
     breakPaused: (title: string, left: string) => `Next: ${title} \u00b7 break paused \u00b7 ${left} left`,
     plusOne: "+1 min",

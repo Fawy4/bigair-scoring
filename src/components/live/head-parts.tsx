@@ -116,10 +116,11 @@ export function BreakStrip({ c, inline = false }: { c: HeadController; inline?: 
       </p>
     ) : null;
   }
-  const late = info.state === "due" ? formatClock(info.lateMs) : "";
-  const base = info.state === "counting" ? V.breakNext(c.nextTitle, formatClock(info.remainingMs)) : info.state === "due" ? V.breakDue(c.nextTitle, late) : V.breakPaused(c.nextTitle, formatClock(info.remainingMs));
-  // how long the break has really lasted since the last heat ended: it keeps running whatever the break is set to, and Pause break never stops it
-  const text = c.lastEndMs === null ? base : `${base} · ${V.breakElapsed(formatClock(Math.max(0, c.nowServer - c.lastEndMs)))}`;
+  // The clock counts to the next heat's planned start and then shows how late it is. It never stops: Pause break holds the run order (the red banner's countdown), not this clock,
+  // so it always shows how the real day compares with the plan.
+  const leftMs = Date.parse(info.startUtc) - c.nowServer;
+  const base = leftMs > 0 ? V.breakNext(c.nextTitle, formatClock(leftMs)) : V.breakDue(c.nextTitle, formatClock(-leftMs));
+  const text = base;
   return (
     <div className={cn("flex flex-wrap items-center gap-3", inline && "min-w-0")}>
       <div data-testid="break-strip" data-state={info.state} className="flex min-w-0 items-center gap-2 rounded-card border border-beach-line bg-beach-surface px-2 py-1">

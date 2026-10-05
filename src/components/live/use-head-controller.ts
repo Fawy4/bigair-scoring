@@ -272,7 +272,6 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     breakInfo,
     nextTitle,
     breakLengthMs,
-    lastEndMs,
     nowServer,
     drift,
     actions: {

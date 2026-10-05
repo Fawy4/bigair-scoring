@@ -104,18 +104,11 @@ test("start Heat 2 before Heat 1: one warning, the big timer beside Start / End;
   // Pause break holds the countdown until Resume
   await head.getByTestId("break-pause").click();
   await expect(head.getByTestId("break-strip")).toHaveAttribute("data-state", "paused", { timeout: 30_000 });
-  // the run order's countdown is held; the strip's own "break so far" keeps running
-  const part = async (re: RegExp) => re.exec((await head.getByTestId("break-text").textContent()) ?? "")?.[0] ?? "";
-  const frozen = await part(/starts in|break paused · [\d:]+ left/);
-  const left = async () => /break paused · ([\d:]+) left/.exec((await head.getByTestId("break-text").textContent()) ?? "")?.[1];
-  const leftNow = await left();
-  const sofar = async () => /break so far (\d+):(\d\d)/.exec((await head.getByTestId("break-text").textContent()) ?? "");
-  const s1 = await sofar();
+  // the run order's break is held, but the strip's own clock keeps running: it keeps counting to the planned start (and shows how late once it has passed)
+  const secs = async () => secondsOf((await head.getByTestId("break-text").textContent()) ?? "");
+  const t1 = await secs();
   await head.waitForTimeout(2500);
-  expect(await left()).toBe(leftNow);
-  const s2 = await sofar();
-  expect(frozen).not.toBe("");
-  expect(Number(s2![1]) * 60 + Number(s2![2])).toBeGreaterThan(Number(s1![1]) * 60 + Number(s1![2]));
+  expect(await secs()).toBeLessThan(t1);
   await head.getByTestId("break-resume").click();
   await expect(head.getByTestId("break-strip")).toHaveAttribute("data-state", "counting", { timeout: 30_000 });
 });
