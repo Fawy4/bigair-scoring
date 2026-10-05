@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Chip } from "./chip";
 import { Pill } from "./pill";
 import type { LiveHeatState } from "./use-live-heat";
-import { auditLine, type AuditRow } from "@/lib/live/audit-lines";
+import { auditLine, isScoreChange, timeOfDay, type AuditRow } from "@/lib/live/audit-lines";
 import { resolveFlag } from "@/lib/live/head-actions";
 import type { HeadModel } from "@/lib/live/head-model";
 import { judgeNames, judgeWordOf } from "@/lib/live/judge-names";
@@ -42,13 +42,13 @@ export function useSideData(supabase: SupabaseClient, eventId: string, heat: Hea
   const loadAudit = useCallback(async () => {
     const { data } = await supabase
       .from("audit_log")
-      .select("id, action, reason, at, before, after")
+      .select("id, action, reason, at, before, after, table_name")
       .eq("event_id", eventId)
       .or(`after->>heat_id.eq.${heat.id},before->>heat_id.eq.${heat.id},row_id.eq.${heat.id}`)
       .order("at", { ascending: false })
       .limit(120);
     // only changes somebody made on purpose have a name of their own; the rest (every score a judge saves) is not worth a line here
-    if (data) setAudit((data as unknown as AuditRow[]).filter((r) => !["insert", "update", "delete"].includes(r.action)).slice(0, 30));
+    if (data) setAudit((data as unknown as AuditRow[]).filter((r) => !["insert", "update", "delete"].includes(r.action) || isScoreChange(r)).slice(0, 30));
   }, [supabase, eventId, heat.id]);
 
   // observers are never judges: they only show as "2 observers watching"
@@ -165,7 +165,7 @@ export function AgreementReport({ side, head, heat }: { side: SideData; head: He
 }
 
 /** This heat's audit log, in words. */
-export function AuditLog({ side, head, wordFor }: { side: SideData; head: HeadModel; wordFor: (entryId: string) => string }) {
+export function AuditLog({ side, head, wordFor, timezone }: { side: SideData; head: HeadModel; wordFor: (entryId: string) => string; timezone?: string }) {
   const word = (seatId: string) => judgeWordOf(side.judges.find((j) => j.id === seatId) ?? { name: null, tag: copy.live.matrix.aJudge });
   const attemptWord = (attemptId: string) => {
     const row = head.matrix.rows.find((r) => r.attemptId === attemptId);
@@ -177,7 +177,7 @@ export function AuditLog({ side, head, wordFor }: { side: SideData; head: HeadMo
       {side.audit.length === 0 ? <p className="text-small font-medium text-beach-muted">{copy.audit.empty}</p> : null}
       {side.audit.map((a) => (
         <p key={a.id} data-testid="audit-line" data-action={a.action} className="text-small font-medium">
-          {auditLine(a, { judgeWord: word, riderWord: wordFor, attemptWord })}
+          {auditLine(a, { judgeWord: word, riderWord: wordFor, attemptWord, ...(timezone ? { clock: (iso: string) => timeOfDay(iso, timezone) } : {}) })}
         </p>
       ))}
     </section>

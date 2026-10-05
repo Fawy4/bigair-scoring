@@ -56,6 +56,13 @@ async function send(supabase: SupabaseClient, item: QueueEntry, onSaved?: (kind:
       );
     case "impression":
       return done(await supabase.rpc("submit_impression", { p_heat: p.heatId, p_entry: p.entryId, p_value: p.value, p_client_key: item.clientKey, p_client_rev: item.clientRev }));
+    case "line_score":
+      // a score typed on a Rider sheet line: the server keeps it as a pending note, or (when the attempt has been logged meanwhile) gives it to that attempt
+      return done(await supabase.rpc("set_line_score", { p_heat: p.heatId, p_entry: p.entryId, p_line: p.line, p_score: p.score, p_client_key: item.clientKey, p_client_rev: item.clientRev }));
+    case "line_clear": {
+      const r = await supabase.rpc("clear_line_score", { p_heat: p.heatId, p_entry: p.entryId, p_line: p.line });
+      return classify(r);
+    }
     case "flag":
       return done(await supabase.rpc("submit_flag", { p_attempt: p.attemptId, p_kind: p.kind, p_note: p.note ?? null, p_client_key: item.clientKey }));
   }

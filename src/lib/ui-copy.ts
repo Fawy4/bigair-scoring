@@ -2889,6 +2889,11 @@ export const copy = {
       /** The small tag of a judge's place on the panel, shown under the seat name. */
       judgeTag: (n: number) => `J${n}`,
       aJudge: "A judge",
+      /** The label of a pending row in the console's score table: scores typed before the spotter logged the attempt. */
+      pendingTag: (judges: string) => `pending · ${judges}`,
+      pendingRow: (n: number) => `Attempt ${n} (not logged yet)`,
+      pendingTitle: "scores with no attempt",
+      pendingHelp: "Hatched rows are scores a judge typed before the spotter logged the attempt. They are not counted, not published and not shown to the public.",
       missing: "missing",
       missed: "missed",
       absent: "absent",
@@ -3572,6 +3577,12 @@ export const copy = {
       IMPRESSION_MISSING: (n?: string, c?: { impressionName?: string }) => `${n && n !== "1" ? `${n} riders have` : "A rider has"} no ${scoreName(c)} from you yet.`,
       IMPRESSION_NOT_OPEN: (_d?: string, c?: { impressionName?: string }) => `The ${scoreName(c)} opens when the heat has ended.`,
       NOT_SCORABLE: () => "A crash is not scored.",
+      /** Detail: the most lines this rider can have right now. */
+      LINE_PAST_CAP: (n?: string) => (n ? `There is no attempt ${Number(n) + 1} to score: this rider can have at most ${n} attempts.` : "There is no such attempt to score."),
+      LINE_SCORE_NOT_AVAILABLE: () => "This division is scored by criteria. Use the Queue.",
+      /** Detail: "‹rider id›:‹lines›;…" (the phone words it with the rider's name). */
+      PENDING_NOTES: () => "You still have scores with no attempt. Clear them first, then submit.",
+      PENDING_SCORES: () => "A judge still has a score with no attempt. Publish once it is cleared.",
       FLAG_NOT_APPLICABLE: () => "That flag does not fit this attempt.",
       BAD_FLAG: () => "That flag is not valid.",
       ENTRY_NOT_IN_DIVISION: () => "That rider is not in this division.",
@@ -3607,6 +3618,34 @@ export const copy = {
     reviewTab: "Review",
     impressionTab: "Impression",
     nothingToScore: "Nothing to score for this heat.",
+  },
+  /** The judge's second view, the Rider sheet: scores typed on numbered lines before the spotter has logged the attempt. */
+  riderSheet: {
+    switchLabel: "Scoring view",
+    queue: "Queue",
+    sheet: "Rider sheet",
+    switchHelp: "Queue: one attempt at a time, as the spotter logs it. Rider sheet: one rider's numbered lines, so you can score the jump the moment you see it.",
+    switchExample: "Example: you see Red land a jump. On the Rider sheet you type 7.5 on the next empty line; the trick appears when the spotter logs it.",
+    strip: "Riders",
+    pickRider: "Tap a rider to see their lines.",
+    sheetFor: (rider: string) => `${rider}: attempts`,
+    attemptNumber: (n: number) => `Attempt ${n}`,
+    waitingTrick: "waiting for the spotter",
+    crash: "Crash",
+    crashNote: "Crashed: no score",
+    scoreBox: (n: number) => `Score for attempt ${n}`,
+    placeholder: "0.0",
+    pendingTag: "pending",
+    pendingNote: "Your private note: it becomes your score when the spotter logs this attempt.",
+    noAttempt: "no attempt logged here",
+    clear: "Clear",
+    clearAria: (n: number) => `Clear the score on attempt ${n}`,
+    noRider: "No rider to score yet.",
+    criteriaOnly: "This division is scored by criteria, so the Rider sheet is not available here. Use the Queue.",
+    submitHeld: (what: string) => `You still have scores with no attempt: ${what}. Clear them, then submit.`,
+    submitHeldPart: (rider: string, lines: number[]) => `${rider}, attempt ${lines.join(", ")}`,
+    lockedNote: "Your sheet is locked: scores cannot be changed.",
+    openSheet: "Open the Rider sheet",
   },
   /** The spotter's phone (docs/PLAN-phase-5 step 2). */
   spotter: {
@@ -3824,6 +3863,8 @@ export const copy = {
     fix: "Fix",
     fixAria: (line: string) => `Fix: ${line}`,
     tie: (names: string) => `${names} are tied — choose the order`,
+    /** A judge's score typed before the attempt, still waiting for it. There is no override: the judge clears it, or the attempt is added. */
+    pending: (rider: string, judge: string) => `${rider}: ${judge} has a score with no attempt`,
     and: " and ",
   },
   /** Publish: the words of the dialogs and of the answers (src/lib/live/publish-core.ts). */
@@ -3942,6 +3983,7 @@ export const copy = {
     publishWithReason: "Publish with a reason",
     publishReasonHint: "Everything above can be published past, with a reason. It is written to the audit log.",
     publishNoOverride: "A tie is settled by choosing the order, never by a reason.",
+    publishNoOverridePending: "A score with no attempt is settled by the judge clearing it, or by adding the attempt, never by a reason.",
     chooseOrder: "Choose order",
     published: (version: number) => (version > 1 ? `Published — version ${version}` : "Published"),
     alreadyPublished: "Already published",
@@ -4158,6 +4200,10 @@ export const copy = {
     absent: "absent",
     missed: "missed",
     scoreMoved: "score moved to the kept attempt",
+    /** A judge changing their own score: "J2 changed attempt 3 from 7.0 to 8.5 at 14:21:05". */
+    scoreChanged: (judge: string, attempt: string, from: string, to: string, at: string | null) => `${judge} changed ${attempt} from ${from} to ${to}${at ? ` at ${at}` : ""}`,
+    /** A score typed on the Rider sheet before the attempt was logged, now on the attempt. */
+    scoreFromNote: (judge: string, attempt: string, score: string) => `${judge} · ${attempt}: ${score} (typed before the attempt was logged)`,
     impression: "Impression / Variety score",
     deleted: (a: string) => `Deleted attempt ${a}`,
     undone: (a: string) => `Spotter took back attempt ${a}`,

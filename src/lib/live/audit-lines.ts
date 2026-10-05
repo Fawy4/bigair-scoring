@@ -6,6 +6,8 @@ const T = copy.audit;
 export interface AuditRow {
   id: string;
   action: string;
+  /** The table the line is about ("trick_scores" for a judge changing their own score). */
+  table_name?: string;
   reason: string | null;
   at: string;
   before: Record<string, unknown> | null;
@@ -18,6 +20,19 @@ export interface AuditWords {
   riderWord: (entryId: string) => string;
   /** "Red 3": the rider and the attempt number. */
   attemptWord: (attemptId: string) => string;
+  /** The time of day of a change, in the event's time zone ("14:21:05"); none when not given. */
+  clock?: (iso: string) => string;
+}
+
+/** A line worth showing among the named changes: a judge changing their own score (the audit log keeps every one of them; the console lists the ones that changed a number). */
+export function isScoreChange(r: Pick<AuditRow, "action" | "table_name" | "before" | "after">): boolean {
+  if (r.action !== "update" || r.table_name !== "trick_scores" || !r.before || !r.after) return false;
+  return r.before.score !== r.after.score || r.before.missed !== r.after.missed;
+}
+
+/** "14:21:05" in the event's time zone. */
+export function timeOfDay(iso: string, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(new Date(iso));
 }
 
 const val = (o: Record<string, unknown> | null): string => {
@@ -42,6 +57,12 @@ export function auditLine(r: AuditRow, w: AuditWords): string {
   switch (r.action) {
     case "score_edited":
       return `${w.judgeWord(String(after.judge_seat_id ?? before.judge_seat_id ?? ""))} · ${attempt(after)}: ${val(r.before)} → ${val(r.after)}${because}`;
+    case "update":
+      if (isScoreChange({ action: r.action, table_name: r.table_name, before: r.before, after: r.after }))
+        return T.scoreChanged(w.judgeWord(String(after.judge_seat_id ?? before.judge_seat_id ?? "")), attempt(after), val(r.before), val(r.after), w.clock ? w.clock(r.at) : null);
+      return rowFallback(r, because);
+    case "score_from_note":
+      return T.scoreFromNote(w.judgeWord(String(after.judge_seat_id ?? "")), attempt(after), val(r.after));
     case "score_merged":
       return `${w.judgeWord(String(after.judge_seat_id ?? ""))} · ${attempt(after)}: ${T.scoreMoved}${because}`;
     case "impression_set":
@@ -88,9 +109,12 @@ export function auditLine(r: AuditRow, w: AuditWords): string {
       return `${T.cancelled}${because}`;
     case "heat_rerun":
       return `${T.rerun}${because}`;
-    default: {
-      const words = r.action.replace(/_/g, " ");
-      return `${words[0].toUpperCase()}${words.slice(1)}${because}`;
-    }
+    default:
+      return rowFallback(r, because);
   }
+}
+
+function rowFallback(r: AuditRow, because: string): string {
+  const words = r.action.replace(/_/g, " ");
+  return `${words[0].toUpperCase()}${words.slice(1)}${because}`;
 }

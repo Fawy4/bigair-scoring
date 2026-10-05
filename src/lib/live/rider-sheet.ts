@@ -171,20 +171,20 @@ export function submitBlockLines(notes: Array<SheetNote & { entryId: string }>, 
   return [...out.entries()].map(([entryId, lines]) => ({ entryId, lines: lines.sort((a, b) => a - b) })).sort((a, b) => a.entryId.localeCompare(b.entryId));
 }
 
-// ---- the switch "Queue / Rider sheet": remembered per device, default Queue
+// ---- the switch "Queue / Rider sheet": remembered per device (one choice for the whole phone, also on the head judge's Score tab), default Queue
 export type JudgeView = "queue" | "sheet";
 export const viewPreference = {
-  key: (eventId: string) => `bigair.judgeView.${eventId}`,
-  read(eventId: string, storage: Pick<Storage, "getItem"> | undefined): JudgeView {
+  key: "bigair.judgeView",
+  read(storage: Pick<Storage, "getItem"> | null | undefined): JudgeView {
     try {
-      return storage?.getItem(viewPreference.key(eventId)) === "sheet" ? "sheet" : "queue";
+      return storage?.getItem(viewPreference.key) === "sheet" ? "sheet" : "queue";
     } catch {
       return "queue";
     }
   },
-  write(eventId: string, view: JudgeView, storage: Pick<Storage, "setItem"> | undefined): void {
+  write(view: JudgeView, storage: Pick<Storage, "setItem"> | null | undefined): void {
     try {
-      storage?.setItem(viewPreference.key(eventId), view);
+      storage?.setItem(viewPreference.key, view);
     } catch {
       /* private mode: the choice lasts until the page closes */
     }

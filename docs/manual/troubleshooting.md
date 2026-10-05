@@ -69,6 +69,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “A heat of this event is running or paused. Update when no heat is running.” | Wait until no heat of the event is running or paused (between heats), then press Update to latest. | [Admin: trick base](errors.md#err-trickeditor-event-errors-heat-running) |
 | “A heat of this simulation has started, so the settings cannot be refreshed. Reset the simulation first.” | Reset the simulation, then refresh. | [Simulator](errors.md#err-simulator-errors-heat-started) |
 | “A heat that is no longer in the draw” | Take the row out with ✕ (or Take row out of the run order), then Add the heats that are missing. | [Organiser: Run order](errors.md#err-runorder-goneheat) |
+| “A judge still has a score with no attempt. Publish once it is cleared.” | Ask the judge named in the blocker to Clear it on their Rider sheet, or add the missing attempt (head judge, past the limit, with a reason). | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-pending-scores) |
 | “A later heat has already started, so this correction would change who rides in it. Nothing was changed.” | Reset or finish the later heat first, or leave the result. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-downstream-started) |
 | “A later heat that depends on this result has already started (‹heat›). Reset that heat first, then this one.” | Reset the later heat first, then this one. | [Resets](errors.md#err-resetparts-errors-downstream-started) |
 | “A later round was arranged by hand, so its seats cannot be rebuilt from the current draw. Nothing was changed.” | Follow the sentence. | [Resets](errors.md#err-reset-rebuildarranged) |
@@ -80,6 +81,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “A reason of at least 5 characters is needed, because results of this event were shown publicly.” | Follow the sentence. | [Resets](errors.md#err-reset-errors-reason-required) |
 | “A reset is not possible yet:” | Follow the sentence. | [Resets](errors.md#err-reset-blocked) |
 | “A rider needs a first and a last name.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-errors-namerequired) |
+| “A score with no attempt is settled by the judge clearing it, or by adding the attempt, never by a reason.” | Ask the judge named in the list to press Clear on that line of their Rider sheet, or add the attempt it belongs to (head judge: past the limit, with a reason). The line leaves the list at once. | [Head console](errors.md#err-headlive-publishnooverridepending) |
 | “A tie is settled by choosing the order, never by a reason.” | Press Choose order and set the order of the tied riders. | [Head console](errors.md#err-headlive-publishnooverride) |
 | “Abort the start sequence first.” | On the head console press Abort while the yellow is up, then reset. Nothing was changed. | [Resets](errors.md#err-reset-errors-heat-armed) |
 | “Add a division first (Step 2), then come back to add riders.” | Divisions step → + Add division. | [Organiser: Riders](errors.md#err-riders-nodivisions) |
@@ -276,6 +278,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Realtime: Not connected” | Reload; check the hotspot. Not blocking: screens still update by polling. | [Platform owner (/admin)](errors.md#err-admin-health-realtimeoff) |
 | “Registration cannot close after the event has ended” | Set the closing day on or before the event's last day. | [Organiser: event list and Event step](errors.md#err-event-validation-closesafterend) |
 | “Registration is closed for this event.” | Organiser: Event step → Rider registration → Open, closing day in the future; Published ticked. | [Rider registration](errors.md#err-registration-closeddefault) |
+| “‹rider›: ‹judge› has a score with no attempt” | Ask that judge to Clear it, or add the attempt it belongs to. Publish is blocked until then (no override). | [Other](errors.md#err-checklist-pending) |
 | “‹round›: ‹detail›. Send fewer places on, or make the heats bigger.” | Fix the red point it names; then Apply to draw is on. | [Organiser: Divisions](errors.md#err-custombuilder-eliminatesnobody) |
 | “Save or undo your changes first.” | Press Save as a new draft (or reload to drop the edits), then accept. | [Admin: trick base](errors.md#err-trickeditor-proposals-savefirst) |
 | “Save your changes first.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-savebeforepublish) |
@@ -481,6 +484,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “There are no heats yet. Make each division's draw first.” | Draw step → Generate draw for each division. | [Organiser: Run order](errors.md#err-runorder-noheats) |
 | “There are no open notes to export.” | Follow the sentence. | [Feedback notes](errors.md#err-feedback-exportnone) |
 | “There is no active run order for today.” | Run order step → pick today → Activate this plan. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-no-active-plan) |
+| “There is no attempt NaN to score: this rider can have at most ‹n› attempts.” | Type on one of the numbered lines of the sheet. The head judge can add an attempt past the limit, with a reason; its line then appears. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-line-past-cap) |
 | “There is no draw yet.” | Follow the sentence. | [Organiser: Draw](errors.md#err-draw-errors-nodraw) |
 | “There is no newer draft to publish.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-nothingtopublish) |
 | “There is no other organisation to move it to.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-org-movenoothers) |
@@ -503,6 +507,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “This division has no heats yet, so there is nothing to reset.” | Follow the sentence. | [Resets](errors.md#err-resetparts-division-noheats) |
 | “This division has no usable scoring rules, so it cannot be published.” | Divisions → the division → Scoring tab → choose a preset → Save. | [Head console](errors.md#err-publish-nomodel) |
 | “This division is full. Ask the organiser if you would like to be on a waiting list.” | Organiser: raise the number in the Event step, or add the rider by hand in Riders. | [Rider registration](errors.md#err-registration-fullline) |
+| “This division is scored by criteria. Use the Queue.” | Use the Queue view for this division. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-line-score-not-available) |
 | “This division's rules have no Impression / Variety score.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-no-impression) |
 | “This event has already been run, so it is not a clean starting point. Copy it before its first heat starts, or reset it first.” | Copy the event before its first heat, or reset it first. | [Simulator](errors.md#err-simulator-errors-source-already-run) |
 | “This event has no divisions to register for yet.” | Follow the sentence. | [Rider registration](errors.md#err-registration-nodivisions) |
@@ -609,6 +614,8 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “You are not on the panel of a heat that is running.” | Organiser: Officials → Panels → tick the judge for that division. | [Judge and spotter phones](errors.md#err-judge-notonpanel) |
 | “You cannot remove your own login.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-cannot-remove-self) |
 | “You do not have permission to do that.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-errors-notallowed) |
+| “You still have scores with no attempt: ‹what›. Clear them, then submit.” | Press Clear on those lines (Review → Rider sheet), then Submit. | [Other](errors.md#err-ridersheet-submitheld) |
+| “You still have scores with no attempt. Clear them first, then submit.” | Open the Rider sheet (Review), press Clear on the line that says “no attempt logged here” (or ask the head judge to add the attempt), then Submit. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-pending-notes) |
 | “Your phone could not start a session. Check your connection and try again.” | Check the connection; on iPhone join from the home-screen app, not a private tab. | [Officials joining](errors.md#err-join-errors-no-session) |
 | “Your sheet is locked. Ask the head judge to reopen it.” | Head judge reopens the sheet. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-sheet-locked) |
 <!-- generated:index:end -->

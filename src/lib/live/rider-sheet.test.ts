@@ -267,12 +267,14 @@ describe("mixed views: two judges on the Queue and two on the Rider sheet", () =
   it("the view is a per-device choice, kept apart from the scores: Queue unless the device chose the Rider sheet", () => {
     const store = new Map<string, string>();
     const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
-    expect(viewPreference.read("ev1", storage)).toBe("queue");
-    viewPreference.write("ev1", "sheet", storage);
-    expect(viewPreference.read("ev1", storage)).toBe("sheet");
-    expect(viewPreference.read("ev2", storage)).toBe("queue");
-    store.set(viewPreference.key("ev1"), "nonsense");
-    expect(viewPreference.read("ev1", storage)).toBe("queue");
-    expect(viewPreference.read("ev1", { getItem: () => { throw new Error("blocked"); } })).toBe("queue");
+    expect(viewPreference.read(storage)).toBe("queue");
+    viewPreference.write("sheet", storage);
+    expect(viewPreference.read(storage)).toBe("sheet");
+    viewPreference.write("queue", storage);
+    expect(viewPreference.read(storage)).toBe("queue");
+    store.set(viewPreference.key, "nonsense");
+    expect(viewPreference.read(storage)).toBe("queue");
+    expect(viewPreference.read(null)).toBe("queue");
+    expect(viewPreference.read({ getItem: () => { throw new Error("blocked"); } })).toBe("queue");
   });
 });

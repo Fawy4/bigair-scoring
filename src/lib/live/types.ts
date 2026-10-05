@@ -130,6 +130,19 @@ export interface SheetRow {
 }
 export const SHEET_COLUMNS = "id, heat_id, judge_seat_id, submitted_at, reopened_at, updated_at";
 
+/** A judge's pending note: a score typed on a Rider sheet line before the spotter logged the attempt. `slot` is the attempt number it waits for. Never counted, never public. */
+export interface PendingRow {
+  id: string;
+  heat_id: string;
+  entry_id: string;
+  judge_seat_id: string;
+  slot: number;
+  score: number;
+  client_rev: number;
+  updated_at: string;
+}
+export const PENDING_COLUMNS = "id, heat_id, entry_id, judge_seat_id, slot, score, client_rev, updated_at";
+
 export type SeatRole = "judge" | "head" | "spotter" | "announcer" | "observer";
 
 export interface LiveDivisionContext {

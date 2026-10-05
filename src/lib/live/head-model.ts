@@ -7,10 +7,10 @@ import { riderTotals, type RiderTotal } from "./head-totals";
 import { judgeWordFor } from "./judge-names";
 import { heatInputFromRows, type PenaltyRow } from "./heat-input";
 import { buildMatrix, type LiveMatrix } from "./matrix";
-import { publishChecklist, type Checklist } from "./publish-checklist";
+import { pendingBlockers, publishChecklist, type Checklist } from "./publish-checklist";
 import { effectiveUnsubmitted } from "./sheet-rule";
 import { tieSentences, type TieSentence } from "./tie-words";
-import type { AttemptRow, FlagRow, ImpressionRow, ScoreRow, SheetRow, SlotRow } from "./types";
+import type { AttemptRow, FlagRow, ImpressionRow, PendingRow, ScoreRow, SheetRow, SlotRow } from "./types";
 import { copy } from "@/lib/ui-copy";
 import { impressionNameOf } from "@/lib/schemas/impression-name";
 
@@ -54,9 +54,15 @@ export function buildHeadModel(input: {
   wordFor: (entryId: string) => string;
   showPercent?: boolean;
   flagOutCount?: number;
+  /** Scores judges typed on the Rider sheet that have no attempt yet: shown as pending rows, hold Publish back, never counted. */
+  pending?: PendingRow[];
+  /** The rider's name for the Publish blocker ("Omar Hassan: J3 has a score with no attempt"); the rider's word when not given. */
+  nameFor?: (entryId: string) => string;
+  /** The riders in seat order (pending rows follow it). */
+  riderOrder?: string[];
 }): HeadModel {
   const { model, panelSeatIds } = input;
-  const matrix = buildMatrix({ model, panelSeatIds, attempts: input.attempts, scores: input.scores, flags: input.flags, labelFor: input.labelFor });
+  const matrix = buildMatrix({ model, panelSeatIds, attempts: input.attempts, scores: input.scores, flags: input.flags, labelFor: input.labelFor, pending: input.pending, riderOrder: input.riderOrder });
   const totals = riderTotals(model, panelSeatIds, input.slots, input.attempts, input.scores, input.impressions, input.showPercent ?? false, input.penalties, input.decisions);
   const heatInput = heatInputFromRows(model, panelSeatIds, input.slots, input.attempts, input.scores, input.impressions, input.penalties, input.decisions);
   let result: HeatResult | null = null;
@@ -76,6 +82,9 @@ export function buildHeadModel(input: {
     attemptIdOf: (rider, seq) => input.attempts.find((a) => a.entry_id === rider && a.seq === seq && !a.deleted_at)?.id,
     riderLabel: input.wordFor,
     impressionLabel: copy.checklist.impressionWord(impressionNameOf(model)),
+    pending: pendingBlockers(input.pending ?? [], panelSeatIds),
+    riderName: input.nameFor,
+    judgeTag: (id) => copy.live.matrix.judgeTag((panelSeatIds.indexOf(id) < 0 ? 0 : panelSeatIds.indexOf(id)) + 1),
   });
   const decisions = input.decisions;
   const ties = result ? tieSentences(model, result, input.wordFor, decisions) : [];

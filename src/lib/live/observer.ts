@@ -138,6 +138,7 @@ interface MaskRows {
   flags: Array<{ judge_seat_id: string }>;
   sheets: Array<{ judge_seat_id: string }>;
   decisions: unknown[];
+  pending?: Array<{ judge_seat_id: string }>;
 }
 
 /**
@@ -148,11 +149,11 @@ export function maskFor<T extends MaskRows>(snap: T, role: string, seatId: strin
   const own = <R extends { judge_seat_id: string }>(l: R[]) => l.filter((r) => r.judge_seat_id === seatId);
   switch (role) {
     case "judge":
-      return { ...snap, scores: own(snap.scores), impressions: own(snap.impressions), flags: own(snap.flags), sheets: own(snap.sheets), decisions: [] };
+      return { ...snap, scores: own(snap.scores), impressions: own(snap.impressions), flags: own(snap.flags), sheets: own(snap.sheets), decisions: [], ...(snap.pending ? { pending: own(snap.pending) } : {}) };
     case "spotter":
-      return { ...snap, scores: [], impressions: [], flags: [], sheets: [], decisions: [] };
+      return { ...snap, scores: [], impressions: [], flags: [], sheets: [], decisions: [], ...(snap.pending ? { pending: [] } : {}) };
     case "announcer":
-      return { ...snap, flags: [], sheets: [], decisions: [] };
+      return { ...snap, flags: [], sheets: [], decisions: [], ...(snap.pending ? { pending: [] } : {}) };
     default:
       return snap;
   }

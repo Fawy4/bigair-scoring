@@ -15,7 +15,7 @@ import { signedInUser } from "@/lib/supabase/claims";
 import { errorSentence, parseError } from "./errors";
 import { heatInputFromRows } from "./heat-input";
 import { judgeWordFor } from "./judge-names";
-import { publishChecklist, type ChecklistItem } from "./publish-checklist";
+import { pendingBlockers, publishChecklist, type ChecklistItem } from "./publish-checklist";
 import { effectiveUnsubmitted } from "./sheet-rule";
 import type { AttemptRow, ImpressionRow, ScoreRow, SlotRow } from "./types";
 import { effectiveSetting, holdAtPublish } from "./visibility";
@@ -43,6 +43,8 @@ export interface PublishInputs {
   entries: Array<{ id: string; first_name: string | null; last_name: string | null }>;
   members: Array<{ judge_seat_id: string; seat_no: number }>;
   seats: Array<{ id: string; name: string; active: boolean; status: string }>;
+  /** Scores judges typed on the Rider sheet that still have no attempt (never counted; they hold Publish back, with no override). Absent from an older database. */
+  pending?: Array<{ entry_id: string; judge_seat_id: string; slot: number; line: number }>;
 }
 
 const fail = (code: string | null, message?: string): PublishResult => ({ ok: false, code, message: message ?? errorSentence(code) });
@@ -121,6 +123,9 @@ export async function publishHeatCore(
     attemptIdOf: (rider, seq) => attempts.find((a) => a.entry_id === rider && a.seq === seq && !a.deleted_at)?.id,
     riderLabel: (id) => softWord(labelOf(id)),
     impressionLabel: copy.checklist.impressionWord(impressionNameOf(model)),
+    pending: pendingBlockers(read.pending ?? [], panelSeatIds),
+    riderName: (id) => nameOf.get(id) ?? softWord(labelOf(id)),
+    judgeTag: (id) => copy.live.matrix.judgeTag((seatNo.get(id) ?? 0) || 1),
   });
   const reason = opts.override && checklist.items.length > 0 ? reasonOf(opts.overrideReason) : (opts.overrideReason?.trim() ?? "");
   if (checklist.items.length > 0) {

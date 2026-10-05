@@ -5,6 +5,7 @@ import { AnnouncerView } from "./announcer-view";
 import { AnnouncerFlags } from "./flag-cues";
 import { PhoneReview } from "./phone-review";
 import { HeadLiveConsole } from "./head-live-console";
+import { LearnMore } from "@/components/manual/learn-more";
 import type { FixTarget } from "@/lib/live/publish-checklist";
 import { TieDialog } from "./head-dialogs";
 import { BreakChoice, ControlMessage, WhyLine, SoundToggle, DivisionTabs, HeatDialogs, RunOrderList, StartWarning, TimerBar, TimingButtons, WindButton } from "./head-parts";
@@ -167,8 +168,11 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
       judgeWord: judgeWordFor(heatDivision.panelSeatIds, ctx.seatNames),
       showPercent: heatDivision.live.showPercentOfMax,
       flagOutCount: heatDivision.flagOut?.count,
+      pending: live.pending,
+      nameFor: (entryId: string) => riders.find((r) => r.entryId === entryId)?.name || wordFor(entryId),
+      riderOrder: riders.map((r) => r.entryId),
     });
-  }, [heatDivision, fresh, riders, ctx.seatNames, live.slots, live.attempts, live.scores, live.impressions, live.penalties, live.decisions, live.flags, live.sheets, wordFor]);
+  }, [heatDivision, fresh, riders, ctx.seatNames, live.slots, live.attempts, live.scores, live.impressions, live.penalties, live.decisions, live.flags, live.sheets, live.pending, wordFor]);
 
   // Impression / Variety scores open when the heat has ended: until then nothing is owed and nothing blocks Publish
   const closing = shown ? shown.status === "ended" || shown.status === "under_review" || (shown.status === "running" && remaining <= 0) : false;
@@ -229,6 +233,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
       {blockerItems.map((b) => (
         <p key={b.text} className="rounded-lg border border-beach-outlier bg-beach-bg px-2 py-0.5 text-body font-medium">
           {b.text}
+          {b.kind === "pending" ? <LearnMore href={copy.manual.href("cl-pending")} what={copy.live.matrix.pendingTitle} /> : null}
         </p>
       ))}
       {head.ties.map((t) => (

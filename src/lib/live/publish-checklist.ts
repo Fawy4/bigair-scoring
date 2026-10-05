@@ -3,7 +3,7 @@ import { copy } from "@/lib/ui-copy";
 
 const C = copy.checklist;
 
-export type ChecklistKind = "sheet" | "score" | "impression" | "tie";
+export type ChecklistKind = "sheet" | "score" | "impression" | "pending" | "tie";
 /** Where a blocker is fixed: one judge's cell of one attempt, one judge's Impression / Variety score of one rider, or the judge's sheet. */
 export type FixTarget =
   | { kind: "score"; seatId: string; attemptId: string }
@@ -21,11 +21,11 @@ export interface ChecklistItem {
 }
 export interface Checklist {
   items: ChecklistItem[];
-  /** Everything but a tie can be published past, with a reason (decision 3). */
+  /** Everything but a tie, or a score typed with no attempt, can be published past, with a reason (decision 3). */
   canOverride: boolean;
 }
 
-const ORDER: ChecklistKind[] = ["sheet", "score", "impression", "tie"];
+const ORDER: ChecklistKind[] = ["sheet", "score", "impression", "pending", "tie"];
 
 /**
  * What blocks Publish, in plain words and in a fixed order: submitted sheets, scores, Impression scores, ties (docs/08 §1H-7). Every line names the judge and
@@ -41,6 +41,12 @@ export function publishChecklist(input: {
   impressionLabel: string;
   /** The attempt's id from the rider and the attempt number, so a missing score's line opens that cell. */
   attemptIdOf?: (riderId: string, seq: number) => string | undefined;
+  /** Scores judges typed on the Rider sheet that still have no attempt: one entry per rider and judge. They hold Publish back with no override. */
+  pending?: Array<{ riderId: string; judgeId: string }>;
+  /** The rider as the blocker names them ("Omar Hassan"); the rider's word when not given. */
+  riderName?: (riderId: string) => string;
+  /** The judge as the blocker names them ("J3"); the judge's word when not given. */
+  judgeTag?: (judgeId: string) => string;
 }): Checklist {
   const judge = input.judgeWord;
   const targetOf = (b: PublishBlocker): FixTarget | undefined => {
@@ -68,6 +74,24 @@ export function publishChecklist(input: {
       items.push({ kind: "tie", text: C.tie(names.length <= 2 ? names.join(C.and) : `${names.slice(0, -1).join(", ")}${C.and}${names[names.length - 1]}`), riders: b.riders });
     }
   }
+  for (const n of input.pending ?? []) {
+    items.push({ kind: "pending", judge: n.judgeId, text: C.pending((input.riderName ?? input.riderLabel)(n.riderId), (input.judgeTag ?? judge)(n.judgeId)), riders: [n.riderId] });
+  }
   items.sort((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind));
-  return { items, canOverride: !items.some((i) => i.kind === "tie") };
+  return { items, canOverride: !items.some((i) => i.kind === "tie" || i.kind === "pending") };
+}
+
+/** One blocker per rider and panel judge who still holds a note typed on the Rider sheet with no attempt behind it. */
+export function pendingBlockers(notes: Array<{ entry_id: string; judge_seat_id: string }>, panelSeatIds: string[]): Array<{ riderId: string; judgeId: string }> {
+  const seen = new Set<string>();
+  const out: Array<{ riderId: string; judgeId: string }> = [];
+  for (const n of notes) {
+    const key = `${n.entry_id}|${n.judge_seat_id}`;
+    if (!panelSeatIds.includes(n.judge_seat_id) || seen.has(key)) continue;
+    seen.add(key);
+    out.push({ riderId: n.entry_id, judgeId: n.judge_seat_id });
+  }
+  // rider by rider (in the order the notes arrive), the judges of one rider in panel order
+  const riders = [...new Set(out.map((o) => o.riderId))];
+  return out.sort((a, b) => riders.indexOf(a.riderId) - riders.indexOf(b.riderId) || panelSeatIds.indexOf(a.judgeId) - panelSeatIds.indexOf(b.judgeId));
 }

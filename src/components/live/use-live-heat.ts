@@ -15,6 +15,7 @@ import {
   HEAT_COLUMNS,
   IMPRESSION_COLUMNS,
   PENALTY_COLUMNS,
+  PENDING_COLUMNS,
   SCORE_COLUMNS,
   SHEET_COLUMNS,
   SLOT_COLUMNS,
@@ -25,6 +26,7 @@ import {
   type ImpressionRow,
   type LiveContext,
   type PenaltyRowLive,
+  type PendingRow,
   type ScoreRow,
   type SheetRow,
   type SlotRow,
@@ -53,8 +55,10 @@ interface Snapshot {
   penalties: PenaltyRowLive[];
   /** The head judge's tie orders and publish overrides; judges get none (row security). */
   decisions: DecisionRow[];
+  /** Scores typed on a Rider sheet line before the attempt was logged: a judge reads only their own, the head judge and an observer all. Never counted. */
+  pending: PendingRow[];
 }
-const EMPTY: Snapshot = { slots: [], attempts: [], scores: [], impressions: [], flags: [], sheets: [], penalties: [], decisions: [] };
+const EMPTY: Snapshot = { slots: [], attempts: [], scores: [], impressions: [], flags: [], sheets: [], penalties: [], decisions: [], pending: [] };
 
 export interface LiveHeatState extends Snapshot {
   heats: HeatRow[];
@@ -72,7 +76,9 @@ export interface LiveHeatState extends Snapshot {
   /** Shows a hold or pins the server has just answered with, before the stream delivers them. */
   applyPlan: (planId: string, hold: Json | null, anchors: Json, items?: Json) => void;
   /** Puts a row the server has just returned (our own attempt, score, impression, flag or sheet) into the list at once, without waiting for the stream. */
-  apply: (key: "attempts" | "scores" | "impressions" | "flags" | "sheets" | "penalties" | "decisions", row: { id: string; heat_id?: string; updated_at?: string }) => void;
+  apply: (key: "attempts" | "scores" | "impressions" | "flags" | "sheets" | "penalties" | "decisions" | "pending", row: { id: string; heat_id?: string; updated_at?: string }) => void;
+  /** Takes a row out at once (a pending note the judge has just cleared); the stream's delete confirms it. */
+  drop: (key: "pending", id: string) => void;
 }
 
 /**
@@ -81,6 +87,11 @@ export interface LiveHeatState extends Snapshot {
  * and then applies the stream, so nothing is lost across a dropped connection. `nowServer` is the server-clock "now" for the screen's timer.
  */
 export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServer: number, pinnedHeatId?: string | null): LiveHeatState {
+  // The browser client is one object for the whole page and `channel(name)` hands back the channel that already has that name, so a second screen asking for the same
+  // heat (the head judge's Score tab sits inside the page that already follows the heat) would add listeners to a channel that has been subscribed ("cannot add
+  // postgres_changes callbacks after subscribe"). Each use gets its own channel name; every listener is attached before its own subscribe.
+  const instance = useRef<string>("");
+  if (!instance.current) instance.current = Math.random().toString(36).slice(2, 8);
   const [rawHeats, setHeats] = useState<HeatRow[]>(ctx.heats);
   // a heat whose pre-start is over is running from the armed moment (the database says the same), whoever has written that down yet
   const heats = useMemo(() => overlayHeats(rawHeats, nowServer), [rawHeats, nowServer]);
@@ -154,7 +165,7 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
   }, []);
   useEffect(() => {
     const ch = supabase
-      .channel(`heats-${ctx.event.id}`)
+      .channel(`heats-${ctx.event.id}-${instance.current}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "schedule_plans", filter: `event_id=eq.${ctx.event.id}` }, () => void refreshPlans())
       .on("postgres_changes", { event: "*", schema: "public", table: "heats", filter: `event_id=eq.${ctx.event.id}` }, (p) => {
         if (p.eventType === "DELETE") setHeats((l) => l.filter((h) => h.id !== (p.old as Row).id));
@@ -174,7 +185,7 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
   const fetchSnapshot = useCallback(
     async (id: string) => {
       const q = (table: string, cols: string) => supabase.from(table).select(cols).eq("heat_id", id);
-      const [slots, attempts, scores, impressions, flags, sheets, penalties, decisions] = await Promise.all([
+      const [slots, attempts, scores, impressions, flags, sheets, penalties, decisions, pending] = await Promise.all([
         q("heat_slots", SLOT_COLUMNS),
         q("trick_attempts", ATTEMPT_COLUMNS),
         q("trick_scores", SCORE_COLUMNS),
@@ -183,6 +194,7 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
         q("judge_sheets", SHEET_COLUMNS),
         q("penalties", PENALTY_COLUMNS),
         q("heat_decisions", DECISION_COLUMNS),
+        q("pending_scores", PENDING_COLUMNS),
       ]);
       setSnap({
         slots: (slots.data ?? []) as unknown as SlotRow[],
@@ -193,6 +205,7 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
         sheets: (sheets.data ?? []) as unknown as SheetRow[],
         penalties: (penalties.data ?? []) as unknown as PenaltyRowLive[],
         decisions: (decisions.data ?? []) as unknown as DecisionRow[],
+        pending: (pending.data ?? []) as unknown as PendingRow[],
       });
     },
     [supabase],
@@ -220,8 +233,9 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
       ["judge_sheets", "sheets"],
       ["penalties", "penalties"],
       ["heat_decisions", "decisions"],
+      ["pending_scores", "pending"],
     ];
-    let ch: RealtimeChannel = supabase.channel(`heat-${heatId}`);
+    let ch: RealtimeChannel = supabase.channel(`heat-${heatId}-${instance.current}`);
     for (const [table, key] of tables) {
       ch = ch.on("postgres_changes", { event: "*", schema: "public", table, filter: `heat_id=eq.${heatId}` }, (p) => {
         if (!live) return;
@@ -263,5 +277,9 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
     [heatId],
   );
 
-  return { heats, heat, phase, ...shownSnap, apply, plans, applyPlan, patchHeat, connected: up && (typeof navigator === "undefined" || navigator.onLine), submittedHeatIds: submittedMemory.current, refresh };
+  const drop = useCallback<LiveHeatState["drop"]>((_key, id) => {
+    setSnap((s) => ({ ...s, pending: s.pending.filter((r) => r.id !== id) }));
+  }, []);
+
+  return { heats, heat, phase, ...shownSnap, apply, drop, plans, applyPlan, patchHeat, connected: up && (typeof navigator === "undefined" || navigator.onLine), submittedHeatIds: submittedMemory.current, refresh };
 }

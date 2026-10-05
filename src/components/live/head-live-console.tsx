@@ -8,6 +8,7 @@ import { plain } from "./console-parts";
 import { AddAttemptDialog, CellDialog, DeleteDialog, EditAttemptDialog, FlagOutDialog, ImpressionDialog, MergeDialog, StatusDialog } from "./head-console-dialogs";
 import { TieDialog } from "./head-dialogs";
 import { HeadMatrix } from "./head-matrix";
+import { LearnMore } from "@/components/manual/learn-more";
 import { ReviewButtons, VisibilityBox } from "./head-parts";
 import { AgreementReport, AuditLog, JudgesStatus, OpenFlags, useSideData } from "./head-side-panel";
 import { useReview } from "./use-review";
@@ -296,6 +297,8 @@ export function HeadLiveConsole({
           tolerance={outlierTolerance(model)}
           judges={side.judges}
           model={{ judgeIds: head.matrix.judgeIds, rows: tableRows }}
+          pending={head.matrix.pending}
+          pendingAfterRider={order === "rider"}
           actions={
             open
               ? {
@@ -308,6 +311,11 @@ export function HeadLiveConsole({
               : {}
           }
         />
+        {head.matrix.pending.length > 0 ? (
+          <p data-testid="pending-help" className="text-small font-medium text-beach-muted">
+            {copy.live.matrix.pendingHelp}
+          </p>
+        ) : null}
       </div>
 
       <aside data-testid="head-side" className="flex min-w-0 flex-col gap-2">
@@ -318,7 +326,10 @@ export function HeadLiveConsole({
           <h3 className="text-heading font-semibold text-beach-muted">{blockerItems.length ? C.publishBlocked : H.nothingBlocks}</h3>
           {blockerItems.map((b) => (
             <div key={b.text} data-testid="blocker-line" data-kind={b.kind} className="flex items-center justify-between gap-2 rounded-lg border border-beach-outlier bg-beach-bg px-2 py-0.5">
-              <span className="min-w-0 text-body font-medium">{b.text}</span>
+              <span className="min-w-0 text-body font-medium">
+                {b.text}
+                {b.kind === "pending" ? <LearnMore href={copy.manual.href("cl-pending")} what={copy.live.matrix.pendingTitle} /> : null}
+              </span>
               {open && b.target ? (
                 <button type="button" data-testid="blocker-fix" aria-label={copy.checklist.fixAria(b.text)} onClick={() => openFix(b.target!)} className={plain}>
                   {copy.checklist.fix}
@@ -428,7 +439,7 @@ export function HeadLiveConsole({
           <div data-testid="more-panel" className="flex flex-col gap-2">
             <VisibilityBox c={c} />
             <AgreementReport side={side} head={head} heat={heat} />
-            <AuditLog side={side} head={head} wordFor={wordFor} />
+            <AuditLog side={side} head={head} wordFor={wordFor} timezone={ctx.event.timezone} />
             <ScreenSettings hideSound />
             {extras}
           </div>
