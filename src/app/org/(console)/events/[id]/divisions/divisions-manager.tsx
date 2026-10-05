@@ -115,7 +115,7 @@ export function DivisionsManager({
     start(async () => {
       const res = await addDivision(eventId, newName);
       if (!res.ok) return fail(res.error);
-      setDivisions((ds) => [...ds, { id: res.id, name: newName.trim(), sort_order: res.sortOrder, scoring_model_id: null, scoring_overrides: {}, format_template_id: null, format_params: {}, description: null, identification: null, trickBase: {}, liveSettings: {}, started: false, hasHeats: false, locked: false, riders: [], drawLocked: false }]);
+      setDivisions((ds) => [...ds, { id: res.id, name: newName.trim(), sort_order: res.sortOrder, scoring_model_id: res.scoringModelId, scoring_overrides: {}, format_template_id: null, format_params: {}, description: null, identification: null, trickBase: {}, liveSettings: {}, started: false, hasHeats: false, locked: false, riders: [], drawLocked: false }]);
       setOpenId(res.id);
       setNewName("");
       toast({ title: copy.divisions.added });

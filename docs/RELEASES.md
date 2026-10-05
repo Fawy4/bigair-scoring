@@ -22,6 +22,7 @@ PR: #39
 - **Built-in presets without JSON (owner).** Admin → Master presets lists scoring models and formats with **Add a preset**, **Edit** (the organisers' own Simple / More settings form), **Rename**, **Retire** / **Restore**, **Set as DEFAULT** and **Delete** (refused while any division uses it). **Save as built-in** appears on a division's settings while you are opened as an organisation. JSON import and export stay under Advanced.
 - **The Load… menu stays on screen.** Every menu of that kind on the organiser and admin screens opens upwards when there is no room below and never runs off the edge.
 - **A new home page.** The product name large, the live event first as a larger card with a gently pulsing dot, then Coming up and Results, the event code field and the quiet links; light or dark as the phone says. No sign-up, no new addresses, nothing else on the site changed.
+- **A new division's Scoring tab starts filled in.** It begins with the DEFAULT built-in scoring preset already applied and editable (no “Choose a scoring preset…” first). **Based on: KOTA-style… (edited)** shows where it came from and whether you changed it; **Load…** is still the way to start from another preset, and **Save as preset…** still saves your own. The live dot on the home page is orange too (the only other accent besides the Go button); the arc is gone.
 - Under the hood: two new tables (which built-ins an organisation hid, which built-in is the DEFAULT), a "retired" mark on presets and a few database functions; nothing existing was changed.
 
 ### What to test
@@ -31,6 +32,7 @@ PR: #39
 - [ ] In **Load…** → **⋯** on a built-in preset → **Hide**: it is gone from the menu and **Show hidden (1)** appears; press it, then **Show** on the entry: it is back. The preset marked DEFAULT has no Hide button.
 - [ ] Scroll the Divisions page until the **Load…** button is near the bottom of the screen and open it: the whole menu is on screen (it opens upwards).
 - [ ] As platform owner, Admin → **Master presets** → **Add a preset**: **Load…** a built-in, type a name, **Save**. Then **Edit** it, **Rename** it, **Retire** it (it vanishes from an organiser's Load… menu), **Restore** it, and **Delete** it. A division that loaded it earlier is unchanged.
+- [ ] Add a new division: its **Scoring** tab shows the form at once with “Based on: KOTA-style: best 3 tricks + impression”; change “Best tricks that count” and “(edited)” appears; **Load…** another preset and the settings change.
 - [ ] Open the home page on a phone and on a laptop, light and dark: one orange accent (the Go button), the live or next event as a clear card, the **Have an event code?** field and the quiet links; dark mode follows the phone.
 
 ### Known issues

@@ -1,4 +1,4 @@
-/* The front door (Polish 4). Its own small set of tokens, scoped to .home: near-black #111111, one accent (electric orange #FF6A00) used for the primary action only, 1 px frames, 16 px cards, no shadows, no gradients. Dark and light follow the device. Text pairs are at least 7:1 (the beach standard):
+/* The front door (Polish 4). Its own small set of tokens, scoped to .home: near-black #111111, one accent (electric orange #FF6A00) used for the primary action and the live dot only, 1 px frames, 16 px cards, no shadows, no gradients. Dark and light follow the device. Text pairs are at least 7:1 (the beach standard):
    ink on bg 17:1 / 17:1, muted on bg 8.4:1 / 10:1, black on the accent 7.4:1. The only movement on the page is the live dot (see .home-dot). */
 .home {
   --h-bg: #ffffff;
@@ -200,7 +200,7 @@
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  background: var(--h-ink);
+  background: var(--h-accent);
   animation: home-pulse 1.5s ease-in-out infinite;
 }
 @keyframes home-pulse {

@@ -135,7 +135,7 @@ for (const profile of PROFILES) {
           const ratio = await contrastOf(page, sel);
           expect(ratio, `${sel} on ${scheme}`).toBeGreaterThanOrEqual(7);
         }
-        // the accent appears in one place only: the primary action
+        // the accent appears in two places only: the primary action and the live dot
         const accent = await page.evaluate(() => {
           const orange = "rgb(255, 106, 0)";
           const hits: string[] = [];
@@ -145,7 +145,7 @@ for (const profile of PROFILES) {
           }
           return [...new Set(hits)].sort();
         });
-        expect(accent).toEqual(["home-go"]);
+        expect(accent).toEqual(["home-dot", "home-go"]);
       });
     }
   });

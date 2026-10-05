@@ -108,7 +108,12 @@ export function RulesPanel({
   const savedPresetId = scoring ? division.scoring_model_id : division.format_template_id;
   const savedOverrides = scoring ? division.scoring_overrides : division.format_params;
 
-  const [presetId, setPresetId] = useState<string | null>(savedPresetId);
+  // a division with no scoring preset yet starts from the owner's DEFAULT built-in, already applied and editable (nothing to choose first); Load… stays the way to start from another
+  const defaultRow = useMemo(
+    () => (scoring && defaultKey ? ([...presets].filter((p) => !p.organisation_id && p.key === defaultKey && !p.retired_at).sort((a, b) => b.version - a.version)[0] ?? null) : null),
+    [scoring, defaultKey, presets],
+  );
+  const [presetId, setPresetId] = useState<string | null>(savedPresetId ?? defaultRow?.id ?? null);
   const [custom, setCustom] = useState(false); // an unsaved custom ladder
   const [showPresetTools, setShowPresetTools] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
@@ -169,6 +174,14 @@ export function RulesPanel({
     setCustom(false);
     setMessage(null);
     setWorking(parsed?.success ? parsed.data : null);
+  }
+
+  /** The division now uses this just-saved preset: the form shows exactly what it stores (its name and id differ from the old working copy, which would read as an edit). */
+  function adopt(row: PresetRow) {
+    const parsed = parseWith(kind, row.json);
+    setPresetId(row.id);
+    setCustom(false);
+    if (parsed.success) setWorking(parsed.data);
   }
 
   /** A ladder card: load that type's built-in format (its newest version); without one in the list, swap the generator of what is open. */
@@ -263,8 +276,7 @@ export function RulesPanel({
       const applied = await saveDivisionRules({ divisionId: division.id, kind, presetId: res.row.id, overrides: {} });
       if (applied.ok) {
         onDivisionChange(scoring ? { scoring_model_id: res.row.id, scoring_overrides: {} } : { format_template_id: res.row.id, format_params: {} });
-        setPresetId(res.row.id);
-        setCustom(false);
+        adopt(res.row);
         setPresetName("");
       }
       report(applied, newVersion ? R.versionSavedUsing(res.row.name, res.row.version, division.name) : R.presetSavedUsing(res.row.name, division.name));
@@ -376,8 +388,7 @@ export function RulesPanel({
     const applied = await saveDivisionRules({ divisionId: division.id, kind, presetId: res.row.id, overrides: {} });
     if (!applied.ok) return { ok: false, error: applied.error };
     onDivisionChange(scoring ? { scoring_model_id: res.row.id, scoring_overrides: {} } : { format_template_id: res.row.id, format_params: {} });
-    setPresetId(res.row.id);
-    setCustom(false);
+    adopt(res.row);
     return { ok: true, message: copy.presetManage.updated(row.name, res.row.version) };
   }
   const nameOf = (key: string, own: boolean) => presets.find((p) => p.key === key && (own ? p.organisation_id === organisationId : !p.organisation_id))?.name ?? key;
@@ -431,6 +442,11 @@ export function RulesPanel({
     <div className="org-new flex min-w-0 flex-col gap-3 py-2">
       {scoring && baseRow && baseParsed && typeof baseParsed.description === "string" ? <p className="text-small font-medium text-beach-muted">{baseParsed.description}</p> : null}
       {!working && !custom && scoring ? <p className="text-body font-semibold">{R.chooseFirst(R.scoringWord)}</p> : null}
+      {baseRow && !custom && scoring ? (
+        <p className="text-small font-semibold" data-testid="based-on">
+          {R.basedOn(baseRow.name.replace(/\s*\(DEFAULT\)\s*$/, ""), Object.keys(overrides).length > 0)}
+        </p>
+      ) : null}
       {working && scoring ? <ScoringSimple working={working} onChange={setValue} errors={errors} readOnly={locked} /> : null}
 
       {!scoring ? (

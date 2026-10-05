@@ -45,16 +45,25 @@ async function eventOf(supabase: Supabase, divisionId: string) {
 // A save answers as soon as it is stored: no revalidatePath, which would make the answer wait for the server to draw the whole page again. The screen shows what it
 // saved by itself and refreshes the page (and the left rail) in the background.
 
-export async function addDivision(eventId: string, name: string): Promise<Ok<{ id: string; sortOrder: number }> | Fail> {
+/** The newest published version of the owner's DEFAULT built-in scoring preset: every new division starts with it already applied (null when none is set). */
+async function defaultScoringModelId(supabase: Supabase): Promise<string | null> {
+  const { data: def } = await supabase.from("platform_default_presets").select("key").eq("kind", "scoring_model").maybeSingle();
+  if (!def) return null;
+  const { data: rows } = await supabase.from("scoring_models").select("id, version, published_at").is("organisation_id", null).is("retired_at", null).eq("key", def.key).order("version", { ascending: false });
+  return (rows ?? []).find((r) => r.published_at)?.id ?? null;
+}
+
+export async function addDivision(eventId: string, name: string): Promise<Ok<{ id: string; sortOrder: number; scoringModelId: string | null }> | Fail> {
   const parsed = Name.safeParse(name);
   if (!parsed.success || !uuid.safeParse(eventId).success) return { ok: false, error: parsed.success ? E.unknownEvent : parsed.error.issues[0].message };
   const { supabase } = await getDb();
   const { data: last } = await supabase.from("divisions").select("sort_order").eq("event_id", eventId).order("sort_order", { ascending: false }).limit(1);
   const sortOrder = (last?.[0]?.sort_order ?? 0) + 1;
-  const { data, error } = await supabase.from("divisions").insert({ event_id: eventId, name: parsed.data, sort_order: sortOrder }).select("id").single();
+  const scoringModelId = await defaultScoringModelId(supabase);
+  const { data, error } = await supabase.from("divisions").insert({ event_id: eventId, name: parsed.data, sort_order: sortOrder, scoring_model_id: scoringModelId }).select("id").single();
   if (error) return { ok: false, error: explain(error.message) };
   await supabase.rpc("ensure_division_panel", { p_division: data.id }); // the scoring head judge is on every panel
-  return { ok: true, id: data.id, sortOrder };
+  return { ok: true, id: data.id, sortOrder, scoringModelId };
 }
 
 export async function renameDivision(divisionId: string, name: string): Promise<Ok<object> | Fail> {

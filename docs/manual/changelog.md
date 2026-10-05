@@ -11,6 +11,7 @@ Release entry: [0.17.0](/admin/releases#release-0-17-0) (platform owner only)
 **What changed for users**
 - **Presets you can manage.** In the **Load…** menu and on a new **Presets** card of Organisation settings: **Rename**, **Delete** (refused while a live division uses it, naming the division), **Update preset from this division** (one click, reason optional), and **Hide** / **Show hidden** for built-in presets (the DEFAULT cannot be hidden). A division that loaded a preset is never changed by what you do to the preset afterwards.
 - **Master presets (owner):** scoring and format built-ins are a list with **Add**, **Edit** (the organisers' own form, no JSON), **Rename**, **Retire** / **Restore**, **Set as DEFAULT**, **Delete** (refused while a division uses it) and **Save as built-in** from a division's settings. JSON import/export is under Advanced.
+- **A new division's Scoring tab starts filled in** with the DEFAULT built-in preset (“Based on: … (edited)”); Load… is optional.
 - **The Load… menu (and every menu of its kind) opens inside the screen**, upwards when there is no room below.
 - **A new home page:** the wordmark large, live event first and larger, Coming up, Results, the event code field, light and dark with the phone. Nothing else on the site changed.
 

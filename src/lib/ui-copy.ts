@@ -743,6 +743,7 @@ export const copy = {
     customUnsaved: "Custom ladder (not saved yet)",
     showAll: "Show all settings",
     showAllHint: "Simple shows only what most events need. Show all settings adds every option, each with a “?” explanation.",
+    basedOn: (name: string, edited: boolean) => `Based on: ${name}${edited ? " (edited)" : ""}`,
     chooseFirst: (what: string) => `Choose a ${what} to see and edit its settings.`,
     scoringWord: "scoring preset",
     formatWord: "format",
