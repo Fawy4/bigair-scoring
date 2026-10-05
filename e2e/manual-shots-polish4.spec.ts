@@ -132,3 +132,34 @@ test.describe("the home page pictures", () => {
     });
   }
 });
+
+test.describe("the Join page pictures", () => {
+  let w: LiveWorld;
+  test.beforeAll(async () => {
+    test.setTimeout(240_000);
+    w = await createLiveWorld();
+    await w.db.from("events").update({ status: "published" }).eq("id", w.eventId);
+  });
+  test.afterAll(async () => {
+    await w?.cleanup();
+  });
+  for (const scheme of ["light", "dark"] as const) {
+    test(`the Join page, ${scheme}, on a phone and a laptop`, async ({ browser }) => {
+      test.setTimeout(120_000);
+      for (const [size, vp] of [["390", { width: 390, height: 844 }], ["1280", { width: 1280, height: 900 }]] as const) {
+        const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: size === "390" ? 2 : 1, colorScheme: scheme });
+        const page = await ctx.newPage();
+        await page.goto(`/e/e2e-live-${w.org.run}/join`);
+        await expect(page.getByTestId("join-registration-closed")).toBeVisible({ timeout: 60_000 });
+        await hideDevOverlay(page);
+        await page.waitForTimeout(300);
+        await page.screenshot({ path: path.join(OUT, `public-join-${scheme}-${size}.png`), fullPage: true });
+        if (scheme === "light" && size === "390") {
+          await page.screenshot({ path: path.join(OUT, "public-join-390.png"), fullPage: true });
+          await page.screenshot({ path: path.join(OUT, "public-join-closed-390.png"), fullPage: true });
+        }
+        await ctx.close();
+      }
+    });
+  }
+});

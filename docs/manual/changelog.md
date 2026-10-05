@@ -13,6 +13,7 @@ Release entry: [0.17.0](/admin/releases#release-0-17-0) (platform owner only)
 - **Master presets (owner):** scoring and format built-ins are a list with **Add**, **Edit** (the organisers' own form, no JSON), **Rename**, **Retire** / **Restore**, **Set as DEFAULT**, **Delete** (refused while a division uses it) and **Save as built-in** from a division's settings. JSON import/export is under Advanced.
 - **A new division's Scoring tab starts filled in** with the DEFAULT built-in preset (“Based on: … (edited)”); Load… is optional.
 - **The Load… menu (and every menu of its kind) opens inside the screen**, upwards when there is no room below.
+- **A way home and help everywhere:** the product name (or logo) links to the home page and a quiet Home / Help sit at the foot of the public event pages, the Join pages and the sign-in pages; Help is also in the organiser and admin top bar. Not on the officials' live screens or the big screens. **The Join pages** use the home page's design (light and dark); joining works as before.
 - **A new home page:** the wordmark large, live event first and larger, Coming up, Results, the event code field, light and dark with the phone. Nothing else on the site changed.
 
 **Manual pages updated:** [Divisions](screens/organiser-divisions.md#div-presets), [Organiser access](screens/organiser-access.md#oa-presets), [Admin: master presets](screens/admin-presets.md#ap-manage), [Public: the home page](screens/public-home.md), [Glossary](glossary.md), [Errors and refusals](errors.md).

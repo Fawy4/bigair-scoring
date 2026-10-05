@@ -1,3 +1,5 @@
+import { SiteFooter, Wordmark } from "@/components/home/site-chrome";
+import { getPlatformSettings } from "@/lib/platform/public-settings";
 import { copy } from "@/lib/ui-copy";
 import { LoginForm } from "./login-form";
 
@@ -5,8 +7,10 @@ export const metadata = { title: copy.login.title };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; error?: string }> }) {
   const { next, error } = await searchParams;
+  const productName = (await getPlatformSettings()).productName;
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 p-4 text-beach-ink">
+      <Wordmark name={productName} className="self-start text-body font-extrabold tracking-tight text-beach-ink" />
       <h1 className="text-[20px] font-semibold leading-tight">{copy.login.title}</h1>
       {error ? (
         <p role="alert" className="rounded-card border border-beach-failed p-4 text-body font-semibold text-beach-failed">
@@ -14,6 +18,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </p>
       ) : null}
       <LoginForm next={next} />
+      <SiteFooter variant="beach" />
     </main>
   );
 }

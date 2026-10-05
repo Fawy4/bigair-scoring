@@ -238,6 +238,7 @@ export const copy = {
     officialQuestion: "Official?",
     officialLink: "Join with your PIN",
     admin: "Admin",
+    homeLink: "Home",
     homeTitle: (product: string) => `${product}: live scores for kitesurfing Big Air`,
   },
 

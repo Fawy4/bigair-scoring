@@ -23,6 +23,8 @@ interface SettingsPanelProps {
     mine: LoadItem[];
     onLoad?: (id: string) => void;
     onSaveAsPreset?: () => void;
+    /** The owner's preset form saves with its own button: no "Save as preset…" line. */
+    hideSaveAsPreset?: boolean;
     disabledReason?: string;
     /** The small actions under an entry (rename, update, delete, hide…): when given, each real entry gets a "⋯" button that opens them. */
     renderManage?: (item: Exclude<LoadItem, string>) => ReactNode;
@@ -114,7 +116,7 @@ export function SettingsPanel({ title, sentence, sentenceTestId = "model-sentenc
                   <MenuLabel>{orgCopy.settings.builtIn}</MenuLabel>
                   {loadMenu.builtIn.map(entry)}
                   <div className="mt-1 border-t border-beach-line pt-1 empty:hidden">
-                    {loadMenu.onSaveAsPreset ? (
+                    {!loadMenu.hideSaveAsPreset ? (
                       <MenuItem
                         onClick={() => {
                           loadMenu.onSaveAsPreset?.();

@@ -320,3 +320,103 @@
 .home-footer .admin {
   margin-left: auto;
 }
+
+/* ---- the same design on the Join page (and the other public front-door pages) ---- */
+.home-brand {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--h-ink);
+  text-decoration: none;
+  align-self: flex-start;
+}
+.home-narrow {
+  max-width: 600px;
+  gap: 32px;
+}
+.home-title {
+  margin: 8px 0 0;
+  font-size: clamp(28px, 6vw, 40px);
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+.home-lede {
+  margin: 12px 0 0;
+  font-size: 16px;
+  color: var(--h-muted);
+}
+.home-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.home-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.home-field label {
+  font-size: 15px;
+  font-weight: 700;
+}
+.home-field .home-input {
+  flex: none;
+  width: 100%;
+  min-height: 56px;
+  font-size: 18px;
+}
+.home-field .home-input.pin {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+.home-go.wide {
+  width: 100%;
+  min-height: 56px;
+  font-size: 18px;
+}
+.home-go:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.home-secondary {
+  min-height: 48px;
+  padding: 0 24px;
+  border: 1px solid var(--h-ink);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--h-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.home-details {
+  padding: 16px;
+  border: 1px solid var(--h-line);
+  border-radius: 16px;
+}
+.home-details > summary {
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+}
+.home-notice {
+  padding: 16px;
+  border: 2px solid var(--h-ink);
+  border-radius: 16px;
+}
+.home-notice p {
+  margin: 0;
+}
+.home-notice .home-name + p {
+  margin-top: 8px;
+  color: var(--h-muted);
+}
+.home-tip {
+  margin: 0;
+  font-size: 15px;
+  color: var(--h-muted);
+}

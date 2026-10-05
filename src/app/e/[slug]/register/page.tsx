@@ -7,6 +7,7 @@ import { parseEventBranding, parseEventSettings } from "@/lib/schemas/event-sett
 import { defaultScheme } from "@/lib/schemas/identification";
 import { formatEventDates } from "@/lib/platform/event-label";
 import { createServiceClient } from "@/lib/supabase/service";
+import { SiteFooter } from "@/components/home/site-chrome";
 import { copy } from "@/lib/ui-copy";
 import { RegisterForm, type DivisionOption } from "./register-form";
 
@@ -94,6 +95,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
           )}
         </footer>
       ) : null}
+      <SiteFooter variant="beach" />
     </main>
   );
 }

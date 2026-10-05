@@ -210,6 +210,9 @@ test("master presets: edit makes a new draft version, and publishing makes it th
     await admin.signIn(page, `/admin/presets/scoring-models/${key}`);
     await expect(page.getByText("Default for new divisions: version 1")).toBeVisible({ timeout: 90_000 }); // the first visit compiles the page in dev mode
 
+    // the JSON box is under "Advanced: import or export as JSON" now (the form comes first)
+    await page.getByText("Advanced: import or export as JSON").click();
+
     // not JSON: refused in words, nothing saved
     await page.getByLabel("Preset JSON", { exact: true }).fill("{ not json");
     await page.getByRole("button", { name: "Save as new version" }).click();
@@ -249,7 +252,8 @@ test("the public home page and the organisation page show published events only,
   ]);
   await page.goto("/");
   const card = page.getByRole("link", { name: new RegExp(`E2E Public ${admin.run}`) });
-  await expect(card).toContainText(`E2E Big Air ${admin.run} · El Gouna · 5–7 May 2099`);
+  await expect(card).toContainText(`E2E Big Air ${admin.run} · El Gouna`);
+  await expect(card).toContainText("5–7 May 2099");
   await expect(page.getByText(`E2E Hidden ${admin.run}`)).toHaveCount(0);
   await card.click();
   await expect(page).toHaveURL(new RegExp(`/e/e2e-pub-${admin.run}$`));

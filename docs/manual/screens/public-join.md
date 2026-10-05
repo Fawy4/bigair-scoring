@@ -2,7 +2,7 @@
 
 The event's **Join** tab (/e/‹event›/join), the officials' join page (/join), the seat page (/seat) and the riders' registration page (/e/‹event›/register).
 
-Last checked: 4 Oct 2026 · Product version 0.13.2
+Last checked: 5 Oct 2026 · Product version 0.17.0
 
 ## What it is for {#pj-purpose}
 
@@ -13,6 +13,16 @@ One door for everybody who is not a spectator: officials join with their PIN, ri
 
 ![Registration page on a phone](../img/public-register-390.png)
 *public-register-390.png — the registration form.*
+
+## The look, and the way out {#pj-look}
+
+The Join pages share the home page's design: the product name (a link to the home page) above the title, rounded 1 px role cards, the PIN entry as the clear primary action in the accent colour, the officials' part first and the riders' part below it, light or dark as the device says, text at least 7:1. Nothing about how joining works changed. At the foot: **Home** and **Help**. See [the home page](public-home.md).
+
+![Join page, dark, on a phone](../img/public-join-dark-390.png)
+*public-join-dark-390.png — the same page in dark.*
+
+![Join page on a laptop](../img/public-join-light-1280.png)
+*public-join-light-1280.png — the role cards, the PIN form and the riders' part on a laptop.*
 
 ## Joining as an official {#pj-officials}
 

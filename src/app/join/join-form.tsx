@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 import { joinErrorMessage } from "@/lib/join/messages";
 import { copy } from "@/lib/ui-copy";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { joinWithPin, joinWithToken, type JoinResult } from "./actions";
 
 export function JoinForm({ slug: initialSlug = "", token }: { slug?: string; token?: string }) {
@@ -57,28 +55,30 @@ export function JoinForm({ slug: initialSlug = "", token }: { slug?: string; tok
         e.preventDefault();
         void run(() => joinWithPin({ slug, pin }));
       }}
-      className="flex flex-col gap-4"
+      className="home-stack"
     >
-      {token && busy ? <p role="status" className="rounded-lg border-4 border-[#111] p-4 text-xl font-semibold">{copy.join.qrJoining}</p> : null}
-      <label htmlFor="slug" className="text-xl font-bold">
-        {copy.join.eventCode}
-      </label>
-      <Input id="slug" value={slug} onChange={(e) => setSlug(e.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} required className="h-16 border-2 border-[#111] text-2xl font-bold" />
-      <label htmlFor="pin" className="text-xl font-bold">
-        {copy.join.pin}
-      </label>
-      <Input id="pin" value={pin} onChange={(e) => setPin(e.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={11} required className="h-16 border-2 border-[#111] text-center text-3xl font-extrabold tracking-widest" />
+      {token && busy ? (
+        <p role="status" className="home-notice">
+          {copy.join.qrJoining}
+        </p>
+      ) : null}
+      <div className="home-field">
+        <label htmlFor="slug">{copy.join.eventCode}</label>
+        <input id="slug" className="home-input" value={slug} onChange={(e) => setSlug(e.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} required />
+      </div>
+      <div className="home-field">
+        <label htmlFor="pin">{copy.join.pin}</label>
+        <input id="pin" className="home-input pin" value={pin} onChange={(e) => setPin(e.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={11} required />
+      </div>
       {error ? (
-        <p role="alert" className="rounded-lg border-4 border-[#111] p-4 text-lg font-bold">
+        <p role="alert" className="home-alert">
           {copy.common.problem(error)}
         </p>
       ) : null}
-      <Button type="submit" size="lg" disabled={busy} className="h-16 text-xl font-bold">
+      <button type="submit" disabled={busy} className="home-go wide">
         {busy ? copy.join.joining : copy.join.button}
-      </Button>
-      <p className="text-base font-semibold">
-        {copy.join.iphoneTip}
-      </p>
+      </button>
+      <p className="home-tip">{copy.join.iphoneTip}</p>
     </form>
   );
 }

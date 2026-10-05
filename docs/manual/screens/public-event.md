@@ -8,6 +8,8 @@ Last checked: 4 Oct 2026 · Product version 0.13.2
 
 Riders check when they ride; spectators follow the day. Pages ask the server for fresh data every “Live update” seconds (Event step, default 7) while they are visible. Daylight only (no dark theme on the public site). The public pages and the big screen answer from a shared copy that is at most about 3 seconds old, so a published result shows within a few seconds however many people are watching (a held result never shows until it is released). When very many people ask at once the page says **Updating…** (“Many people are watching right now. This page will try again by itself in a few seconds.”) and asks again by itself every few seconds; the head judge's console, the judges' and spotters' phones, the Flag view and every organiser screen never go through this.
 
+**Way home and help.** Above the event's name the product name is a link to the home page (the organisation's logo too, where one is shown), and a quiet **Home** and **Help** (the manual) sit at the foot of every page of the event. The Flag view and the big screens have neither: they stay clean.
+
 ![Event page on a phone](../img/public-event-390.png)
 *public-event-390.png — the event page on a phone: wind banner, Now, Up next, today's timetable.*
 

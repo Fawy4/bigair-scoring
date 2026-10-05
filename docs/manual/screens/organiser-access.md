@@ -21,7 +21,7 @@ Set a password on the first day: the hosted e-mail plan sends only 2 sign-in e-m
 
 | Control | What it does |
 |---|---|
-| Top bar | Product name, **organisation switcher** (when you belong to several), inside an event its name, dates, state and **Public link** (copy, open, QR), and the **account menu**. |
+| Top bar | Product name, a quiet **Help** link (the manual; an icon on a phone), **organisation switcher** (when you belong to several), inside an event its name, dates, state and **Public link** (copy, open, QR), and the **account menu**. |
 | Account menu | **On this device**: Daylight / Dark and Normal / Large (remembered on this device only); **Note**; **Set or change password**; **Sign out**; inside an event also the links to the events list, Organisation settings and Feedback. |
 | **‹organisation›: events** | Your events with dates and state; **Open setup**; **+ New event**. Archived events are hidden behind **Show archived events (‹n›)**. |
 | **Organisation settings** | Name, web address (slug), logo, default time zone. Only owners and admins of the organisation can save; others can look (“Only owners and admins can change these settings. You can look, but not save.”). See [Settings](../settings.md#settings-organisation). |
