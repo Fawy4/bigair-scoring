@@ -21,8 +21,7 @@ test.afterAll(async () => {
 test("home: wind banner, now with the clock, the next two heats with estimates, today's timetable with its states, share and QR", async ({ page }) => {
   await w.db.from("wind_calls").insert({ event_id: w.eventId, status: "amber", message: "Light wind — heats on hold" });
   await page.goto(url());
-  await expect(page.getByTestId("wind-banner")).toContainText("Amber — caution");
-  await expect(page.getByTestId("wind-banner")).toContainText("Light wind");
+  await expect(page.getByTestId("wind-banner")).toHaveText("Wind Call: Light wind — heats on hold"); // the head judge's words, not "Amber — caution"
   await expect(page.getByTestId("now-title")).toContainText("Now: Pro Men · R1 · Heat 2");
   await expect(page.getByTestId("now-title")).toContainText(/\d+:\d\d left/);
   await expect(page.getByTestId("up-next-row")).toHaveCount(2);
@@ -195,6 +194,20 @@ test("Open Graph tags are on every public page, and the picture is a real 1200 �
   expect(heatImage.status()).toBe(200);
 });
 
+test("Follow the heat shows the wind call at the very top, in the head judge's words, and drops it when it is cleared", async ({ page }) => {
+  await w.db.from("wind_calls").insert({ event_id: w.eventId, status: "red", message: "Wind too strong: all heats on hold" });
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto(`/screen/${w.slug}/follow`);
+  await expect(page.getByTestId("wind-banner")).toHaveText("Wind Call: Wind too strong: all heats on hold");
+  await expect(page.getByTestId("wind-banner")).toHaveAttribute("data-status", "red");
+  const top = await page.getByTestId("wind-banner").boundingBox();
+  const head = await page.getByTestId("screen-header").boundingBox();
+  expect(top && head && top.y < head.y).toBe(true);
+  // the screen asks the server every second: a cleared call goes away without a reload
+  await w.db.from("wind_calls").insert({ event_id: w.eventId, status: "clear", message: null });
+  await expect(page.getByTestId("wind-banner")).toHaveCount(0, { timeout: 15_000 });
+});
+
 test("big screen: white on dark, pages rotate by themselves, Space pauses, a QR to the public site, sponsors page, the wind call", async ({ page }) => {
   await w.db.from("events").update({ branding: { sponsors: [{ name: "WOO Events" }] } }).eq("id", w.eventId);
   await w.db.from("wind_calls").insert({ event_id: w.eventId, status: "green", message: "Good to go" });
@@ -203,7 +216,10 @@ test("big screen: white on dark, pages rotate by themselves, Space pauses, a QR 
   await expect(page.getByTestId("big-screen")).toBeVisible();
   const bg = await page.getByTestId("big-screen").evaluate((e) => getComputedStyle(e).backgroundColor);
   expect(bg).toBe("rgb(11, 14, 15)");
-  await expect(page.getByTestId("wind-banner")).toContainText("Green — go");
+  await expect(page.getByTestId("wind-banner")).toHaveText("Wind Call: Good to go");
+  const top = await page.getByTestId("wind-banner").boundingBox();
+  const head = await page.getByTestId("screen-header").boundingBox();
+  expect(top && head && top.y < head.y).toBe(true); // the very top of the screen, above the header
   await expect(page.getByTestId("qr")).toBeVisible();
   const rot = page.getByTestId("screen-rotator");
   const kinds = await page.getByTestId("screen-slide").evaluateAll((els) => els.map((e) => e.getAttribute("data-slide")));

@@ -3027,7 +3027,7 @@ export const copy = {
       openLive: "Open the live heat",
       divisionsHeading: "Divisions",
     },
-    wind: { label: "Wind", states: { red: "Red — stop", amber: "Amber — caution", green: "Green — go" } as Record<string, string> },
+    wind: { label: "Wind Call" },
     share: { heading: "Share this page", whatsapp: "Share on WhatsApp", copy: "Copy link", copied: "Link copied", qr: "QR code to this page", qrAlt: "QR code that opens this page", text: (event: string) => `${event}: live scores and timetable` },
     live: {
       title: "Live heat",
@@ -3265,6 +3265,7 @@ export const copy = {
         waitHead: (heat: string) => `${heat} is waiting for the head judge, who is a real person. Review and publish it on the head console.`,
         waitJudges: (heat: string, names: string) => `${heat} is waiting for ${names} (a real person) to submit.`,
         hold: "The run order is on hold. Resume it to carry on.",
+        abortedWait: (heat: string) => `${heat}: the start was aborted. Waiting for the head judge to start it again.`,
         notReady: (heat: string) => `${heat} is not ready: its draw is not locked or a seat has no rider yet.`,
         finished: "Every heat is published. The simulation is complete.",
         wholeFinished: "The whole event is published, finals included. The simulation is complete.",
