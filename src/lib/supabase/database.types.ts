@@ -966,6 +966,7 @@ export type Database = {
           duration_sec: number
           ended_at: string | null
           event_id: string
+          extra_sec: number
           flag_out: Json | null
           id: string
           live_rev: number
@@ -998,6 +999,7 @@ export type Database = {
           duration_sec?: number
           ended_at?: string | null
           event_id: string
+          extra_sec?: number
           flag_out?: Json | null
           id?: string
           live_rev?: number
@@ -1030,6 +1032,7 @@ export type Database = {
           duration_sec?: number
           ended_at?: string | null
           event_id?: string
+          extra_sec?: number
           flag_out?: Json | null
           id?: string
           live_rev?: number
@@ -2630,6 +2633,7 @@ export type Database = {
           duration_sec: number
           ended_at: string | null
           event_id: string
+          extra_sec: number
           flag_out: Json | null
           id: string
           live_rev: number
@@ -2950,6 +2954,7 @@ export type Database = {
           duration_sec: number
           ended_at: string | null
           event_id: string
+          extra_sec: number
           flag_out: Json | null
           id: string
           live_rev: number
@@ -3008,6 +3013,7 @@ export type Database = {
           duration_sec: number
           ended_at: string | null
           event_id: string
+          extra_sec: number
           flag_out: Json | null
           id: string
           live_rev: number
@@ -3160,47 +3166,91 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      end_heat: {
-        Args: { p_heat: string }
-        Returns: {
-          armed_at: string | null
-          armed_paused_at: string | null
-          created_at: string
-          division_id: string
-          draw_uid: string | null
-          duration_sec: number
-          ended_at: string | null
-          event_id: string
-          flag_out: Json | null
-          id: string
-          live_rev: number
-          manual_override: boolean
-          name: string | null
-          number: number
-          number_suffix: string | null
-          paused_at: string | null
-          paused_reason: string | null
-          paused_total_sec: number
-          prestart_sec: number | null
-          public_live: boolean | null
-          publish_hold: boolean
-          published_at: string | null
-          reopened_at: string | null
-          rerun_of: string | null
-          round_id: string
-          started_at: string | null
-          status: string
-          time_scale: number
-          updated_at: string
-          warm_up_sec: number
-        }
-        SetofOptions: {
-          from: "*"
-          to: "heats"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      end_heat:
+        | {
+            Args: { p_heat: string }
+            Returns: {
+              armed_at: string | null
+              armed_paused_at: string | null
+              created_at: string
+              division_id: string
+              draw_uid: string | null
+              duration_sec: number
+              ended_at: string | null
+              event_id: string
+              extra_sec: number
+              flag_out: Json | null
+              id: string
+              live_rev: number
+              manual_override: boolean
+              name: string | null
+              number: number
+              number_suffix: string | null
+              paused_at: string | null
+              paused_reason: string | null
+              paused_total_sec: number
+              prestart_sec: number | null
+              public_live: boolean | null
+              publish_hold: boolean
+              published_at: string | null
+              reopened_at: string | null
+              rerun_of: string | null
+              round_id: string
+              started_at: string | null
+              status: string
+              time_scale: number
+              updated_at: string
+              warm_up_sec: number
+            }
+            SetofOptions: {
+              from: "*"
+              to: "heats"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { p_heat: string; p_reason: string }
+            Returns: {
+              armed_at: string | null
+              armed_paused_at: string | null
+              created_at: string
+              division_id: string
+              draw_uid: string | null
+              duration_sec: number
+              ended_at: string | null
+              event_id: string
+              extra_sec: number
+              flag_out: Json | null
+              id: string
+              live_rev: number
+              manual_override: boolean
+              name: string | null
+              number: number
+              number_suffix: string | null
+              paused_at: string | null
+              paused_reason: string | null
+              paused_total_sec: number
+              prestart_sec: number | null
+              public_live: boolean | null
+              publish_hold: boolean
+              published_at: string | null
+              reopened_at: string | null
+              rerun_of: string | null
+              round_id: string
+              started_at: string | null
+              status: string
+              time_scale: number
+              updated_at: string
+              warm_up_sec: number
+            }
+            SetofOptions: {
+              from: "*"
+              to: "heats"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       end_heat_if_due: {
         Args: { p_heat: string }
         Returns: {
@@ -3212,6 +3262,7 @@ export type Database = {
           duration_sec: number
           ended_at: string | null
           event_id: string
+          extra_sec: number
           flag_out: Json | null
           id: string
           live_rev: number
@@ -3244,6 +3295,48 @@ export type Database = {
       }
       ensure_division_panel: { Args: { p_division: string }; Returns: string }
       export_role: { Args: { p_event: string }; Returns: string }
+      extend_heat: {
+        Args: { p_heat: string }
+        Returns: {
+          armed_at: string | null
+          armed_paused_at: string | null
+          created_at: string
+          division_id: string
+          draw_uid: string | null
+          duration_sec: number
+          ended_at: string | null
+          event_id: string
+          extra_sec: number
+          flag_out: Json | null
+          id: string
+          live_rev: number
+          manual_override: boolean
+          name: string | null
+          number: number
+          number_suffix: string | null
+          paused_at: string | null
+          paused_reason: string | null
+          paused_total_sec: number
+          prestart_sec: number | null
+          public_live: boolean | null
+          publish_hold: boolean
+          published_at: string | null
+          reopened_at: string | null
+          rerun_of: string | null
+          round_id: string
+          started_at: string | null
+          status: string
+          time_scale: number
+          updated_at: string
+          warm_up_sec: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "heats"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       extend_prestart: {
         Args: { p_heat: string }
         Returns: {
@@ -3255,6 +3348,7 @@ export type Database = {
           duration_sec: number
           ended_at: string | null
           event_id: string
+          extra_sec: number
           flag_out: Json | null
           id: string
           live_rev: number
@@ -3502,6 +3596,7 @@ export type Database = {
           duration_sec: number
           ended_at: string | null
           event_id: string
+          extra_sec: number
           flag_out: Json | null
           id: string
           live_rev: number
@@ -3627,6 +3722,7 @@ export type Database = {
           duration_sec: number
           ended_at: string | null
           event_id: string
+          extra_sec: number
           flag_out: Json | null
           id: string
           live_rev: number
@@ -3767,6 +3863,7 @@ export type Database = {
           duration_sec: number
           ended_at: string | null
           event_id: string
+          extra_sec: number
           flag_out: Json | null
           id: string
           live_rev: number
@@ -3808,6 +3905,7 @@ export type Database = {
           duration_sec: number
           ended_at: string | null
           event_id: string
+          extra_sec: number
           flag_out: Json | null
           id: string
           live_rev: number
@@ -3896,6 +3994,7 @@ export type Database = {
           duration_sec: number
           ended_at: string | null
           event_id: string
+          extra_sec: number
           flag_out: Json | null
           id: string
           live_rev: number
@@ -3930,6 +4029,37 @@ export type Database = {
         Args: {
           p_anchors: Json
           p_expected?: string
+          p_plan: string
+          p_reason?: string
+        }
+        Returns: {
+          active: boolean
+          actual_starts: Json
+          anchors: Json
+          created_at: string
+          day: string
+          defaults: Json
+          event_id: string
+          hand_pins: Json | null
+          hold: Json | null
+          id: string
+          items: Json
+          name: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "schedule_plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_plan_break: {
+        Args: {
+          p_anchors: Json
+          p_break_min: number
+          p_expected?: string
+          p_item: string
           p_plan: string
           p_reason?: string
         }
@@ -4266,6 +4396,7 @@ export type Database = {
           duration_sec: number
           ended_at: string | null
           event_id: string
+          extra_sec: number
           flag_out: Json | null
           id: string
           live_rev: number
@@ -4307,6 +4438,7 @@ export type Database = {
           duration_sec: number
           ended_at: string | null
           event_id: string
+          extra_sec: number
           flag_out: Json | null
           id: string
           live_rev: number

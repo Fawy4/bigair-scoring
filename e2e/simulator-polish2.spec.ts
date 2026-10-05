@@ -171,6 +171,7 @@ for (const speed of [1, 10] as const) test(`Polish 3 item 1 at ×${speed}: Skip 
     expect((await w.db.from("heat_results").select("id", { count: "exact", head: true }).eq("heat_id", heatId)).count ?? 0).toBe(0);
     // End heat and publish publishes it
     await page.getByTestId("sim-end-publish").click();
+    await page.getByTestId("sim-end-confirm").click(); // End heat and publish asks once
     await expect.poll(async () => (await w.db.from("heats").select("status").eq("id", heatId).single()).data!.status, { timeout: 120_000 }).toBe("published");
     const sheets = (await w.db.from("judge_sheets").select("submitted_at").eq("heat_id", heatId)).data ?? [];
     expect(sheets.filter((x) => x.submitted_at)).toHaveLength(3);

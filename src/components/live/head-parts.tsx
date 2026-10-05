@@ -15,6 +15,7 @@ import { WindCallControl } from "@/components/wind-call-control";
 import { runLine, shortHeat } from "@/lib/live/run-line";
 import { heatLabel, livesFor } from "@/lib/live/run-order";
 import { formatClock } from "@/lib/live/timer";
+import { parseBreak } from "@/lib/live/break-input";
 import { parsePrestart } from "@/lib/live/prestart-input";
 import { resetHeatControl, type ControlId } from "@/lib/live/head-state";
 import type { FixTarget } from "@/lib/live/publish-checklist";
@@ -127,9 +128,6 @@ export function BreakStrip({ c }: { c: HeadController }) {
         </Btn>
       ) : (
         <>
-          <Btn testId="break-plus-one" disabled={c.pending || !c.planId} onClick={c.actions.plusOne}>
-            {V.plusOne}
-          </Btn>
           <Btn testId="break-pause" disabled={c.pending || !c.planId} onClick={c.actions.pauseBreak}>
             {V.pauseBreak}
           </Btn>
@@ -164,7 +162,13 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
         <DriftBadge drift={c.drift} />
         {selected && state !== "cancelled" ? (
           <div className="flex flex-wrap items-center gap-2">
+            {c.ctl && c.ctl.id !== selected.id && c.on("start") ? (
+              <span data-testid="start-target" className="text-small font-semibold text-beach-muted">
+                {T.startNext(c.ctlTitle)}
+              </span>
+            ) : null}
             {c.flagsOn && !c.armed && c.on("start") ? <PrestartChoice c={c} /> : null}
+            {!c.armed ? <BreakChoice c={c} /> : null}
             {c.armed ? (
               <>
                 <Btn compact size="bar" testId="start-now" tone="accent" disabled={c.pending} onClick={c.actions.startNowDuringYellow}>
@@ -182,6 +186,11 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
                 {c.flagsOn ? T.startSequence : T.start}
               </Btn>
             )}
+            {state === "running" && !c.armed ? (
+              <Btn compact size="bar" testId="extend-heat" disabled={c.pending} onClick={c.actions.extendHeat}>
+                {T.plusOneMin}
+              </Btn>
+            ) : null}
             {state === "paused" || c.armedFrozen ? (
               <Btn compact size="bar" testId="resume" reason={c.why("resume")} disabled={c.pending || (!c.on("resume") && !c.armedFrozen)} onClick={c.actions.resume}>
                 {T.resume}
@@ -191,7 +200,7 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
                 {T.pause}
               </Btn>
             )}
-            <Btn compact size="bar" testId="end" reason={c.why("end")} disabled={c.pending || !c.on("end")} onClick={c.actions.end}>
+            <Btn compact size="bar" testId="end" reason={c.why("end")} disabled={c.pending || !c.on("end")} onClick={() => { c.setReason(""); c.setConfirmingEnd(true); }}>
               {T.end}
             </Btn>
           </div>
@@ -203,12 +212,99 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
           </button>
         ) : null}
       </div>
+      {selected && c.confirmingEnd && c.on("end") ? (
+        <div data-testid="end-panel" role="group" aria-label={T.endQuestion} className="flex flex-col gap-1.5 rounded-xl border border-beach-border bg-beach-surface p-2">
+          <p className="text-body font-semibold">{T.endQuestion}</p>
+          <label className="flex flex-col gap-1 text-small font-semibold">
+            {T.endReason}
+            <input data-testid="end-reason" value={c.reason} onChange={(e) => c.setReason(e.target.value)} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-3 text-body font-semibold" />
+          </label>
+          <div className="flex gap-1.5">
+            <Btn testId="end-confirm" tone="danger" disabled={c.pending} onClick={c.actions.end}>
+              {T.endConfirm}
+            </Btn>
+            <Btn testId="end-cancel" onClick={() => c.setConfirmingEnd(false)}>
+              {T.endCancel}
+            </Btn>
+          </div>
+        </div>
+      ) : null}
       {selected && state !== "cancelled" && !live && reason ? (
         <p data-testid="why-line" className="text-small font-medium text-beach-muted">
           {reason}
         </p>
       ) : null}
       {selected && state === "cancelled" ? <CancelledNote c={c} /> : null}
+    </div>
+  );
+}
+
+/**
+ * "Break:" beside the red banner, laid out like the Pre-start group: the break as the run order has it now (selected, with its length), "+1 min" and "Other…" (a small
+ * field, m:ss or whole minutes). Each press changes the REAL break (the run order's), so the next heat's planned start moves on every screen at once; nothing starts.
+ */
+export function BreakChoice({ c }: { c: HeadController }) {
+  const info = c.breakInfo;
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [bad, setBad] = useState(false);
+  if (info.kind !== "break" || info.state === "paused" || c.breakLengthMs === null) return null;
+  const apply = () => {
+    const r = parseBreak(text);
+    if (!r.ok) return setBad(true);
+    setBad(false);
+    setOpen(false);
+    setText("");
+    c.actions.breakSet(r.sec);
+  };
+  return (
+    <div data-testid="break-choice" role="group" aria-label={V.breakGroup} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-beach-line bg-beach-surface px-2 py-1">
+      <span className="text-small font-semibold text-beach-muted">{V.breakGroup}</span>
+      <span data-testid="break-length" aria-current="true" className="inline-flex min-h-tap items-center gap-1 rounded-lg border-2 border-beach-accent bg-beach-bg px-3 text-small font-semibold tabular-nums text-beach-ink">
+        <Check aria-hidden className="size-4" />
+        {formatClock(c.breakLengthMs)}
+      </span>
+      <Btn compact size="bar" testId="break-plus-one" disabled={c.pending || !c.planId} onClick={c.actions.breakPlusOne}>
+        {T.plusOneMin}
+      </Btn>
+      <Btn compact size="bar" testId="break-other" disabled={c.pending || !c.planId} onClick={() => setOpen((v) => !v)}>
+        {V.breakOther}
+      </Btn>
+      {open ? (
+        <div className="flex flex-wrap items-center gap-1">
+          <label className="sr-only" htmlFor="break-other-input">
+            {V.breakOtherLabel}
+          </label>
+          <input
+            id="break-other-input"
+            data-testid="break-other-input"
+            inputMode="numeric"
+            autoFocus
+            value={text}
+            placeholder="2:30"
+            aria-invalid={bad}
+            onChange={(e) => {
+              setText(e.target.value);
+              setBad(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                apply();
+              }
+            }}
+            className="min-h-tap w-24 rounded-lg border border-beach-border bg-beach-bg px-2 text-body font-semibold tabular-nums"
+          />
+          <Btn compact size="bar" testId="break-other-set" disabled={c.pending || !c.planId} onClick={apply}>
+            {V.breakOtherSet}
+          </Btn>
+          {bad ? (
+            <p role="alert" data-testid="break-other-error" className="w-full text-small font-semibold">
+              {V.breakOtherBad}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

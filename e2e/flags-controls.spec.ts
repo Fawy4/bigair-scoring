@@ -150,6 +150,7 @@ test("a heat that is ended and then reset is not started: the flag says Stopped,
   await head.getByTestId("start").click();
   await expect(flagOf(flag)).toHaveAttribute("data-flag", /running|last_minute/, { timeout: 20_000 });
   await head.getByTestId("end").click();
+  await head.getByTestId("end-confirm").click(); // End heat asks once
   await expect(flagOf(flag)).toHaveAttribute("data-flag", "stopped", { timeout: 15_000 });
   await expect(head.getByTestId("reset-heat")).toBeEnabled({ timeout: 30_000 });
   await head.getByTestId("reset-heat").click();

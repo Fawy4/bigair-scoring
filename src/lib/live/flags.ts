@@ -9,7 +9,7 @@
  */
 import { DEFAULT_FLAGS, type FlagKind, type FlagSettings } from "@/lib/schemas/flags";
 import { copy } from "@/lib/ui-copy";
-import { remainingMs, type HeatTiming } from "./timer";
+import { formatClock as formatClockMs, remainingMs, type HeatTiming } from "./timer";
 
 export type StoppedWhy = "finished" | "paused" | "hold" | "between" | "before_day";
 
@@ -135,6 +135,7 @@ export function flagState(i: FlagInput): FlagState | null {
 export function hornsFor(prev: FlagState | null, next: FlagState | null): 0 | 1 | 2 {
   if (!prev || !next || prev.kind === next.kind) return 0;
   if (next.kind === "before_start") return 0; // the yellow carries on after a freeze: no horn
+  if (prev.kind === "last_minute" && next.kind === "running") return 0; // "+1 min" in the last minute: back to green without a horn; the last minute's horn sounds again when it begins
   if (next.kind === "stopped") return next.why === "finished" && (prev.kind === "running" || prev.kind === "last_minute") ? 2 : prev.kind === "before_start" && next.why === "finished" ? 2 : 0;
   // on to green or the last minute: from the yellow, from a pause (resume), or from a last minute that began at once
   return 1;
@@ -238,9 +239,30 @@ export function pickFlagHeat<T extends FlagRowLike>(heats: T[], current: T | nul
 export const anyHeatStarted = (heats: Array<Pick<FlagRowLike, "started_at" | "armed_at" | "status" | "prestart_sec">>, nowMs: number): boolean =>
   heats.some((h) => h.started_at !== null || (h.status === "scheduled" && h.armed_at ? nowMs >= Date.parse(h.armed_at) + (h.prestart_sec ?? 0) * 1000 : false));
 
-/** The words on the strip: the state's label, or for red the reason with what comes next ("Finished — next: Heat 5, est. 10:40", "Paused", "Hold — times update when we resume"). */
-export function flagWords(state: FlagState, next: string | null): string {
+/** The next heat as the red banner's second part needs it: its planned start (the run order's own, break and warm-up included), its name and the estimate to show. */
+export interface NextHeatInfo {
+  startMs: number;
+  title: string;
+  est: string | null;
+}
+
+/**
+ * "Next heat in 3:40 · Advanced · R2 · Heat 12 · est. 14:20", counting down to 0:00 and then "Next heat due · Advanced · R2 · Heat 12". It only says; nothing starts by
+ * itself and no horn sounds for it.
+ */
+export function nextHeatPart(info: NextHeatInfo | null, nowMs: number): string | null {
+  if (!info) return null;
+  const left = info.startMs - nowMs;
+  return left > 0 ? copy.flags.nextHeat.counting(formatClockMs(left), info.title, info.est) : copy.flags.nextHeat.due(info.title);
+}
+
+/** Does the red banner carry the "Next heat in" part: nothing is running and the reason is "finished" or "between heats" (not a pause, a hold or before the day). */
+export const showsNextHeat = (state: FlagState): boolean => state.kind === "stopped" && (state.why === "finished" || state.why === "between");
+
+/** The words on the strip: the state's label, or for red the reason with what comes next ("Finished — next: Heat 5, est. 10:40", "Paused", "Hold — times update when we resume"). With the "Next heat in" part beside it, the words are just the state word. */
+export function flagWords(state: FlagState, next: string | null, withNextPart = false): string {
   if (state.kind !== "stopped") return state.label;
+  if (withNextPart && showsNextHeat(state)) return state.label;
   const W = copy.flags.nextLine;
   switch (state.why) {
     case "finished":

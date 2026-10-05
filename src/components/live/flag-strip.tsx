@@ -12,6 +12,8 @@ export interface FlagStripModel {
   heatName: string;
   /** "Heat 5": the short name the announcer's cues use. */
   heatShort: string;
+  /** Beside the state word of the red banner: "Next heat in 3:40 · Advanced · R2 · Heat 12 · est. 14:20" (from the run order), or null. */
+  nextPart?: string | null;
 }
 
 /** The old timer's `data-state`, so the tests and screens that read it keep working. */
@@ -40,6 +42,11 @@ export function FlagStrip({ model, size = "slim", soundOn, onToggleSound, classN
       <span data-testid="heat-timer-state" className="min-w-0 shrink truncate text-small font-bold">
         {model.words}
       </span>
+      {model.nextPart ? (
+        <span data-testid="flag-next-heat" className="min-w-0 shrink truncate text-small font-semibold tabular-nums">
+          {model.nextPart}
+        </span>
+      ) : null}
       {state.countdownMs !== null ? (
         <span data-testid="heat-timer-clock" className={cn("shrink-0 font-bold tabular-nums", size === "head" ? "text-timer-head" : "text-timer-slim")}>
           {formatClock(state.countdownMs)}

@@ -90,6 +90,7 @@ test("start Heat 2 before Heat 1: one warning, the big timer beside Start / End;
 
   // End: the break counts down to the heat that is next in the run order (Heat 1)
   await head.getByTestId("end").click();
+  await head.getByTestId("end-confirm").click(); // End heat asks once
   await expect(head.getByTestId("selected-heat")).toHaveAttribute("data-state", "ended", { timeout: 40_000 });
   await expect(head.getByTestId("break-text")).toContainText(/Next: R1 · H1 · starts in \d+:\d\d/, { timeout: 30_000 });
   const before = secondsOf((await head.getByTestId("break-text").textContent()) ?? "");

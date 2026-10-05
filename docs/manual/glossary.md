@@ -17,11 +17,12 @@ Last checked: 4 Oct 2026 · Product version 0.15.0
 | {#g-best-n} **Best-N** | Only a rider's N best tricks count toward the total. *Best 3: a rider who landed 6 tricks is scored on the 3 highest.* |
 | {#g-big-screen} **Big screen** | /screen/‹event›, the beach TV page that rotates live heat, timetable, results, sponsors. *A laptop on the TV by the judges' tower.* |
 | {#g-big-screen-follow} **Big screen — Follow the heat** | /screen/‹event›/follow, a second beach TV page: it stays on the heat while it is armed or running, says “Judges reviewing” until Publish, then alternates the full Results of today's published heats (newest first) and the Ladder. *The TV by the water: the live heat, then Heat 6's result, the ladder, Heat 5's result…* |
-| {#g-break} **Break** | Minutes between heats (or a break row such as Lunch) in the run order. *2 minutes after each heat, 45 minutes for lunch.* |
+| {#g-break} **Break** | Minutes between heats (or a break row such as Lunch) in the run order. After a heat the red banner counts it down (“Next heat in 3:40 …”) and the head judge can change it with **Break: +1 min** or **Other…**; the change is the real run order's, on every screen. *2 minutes after each heat, 45 minutes for lunch.* |
 | {#g-call-out} **Call-out** | What the spotter says aloud for a rider, from the Rider label scheme. *“Red”, “14” or “Sam Sample”.* |
 | {#g-cancel} **Cancel (heat)** | Stops a heat for good (reason optional); it takes no time on timetables. *Kite tangle in heat 3: Cancel heat, then Re-run.* |
 | {#g-category} **Category** | A group of tricks for counting rules (handle pass, board-off, kiteloop, rotation, other). *Best per category: at most one kiteloop counts.* |
 | {#g-checks} **Checks / checker** | Warnings under the draw or the custom ladder; they warn, never block (except red points before Apply to draw). *“Heat 4 has 5 riders.”* |
+| {#g-plus-one-min} **+1 min** | A console button that adds exactly one minute: on the yellow, to the pre-start; on a running heat, to the heat time that is left (every screen shows it, the last-minute yellow comes back at the new 1:00); between heats, to the break. *Press +1 min at 0:40 and the heat now ends 60 seconds later.* |
 | {#g-countdown} **Countdown (break)** | On the head console between heats: “Next: R1 · H3 · starts in 4:30”. *+1 min gives the riders one more minute.* |
 | {#g-counted-trick} **Counted trick** | A trick whose score goes into the total. *Green boxes in the public results are counted; grey ones are not.* |
 | {#g-crash} **Crash** | An attempt that was not landed; it scores nothing and does not count (unless the rules count it as zero). *Spotter taps CRASH; the result box is red.* |

@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { errorSentence, parseError } from "./errors";
 import { extendBreakPlan, holdPlan as holdPlanPure, resumeBreakPlan, resumePlanAt as resumePlanAtPure, shiftPlan as shiftPlanPure } from "./plan-actions";
+import { setBreak as setBreakPlan, utcToLocalHHMM } from "@/lib/engine/schedule";
 import { buildHeatModel, type DivisionRowDb, type HeatRowDb, type RoundRowDb } from "@/lib/schedule/model";
 import { parseEventSettings } from "@/lib/schemas/event-settings";
 import { rowToPlan, type PlanRow } from "@/lib/schedule/plans";
@@ -14,7 +15,7 @@ import { HEAT_COLUMNS, type HeatRow } from "./types";
 /** `heat`: the heat as the database has it now (the heat functions return the row they changed), so the screen shows it without waiting for the stream. */
 export type ActionResult = { ok: true; heat?: Partial<HeatRow> } | { ok: false; code: string | null; message: string };
 /** A run order change answers with the hold and pins as they are now, so the screen can show them at once. */
-export type PlanActionResult = { ok: true; hold: Json | null; anchors: Json } | { ok: false; code: string | null; message: string };
+export type PlanActionResult = { ok: true; hold: Json | null; anchors: Json; items?: Json } | { ok: false; code: string | null; message: string };
 
 const uuid = z.string().uuid();
 const HEAT_KEYS = HEAT_COLUMNS.split(", ");
@@ -52,6 +53,16 @@ export async function extendPrestart(heatId: string): Promise<ActionResult> {
   const { data, error } = await supabase.rpc("extend_prestart", { p_heat: heatId });
   return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, heat: heatOf(data) };
 }
+/**
+ * "+1 min" on a heat that is running: the database adds exactly 60 s of heat time to what is left (6 s on a simulation at x10), as often as needed, and writes
+ * "+1 min by ‹head seat› at ‹time›, heat now ends ‹time›" to the audit log. Refused (HEAT_NOT_RUNNING) when the heat is not running. Every screen follows the heat's row.
+ */
+export async function extendHeat(heatId: string): Promise<ActionResult> {
+  if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("extend_heat", { p_heat: heatId });
+  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, heat: heatOf(data) };
+}
 export async function abortStart(heatId: string): Promise<ActionResult> {
   return heatRpc("abort_start", heatId);
 }
@@ -61,8 +72,14 @@ export async function pauseHeat(heatId: string): Promise<ActionResult> {
 export async function resumeHeat(heatId: string): Promise<ActionResult> {
   return heatRpc("resume_heat", heatId);
 }
-export async function endHeat(heatId: string): Promise<ActionResult> {
-  return heatRpc("end_heat", heatId);
+/** End heat, after the console asked once. The reason is optional: with one it goes to the audit line (a second function of the same name, same checks and same move). */
+export async function endHeat(heatId: string, reason?: string): Promise<ActionResult> {
+  const why = (reason ?? "").trim().slice(0, 500);
+  if (!why) return heatRpc("end_heat", heatId);
+  if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("end_heat", { p_heat: heatId, p_reason: why });
+  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, heat: heatOf(data) };
 }
 
 export async function cancelHeat(heatId: string, reason: string): Promise<ActionResult> {
@@ -150,6 +167,30 @@ export async function extendBreakAction(planId: string, minutes: number): Promis
     const next = extendBreakPlan(p.plan, p.lives, minutes, { timezone: p.timezone, eventDay: p.row.day, defaults: p.defaults, serverNowIso: p.serverNow });
     const { data, error } = await p.supabase.rpc("set_plan_anchors", { p_plan: planId, p_anchors: next.anchors as unknown as Json, p_expected: p.row.updated_at });
     return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, hold: data?.hold ?? null, anchors: data?.anchors ?? {} };
+  } catch (e) {
+    return planFailure(e);
+  }
+}
+
+/**
+ * The break controls beside the red banner. "+1 min" adds exactly one minute to this break, "Other…" sets its length (end of the last heat to the next heat's start,
+ * warm-up included). Both change the run order's own break (to the second), so the next heat's planned start, the Run order step, the public timetable and every
+ * countdown move together; the change and any pin it replaced are in the audit log. Nothing starts by itself.
+ */
+export async function setBreakAction(planId: string, spec: { kind: "add"; minutes: number } | { kind: "length"; seconds: number }): Promise<PlanActionResult> {
+  if (!uuid.safeParse(planId).success) return fail("PLAN_NOT_FOUND");
+  if (spec.kind === "add" ? !(Number.isFinite(spec.minutes) && spec.minutes > 0 && spec.minutes <= 30) : !(Number.isFinite(spec.seconds) && spec.seconds >= 0 && spec.seconds <= 7200)) return fail("BAD_PLAN_VALUE");
+  const p = await loadPlan(planId);
+  if (!p) return fail("PLAN_NOT_FOUND");
+  try {
+    // a simulation's break is a tenth as long at x10: what is typed is the time on the clock, so the run order gets it multiplied by the speed
+    const { data: ended } = await p.supabase.from("heats").select("time_scale").eq("event_id", p.row.event_id).not("ended_at", "is", null).order("ended_at", { ascending: false }).limit(1);
+    const scale = Math.max(1, ended?.[0]?.time_scale ?? 1);
+    const ctx = { timezone: p.timezone, eventDay: p.row.day, defaults: p.defaults, now: p.serverNow, timeScale: scale };
+    const r = setBreakPlan(p.plan, p.lives, spec.kind === "add" ? { add: { minutes: spec.minutes } } : { length: { ms: spec.seconds * 1000 * scale } }, ctx);
+    const why = spec.kind === "add" ? `Break +1 min: the next heat now starts ${utcToLocalHHMM(Date.parse(r.startUtc), p.timezone)}${r.replacedPin ? ` (the ${r.replacedPin} pin was replaced)` : ""}` : `Break set to ${Math.floor(spec.seconds / 60)}:${String(spec.seconds % 60).padStart(2, "0")}: the next heat now starts ${utcToLocalHHMM(Date.parse(r.startUtc), p.timezone)}${r.replacedPin ? ` (the ${r.replacedPin} pin was replaced)` : ""}`;
+    const { data, error } = await p.supabase.rpc("set_plan_break", { p_plan: planId, p_item: r.prevItemId, p_break_min: r.breakMin, p_anchors: r.plan.anchors as unknown as Json, p_reason: why, p_expected: p.row.updated_at });
+    return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, hold: data?.hold ?? null, anchors: data?.anchors ?? {}, items: data?.items ?? undefined };
   } catch (e) {
     return planFailure(e);
   }

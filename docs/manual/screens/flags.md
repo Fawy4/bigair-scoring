@@ -2,7 +2,7 @@
 
 How the clock drives the flags: the four colours, the start heat sequence on the head judge's console, the flag strip on every live screen, the flag marshal's screen (/e/‹event›/flag), the horns, and what **Abort** does.
 
-Last checked: 4 Oct 2026 · Product version 0.13.2
+Last checked: 5 Oct 2026 · Product version 0.17.0
 
 ## Why it exists {#fl-purpose}
 
@@ -31,6 +31,14 @@ On the head judge's console (laptop and phone) **Start heat** becomes **Start he
 6. **Pause**: red with **Paused**, no horn. **Resume**: back to green or yellow according to the time left (a resume with 20 seconds left is yellow), one horn. A wind **Hold** between heats shows red with **Hold**.
 
 The pre-start time comes out of the gap before the heat. The run order's estimates do not change: a heat's estimated and actual start are the **green** moment.
+
+## +1 min on a running heat: the last minute can move {#fl-plus-one}
+
+The head judge's **+1 min** beside the heat clock adds exactly one minute to the heat time that is left, as often as needed. The last minute is measured from the heat's end, so it **moves with it**: a press inside the last minute puts the flag back to **green** (with no horn) until the new last minute begins, where it goes **yellow** again with its horn, once. The heat ends, with its two horns, at the new 0:00. On a simulation the minute is scaled with the speed (6 seconds at ×10).
+
+## After a heat: the break counts down {#fl-next-heat}
+
+After a heat the red banner keeps its state word (**Finished** or **Stopped**) and adds a second part from the active run order: “Next heat in 3:40 · Advanced · R2 · Heat 12 · est. 14:20”. It counts down the break plus the warm-up to the next heat's planned start, on the head console, the Flag view, the big screens and Follow the heat, to the same second. At 0:00 it stays and reads “Next heat due · Advanced · R2 · Heat 12”; it never starts anything and there is no horn. The head judge's **Break:** group (planned length, **+1 min**, **Other…**) changes the real break in the run order, so every screen counts down to the new 0:00 within a second ([console](console-laptop.md)). With no active run order the banner shows the state word alone, as before.
 
 ## The flag strip {#fl-strip}
 

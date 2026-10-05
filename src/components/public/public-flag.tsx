@@ -30,7 +30,7 @@ export function PublicFlagStrip({ data }: { data: PublicFlagData }) {
   if (!at) return null;
   return (
     <div data-testid="public-flag" className="flex">
-      <FlagStrip model={{ state: at.state, words: at.words, heatName: data.heatName, heatShort: data.heatShort }} />
+      <FlagStrip model={{ state: at.state, words: at.words, heatName: data.heatName, heatShort: data.heatShort, nextPart: at.nextPart }} />
     </div>
   );
 }
@@ -43,7 +43,7 @@ export function BigScreenFlag({ data }: { data: PublicFlagData }) {
   const now = useServerNow(data.serverNow);
   const at = publicFlagAt(data, now);
   if (!at) return null;
-  const { state, words } = at;
+  const { state, words, nextPart } = at;
   return (
     <>
       <div data-testid="screen-flag-frame" data-flag={state.kind} aria-hidden className="pointer-events-none absolute inset-0 z-20 border-[1.4vw]" style={{ borderColor: state.colour }} />
@@ -58,6 +58,11 @@ export function BigScreenFlag({ data }: { data: PublicFlagData }) {
         <span data-testid="screen-flag-word" className="min-w-0 break-words text-[3.4vw] font-bold">
           {words}
         </span>
+        {nextPart ? (
+          <span data-testid="screen-flag-next" className="min-w-0 break-words text-[2.4vw] font-semibold tabular-nums">
+            {nextPart}
+          </span>
+        ) : null}
         {state.countdownMs !== null ? (
           <span data-testid="screen-flag-countdown" className="text-[6vw] font-bold leading-none tabular-nums">
             {formatClock(state.countdownMs)}

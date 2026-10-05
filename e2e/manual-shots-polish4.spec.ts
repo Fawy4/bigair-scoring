@@ -1,5 +1,5 @@
 import path from "node:path";
-import { expect, test } from "./base";
+import { expect, test, installSupabaseProxy } from "./base";
 import { createOrganiser } from "./organiser";
 import { createLiveWorld, type LiveWorld } from "./live-world";
 
@@ -160,6 +160,32 @@ test.describe("the Join page pictures", () => {
         }
         await ctx.close();
       }
+    });
+  }
+});
+
+test.describe("the head console pictures (+1 min beside the clock of a running heat)", () => {
+  let w: LiveWorld;
+  test.beforeAll(async () => {
+    test.setTimeout(240_000);
+    w = await createLiveWorld({ flags: true });
+    await w.db.from("heats").update({ status: "running", started_at: new Date(Date.now() - 200_000).toISOString() }).eq("id", w.heats[0]);
+  });
+  test.afterAll(async () => {
+    await w?.cleanup();
+  });
+  for (const [name, vp] of [["console-laptop-1280", { width: 1280, height: 800 }], ["console-phone-390", { width: 390, height: 844 }]] as const) {
+    test(name, async ({ browser }) => {
+      test.setTimeout(180_000);
+      const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: vp.width === 390 ? 2 : 1 });
+      await installSupabaseProxy(ctx);
+      const page = await ctx.newPage();
+      await w.signInAs(page, "head", `/head/${w.eventId}`);
+      await expect(page.getByTestId("extend-heat")).toBeVisible({ timeout: 90_000 });
+      await hideDevOverlay(page);
+      await page.waitForTimeout(800);
+      await page.screenshot({ path: path.join(OUT, `${name}.png`) });
+      await ctx.close();
     });
   }
 });

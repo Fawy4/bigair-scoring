@@ -70,7 +70,7 @@ export interface LiveHeatState extends Snapshot {
   /** Puts a change of one heat on the screen at once: a guess before the server answers, then the row the server answered with. The stream confirms it. A row older than the one held is ignored. */
   patchHeat: (heatId: string, patch: Partial<HeatRow>) => void;
   /** Shows a hold or pins the server has just answered with, before the stream delivers them. */
-  applyPlan: (planId: string, hold: Json | null, anchors: Json) => void;
+  applyPlan: (planId: string, hold: Json | null, anchors: Json, items?: Json) => void;
   /** Puts a row the server has just returned (our own attempt, score, impression, flag or sheet) into the list at once, without waiting for the stream. */
   apply: (key: "attempts" | "scores" | "impressions" | "flags" | "sheets" | "penalties" | "decisions", row: { id: string; heat_id?: string; updated_at?: string }) => void;
 }
@@ -139,13 +139,13 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
     }
     setPlans(next);
   }, [supabase, ctx.event.id, ctx.event.readyCallMin]);
-  const applyPlan = useCallback<LiveHeatState["applyPlan"]>((planId, hold, anchors) => {
+  const applyPlan = useCallback<LiveHeatState["applyPlan"]>((planId, hold, anchors, items) => {
     setPlans((l) =>
       l.map((p) => {
         if (p.id !== planId) return p;
         const { hold: _old, ...rest } = p.plan;
         void _old;
-        return { ...p, plan: { ...rest, anchors: anchors as Record<string, string>, ...(hold ? { hold: hold as unknown as NonNullable<typeof p.plan.hold> } : {}) } };
+        return { ...p, plan: { ...rest, ...(items ? { items: items as unknown as typeof p.plan.items } : {}), anchors: anchors as Record<string, string>, ...(hold ? { hold: hold as unknown as NonNullable<typeof p.plan.hold> } : {}) } };
       }),
     );
   }, []);

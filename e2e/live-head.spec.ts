@@ -100,6 +100,7 @@ test("the head judge runs a whole heat from a phone: Start refused in plain word
 
   // End; the ended heat and its start are in the database
   await head.getByTestId("end").click();
+  await head.getByTestId("end-confirm").click(); // End heat asks once
   await expect(head.getByTestId("selected-heat")).toHaveAttribute("data-state", "ended");
   const done = await heatRow(w.heats[0]);
   expect(done.status).toBe("ended");
