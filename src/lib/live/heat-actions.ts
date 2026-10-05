@@ -179,7 +179,7 @@ export async function extendBreakAction(planId: string, minutes: number): Promis
  */
 export async function setBreakAction(planId: string, spec: { kind: "add"; minutes: number } | { kind: "length"; seconds: number }): Promise<PlanActionResult> {
   if (!uuid.safeParse(planId).success) return fail("PLAN_NOT_FOUND");
-  if (spec.kind === "add" ? !(Number.isFinite(spec.minutes) && spec.minutes > 0 && spec.minutes <= 30) : !(Number.isFinite(spec.seconds) && spec.seconds >= 0 && spec.seconds <= 7200)) return fail("BAD_PLAN_VALUE");
+  if (spec.kind === "add" ? !(Number.isFinite(spec.minutes) && spec.minutes > 0 && spec.minutes <= 120) : !(Number.isFinite(spec.seconds) && spec.seconds >= 0 && spec.seconds <= 7200)) return fail("BAD_PLAN_VALUE");
   const p = await loadPlan(planId);
   if (!p) return fail("PLAN_NOT_FOUND");
   try {
@@ -188,7 +188,7 @@ export async function setBreakAction(planId: string, spec: { kind: "add"; minute
     const scale = Math.max(1, ended?.[0]?.time_scale ?? 1);
     const ctx = { timezone: p.timezone, eventDay: p.row.day, defaults: p.defaults, now: p.serverNow, timeScale: scale };
     const r = setBreakPlan(p.plan, p.lives, spec.kind === "add" ? { add: { minutes: spec.minutes } } : { length: { ms: spec.seconds * 1000 * scale } }, ctx);
-    const why = spec.kind === "add" ? `Break +1 min: the next heat now starts ${utcToLocalHHMM(Date.parse(r.startUtc), p.timezone)}${r.replacedPin ? ` (the ${r.replacedPin} pin was replaced)` : ""}` : `Break set to ${Math.floor(spec.seconds / 60)}:${String(spec.seconds % 60).padStart(2, "0")}: the next heat now starts ${utcToLocalHHMM(Date.parse(r.startUtc), p.timezone)}${r.replacedPin ? ` (the ${r.replacedPin} pin was replaced)` : ""}`;
+    const why = spec.kind === "add" ? `Break +${spec.minutes === 1 ? "1 min" : `${Math.floor(spec.minutes)}:${String(Math.round((spec.minutes % 1) * 60)).padStart(2, "0")}`}: the next heat now starts ${utcToLocalHHMM(Date.parse(r.startUtc), p.timezone)}${r.replacedPin ? ` (the ${r.replacedPin} pin was replaced)` : ""}` : `Break set to ${Math.floor(spec.seconds / 60)}:${String(spec.seconds % 60).padStart(2, "0")}: the next heat now starts ${utcToLocalHHMM(Date.parse(r.startUtc), p.timezone)}${r.replacedPin ? ` (the ${r.replacedPin} pin was replaced)` : ""}`;
     const { data, error } = await p.supabase.rpc("set_plan_break", { p_plan: planId, p_item: r.prevItemId, p_break_min: r.breakMin, p_anchors: r.plan.anchors as unknown as Json, p_reason: why, p_expected: p.row.updated_at });
     return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, hold: data?.hold ?? null, anchors: data?.anchors ?? {}, items: data?.items ?? undefined };
   } catch (e) {

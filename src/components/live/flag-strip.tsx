@@ -37,13 +37,13 @@ export function FlagStrip({ model, size = "slim", soundOn, onToggleSound, classN
       role="status"
       aria-label={`${state.label}${state.countdownMs !== null ? ` ${formatClock(state.countdownMs)}` : ""}${model.heatName ? `, ${model.heatName}` : ""}`}
       style={{ backgroundColor: state.colour, color: ink }}
-      className={cn("flex min-h-tap min-w-0 flex-1 items-center gap-x-2 overflow-hidden rounded-xl px-2", className)}
+      className={cn("flex min-h-tap min-w-0 flex-1 items-center gap-x-2 rounded-xl px-2", model.nextPart ? "flex-wrap gap-y-0.5 py-1" : "overflow-hidden", className)}
     >
-      <span data-testid="heat-timer-state" className="min-w-0 shrink truncate text-small font-bold">
+      <span data-testid="heat-timer-state" className={cn("min-w-0 text-small font-bold", model.nextPart ? "shrink-0" : "shrink truncate")}>
         {model.words}
       </span>
       {model.nextPart ? (
-        <span data-testid="flag-next-heat" className="min-w-0 shrink truncate text-small font-semibold tabular-nums">
+        <span data-testid="flag-next-heat" className="min-w-0 flex-1 basis-48 whitespace-normal break-words text-small font-semibold tabular-nums">
           {model.nextPart}
         </span>
       ) : null}

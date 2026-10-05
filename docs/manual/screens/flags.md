@@ -38,7 +38,7 @@ The head judge's **+1 min** beside the heat clock adds exactly one minute to the
 
 ## After a heat: the break counts down {#fl-next-heat}
 
-After a heat the red banner keeps its state word (**Finished** or **Stopped**) and adds a second part from the active run order: “Next heat in 3:40 · Advanced · R2 · Heat 12 · est. 14:20”. It counts down the break plus the warm-up to the next heat's planned start, on the head console, the Flag view, the big screens and Follow the heat, to the same second. At 0:00 it stays and reads “Next heat due · Advanced · R2 · Heat 12”; it never starts anything and there is no horn. The head judge's **Break:** group (planned length, **+1 min**, **Other…**) changes the real break in the run order, so every screen counts down to the new 0:00 within a second ([console](console-laptop.md)). With no active run order the banner shows the state word alone, as before.
+After a heat the red banner keeps its state word (**Finished** or **Stopped**) and adds a second part from the active run order: “Next heat in 3:40 · Advanced · R2 · Heat 12 · est. 14:20”. It counts down the break plus the warm-up to the next heat's planned start, on the head console, the Flag view, the big screens and Follow the heat, to the same second. At 0:00 it stays and reads “Next heat due · Advanced · R2 · Heat 12”; it never starts anything and there is no horn. The head judge's **Break:** group (planned length, **+1 min**, **+ Other…**, **Set length…**) changes the real break in the run order, so every screen counts down to the new 0:00 within a second ([console](console-laptop.md)). With no active run order the banner shows the state word alone, as before.
 
 ## The flag strip {#fl-strip}
 

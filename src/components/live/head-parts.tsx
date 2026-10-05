@@ -29,7 +29,7 @@ const V = copy.headV2;
 const HL = copy.headLive;
 
 /** A heat-control button. `compact` is the laptop's top bar (the reason goes to the line under the bar and to assistive technology); otherwise the reason is written under the button. */
-export function Btn({ children, onClick, disabled, tone = "plain", testId, reason, compact = false, size = "tap", className }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; tone?: "plain" | "accent" | "danger"; testId: string; reason?: string; compact?: boolean; size?: "tap" | "bar"; className?: string }) {
+export function Btn({ children, onClick, disabled, tone = "plain", testId, reason, compact = false, size = "tap", className, pressed }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; tone?: "plain" | "accent" | "danger"; testId: string; reason?: string; compact?: boolean; size?: "tap" | "bar"; className?: string; pressed?: boolean }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       <button
@@ -37,9 +37,11 @@ export function Btn({ children, onClick, disabled, tone = "plain", testId, reaso
         data-testid={testId}
         disabled={disabled}
         aria-describedby={disabled && reason ? `why-${testId}` : undefined}
+        aria-pressed={pressed}
         onClick={onClick}
         className={cn(
           "inline-flex items-center justify-center gap-1 rounded-xl border px-3 text-body font-semibold",
+          pressed ? "border-2 border-beach-accent" : "",
           size === "bar" ? "min-h-bar" : "min-h-tap",
           disabled ? "border-beach-line bg-beach-surface text-beach-muted" : tone === "accent" ? "border-beach-accent bg-beach-accent text-beach-on-accent" : tone === "danger" ? "border-beach-crash bg-beach-bg text-beach-ink" : "border-beach-border bg-beach-bg text-beach-ink",
           className,
@@ -157,18 +159,18 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
             </p>
           ) : null}
         </div>
-        {c.flag ? <FlagStrip model={c.flag} size="head" className="min-w-[16rem] basis-72" /> : selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
         <ClockText timezone={c.ctx.event.timezone} nowMs={c.nowServer} />
         <DriftBadge drift={c.drift} />
+        {/* the banner has its own full-width line: nothing sits beside it or on top of it, so its words (state, break countdown, next heat) are never cut */}
+        {c.flag ? <FlagStrip model={c.flag} size="head" className="w-full basis-full" /> : selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
         {selected && state !== "cancelled" ? (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full basis-full flex-wrap items-center gap-2">
             {c.ctl && c.ctl.id !== selected.id && c.on("start") ? (
               <span data-testid="start-target" className="text-small font-semibold text-beach-muted">
                 {T.startNext(c.ctlTitle)}
               </span>
             ) : null}
             {c.flagsOn && !c.armed && c.on("start") ? <PrestartChoice c={c} /> : null}
-            {!c.armed ? <BreakChoice c={c} /> : null}
             {c.armed ? (
               <>
                 <Btn compact size="bar" testId="start-now" tone="accent" disabled={c.pending} onClick={c.actions.startNowDuringYellow}>
@@ -203,6 +205,7 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
             <Btn compact size="bar" testId="end" reason={c.why("end")} disabled={c.pending || !c.on("end")} onClick={() => { c.setReason(""); c.setConfirmingEnd(true); }}>
               {T.end}
             </Btn>
+            {!c.armed ? <BreakChoice c={c} /> : null}
           </div>
         ) : null}
         {withSound && onSoundToggle ? (
@@ -240,44 +243,57 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn }: { c: HeadCont
 }
 
 /**
- * "Break:" beside the red banner, laid out like the Pre-start group: the break as the run order has it now (selected, with its length), "+1 min" and "Other…" (a small
- * field, m:ss or whole minutes). Each press changes the REAL break (the run order's), so the next heat's planned start moves on every screen at once; nothing starts.
+ * "Break:" on its own line under the red banner (the banner is never squeezed or covered), laid out like the Pre-start group but smaller: the break as the run order has it now
+ * (ticked, with its length), "+1 min", "+ Other…" (adds the typed time, like +1 min) and "Set length…" (the whole break, counted from the end of the last heat). A small field opens
+ * under the buttons for the last two, one at a time. Each press changes the REAL break (the run order's), so the next heat's planned start moves on every screen; nothing starts.
  */
 export function BreakChoice({ c }: { c: HeadController }) {
   const info = c.breakInfo;
-  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"add" | "set" | null>(null);
   const [text, setText] = useState("");
   const [bad, setBad] = useState(false);
   if (info.kind !== "break" || info.state === "paused" || c.breakLengthMs === null) return null;
   const apply = () => {
     const r = parseBreak(text);
-    if (!r.ok) return setBad(true);
+    if (!r.ok || (mode === "add" && r.sec <= 0)) return setBad(true);
     setBad(false);
-    setOpen(false);
+    setMode(null);
     setText("");
-    c.actions.breakSet(r.sec);
+    if (mode === "add") c.actions.breakAdd(r.sec);
+    else c.actions.breakSet(r.sec);
   };
+  const toggle = (m: "add" | "set") => {
+    setBad(false);
+    setText("");
+    setMode((cur) => (cur === m ? null : m));
+  };
+  const id = mode === "add" ? "break-add" : "break-set";
   return (
-    <div data-testid="break-choice" role="group" aria-label={V.breakGroup} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-beach-line bg-beach-surface px-2 py-1">
-      <span className="text-small font-semibold text-beach-muted">{V.breakGroup}</span>
-      <span data-testid="break-length" aria-current="true" className="inline-flex min-h-tap items-center gap-1 rounded-lg border-2 border-beach-accent bg-beach-bg px-3 text-small font-semibold tabular-nums text-beach-ink">
-        <Check aria-hidden className="size-4" />
-        {formatClock(c.breakLengthMs)}
-      </span>
-      <Btn compact size="bar" testId="break-plus-one" disabled={c.pending || !c.planId} onClick={c.actions.breakPlusOne}>
-        {T.plusOneMin}
-      </Btn>
-      <Btn compact size="bar" testId="break-other" disabled={c.pending || !c.planId} onClick={() => setOpen((v) => !v)}>
-        {V.breakOther}
-      </Btn>
-      {open ? (
+    <div data-testid="break-choice" role="group" aria-label={V.breakGroup} className="flex w-full basis-full flex-col gap-1 rounded-xl border border-beach-line bg-beach-surface px-2 py-1">
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+        <span className="text-small font-semibold text-beach-muted">{V.breakGroup}</span>
+        <span data-testid="break-length" aria-current="true" className="inline-flex min-h-tap items-center gap-1 rounded-lg border-2 border-beach-accent bg-beach-bg px-2 text-small font-semibold tabular-nums text-beach-ink">
+          <Check aria-hidden className="size-3.5" />
+          {V.breakPlanned(formatClock(c.breakLengthMs))}
+        </span>
+        <Btn compact size="bar" testId="break-plus-one" disabled={c.pending || !c.planId} onClick={c.actions.breakPlusOne}>
+          {T.plusOneMin}
+        </Btn>
+        <Btn compact size="bar" testId="break-add" pressed={mode === "add"} disabled={c.pending || !c.planId} onClick={() => toggle("add")}>
+          {V.breakAdd}
+        </Btn>
+        <Btn compact size="bar" testId="break-set" pressed={mode === "set"} disabled={c.pending || !c.planId} onClick={() => toggle("set")}>
+          {V.breakOther}
+        </Btn>
+      </div>
+      {mode ? (
         <div className="flex flex-wrap items-center gap-1">
-          <label className="sr-only" htmlFor="break-other-input">
-            {V.breakOtherLabel}
+          <label className="text-small font-semibold text-beach-muted" htmlFor={`${id}-input`}>
+            {mode === "add" ? V.breakAddLabel : V.breakOtherLabel}
           </label>
           <input
-            id="break-other-input"
-            data-testid="break-other-input"
+            id={`${id}-input`}
+            data-testid={`${id}-input`}
             inputMode="numeric"
             autoFocus
             value={text}
@@ -293,14 +309,14 @@ export function BreakChoice({ c }: { c: HeadController }) {
                 apply();
               }
             }}
-            className="min-h-tap w-24 rounded-lg border border-beach-border bg-beach-bg px-2 text-body font-semibold tabular-nums"
+            className="min-h-tap w-24 rounded-lg border border-beach-border bg-beach-bg px-2 text-small font-semibold tabular-nums"
           />
-          <Btn compact size="bar" testId="break-other-set" disabled={c.pending || !c.planId} onClick={apply}>
-            {V.breakOtherSet}
+          <Btn compact size="bar" testId={`${id}-apply`} disabled={c.pending || !c.planId} onClick={apply}>
+            {mode === "add" ? V.breakAddApply : V.breakOtherSet}
           </Btn>
           {bad ? (
-            <p role="alert" data-testid="break-other-error" className="w-full text-small font-semibold">
-              {V.breakOtherBad}
+            <p role="alert" data-testid={`${id}-error`} className="w-full text-small font-semibold">
+              {mode === "add" ? V.breakAddBad : V.breakOtherBad}
             </p>
           ) : null}
         </div>

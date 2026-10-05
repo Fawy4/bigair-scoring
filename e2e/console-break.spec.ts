@@ -5,7 +5,7 @@ import type { Browser, BrowserContext, Page } from "@playwright/test";
 // Polish 4, G / H / I on the head console (a throwaway organisation; one worker, no retries):
 //   G  End heat asks once: the heat keeps running until Confirm; Cancel leaves it running.
 //   H  after End heat the next heat's start controls are there at once (no refresh), on the laptop and the phone, at x1 and x10; nothing starts by itself on a real event.
-//   I  the red banner keeps "Finished" and adds "Next heat in m:ss · Division · R1 · Heat 2 · est. hh:mm" from the run order; +1 min and Other… change the real break, every
+//   I  the red banner keeps "Finished" and adds "Next heat in m:ss · Division · R1 · Heat 2 · est. hh:mm" from the run order; +1 min, + Other… and Set length… change the real break, every
 //      screen follows; at 0:00 it reads "Next heat due" and nothing has started.
 let w: LiveWorld;
 const phones: BrowserContext[] = [];
@@ -78,10 +78,8 @@ test("H on a laptop: after End heat the next heat's start controls are there at 
   await expect(head.getByTestId("selected-heat")).toHaveAttribute("data-state", "published", { timeout: 15_000 });
   await expect(head.getByTestId("start")).toBeEnabled();
   // a break of 5 seconds: it runs out, and nothing starts or arms by itself
-  await head.getByTestId("break-other").click();
-  await head.getByTestId("break-other-input").fill("0:05");
-  await head.getByTestId("break-other-set").click();
-  await head.waitForTimeout(30_000);
+  await w.db.from("schedule_plans").update({ items: [{ id: "i1", kind: "heat", heatId: w.heats[0], breakAfterMin: 0 }, { id: "i2", kind: "heat", heatId: w.heats[1] }] as never }).eq("id", w.planId);
+  await head.waitForTimeout(30_000); // the break has run out: nothing starts or arms by itself
   const next = await heatRow(w.heats[1]);
   expect(next).toMatchObject({ status: "scheduled", armed_at: null, started_at: null });
   await expect(head.getByTestId("start")).toBeEnabled();
@@ -98,6 +96,7 @@ test("H on a phone: the same, with the phone console", async ({ browser }) => {
   await head.getByTestId("end-confirm").click();
   await expect(head.getByTestId("start")).toBeEnabled({ timeout: 10_000 });
   await expect(head.getByTestId("prestart-choice")).toBeVisible();
+  if (process.env.SHOT_DIR) await head.screenshot({ path: `${process.env.SHOT_DIR}/break-phone.png` });
 });
 
 test("H at x10: the controls are back at once on a heat that ran at ten times the speed", async ({ browser }) => {
@@ -113,7 +112,7 @@ test("H at x10: the controls are back at once on a heat that ran at ten times th
   await expect(head.getByTestId("prestart-choice")).toBeVisible();
 });
 
-test("I: the red banner says Finished and counts down Next heat in …; +1 min and Other… change the real break on every screen; at 0:00 it reads Next heat due and nothing has started", async ({ browser }) => {
+test("I: the red banner says Finished and counts down Next heat in …; +1 min, + Other… and Set length… change the real break on every screen; at 0:00 it reads Next heat due and nothing has started", async ({ browser }) => {
   test.setTimeout(420_000);
   await run();
   const head = await headLaptop(browser);
@@ -151,18 +150,43 @@ test("I: the red banner says Finished and counts down Next heat in …; +1 min a
   const audit = (await w.db.from("audit_log").select("reason").eq("action", "plan_break_set")).data ?? [];
   expect(audit.length).toBeGreaterThan(0);
 
-  // Other… 2:30
-  await head.getByTestId("break-other").click();
-  await head.getByTestId("break-other-input").fill("2:30");
-  await head.getByTestId("break-other-set").click();
-  await expect.poll(async () => nextSeconds(head, "flag-next-heat"), { timeout: 10_000 }).toBeLessThanOrEqual(150);
-  expect(await nextSeconds(head, "flag-next-heat")).toBeGreaterThan(120);
-  await expect.poll(async () => nextSeconds(marshal, "flag-next-heat"), { timeout: 20_000 }).toBeLessThanOrEqual(150);
+  // + Other… 2:30 ADDS 2:30 to the break as it stands (like +1 min), on every screen
+  const beforeAdd = await nextSeconds(head, "flag-next-heat");
+  await head.getByTestId("break-add").click();
+  await head.getByTestId("break-add-input").fill("2:30");
+  await head.getByTestId("break-add-apply").click();
+  await expect.poll(async () => nextSeconds(head, "flag-next-heat"), { timeout: 10_000 }).toBeGreaterThan(beforeAdd + 140);
+  expect(await nextSeconds(head, "flag-next-heat")).toBeLessThanOrEqual(beforeAdd + 155);
+  await expect.poll(async () => nextSeconds(marshal, "flag-next-heat"), { timeout: 20_000 }).toBeGreaterThan(beforeAdd + 140);
+  await expect.poll(async () => nextSeconds(follow, "screen-flag-next"), { timeout: 20_000 }).toBeGreaterThan(beforeAdd + 140);
+  // adding 0 is refused in words and changes nothing
+  await head.getByTestId("break-add").click();
+  await head.getByTestId("break-add-input").fill("0");
+  await head.getByTestId("break-add-apply").click();
+  await expect(head.getByTestId("break-add-error")).toBeVisible();
+  await head.getByTestId("break-add").click(); // closes it
 
-  // at 0:00: "Next heat due", and nothing has started or armed
-  await head.getByTestId("break-other").click();
-  await head.getByTestId("break-other-input").fill("0:05");
-  await head.getByTestId("break-other-set").click();
+  // Set length… 2:30 makes the WHOLE break 2:30, counted from the end of the heat: what is left is under 2:30 (and not the 7+ minutes before)
+  await head.getByTestId("break-set").click();
+  await head.getByTestId("break-set-input").fill("2:30");
+  await head.getByTestId("break-set-apply").click();
+  await expect.poll(async () => nextSeconds(head, "flag-next-heat"), { timeout: 10_000 }).toBeLessThanOrEqual(150);
+  expect(await nextSeconds(head, "flag-next-heat")).toBeGreaterThan(60);
+  await expect.poll(async () => nextSeconds(marshal, "flag-next-heat"), { timeout: 20_000 }).toBeLessThanOrEqual(150);
+  await expect.poll(async () => nextSeconds(follow, "screen-flag-next"), { timeout: 20_000 }).toBeLessThanOrEqual(150);
+
+  // the banner is never covered: the Break group and the Start controls are below it
+  const banner = await head.getByTestId("heat-timer").first().boundingBox();
+  const group = await head.getByTestId("break-choice").boundingBox();
+  expect(banner && group && group.y >= banner.y + banner.height - 1).toBe(true);
+  // Pre-start stays right beside Start heat sequence (same line, Pre-start to its left)
+  const pre = await head.getByTestId("prestart-choice").boundingBox();
+  const go = await head.getByTestId("start").boundingBox();
+  expect(pre && go && group && Math.abs(pre.y + pre.height / 2 - (go.y + go.height / 2)) < 40 && pre.x < go.x && group.y > go.y).toBe(true);
+  if (process.env.SHOT_DIR) await head.screenshot({ path: `${process.env.SHOT_DIR}/break-laptop.png` });
+
+  // at 0:00: "Next heat due", and nothing has started or armed (the break is cut to nothing behind the screen's back)
+  await w.db.from("schedule_plans").update({ items: [{ id: "i1", kind: "heat", heatId: w.heats[0], breakAfterMin: 0 }, { id: "i2", kind: "heat", heatId: w.heats[1] }] as never }).eq("id", w.planId);
   await expect(head.getByTestId("flag-next-heat")).toHaveText(/^Next heat due · Pro Men · R1 · Heat 2$/, { timeout: 30_000 });
   await expect(marshal.getByTestId("flag-next-heat")).toHaveText(/^Next heat due · Pro Men · R1 · Heat 2$/, { timeout: 30_000 });
   await head.waitForTimeout(8000);

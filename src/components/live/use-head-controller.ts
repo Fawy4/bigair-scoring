@@ -290,6 +290,7 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
       /** The break controls: the change IS the run order's break for this gap (the next heat's planned start moves on every screen), to the second. */
       breakPlusOne: () => planId && act(V.breakDone.plusOne, () => setBreakAction(planId, { kind: "add", minutes: 1 })),
       breakSet: (seconds: number) => planId && act(V.breakDone.set(formatClock(seconds * 1000)), () => setBreakAction(planId, { kind: "length", seconds })),
+      breakAdd: (seconds: number) => planId && act(V.breakDone.added(formatClock(seconds * 1000)), () => setBreakAction(planId, { kind: "add", minutes: seconds / 60 })),
       pauseBreak: () => planId && act(V.breakDone.paused, () => holdPlan(planId)),
       resumeBreak: () => planId && act(V.breakDone.resumed, () => resumeBreakAction(planId)),
     },
