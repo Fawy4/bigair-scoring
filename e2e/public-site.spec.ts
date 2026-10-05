@@ -194,6 +194,22 @@ test("Open Graph tags are on every public page, and the picture is a real 1200 Ã
   expect(heatImage.status()).toBe(200);
 });
 
+test("a wind call with no message shows its state word after Wind Call: (Stop / Hold / LETS GO!), on the public page, the big screen and Follow the heat", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  for (const [status, word] of [["red", "Stop"], ["amber", "Hold"], ["green", "LETS GO!"]] as const) {
+    await w.db.from("wind_calls").insert({ event_id: w.eventId, status, message: null });
+    for (const path of [url(), `/screen/${w.slug}`, `/screen/${w.slug}/follow`]) {
+      await page.goto(path);
+      await expect(page.getByTestId("wind-banner")).toHaveText(`Wind Call: ${word}`);
+      await expect(page.getByTestId("wind-banner")).toHaveAttribute("data-status", status);
+    }
+  }
+  // with a message the message is shown alone
+  await w.db.from("wind_calls").insert({ event_id: w.eventId, status: "red", message: "Gusts 35 knots" });
+  await page.goto(url());
+  await expect(page.getByTestId("wind-banner")).toHaveText("Wind Call: Gusts 35 knots");
+});
+
 test("Follow the heat shows the wind call at the very top, in the head judge's words, and drops it when it is cleared", async ({ page }) => {
   await w.db.from("wind_calls").insert({ event_id: w.eventId, status: "red", message: "Wind too strong: all heats on hold" });
   await page.setViewportSize({ width: 1600, height: 900 });

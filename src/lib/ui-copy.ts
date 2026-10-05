@@ -3027,7 +3027,7 @@ export const copy = {
       openLive: "Open the live heat",
       divisionsHeading: "Divisions",
     },
-    wind: { label: "Wind Call" },
+    wind: { label: "Wind Call", states: { red: "Stop", amber: "Hold", green: "LETS GO!" } as Record<string, string> },
     share: { heading: "Share this page", whatsapp: "Share on WhatsApp", copy: "Copy link", copied: "Link copied", qr: "QR code to this page", qrAlt: "QR code that opens this page", text: (event: string) => `${event}: live scores and timetable` },
     live: {
       title: "Live heat",
