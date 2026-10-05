@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Check, CircleUser, Copy, ExternalLink, KeyRound, LogOut, MessageSquare, QrCode } from "lucide-react";
+import { Check, CircleUser, Copy, ExternalLink, KeyRound, LogOut, MessageSquare, QrCode, CircleHelp } from "lucide-react";
 import { QR_COLOURS } from "@/lib/org-design/qr";
-import { orgCopy } from "@/lib/ui-copy";
+import { copy, orgCopy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import { ShellLayoutProvider, type ShellLayout } from "./layout-context";
@@ -212,6 +212,7 @@ function TopBar({ layout, productName, organisations, currentOrganisationId, eve
           </div>
         )}
         {event ? <PublicLinkMenu url={event.publicUrl} iconOnly /> : null}
+        <Button variant="quiet" iconOnly icon={CircleHelp} href="/help" aria-label={copy.manual.footerHelp} data-testid="help-link" />
         {accountMenu}
       </header>
     );
@@ -239,6 +240,9 @@ function TopBar({ layout, productName, organisations, currentOrganisationId, eve
             {orgCopy.shell.note}
           </Button>
         ) : null}
+        <Button variant="quiet" href="/help" data-testid="help-link">
+          {copy.manual.footerHelp}
+        </Button>
         {accountMenu}
       </div>
     </header>

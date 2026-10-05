@@ -7,7 +7,7 @@ import { PhoneReview } from "./phone-review";
 import { HeadLiveConsole } from "./head-live-console";
 import type { FixTarget } from "@/lib/live/publish-checklist";
 import { TieDialog } from "./head-dialogs";
-import { BreakStrip, ControlMessage, DivisionTabs, HeatDialogs, RunOrderList, StartWarning, TimerBar, TimingButtons, WindButton } from "./head-parts";
+import { BreakChoice, ControlMessage, WhyLine, SoundToggle, DivisionTabs, HeatDialogs, RunOrderList, StartWarning, TimerBar, TimingButtons, WindButton } from "./head-parts";
 import { HeatControl, type ReviewProps } from "./heat-control";
 import { useHeadController } from "./use-head-controller";
 import { JudgeScreen } from "./judge-screen";
@@ -179,7 +179,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   }, [live]);
   const review: ReviewProps | undefined = head ? { items: blockerItems, canOverride: head.checklist.canOverride, riders: riders.map((r) => ({ entryId: r.entryId, word: wordFor(r.entryId), name: r.name })), onChooseOrder: setTieFor, onChanged, ...(wide ? { onFix: (target: FixTarget) => setFixRequest({ target, n: Date.now() }) } : {}) } : undefined;
 
-  const c = useHeadController({ ctx, heats: live.heats, plans: live.plans, nowServer, selectedId: shownId, onSelect: selectHeat, onPlanChanged: live.applyPlan, onPatchHeat: live.patchHeat, review, divisionId });
+  const c = useHeadController({ ctx, heats: live.heats, plans: live.plans, nowServer, selectedId: shownId, nextHeatId, onSelect: selectHeat, onPlanChanged: live.applyPlan, onPatchHeat: live.patchHeat, review, divisionId });
 
   // the clock, the sound and the screen lock follow the heat that is on the water, wherever it is, else the heat shown
   const clockHeat = c.liveHeat ?? shown;
@@ -351,11 +351,19 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   return (
     <div data-testid="head-page" data-layout="wide" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
-      <header data-testid="top-bar" className="sticky top-0 z-10 flex flex-col gap-1.5 border-b border-beach-line bg-beach-bg px-3 py-2">
+      <header data-testid="top-bar" className="flex flex-col gap-1 border-b border-beach-line bg-beach-bg px-3 py-1.5">
         <h1 className="sr-only">{T.title}</h1>
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <DivisionTabs divisions={ctx.divisionTabs} divisionId={divisionId} liveIds={liveIds} onPick={pickDivision} />
-          <p className="text-small font-medium text-beach-muted">{[ctx.event.name, viewer.name].join(" · ")}</p>
+          {c.selected && c.state !== "cancelled" && !c.armed ? <BreakChoice c={c} compact /> : null}
+          <div className="min-w-0 flex-1 basis-48">
+            <ControlMessage c={c} />
+            <WhyLine c={c} />
+          </div>
+          <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+            <SoundToggle on={settings.soundOn} onToggle={() => settings.setSoundOn(!settings.soundOn)} />
+            <p className="text-small font-medium text-beach-muted">{[ctx.event.name, viewer.name].join(" · ")}</p>
+          </div>
         </div>
         {liveElsewhere ? (
           <button type="button" data-testid="live-elsewhere" onClick={() => selectHeat(liveElsewhere.id)} className="inline-flex min-h-tap flex-wrap items-center gap-2 self-start rounded-xl border border-beach-live bg-beach-bg px-3 text-left text-body font-semibold">
@@ -363,10 +371,8 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
             <span className="text-beach-muted">{V.goToLive}</span>
           </button>
         ) : null}
-        <TimerBar c={c} withSound soundOn={settings.soundOn} onSoundToggle={() => settings.setSoundOn(!settings.soundOn)} />
+        <TimerBar c={c} bar />
         <StartWarning c={c} />
-        <BreakStrip c={c} />
-        <ControlMessage c={c} />
       </header>
       <div className="grid gap-3 px-3 py-2 min-[900px]:grid-cols-[15rem_minmax(0,1fr)]">
         <div data-testid="left-column" className="flex min-w-0 flex-col gap-2">

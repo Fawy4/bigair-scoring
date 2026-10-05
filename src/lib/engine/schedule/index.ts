@@ -3,7 +3,7 @@ export * from "./types";
 export { localToUtc, utcToLocalHHMM, addMinutes, tzOffsetMs, toIso } from "./time";
 export { computeTimetable } from "./timetable";
 export { startHold, resumeHold, shift, activatePlan, type HeatLookup } from "./actions";
-export { breakCountdown, extendBreak, resumeBreak, nextHeatInOrder, startsOutOfOrder, type BreakCountdown, type BreakNone } from "./break";
+export { breakCountdown, extendBreak, setBreak, resumeBreak, nextHeatInOrder, startsOutOfOrder, type BreakCountdown, type BreakNone } from "./break";
 export { resolveHeatRefs } from "./resolve";
 export {
   addHeatToPlan,

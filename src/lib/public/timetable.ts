@@ -45,6 +45,8 @@ export interface PublicTimetableModel {
   heatsLeft: number;
   /** How far today has slipped: the next heat that has not started against the plan as written. Today's plan only. */
   drift?: Drift | null;
+  /** The break after the last heat, read from the run order: the next heat's planned start (break and warm-up included). Null when nothing is on the break, or the run order is on hold. */
+  breakNext?: { startMs: number; title: string; est: string } | null;
 }
 
 export const heatLabel = (h: Pick<TimetableHeat, "name" | "number" | "suffix">): string => h.name ?? `Heat ${h.number}${h.suffix ?? ""}`;
@@ -122,9 +124,11 @@ export function buildPublicTimetable(t: PublicTimetable | null, nowIso: string):
   // a simulation at x10 has a break a tenth as long: the next heat shows the same start the head judge's break countdown and the auto-play use (Polish 3, item 3)
   const lastEnded = t.heats.filter((h) => h.ended_at).sort((a, b) => Date.parse(b.ended_at!) - Date.parse(a.ended_at!))[0];
   const scale = Math.max(1, lastEnded?.time_scale ?? 1);
+  const brk = breakCountdown(chosen.plan, lives, { timezone: t.timezone, eventDay: chosen.day, defaults: chosen.defaults, now: nowIso, timeScale: scale });
+  const brkRow = brk.kind === "break" ? rows.find((r) => r.itemId === brk.itemId) : undefined;
+  const breakNext = brk.kind === "break" && brk.state !== "paused" ? { startMs: Date.parse(brk.startUtc), title: brkRow?.title ?? "", est: utcToLocalHHMM(Date.parse(brk.startUtc), t.timezone) } : null;
   if (scale > 1) {
-    const brk = breakCountdown(chosen.plan, lives, { timezone: t.timezone, eventDay: chosen.day, defaults: chosen.defaults, now: nowIso, timeScale: scale });
-    const row = brk.kind === "break" ? rows.find((r) => r.itemId === brk.itemId) : undefined;
+    const row = brkRow;
     if (brk.kind === "break" && row) {
       row.startUtc = brk.startUtc;
       row.start = utcToLocalHHMM(Date.parse(brk.startUtc), t.timezone);
@@ -140,6 +144,7 @@ export function buildPublicTimetable(t: PublicTimetable | null, nowIso: string):
     finish: table.finish,
     onHold: Boolean(chosen.plan.hold),
     heatsLeft: table.heatsLeft,
+    breakNext,
     drift: chosen.day === todayIn(t.timezone, now) ? driftOf(plannedTimetable(chosen.plan, lives, { timezone: t.timezone, eventDay: chosen.day, defaults: chosen.defaults }), table) : null,
   };
 }

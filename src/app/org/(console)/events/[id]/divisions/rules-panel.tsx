@@ -28,6 +28,8 @@ import { diffOverrides, effectiveOverrides, FORMAT_NULLABLE, mergeOverrides, sam
 import { copy, FORMAT_HIDDEN, FORMAT_LABELS, help, orgCopy, SCORING_HIDDEN, SCORING_LABELS } from "@/lib/ui-copy";
 import { expandFormat, drawToLadder, designDifference, ladderTemplate, LadderConvertError, newLadder, previewRiders, type CustomLadder, type Entrant } from "@/lib/engine/ladder";
 import { generateDraw } from "../draw/actions";
+import { logPresetUpdate } from "../../../preset-actions";
+import { PresetRowActions } from "@/components/org/preset-row-actions";
 import { importPreset, savePreset, saveDivisionRules, unlockRules } from "./actions";
 import type { DivisionRow } from "./divisions-manager";
 import { CustomBuilder } from "./custom-builder";
@@ -72,8 +74,14 @@ export function RulesPanel({
   presets,
   organisationId,
   onPresetAdded,
+  onPresetsChange,
+  hiddenKeys,
+  onHiddenChange,
+  defaultKey,
   onDivisionChange,
   advancedExtra,
+  standalone,
+  saveAsBuiltIn,
 }: {
   kind: PresetKind;
   eventId: string;
@@ -81,21 +89,37 @@ export function RulesPanel({
   presets: PresetRow[];
   organisationId: string;
   onPresetAdded: (row: PresetRow) => void;
+  /** Rename and delete change the list the page keeps. */
+  onPresetsChange: (update: (rows: PresetRow[]) => PresetRow[]) => void;
+  /** The built-ins (by key) this organisation hid from its menus, and the owner's DEFAULT built-in (never hidden). */
+  hiddenKeys: string[];
+  onHiddenChange: (keys: string[]) => void;
+  defaultKey: string | null;
   onDivisionChange: (patch: Partial<DivisionRow>) => void;
   /** Shown under "Show all settings" of the Scoring tab (the division's live-screen settings). */
   advancedExtra?: React.ReactNode;
+  /** The platform owner's preset form (/admin → Master presets): the same Simple / Advanced form, not tied to a division; one Save writes a built-in preset. */
+  standalone?: { initialName: string; saveLabel: string; save: (name: string, json: unknown) => Promise<{ ok: true; message: string } | { ok: false; error: string }> };
+  /** Only while the platform owner is opened as this organisation: also offer "Save as built-in" next to "Save as preset". */
+  saveAsBuiltIn?: (kind: PresetKind, name: string, json: unknown) => Promise<{ ok: true; message: string } | { ok: false; error: string }>;
 }) {
   const scoring = kind === "scoring_model";
   const nullable = scoring ? SCORING_NULLABLE : FORMAT_NULLABLE;
   const savedPresetId = scoring ? division.scoring_model_id : division.format_template_id;
   const savedOverrides = scoring ? division.scoring_overrides : division.format_params;
 
-  const [presetId, setPresetId] = useState<string | null>(savedPresetId);
+  // a division with no scoring preset yet starts from the owner's DEFAULT built-in, already applied and editable (nothing to choose first); Load… stays the way to start from another
+  const defaultRow = useMemo(
+    () => (scoring && defaultKey ? ([...presets].filter((p) => !p.organisation_id && p.key === defaultKey && !p.retired_at).sort((a, b) => b.version - a.version)[0] ?? null) : null),
+    [scoring, defaultKey, presets],
+  );
+  const [presetId, setPresetId] = useState<string | null>(savedPresetId ?? defaultRow?.id ?? null);
   const [custom, setCustom] = useState(false); // an unsaved custom ladder
   const [showPresetTools, setShowPresetTools] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const [riders, setRiders] = useState(division.riders.length || 14);
   const [message, setMessage] = useState<Message>(null);
-  const [presetName, setPresetName] = useState("");
+  const [presetName, setPresetName] = useState(standalone?.initialName ?? "");
   const [reason, setReason] = useState("");
   const [pasted, setPasted] = useState("");
   const [showPaste, setShowPaste] = useState(false);
@@ -130,7 +154,7 @@ export function RulesPanel({
   }, [baseParsed, presetId, savedPresetId, savedOverrides, kind, nullable]);
   const unsaved = presetId !== savedPresetId || !sameOverrides(overrides, savedEffective);
 
-  const groups = presetGroups(presets, presetId);
+  const groups = presetGroups(presets, presetId, { hiddenKeys, showHidden, defaultKey });
   const model = check?.success && scoring ? (check.data as Parameters<typeof describeScoringModel>[0]) : null;
   const template = check?.success && !scoring ? (check.data as FormatTemplate) : null;
   const preview = useMemo(() => (template ? previewFormat(template, riders) : null), [template, riders]);
@@ -152,11 +176,19 @@ export function RulesPanel({
     setWorking(parsed?.success ? parsed.data : null);
   }
 
+  /** The division now uses this just-saved preset: the form shows exactly what it stores (its name and id differ from the old working copy, which would read as an edit). */
+  function adopt(row: PresetRow) {
+    const parsed = parseWith(kind, row.json);
+    setPresetId(row.id);
+    setCustom(false);
+    if (parsed.success) setWorking(parsed.data);
+  }
+
   /** A ladder card: load that type's built-in format (its newest version); without one in the list, swap the generator of what is open. */
   function pickKind(k: GeneratedKind) {
     if (ladderKindOf(working) === k) return;
     const type = GENERATOR[k];
-    const matches = presets.filter((p) => !p.organisation_id && (p.json as { generator?: { type?: string } } | null)?.generator?.type === type);
+    const matches = presets.filter((p) => !p.organisation_id && !p.retired_at && (p.json as { generator?: { type?: string } } | null)?.generator?.type === type);
     const row = [...matches].sort((a, b) => Number(b.key === KIND_PRESET_KEY[k]) - Number(a.key === KIND_PRESET_KEY[k]) || b.version - a.version)[0];
     if (row) return choose(row.id);
     if (working) setValue(withLadderKind(working as Record<string, unknown>, k));
@@ -176,7 +208,7 @@ export function RulesPanel({
     setStartFromError(null);
     const k = kindKey as GeneratedKind;
     const type = GENERATOR[k];
-    const matches = presets.filter((p) => !p.organisation_id && (p.json as { generator?: { type?: string } } | null)?.generator?.type === type);
+    const matches = presets.filter((p) => !p.organisation_id && !p.retired_at && (p.json as { generator?: { type?: string } } | null)?.generator?.type === type);
     const row = [...matches].sort((a, b) => Number(b.key === KIND_PRESET_KEY[k]) - Number(a.key === KIND_PRESET_KEY[k]) || b.version - a.version)[0];
     const parsed = row ? FormatTemplateSchema.safeParse(row.json) : null;
     if (!parsed?.success) return setStartFromError(R.startFromMissing);
@@ -244,11 +276,27 @@ export function RulesPanel({
       const applied = await saveDivisionRules({ divisionId: division.id, kind, presetId: res.row.id, overrides: {} });
       if (applied.ok) {
         onDivisionChange(scoring ? { scoring_model_id: res.row.id, scoring_overrides: {} } : { format_template_id: res.row.id, format_params: {} });
-        setPresetId(res.row.id);
-        setCustom(false);
+        adopt(res.row);
         setPresetName("");
       }
       report(applied, newVersion ? R.versionSavedUsing(res.row.name, res.row.version, division.name) : R.presetSavedUsing(res.row.name, division.name));
+    });
+  }
+
+  function saveBuiltIn() {
+    setMessage(null);
+    start(async () => {
+      const res = await saveAsBuiltIn!(kind, presetName, working);
+      if (res.ok) setPresetName("");
+      report(res.ok ? { ok: true } : { ok: false, error: res.error }, res.ok ? res.message : "");
+    });
+  }
+
+  function saveStandalone() {
+    setMessage(null);
+    start(async () => {
+      const res = await standalone!.save(presetName, working);
+      report(res.ok ? { ok: true } : { ok: false, error: res.error }, res.ok ? res.message : "");
     });
   }
 
@@ -328,12 +376,49 @@ export function RulesPanel({
       ? formatSentence({ kindTitle: kindTitle(), heatSize: heatSizes(working as Record<string, unknown>)?.target, advance: paramOf(working as Record<string, unknown>, "advancePerHeat") as number | undefined, finalSize: paramOf(working as Record<string, unknown>, "finalSize") as number | undefined, riders, rounds: preview.rounds.length, totalMin: preview.totalMinutes })
       : (preview?.sentence ?? R.chooseFirst(R.formatWord));
 
+  /** "Update preset from this division": the division's settings as they are now become the next version of the preset, and the division uses it. */
+  async function updateFromDivision(key: string, reason: string): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+    const row = presets.find((p) => p.key === key && p.organisation_id === organisationId);
+    if (!row || !working) return { ok: false, error: copy.presetManage.errors.notFound };
+    if (!valid) return { ok: false, error: R.saveInvalid };
+    const res = await savePreset({ kind, organisationId, name: row.name, json: working, newVersionOfKey: key });
+    if (!res.ok) return { ok: false, error: res.error };
+    onPresetAdded(res.row);
+    await logPresetUpdate({ organisationId, kind, key, version: res.row.version, reason });
+    const applied = await saveDivisionRules({ divisionId: division.id, kind, presetId: res.row.id, overrides: {} });
+    if (!applied.ok) return { ok: false, error: applied.error };
+    onDivisionChange(scoring ? { scoring_model_id: res.row.id, scoring_overrides: {} } : { format_template_id: res.row.id, format_params: {} });
+    adopt(res.row);
+    return { ok: true, message: copy.presetManage.updated(row.name, res.row.version) };
+  }
+  const nameOf = (key: string, own: boolean) => presets.find((p) => p.key === key && (own ? p.organisation_id === organisationId : !p.organisation_id))?.name ?? key;
   const loadMenu = {
-    builtIn: groups.system.map((o) => ({ id: o.id, label: o.label })),
-    mine: groups.organisation.map((o) => ({ id: o.id, label: o.label })),
+    builtIn: groups.system.map((o) => ({ id: o.id, label: o.label, key: o.key, own: false, isDefault: o.isDefault, hidden: o.hidden })),
+    mine: groups.organisation.map((o) => ({ id: o.id, label: o.label, key: o.key, own: true })),
     onLoad: choose,
     onSaveAsPreset: () => setShowPresetTools(true),
+    hideSaveAsPreset: Boolean(standalone),
     disabledReason: locked ? R.loadLocked : undefined,
+    hiddenCount: standalone ? 0 : groups.hiddenCount,
+    showHidden,
+    onToggleShowHidden: standalone ? undefined : () => setShowHidden((v) => !v),
+    renderManage: standalone ? undefined : (item: { id: string; key?: string; own?: boolean; isDefault?: boolean; hidden?: boolean }) =>
+      item.key ? (
+        <PresetRowActions
+          organisationId={organisationId}
+          kind={kind}
+          preset={{ key: item.key, name: nameOf(item.key, Boolean(item.own)), own: Boolean(item.own), isDefault: item.isDefault, hidden: item.hidden }}
+          changes={{
+            onRenamed: (k, name) => onPresetsChange((rows) => rows.map((r) => (r.key === k && r.organisation_id === organisationId ? { ...r, name, json: { ...(r.json as object), name } } : r))),
+            onRemoved: (k) => {
+              onPresetsChange((rows) => rows.filter((r) => !(r.key === k && r.organisation_id === organisationId)));
+              if (baseRow?.key === k && baseRow.organisation_id === organisationId && presetId !== savedPresetId) choose(savedPresetId ?? "");
+            },
+            onHidden: (k, hidden) => onHiddenChange(hidden ? [...new Set([...hiddenKeys, k])] : hiddenKeys.filter((x) => x !== k)),
+            updateFromDivision: item.own && !custom ? updateFromDivision : undefined,
+          }}
+        />
+      ) : null,
   };
 
   const banner = locked ? (
@@ -358,6 +443,11 @@ export function RulesPanel({
     <div className="org-new flex min-w-0 flex-col gap-3 py-2">
       {scoring && baseRow && baseParsed && typeof baseParsed.description === "string" ? <p className="text-small font-medium text-beach-muted">{baseParsed.description}</p> : null}
       {!working && !custom && scoring ? <p className="text-body font-semibold">{R.chooseFirst(R.scoringWord)}</p> : null}
+      {baseRow && !custom && scoring ? (
+        <p className="text-small font-semibold" data-testid="based-on">
+          {R.basedOn(baseRow.name.replace(/\s*\(DEFAULT\)\s*$/, ""), Object.keys(overrides).length > 0)}
+        </p>
+      ) : null}
       {working && scoring ? <ScoringSimple working={working} onChange={setValue} errors={errors} readOnly={locked} /> : null}
 
       {!scoring ? (
@@ -403,7 +493,7 @@ export function RulesPanel({
                 onStartFrom={startFrom}
                 startFromError={startFromError}
               >
-                {({ complete }) => (
+                {({ complete }) => standalone ? null : (
                   <div className="panel flex flex-col gap-3">
                     <div className="flex flex-col gap-1">
                       <label htmlFor={`lname-${division.id}`} className="font-semibold">
@@ -550,8 +640,21 @@ export function RulesPanel({
       </div>
     ) : null;
 
-  const saveTools =
-    working && !locked ? (
+  const saveTools = standalone ? (
+    working ? (
+      <div className="flex flex-wrap items-end gap-3" data-testid="standalone-save">
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`pname-${idSuffix}`} className="text-small font-semibold">
+            {copy.admin.presets.manage.nameLabel}
+          </label>
+          <input id={`pname-${idSuffix}`} value={presetName} onChange={(e) => setPresetName(e.target.value)} maxLength={80} className="h-[var(--org-ctl)] w-72 max-w-full rounded-[8px] border border-beach-border bg-transparent px-3 text-body font-semibold" />
+        </div>
+        <Button variant="primary" onClick={saveStandalone} {...gate(pending ? copy.common.saving : !valid ? R.saveInvalid : presetName.trim().length < 2 ? R.presetNeedsName : null)}>
+          {pending ? copy.common.saving : standalone.saveLabel}
+        </Button>
+      </div>
+    ) : null
+  ) : working && !locked ? (
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="primary" onClick={saveForDivision} {...gate(pending ? copy.common.saving : !valid ? R.saveInvalid : !presetId || custom ? R.saveFirst : null)}>
@@ -583,6 +686,11 @@ export function RulesPanel({
               <Button variant="secondary" onClick={() => saveAsPreset(false)} {...gate(pending ? copy.common.saving : !valid ? R.saveInvalid : presetName.trim().length < 2 ? R.presetNeedsName : null)}>
                 {scoring ? R.saveNewPreset : R.saveMyFormat}
               </Button>
+              {saveAsBuiltIn ? (
+                <Button variant="secondary" onClick={saveBuiltIn} {...gate(pending ? copy.common.saving : !valid ? R.saveInvalid : presetName.trim().length < 2 ? R.presetNeedsName : null)}>
+                  {R.saveAsBuiltIn}
+                </Button>
+              ) : null}
               {owned && !custom ? (
                 <Button variant="secondary" onClick={() => saveAsPreset(true)} {...gate(pending ? copy.common.saving : !valid ? R.saveInvalid : null)}>
                   {R.saveNewVersion(baseRow?.name ?? "")}

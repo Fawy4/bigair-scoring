@@ -5,6 +5,7 @@ import { ClockText } from "@/components/clock-text";
 import { Logo } from "@/components/public/logo";
 import { RiderLabel } from "@/components/rider-label";
 import { BigScreenFlag } from "@/components/public/public-flag";
+import { WindBanner } from "@/components/public/wind-banner";
 import { ScoreBox } from "@/components/public/heat-summary";
 import { ScreenFrame } from "@/components/public/screen-frame";
 import type { AttemptDisplay } from "@/lib/live/result-shading";
@@ -251,6 +252,7 @@ export function FollowScreen({ slug, initial, qr, pollMs = FOLLOW_POLL_MS }: { s
   return (
     <ScreenFrame defaultMode={payload.defaultMode} labels={{ toggleToDay: F.modeDay, toggleToDark: F.modeDark }}>
       <div data-testid="follow-screen" data-phase={phase.kind} data-index={index} data-paused={paused} data-offline={offline} className="flex min-h-0 flex-1 flex-col">
+        <WindBanner wind={payload.wind} big />
         <header data-testid="screen-header" className="mb-[0.8vw] flex flex-wrap items-center gap-x-[2vw] gap-y-[0.6vw]">
           {payload.logoUrl ? (
             <span className="rounded-[0.8vw] border border-[var(--bs-line)] bg-white p-[0.5vw]">

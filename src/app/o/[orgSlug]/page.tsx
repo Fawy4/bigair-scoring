@@ -5,6 +5,7 @@ import { groupOrgEvents, todayInZone } from "@/lib/platform/event-label";
 import { isValidTimeZone } from "@/lib/schemas/org-settings";
 import { createAnonClient } from "@/lib/supabase/anon";
 import { requestOrigin } from "@/lib/platform/origin";
+import { SiteFooter } from "@/components/home/site-chrome";
 import { copy } from "@/lib/ui-copy";
 
 export const dynamic = "force-dynamic";
@@ -86,6 +87,7 @@ export default async function PublicOrganisationPage({ params }: { params: Promi
         </h2>
         {groups.past.length > 0 ? list(groups.past) : <p className="mt-2 text-lg font-semibold">{c.noPast}</p>}
       </section>
+      <SiteFooter variant="beach" />
     </main>
   );
 }

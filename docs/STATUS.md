@@ -1313,3 +1313,19 @@ Release entry 0.15.1 (`docs/RELEASES.md`). `npm test`; `npm run test:rls -- test
 
 ### How to test
 Release entry 0.16.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; browser: `e2e/simulator-polish3.spec.ts`, `e2e/clear-plan.spec.ts`, `e2e/simulator-polish2.spec.ts` (Polish 3 item 1), `e2e/event-reset.spec.ts`, `e2e/live-head.spec.ts`, `e2e/impression-name.spec.ts`, `e2e/big-screen-follow.spec.ts`.
+
+## Polish 4 – presets you can manage, a dropdown that stays on screen, a modern landing page (branch `polish-4`, 4 Oct 2026, 0.17.0)
+
+### Done
+1. **Organisation presets** (Load… menu and a Presets card on Organisation settings): Rename, Delete (refused with the division's name while a live division uses it), Update preset from this division (a new version, reason optional). Presets stay immutable per version, so a division that loaded one never changes (`src/lib/presets/manage.ts`, tests in `manage.test.ts`; database rules in `20261103100000_polish4_preset_management.sql`, tested by `tests/rls/preset-management.test.ts`; browser: `e2e/preset-management.spec.ts`).
+2. **Hide built-ins per organisation** (`organisation_hidden_presets`, only through `hide_builtin_preset`); the DEFAULT built-in (`platform_default_presets`) cannot be hidden.
+3. **Owner: Master presets** list with Add, Edit (the organisers' own form, `RulesPanel` with a `standalone` prop), Rename, Retire / Restore, Set as DEFAULT, Delete (refused while a division uses it), Save as built-in; JSON stays under Advanced (`e2e/master-presets.spec.ts`).
+4. **Dropdowns stay on screen:** `src/components/org/popover.tsx` measures the button and the screen; opens upwards when there is more room above, scrolls inside itself when it must.
+5–9. **Home page** (`/`): `src/app/page.tsx`, `src/app/home.css`, `src/components/home/*`. Hero streams first; the events list streams in under it (Suspense). Own tokens, dark and light by `prefers-color-scheme`, ≥ 7:1 on essential text, the live dot is the only animation. Tests: `src/components/home/events-view.test.ts` (empty, one live, ten), `e2e/home-landing.spec.ts` (phone and laptop, both themes), `e2e/home-budget.spec.ts` (slow 4G, production build).
+- Manual: Divisions, Organiser access, Admin presets, Public home, glossary, errors (generated), changelog; pictures from `e2e/manual-shots-polish4.spec.ts` (part of `npm run manual:shots`).
+
+### Not done / decisions
+See the decision list at the top of the pull request description.
+
+### How to test
+Release entry 0.17.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm run test:rls -- tests/rls/preset-management.test.ts`; browser (one worker, no retries): `e2e/preset-management.spec.ts`, `e2e/master-presets.spec.ts`, `e2e/home-landing.spec.ts`.

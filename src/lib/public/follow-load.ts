@@ -10,6 +10,7 @@ import { loadCore } from "./page-data";
 import { modelOf, type RiderRowVM } from "./results-model";
 import { schemeFor } from "./schemes";
 import { eventUrl } from "./share";
+import type { PublicSite } from "./types";
 
 /** The heat the screen is on while one is armed, running or waiting for the judges: plain values only (they cross to the browser). */
 export interface FollowHeat {
@@ -35,6 +36,8 @@ export interface FollowPayload {
   defaultMode: "dark" | "day";
   rotateSec: number;
   flag: PublicFlagData | null;
+  /** The wind call (red / amber / green with its message) as the public pages have it; null when there is none. Drawn at the very top. */
+  wind: PublicSite["wind"];
   phase: FollowPhase;
   heat: FollowHeat | null;
   pages: FollowPage[];
@@ -98,6 +101,7 @@ export async function loadFollowPayload(slug: string): Promise<FollowPayload | n
     rotateSec: site.settings.followRotateSec ?? 15,
     // the "next: …" words are left off the flag pill: the thin line at the bottom says what is next, and the pill stays one short line so the pages keep their room
     flag: ((f) => (f ? { ...f, next: null } : null))(publicFlagData(timetable, tt, site.settings.flags)),
+    wind: site.wind,
     phase,
     heat,
     pages,

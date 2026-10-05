@@ -1,4 +1,4 @@
-import { anyHeatStarted, armedStartMs, flagHeatOf, flagState, flagWords, isArmedNow, type FlagHeat, type FlagState } from "@/lib/live/flags";
+import { anyHeatStarted, armedStartMs, flagHeatOf, flagState, flagWords, isArmedNow, nextHeatPart, showsNextHeat, type FlagHeat, type FlagState, type NextHeatInfo } from "@/lib/live/flags";
 import { parseFlagSettings, type FlagSettings } from "@/lib/schemas/flags";
 import type { PublicTimetableModel } from "./timetable";
 import { heatLabel } from "./timetable";
@@ -20,6 +20,8 @@ export interface PublicFlagData {
   anyHeatStarted: boolean;
   /** "Heat 5, est. 10:40" for the red flag between heats. */
   next: string | null;
+  /** The break read from the run order (the one source every screen counts down to), or null. */
+  nextHeat: NextHeatInfo | null;
 }
 
 const asFlagHeat = (h: TimetableHeat): FlagHeat => flagHeatOf({ id: h.id, status: h.status, duration_sec: h.duration_sec, started_at: h.started_at, paused_at: h.paused_at, paused_total_sec: h.paused_total_sec, armed_at: h.armed_at ?? null, prestart_sec: h.prestart_sec ?? null, armed_paused_at: h.armed_paused_at ?? null, time_scale: h.time_scale ?? 1 });
@@ -52,13 +54,17 @@ export function publicFlagData(timetable: PublicTimetable | null, tt: PublicTime
     onHold: tt.onHold,
     anyHeatStarted: anyHeatStarted(timetable.heats.map((h) => ({ started_at: h.started_at, status: h.status, armed_at: h.armed_at ?? null, prestart_sec: h.prestart_sec ?? null, armed_paused_at: h.armed_paused_at ?? null })), nowMs),
     next: up ? (up.start ? `${up.title}, est. ${up.start}` : up.title) : null,
+    nextHeat: tt.breakNext ?? null,
   };
 }
 
 /** The state at a given server time, with the words for the strip. Null when the flags are off. */
-export function publicFlagAt(d: PublicFlagData, nowMs: number): { state: FlagState; words: string } | null {
+export function publicFlagAt(d: PublicFlagData, nowMs: number): { state: FlagState; words: string; nextPart: string | null } | null {
   const state = flagState({ settings: d.settings, heat: d.heat, nowMs, onHold: d.onHold, anyHeatStarted: d.anyHeatStarted });
-  return state ? { state, words: flagWords(state, d.next) } : null;
+  if (!state) return null;
+  // the red banner keeps its state word; beside it the break counts down to the next heat (from the run order; nothing starts by itself)
+  const nextPart = showsNextHeat(state) ? nextHeatPart(d.nextHeat ?? null, nowMs) : null;
+  return { state, words: flagWords(state, d.next, nextPart !== null), nextPart };
 }
 
 export { armedStartMs };

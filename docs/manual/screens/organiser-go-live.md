@@ -20,7 +20,7 @@ The start of event day. Read the checklist top to bottom, fix what is red, then 
 |---|---|
 | **Ready to run?** | The readiness checklist, in the order you fix things: riders confirmed per division, judges per division (“Pro Men: 2 of 3 judges”), draw locked per division, a run order active for today, a PIN for every seat. Each row not green has **Fix** (opens the step). All green: **Ready to run**. When the active plan is for another day it names both days. |
 | **Now and next** | The running heat with its timer (server time with seconds), the next heat and the one after with estimated times; “On hold” during a hold. |
-| **Wind call** | Red — stop / Amber — caution / Green — go, an optional message (140 letters), **Set wind call**, **Clear banner**. Shown as a banner on the public pages and the big screen when the Event step's banner switch is on. |
+| **Wind call** | Red — Stop / Amber — Hold / Green — LETS GO! (the picked button is ticked, filled and has a thick border; “On now” sits beside the call that is showing), an optional message (140 letters), **Set wind call**, **Clear banner**. Shown as a banner on the public pages and the big screen when the Event step's banner switch is on. |
 | **Hold** | Puts today's active run order on hold (wind): estimates stop, public pages say “Competition on hold — times will update when we resume.” |
 | **Resume at…** | Ends the hold at the time you type (event time zone); everything not started re-flows from it. |
 | **Shift +5 min**, **Shift +10 min** | Moves everything that has not started later. |

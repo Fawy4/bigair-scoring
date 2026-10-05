@@ -90,6 +90,7 @@ test("start Heat 2 before Heat 1: one warning, the big timer beside Start / End;
 
   // End: the break counts down to the heat that is next in the run order (Heat 1)
   await head.getByTestId("end").click();
+  await head.getByTestId("end-confirm").click(); // End heat asks once
   await expect(head.getByTestId("selected-heat")).toHaveAttribute("data-state", "ended", { timeout: 40_000 });
   await expect(head.getByTestId("break-text")).toContainText(/Next: R1 · H1 · starts in \d+:\d\d/, { timeout: 30_000 });
   const before = secondsOf((await head.getByTestId("break-text").textContent()) ?? "");
@@ -103,9 +104,11 @@ test("start Heat 2 before Heat 1: one warning, the big timer beside Start / End;
   // Pause break holds the countdown until Resume
   await head.getByTestId("break-pause").click();
   await expect(head.getByTestId("break-strip")).toHaveAttribute("data-state", "paused", { timeout: 30_000 });
-  const frozen = await head.getByTestId("break-text").textContent();
+  // the run order's break is held, but the strip's own clock keeps running: it keeps counting to the planned start (and shows how late once it has passed)
+  const secs = async () => secondsOf((await head.getByTestId("break-text").textContent()) ?? "");
+  const t1 = await secs();
   await head.waitForTimeout(2500);
-  expect(await head.getByTestId("break-text").textContent()).toBe(frozen);
+  expect(await secs()).toBeLessThan(t1);
   await head.getByTestId("break-resume").click();
   await expect(head.getByTestId("break-strip")).toHaveAttribute("data-state", "counting", { timeout: 30_000 });
 });

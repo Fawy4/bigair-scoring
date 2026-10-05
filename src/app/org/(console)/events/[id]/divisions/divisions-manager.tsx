@@ -2,6 +2,7 @@
 
 import { ResetDivisionButton } from "../reset-buttons";
 import { useState, useTransition } from "react";
+import { saveMasterPreset } from "@/app/admin/actions";
 import { useRefreshSoon } from "@/lib/use-refresh-soon";
 import { toast } from "@/hooks/use-toast";
 import type { PresetRow } from "@/lib/presets/options";
@@ -64,6 +65,9 @@ export function DivisionsManager({
   initialDivisions,
   initialScoring,
   initialFormats,
+  hiddenBuiltIns,
+  defaultBuiltIns,
+  canSaveAsBuiltIn,
 }: {
   eventId: string;
   organisationId: string;
@@ -75,12 +79,18 @@ export function DivisionsManager({
   initialDivisions: DivisionRow[];
   initialScoring: PresetRow[];
   initialFormats: PresetRow[];
+  /** Built-in presets this organisation hid from its Load… menus (by key), and the owner's DEFAULT built-in of each kind. */
+  hiddenBuiltIns: { scoring_model: string[]; format_template: string[] };
+  defaultBuiltIns: { scoring_model: string | null; format_template: string | null };
+  /** The platform owner is opened as this organisation: "Save as built-in" is offered next to "Save as preset". */
+  canSaveAsBuiltIn?: boolean;
 }) {
   const refreshSoon = useRefreshSoon();
   const [divisions, setDivisions] = useState(initialDivisions);
   const [scoring, setScoring] = useState(initialScoring);
   const [localBlocks, setLocalBlocks] = useState(initialLocalBlocks);
   const [formats, setFormats] = useState(initialFormats);
+  const [hidden, setHidden] = useState(hiddenBuiltIns);
   const [openId, setOpenId] = useState<string | null>(initialDivisions[0]?.id ?? null);
   const [tab, setTab] = useState<Tab>("scoring");
   const [newName, setNewName] = useState("");
@@ -94,6 +104,10 @@ export function DivisionsManager({
     refreshSoon(); // the left rail's "what is missing" list follows
   };
   const fail = (text: string) => setError(text);
+  const saveBuiltIn = async (kind: "scoring_model" | "format_template", name: string, json: unknown) => {
+    const res = await saveMasterPreset({ kind, key: null, name, json });
+    return res.ok ? { ok: true as const, message: copy.rules.builtInSaved(name.trim()) } : { ok: false as const, error: res.error };
+  };
   const sorted = [...divisions].sort((a, b) => a.sort_order - b.sort_order);
 
   function add() {
@@ -101,7 +115,7 @@ export function DivisionsManager({
     start(async () => {
       const res = await addDivision(eventId, newName);
       if (!res.ok) return fail(res.error);
-      setDivisions((ds) => [...ds, { id: res.id, name: newName.trim(), sort_order: res.sortOrder, scoring_model_id: null, scoring_overrides: {}, format_template_id: null, format_params: {}, description: null, identification: null, trickBase: {}, liveSettings: {}, started: false, hasHeats: false, locked: false, riders: [], drawLocked: false }]);
+      setDivisions((ds) => [...ds, { id: res.id, name: newName.trim(), sort_order: res.sortOrder, scoring_model_id: res.scoringModelId, scoring_overrides: {}, format_template_id: null, format_params: {}, description: null, identification: null, trickBase: {}, liveSettings: {}, started: false, hasHeats: false, locked: false, riders: [], drawLocked: false }]);
       setOpenId(res.id);
       setNewName("");
       toast({ title: copy.divisions.added });
@@ -269,6 +283,11 @@ export function DivisionsManager({
                       presets={scoring}
                       organisationId={organisationId}
                       onPresetAdded={(row) => setScoring((s) => [...s, row])}
+                      onPresetsChange={setScoring}
+                      saveAsBuiltIn={canSaveAsBuiltIn ? saveBuiltIn : undefined}
+                      hiddenKeys={hidden.scoring_model}
+                      onHiddenChange={(keys) => setHidden((h) => ({ ...h, scoring_model: keys }))}
+                      defaultKey={defaultBuiltIns.scoring_model}
                       onDivisionChange={(p) => patch(d.id, p)}
                       advancedExtra={<LiveSettingsPanel key={`l-${d.id}`} divisionId={d.id} initial={d.liveSettings} readOnly={false} />}
                     />
@@ -309,6 +328,11 @@ export function DivisionsManager({
                       presets={formats}
                       organisationId={organisationId}
                       onPresetAdded={(row) => setFormats((s) => [...s, row])}
+                      onPresetsChange={setFormats}
+                      saveAsBuiltIn={canSaveAsBuiltIn ? saveBuiltIn : undefined}
+                      hiddenKeys={hidden.format_template}
+                      onHiddenChange={(keys) => setHidden((h) => ({ ...h, format_template: keys }))}
+                      defaultKey={defaultBuiltIns.format_template}
                       onDivisionChange={(p) => patch(d.id, p)}
                     />
                   )}

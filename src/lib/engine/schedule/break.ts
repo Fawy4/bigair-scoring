@@ -119,3 +119,59 @@ export function resumeBreak(plan: SchedulePlan, heats: HeatLive[], ctx: Timetabl
   }
   return resumed;
 }
+
+/**
+ * The head judge's break controls ("+1 min", "Other…"): they change the REAL break of this gap, to the second. The break is the `breakAfterMin` of the heat that
+ * has just ended (the run order's own field, minutes with decimals), so the next heat's planned start moves, every heat after it follows (the timetable engine does
+ * that for any change), and every screen that reads the run order shows the same new time. A pin on the next heat ("not before") would hide the change, so a
+ * pin there is replaced (and reported back: the audit line names it).
+ *
+ * `add`: the next start moves by that many minutes from where it is. `length`: the break (end of the last heat to the next start, warm-up included) is this long.
+ * `ms` for `length` is in the plan's own time: a simulation's caller multiplies what was typed by the speed. Never below the earliest possible start (end + warm-up).
+ */
+export function setBreak(
+  plan: SchedulePlan,
+  heats: HeatLive[],
+  spec: { add: { minutes: number } } | { length: { ms: number } },
+  ctx: Pick<TimetableOptions, "timezone" | "eventDay" | "defaults"> & { now: string; timeScale?: number },
+): { plan: SchedulePlan; itemId: string; prevItemId: string; breakMin: number; replacedPin: string | null; startUtc: string } {
+  if (plan.hold) throw new Error("The plan is on hold: resume it first.");
+  const next = nextItemToStart(plan, heats);
+  if (!next || next.kind !== "heat") throw new Error("Nothing left to shift: every heat has started.");
+  const byHeat = new Map(heats.map((h) => [h.heatId, h]));
+  // the break that applies is the one after the heat that started last (the timetable walks started heats in the order they really started, so a heat run out of order counts)
+  let prev: RunItem | undefined;
+  let prevStart = -Infinity;
+  for (const it of plan.items) {
+    const live = it.kind === "heat" && it.heatId ? byHeat.get(it.heatId) : undefined;
+    if (it.kind === "heat" && live?.startedAt && live.endedAt && Date.parse(live.startedAt) > prevStart) {
+      prev = it;
+      prevStart = Date.parse(live.startedAt);
+    }
+  }
+  if (!prev || prev.kind !== "heat") throw new Error("There is no break to change: no heat has ended before the next one.");
+  const prevEnd = Date.parse(byHeat.get(prev.heatId!)!.endedAt!);
+  const { timezone, eventDay, defaults } = ctx;
+  const startWith = (p: SchedulePlan): number => {
+    const row = computeTimetable(p, heats, { timezone, eventDay, defaults }).rows.find((r) => r.itemId === next.id);
+    if (!row?.startUtc) throw new Error("The next heat has no projected start time yet.");
+    return Date.parse(row.startUtc);
+  };
+  const withBreak = (p: SchedulePlan, minutes: number): SchedulePlan => ({ ...p, anchors: Object.fromEntries(Object.entries(p.anchors).filter(([k]) => k !== next.id)), items: p.items.map((i) => (i.id === prev!.id && i.kind === "heat" ? { ...i, breakAfterMin: minutes } : i)) });
+  const current = startWith(plan);
+  const earliest = startWith(withBreak(plan, 0)); // end of the last heat + warm-up: the shortest the gap can be
+  const wanted = "add" in spec ? current + spec.add.minutes * MIN : prevEnd + spec.length.ms;
+  const target = Math.max(wanted, earliest);
+  const breakMin = Math.round(((target - earliest) / 1000)) / 60;
+  const changed = withBreak(plan, breakMin);
+  const got = startWith(changed);
+  if (Math.abs(got - target) <= 1500) return { plan: changed, itemId: next.id, prevItemId: prev.id, breakMin, replacedPin: plan.anchors[next.id] ?? null, startUtc: new Date(got).toISOString() };
+  // The timetable ignores an explicit break on the plan's last item once other rows follow it (a heat run out of order): the change is a "not before" pin on the next heat instead,
+  // to the next whole minute (pins are hh:mm).
+  const live = byHeat.get(prev.heatId!)!;
+  const kept = prev.breakAfterMin ?? (live.roundLast ? (live.breakAfterRoundMin ?? defaults.breakAfterRoundMin) : (live.breakAfterHeatMin ?? defaults.breakAfterHeatMin));
+  const pinned: SchedulePlan = { ...plan, anchors: { ...plan.anchors, [next.id]: utcToLocalHHMM(Math.ceil(target / MIN) * MIN, ctx.timezone) } };
+  const pinnedStart = startWith(pinned);
+  if (pinnedStart < target - 1500 || pinnedStart > target + MIN + 1500) throw new Error("The break could not be changed here: something else in the run order fixes this start.");
+  return { plan: pinned, itemId: next.id, prevItemId: prev.id, breakMin: kept, replacedPin: plan.anchors[next.id] ?? null, startUtc: new Date(pinnedStart).toISOString() };
+}

@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { ChevronDown, FolderOpen } from "lucide-react";
+import { ChevronDown, FolderOpen, MoreHorizontal } from "lucide-react";
 import { orgCopy } from "@/lib/ui-copy";
 import { Button } from "./button";
 import { MenuItem, MenuLabel, Popover } from "./popover";
 
-export type LoadItem = string | { id: string; label: string };
+export type LoadItem = string | { id: string; label: string; key?: string; own?: boolean; isDefault?: boolean; hidden?: boolean };
 const itemId = (i: LoadItem) => (typeof i === "string" ? i : i.id);
 const itemLabel = (i: LoadItem) => (typeof i === "string" ? i : i.label);
 
@@ -18,7 +18,21 @@ interface SettingsPanelProps {
   /** The sentence is shown elsewhere on the page (a SummaryCard beside the form): not repeated inside the panel. */
   sentenceElsewhere?: boolean;
   /** The quiet "Load…" menu: names of saved presets (the preview) or `{ id, label }` with `onLoad` (the real screens), and "Save as preset…". */
-  loadMenu?: { builtIn: LoadItem[]; mine: LoadItem[]; onLoad?: (id: string) => void; onSaveAsPreset?: () => void; disabledReason?: string };
+  loadMenu?: {
+    builtIn: LoadItem[];
+    mine: LoadItem[];
+    onLoad?: (id: string) => void;
+    onSaveAsPreset?: () => void;
+    /** The owner's preset form saves with its own button: no "Save as preset…" line. */
+    hideSaveAsPreset?: boolean;
+    disabledReason?: string;
+    /** The small actions under an entry (rename, update, delete, hide…): when given, each real entry gets a "⋯" button that opens them. */
+    renderManage?: (item: Exclude<LoadItem, string>) => ReactNode;
+    /** How many built-ins the organisation has hidden: the menu's "Show hidden" line. */
+    hiddenCount?: number;
+    showHidden?: boolean;
+    onToggleShowHidden?: () => void;
+  };
   /** A note above the dials: a locked division says so here, once. */
   banner?: ReactNode;
   /** Under the Advanced fold: Save buttons, export and import. */
@@ -36,6 +50,7 @@ interface SettingsPanelProps {
 /** Simple dials on top, the live sentence under the title, one "More settings" fold at the bottom, presets in a small "Load…" menu in the header. */
 export function SettingsPanel({ title, sentence, sentenceTestId = "model-sentence", sentenceElsewhere, loadMenu, banner, footer, simple, advanced, advancedCount, defaultAdvancedOpen = false, storageKey, testId }: SettingsPanelProps) {
   const [open, setOpen] = useState(defaultAdvancedOpen);
+  const [manageId, setManageId] = useState<string | null>(null);
   useEffect(() => {
     if (!storageKey) return;
     try {
@@ -65,44 +80,59 @@ export function SettingsPanel({ title, sentence, sentenceTestId = "model-sentenc
           </Button>
         ) : (
           <Popover label={orgCopy.settings.load} icon={FolderOpen} variant="quiet" align="end" panelRole="menu" testId="load-menu" panelClassName="max-h-[60dvh] w-80 overflow-y-auto">
-            {(close) => (
-              <>
-                {loadMenu.mine.length > 0 ? <MenuLabel>{orgCopy.settings.mine}</MenuLabel> : null}
-                {loadMenu.mine.map((item) => (
-                  <MenuItem
-                    key={itemId(item)}
-                    onClick={() => {
-                      loadMenu.onLoad?.(itemId(item));
-                      close();
-                    }}
-                  >
-                    {itemLabel(item)}
-                  </MenuItem>
-                ))}
-                <MenuLabel>{orgCopy.settings.builtIn}</MenuLabel>
-                {loadMenu.builtIn.map((item) => (
-                  <MenuItem
-                    key={itemId(item)}
-                    onClick={() => {
-                      loadMenu.onLoad?.(itemId(item));
-                      close();
-                    }}
-                  >
-                    {itemLabel(item)}
-                  </MenuItem>
-                ))}
-                <div className="mt-1 border-t border-beach-line pt-1">
-                  <MenuItem
-                    onClick={() => {
-                      loadMenu.onSaveAsPreset?.();
-                      close();
-                    }}
-                  >
-                    {orgCopy.settings.saveAsPreset}
-                  </MenuItem>
-                </div>
-              </>
-            )}
+            {(close) => {
+              const entry = (item: LoadItem) => {
+                const id = itemId(item);
+                // a preset keeps its row (and what its actions just said) when an update gives it a new version id
+                const rowKey = typeof item === "object" && item.key ? `${item.own ? "mine" : "built-in"}-${item.key}` : id;
+                const manage = typeof item !== "string" ? loadMenu.renderManage?.(item) : null;
+                return (
+                  <div key={rowKey} className={typeof item === "object" && item.hidden ? "opacity-70" : undefined}>
+                    <div className="flex items-center gap-1">
+                      <div className="min-w-0 flex-1">
+                        <MenuItem
+                          onClick={() => {
+                            loadMenu.onLoad?.(id);
+                            close();
+                          }}
+                        >
+                          {itemLabel(item)}
+                          {typeof item === "object" && item.isDefault ? <span className="ml-2 rounded-[6px] border border-beach-line px-1 text-small font-semibold">{orgCopy.settings.defaultTag}</span> : null}
+                          {typeof item === "object" && item.hidden ? <span className="ml-2 rounded-[6px] border border-beach-line px-1 text-small font-semibold">{orgCopy.settings.hiddenTag}</span> : null}
+                        </MenuItem>
+                      </div>
+                      {manage ? (
+                        <Button variant="quiet" iconOnly icon={MoreHorizontal} aria-label={orgCopy.settings.manageAria(itemLabel(item))} aria-expanded={manageId === rowKey} onClick={() => setManageId(manageId === rowKey ? null : rowKey)} />
+                      ) : null}
+                    </div>
+                    {manage && manageId === rowKey ? <div className="px-1 pb-1">{manage}</div> : null}
+                  </div>
+                );
+              };
+              return (
+                <>
+                  {loadMenu.mine.length > 0 ? <MenuLabel>{orgCopy.settings.mine}</MenuLabel> : null}
+                  {loadMenu.mine.map(entry)}
+                  <MenuLabel>{orgCopy.settings.builtIn}</MenuLabel>
+                  {loadMenu.builtIn.map(entry)}
+                  <div className="mt-1 border-t border-beach-line pt-1 empty:hidden">
+                    {!loadMenu.hideSaveAsPreset ? (
+                      <MenuItem
+                        onClick={() => {
+                          loadMenu.onSaveAsPreset?.();
+                          close();
+                        }}
+                      >
+                        {orgCopy.settings.saveAsPreset}
+                      </MenuItem>
+                    ) : null}
+                    {loadMenu.onToggleShowHidden && ((loadMenu.hiddenCount ?? 0) > 0 || loadMenu.showHidden) ? (
+                      <MenuItem onClick={loadMenu.onToggleShowHidden}>{loadMenu.showHidden ? orgCopy.settings.hideHiddenAgain : orgCopy.settings.showHidden(loadMenu.hiddenCount ?? 0)}</MenuItem>
+                    ) : null}
+                  </div>
+                </>
+              );
+            }}
           </Popover>
         )}
       </header>

@@ -271,6 +271,8 @@ export async function attemptScenario(db: SimDb, snap: Snapshot, key: ScenarioKe
       if (!yellow) return { status: "wait" };
       const r = await db.user.rpc("abort_start", { p_heat: yellow.id });
       if (r.error) return failed(db, snap, key, simErrorSentence(r.error.message));
+      // a person's Abort makes the simulator leave the heat alone; the virtual head judge's own Abort is part of the run, so the simulator raises the yellow again
+      await updateConfig(db, snap.eventId, (c) => ({ ...c, noArm: null }));
       forgetContext(snap.eventId);
       return done(db, snap, key, L.abortStart(heatName(yellow)));
     }

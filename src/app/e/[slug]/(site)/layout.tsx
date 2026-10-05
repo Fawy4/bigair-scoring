@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { SiteFooter, Wordmark } from "@/components/home/site-chrome";
+import { getPlatformSettings } from "@/lib/platform/public-settings";
 import { LivePoll } from "@/components/public/poll";
 import { Logo } from "@/components/public/logo";
 import { PublicNav } from "@/components/public/nav";
@@ -25,12 +27,18 @@ export default async function SiteLayout({ children, params }: { children: React
   const items = visiblePublicTabs(tabSettingsOf(site)).map((t) => ({ href: `${base}${t.path}`, label: t.label }));
   const dates = formatEventDates(site.event.start_date, site.event.end_date);
   const logo = site.branding.logoUrl ?? site.organisation.logo_url;
+  const productName = (await getPlatformSettings()).productName;
   return (
     <div data-testid="public-site" className="beach-day beach-text-normal min-h-screen bg-beach-bg text-beach-ink">
       <LivePoll seconds={site.settings.livePollSec} />
       <div className="mx-auto flex max-w-xl flex-col gap-2 px-3 pb-8 pt-3">
+        <Wordmark name={productName} className="self-start text-small font-extrabold tracking-tight text-beach-muted" />
         <header className="flex items-center gap-3">
-          {logo ? <Logo src={logo} alt={copy.publicSite.logoAlt(site.event.name)} height={44} maxWidth={96} priority /> : null}
+          {logo ? (
+            <Link href="/" prefetch={false} aria-label={copy.landing.homeLink} data-testid="home-logo">
+              <Logo src={logo} alt={copy.publicSite.logoAlt(site.event.name)} height={44} maxWidth={96} priority />
+            </Link>
+          ) : null}
           <div className="min-w-0">
             <h1 data-testid="event-name" className="truncate text-heading font-semibold">
               <Link href={base} prefetch={false}>
@@ -43,6 +51,7 @@ export default async function SiteLayout({ children, params }: { children: React
         <WindBanner wind={site.wind} />
         <PublicNav items={items} label={N.menu} />
         <main className="flex flex-col gap-3">{children}</main>
+        <SiteFooter variant="beach" />
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ describe("preset dropdown", () => {
   it("shows built-in presets and the latest version of each of the organisation's own", () => {
     const g = presetGroups(rows, null);
     expect(g.system.map((o) => o.label)).toEqual(["GKA", "KOTA"]);
-    expect(g.organisation).toEqual([{ id: "o3", label: "Arrow best 3 (v3)" }]);
+    expect(g.organisation).toEqual([{ id: "o3", label: "Arrow best 3 (v3)", key: "mine", own: true }]);
   });
   it("keeps the older version a division already uses, labelled", () => {
     const g = presetGroups(rows, "o1");

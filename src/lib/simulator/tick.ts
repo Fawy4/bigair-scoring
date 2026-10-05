@@ -372,6 +372,8 @@ async function step(db: SimDb, snap: Snapshot): Promise<string> {
   const heat = byId.get(next.heatId)!;
   // Pause may have been pressed since this step began: the head judge's console or the simulator's own Pause stops the arming too
   if (await pausedNow(db, snap.eventId)) return T.play.lines.idle;
+  // the head judge aborted this heat's start sequence: the auto-play stays on and leaves the heat alone until she starts it again
+  if ((await refreshConfig(db, snap)).control.config.noArm === heat.id) return T.play.lines.abortedWait(heatName(heat));
   // the break is respected (Polish 3, item 3): the next heat waits for its start time on the run order, scaled by the speed, and the yellow ends at that start
   const dayPlan = await readPlanContaining(db, snap, heat.id);
   const planned = dayPlan

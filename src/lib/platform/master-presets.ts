@@ -21,6 +21,8 @@ export interface MasterRow {
   version: number;
   published_at: string | null;
   created_at?: string | null;
+  /** Scoring models and formats only: set when the owner retired the preset. */
+  retired_at?: string | null;
 }
 
 /** The version new divisions get: the highest published one. Drafts never count. */

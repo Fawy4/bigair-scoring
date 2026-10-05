@@ -1,4 +1,5 @@
 import { devices, expect, test, type Page } from "@playwright/test";
+import { installSupabaseProxy } from "./base";
 import { createPublicWorld, type PublicWorld } from "./public-world";
 
 // Phase 6: the public event site as a visitor on a phone sees it (no login anywhere). One throwaway event: Pro Men with a published heat and a heat on the water
@@ -21,8 +22,7 @@ test.afterAll(async () => {
 test("home: wind banner, now with the clock, the next two heats with estimates, today's timetable with its states, share and QR", async ({ page }) => {
   await w.db.from("wind_calls").insert({ event_id: w.eventId, status: "amber", message: "Light wind — heats on hold" });
   await page.goto(url());
-  await expect(page.getByTestId("wind-banner")).toContainText("Amber — caution");
-  await expect(page.getByTestId("wind-banner")).toContainText("Light wind");
+  await expect(page.getByTestId("wind-banner")).toHaveText("Wind Call: Light wind — heats on hold"); // the head judge's words, not "Amber — caution"
   await expect(page.getByTestId("now-title")).toContainText("Now: Pro Men · R1 · Heat 2");
   await expect(page.getByTestId("now-title")).toContainText(/\d+:\d\d left/);
   await expect(page.getByTestId("up-next-row")).toHaveCount(2);
@@ -195,6 +195,36 @@ test("Open Graph tags are on every public page, and the picture is a real 1200 �
   expect(heatImage.status()).toBe(200);
 });
 
+test("a wind call with no message shows its state word after Wind Call: (Stop / Hold / LETS GO!), on the public page, the big screen and Follow the heat", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  for (const [status, word] of [["red", "Stop"], ["amber", "Hold"], ["green", "LETS GO!"]] as const) {
+    await w.db.from("wind_calls").insert({ event_id: w.eventId, status, message: null });
+    for (const path of [url(), `/screen/${w.slug}`, `/screen/${w.slug}/follow`]) {
+      await page.goto(path);
+      await expect(page.getByTestId("wind-banner")).toHaveText(`Wind Call: ${word}`);
+      await expect(page.getByTestId("wind-banner")).toHaveAttribute("data-status", status);
+    }
+  }
+  // with a message the message is shown alone
+  await w.db.from("wind_calls").insert({ event_id: w.eventId, status: "red", message: "Gusts 35 knots" });
+  await page.goto(url());
+  await expect(page.getByTestId("wind-banner")).toHaveText("Wind Call: Gusts 35 knots");
+});
+
+test("Follow the heat shows the wind call at the very top, in the head judge's words, and drops it when it is cleared", async ({ page }) => {
+  await w.db.from("wind_calls").insert({ event_id: w.eventId, status: "red", message: "Wind too strong: all heats on hold" });
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto(`/screen/${w.slug}/follow`);
+  await expect(page.getByTestId("wind-banner")).toHaveText("Wind Call: Wind too strong: all heats on hold");
+  await expect(page.getByTestId("wind-banner")).toHaveAttribute("data-status", "red");
+  const top = await page.getByTestId("wind-banner").boundingBox();
+  const head = await page.getByTestId("screen-header").boundingBox();
+  expect(top && head && top.y < head.y).toBe(true);
+  // the screen asks the server every second: a cleared call goes away without a reload
+  await w.db.from("wind_calls").insert({ event_id: w.eventId, status: "clear", message: null });
+  await expect(page.getByTestId("wind-banner")).toHaveCount(0, { timeout: 15_000 });
+});
+
 test("big screen: white on dark, pages rotate by themselves, Space pauses, a QR to the public site, sponsors page, the wind call", async ({ page }) => {
   await w.db.from("events").update({ branding: { sponsors: [{ name: "WOO Events" }] } }).eq("id", w.eventId);
   await w.db.from("wind_calls").insert({ event_id: w.eventId, status: "green", message: "Good to go" });
@@ -203,7 +233,10 @@ test("big screen: white on dark, pages rotate by themselves, Space pauses, a QR 
   await expect(page.getByTestId("big-screen")).toBeVisible();
   const bg = await page.getByTestId("big-screen").evaluate((e) => getComputedStyle(e).backgroundColor);
   expect(bg).toBe("rgb(11, 14, 15)");
-  await expect(page.getByTestId("wind-banner")).toContainText("Green — go");
+  await expect(page.getByTestId("wind-banner")).toHaveText("Wind Call: Good to go");
+  const top = await page.getByTestId("wind-banner").boundingBox();
+  const head = await page.getByTestId("screen-header").boundingBox();
+  expect(top && head && top.y < head.y).toBe(true); // the very top of the screen, above the header
   await expect(page.getByTestId("qr")).toBeVisible();
   const rot = page.getByTestId("screen-rotator");
   const kinds = await page.getByTestId("screen-slide").evaluateAll((els) => els.map((e) => e.getAttribute("data-slide")));
@@ -244,13 +277,44 @@ test("the big screen shows a podium once the final is released, and nothing whil
   await expect(page.locator('[data-testid="placing-row"][data-place="3="]').first()).toBeVisible();
 });
 
+test("the wind call buttons show which one is picked (ticked, filled, thick border) and which one is on now; amber says Hold", async ({ page }) => {
+  await installSupabaseProxy(page.context()); // the control reads the current call from the browser (this sandbox cannot reach the database directly)
+  await w.org.signIn(page, `/org/events/${w.eventId}`);
+  await expect(page.getByTestId("wind-amber")).toHaveText(/Amber — Hold/);
+  await expect(page.getByTestId("wind-red")).toHaveText(/Red — Stop/);
+  await expect(page.getByTestId("wind-green")).toHaveText(/Green — LETS GO!/);
+  const width = (id: string) => page.getByTestId(id).evaluate((e) => parseFloat(getComputedStyle(e).borderTopWidth));
+  await page.getByTestId("wind-red").click();
+  await expect(page.getByTestId("wind-red")).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByTestId("wind-amber")).toHaveAttribute("aria-checked", "false");
+  await expect(page.getByTestId("wind-green")).toHaveAttribute("aria-checked", "false");
+  expect(await width("wind-red")).toBeGreaterThanOrEqual(3);
+  expect(await width("wind-amber")).toBeLessThanOrEqual(1);
+  await page.getByTestId("wind-green").click();
+  await expect(page.getByTestId("wind-green")).toHaveAttribute("data-selected", "true");
+  await expect(page.getByTestId("wind-red")).toHaveAttribute("data-selected", "false");
+  // set amber: the button says it is on now, and after a reload the picked one is the one that is showing
+  await page.getByTestId("wind-amber").click();
+  await page.getByTestId("wind-set").click();
+  await expect(page.getByTestId("wind-note")).toHaveText("Wind call updated.");
+  await expect(page.getByTestId("wind-live-amber")).toHaveText("On now");
+  await expect(page.getByTestId("wind-live-red")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByTestId("wind-amber")).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByTestId("wind-live-amber")).toBeVisible();
+  await page.getByTestId("wind-green").click(); // picked: green, showing now: amber
+  if (process.env.SHOT_DIR) await page.getByTestId("wind-call").screenshot({ path: `${process.env.SHOT_DIR}/wind-control.png` });
+  await page.getByTestId("wind-clear").click();
+  await expect(page.getByTestId("wind-live-amber")).toHaveCount(0);
+});
+
 test("the organiser sets the wind call on the dashboard and visitors see the banner on their next poll", async ({ page, browser }) => {
   await w.org.signIn(page, `/org/events/${w.eventId}`);
   await page.getByTestId("wind-red").click();
   await page.getByLabel("Message (shown with the call)").fill("Gusts — all stop");
   await page.getByTestId("wind-set").click();
   await expect(page.getByTestId("wind-note")).toHaveText("Wind call updated.");
-  await expect(page.getByTestId("wind-now")).toContainText("Red — stop");
+  await expect(page.getByTestId("wind-now")).toContainText("Red — Stop");
   const visitor = await browser.newPage({ ...devices["Pixel 5"] });
   await visitor.goto(url());
   await expect(visitor.getByTestId("wind-banner")).toContainText("Gusts — all stop");

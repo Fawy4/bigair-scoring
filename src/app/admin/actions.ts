@@ -15,6 +15,7 @@ import { classifyEmailError, emailLimitPerHour, type EmailFailure } from "@/lib/
 import { requestOrigin } from "@/lib/platform/origin";
 import { MASTER_KINDS, nextVersion, prepareNewVersion, validateMasterPreset, type MasterKind } from "@/lib/platform/master-presets";
 import { canonicalHash } from "@/lib/presets/plan";
+import { asNewPreset } from "@/lib/presets/io";
 import { drawDemoEvent } from "@/lib/demo/draw";
 import { OrgNameSchema, OrgSlugSchema, TimeZoneSchema } from "@/lib/schemas/org-settings";
 import { findUserByEmail } from "@/lib/supabase/admin-users";
@@ -307,4 +308,99 @@ export async function exportFeedbackNotes(filters: { tag?: string; status?: stri
   }
   revalidatePath("/admin/feedback");
   return { ok: true, markdown, count: notes.length };
+}
+
+// ------------------------------------------------------------------ master presets: manage (Polish 4)
+
+const SYSTEM_KIND = z.enum(["scoring_model", "format_template"]);
+const M = copy.admin.presets.manage;
+
+function manageError(message: string | undefined): string {
+  if (!message) return M.errors.failed;
+  if (message.includes("PRESET_NAME")) return M.errors.name;
+  if (message.includes("PRESET_IS_DEFAULT")) return M.errors.isDefault;
+  if (message.includes("NOT_FOUND")) return M.errors.notFound;
+  if (message.includes("NOT_ALLOWED")) return M.errors.notOwner;
+  return M.errors.failed;
+}
+
+/**
+ * Saves a built-in preset from the form (the same Simple / Advanced form organisers see): a NEW preset when `key` is null, otherwise the next version of that one.
+ * The owner's save is published at once (customers get it for new divisions; divisions that loaded an earlier version keep theirs); staff save a draft only.
+ */
+export async function saveMasterPreset(input: { kind: string; key: string | null; name: string; json: unknown }): Promise<{ ok: true; key: string; version: number; published: boolean } | Failure> {
+  const kind = SYSTEM_KIND.safeParse(input.kind);
+  if (!kind.success) return { ok: false, error: M.errors.failed };
+  const name = (input.name ?? "").trim();
+  if (name.length < 2 || name.length > 80) return { ok: false, error: M.errors.name };
+  if (!input.json || typeof input.json !== "object" || Array.isArray(input.json)) return { ok: false, error: presetErrors.NOT_OBJECT };
+  const { supabase, role } = await requireAdmin();
+
+  let key = input.key;
+  let json: Record<string, unknown> = { ...(input.json as Record<string, unknown>), name };
+  if (!key) {
+    const { data: taken } = await (kind.data === "scoring_model" ? supabase.from("scoring_models") : supabase.from("format_templates")).select("key").is("organisation_id", null);
+    const made = asNewPreset(json, name, (taken ?? []).map((r) => r.key));
+    key = made.key;
+    json = made.json as Record<string, unknown>;
+  }
+  const rows = await loadVersions(supabase, kind.data, key);
+  const version = nextVersion(rows);
+  const prepared = prepareNewVersion(kind.data, json, { key, version });
+  const valid = validateMasterPreset(kind.data, prepared);
+  if (!valid.ok) return { ok: false, error: M.errors.invalid(valid.message) };
+  const { data: id, error } = await supabase.rpc("admin_create_preset_version", { p_kind: kind.data, p_key: key, p_name: name, p_json: prepared as Json, p_hash: canonicalHash(prepared) });
+  if (error || !id) return { ok: false, error: manageError(error?.message) };
+  let published = false;
+  if (role === "owner") {
+    const res = await supabase.rpc("admin_publish_preset", { p_kind: kind.data, p_id: id });
+    if (res.error) return { ok: false, error: errorText(res.error.message, presetErrors) };
+    published = true;
+    // the name is the preset's, not the version's: every version carries it
+    if (rows.length && rows[0].name !== name) await supabase.rpc("admin_rename_preset", { p_kind: kind.data, p_key: key, p_name: name });
+  }
+  revalidatePath("/admin/presets", "layout");
+  return { ok: true, key, version, published };
+}
+
+export async function renameMasterPreset(input: { kind: string; key: string; name: string }): Promise<{ ok: true } | Failure> {
+  const kind = SYSTEM_KIND.safeParse(input.kind);
+  if (!kind.success) return { ok: false, error: M.errors.failed };
+  const { supabase } = await requireAdmin();
+  const { error } = await supabase.rpc("admin_rename_preset", { p_kind: kind.data, p_key: input.key, p_name: input.name });
+  if (error) return { ok: false, error: manageError(error.message) };
+  revalidatePath("/admin/presets", "layout");
+  return { ok: true };
+}
+
+export async function setMasterPresetRetired(input: { kind: string; key: string; retired: boolean }): Promise<{ ok: true } | Failure> {
+  const kind = SYSTEM_KIND.safeParse(input.kind);
+  if (!kind.success) return { ok: false, error: M.errors.failed };
+  const { supabase } = await requireAdmin();
+  const { error } = await supabase.rpc("admin_set_preset_retired", { p_kind: kind.data, p_key: input.key, p_retired: input.retired });
+  if (error) return { ok: false, error: manageError(error.message) };
+  revalidatePath("/admin/presets", "layout");
+  return { ok: true };
+}
+
+export async function setMasterPresetDefault(input: { kind: string; key: string }): Promise<{ ok: true } | Failure> {
+  const kind = SYSTEM_KIND.safeParse(input.kind);
+  if (!kind.success) return { ok: false, error: M.errors.failed };
+  const { supabase } = await requireAdmin();
+  const { error } = await supabase.rpc("admin_set_default_preset", { p_kind: kind.data, p_key: input.key });
+  if (error) return { ok: false, error: manageError(error.message) };
+  revalidatePath("/admin/presets", "layout");
+  return { ok: true };
+}
+
+export async function deleteMasterPreset(input: { kind: string; key: string }): Promise<{ ok: true } | (Failure & { usedBy?: string[] })> {
+  const kind = SYSTEM_KIND.safeParse(input.kind);
+  if (!kind.success) return { ok: false, error: M.errors.failed };
+  const { supabase } = await requireAdmin();
+  const { data, error } = await supabase.rpc("admin_delete_preset", { p_kind: kind.data, p_key: input.key });
+  if (error) return { ok: false, error: manageError(error.message) };
+  const answer = data as { ok: boolean; usedBy: string[] } | null;
+  if (answer && !answer.ok) return { ok: false, error: M.errors.inUse(answer.usedBy.join(", ")), usedBy: answer.usedBy };
+  revalidatePath("/admin/presets", "layout");
+  return { ok: true };
 }

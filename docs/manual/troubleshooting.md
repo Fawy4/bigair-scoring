@@ -231,6 +231,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Only a copy made with Run as simulation can be deleted or refreshed. The Demo is reset, not deleted.” | Follow the sentence. | [Simulator](errors.md#err-simulator-errors-not-a-copy) |
 | “Only a heat that has not started can be started.” | Pick the next heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-start) |
 | “Only a paused heat can be resumed.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-resume) |
+| “Only a platform owner can do that.” | Ask the platform owner. | [Platform owner (/admin)](errors.md#err-admin-presets-manage-errors-notowner) |
 | “Only a platform owner can publish presets.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-presets-errors-not-allowed) |
 | “Only a published heat can be re-opened.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-reopen) |
 | “Only a running heat can be paused.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-pause) |
@@ -352,6 +353,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “That plan names a heat that is not in this event.” | Take the row out and add the heat again. | [Organiser: Run order](errors.md#err-runorder-errors-unknownheat) |
 | “That preset is not valid: ‹why›” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-presets-invalid) |
 | “That preset was not found.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-errors-presetnotfound) |
+| “That preset was not found. Reload the page and try again.” | Reload the page. | [Organiser: Divisions](errors.md#err-presetmanage-errors-notfound) |
 | “That rider has used every attempt. Adding one more is saved with your reason.” | Follow the sentence. | [Head console](errors.md#err-headlive-pastcapneedsreason) |
 | “That rider is already in this division.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-errors-alreadyindivision) |
 | “That rider is not in this division.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-entry-not-in-division) |
@@ -384,6 +386,8 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “That web address is already used by another organisation.” | Choose another web address. | [Organiser: organisation settings](errors.md#err-orgsettings-slugtaken) |
 | “The banner is switched off in the Event step, so nothing shows on the public pages.” | Event step → tick “Show the wind-call banner…”. | [Organiser: Go live](errors.md#err-windcall-banneroffnote) |
 | “The chosen preset is not valid.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-errors-presetinvalid) |
+| “The DEFAULT built-in preset cannot be hidden.” | Hide another built-in preset instead. | [Organiser: Divisions](errors.md#err-presetmanage-errors-isdefault) |
+| “The DEFAULT preset cannot be retired, hidden or deleted. Set another preset as DEFAULT first.” | Set another preset as DEFAULT first. | [Platform owner (/admin)](errors.md#err-admin-presets-manage-errors-isdefault) |
 | “The demo organisation was created, but its draw could not be built. Run “npm run seed:demo” to finish it.” | On a computer with the keys: npm run seed:demo. | [Platform owner (/admin)](errors.md#err-admin-demo-drawfailed) |
 | “The draw changed while the reset was being prepared. Nothing was changed; try again.” | Follow the sentence. | [Resets](errors.md#err-resetparts-errors-draw-changed) |
 | “The draw is locked, so it cannot be replaced. Unlock it in the Draw step first.” | Draw step → Unlock draw with a reason, then apply. | [Organiser: Divisions](errors.md#err-builder-drawlocked) |
@@ -538,6 +542,8 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “This phone does not hold a seat yet.” | Join with the PIN. | [Officials joining](errors.md#err-seat-noseat) |
 | “This PIN could not be read back. Use Regenerate PIN to make a new one.” | Regenerate PIN. | [Organiser: Officials](errors.md#err-officials-pincouldnotread) |
 | “This plan is active. Activate another plan first.” | Activate another plan of that day first, then delete this one. | [Organiser: Run order](errors.md#err-runorder-errors-deleteactive) |
+| “This preset cannot be deleted: a division still uses it (‹usedBy›). Retire it instead.” | Retire the preset instead: it disappears from every Load… menu and nothing live changes. | [Platform owner (/admin)](errors.md#err-admin-presets-manage-errors-inuse) |
+| “This preset cannot be deleted: it is used by ‹usedBy›. Give that division another preset first.” | Open that division's Scoring or Format tab, load another preset, save; then delete this one. A division that loaded the preset earlier is never changed by deleting it. | [Organiser: Divisions](errors.md#err-presetmanage-errors-inuse) |
 | “This QR code has already been used or has expired. Ask the organiser for a new card, or type your PIN instead.” | Type the PIN instead, or print a fresh card (Officials → Print card). | [Officials joining](errors.md#err-join-errors-invalid-token) |
 | “This rider has a seat in the draw — set them to Withdrawn instead” | Set the rider to Withdrawn: after the draw is locked their seat becomes a walkover. | [Organiser: Riders](errors.md#err-riders-indraw) |
 | “This rider is not on the public list.” | Lock the division's draw; open the rider from the Results or Ladder page. | [Public pages](errors.md#err-pub-rider-notfound) |
@@ -550,6 +556,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “This sponsor is already first.” | Nothing to fix. | [Organiser: event list and Event step](errors.md#err-event-sponsorfirst) |
 | “This sponsor is already last.” | Nothing to fix. | [Organiser: event list and Event step](errors.md#err-event-sponsorlast) |
 | “This version is already the default.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-presets-errors-already-default) |
+| “Those settings are not valid yet: ‹why›” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-presets-manage-errors-invalid) |
 | “Tick “I understand, change the address” first.” | Tick “I understand, change the address”, then Save. | [Organiser: organisation settings](errors.md#err-orgsettings-understandfirst) |
 | “Tick every check of this version before confirming it as tested.” | Reload, tick the open checks after doing them, then press Confirm version tested again. | [Platform owner (/admin)](errors.md#err-admin-releases-codes-release-checks-open) |
 | “Tick the box to continue.” | Follow the sentence. | [Rider registration](errors.md#err-registration-errors-consent) |

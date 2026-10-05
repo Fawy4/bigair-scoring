@@ -2,15 +2,16 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { breakCountdown, computeTimetable, startsOutOfOrder, utcToLocalHHMM, type BreakCountdown, type BreakNone, type Timetable } from "@/lib/engine/schedule";
-import { abortStart, armHeat, cancelHeat, endHeat, extendBreakAction, extendPrestart, holdPlan, pauseHeat, resumeBreakAction, resumeHeat, resumePlanAt, shiftPlan, startHeat, type ActionResult, type PlanActionResult } from "@/lib/live/heat-actions";
+import { extensionSec } from "@/lib/live/extend";
+import { abortStart, armHeat, cancelHeat, endHeat, setBreakAction, extendHeat, extendPrestart, holdPlan, pauseHeat, resumeBreakAction, resumeHeat, resumePlanAt, shiftPlan, startHeat, type ActionResult, type PlanActionResult } from "@/lib/live/heat-actions";
 import { controlsFor, type Control, type ControlId, type HeatState } from "@/lib/live/head-state";
 import type { ReviewProps } from "./heat-control";
 import { isLiveHeat } from "@/lib/live/division-pick";
 import { activePlanFor, heatTitle, livesFor, timetableOptions, type ActivePlan } from "@/lib/live/run-order";
-import { shortTitle } from "@/lib/live/run-line";
+import { shortRound, shortTitle } from "@/lib/live/run-line";
 import { driftOf, plannedTimetable } from "@/lib/schedule/drift";
 import { effectiveStatus, formatClock, remainingMs } from "@/lib/live/timer";
-import { isArmedNow } from "@/lib/live/flags";
+import { isArmedNow, nextHeatPart, showsNextHeat } from "@/lib/live/flags";
 import { useFlagStrip } from "./use-flag";
 import type { HeatRow, LiveContext } from "@/lib/live/types";
 import type { Json } from "@/lib/supabase/database.types";
@@ -36,12 +37,13 @@ export type DialogKind = "publish" | "reopen" | "rerun" | "hold" | "reset" | nul
  * buttons: the run order (with the real order of the timetable), the selected heat's state and controls, Start (with its out-of-order warning), Hold,
  * Resume at, Shift, the break after a heat (+1 min, Pause break, Resume), Cancel and the dialogs. Every press is a server action on the database's clock.
  */
-export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; plans: ActivePlan[]; nowServer: number; selectedId: string | null; onSelect: (id: string) => void; onPlanChanged?: (planId: string, hold: Json | null, anchors: Json) => void; onPatchHeat?: (heatId: string, patch: Partial<HeatRow>) => void; review?: ReviewProps; divisionId: string | null }) {
-  const { ctx, heats, plans, nowServer, selectedId, onSelect, onPlanChanged, onPatchHeat, review, divisionId } = input;
+export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; plans: ActivePlan[]; nowServer: number; selectedId: string | null; nextHeatId?: string | null; onSelect: (id: string) => void; onPlanChanged?: (planId: string, hold: Json | null, anchors: Json, items?: Json) => void; onPatchHeat?: (heatId: string, patch: Partial<HeatRow>) => void; review?: ReviewProps; divisionId: string | null }) {
+  const { ctx, heats, plans, nowServer, selectedId, nextHeatId = null, onSelect, onPlanChanged, onPatchHeat, review, divisionId } = input;
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [restart, setRestart] = useState("");
   const [cancelling, setCancelling] = useState(false);
+  const [endFor, setEndFor] = useState<string | null>(null); // the heat whose End heat is waiting for its Confirm
   const [reason, setReason] = useState("");
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [startWarning, setStartWarning] = useState<{ heatId: string; text: string } | null>(null);
@@ -85,10 +87,21 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
 
   const selected = heats.find((h) => h.id === selectedId) ?? null;
   const state = selected ? stateOf(selected, nowServer) : null;
+  // The heat the START controls are about. Normally the heat shown; but when the heat shown is over (ended, in review, published) and nothing is on the water, it is the next heat
+  // of the run order, so the head judge can raise the next yellow without leaving the review and without a refresh.
+  const ctl = useMemo(() => {
+    if (selected && stateOf(selected, nowServer) === "scheduled") return selected;
+    const onWater = heats.some((h) => isLiveHeat(h, nowServer));
+    const next = nextHeatId ? heats.find((h) => h.id === nextHeatId) : undefined;
+    if (!onWater && next && stateOf(next, nowServer) === "scheduled") return next;
+    return selected;
+  }, [selected, heats, nextHeatId, nowServer]);
+  const ctlState = ctl ? stateOf(ctl, nowServer) : null;
   const alreadyRerun = Boolean(selected && heats.some((h) => h.rerun_of === selected.id));
   const controls = new Map<ControlId, Control>((state ? controlsFor(state, review?.items.length ?? 0, { hasPlan: Boolean(planId), publishOpensList: Boolean(review), alreadyRerun }) : []).map((c) => [c.id, c]));
-  const on = (id: ControlId) => Boolean(controls.get(id)?.enabled);
-  const why = (id: ControlId) => controls.get(id)?.reason;
+  const startControls = new Map<ControlId, Control>((ctlState ? controlsFor(ctlState, 0, { hasPlan: Boolean(planId), publishOpensList: false, alreadyRerun: false }) : []).map((c) => [c.id, c]));
+  const on = (id: ControlId) => Boolean((id === "start" ? startControls : controls).get(id)?.enabled);
+  const why = (id: ControlId) => (id === "start" ? startControls : controls).get(id)?.reason;
   const onHold = Boolean(plan?.plan.hold);
   const title = selected ? heatTitle(ctx, selected) : "";
   const remaining = selected ? remainingMs({ status: selected.status, durationSec: selected.duration_sec, startedAt: selected.started_at, pausedAt: selected.paused_at, pausedTotalSec: selected.paused_total_sec }, nowServer) : 0;
@@ -113,10 +126,27 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     return shortTitle({ division: ctx.divisionTabs.find((d) => d.id === h.division_id)?.name, round: ctx.rounds.find((r) => r.id === h.round_id), heat: h, withDivision: h.division_id !== own });
   }, [breakInfo, heats, ctx.divisionTabs, ctx.rounds, selectedId, divisionId]);
 
+  // the same name with its division, for the red banner's "Next heat in …" part (it names the heat to anybody who walks past)
+  const nextTitleFull = useMemo(() => {
+    if (breakInfo.kind !== "break") return "";
+    const h = heats.find((x) => x.id === breakInfo.heatId);
+    // "Pro Men · R1 · Heat 2": the same words the Flag view and the big screens use (not the run order's short "H2")
+    return h ? [ctx.divisionTabs.find((d) => d.id === h.division_id)?.name, shortRound(ctx.rounds.find((r) => r.id === h.round_id)), h.name?.trim() || `Heat ${h.number}${h.number_suffix ?? ""}`].filter(Boolean).join(" · ") : "";
+  }, [breakInfo, heats, ctx.divisionTabs, ctx.rounds]);
+  /** The break as the run order has it now: from the end of the last heat to the next heat's planned start (warm-up included), as the clock shows it. */
+  const lastEndMs = useMemo(() => {
+    const ends = heats.filter((h) => h.ended_at).map((h) => Date.parse(h.ended_at!));
+    return ends.length ? Math.max(...ends) : null;
+  }, [heats]);
+  const breakLengthMs = useMemo(() => {
+    if (breakInfo.kind !== "break") return null;
+    return lastEndMs === null ? null : Math.max(0, Date.parse(breakInfo.startUtc) - lastEndMs);
+  }, [breakInfo, lastEndMs]);
+
   /** Every press runs one server action and says what happened; a plan change also hands the new hold and pins back so the screen shows them at once. */
   const flagsOn = ctx.event.flags.enabled;
   const defaultPrestart = ctx.event.flags.prestartSec;
-  const armed = Boolean(selected && flagsOn && isArmedNow(selected, nowServer));
+  const armed = Boolean(ctl && flagsOn && isArmedNow(ctl, nowServer));
   const chosenPrestart = prestart ?? defaultPrestart;
   /** The event's default, "Other…" (its typed value once there is one) and "Start now". A typed value equal to the default simply selects the default. */
   const prestartOptions = useMemo(() => {
@@ -127,17 +157,25 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
       { id: "now" as const, sec: 0, label: T.prestartNow, selected: chosenPrestart === 0 },
     ];
   }, [defaultPrestart, otherSec, chosenPrestart]);
-  const armedFrozen = Boolean(armed && selected?.armed_paused_at);
+  const armedFrozen = Boolean(armed && ctl?.armed_paused_at);
+  const ctlTitle = ctl ? heatTitle(ctx, ctl) : "";
   const liveHeatRow = heats.find((h) => isLiveHeat(h, nowServer)) ?? null;
   /** The flag strip: about the heat in its pre-start, else the heat on the water, else the heat shown. */
-  const flag = useFlagStrip(ctx, heats, plans, liveHeatRow ?? selected, nowServer);
+  const flagBase = useFlagStrip(ctx, heats, plans, liveHeatRow ?? selected, nowServer);
+  // the red banner keeps its state word ("Finished"); beside it the break counts down to the next heat, from the run order (never starts anything, no horn)
+  const flag = useMemo(() => {
+    if (!flagBase || breakInfo.kind !== "break" || breakInfo.state === "paused" || !showsNextHeat(flagBase.state)) return flagBase;
+    const startMs = Date.parse(breakInfo.startUtc);
+    const part = nextHeatPart({ startMs, title: nextTitleFull, est: utcToLocalHHMM(startMs, ctx.event.timezone) }, nowServer);
+    return { ...flagBase, words: flagBase.state.label, nextPart: part };
+  }, [flagBase, breakInfo, nextTitleFull, nowServer, ctx.event.timezone]);
 
   /**
    * Every press runs one server action. The screen answers at once with a guess of what the press does (`guess`, fields of the selected heat), then takes the row the
    * database answered with; a refusal puts the guessed fields back. The stream confirms it a moment later and changes nothing.
    */
-  const act = (label: string, run: () => Promise<ActionResult | PlanActionResult>, after?: () => void, guess?: Partial<HeatRow>) => {
-    const id = selectedId;
+  const act = (label: string, run: () => Promise<ActionResult | PlanActionResult>, after?: () => void, guess?: Partial<HeatRow>, targetId: string | null = selectedId) => {
+    const id = targetId;
     const before = id ? heats.find((h) => h.id === id) : undefined;
     // the guess goes on the screen first, outside the transition: an update made inside an async transition is held back until the whole action has finished
     if (guess && id) onPatchHeat?.(id, guess);
@@ -147,7 +185,7 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
       if (r.ok && "heat" in r && r.heat && id) onPatchHeat?.(id, r.heat);
       if (!r.ok && guess && before && id) onPatchHeat?.(id, Object.fromEntries(Object.keys(guess).map((k) => [k, before[k as keyof HeatRow]])) as Partial<HeatRow>);
       setMessage(r.ok ? { ok: true, text: label } : { ok: false, text: r.message });
-      if (r.ok && "anchors" in r && planId) onPlanChanged?.(planId, r.hold, r.anchors);
+      if (r.ok && "anchors" in r && planId) onPlanChanged?.(planId, r.hold, r.anchors, r.items);
       if (r.ok) {
         setCancelling(false);
         setReason("");
@@ -160,27 +198,27 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
 
   /** Start: any heat that has not started, in any order. When it is not the heat the run order expects, ask once (the timetable then re-flows around the real order). */
   const requestStart = () => {
-    if (!selected) return;
-    const check = startsOutOfOrder(plan?.plan ?? null, lives, selected.id);
+    if (!ctl) return;
+    const check = startsOutOfOrder(plan?.plan ?? null, lives, ctl.id);
     if (check.outOfOrder) {
       const next = heats.find((h) => h.id === check.nextHeatId);
-      const text = V.notNext(next ? shortTitle({ division: ctx.divisionTabs.find((d) => d.id === next.division_id)?.name, round: ctx.rounds.find((r) => r.id === next.round_id), heat: next, withDivision: next.division_id !== selected.division_id }) : "");
-      setStartWarning({ heatId: selected.id, text });
+      const text = V.notNext(next ? shortTitle({ division: ctx.divisionTabs.find((d) => d.id === next.division_id)?.name, round: ctx.rounds.find((r) => r.id === next.round_id), heat: next, withDivision: next.division_id !== ctl.division_id }) : "");
+      setStartWarning({ heatId: ctl.id, text });
       return;
     }
     startNow();
   };
   /** Start heat (flags off), or Start sequence (flags on: the yellow for the chosen pre-start; "Start now" skips it). */
   const startNow = () => {
-    if (!selected) return;
-    if (!flagsOn) return act(T.done.start(title), () => startHeat(selected.id)); // no guess: the plain Start is shown from the database's own answer
-    if (chosenPrestart === 0) return act(T.done.start(title), () => armHeat(selected.id, 0), undefined, { armed_at: stamp, prestart_sec: 0, armed_paused_at: null });
-    act(T.done.arm(title, formatClock(chosenPrestart * 1000)), () => armHeat(selected.id, chosenPrestart), undefined, { armed_at: stamp, prestart_sec: chosenPrestart, armed_paused_at: null });
+    if (!ctl) return;
+    if (!flagsOn) return act(T.done.start(ctlTitle), () => startHeat(ctl.id), undefined, undefined, ctl.id); // no guess: the plain Start is shown from the database's own answer
+    if (chosenPrestart === 0) return act(T.done.start(ctlTitle), () => armHeat(ctl.id, 0), undefined, { armed_at: stamp, prestart_sec: 0, armed_paused_at: null }, ctl.id);
+    act(T.done.arm(ctlTitle, formatClock(chosenPrestart * 1000)), () => armHeat(ctl.id, chosenPrestart), undefined, { armed_at: stamp, prestart_sec: chosenPrestart, armed_paused_at: null }, ctl.id);
   };
   const confirmStart = () => startNow();
   const dismissStart = () => setStartWarning(null);
 
-  const shownWarning = startWarning && startWarning.heatId === selectedId && state === "scheduled" ? startWarning : null;
+  const shownWarning = startWarning && ctl && startWarning.heatId === ctl.id && ctlState === "scheduled" ? startWarning : null;
 
   return {
     ctx,
@@ -191,6 +229,8 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     order,
     gone,
     selected,
+    ctl,
+    ctlTitle,
     state,
     title,
     remaining,
@@ -205,6 +245,8 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     setRestart,
     cancelling,
     setCancelling,
+    confirmingEnd: endFor !== null && endFor === selectedId,
+    setConfirmingEnd: (ask: boolean) => setEndFor(ask ? selectedId : null),
     reason,
     setReason,
     dialog,
@@ -229,22 +271,29 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     dismissStart,
     breakInfo,
     nextTitle,
+    breakLengthMs,
     nowServer,
     drift,
     actions: {
       /** Green at once, during the yellow. */
-      startNowDuringYellow: () => selected && act(T.done.startNow(title), () => startHeat(selected.id)),
-      abort: () => selected && act(T.done.abort(title), () => abortStart(selected.id), undefined, { armed_at: null, prestart_sec: null, armed_paused_at: null }),
-      end: () => selected && act(T.done.end(title), () => endHeat(selected.id)), // no guess: ending a heat is shown from the database's own answer
+      startNowDuringYellow: () => ctl && act(T.done.startNow(ctlTitle), () => startHeat(ctl.id), undefined, undefined, ctl.id),
+      abort: () => ctl && act(T.done.abort(ctlTitle), () => abortStart(ctl.id), undefined, { armed_at: null, prestart_sec: null, armed_paused_at: null }, ctl.id),
+      /** End heat asks once (the panel under the buttons); this is the confirmed press. No guess: ending a heat is shown from the database's own answer. */
+      end: () => selected && act(T.done.end(title), () => endHeat(selected.id, reason), () => setEndFor(null)),
       /** "+1 min" on the yellow: exactly one more minute, as often as needed. */
-      extend: () => selected && act(T.done.extend(title), () => extendPrestart(selected.id), undefined, { prestart_sec: (selected.prestart_sec ?? 0) + 60 }),
-      pause: () => selected && act(T.done.pause(title), () => pauseHeat(selected.id), undefined, armed && !armedFrozen ? { armed_paused_at: stamp } : { status: "paused", paused_at: stamp }),
-      resume: () => selected && act(T.done.resume(title), () => resumeHeat(selected.id), undefined, armedFrozen ? { armed_paused_at: null } : { status: "running", paused_at: null, paused_total_sec: selected.paused_total_sec + (selected.paused_at ? Math.max(0, Math.round((nowServer - Date.parse(selected.paused_at)) / 1000)) : 0) }),
+      extend: () => ctl && act(T.done.extend(ctlTitle), () => extendPrestart(ctl.id), undefined, { prestart_sec: (ctl.prestart_sec ?? 0) + 60 }, ctl.id),
+      /** "+1 min" on a running heat: the server adds the minute; the head's own screen shows it at once and then takes the database's row. */
+      extendHeat: () => selected && act(T.done.extendHeat(title), () => extendHeat(selected.id), undefined, { duration_sec: selected.duration_sec + extensionSec(selected.time_scale) }),
+      pause: () => { const t = armed ? ctl : selected; return t && act(T.done.pause(armed ? ctlTitle : title), () => pauseHeat(t.id), undefined, armed && !armedFrozen ? { armed_paused_at: stamp } : { status: "paused", paused_at: stamp }, t.id); },
+      resume: () => { const t = armedFrozen ? ctl : selected; return t && act(T.done.resume(armedFrozen ? ctlTitle : title), () => resumeHeat(t.id), undefined, armedFrozen ? { armed_paused_at: null } : { status: "running", paused_at: null, paused_total_sec: t.paused_total_sec + (t.paused_at ? Math.max(0, Math.round((nowServer - Date.parse(t.paused_at)) / 1000)) : 0) }, t.id); },
       hold: () => planId && act(T.done.hold, () => holdPlan(planId)),
       shift: (m: number) => planId && act(T.done.shift(m), () => shiftPlan(planId, m)),
       resumeAt: () => planId && act(T.done.resumeAt(restart), () => resumePlanAt(planId, restart)),
       cancel: () => selected && act(T.done.cancel(title), () => cancelHeat(selected.id, reason)),
-      plusOne: () => planId && act(V.breakDone.plusOne, () => extendBreakAction(planId, 1)),
+      /** The break controls: the change IS the run order's break for this gap (the next heat's planned start moves on every screen), to the second. */
+      breakPlusOne: () => planId && act(V.breakDone.plusOne, () => setBreakAction(planId, { kind: "add", minutes: 1 })),
+      breakSet: (seconds: number) => planId && act(V.breakDone.set(formatClock(seconds * 1000)), () => setBreakAction(planId, { kind: "length", seconds })),
+      breakAdd: (seconds: number) => planId && act(V.breakDone.added(formatClock(seconds * 1000)), () => setBreakAction(planId, { kind: "add", minutes: seconds / 60 })),
       pauseBreak: () => planId && act(V.breakDone.paused, () => holdPlan(planId)),
       resumeBreak: () => planId && act(V.breakDone.resumed, () => resumeBreakAction(planId)),
     },

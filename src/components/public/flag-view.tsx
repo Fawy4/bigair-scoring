@@ -125,6 +125,11 @@ export function FlagView({ slug, initial, pollMs = POLL_MS, staleMs = STALE_MS }
                 {formatClock(state.countdownMs)}
               </p>
             ) : null}
+            {at?.nextPart ? (
+              <p data-testid="flag-next-heat" className="mt-[1vh] max-w-full text-[clamp(1.25rem,3.6vw,2.6rem)] font-bold tabular-nums">
+                {at.nextPart}
+              </p>
+            ) : null}
             {at?.words && state.kind === "stopped" && at.words !== state.label ? (
               <p data-testid="flag-words" className="mt-[1vh] max-w-full text-[clamp(1.25rem,3.6vw,2.6rem)] font-bold">
                 {at.words}

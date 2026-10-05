@@ -1,14 +1,24 @@
+import { SiteFooter, Wordmark } from "@/components/home/site-chrome";
+import { getPlatformSettings } from "@/lib/platform/public-settings";
 import { copy } from "@/lib/ui-copy";
 import { JoinForm } from "./join-form";
+import "../home.css";
 
 export const metadata = { title: copy.join.title };
 
-export default function JoinPage() {
+export default async function JoinPage() {
+  const settings = await getPlatformSettings();
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 p-4 text-[#111]">
-      <h1 className="text-3xl font-extrabold">{copy.join.title}</h1>
-      <p className="text-lg font-semibold">{copy.join.intro}</p>
-      <JoinForm />
-    </main>
+    <div className="home" data-testid="join-page">
+      <main className="home-wrap home-narrow">
+        <header>
+          <Wordmark name={settings.productName} />
+          <h1 className="home-title">{copy.join.title}</h1>
+          <p className="home-lede">{copy.join.intro}</p>
+        </header>
+        <JoinForm />
+        <SiteFooter />
+      </main>
+    </div>
   );
 }

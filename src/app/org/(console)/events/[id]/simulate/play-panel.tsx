@@ -33,6 +33,7 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
   const canEnd = now === "running" || now === "paused" || now === "ended" || now === "under_review";
   const whole = status.control.config.wholeEvent;
   const [skipping, setSkipping] = React.useState(false);
+  const [askEnd, setAskEnd] = React.useState(false); // End heat and publish asks once
   return (
     <section role="toolbar" aria-label={T.toolbarLabel} data-testid="sim-toolbar" className="flex flex-col gap-3 rounded-card border border-beach-line bg-beach-bg p-4">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
@@ -62,9 +63,21 @@ export function Toolbar({ eventId, sim }: { eventId: string; sim: Sim }) {
             <Choice icon={SkipForward} data-testid="sim-skip-end" title={canSkip ? T.skip.help.text : T.skip.why} disabled={pending || skipping || !canSkip} onClick={() => { setSkipping(true); void act(() => skipToEndOfHeat(eventId), (r) => r.text).finally(() => setSkipping(false)); }}>
               {skipping ? T.skip.working : T.skip.button}
             </Choice>
-            <Choice icon={Flag} data-testid="sim-end-publish" title={canEnd ? T.endPublish.help.text : T.endPublish.why} disabled={pending || !canEnd} onClick={() => void act(() => endHeatAndPublish(eventId), (r) => r.text)}>
-              {T.endPublish.button}
-            </Choice>
+            {askEnd && canEnd ? (
+              <span data-testid="sim-end-panel" role="group" aria-label={T.endPublish.question} className="flex flex-wrap items-center gap-2 rounded-[8px] border border-beach-border bg-beach-surface p-2">
+                <span className="text-body font-semibold">{T.endPublish.question}</span>
+                <Choice icon={Flag} data-testid="sim-end-confirm" disabled={pending} onClick={() => { setAskEnd(false); void act(() => endHeatAndPublish(eventId), (r) => r.text); }}>
+                  {T.endPublish.confirm}
+                </Choice>
+                <Choice data-testid="sim-end-cancel" onClick={() => setAskEnd(false)}>
+                  {T.endPublish.cancel}
+                </Choice>
+              </span>
+            ) : (
+              <Choice icon={Flag} data-testid="sim-end-publish" title={canEnd ? T.endPublish.help.text : T.endPublish.why} disabled={pending || !canEnd} onClick={() => setAskEnd(true)}>
+                {T.endPublish.button}
+              </Choice>
+            )}
             <Choice icon={FastForward} data-testid="sim-whole-event" pressed={whole} title={T.whole.help.text} disabled={pending || (whole && state === "playing")} onClick={() => void act(() => runWholeEvent(eventId))}>
               {T.whole.button}
             </Choice>

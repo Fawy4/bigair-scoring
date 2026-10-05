@@ -113,7 +113,7 @@ test("organiser: settings, then the Event step", async ({ page }) => {
   await page.goto("/");
   const link = page.getByRole("link", { name: new RegExp(`Arrow Big Air ${org.run}`) });
   await expect(link).toHaveAttribute("href", `/e/arrow-big-air-${org.run}`);
-  await expect(link).toContainText(`Arrow ${org.run} · El Gouna, Egypt · `); // "Organisation · Location · Date": the organisation comes first
+  await expect(link).toContainText(`Arrow ${org.run} · El Gouna, Egypt`); // the card names the organisation first, then the location (the dates have their own line)
 });
 
 test("organiser: Divisions step (Simple, Show all settings, presets, ladder choice and diagram, import/export, lock)", async ({ page }) => {
@@ -152,7 +152,7 @@ test("organiser: Divisions step (Simple, Show all settings, presets, ladder choi
   await field("New division name").fill("Pro Men");
   await page.getByRole("button", { name: "+ Add division" }).click();
   await expect(page.getByTestId("division-card")).toHaveCount(1);
-  await expect(divisionsRail()).toContainText("Pro Men: choose how it is scored.");
+  await expect(divisionsRail()).toContainText("Pro Men: choose its format."); // scoring starts from the DEFAULT built-in preset, already applied
   await expect(divisionsRail()).toHaveAttribute("data-state", "attention");
 
   // Scoring: the legacy preset gives the owner's example sentence

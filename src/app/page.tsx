@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { BeachPage } from "@/components/beach-page";
-import { EventCodeForm } from "@/components/event-code-form";
-import { LandingEventCard, type LandingEvent } from "@/components/landing-event-card";
+import { Suspense } from "react";
+import { HomeEventCode } from "@/components/home/home-event-code";
+import { EventsView } from "@/components/home/events-view";
+import type { LandingEvent } from "@/components/landing-event-card";
+import "./home.css";
 import { requestOrigin } from "@/lib/platform/origin";
 import { groupOrgEvents } from "@/lib/platform/event-label";
 import { getPlatformSettings } from "@/lib/platform/public-settings";
@@ -28,7 +30,6 @@ export async function generateMetadata() {
 }
 
 const LIVE_LOOKUPS = 6;
-const SHOWN = { upcoming: 40, recent: 8 };
 
 /** What is on right now in a live event (for example "Pro Men · R1 · Heat 3"), read the way a visitor would; nothing when it cannot be read. */
 async function nowOn(slug: string): Promise<string | null> {
@@ -39,87 +40,70 @@ async function nowOn(slug: string): Promise<string | null> {
   }
 }
 
-/** For riders and spectators: live events first, then upcoming, then recent results; one field for an event that is not listed. Simulation and archived events never appear (the database function leaves them out). */
-export default async function Home() {
+const L = copy.landing;
+
+/** The code field under the events (or under "No public events right now"): the same field either way. */
+function CodeField() {
+  return <HomeEventCode label={L.codeLabel} placeholder={L.codePlaceholder} go={L.codeGo} invalid={L.codeInvalid} />;
+}
+
+/** The events, streamed in after the hero: reads them as a visitor would (simulation and archived events are left out by the database function). */
+async function Events() {
   const settings = await getPlatformSettings();
   const { data, error } = await (await createClient()).rpc("get_public_events", { p_limit: 100 });
   const events = (data ?? []) as LandingEvent[];
   const groups = groupOrgEvents(events, todayIn(settings.defaultTimezone, Date.now()));
-  const live = groups.live;
-  const nows = await Promise.all(live.slice(0, LIVE_LOOKUPS).map((e) => nowOn(e.slug)));
-  const hasLegal = Boolean(settings.legalTexts.terms || settings.legalTexts.privacy);
-  const section = (id: string, heading: string, list: LandingEvent[], nowLines?: Array<string | null>) =>
-    list.length === 0 ? null : (
-      <section aria-labelledby={id} className="flex flex-col gap-2" data-testid={id}>
-        <h2 id={id} className="text-small font-semibold text-beach-muted">
-          {heading}
-        </h2>
-        <ul className="flex flex-col gap-2">
-          {list.map((e, i) => (
-            <li key={e.id}>
-              <LandingEventCard event={e} now={nowLines?.[i] ?? null} />
-            </li>
-          ))}
-        </ul>
-      </section>
-    );
+  const nows = await Promise.all(groups.live.slice(0, LIVE_LOOKUPS).map((e) => nowOn(e.slug)));
+  return <EventsView groups={groups} nowLines={nows} failed={Boolean(error)} />;
+}
 
+/** For riders and spectators. The hero (wordmark, tagline) does not wait for the events: the list streams in under it. */
+export default async function Home() {
+  const settings = await getPlatformSettings();
+  const hasLegal = Boolean(settings.legalTexts.terms || settings.legalTexts.privacy);
   return (
-    <BeachPage testId="landing">
-      <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-6 px-4 pb-6 pt-8">
-        <header className="flex flex-col gap-1">
-          {settings.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={settings.logoUrl} alt={copy.publicSite.logoAlt(settings.productName)} className="mb-1 h-12 max-w-[12rem] self-start object-contain" />
-          ) : null}
-          <h1 className="text-[20px] font-semibold leading-tight">{settings.productName}</h1>
-          <p className="text-body font-medium text-beach-muted">{settings.tagline}</p>
+    <div className="home" data-testid="landing">
+      <main className="home-wrap">
+        <header className="home-hero">
+          <div>
+            {settings.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={settings.logoUrl} alt={copy.publicSite.logoAlt(settings.productName)} className="home-logo" />
+            ) : null}
+            <h1 className="home-wordmark">{settings.productName}</h1>
+            <p className="home-tagline">{settings.tagline}</p>
+          </div>
         </header>
 
-        {error ? (
-          <p role="alert" className="rounded-card border border-beach-failed p-3 text-body font-semibold text-beach-failed">
-            {copy.common.problem(copy.landing.loadError)}
-          </p>
-        ) : events.length === 0 ? (
-          <p className="text-body font-medium text-beach-muted">{copy.landing.none}</p>
-        ) : (
-          <>
-            {section("live-events", copy.landing.liveHeading, live, nows)}
-            {section("upcoming-events", copy.landing.upcomingHeading, groups.upcoming.slice(0, SHOWN.upcoming))}
-            {section("recent-events", copy.landing.recentHeading, groups.past.slice(0, SHOWN.recent))}
-          </>
-        )}
+        <Suspense fallback={<div className="home-skeleton" aria-hidden />}>
+          <Events />
+        </Suspense>
 
-        <EventCodeForm />
+        <CodeField />
 
-        <p className="text-small font-medium text-beach-muted">
-          {copy.landing.organiserQuestion}{" "}
-          <Link href="/org/login" className="font-semibold text-beach-ink underline">
-            {copy.landing.organiserLink}
+        <p className="home-quiet">
+          {L.organiserQuestion}{" "}
+          <Link href="/org/login" className="link">
+            {L.organiserLink}
           </Link>
           {" · "}
-          {copy.landing.officialQuestion}{" "}
-          <Link href="/join" className="font-semibold text-beach-ink underline">
-            {copy.landing.officialLink}
+          {L.officialQuestion}{" "}
+          <Link href="/join" className="link">
+            {L.officialLink}
           </Link>
         </p>
 
-        <footer className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-4 text-small font-medium text-beach-muted">
-          <span>{settings.productName}</span>
+        <footer className="home-footer">
           <span data-testid="product-version">{copy.manual.version(PRODUCT_VERSION)}</span>
-          <Link href="/help" className="underline" data-testid="help-link">
+          <Link href="/help" prefetch={false} data-testid="help-link">
             {copy.manual.footerHelp}
           </Link>
-          {hasLegal ? (
-            <Link href="/legal" className="underline">
-              {copy.publicSite.legalLink}
-            </Link>
-          ) : null}
-          <Link href="/org/login?next=%2Fadmin" className="ml-auto underline" data-testid="admin-link">
-            {copy.landing.admin}
+          {hasLegal ? <Link href="/legal">{copy.publicSite.legalLink}</Link> : null}
+          <Link href="/org/login?next=%2Fadmin" className="admin" data-testid="admin-link">
+            {L.admin}
           </Link>
         </footer>
       </main>
-    </BeachPage>
+    </div>
   );
 }

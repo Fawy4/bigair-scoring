@@ -40,6 +40,8 @@ export const SimConfigSchema = z.object({
   wholeEvent: z.boolean().default(false),
   /** "Skip to end of heat" left this heat in review: the virtual head judge does not publish it; whoever presses Publish (or "End heat and publish") does (Polish 3, item 1). */
   reviewHold: z.string().nullable().default(null),
+  /** The heat whose start sequence a person aborted: the simulator does not raise its yellow again; the head judge starts it when ready (Polish 4). */
+  noArm: z.string().nullable().default(null),
 });
 export type SimConfig = z.infer<typeof SimConfigSchema>;
 

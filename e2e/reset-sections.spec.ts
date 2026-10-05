@@ -35,6 +35,7 @@ test("run a heat, reset it from the console, see it not started", async ({ brows
   await expect(head.getByTestId("why-reset-heat")).toContainText("running");
 
   await head.getByTestId("end").click();
+  await head.getByTestId("end-confirm").click(); // End heat asks once
   await expect(row(head, w.heats[0])).toHaveAttribute("data-state", "ended", { timeout: 40_000 });
   await expect(head.getByTestId("reset-heat")).toBeEnabled();
   // Reset this heat is a visible button immediately before Cancel heat (same row, same size), and there is no heat menu any more

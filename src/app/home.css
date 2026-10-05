@@ -1,0 +1,422 @@
+/* The front door (Polish 4). Its own small set of tokens, scoped to .home: near-black #111111, one accent (electric orange #FF6A00) used for the primary action and the live dot only, 1 px frames, 16 px cards, no shadows, no gradients. Dark and light follow the device. Text pairs are at least 7:1 (the beach standard):
+   ink on bg 17:1 / 17:1, muted on bg 8.4:1 / 10:1, black on the accent 7.4:1. The only movement on the page is the live dot (see .home-dot). */
+.home {
+  --h-bg: #ffffff;
+  --h-ink: #111111;
+  --h-muted: #4d4d4d;
+  --h-line: #d6d6d6;
+  --h-accent: #ff6a00;
+  --h-on-accent: #000000;
+  min-height: 100dvh;
+  background: var(--h-bg);
+  color: var(--h-ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  line-height: 1.5;
+}
+@media (prefers-color-scheme: dark) {
+  .home {
+    --h-bg: #111111;
+    --h-ink: #f5f5f5;
+    --h-muted: #bdbdbd;
+    --h-line: #3a3a3a;
+  }
+  body:has(.home) {
+    background: #111111;
+  }
+}
+.home * {
+  box-sizing: border-box;
+}
+.home-wrap {
+  margin: 0 auto;
+  max-width: 1100px;
+  padding: 24px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  min-height: 100dvh;
+}
+@media (min-width: 720px) {
+  .home-wrap {
+    padding: 48px 32px 24px;
+    gap: 56px;
+  }
+}
+
+/* hero: the wordmark large, the tagline in one line */
+.home-hero {
+  display: grid;
+  gap: 16px;
+  align-items: center;
+}
+.home-logo {
+  height: 48px;
+  max-width: 12rem;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+.home-wordmark {
+  font-size: clamp(48px, 11vw, 104px);
+  line-height: 0.95;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.home-tagline {
+  margin: 16px 0 0;
+  font-size: clamp(15px, 4vw, 18px);
+  font-weight: 500;
+  color: var(--h-muted);
+}
+
+/* section labels: 13 px uppercase */
+.home-label {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--h-muted);
+}
+.home-section {
+  display: block;
+}
+.home-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+}
+.home-grid > li {
+  display: flex;
+}
+.home-grid > li.featured {
+  grid-column: 1 / -1;
+}
+
+/* an event card: the whole card is the tap target */
+.home-card {
+  display: flex;
+  flex: 1;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid var(--h-line);
+  border-radius: 16px;
+  background: transparent;
+  color: inherit;
+  text-decoration: none;
+}
+.home-card:hover {
+  border-color: var(--h-ink);
+}
+.home-card:focus-visible,
+.home-input:focus-visible,
+.home-go:focus-visible,
+.home a:focus-visible {
+  outline: 3px solid var(--h-ink);
+  outline-offset: 3px;
+}
+.home-card.featured {
+  padding: 24px;
+  border-width: 2px;
+  border-color: var(--h-ink);
+  gap: 24px;
+}
+.home-mark {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--h-line);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: 800;
+}
+.home-card.featured .home-mark {
+  width: 64px;
+  height: 64px;
+  font-size: 28px;
+  border-color: var(--h-ink);
+}
+.home-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.home-name {
+  font-size: 18px;
+  line-height: 1.25;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.home-card.featured .home-name {
+  font-size: clamp(24px, 4vw, 32px);
+  line-height: 1.15;
+}
+.home-meta {
+  font-size: 15px;
+  color: var(--h-muted);
+  overflow-wrap: anywhere;
+}
+.home-status {
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.home-card.featured .home-status {
+  font-size: 18px;
+}
+.home-tag {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 0 8px;
+  border: 1px solid var(--h-line);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--h-muted);
+}
+.home-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* the live dot: the one thing on the page that moves, one gentle 1.5-second pulse */
+.home-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--h-accent);
+  animation: home-pulse 1.5s ease-in-out infinite;
+}
+@keyframes home-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-dot {
+    animation: none;
+  }
+}
+
+/* the list streams in: the placeholder holds its space, nothing moves */
+.home-skeleton {
+  min-height: 112px;
+  border: 1px solid var(--h-line);
+  border-radius: 16px;
+}
+.home-empty {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.home-alert {
+  margin: 0;
+  padding: 16px;
+  border: 2px solid var(--h-ink);
+  border-radius: 16px;
+  font-weight: 600;
+}
+
+/* the event code field and its one primary action */
+.home-code {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 560px;
+}
+.home-code label {
+  font-size: 15px;
+  font-weight: 700;
+}
+.home-code .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.home-input {
+  flex: 1 1 220px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--h-ink);
+  border-radius: 12px;
+  background: var(--h-bg);
+  color: var(--h-ink);
+  font: inherit;
+  font-size: 16px;
+}
+.home-input {
+  text-overflow: clip;
+}
+.home-input::placeholder {
+  color: var(--h-muted);
+  opacity: 1;
+}
+.home-go {
+  min-height: 48px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--h-accent);
+  color: var(--h-on-accent);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.home-problem {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.home-quiet {
+  margin: 0;
+  font-size: 15px;
+  color: var(--h-muted);
+}
+.home a.link {
+  color: var(--h-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* the footer: the quiet links, the version, nothing else */
+.home-footer {
+  margin-top: auto;
+  padding-top: 24px;
+  border-top: 1px solid var(--h-line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  font-size: 13px;
+  color: var(--h-muted);
+}
+.home-footer a {
+  color: var(--h-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.home-footer .admin {
+  margin-left: auto;
+}
+
+/* ---- the same design on the Join page (and the other public front-door pages) ---- */
+.home-brand {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--h-ink);
+  text-decoration: none;
+  align-self: flex-start;
+}
+.home-narrow {
+  max-width: 600px;
+  gap: 32px;
+}
+.home-title {
+  margin: 8px 0 0;
+  font-size: clamp(28px, 6vw, 40px);
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+.home-lede {
+  margin: 12px 0 0;
+  font-size: 16px;
+  color: var(--h-muted);
+}
+.home-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.home-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.home-field label {
+  font-size: 15px;
+  font-weight: 700;
+}
+.home-field .home-input {
+  flex: none;
+  width: 100%;
+  min-height: 56px;
+  font-size: 18px;
+}
+.home-field .home-input.pin {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+.home-go.wide {
+  width: 100%;
+  min-height: 56px;
+  font-size: 18px;
+}
+.home-go:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.home-secondary {
+  min-height: 48px;
+  padding: 0 24px;
+  border: 1px solid var(--h-ink);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--h-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.home-details {
+  padding: 16px;
+  border: 1px solid var(--h-line);
+  border-radius: 16px;
+}
+.home-details > summary {
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+}
+.home-notice {
+  padding: 16px;
+  border: 2px solid var(--h-ink);
+  border-radius: 16px;
+}
+.home-notice p {
+  margin: 0;
+}
+.home-notice .home-name + p {
+  margin-top: 8px;
+  color: var(--h-muted);
+}
+.home-tip {
+  margin: 0;
+  font-size: 15px;
+  color: var(--h-muted);
+}

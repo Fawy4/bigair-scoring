@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 const FeedbackButton = dynamic(() => import("./feedback-button").then((m) => m.FeedbackButton), { ssr: false });
 
-const PUBLIC = /^\/(e|o|screen)(\/|$)/;
+const PUBLIC = /^\/((e|o|screen)(\/|$)|$)/; // the public pages and the home page
 /** The big screens (/screen/…) are for a TV or a projector: a clean screen, never a Note button, whoever is signed in on that browser. */
 const SCREEN = /^\/screen(\/|$)/;
 

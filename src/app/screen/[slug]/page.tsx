@@ -178,6 +178,7 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
   return (
     <ScreenFrame defaultMode={site.settings.screenColourMode === "day" ? "day" : "dark"} labels={{ toggleToDay: S.modeDay, toggleToDark: S.modeDark }}>
       <LivePoll seconds={site.settings.livePollSec} />
+      <WindBanner wind={site.wind} big />
       {/* the header fits the width, never cuts a word: the heat's flag pill takes the room it needs first, the event name takes the rest and wraps (onto its own line when it must), the clock keeps its corner */}
       <header data-testid="screen-header" className="mb-[1.5vw] flex flex-wrap items-center gap-x-[2vw] gap-y-[0.8vw]">
         {logo ? (
@@ -191,7 +192,6 @@ export default async function BigScreen({ params }: { params: Promise<{ slug: st
         {flagData ? <BigScreenFlag data={flagData} /> : null}
         <ClockText timezone={site.event.timezone} serverNow={core.now} className={flagData ? "shrink-0 !text-[2vw] !text-[var(--bs-muted)]" : "ml-auto shrink-0 !text-[2vw] !text-[var(--bs-muted)]"} />
       </header>
-      <WindBanner wind={site.wind} big />
       <div className="mt-[1.5vw] flex min-h-0 flex-1 pb-[5.5vw] pr-[15vw]">
         {slides.length ? (
           <ScreenRotator pausedLabel={S.pause} seconds={site.settings.screenRotateSec} labels={slides.map((s) => labels[s.kind])}>

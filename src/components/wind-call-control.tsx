@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Wind } from "lucide-react";
+import { Check, Wind } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
 import { setWindCall } from "@/lib/live/wind-actions";
 import { copy } from "@/lib/ui-copy";
@@ -29,6 +29,8 @@ export function WindCallControl({ eventId, bannerOn = true }: { eventId: string;
       if (!live) return;
       const row = r.data?.[0];
       setCurrent(row && row.status !== "clear" ? { status: row.status, message: row.message } : null);
+      // the picked button starts on the call that is showing, so the screen never shows one call and highlights another
+      if (row && (row.status === "red" || row.status === "amber" || row.status === "green")) setPick(row.status);
     });
     return () => {
       live = false;
@@ -65,10 +67,14 @@ export function WindCallControl({ eventId, bannerOn = true }: { eventId: string;
             aria-checked={pick === s}
             data-testid={`wind-${s}`}
             onClick={() => setPick(s)}
-            className={`min-h-[44px] rounded-xl border px-3 text-sm font-semibold ${pick === s ? "border-current" : "border-current/30"}`}
+            data-selected={pick === s}
+            data-live={current?.status === s}
+            className={`inline-flex min-h-[44px] items-center gap-2 rounded-xl px-3 text-sm font-semibold ${pick === s ? "border-[3px] border-current bg-[color-mix(in_srgb,currentColor_14%,transparent)]" : "border border-current/30"}`}
           >
-            <span aria-hidden className="mr-2 inline-block size-3 rounded-full align-middle" style={{ background: SWATCH[s] }} />
+            {pick === s ? <Check aria-hidden className="size-4" /> : null}
+            <span aria-hidden className="inline-block size-3 rounded-full align-middle" style={{ background: SWATCH[s] }} />
             {T.states[s]}
+            {current?.status === s ? <span data-testid={`wind-live-${s}`} className="rounded-full border border-current px-2 text-xs font-bold">{T.showingTag}</span> : null}
           </button>
         ))}
       </div>
