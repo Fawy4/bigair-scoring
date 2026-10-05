@@ -117,23 +117,26 @@ export function BreakStrip({ c, inline = false }: { c: HeadController; inline?: 
     ) : null;
   }
   const late = info.state === "due" ? formatClock(info.lateMs) : "";
-  const text = info.state === "counting" ? V.breakNext(c.nextTitle, formatClock(info.remainingMs)) : info.state === "due" ? V.breakDue(c.nextTitle, late) : V.breakPaused(c.nextTitle, formatClock(info.remainingMs));
+  const base = info.state === "counting" ? V.breakNext(c.nextTitle, formatClock(info.remainingMs)) : info.state === "due" ? V.breakDue(c.nextTitle, late) : V.breakPaused(c.nextTitle, formatClock(info.remainingMs));
+  // how long the break has really lasted since the last heat ended: it keeps running whatever the break is set to, and Pause break never stops it
+  const text = c.lastEndMs === null ? base : `${base} · ${V.breakElapsed(formatClock(Math.max(0, c.nowServer - c.lastEndMs)))}`;
   return (
-    <div data-testid="break-strip" data-state={info.state} className={cn("flex flex-wrap items-center gap-2 rounded-card border border-beach-line bg-beach-surface px-2 py-0.5", inline && "min-w-0")}>
-      <Clock aria-hidden className="size-4 shrink-0" />
-      <p data-testid="break-text" aria-live="off" className="min-w-0 flex-1 text-small font-semibold tabular-nums">
-        {text}
-      </p>
+    <div className={cn("flex flex-wrap items-center gap-3", inline && "min-w-0")}>
+      <div data-testid="break-strip" data-state={info.state} className="flex min-w-0 items-center gap-2 rounded-card border border-beach-line bg-beach-surface px-2 py-1">
+        <Clock aria-hidden className="size-4 shrink-0" />
+        <p data-testid="break-text" aria-live="off" className="min-w-0 flex-1 text-small font-semibold tabular-nums">
+          {text}
+        </p>
+      </div>
+      {/* a separate control, apart from the clock: it holds the run order's break (the red banner's countdown), never the strip's own timer */}
       {info.state === "paused" ? (
         <Btn compact size="bar" testId="break-resume" tone="accent" disabled={c.pending || !c.planId} onClick={c.actions.resumeBreak}>
           {V.resumeBreak}
         </Btn>
       ) : (
-        <>
-          <Btn compact size="bar" testId="break-pause" disabled={c.pending || !c.planId} onClick={c.actions.pauseBreak}>
-            {V.pauseBreak}
-          </Btn>
-        </>
+        <Btn compact size="bar" testId="break-pause" disabled={c.pending || !c.planId} onClick={c.actions.pauseBreak}>
+          {V.pauseBreak}
+        </Btn>
       )}
     </div>
   );

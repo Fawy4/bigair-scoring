@@ -134,11 +134,14 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     return h ? [ctx.divisionTabs.find((d) => d.id === h.division_id)?.name, shortRound(ctx.rounds.find((r) => r.id === h.round_id)), h.name?.trim() || `Heat ${h.number}${h.number_suffix ?? ""}`].filter(Boolean).join(" · ") : "";
   }, [breakInfo, heats, ctx.divisionTabs, ctx.rounds]);
   /** The break as the run order has it now: from the end of the last heat to the next heat's planned start (warm-up included), as the clock shows it. */
+  const lastEndMs = useMemo(() => {
+    const ends = heats.filter((h) => h.ended_at).map((h) => Date.parse(h.ended_at!));
+    return ends.length ? Math.max(...ends) : null;
+  }, [heats]);
   const breakLengthMs = useMemo(() => {
     if (breakInfo.kind !== "break") return null;
-    const ends = heats.filter((h) => h.ended_at).map((h) => Date.parse(h.ended_at!));
-    return ends.length ? Math.max(0, Date.parse(breakInfo.startUtc) - Math.max(...ends)) : null;
-  }, [breakInfo, heats]);
+    return lastEndMs === null ? null : Math.max(0, Date.parse(breakInfo.startUtc) - lastEndMs);
+  }, [breakInfo, lastEndMs]);
 
   /** Every press runs one server action and says what happened; a plan change also hands the new hold and pins back so the screen shows them at once. */
   const flagsOn = ctx.event.flags.enabled;
@@ -269,6 +272,7 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     breakInfo,
     nextTitle,
     breakLengthMs,
+    lastEndMs,
     nowServer,
     drift,
     actions: {
