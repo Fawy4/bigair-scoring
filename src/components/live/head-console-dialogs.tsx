@@ -7,7 +7,7 @@ import { ScorePad } from "./score-pad";
 import { judgeTrickScore } from "@/lib/engine/scoring";
 import { ABSENT_REASON } from "@/lib/live/sheet-rule";
 import { nextOpenRider, type SheetDraft as Draft, type SheetRider } from "@/lib/live/impression-sheet";
-import { addAttemptByHead, addInterference, deleteAttempts, editAttempt, flagOutRiders, headSaveImpressionSheet, headSetScore, mergeAttempts, removePenalty, setRiderStatus, type HeadResult } from "@/lib/live/head-actions";
+import { clearPendingByHead, addAttemptByHead, addInterference, deleteAttempts, editAttempt, flagOutRiders, headSaveImpressionSheet, headSetScore, mergeAttempts, removePenalty, setRiderStatus, type HeadResult } from "@/lib/live/head-actions";
 import { canAddPastCap, defaultKeep, mergePlan, type PastCapRole } from "@/lib/live/merge-plan";
 import { formatCell } from "@/lib/live/matrix-model";
 import { markOf } from "@/lib/live/heat-input";
@@ -189,6 +189,22 @@ export function DeleteDialog({ rows, wordFor, onClose, onDone }: { rows: LiveMat
       <Reason value={reason} onChange={setReason} />
       <ErrorLine error={error} />
       <Footer canSave={!pending} saveLabel={pending ? H.working : rows.length === 1 ? C.delete : C.deleteSelected} onCancel={onClose} onSave={() => run(() => deleteAttempts(rows.map((r) => r.attemptId), reason))} />
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------- clear a judge's pending note (the way out when the judge's phone is gone)
+export function ClearNoteDialog({ noteId, judge, rider, line, onClose, onDone }: { noteId: string; judge: string; rider: string; line: number; onClose: () => void; onDone: () => void }) {
+  const [reason, setReason] = useState("");
+  const { error, pending, run } = useRun(onDone);
+  return (
+    <Modal screen title={copy.live.matrix.clearNoteTitle} onClose={onClose}>
+      <p data-testid="clear-note-ask" className="text-body font-semibold">
+        {copy.live.matrix.clearNoteAsk(judge, rider, line)}
+      </p>
+      <Reason value={reason} onChange={setReason} />
+      <ErrorLine error={error} />
+      <Footer canSave={!pending} saveLabel={pending ? H.working : copy.live.matrix.clearNoteConfirm} onCancel={onClose} onSave={() => run(() => clearPendingByHead(noteId, reason))} />
     </Modal>
   );
 }

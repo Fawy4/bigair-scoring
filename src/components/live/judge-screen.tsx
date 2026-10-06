@@ -13,6 +13,7 @@ import { useSendQueue } from "./use-send-queue";
 import { useServerClock, useTick } from "./use-server-clock";
 import { SeatHeartbeat } from "@/app/seat/heartbeat";
 import { Chip } from "./chip";
+import { RiderSheetView, ViewSwitch } from "./rider-sheet";
 import { heatSummary } from "@/lib/engine/scoring";
 import { criteriaRows, criteriaScore } from "@/lib/live/criteria";
 import type { ImpressionRider } from "@/lib/live/design-fixtures";
@@ -23,6 +24,7 @@ import { formatCell } from "@/lib/live/matrix-model";
 import { myCountedSeqs, type MyScoreEntry } from "@/lib/live/my-sheet";
 import { nextHeat } from "@/lib/live/next-heat";
 import { pendingFlags, pendingImpressions, pendingScores } from "@/lib/live/pending";
+import { buildLines, slotForLine, submitBlockLines, viewPreference, type JudgeView, type SheetAttempt, type SheetLine, type SheetNote } from "@/lib/live/rider-sheet";
 import { activePlanFor, heatTitle, livesFor, timetableOptions } from "@/lib/live/run-order";
 import { attemptCounts, ridersForHeat, trickKit } from "@/lib/live/screen-model";
 import { formatPadValue } from "@/lib/live/score-pad";
@@ -69,9 +71,22 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const viewer = ctx.viewer.kind === "seat" ? ctx.viewer : null;
   const seatId = viewer?.seatId ?? "";
   const q = useSendQueue(supabase, clock.now, `judge-${ctx.event.id}-${seatId}`, online && live.connected, (kind, row) => {
+    if (kind === "line_score") {
+      // the answer to a score typed on a Rider sheet line: a pending note, or (the attempt had been logged meanwhile) the score on that attempt
+      const got = row as unknown as { kind: "pending" | "score"; row: { id: string } };
+      live.apply(got.kind === "pending" ? "pending" : "scores", got.row as never);
+      return;
+    }
     const key = kind === "attempt" ? "attempts" : kind === "trick_score" ? "scores" : kind === "impression" ? "impressions" : "flags";
     live.apply(key, row as never);
   });
+  // the view this device scores in: the Queue, or the Rider sheet (one choice for the whole phone; read after the page is up, so the server and the browser draw the same first screen)
+  const [view, setView] = useState<JudgeView>("queue");
+  useEffect(() => setView(viewPreference.read(typeof window === "undefined" ? null : window.localStorage)), []);
+  const chooseView = (v: JudgeView) => {
+    setView(v);
+    viewPreference.write(v, typeof window === "undefined" ? null : window.localStorage);
+  };
   const [saved, setSaved] = useState<string | null>(null);
   const [flagged, setFlagged] = useState<Set<string | number>>(new Set());
   const [tab, setTab] = useState<"impression" | "review">("impression");
@@ -194,6 +209,57 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const counts = useMemo(() => attemptCounts(live.attempts, []), [live.attempts]);
   const liveRiders = riding.map((r) => ({ id: r.entryId, label: r.label, attempts: counts.get(r.entryId) ?? 0, max }));
 
+  // ---- the Rider sheet: this judge's lines for every rider (the attempts logged, and the notes typed on the empty lines)
+  const sheetAvailable = entry === "single";
+  const myNotes = useMemo<Array<SheetNote & { entryId: string }>>(() => {
+    const byKey = new Map<string, SheetNote & { entryId: string }>();
+    for (const n of live.pending) if (n.judge_seat_id === seatId) byKey.set(`${n.entry_id}:${n.slot}`, { entryId: n.entry_id, seatId, slot: n.slot, score: Number(n.score) });
+    // what is still waiting on the phone shows at once (and a Clear shows at once)
+    for (const i of q.items) {
+      if (i.state === "refused") continue;
+      const pl = i.payload as { entryId: string; slot: number; score?: number };
+      if (i.kind === "line_score") byKey.set(`${pl.entryId}:${pl.slot}`, { entryId: pl.entryId, seatId, slot: pl.slot, score: Number(pl.score) });
+      else if (i.kind === "line_clear") byKey.delete(`${pl.entryId}:${pl.slot}`);
+    }
+    return [...byKey.values()];
+  }, [live.pending, q.items, seatId]);
+  const attemptsOf = useCallback(
+    (entryId: string): SheetAttempt[] => live.attempts.filter((a) => a.entry_id === entryId).map((a) => ({ id: a.id, seq: a.seq, status: a.status, trickName: a.trick_name, direction: a.direction, deleted: Boolean(a.deleted_at) })),
+    [live.attempts],
+  );
+  const sheetLines = useMemo(() => {
+    const mine = new Map<string, number | "missed">();
+    for (const m of mineRows) if (m.missed) mine.set(m.attemptId, "missed");
+    else if (m.score !== null) mine.set(m.attemptId, m.score);
+    const out: Record<string, SheetLine[]> = {};
+    for (const r of riding) out[r.entryId] = buildLines({ attempts: attemptsOf(r.entryId), notes: myNotes.filter((n) => n.entryId === r.entryId), cap: max, mine });
+    return out;
+  }, [riding, attemptsOf, myNotes, max, mineRows]);
+  const onLineScore = (riderId: string, line: SheetLine, value: number) => {
+    if (!heat) return;
+    if (line.kind === "attempt" && line.attemptId) {
+      onScore(line.attemptId, value);
+      return;
+    }
+    if (line.kind !== "empty") return;
+    const slot = line.slot ?? slotForLine(attemptsOf(riderId), line.n);
+    if (slot === null) return;
+    q.enqueue("line_score", `line:${riderId}:${slot}`, { heatId: heat.id, entryId: riderId, line: line.n, slot, score: value });
+    setSaved(copy.live.saved.line(formatPadValue(value, scale), labelOf(riderId)?.primary.text ?? "", line.n));
+  };
+  const onLineClear = (riderId: string, line: SheetLine) => {
+    if (!heat || line.kind !== "empty") return;
+    const slot = line.slot ?? slotForLine(attemptsOf(riderId), line.n);
+    if (slot === null) return;
+    const row = live.pending.find((n) => n.entry_id === riderId && n.judge_seat_id === seatId && n.slot === slot);
+    if (row) live.drop("pending", row.id);
+    q.enqueue("line_clear", `line:${riderId}:${slot}`, { heatId: heat.id, entryId: riderId, line: line.n, slot });
+  };
+  const heldLines = useMemo(() => submitBlockLines(myNotes, (id) => ({ attempts: attemptsOf(id) })), [myNotes, attemptsOf]);
+  const effectiveView: JudgeView = sheetAvailable ? view : "queue";
+  const switcher = sheetAvailable ? <ViewSwitch view={effectiveView} onChange={chooseView} /> : <p className="text-small font-medium text-beach-muted">{copy.riderSheet.criteriaOnly}</p>;
+  const heldSentence = heldLines.length ? copy.riderSheet.submitHeld(heldLines.map((h) => copy.riderSheet.submitHeldPart(labelOf(h.entryId)?.primary.text ?? "", h.lines)).join("; ")) : null;
+
   // ---- the Impression / Variety step
   const impressionRiders = useMemo<ImpressionRider[]>(() => {
     const serverMine = new Map(live.impressions.filter((i) => i.judge_seat_id === seatId && !i.missed && i.value !== null).map((i) => [i.entry_id, Number(i.value)]));
@@ -214,6 +280,10 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const submit = async () => {
     if (!heat) return;
     setSubmitError(null);
+    if (heldSentence) {
+      setSubmitError(heldSentence);
+      return;
+    }
     if (!(await drained(q.queue, 12_000))) {
       setSubmitError(T.stillSending);
       return;
@@ -285,7 +355,24 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
         <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
         <ScreenHeader heatName={title} {...common} remainingMs={0} timerState="ended" details={tab === "review"} detailsLabels={{ off: T.reviewTab, on: T.impressionTab }} onToggleDetails={onlyImpression ? undefined : () => setTab((t) => (t === "review" ? "impression" : "review"))} />
         {noticeList}
-        {tab === "review" && !onlyImpression ? (
+        {tab === "review" && !onlyImpression && effectiveView !== "sheet" ? <div className="px-2 pt-1.5">{switcher}</div> : null}
+        {tab === "review" && !onlyImpression && effectiveView === "sheet" ? (
+          <RiderSheetView
+            bare
+            ended
+            heatName={title}
+            seat={viewer?.name ?? ""}
+            remainingMs={0}
+            switcher={switcher}
+            riders={liveRiders}
+            lines={sheetLines}
+            scale={scale}
+            lockedMessage={lockedMessage}
+            notice={heldSentence ? <p role="alert" data-testid="held-notes" className="rounded-card border border-beach-outlier bg-beach-bg px-2 py-1 text-body font-semibold">{heldSentence}</p> : null}
+            onScore={onLineScore}
+            onClear={onLineClear}
+          />
+        ) : tab === "review" && !onlyImpression ? (
           <JudgeQueueView
             bare
             startDetails
@@ -306,6 +393,20 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
           />
         ) : (
           <div data-testid="screen-body" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 py-1.5">
+            {heldSentence ? (
+              <div role="alert" data-testid="held-notes" className="flex flex-col items-start gap-1 rounded-card border border-beach-outlier bg-beach-bg px-2 py-1 text-body font-semibold">
+                <span>{heldSentence}</span>
+                <Chip
+                  data-testid="open-rider-sheet"
+                  onClick={() => {
+                    chooseView("sheet");
+                    setTab("review");
+                  }}
+                >
+                  {copy.riderSheet.openSheet}
+                </Chip>
+              </div>
+            ) : null}
             {impression ? (
               <ImpressionCard
                 riders={impressionRiders}
@@ -369,7 +470,24 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
       <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
       {noticeList}
       {q.memoryOnly ? <p className="px-2 pt-1 text-small font-semibold text-beach-muted">{copy.live.queue.memoryOnly}</p> : null}
+      {effectiveView === "sheet" ? (
+        <RiderSheetView
+          heatName={title}
+          {...queueCommon}
+          remainingMs={remaining}
+          timerState={timerState}
+          switcher={switcher}
+          riders={liveRiders}
+          lines={sheetLines}
+          scale={scale}
+          lockedMessage={lockedMessage}
+          settings={settingsBlock}
+          onScore={onLineScore}
+          onClear={onLineClear}
+        />
+      ) : (
       <JudgeQueueView
+        topSlot={switcher}
         heatName={title}
         {...queueCommon}
         remainingMs={remaining}
@@ -394,6 +512,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
           ) : null
         }
       />
+      )}
       {logFor && kit ? (
         <div role="dialog" aria-label={T.logAttempt("")} data-testid="judge-logger" className={cn("absolute inset-0 z-20 flex flex-col bg-beach-bg")}>
           <div className="flex items-center justify-end border-b border-beach-line px-2 py-1">

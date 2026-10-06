@@ -181,6 +181,7 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
       add_penalty: { p_heat: ended, p_entry: p[0], p_type: "INT", p_reason: "blocked a rider" },
       ask_usage: { p_org: f.ids.orgA },
       cancel_heat: { p_heat: running, p_reason: "kite tangle" },
+      clear_line_score: { p_heat: running, p_entry: p[0], p_line: 3 },
       clear_plan_actuals: { p_plan: planId },
       clear_schedule_plan: { p_plan: planId, p_items: [], p_anchors: {}, p_actual: {} },
       clone_event_as_simulation: { p_event: f.ids.evA1, p_name: "copy" },
@@ -194,6 +195,7 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
       ensure_division_panel: { p_division: d.div },
       flag_out: { p_heat: running, p_entries: [p[0]], p_reason: "flag out" },
       get_seat_contacts: { p_event: f.ids.evA1 },
+      head_clear_pending: { p_note: randomUUID(), p_reason: "x y z" },
       head_set_impression: { p_heat: ended, p_entry: p[0], p_seat: f.ids.seat_j1, p_value: 7, p_reason: "paper sheet" },
       head_set_trick_score: { p_attempt: attE1, p_seat: f.ids.seat_j1, p_score: 2, p_criteria: {}, p_missed: false, p_reason: "paper sheet" },
       export_role: { p_event: f.ids.evA1 }, // a read: for an observer it answers nobody (null), the same as a judge or a spotter
@@ -228,6 +230,7 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
       set_entry_order: { p_division: d.div, p_entry_ids: [p[2], p[1], p[0]], p_shuffle_seed: 1 },
       set_event_archived: { p_event: f.ids.evA1, p_archived: true },
       set_heat_public_live: { p_heat: running, p_value: false },
+      set_line_score: { p_heat: running, p_entry: p[0], p_line: 3, p_score: 6, p_client_key: ck(), p_client_rev: 900 },
       set_plan_anchors: { p_plan: planId, p_anchors: { a: "10:00" } },
       set_plan_break: { p_plan: planId, p_item: "i1", p_break_min: 3, p_anchors: {} },
       set_plan_hold: { p_plan: planId, p_hold: { since: new Date().toISOString(), reason: "wind dropped" } },

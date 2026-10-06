@@ -1,6 +1,6 @@
 {
   "name": "bigair-scoring",
-  "version": "0.17.1",
+  "version": "0.18.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -24,7 +24,7 @@
     "test:e2e:budget": "E2E_PRODUCTION=1 playwright test e2e/public-budget.spec.ts",
     "preview:public": "tsx scripts/public-preview.ts",
     "manual:generate": "tsx scripts/manual-generate.ts",
-    "manual:shots": "MANUAL_SHOTS=1 playwright test e2e/manual-shots.spec.ts e2e/manual-shots-polish3.spec.ts e2e/manual-shots-polish4.spec.ts --workers=1"
+    "manual:shots": "MANUAL_SHOTS=1 playwright test e2e/manual-shots.spec.ts e2e/manual-shots-polish3.spec.ts e2e/manual-shots-polish4.spec.ts e2e/manual-shots-rider-sheet.spec.ts --workers=1"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

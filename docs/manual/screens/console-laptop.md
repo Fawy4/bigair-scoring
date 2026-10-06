@@ -2,7 +2,7 @@
 
 The head judge's working screen at /head/‹event› on a laptop or tablet (1280 px and wider): division tabs, the heat's timer and buttons, the run order with times, the break countdown, the live score table, Publish and everything around it.
 
-Last checked: 5 Oct 2026 · Product version 0.17.0
+Last checked: 6 Oct 2026 · Product version 0.18.0
 
 ## What it is for {#cl-purpose}
 
@@ -43,12 +43,16 @@ The head judge (the head judge seat, or an organiser of the event — an organis
 | **Riders in this heat** | Each rider's Rider label, running total and attempts used / allowed (5/7). |
 | **Impression** card (its name is the Event step's **Name of the impression score**, for example **Variety**) | Beside the rider cards, in the same row, once the heat has ended (not for a division whose scoring has no separate score): a **heading** in the same style and size as the console's other section headings (**Riders**, the table's header), left-aligned above the grid, then one column per judge (the same short names and J-numbers as the table) and a **Panel** column, one row per rider with the Lycra block and name. Cells are coloured by distance from the panel mean like the trick scores (with the difference written in), “—” where a judge has not given it, “Absent” where the judge was set to Absent; tap a cell to correct it (the judge's sheet opens on that rider). It never pushes the table down: the card is always given its own room beside the rider cards (the rider cards shrink or wrap, never the card), so at 1280 px and wider it stays a card with 3, 4 and 5 riders; it takes tighter spacing first, then smaller digits down to the table's smallest text, and only when even that does not fit (six or more riders, a narrow window) it is one **Impression** button that opens the same grid as a pop-over. There is no Impression row in the attempt table. |
 | Score table | One row per attempt (rider, trick, panel score, one column per judge headed by the seat's name with “J1” under it). **Newest on top** or **Group by rider** (remembered). Cell words: a score; “missing” (grey: not scored yet); “missed” (the judge did not see it, left out of the average); “absent”; “outlier” (amber); “crash”; “deleted” (struck through); “possible duplicate”. Each judge's cell is coloured by its distance from the panel score (green within the tolerance, then yellow, orange, red). |
+| {#cl-pending} **Pending rows** | Scores a judge typed on the Rider sheet **before the spotter logged the attempt** appear in the table as **hatched, greyed rows** after the logged attempts of that rider: no trick, the line number, “pending · J1, J3” and each judge's note in that judge's column (“—” for a judge with none; Queue judges never have any). They are **never counted** in a total, **never published**, never on the public live page or any public screen. When the spotter logs the attempt the first pending row becomes the attempt. They shift up when you delete or merge an attempt before them. **Publish is blocked while any remains**: the list says “Omar Hassan: J3 has a score with no attempt” (with **Learn more**) and there is no “publish anyway”. Ask the judge to press **Clear** on that line, or press **Clear** on the note's cell in the pending row yourself: one confirmation (“Clear J3's pending score on Omar Hassan, attempt 4? It is thrown away and never counted.”), reason optional, and the audit log says “Head judge cleared J3's pending score on Omar Hassan line 4: ‹reason or no reason given›”. This is the way out when the judge's phone is dead; the judge's sheet shows the line cleared within a second. Or add the attempt it belongs to (**Add attempt** past the cap, with a reason as usual). |
 | Tap a score | **Edit score** with a **Reason (optional, for the audit log)**; with none, the audit log says “no reason given”. |
 | Attempt menu | **Delete**, **Merge duplicate** (keeps the first logged attempt), **Edit attempt**, **Add attempt** (past the attempt cap the reason box is optional: “That rider has used every attempt. Adding one more is saved with your reason.”), judge absent for this attempt. |
 | Tick boxes | Select several attempts → **Merge** or **Delete**. |
 | Rider menu | **DNS (did not start)**, **DNF (did not finish)**, **DSQ (disqualified)**, **Interference**, **Clear status**, **Take back interference**. |
 | **More** | The **Live scores** switch of the heat (**Follow division** / **Live** / **Not live**: whether spectators see this heat live), **Hold result back** for a published heat, the agreement report (“‹judge›: 0.4 from the panel score on average, 1 outlier”) with **Hide agreement report**, the **Audit log** of the heat, theme and size, and the **Practice heat** panel on a simulation event. |
 | **Flag-out** | When the format has one: “At ‹n› min the lowest ‹n› riders are flagged out.” → **Flag out…**. |
+
+![Pending rows in the score table](../img/console-pending-rows-1280.png)
+*console-pending-rows-1280.png — Red has two attempts (the second a crash) and two hatched pending rows: J1 and J3 typed scores on line 3, J1 on line 4. Nothing here is counted.*
 
 ## The right column {#cl-right}
 

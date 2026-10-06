@@ -5,9 +5,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { MoreVertical } from "lucide-react";
 import { Chip } from "./chip";
 import { plain } from "./console-parts";
-import { AddAttemptDialog, CellDialog, DeleteDialog, EditAttemptDialog, FlagOutDialog, ImpressionDialog, MergeDialog, StatusDialog } from "./head-console-dialogs";
+import { AddAttemptDialog, CellDialog, ClearNoteDialog, DeleteDialog, EditAttemptDialog, FlagOutDialog, ImpressionDialog, MergeDialog, StatusDialog } from "./head-console-dialogs";
 import { TieDialog } from "./head-dialogs";
 import { HeadMatrix } from "./head-matrix";
+import { LearnMore } from "@/components/manual/learn-more";
 import { ReviewButtons, VisibilityBox } from "./head-parts";
 import { AgreementReport, AuditLog, JudgesStatus, OpenFlags, useSideData } from "./head-side-panel";
 import { useReview } from "./use-review";
@@ -50,6 +51,7 @@ type Dialog =
   | { kind: "impression"; seatId: string; entryId: string }
   | { kind: "tie"; riders: string[] }
   | { kind: "flagOut" }
+  | { kind: "clearNote"; noteId: string; judgeId: string; entryId: string; line: number }
   | null;
 
 const editable = (status: string) => ["running", "paused", "ended", "under_review"].includes(status);
@@ -296,6 +298,9 @@ export function HeadLiveConsole({
           tolerance={outlierTolerance(model)}
           judges={side.judges}
           model={{ judgeIds: head.matrix.judgeIds, rows: tableRows }}
+          pending={head.matrix.pending}
+          pendingAfterRider={order === "rider"}
+          onClearNote={open ? (row, judgeId, noteId) => setDialog({ kind: "clearNote", noteId, judgeId, entryId: row.riderKey, line: row.n }) : undefined}
           actions={
             open
               ? {
@@ -308,6 +313,11 @@ export function HeadLiveConsole({
               : {}
           }
         />
+        {head.matrix.pending.length > 0 ? (
+          <p data-testid="pending-help" className="text-small font-medium text-beach-muted">
+            {copy.live.matrix.pendingHelp}
+          </p>
+        ) : null}
       </div>
 
       <aside data-testid="head-side" className="flex min-w-0 flex-col gap-2">
@@ -318,7 +328,10 @@ export function HeadLiveConsole({
           <h3 className="text-heading font-semibold text-beach-muted">{blockerItems.length ? C.publishBlocked : H.nothingBlocks}</h3>
           {blockerItems.map((b) => (
             <div key={b.text} data-testid="blocker-line" data-kind={b.kind} className="flex items-center justify-between gap-2 rounded-lg border border-beach-outlier bg-beach-bg px-2 py-0.5">
-              <span className="min-w-0 text-body font-medium">{b.text}</span>
+              <span className="min-w-0 text-body font-medium">
+                {b.text}
+                {b.kind === "pending" ? <LearnMore href={copy.manual.href("cl-pending")} what={copy.live.matrix.pendingTitle} /> : null}
+              </span>
               {open && b.target ? (
                 <button type="button" data-testid="blocker-fix" aria-label={copy.checklist.fixAria(b.text)} onClick={() => openFix(b.target!)} className={plain}>
                   {copy.checklist.fix}
@@ -428,7 +441,7 @@ export function HeadLiveConsole({
           <div data-testid="more-panel" className="flex flex-col gap-2">
             <VisibilityBox c={c} />
             <AgreementReport side={side} head={head} heat={heat} />
-            <AuditLog side={side} head={head} wordFor={wordFor} />
+            <AuditLog side={side} head={head} wordFor={wordFor} nameFor={(id) => riders.find((r) => r.entryId === id)?.name || wordFor(id)} timezone={ctx.event.timezone} />
             <ScreenSettings hideSound />
             {extras}
           </div>
@@ -454,6 +467,7 @@ export function HeadLiveConsole({
             );
           })()
         : null}
+      {dialog?.kind === "clearNote" ? <ClearNoteDialog noteId={dialog.noteId} judge={side.judges.find((j) => j.id === dialog.judgeId)?.tag ?? copy.live.matrix.aJudge} rider={riders.find((r) => r.entryId === dialog.entryId)?.name || wordFor(dialog.entryId)} line={dialog.line} onClose={close} onDone={done} /> : null}
       {dialog?.kind === "delete" ? <DeleteDialog rows={dialogRows(dialog.ids)} wordFor={wordFor} onClose={close} onDone={done} /> : null}
       {dialog?.kind === "merge" ? <MergeDialog model={model} rows={dialogRows(dialog.ids)} attempts={live.attempts} scores={live.scores} panelSeatIds={head.matrix.judgeIds} judgeWord={judgeWord} wordFor={wordFor} onClose={close} onDone={done} /> : null}
       {dialog?.kind === "edit"

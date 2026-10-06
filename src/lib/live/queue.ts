@@ -2,7 +2,7 @@
  * The send queue of the official phones (docs/08 §1G-7). Pure: storage and the network are passed in, the tests use an in-memory store.
  * Every score and attempt is saved on the phone first and sent in order; a newer edit of the same score replaces an older one that is still waiting.
  */
-export type QueueKind = "attempt" | "trick_score" | "impression" | "flag";
+export type QueueKind = "attempt" | "trick_score" | "impression" | "flag" | "line_score" | "line_clear";
 export type ItemState = "pending" | "synced" | "failed" | "refused";
 
 export interface QueueEntry {
@@ -35,6 +35,8 @@ export const REFUSALS: ReadonlySet<string> = new Set([
   "HEAT_NOT_FOUND",
   "CLIENT_KEY_REUSED",
   "ENTRY_NOT_IN_DIVISION",
+  "LINE_PAST_CAP",
+  "LINE_SCORE_NOT_AVAILABLE",
 ]);
 
 /** 1, 2, 4, 8 and 16 seconds, then 30 seconds every time. */

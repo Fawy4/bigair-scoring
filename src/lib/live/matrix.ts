@@ -3,8 +3,9 @@ import { farthestJudge } from "@/lib/engine/scoring/outlier";
 import type { LabelModel } from "@/lib/identification/rider-label";
 import type { ScoringModel } from "@/lib/schemas/scoring-model";
 import { markOf } from "./heat-input";
-import { formatCell, type CellState, type MatrixCell, type MatrixRow, type PanelState } from "./matrix-model";
-import type { AttemptRow, FlagRow, ScoreRow } from "./types";
+import { formatCell, type CellState, type MatrixCell, type MatrixRow, type PanelState, type PendingMatrixRow } from "./matrix-model";
+import { consoleRows, lineOfSlot, type SheetAttempt } from "./rider-sheet";
+import type { AttemptRow, FlagRow, PendingRow, ScoreRow } from "./types";
 
 /** A row of the head judge's table with what the console needs to act on it. */
 export type LiveMatrixRow = MatrixRow & {
@@ -18,6 +19,8 @@ export type LiveMatrixRow = MatrixRow & {
 export interface LiveMatrix {
   judgeIds: string[];
   rows: LiveMatrixRow[];
+  /** Pending rows (Rider sheet notes with no attempt yet), per rider after the attempts: never counted. */
+  pending: PendingMatrixRow[];
 }
 
 const two = (n: number) => roundHalfUp(n, 2).toFixed(2);
@@ -34,6 +37,10 @@ export function buildMatrix(input: {
   scores: ScoreRow[];
   flags: FlagRow[];
   labelFor: (entryId: string) => LabelModel;
+  /** Notes typed on the Rider sheet that still wait for their attempt (the head judge, an observer and an organiser read them all). */
+  pending?: PendingRow[];
+  /** The riders of the heat in seat order: pending rows follow it. */
+  riderOrder?: string[];
 }): LiveMatrix {
   const { model, panelSeatIds, scores, flags } = input;
   const attempts = [...input.attempts].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at) || a.seq - b.seq);
@@ -91,5 +98,34 @@ export function buildMatrix(input: {
       possibleDuplicateOf: a.possible_duplicate_of,
     };
   });
-  return { judgeIds: panelSeatIds, rows };
+  return { judgeIds: panelSeatIds, rows, pending: pendingRows(input.attempts, input.pending ?? [], panelSeatIds, input.labelFor, input.riderOrder ?? []) };
+}
+
+/** One pending row per rider and line that holds a note, after the attempts logged. Only panel judges' notes show; none of it reaches the panel score. */
+export function pendingRows(attempts: AttemptRow[], notes: PendingRow[], panelSeatIds: string[], labelFor: (entryId: string) => LabelModel, riderOrder: string[]): PendingMatrixRow[] {
+  const panel = new Set(panelSeatIds);
+  const riders = [...new Set(notes.filter((n) => panel.has(n.judge_seat_id)).map((n) => n.entry_id))];
+  const rank = (id: string) => (riderOrder.indexOf(id) < 0 ? riderOrder.length : riderOrder.indexOf(id));
+  riders.sort((a, b) => rank(a) - rank(b));
+  const out: PendingMatrixRow[] = [];
+  for (const riderKey of riders) {
+    const sheet: SheetAttempt[] = attempts.filter((a) => a.entry_id === riderKey).map((a) => ({ id: a.id, seq: a.seq, status: a.status, trickName: a.trick_name, direction: a.direction, deleted: Boolean(a.deleted_at) }));
+    const mine = notes.filter((n) => n.entry_id === riderKey && panel.has(n.judge_seat_id)).map((n) => ({ seatId: n.judge_seat_id, slot: n.slot, score: Number(n.score) }));
+    for (const row of consoleRows(sheet, mine)) {
+      out.push({
+        kind: "pending",
+        id: `pending:${riderKey}:${row.n}`,
+        riderKey,
+        label: labelFor(riderKey),
+        n: row.n,
+        judgeIds: panelSeatIds.filter((j) => row.judges.includes(j)),
+        cells: panelSeatIds.map((judgeId) => {
+          const v = row.cells[judgeId];
+          const note = notes.find((n) => n.entry_id === riderKey && n.judge_seat_id === judgeId && lineOfSlot(sheet, n.slot) === row.n);
+          return { judgeId, value: v === undefined ? null : v, label: v === undefined ? "—" : formatCell(v), noteId: note?.id ?? null };
+        }),
+      });
+    }
+  }
+  return out;
 }

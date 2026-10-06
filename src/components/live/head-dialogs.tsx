@@ -5,6 +5,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import { Footer, Modal, plain, Reason } from "./console-parts";
 import { decideTie, previewResetHeat, publishHeat, reopenHeat, rerunHeat, resetHeat, setPublishHold, type HeatResetPreview, type PublishResult } from "@/lib/live/head-actions";
 import type { ChecklistItem, FixTarget } from "@/lib/live/publish-checklist";
+import { LearnMore } from "@/components/manual/learn-more";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +37,10 @@ export function PublishDialog({ heatId, title, items, canOverride, onChooseOrder
           <ul data-testid="publish-blockers" className="flex flex-col gap-1">
             {blocked.map((b) => (
               <li key={b.text} className="flex items-center justify-between gap-2 rounded-lg border border-beach-outlier bg-beach-bg px-2 py-0.5 text-body font-medium">
-                <span>{b.text}</span>
+                <span>
+                  {b.text}
+                  {b.kind === "pending" ? <LearnMore href={copy.manual.href("cl-pending")} what={copy.live.matrix.pendingTitle} /> : null}
+                </span>
                 {b.kind === "tie" && b.riders ? (
                   <button type="button" data-testid="choose-order" className={plain} onClick={() => onChooseOrder(b.riders!)}>
                     {H.chooseOrder}
@@ -55,7 +59,11 @@ export function PublishDialog({ heatId, title, items, canOverride, onChooseOrder
               <Reason value={reason} onChange={setReason} />
             </>
           ) : (
-            <p className="text-small font-semibold">{H.publishNoOverride}</p>
+            <p className="text-small font-semibold">
+              {blocked.some((b) => b.kind === "tie") ? H.publishNoOverride : null}
+              {blocked.some((b) => b.kind === "tie") && blocked.some((b) => b.kind === "pending") ? " " : null}
+              {blocked.some((b) => b.kind === "pending") ? H.publishNoOverridePending : null}
+            </p>
           )}
         </>
       ) : (

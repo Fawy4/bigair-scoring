@@ -1329,3 +1329,18 @@ See the decision list at the top of the pull request description.
 
 ### How to test
 Release entry 0.17.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm run test:rls -- tests/rls/preset-management.test.ts`; browser (one worker, no retries): `e2e/preset-management.spec.ts`, `e2e/master-presets.spec.ts`, `e2e/home-landing.spec.ts`.
+
+## Judge Rider sheet (0.18.0)
+
+### Done
+- A second judge view, **Rider sheet**, beside the Queue (switch remembered per phone; also on the head judge's Score tab). Lines 1…N (the division's attempt cap; uncapped: attempts + one empty line), a typed score box per line, saved the moment it is on the step.
+- Scores typed before the attempt exist are **pending notes** (`pending_scores`, per judge, RLS: own / head / observer / organiser). The attempt that takes the line adopts them (trigger on `trick_attempts`, by order of logging); a crash discards them; delete / merge shifts them up by themselves (notes are kept under the attempt number, which is never reused).
+- Console: hatched pending rows (never counted, never public); **Publish blocked** by name while any remains (no override; DB refuses `published` while notes exist); **Submit** refused while the judge holds one, naming the lines.
+- Audit log lists a judge changing their own score. One realtime channel name per hook instance (the head Score tab no longer shares a channel with the page's own hook).
+- Tests: unit (matching rule, mixed views vs the engine, console rows, blockers, audit), database (RLS, cap, matching, Submit, Publish, public, Realtime latency 0.4–0.6 s), Playwright phone (two tests, one worker). Manual: judge page, console page, glossary, dependency map, errors, changelog, release entry.
+
+### Not done / decisions
+- Criteria divisions stay on the Queue. The head judge cannot clear a judge's note (the judge, or adding the attempt). Spotter Undo removes the attempt and the score that came from a note; the note is not restored.
+
+### How to test on a phone
+- See the release entry 0.18.0 in docs/RELEASES.md.

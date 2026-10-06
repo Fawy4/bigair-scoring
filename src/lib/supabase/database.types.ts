@@ -1596,6 +1596,84 @@ export type Database = {
           },
         ]
       }
+      pending_scores: {
+        Row: {
+          client_key: string
+          client_rev: number
+          created_at: string
+          entry_id: string
+          event_id: string
+          heat_id: string
+          id: string
+          judge_seat_id: string
+          score: number
+          slot: number
+          updated_at: string
+        }
+        Insert: {
+          client_key: string
+          client_rev?: number
+          created_at?: string
+          entry_id: string
+          event_id: string
+          heat_id: string
+          id?: string
+          judge_seat_id: string
+          score: number
+          slot: number
+          updated_at?: string
+        }
+        Update: {
+          client_key?: string
+          client_rev?: number
+          created_at?: string
+          entry_id?: string
+          event_id?: string
+          heat_id?: string
+          id?: string
+          judge_seat_id?: string
+          score?: number
+          slot?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_scores_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_scores_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_scores_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_scores_heat_id_fkey"
+            columns: ["heat_id"]
+            isOneToOne: false
+            referencedRelation: "heats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_scores_judge_seat_id_fkey"
+            columns: ["judge_seat_id"]
+            isOneToOne: false
+            referencedRelation: "judge_seats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_admins: {
         Row: {
           created_at: string
@@ -3050,6 +3128,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      clear_line_score: {
+        Args: { p_entry: string; p_heat: string; p_line: number }
+        Returns: number
+      }
       clear_plan_actuals: { Args: { p_plan: string }; Returns: Json }
       clear_schedule_plan: {
         Args: {
@@ -3440,6 +3522,10 @@ export type Database = {
         }[]
       }
       has_password: { Args: never; Returns: boolean }
+      head_clear_pending: {
+        Args: { p_note: string; p_reason?: string }
+        Returns: undefined
+      }
       head_set_impression: {
         Args: {
           p_entry: string
@@ -4040,6 +4126,17 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_line_score: {
+        Args: {
+          p_client_key: string
+          p_client_rev: number
+          p_entry: string
+          p_heat: string
+          p_line: number
+          p_score: number
+        }
+        Returns: Json
       }
       set_plan_anchors: {
         Args: {

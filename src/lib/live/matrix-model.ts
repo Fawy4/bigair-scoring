@@ -26,6 +26,24 @@ export interface MatrixRow {
   panelState: PanelState;
 }
 
+/**
+ * A pending row of the table: scores judges typed on the Rider sheet before the spotter logged the attempt. Greyed and hatched, no trick, never counted,
+ * never published, never on a public page. `cells` holds each panel judge's note in that judge's column (null where the judge has none).
+ */
+export interface PendingMatrixRow {
+  kind: "pending";
+  id: string;
+  /** The rider (the entry id). */
+  riderKey: string;
+  label: LabelModel;
+  /** The line the row stands for, after the attempts logged. */
+  n: number;
+  /** The panel judges who hold a note on it, in panel order. */
+  judgeIds: string[];
+  /** `noteId`: the note behind the cell (the head judge's Clear), null where the judge has none. */
+  cells: Array<{ judgeId: string; value: number | null; label: string; noteId: string | null }>;
+}
+
 export interface MatrixModel {
   judgeIds: string[];
   rows: MatrixRow[];

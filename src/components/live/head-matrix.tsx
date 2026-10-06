@@ -3,7 +3,7 @@ import { RiderLabel } from "@/components/rider-label";
 import { cellTone, outlierTolerance } from "@/lib/live/cell-tone";
 import { KOTA } from "@/lib/live/design-fixtures";
 import { judgeWordOf, type JudgeName } from "@/lib/live/judge-names";
-import type { CellState, MatrixCell, MatrixModel, MatrixRow } from "@/lib/live/matrix-model";
+import type { CellState, MatrixCell, MatrixModel, MatrixRow, PendingMatrixRow } from "@/lib/live/matrix-model";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
@@ -127,11 +127,67 @@ function Row({ row, actions, tolerance, judges }: { row: Row; actions: MatrixAct
   );
 }
 
+/** The table's rows with the pending rows placed: all at the end, or (rows grouped by rider) straight after the last row of their rider. */
+export function withPending(rows: Row[], pending: PendingMatrixRow[], afterRider: boolean): Array<{ row: Row; pending?: undefined } | { pending: PendingMatrixRow; row?: undefined }> {
+  const out: Array<{ row: Row; pending?: undefined } | { pending: PendingMatrixRow; row?: undefined }> = [];
+  if (!afterRider) {
+    for (const row of rows) out.push({ row });
+    for (const p of pending) out.push({ pending: p });
+    return out;
+  }
+  const placed = new Set<string>();
+  rows.forEach((row, i) => {
+    out.push({ row });
+    const next = rows[i + 1];
+    if (!next || next.riderKey !== row.riderKey) {
+      placed.add(row.riderKey ?? "");
+      for (const p of pending) if (p.riderKey === row.riderKey) out.push({ pending: p });
+    }
+  });
+  for (const p of pending) if (!placed.has(p.riderKey)) out.push({ pending: p });
+  return out;
+}
+
+/**
+ * A pending row: scores judges typed on the Rider sheet before the spotter logged the attempt. Greyed and hatched, no trick, "pending · J1, J3", each judge's note
+ * in that judge's column. It has no panel score: it is never counted, never published, never shown to the public.
+ */
+function PendingRowView({ row, judges, onClear }: { row: PendingMatrixRow; judges?: JudgeName[]; /** The head judge's Clear on one judge's note. */ onClear?: (row: PendingMatrixRow, judgeId: string, noteId: string) => void }) {
+  const tags = row.judgeIds.map((id) => judges?.find((j) => j.id === id)?.tag ?? T.aJudge).join(", ");
+  return (
+    <tr data-testid="pending-row" data-row-state="pending" data-entry={row.riderKey} data-line={row.n} aria-label={T.pendingRow(row.n)} className="border-t border-beach-line align-middle text-beach-muted" style={{ backgroundImage: "repeating-linear-gradient(135deg, transparent 0 6px, var(--beach-line) 6px 7px)" }}>
+      <td className="px-1 py-0.5" />
+      <th scope="row" className="px-1 py-0.5 text-left">
+        <span className="text-body font-semibold tabular-nums">{row.n}</span>
+      </th>
+      <td className="px-1.5 py-1">
+        <RiderLabel model={{ ...row.label, secondary: row.label.secondary.filter((x) => x.key === "name") }} variant="live" bare />
+      </td>
+      <td className="min-w-[6rem] px-1.5 py-1 text-small font-semibold" data-testid="pending-tag">
+        {T.pendingTag(tags)}
+      </td>
+      {row.cells.map((c) => (
+        <td key={c.judgeId} className="px-1 py-1">
+          <div data-testid="pending-cell" data-judge={c.judgeId} data-has-note={c.value !== null} className={cn("flex min-h-row min-w-[4rem] items-center justify-center rounded-lg border border-dashed px-1 text-body font-semibold tabular-nums", c.value !== null ? "border-beach-muted bg-beach-surface text-beach-ink" : "border-beach-line")}>
+            {c.label}
+            {onClear && c.noteId ? (
+              <button type="button" data-testid="clear-note" data-judge={c.judgeId} aria-label={T.clearNoteAria(judges?.find((j) => j.id === c.judgeId)?.tag ?? T.aJudge, row.label.primary.text, row.n)} onClick={() => onClear(row, c.judgeId, c.noteId!)} className="ml-1 min-h-tap rounded-lg border border-beach-border bg-beach-bg px-1.5 text-small font-semibold text-beach-ink">
+                {T.clearNote}
+              </button>
+            ) : null}
+          </div>
+        </td>
+      ))}
+      <td className="px-1.5 py-1 text-right text-name font-semibold">—</td>
+    </tr>
+  );
+}
+
 /**
  * The head judge's score table: attempts down, judges across, the panel score last. For a tablet or laptop. With `actions` it is a working tool:
  * tap a score to edit it, tap the attempt number for its menu, tap the rider for theirs.
  */
-export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE, judges }: { model: MatrixModel & { rows: Row[] }; actions?: MatrixActions; tolerance?: number; /** The judges as the seat names they were given ("Fawy", with "J1" under it). Without it the columns read "Judge 1" (the design preview). */ judges?: JudgeName[] }) {
+export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE, judges, pending = [], pendingAfterRider = false, onClearNote }: { model: MatrixModel & { rows: Row[] }; actions?: MatrixActions; tolerance?: number; /** Pending rows (Rider sheet notes with no attempt): after the attempts, or (grouped by rider) after each rider's own. */ pending?: PendingMatrixRow[]; pendingAfterRider?: boolean; /** The head judge's Clear on a pending note (only while the heat can still be changed). */ onClearNote?: (row: PendingMatrixRow, judgeId: string, noteId: string) => void; /** The judges as the seat names they were given ("Fawy", with "J1" under it). Without it the columns read "Judge 1" (the design preview). */ judges?: JudgeName[] }) {
   return (
     <div data-testid="matrix-scroll" className="overflow-x-auto rounded-card border border-beach-line bg-beach-bg">
       <table data-testid="head-matrix" className="min-w-[34rem] border-collapse text-beach-ink">
@@ -173,9 +229,7 @@ export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE,
           </tr>
         </thead>
         <tbody>
-          {model.rows.map((r) => (
-            <Row key={r.id} row={r} actions={actions} tolerance={tolerance} judges={judges} />
-          ))}
+          {withPending(model.rows, pending, pendingAfterRider).map((x) => (x.pending ? <PendingRowView key={x.pending.id} row={x.pending} judges={judges} onClear={onClearNote} /> : <Row key={x.row.id} row={x.row} actions={actions} tolerance={tolerance} judges={judges} />))}
         </tbody>
       </table>
     </div>

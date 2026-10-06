@@ -143,6 +143,14 @@ export async function editAttempt(input: { attemptId: string; reason: string; en
   return error ? from(error) : { ok: true };
 }
 
+/** The head judge (or an organiser) clears a judge's pending note: the way out when the judge's phone is gone. The reason is optional; the audit line says "no reason given" without one. */
+export async function clearPendingByHead(noteId: string, reason: string): Promise<HeadResult> {
+  if (!uuid.safeParse(noteId).success) return fail("NOTE_NOT_FOUND");
+  const db = await createClient();
+  const { error } = await db.rpc("head_clear_pending", { p_note: noteId, p_reason: reason.trim() === "" ? undefined : reason.trim() });
+  return error ? from(error) : { ok: true };
+}
+
 /** Delete one or several attempts, each with the same reason (each is audited on its own). */
 export async function deleteAttempts(ids: string[], reason: string): Promise<HeadResult> {
   if (!ids.length || !ids.every((x) => uuid.safeParse(x).success)) return fail("ATTEMPT_NOT_FOUND");

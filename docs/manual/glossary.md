@@ -84,6 +84,8 @@ Last checked: 4 Oct 2026 · Product version 0.15.0
 | {#g-reset} **Reset** | Puts an event, a division or a heat back to not started. *Reset event after the rehearsal.* |
 | {#g-restore} **Restore** | Brings back what an event Reset wiped (owner, within 30 days). *Reset by mistake: the owner restores it.* |
 | {#g-resume-at} **Resume at** | Ends a hold at a chosen time. *Resume at 13:30.* |
+| {#g-pending-score} **Pending score** | A score a judge typed on the Rider sheet before the spotter logged the attempt. It is the judge's private note until an attempt takes the line, then it becomes their score. Never counted, never public; it blocks Publish until it is cleared or gets its attempt. *J3 typed 6.5 on Red's line 4; no fourth attempt was logged.* |
+| {#g-rider-sheet} **Rider sheet** | The judge's second view (beside the Queue): one rider's numbered lines, a typed score box on each, so the judge scores the jump the moment they see it. *Switch with Queue / Rider sheet at the top of the scoring screen.* |
 | {#g-rider-label} **Rider label** | How a rider appears on every screen, from the identification scheme; the colour is always written too. *RED · Sam Rivera · EG.* |
 | {#g-round} **Round** | A step of the ladder: all heats that ride before the next step. *Round 1, Second-chance round, Semi-finals, Final.* |
 | {#g-run-order} **Run order** | The order of heats and breaks of a day with their times. It is the live value for every heat that has not started: **the length on a heat's row is what the heat runs**, and so is the break after it; Timing per round is only the starting plan. *Pro Men R1 H1–H4, Pro Women R1, lunch, …* |

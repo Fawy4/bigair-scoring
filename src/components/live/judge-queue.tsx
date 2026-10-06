@@ -75,6 +75,8 @@ export interface JudgeQueueViewProps {
   bare?: boolean;
   /** Under the rider's sheet in the Details view (e.g. "Log an attempt" when judges may). */
   detailsExtra?: (riderId: string) => React.ReactNode;
+  /** At the top of the body when the queue itself is showing (the "Queue / Rider sheet" switch). */
+  topSlot?: React.ReactNode;
 }
 
 /**
@@ -131,6 +133,7 @@ export function JudgeQueueView(p: JudgeQueueViewProps) {
             {details ? T.header.detailsOn : T.header.details}
           </Chip>
         ) : null}
+        {details ? null : p.topSlot}
         {p.lockedMessage ? (
           <p role="status" data-testid="sheet-locked" className="rounded-card border border-beach-border bg-beach-surface px-2 py-1 text-body font-semibold">
             {p.lockedMessage}
