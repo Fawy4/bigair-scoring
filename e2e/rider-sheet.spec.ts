@@ -98,7 +98,7 @@ test("a judge scores on the Rider sheet before the spotter logs; the scores land
   await expect(pendingRows).toHaveCount(3, { timeout: 40_000 });
   console.log(`pending rows reached the console after ${Date.now() - seen} ms (fallback polling in this sandbox)`);
   await expect(pendingRows.first().getByTestId("pending-tag")).toContainText("pending · J1");
-  await expect(pendingRows.first().getByTestId("pending-cell").first()).toHaveText("7.50");
+  await expect(pendingRows.first().getByTestId("pending-cell").first()).toContainText("7.50");
   await expect(head.getByTestId("matrix-row")).toHaveCount(0); // not attempts
   await expect(pendingRows.first().locator("td").last()).toHaveText("—"); // no panel score: never counted
 
@@ -217,4 +217,56 @@ test("the head judge's Score tab has the same switch, no listener is added to a 
     w = old;
     await hw.cleanup();
   }
+});
+
+test("the head judge clears a judge's pending note from the console (reason optional) and the judge's line empties; a spotter's Undo puts a taken note back on its line", async ({ browser }) => {
+  test.setTimeout(600_000);
+  const H = w.heats[0];
+  await w.db.from("heat_slots").update({ modifier: "DNS" }).eq("heat_id", H).neq("entry_id", w.entries[0]);
+  await w.startHeat(H);
+  const spotter = await phone(browser, "spotter", `/spot/${w.eventId}`);
+  const j1 = await phone(browser, "j1", `/judge/${w.eventId}`);
+  const head = await phone(browser, "head", `/head/${w.eventId}`, { width: 1500, height: 1000 });
+  await head.locator(`[data-testid="order-row"][data-heat="${H}"]`).click({ timeout: 60_000 });
+  await expect(j1.getByTestId("view-queue")).toBeVisible({ timeout: 30_000 });
+  await j1.getByTestId("view-sheet").click();
+
+  // ---- the judge's phone "dies" with a note on line 2: the head judge clears it on the console
+  await type(j1, 2, "6.5");
+  await expect.poll(async () => (await notes()).length, { timeout: 30_000 }).toBe(1);
+  await expect(head.getByTestId("pending-row")).toHaveCount(1, { timeout: 40_000 });
+  await head.getByTestId("clear-note").click();
+  const dialog = head.getByTestId("console-dialog");
+  await expect(dialog.getByTestId("clear-note-ask")).toContainText("Clear J1's pending score on Sam Rivera, attempt 2?");
+  await dialog.getByTestId("dialog-save").click(); // no reason
+  await expect.poll(async () => (await notes()).length, { timeout: 30_000 }).toBe(0);
+  await expect(head.getByTestId("pending-row")).toHaveCount(0, { timeout: 40_000 });
+  const audit = (await w.db.from("audit_log").select("reason, before").eq("event_id", w.eventId).eq("action", "pending_cleared_by_head")).data ?? [];
+  expect(audit).toHaveLength(1);
+  expect(audit[0].reason).toBeNull();
+  expect(audit[0].before).toMatchObject({ judge_seat_id: w.seats.j1.id, line: 2 });
+  const changed = Date.now();
+  await expect(line(j1, 2).getByTestId("line-pending")).toHaveCount(0, { timeout: 40_000 });
+  await expect(box(j1, 2)).toHaveValue("");
+  console.log(`the judge's line showed the head judge's Clear after ${Date.now() - changed} ms (fallback polling in this sandbox)`);
+
+  // ---- Undo: a note taken by an attempt goes back to the line when the spotter takes the attempt back
+  await type(j1, 1, "7.5");
+  await expect.poll(async () => (await notes()).map((n) => Number(n.score)), { timeout: 30_000 }).toEqual([7.5]);
+  await logLanded(spotter, "left", "backroll");
+  await expect(line(j1, 1)).toContainText("Left Backroll", { timeout: 30_000 });
+  await expect(box(j1, 1)).toHaveValue("7.5");
+  expect((await scoresOf("j1")).length).toBe(1);
+  await spotter.getByTestId("undo-button").click();
+  await expect(line(j1, 1)).not.toContainText("Left Backroll", { timeout: 40_000 });
+  await expect(line(j1, 1)).toHaveAttribute("data-kind", "empty");
+  await expect(line(j1, 1).getByTestId("line-pending")).toBeVisible();
+  await expect(box(j1, 1)).toHaveValue("7.5");
+  expect((await scoresOf("j1")).length).toBe(0);
+  expect((await notes()).map((n) => [n.slot, Number(n.score)])).toEqual([[2, 7.5]]);
+  // the right attempt then takes it again
+  await logLanded(spotter, "right", "frontroll");
+  await expect(line(j1, 1)).toContainText("Right Frontroll", { timeout: 30_000 });
+  await expect(box(j1, 1)).toHaveValue("7.5");
+  await expect.poll(async () => (await scoresOf("j1")).map((s) => Number(s.score)), { timeout: 30_000 }).toEqual([7.5]);
 });

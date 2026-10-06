@@ -3522,6 +3522,10 @@ export type Database = {
         }[]
       }
       has_password: { Args: never; Returns: boolean }
+      head_clear_pending: {
+        Args: { p_note: string; p_reason?: string }
+        Returns: undefined
+      }
       head_set_impression: {
         Args: {
           p_entry: string

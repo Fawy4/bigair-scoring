@@ -2893,6 +2893,11 @@ export const copy = {
       pendingTag: (judges: string) => `pending · ${judges}`,
       pendingRow: (n: number) => `Attempt ${n} (not logged yet)`,
       pendingTitle: "scores with no attempt",
+      clearNote: "Clear",
+      clearNoteAria: (judge: string, rider: string, line: number) => `Clear ${judge}'s pending score on ${rider}, attempt ${line}`,
+      clearNoteTitle: "Clear a pending score",
+      clearNoteAsk: (judge: string, rider: string, line: number) => `Clear ${judge}'s pending score on ${rider}, attempt ${line}? It is thrown away and never counted.`,
+      clearNoteConfirm: "Clear it",
       pendingHelp: "Hatched rows are scores a judge typed before the spotter logged the attempt. They are not counted, not published and not shown to the public.",
       missing: "missing",
       missed: "missed",
@@ -3582,6 +3587,7 @@ export const copy = {
       LINE_SCORE_NOT_AVAILABLE: () => "This division is scored by criteria. Use the Queue.",
       /** Detail: "‹rider id›:‹lines›;…" (the phone words it with the rider's name). */
       PENDING_NOTES: () => "You still have scores with no attempt. Clear them first, then submit.",
+      NOTE_NOT_FOUND: () => "That pending score is already gone.",
       PENDING_SCORES: () => "A judge still has a score with no attempt. Publish once it is cleared.",
       FLAG_NOT_APPLICABLE: () => "That flag does not fit this attempt.",
       BAD_FLAG: () => "That flag is not valid.",
@@ -3864,7 +3870,7 @@ export const copy = {
     fixAria: (line: string) => `Fix: ${line}`,
     tie: (names: string) => `${names} are tied — choose the order`,
     /** A judge's score typed before the attempt, still waiting for it. There is no override: the judge clears it, or the attempt is added. */
-    pending: (rider: string, judge: string) => `${rider}: ${judge} has a score with no attempt`,
+    pending: (rider: string, judge: string) => `${rider}: ${judge} has a score with no attempt — ask ${judge} to clear it, or clear it here`,
     and: " and ",
   },
   /** Publish: the words of the dialogs and of the answers (src/lib/live/publish-core.ts). */
@@ -3983,7 +3989,7 @@ export const copy = {
     publishWithReason: "Publish with a reason",
     publishReasonHint: "Everything above can be published past, with a reason. It is written to the audit log.",
     publishNoOverride: "A tie is settled by choosing the order, never by a reason.",
-    publishNoOverridePending: "A score with no attempt is settled by the judge clearing it, or by adding the attempt, never by a reason.",
+    publishNoOverridePending: "A score with no attempt is settled by clearing it (the judge, or you on its pending row) or by adding the attempt, never by a reason.",
     chooseOrder: "Choose order",
     published: (version: number) => (version > 1 ? `Published — version ${version}` : "Published"),
     alreadyPublished: "Already published",
@@ -4203,6 +4209,8 @@ export const copy = {
     /** A judge changing their own score: "J2 changed attempt 3 from 7.0 to 8.5 at 14:21:05". */
     scoreChanged: (judge: string, attempt: string, from: string, to: string, at: string | null) => `${judge} changed ${attempt} from ${from} to ${to}${at ? ` at ${at}` : ""}`,
     /** A score typed on the Rider sheet before the attempt was logged, now on the attempt. */
+    /** The head judge clearing a judge's pending note: "Head judge cleared J3's pending score on Omar Hassan line 4: phone died". */
+    noteClearedByHead: (judge: string, rider: string, line: number, reason: string | null) => `Head judge cleared ${judge}'s pending score on ${rider} line ${line}: ${reason ?? "no reason given"}`,
     scoreFromNote: (judge: string, attempt: string, score: string) => `${judge} · ${attempt}: ${score} (typed before the attempt was logged)`,
     impression: "Impression / Variety score",
     deleted: (a: string) => `Deleted attempt ${a}`,

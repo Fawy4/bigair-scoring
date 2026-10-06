@@ -18,6 +18,8 @@ export interface AuditWords {
   /** Judge seat id → the judge as a word (the seat's name, "Fawy"). */
   judgeWord: (seatId: string) => string;
   riderWord: (entryId: string) => string;
+  /** The rider's name for sentences that name them in full ("Omar Hassan"); the rider word when not given. */
+  riderName?: (entryId: string) => string;
   /** "Red 3": the rider and the attempt number. */
   attemptWord: (attemptId: string) => string;
   /** The time of day of a change, in the event's time zone ("14:21:05"); none when not given. */
@@ -61,6 +63,8 @@ export function auditLine(r: AuditRow, w: AuditWords): string {
       if (isScoreChange({ action: r.action, table_name: r.table_name, before: r.before, after: r.after }))
         return T.scoreChanged(w.judgeWord(String(after.judge_seat_id ?? before.judge_seat_id ?? "")), attempt(after), val(r.before), val(r.after), w.clock ? w.clock(r.at) : null);
       return rowFallback(r, because);
+    case "pending_cleared_by_head":
+      return T.noteClearedByHead(w.judgeWord(String(before.judge_seat_id ?? "")), (w.riderName ?? w.riderWord)(String(before.entry_id ?? "")), Number(before.line ?? 0), r.reason);
     case "score_from_note":
       return T.scoreFromNote(w.judgeWord(String(after.judge_seat_id ?? "")), attempt(after), val(r.after));
     case "score_merged":

@@ -11,6 +11,7 @@ Release entry: [0.18.0](/admin/releases#release-0-18-0) (platform owner only)
 **What changed for users**
 - **Judge: Rider sheet.** A second scoring view beside the queue (switch **Queue / Rider sheet**, remembered per phone, also on the head judge's Score tab): type a score on a rider's numbered line the moment you see the jump; the trick appears when the spotter logs it and your score lands on it, by order of logging. Crash lines grey and drop their notes. Changes follow on the console at once.
 - **Console: pending rows and a new Publish blocker.** Notes with no attempt yet show as hatched pending rows (“pending · J1, J3”), are never counted or public, and block Publish by name (“Omar Hassan: J3 has a score with no attempt”) until cleared.
+- **Head judge Clear** on a pending row (reason optional, audited) when a judge's phone is dead; **Undo** by the spotter puts a taken note back on its line.
 - **Submit** is refused while a judge still holds a note, naming the lines.
 
 **Manual pages updated:** [Judge screen](screens/judge.md), [Head console on a laptop](screens/console-laptop.md), [Glossary](glossary.md), [Dependency map](dependencies.md), [Errors and refusals](errors.md), [Troubleshooting](troubleshooting.md).

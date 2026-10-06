@@ -195,6 +195,7 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
       ensure_division_panel: { p_division: d.div },
       flag_out: { p_heat: running, p_entries: [p[0]], p_reason: "flag out" },
       get_seat_contacts: { p_event: f.ids.evA1 },
+      head_clear_pending: { p_note: randomUUID(), p_reason: "x y z" },
       head_set_impression: { p_heat: ended, p_entry: p[0], p_seat: f.ids.seat_j1, p_value: 7, p_reason: "paper sheet" },
       head_set_trick_score: { p_attempt: attE1, p_seat: f.ids.seat_j1, p_score: 2, p_criteria: {}, p_missed: false, p_reason: "paper sheet" },
       export_role: { p_event: f.ids.evA1 }, // a read: for an observer it answers nobody (null), the same as a judge or a spotter

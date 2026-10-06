@@ -152,7 +152,7 @@ export function withPending(rows: Row[], pending: PendingMatrixRow[], afterRider
  * A pending row: scores judges typed on the Rider sheet before the spotter logged the attempt. Greyed and hatched, no trick, "pending · J1, J3", each judge's note
  * in that judge's column. It has no panel score: it is never counted, never published, never shown to the public.
  */
-function PendingRowView({ row, judges }: { row: PendingMatrixRow; judges?: JudgeName[] }) {
+function PendingRowView({ row, judges, onClear }: { row: PendingMatrixRow; judges?: JudgeName[]; /** The head judge's Clear on one judge's note. */ onClear?: (row: PendingMatrixRow, judgeId: string, noteId: string) => void }) {
   const tags = row.judgeIds.map((id) => judges?.find((j) => j.id === id)?.tag ?? T.aJudge).join(", ");
   return (
     <tr data-testid="pending-row" data-row-state="pending" data-entry={row.riderKey} data-line={row.n} aria-label={T.pendingRow(row.n)} className="border-t border-beach-line align-middle text-beach-muted" style={{ backgroundImage: "repeating-linear-gradient(135deg, transparent 0 6px, var(--beach-line) 6px 7px)" }}>
@@ -170,6 +170,11 @@ function PendingRowView({ row, judges }: { row: PendingMatrixRow; judges?: Judge
         <td key={c.judgeId} className="px-1 py-1">
           <div data-testid="pending-cell" data-judge={c.judgeId} data-has-note={c.value !== null} className={cn("flex min-h-row min-w-[4rem] items-center justify-center rounded-lg border border-dashed px-1 text-body font-semibold tabular-nums", c.value !== null ? "border-beach-muted bg-beach-surface text-beach-ink" : "border-beach-line")}>
             {c.label}
+            {onClear && c.noteId ? (
+              <button type="button" data-testid="clear-note" data-judge={c.judgeId} aria-label={T.clearNoteAria(judges?.find((j) => j.id === c.judgeId)?.tag ?? T.aJudge, row.label.primary.text, row.n)} onClick={() => onClear(row, c.judgeId, c.noteId!)} className="ml-1 min-h-tap rounded-lg border border-beach-border bg-beach-bg px-1.5 text-small font-semibold text-beach-ink">
+                {T.clearNote}
+              </button>
+            ) : null}
           </div>
         </td>
       ))}
@@ -182,7 +187,7 @@ function PendingRowView({ row, judges }: { row: PendingMatrixRow; judges?: Judge
  * The head judge's score table: attempts down, judges across, the panel score last. For a tablet or laptop. With `actions` it is a working tool:
  * tap a score to edit it, tap the attempt number for its menu, tap the rider for theirs.
  */
-export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE, judges, pending = [], pendingAfterRider = false }: { model: MatrixModel & { rows: Row[] }; actions?: MatrixActions; tolerance?: number; /** Pending rows (Rider sheet notes with no attempt): after the attempts, or (grouped by rider) after each rider's own. */ pending?: PendingMatrixRow[]; pendingAfterRider?: boolean; /** The judges as the seat names they were given ("Fawy", with "J1" under it). Without it the columns read "Judge 1" (the design preview). */ judges?: JudgeName[] }) {
+export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE, judges, pending = [], pendingAfterRider = false, onClearNote }: { model: MatrixModel & { rows: Row[] }; actions?: MatrixActions; tolerance?: number; /** Pending rows (Rider sheet notes with no attempt): after the attempts, or (grouped by rider) after each rider's own. */ pending?: PendingMatrixRow[]; pendingAfterRider?: boolean; /** The head judge's Clear on a pending note (only while the heat can still be changed). */ onClearNote?: (row: PendingMatrixRow, judgeId: string, noteId: string) => void; /** The judges as the seat names they were given ("Fawy", with "J1" under it). Without it the columns read "Judge 1" (the design preview). */ judges?: JudgeName[] }) {
   return (
     <div data-testid="matrix-scroll" className="overflow-x-auto rounded-card border border-beach-line bg-beach-bg">
       <table data-testid="head-matrix" className="min-w-[34rem] border-collapse text-beach-ink">
@@ -224,7 +229,7 @@ export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE,
           </tr>
         </thead>
         <tbody>
-          {withPending(model.rows, pending, pendingAfterRider).map((x) => (x.pending ? <PendingRowView key={x.pending.id} row={x.pending} judges={judges} /> : <Row key={x.row.id} row={x.row} actions={actions} tolerance={tolerance} judges={judges} />))}
+          {withPending(model.rows, pending, pendingAfterRider).map((x) => (x.pending ? <PendingRowView key={x.pending.id} row={x.pending} judges={judges} onClear={onClearNote} /> : <Row key={x.row.id} row={x.row} actions={actions} tolerance={tolerance} judges={judges} />))}
         </tbody>
       </table>
     </div>

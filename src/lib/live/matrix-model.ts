@@ -40,7 +40,8 @@ export interface PendingMatrixRow {
   n: number;
   /** The panel judges who hold a note on it, in panel order. */
   judgeIds: string[];
-  cells: Array<{ judgeId: string; value: number | null; label: string }>;
+  /** `noteId`: the note behind the cell (the head judge's Clear), null where the judge has none. */
+  cells: Array<{ judgeId: string; value: number | null; label: string; noteId: string | null }>;
 }
 
 export interface MatrixModel {

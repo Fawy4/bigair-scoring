@@ -19,6 +19,8 @@ PR: #41
 ### What changed
 - **Judge: Rider sheet.** Beside the queue, judges get a second view. A switch at the top of the scoring screen (**Queue / Rider sheet**, remembered on each phone; the head judge's **Score** tab has it too) opens the heat's rider cards and, for the rider you tap, numbered lines (7 for Arrow). Type a score on a line the moment you see the jump, before the spotter has logged it. Your score is saved straight away as a private “pending” note; when the spotter logs the attempt the trick appears on the line and your score lands on it, by order of logging. If the spotter logs a crash, that line greys and any note on it is dropped. Change a score by typing again; there is no Save button.
 - **Console.** Pending notes show as hatched rows (“pending · J1, J3”) after the logged attempts, are never counted or published, and never reach the public pages. **Publish is blocked** while one remains (“Omar Hassan: J3 has a score with no attempt”, with Learn more); the judge presses **Clear**, or the head judge adds the attempt.
+- **Head judge Clear.** On a pending row of the console, a **Clear** beside a judge's note (one confirmation, reason optional) throws it away: the way out when that judge's phone is dead. The audit log says “Head judge cleared J3's pending score on Omar Hassan line 4: ‹reason or no reason given›”; the blocker sentence now says “…ask J3 to clear it, or clear it here”. Only the head judge's seat or an organiser can.
+- **Spotter Undo** that removes an attempt which had taken a judge's note puts the note back on that line as pending (the trick vanishes, the score stays).
 - **Submit** (end of heat) is refused while a judge still holds a note, and says which lines; the sheet shows “no attempt logged here” with **Clear**.
 - **Audit log** lists a judge changing their own score (“J2 changed attempt 3 from 7.0 to 8.5 at 14:21:05”).
 - **Unchanged:** the Queue, the spotter, Publish rules for everything else, the scoring. A division scored by criteria stays on the Queue.
@@ -30,11 +32,13 @@ PR: #41
 - [ ] Spotter: log a landing, a crash, a landing. On your phone, line 1 and line 3 show the tricks and keep your scores; line 2 is grey with “Crash”. On the console the pending rows are gone and your scores sit in your column on attempts 1 and 3.
 - [ ] Change line 3 to 8.5: the console shows 8.5 within a few seconds without you pressing anything.
 - [ ] Type a score on line 4, end the heat, press **Publish**: it is blocked with “‹rider›: ‹J1› has a score with no attempt” and a Learn more link, and cannot be published past. On the judge phone, **Submit** says which line; open the Rider sheet, press **Clear**; the blocker goes and Publish works.
+- [ ] Head judge: leave a note on line 4 for a judge, end the heat, and on the console's pending row press **Clear**, confirm (leave the reason empty): the blocker goes, the judge's line is empty again, Publish works. The audit log shows “Head judge cleared … no reason given”.
+- [ ] Judge types 7.5 on line 1; the spotter logs an attempt and presses **Undo** at once: the judge's line 1 loses its trick but keeps 7.5 as pending; the next attempt takes it.
 - [ ] Another judge phone left on **Queue** still gets each attempt as a card and scores it with the pad; the console shows both judges' scores.
 
 ### Known issues
-- Only the judge who typed a note can clear it; if that phone is lost the head judge cannot clear it for them (Publish waits). The way round is to add the attempt it belongs to.
-- A spotter's Undo (within 10 seconds) removes the attempt together with the score that came from a note; the note is not brought back.
+- The head judge's Clear is on the laptop console's pending rows; the phone's Control tab lists the blocker but has no Clear button.
+- If a later attempt of the rider is logged before the spotter's Undo, nothing moves and the score stays on the removed attempt.
 - Divisions scored by criteria are Queue only.
 
 ## 0.17.1 — 6 Oct 2026 {#release-0-17-1}

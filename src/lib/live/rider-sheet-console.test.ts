@@ -40,6 +40,11 @@ describe("console: pending rows", () => {
     ]);
   });
 
+  it("each cell that holds a note carries the note's id (for the head judge's Clear); the others none", () => {
+    const row = build(pending).matrix.pending[0];
+    expect(row.cells.map((c) => c.noteId)).toEqual(["omar-J1-3", null, "omar-J3-3", null]);
+  });
+
   it("pending notes are never counted: totals and panel scores are exactly what they are without them", () => {
     const without = build([]);
     const withNotes = build(pending);
@@ -69,13 +74,13 @@ describe("console: Publish is blocked by name while a pending row remains", () =
 
   it("the blocker names the rider and the judge, and there is no override", () => {
     const m = build(pending);
-    expect(m.checklist.items.map((i) => [i.kind, i.text])).toEqual([["pending", "Omar Hassan: J3 has a score with no attempt"]]);
+    expect(m.checklist.items.map((i) => [i.kind, i.text])).toEqual([["pending", "Omar Hassan: J3 has a score with no attempt — ask J3 to clear it, or clear it here"]]);
     expect(m.checklist.canOverride).toBe(false);
   });
 
   it("one blocker per rider and judge, however many lines they hold; a second judge is a second blocker", () => {
     const m = build([...pending, note("omar", "J3", 4, 5), note("omar", "J1", 3, 5), note("sam", "J1", 1, 3)]);
-    expect(m.checklist.items.map((i) => i.text)).toEqual(["Omar Hassan: J1 has a score with no attempt", "Omar Hassan: J3 has a score with no attempt", "Sam Rivera: J1 has a score with no attempt"]);
+    expect(m.checklist.items.map((i) => i.text)).toEqual(["Omar Hassan: J1 has a score with no attempt — ask J1 to clear it, or clear it here", "Omar Hassan: J3 has a score with no attempt — ask J3 to clear it, or clear it here", "Sam Rivera: J1 has a score with no attempt — ask J1 to clear it, or clear it here"]);
   });
 
   it("after Clear nothing blocks Publish and an override is possible again for other blockers", () => {
@@ -111,6 +116,12 @@ describe("audit: a judge changing their own score", () => {
     const r = row({ before: { attempt_id: "a3", judge_seat_id: "J2", score: 7 }, after: { attempt_id: "a3", judge_seat_id: "J2", score: 8.5 } });
     expect(isScoreChange(r)).toBe(true);
     expect(auditLine(r, w)).toBe("J2 changed attempt 3 from 7.00 to 8.50 at 14:21:05");
+  });
+  it("the head judge clearing a note reads 'Head judge cleared J3's pending score on Omar Hassan line 4: <reason or no reason given>'", () => {
+    const cleared = (reason: string | null) => row({ action: "pending_cleared_by_head", table_name: "pending_scores", reason, before: { judge_seat_id: "J2", entry_id: "omar", line: 4 }, after: null });
+    const named = { ...w, riderName: () => "Omar Hassan" };
+    expect(auditLine(cleared("phone died"), named)).toBe("Head judge cleared J2's pending score on Omar Hassan line 4: phone died");
+    expect(auditLine(cleared(null), named)).toBe("Head judge cleared J2's pending score on Omar Hassan line 4: no reason given");
   });
   it("a save that changed no number is not a change; a score that came from a pending note says so", () => {
     expect(isScoreChange(row({ before: { score: 7 }, after: { score: 7, version: 2 } }))).toBe(false);

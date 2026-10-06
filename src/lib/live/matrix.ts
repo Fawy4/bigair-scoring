@@ -4,7 +4,7 @@ import type { LabelModel } from "@/lib/identification/rider-label";
 import type { ScoringModel } from "@/lib/schemas/scoring-model";
 import { markOf } from "./heat-input";
 import { formatCell, type CellState, type MatrixCell, type MatrixRow, type PanelState, type PendingMatrixRow } from "./matrix-model";
-import { consoleRows, type SheetAttempt } from "./rider-sheet";
+import { consoleRows, lineOfSlot, type SheetAttempt } from "./rider-sheet";
 import type { AttemptRow, FlagRow, PendingRow, ScoreRow } from "./types";
 
 /** A row of the head judge's table with what the console needs to act on it. */
@@ -121,7 +121,8 @@ export function pendingRows(attempts: AttemptRow[], notes: PendingRow[], panelSe
         judgeIds: panelSeatIds.filter((j) => row.judges.includes(j)),
         cells: panelSeatIds.map((judgeId) => {
           const v = row.cells[judgeId];
-          return { judgeId, value: v === undefined ? null : v, label: v === undefined ? "—" : formatCell(v) };
+          const note = notes.find((n) => n.entry_id === riderKey && n.judge_seat_id === judgeId && lineOfSlot(sheet, n.slot) === row.n);
+          return { judgeId, value: v === undefined ? null : v, label: v === undefined ? "—" : formatCell(v), noteId: note?.id ?? null };
         }),
       });
     }

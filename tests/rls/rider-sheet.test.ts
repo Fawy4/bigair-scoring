@@ -346,4 +346,101 @@ describe.skipIf(!ENV_OK)("Rider sheet: pending notes (hosted development project
       for (const ch of channels) await ch.unsubscribe();
     }
   });
+
+  // ---------------------------------------------------------------- the head judge clears a judge's note (a dead phone must never trap Publish)
+  describe("head judge Clear", () => {
+    const noteId = async (heat: string, seat: string) => (await f.s.from("pending_scores").select("id").eq("heat_id", heat).eq("judge_seat_id", seat).limit(1).single()).data!.id as string;
+
+    it("the head judge and an organiser may clear a judge's note (reason optional); the audit line names who, which note and the reason; nobody else can", async () => {
+      const h = await running();
+      await note("j1", h, d.entries[0], 3, 6);
+      await note("j2", h, d.entries[0], 3, 7);
+      const n1 = await noteId(h, f.ids.seat_j1);
+      const n2 = await noteId(h, f.ids.seat_j2);
+      for (const who of ["j1", "j2", "j3", "spotter", "announcer", "anon", "orgB"] as const) {
+        expect(codeOf(await f.clients[who].rpc("head_clear_pending", { p_note: n1, p_reason: "x y z" })), who).not.toBe("");
+      }
+      expect(codeOf(await obs.rpc("head_clear_pending", { p_note: n1, p_reason: "x y z" }))).toContain("NOT_ALLOWED");
+      expect((await notes(h)).length).toBe(2);
+      expect(codeOf(await f.clients.head.rpc("head_clear_pending", { p_note: n1, p_reason: "J1's phone died" }))).toBe("");
+      expect(codeOf(await f.clients.orgA.rpc("head_clear_pending", { p_note: n2, p_reason: null }))).toBe("");
+      expect(await notes(h)).toEqual([]);
+      const log = (await f.s.from("audit_log").select("action, reason, before").eq("event_id", f.ids.evA1).eq("action", "pending_cleared_by_head").in("row_id", [n1, n2])).data ?? [];
+      expect(log).toHaveLength(2);
+      const one = log.find((l) => (l.before as { id: string }).id === n1)!;
+      expect(one.reason).toBe("J1's phone died");
+      expect(one.before).toMatchObject({ judge_seat_id: f.ids.seat_j1, entry_id: d.entries[0], line: 3 });
+      expect(log.find((l) => (l.before as { id: string }).id === n2)!.reason).toBeNull();
+      expect(codeOf(await f.clients.head.rpc("head_clear_pending", { p_note: n1, p_reason: null }))).toContain("NOTE_NOT_FOUND");
+    });
+
+    it("after the head judge's Clear Publish is no longer blocked by that note", async () => {
+      const h = await mkHeat(f, d, { status: "running", started_at: ago(900) }, { riders: 1 });
+      await note("j2", h, d.entries[0], 4, 6);
+      await f.s.from("heats").update({ status: "ended", ended_at: ago(300) }).eq("id", h);
+      const commit = () => f.s.rpc("publish_heat_commit", { p_heat: h, p_expected_version: 1, p_results: [], p_draw: null, p_projection: [], p_hold: false, p_override_reason: "x y z", p_actor: f.userIds.head, p_blockers: [] });
+      expect(codeOf(await commit())).toContain("PENDING_SCORES");
+      expect(codeOf(await f.clients.head.rpc("head_clear_pending", { p_note: await noteId(h, f.ids.seat_j2), p_reason: null }))).toBe("");
+      expect(codeOf(await commit())).toBe("");
+    });
+
+    it("the head judge cannot clear a note of another event's heat, nor of a published heat", async () => {
+      const h = await running();
+      await note("j1", h, d.entries[0], 2, 6);
+      expect(codeOf(await f.clients.bJudge.rpc("head_clear_pending", { p_note: await noteId(h, f.ids.seat_j1), p_reason: "x y z" }))).not.toBe("");
+      expect((await notes(h)).length).toBe(1);
+    });
+  });
+
+  // ---------------------------------------------------------------- spotter Undo: the note comes back
+  describe("spotter Undo", () => {
+    const undo = (attempt: string) => f.clients.spotter.rpc("undo_attempt", { p_attempt: attempt });
+    const viaSpotter = async (heat: string, entry: string, trick: string) => {
+      const r = await f.clients.spotter.rpc("add_attempt", { p_heat: heat, p_entry: entry, p_client_key: uuid(), p_status: "landed", p_trick_name: trick });
+      expect(codeOf(r)).toBe("");
+      return (r.data as { id: string }).id;
+    };
+
+    it("an attempt that took a judge's note: Undo puts the note back on that line (the score leaves the attempt, the line is pending again), and the next attempt takes it again", async () => {
+      const h = await running();
+      await note("j1", h, d.entries[0], 1, 7.5);
+      await note("j2", h, d.entries[0], 1, 6);
+      const a1 = await viaSpotter(h, d.entries[0], "Wrong trick");
+      expect((await scoresOf(a1)).length).toBe(2);
+      expect(await notes(h)).toEqual([]);
+      expect(codeOf(await undo(a1))).toBe("");
+      expect(await scoresOf(a1)).toEqual([]); // the scores left the deleted attempt
+      const back = await notes(h);
+      expect(back.map((n) => [n.judge_seat_id, Number(n.score), n.slot]).sort()).toEqual([[f.ids.seat_j1, 7.5, 2], [f.ids.seat_j2, 6, 2]].sort());
+      // line 1 is empty again: the pending line the console computes is 1
+      const a2 = await viaSpotter(h, d.entries[0], "Right trick");
+      expect((await scoresOf(a2)).map((s) => Number(s.score)).sort()).toEqual([6, 7.5]);
+      expect(await notes(h)).toEqual([]);
+    });
+
+    it("a score the judge typed on the attempt itself (no note behind it) stays on the attempt; and with a later attempt logged, nothing is moved", async () => {
+      const h = await running();
+      const a1 = await viaSpotter(h, d.entries[1], "T1");
+      expect(codeOf(await note("j1", h, d.entries[1], 1, 5))).toBe("");
+      expect(codeOf(await undo(a1))).toBe("");
+      expect((await scoresOf(a1)).map((s) => Number(s.score))).toEqual([5]);
+      expect(await notes(h)).toEqual([]);
+      // note -> attempt 1, attempt 2 logged after, then the spotter undoes attempt 1 (not the latest): the score stays where it is
+      await note("j1", h, d.entries[2], 1, 6);
+      const b1 = await viaSpotter(h, d.entries[2], "B1");
+      await viaSpotter(h, d.entries[2], "B2");
+      expect(codeOf(await undo(b1))).toBe("");
+      expect(await notes(h)).toEqual([]);
+      expect((await scoresOf(b1)).map((s) => Number(s.score))).toEqual([6]);
+    });
+
+    it("the head judge's Delete is not an Undo: the scores stay with the deleted attempt as before", async () => {
+      const h = await running();
+      await note("j1", h, d.entries[0], 1, 7);
+      const a1 = await viaSpotter(h, d.entries[0], "Dup");
+      expect(codeOf(await f.clients.head.rpc("delete_attempt", { p_attempt: a1, p_reason: "duplicate" }))).toBe("");
+      expect(await notes(h)).toEqual([]);
+      expect((await scoresOf(a1)).map((s) => Number(s.score))).toEqual([7]);
+    });
+  });
 });

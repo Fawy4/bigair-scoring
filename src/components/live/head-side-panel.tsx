@@ -165,7 +165,7 @@ export function AgreementReport({ side, head, heat }: { side: SideData; head: He
 }
 
 /** This heat's audit log, in words. */
-export function AuditLog({ side, head, wordFor, timezone }: { side: SideData; head: HeadModel; wordFor: (entryId: string) => string; timezone?: string }) {
+export function AuditLog({ side, head, wordFor, nameFor, timezone }: { side: SideData; head: HeadModel; wordFor: (entryId: string) => string; nameFor?: (entryId: string) => string; timezone?: string }) {
   const word = (seatId: string) => judgeWordOf(side.judges.find((j) => j.id === seatId) ?? { name: null, tag: copy.live.matrix.aJudge });
   const attemptWord = (attemptId: string) => {
     const row = head.matrix.rows.find((r) => r.attemptId === attemptId);
@@ -177,7 +177,7 @@ export function AuditLog({ side, head, wordFor, timezone }: { side: SideData; he
       {side.audit.length === 0 ? <p className="text-small font-medium text-beach-muted">{copy.audit.empty}</p> : null}
       {side.audit.map((a) => (
         <p key={a.id} data-testid="audit-line" data-action={a.action} className="text-small font-medium">
-          {auditLine(a, { judgeWord: word, riderWord: wordFor, attemptWord, ...(timezone ? { clock: (iso: string) => timeOfDay(iso, timezone) } : {}) })}
+          {auditLine(a, { judgeWord: word, riderWord: wordFor, riderName: nameFor, attemptWord, ...(timezone ? { clock: (iso: string) => timeOfDay(iso, timezone) } : {}) })}
         </p>
       ))}
     </section>
