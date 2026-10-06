@@ -2,7 +2,16 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 6 Oct 2026 · Product version 0.18.0
+Last checked: 6 Oct 2026 · Product version 0.18.1
+
+## 0.18.1 — 6 Oct 2026 {#cl-0-18-1}
+
+Release entry: [0.18.1](/admin/releases#release-0-18-1) (platform owner only)
+
+**What changed for users**
+- **The Impression card and sheet show each rider properly.** The card's rows are the shared Rider label (Lycra block with the colour word, name, nationality); the bars in the head judge's Impression sheet are filled in the rider's Lycra colour with the colour word on them (7:1 or better) and the selected bar has a thick border and a tick. Scoring is unchanged.
+
+**Manual pages updated:** [Head console on a laptop](screens/console-laptop.md).
 
 ## 0.18.0 — 6 Oct 2026 {#cl-0-18-0}
 

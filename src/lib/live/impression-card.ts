@@ -47,9 +47,9 @@ export interface LevelSize {
   small: boolean;
 }
 export const LEVELS: Record<CardLevel, LevelSize> = {
-  0: { labelW: 132, cellW: 54, rowH: 24, headH: 32, small: false },
-  1: { labelW: 112, cellW: 46, rowH: 20, headH: 28, small: false },
-  2: { labelW: 96, cellW: 40, rowH: 17, headH: 26, small: true },
+  0: { labelW: 184, cellW: 54, rowH: 24, headH: 32, small: false },
+  1: { labelW: 164, cellW: 46, rowH: 20, headH: 28, small: false },
+  2: { labelW: 112, cellW: 38, rowH: 17, headH: 26, small: true },
 };
 const PAD_W = 24; // the card's own padding and border (12 + 2) plus the room the cells take beyond their nominal width (measured: 10 px)
 const PAD_H = 6;

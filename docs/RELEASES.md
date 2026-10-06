@@ -12,6 +12,23 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.18.1 — 6 Oct 2026 {#release-0-18-1}
+
+PR: #42
+
+### What changed
+- **The Impression card shows each rider properly.** Fault seen on the live address: on the head judge's console the Impression card showed only the Lycra word ("Red") on each rider's row. Now each row is the same Rider label as everywhere else: the Lycra block with the colour word, the name and the nationality, following the event's Rider identification scheme.
+- **The selectable bars are in the rider's colours.** In the head judge's Impression sheet each rider's bar was white. Now it is filled in the rider's Lycra colour with the colour word on it in black or white, whichever reads at 7:1 or better (a plain plate under the word for middling colours such as red), then the name and nationality. The selected bar has a thick border and a tick. Day and Dark both.
+- How Impression scores are entered and saved is unchanged. The card's rider column is a little wider so the name and nationality fit; at 1280 px with 5 riders the card is still a card.
+
+### What to test
+- [ ] Impression card: rider names. On the head console of a heat that has just ended (a simulation at ×1 will do), look at the Impression card: each rider's row shows the Lycra block with the colour word, the name and the nationality (for example RED, Omar Hassan, EGY).
+- [ ] Impression sheet: coloured bars. Tap a judge's cell on the card: the sheet that opens has one bar per rider in that rider's colour (a red bar that says RED), the selected one with a thick border and a tick; tap another rider and the tick moves.
+- [ ] Day and Dark: on the head console switch Daylight / Dark and open the same sheet: the colour words, names and the tick stay readable, and a bar is only white when that rider's Lycra is white.
+
+### Known issues
+- The manual screenshot of the Impression sheet was taken on a development server; `npm run manual:shots` will retake it on the production build.
+
 ## 0.18.0 — 6 Oct 2026 {#release-0-18-0}
 
 PR: #41

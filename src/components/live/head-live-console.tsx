@@ -484,7 +484,7 @@ export function HeadLiveConsole({
           heatId={heat.id}
           seatId={dialog.seatId}
           judge={judgeWord(dialog.seatId)}
-          riders={(impressions.find((j) => j.seatId === dialog.seatId)?.cells ?? []).map((cell) => ({ id: cell.entryId, word: wordFor(cell.entryId), now: { state: cell.state, value: cell.value } }))}
+          riders={(impressions.find((j) => j.seatId === dialog.seatId)?.cells ?? []).map((cell) => ({ id: cell.entryId, word: wordFor(cell.entryId), label: riders.find((r) => r.entryId === cell.entryId)!.label, now: { state: cell.state, value: cell.value } }))}
           first={dialog.entryId}
           onClose={close}
           onDone={done}
