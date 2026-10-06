@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { buildFixture, ENV_OK, signedIn, type Fixture } from "./helpers";
+import { buildFixture, ENV_OK, signedIn, uuid, type Fixture } from "./helpers";
 import { ago, codeOf, key, mkDivision, mkHeat, type LiveDivision } from "./live-helpers";
 
 // Rider sheet: a judge types a score on a numbered line before the spotter logs the attempt. The score is a private "pending" note until an attempt takes the line.
@@ -291,5 +291,59 @@ describe.skipIf(!ENV_OK)("Rider sheet: pending notes (hosted development project
       expect(t).not.toContain(f.ids.seat_j1);
     }
     expect(((await anon.from("pending_scores").select("*")).data ?? []).length).toBe(0);
+  });
+
+  // ---------------------------------------------------------------- Realtime (the browser of the test sandbox cannot open the socket, so it is proved from Node)
+  it("Realtime: the head judge's channel gets a note, its conversion into a score and a later change within a second and a half; another judge's channel gets nothing", async () => {
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const channels: RealtimeChannel[] = [];
+    const listen = async (c: SupabaseClient, table: string, heat: string) => {
+      const seen: Array<{ at: number; type: string; row: Record<string, unknown> }> = [];
+      const ch = c.channel(`rs-${table}-${uuid().slice(0, 6)}`).on("postgres_changes", { event: "*", schema: "public", table, filter: `heat_id=eq.${heat}` }, (p) => seen.push({ at: Date.now(), type: p.eventType, row: (p.new ?? p.old) as Record<string, unknown> }));
+      channels.push(ch);
+      await new Promise<void>((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error(`channel ${table} did not subscribe`)), 20_000);
+        ch.subscribe((st) => st === "SUBSCRIBED" && (clearTimeout(t), resolve()));
+      });
+      await wait(1500);
+      return seen;
+    };
+    const until = async (cond: () => boolean) => {
+      const end = Date.now() + 6000;
+      while (!cond() && Date.now() < end) await wait(25);
+    };
+    try {
+      const h = await running(d, 1);
+      const headNotes = await listen(f.clients.head, "pending_scores", h);
+      const otherNotes = await listen(f.clients.j2, "pending_scores", h);
+      const headScores = await listen(f.clients.head, "trick_scores", h);
+      let sent = Date.now();
+      expect(codeOf(await note("j1", h, d.entries[0], 1, 7.5))).toBe("");
+      await until(() => headNotes.length > 0);
+      console.log(`a pending note reached the head judge's channel ${headNotes[0].at - sent} ms after the call`);
+      expect(headNotes[0].at - sent).toBeLessThan(1500);
+      expect(headNotes[0].row).toMatchObject({ judge_seat_id: f.ids.seat_j1, slot: 1 });
+      // the spotter logs: the note is deleted and the score appears, both seen by the head judge
+      sent = Date.now();
+      const a = await att(h, d.entries[0], 1);
+      await until(() => headNotes.some((n) => n.type === "DELETE") && headScores.length > 0);
+      console.log(`the score from the note reached the head judge ${headScores[0].at - sent} ms after the attempt was logged`);
+      expect(headNotes.some((n) => n.type === "DELETE")).toBe(true);
+      expect(Number(headScores[0].row.score)).toBe(7.5);
+      expect(headScores[0].row.attempt_id).toBe(a);
+      // a later change by the judge
+      const before = headScores.length;
+      sent = Date.now();
+      expect(codeOf(await note("j1", h, d.entries[0], 1, 8.5, 5))).toBe("");
+      await until(() => headScores.length > before);
+      console.log(`a changed score reached the head judge ${headScores[headScores.length - 1].at - sent} ms after the call`);
+      expect(Number(headScores[headScores.length - 1].row.score)).toBe(8.5);
+      expect(headScores[headScores.length - 1].at - sent).toBeLessThan(1500);
+      // Realtime does not filter a DELETE by row security, but it carries no row: the other judge learns nothing of the note (no seat, no score)
+      expect(otherNotes.filter((n) => n.type !== "DELETE")).toHaveLength(0);
+      expect(otherNotes.every((n) => Object.keys(n.row).length === 0)).toBe(true);
+    } finally {
+      for (const ch of channels) await ch.unsubscribe();
+    }
   });
 });

@@ -2,7 +2,18 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 6 Oct 2026 · Product version 0.17.1
+Last checked: 6 Oct 2026 · Product version 0.18.0
+
+## 0.18.0 — 6 Oct 2026 {#cl-0-18-0}
+
+Release entry: [0.18.0](/admin/releases#release-0-18-0) (platform owner only)
+
+**What changed for users**
+- **Judge: Rider sheet.** A second scoring view beside the queue (switch **Queue / Rider sheet**, remembered per phone, also on the head judge's Score tab): type a score on a rider's numbered line the moment you see the jump; the trick appears when the spotter logs it and your score lands on it, by order of logging. Crash lines grey and drop their notes. Changes follow on the console at once.
+- **Console: pending rows and a new Publish blocker.** Notes with no attempt yet show as hatched pending rows (“pending · J1, J3”), are never counted or public, and block Publish by name (“Omar Hassan: J3 has a score with no attempt”) until cleared.
+- **Submit** is refused while a judge still holds a note, naming the lines.
+
+**Manual pages updated:** [Judge screen](screens/judge.md), [Head console on a laptop](screens/console-laptop.md), [Glossary](glossary.md), [Dependency map](dependencies.md), [Errors and refusals](errors.md), [Troubleshooting](troubleshooting.md).
 
 ## 0.17.1 — 6 Oct 2026 {#cl-0-17-1}
 

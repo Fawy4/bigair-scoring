@@ -12,6 +12,31 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.18.0 — 6 Oct 2026 {#release-0-18-0}
+
+PR: #41
+
+### What changed
+- **Judge: Rider sheet.** Beside the queue, judges get a second view. A switch at the top of the scoring screen (**Queue / Rider sheet**, remembered on each phone; the head judge's **Score** tab has it too) opens the heat's rider cards and, for the rider you tap, numbered lines (7 for Arrow). Type a score on a line the moment you see the jump, before the spotter has logged it. Your score is saved straight away as a private “pending” note; when the spotter logs the attempt the trick appears on the line and your score lands on it, by order of logging. If the spotter logs a crash, that line greys and any note on it is dropped. Change a score by typing again; there is no Save button.
+- **Console.** Pending notes show as hatched rows (“pending · J1, J3”) after the logged attempts, are never counted or published, and never reach the public pages. **Publish is blocked** while one remains (“Omar Hassan: J3 has a score with no attempt”, with Learn more); the judge presses **Clear**, or the head judge adds the attempt.
+- **Submit** (end of heat) is refused while a judge still holds a note, and says which lines; the sheet shows “no attempt logged here” with **Clear**.
+- **Audit log** lists a judge changing their own score (“J2 changed attempt 3 from 7.0 to 8.5 at 14:21:05”).
+- **Unchanged:** the Queue, the spotter, Publish rules for everything else, the scoring. A division scored by criteria stays on the Queue.
+- Fixed a fault where two screens following the same heat on one page (the head judge's Score tab) tried to add listeners to an already-open live channel.
+
+### What to test
+- [ ] Judge phone: open the scoring screen; it shows **Queue**. Tap **Rider sheet**, tap a rider: you see 7 numbered lines. Close the page and open it again: it is still on the Rider sheet.
+- [ ] With a simulation at ×1 and no attempt logged yet, type 7.5, 6.0 and 8.0 on lines 1, 2 and 3. Each shows “pending”. Reload the phone: the scores are still there. On the laptop console they show as hatched “pending · J1” rows.
+- [ ] Spotter: log a landing, a crash, a landing. On your phone, line 1 and line 3 show the tricks and keep your scores; line 2 is grey with “Crash”. On the console the pending rows are gone and your scores sit in your column on attempts 1 and 3.
+- [ ] Change line 3 to 8.5: the console shows 8.5 within a few seconds without you pressing anything.
+- [ ] Type a score on line 4, end the heat, press **Publish**: it is blocked with “‹rider›: ‹J1› has a score with no attempt” and a Learn more link, and cannot be published past. On the judge phone, **Submit** says which line; open the Rider sheet, press **Clear**; the blocker goes and Publish works.
+- [ ] Another judge phone left on **Queue** still gets each attempt as a card and scores it with the pad; the console shows both judges' scores.
+
+### Known issues
+- Only the judge who typed a note can clear it; if that phone is lost the head judge cannot clear it for them (Publish waits). The way round is to add the attempt it belongs to.
+- A spotter's Undo (within 10 seconds) removes the attempt together with the score that came from a note; the note is not brought back.
+- Divisions scored by criteria are Queue only.
+
 ## 0.17.1 — 6 Oct 2026 {#release-0-17-1}
 
 PR: #40

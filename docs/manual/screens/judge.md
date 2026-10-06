@@ -2,7 +2,7 @@
 
 The judge's phone at /judge/‹event›: a scoring queue during the heat, then the Impression / Variety score for every rider and Submit.
 
-Last checked: 3 Oct 2026 · Product version 0.13.0
+Last checked: 6 Oct 2026 · Product version 0.18.0
 
 ## What it is for {#ju-purpose}
 
@@ -26,6 +26,23 @@ Judges watch the water, not the phone. Each attempt the spotter logs arrives as 
 | Sound, theme, size | Sound behind a tap; Daylight / Dark; Normal / Large. |
 
 After Submit, or when the head judge takes the heat into review, scores are locked (“Your sheet is locked. Ask the head judge to reopen it.”); the head judge can reopen one judge's sheet or edit a score with a reason.
+
+## Rider sheet {#ju-rider-sheet}
+
+A second view beside the queue, for the judge who wants to score the jump the moment they see it, without waiting for the spotter. At the top of the scoring screen a switch reads **Queue** / **Rider sheet**. The **Queue** is the default; the choice is remembered on that phone (the head judge's **Score** tab has the same switch and shares the phone's choice). A division that is scored by criteria (Height, Extremity…) stays on the Queue: the sheet types one score per line.
+
+- **The rider cards** (Rider label, name, nationality, attempts used) sit across the top. Tap a rider to see their sheet below.
+- **The lines.** Exactly as many numbered lines as the division allows attempts (7 for Arrow), numbered 1, 2, 3… from the start of the heat. With no limit you see the attempts logged plus one empty line ahead. If the head judge adds an attempt past the limit, it gets its own line.
+- **Each line** shows the attempt number, the trick (empty — “waiting for the spotter” — until the spotter logs it; then the trick as the spotter named it, with its direction), a **Crash** word when the spotter logged a crash, and a score box you type into with the phone keyboard. The box uses the division's scale and step; a score off the step is refused with the same sentence as the pad (“That score is not on the 0.5 step. Use 7 or 7.5.” with a **Learn more** link to [this page](#ju-pad-step)). There is no Save button: a score that is on the step is saved the moment you type it.
+- **Typing before the attempt exists.** A score typed on an empty line is your private note: it shows **pending** and is kept on the server at once, so it survives a phone reload or a dead phone. Nobody else sees your notes except the head judge and an observer; they are never counted, never published and never shown to the public.
+- **When the spotter logs.** The attempt takes the rider's lowest-numbered line with no attempt, and your note on that line becomes your score on the attempt at once — **by order of logging, never by the time you typed**. A note typed first for line 3 waits for the third attempt. If the spotter logs a **crash**, that line greys, shows **Crash**, and any note on it is thrown away (judges never score crashes).
+- **Changing a score.** Type a new value on any line until you Submit. The console follows; the audit log keeps every change (“J2 changed attempt 3 from 7.0 to 8.5 at 14:21:05”).
+- **If the head judge deletes or merges an attempt**, the lines renumber and the notes behind it move up to the next real attempt; the scores on the deleted attempt go as they always do.
+- **At the end of the heat.** A note that never got an attempt shows **no attempt logged here** with **Clear**. **Submit** is refused while you still hold one (“You still have scores with no attempt: Red, attempt 4. Clear them, then submit.”): the Impression step shows the same sentence with **Open the Rider sheet**. Press **Clear** on each line, then Submit.
+- **Mixed views.** Judges on the same heat can use different views, and it makes no difference to the result: the Queue judge scores an attempt when it lands, the Rider-sheet judge may have scored it before. Switching view in the middle of the heat keeps every score and every pending note.
+
+![The Rider sheet](../img/judge-rider-sheet-390.png)
+*judge-rider-sheet-390.png — Red's sheet: three attempts logged (the second a crash), a pending note on the next line.*
 
 ## A typed score that is off the step {#ju-pad-step}
 
