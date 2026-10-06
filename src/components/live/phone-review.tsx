@@ -96,7 +96,7 @@ export function PhoneReview({
           heatId={heat.id}
           seatId={open.seatId}
           judge={judgeWord(open.seatId)}
-          riders={(impressions.find((j) => j.seatId === open.seatId)?.cells ?? []).map((cell) => ({ id: cell.entryId, word: wordFor(cell.entryId), now: { state: cell.state, value: cell.value } }))}
+          riders={(impressions.find((j) => j.seatId === open.seatId)?.cells ?? []).map((cell) => ({ id: cell.entryId, word: wordFor(cell.entryId), label: riders.find((r) => r.entryId === cell.entryId)!.label, now: { state: cell.state, value: cell.value } }))}
           first={open.entryId}
           onClose={() => setOpen(null)}
           onDone={done}

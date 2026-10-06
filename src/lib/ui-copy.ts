@@ -2941,6 +2941,7 @@ export const copy = {
       confirmNo: "Not yet",
       riderDone: "Set",
       riderOpen: "Not set",
+      riderSelected: "Selected",
       riders: "Riders",
     },
     head: {

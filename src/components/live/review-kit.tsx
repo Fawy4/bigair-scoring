@@ -151,7 +151,8 @@ function Grid({ name, judges, impressions, riders, tolerance, onCell, level }: C
         return (
           <div key={row.entryId} role="row" data-testid="impression-row" data-rider={row.entryId} className="contents">
             <span role="rowheader" className="flex min-w-0 items-center overflow-hidden" style={{ height: size.rowH }}>
-              {rider ? <RiderLabel model={{ ...rider.label, secondary: rider.label.secondary.filter((x) => x.key === "name") }} variant="live" bare className="[&_*]:!text-small [&_*]:!leading-none" /> : null}
+              {/* the shared Rider label, whole (what the event's identification scheme says: Lycra block, name, nationality), on one line for a table row */}
+              {rider ? <RiderLabel model={rider.label} variant="row" dense /> : null}
             </span>
             {row.cells.map((c, i) => {
               const judge = judges[i];

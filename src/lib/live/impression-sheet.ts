@@ -1,7 +1,11 @@
+import type { LabelModel } from "@/lib/identification/rider-label";
+
 /** A rider on the head judge's Impression / Variety sheet for one judge (Polish 2, item 6). */
 export interface SheetRider {
   id: string;
   word: string;
+  /** The rider's Rider label (the event's identification scheme): the bar of this rider is drawn from it. */
+  label: LabelModel;
   /** What is stored now: a score, Absent, or nothing. */
   now: { state: "done" | "missing" | "absent"; value: number | null };
 }

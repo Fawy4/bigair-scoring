@@ -19,6 +19,7 @@ export function RiderLabel({
   wrap = false,
   screen = false,
   seed,
+  dense = false,
 }: {
   scheme?: IdentificationScheme;
   rider?: LabelRider;
@@ -39,33 +40,43 @@ export function RiderLabel({
   screen?: boolean;
   /** Row only: the rider's seed, written small after the name. */
   seed?: number;
+  /** Row only: the rest of the label (nationality and whatever else the scheme lists) after the name, and a tighter line for a table row (the Impression card). */
+  dense?: boolean;
 }) {
   const label = model ?? riderLabelModel(scheme!, rider!);
   const p = label.primary;
   if (variant === "row") {
-    // the Draw step: the whole label on one line, small: the colour (or number) block, the name, the seed
+    // the Draw step: the whole label on one line, small: the colour (or number) block, the name, the seed. `dense` (the Impression card) adds the rest of the label after the name.
     const style = labelStyleOfPrimary(p);
     const name = label.secondary.find((x) => x.key === "name");
     const nameText = style === "name-first" ? p.text : name?.text;
+    const rest = dense ? label.secondary.filter((x) => x.key !== "name").map((x) => x.text).join(" · ") : "";
+    const lh = dense ? "leading-4" : "leading-6";
+    const tx = dense ? "text-small" : "text-sm";
     return (
-      <div data-testid="rider-label" data-variant="row" className={cn("flex min-w-0 items-center gap-1.5", className)}>
+      <div data-testid="rider-label" data-variant="row" className={cn("flex min-w-0 items-center", dense ? "gap-1" : "gap-1.5", className)}>
         {style === "colour-block" ? (
           <span
             data-testid="rider-label-primary"
-            className="shrink-0 rounded px-1.5 text-sm font-bold leading-6"
+            className={cn("shrink-0 rounded px-1.5 font-bold", tx, lh)}
             style={{ backgroundColor: p.hex, color: p.ink, boxShadow: p.outlined ? "inset 0 0 0 2px var(--beach-ink)" : undefined }}
           >
             <span data-testid="rider-label-text">{p.text}</span>
             {p.usedFallback ? <span className="ml-1 text-xs font-medium">{copy.riderLabel.fallback}</span> : null}
           </span>
         ) : style === "number-block" ? (
-          <span data-testid="rider-label-primary" className="max-w-[45%] shrink-0 truncate rounded border-2 border-beach-ink bg-beach-surface px-1.5 text-sm font-bold leading-5 text-beach-ink">
+          <span data-testid="rider-label-primary" className={cn("max-w-[45%] shrink-0 truncate rounded border-2 border-beach-ink bg-beach-surface px-1.5 font-bold text-beach-ink", tx, dense ? "leading-3" : "leading-5")}>
             <span data-testid="rider-label-text">{p.text}</span>
           </span>
         ) : null}
-        <span data-testid={style === "name-first" ? "rider-label-primary" : undefined} className="min-w-0 flex-1 truncate text-sm font-semibold leading-6 text-beach-ink">
+        <span data-testid={style === "name-first" ? "rider-label-primary" : "rider-label-name"} className={cn("min-w-0 flex-1 truncate font-semibold text-beach-ink", tx, lh)}>
           {style === "name-first" ? <span data-testid="rider-label-text">{nameText}</span> : nameText}
         </span>
+        {rest ? (
+          <span data-testid="rider-label-rest" className={cn("max-w-[40%] shrink-0 truncate font-medium text-beach-muted", tx, lh)}>
+            {rest}
+          </span>
+        ) : null}
         {seed != null ? (
           <span data-testid="rider-seed" className="shrink-0 text-xs font-medium text-beach-muted">
             #{seed}

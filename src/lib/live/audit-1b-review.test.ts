@@ -40,7 +40,7 @@ describe("A1b 3b — Impression card", () => {
   it("Fix 2: at 1280 px and wider the card stays a card with 3, 4 and 5 riders and 4 judges: the room it is always given fits it at the smallest level", () => {
     for (const riders of [3, 4, 5]) {
       expect(fitCard({ availW: cardMinWidth(riders, 4), availH: CARD_ROW_MIN, riders, judges: 4 })).not.toBe("button");
-      expect(cardMinWidth(riders, 4)).toBeLessThanOrEqual(320);
+      expect(cardMinWidth(riders, 4)).toBeLessThanOrEqual(330); // the label column holds the whole Rider label (block, name, nationality), so a little wider than before
     }
     // the rider cards at their narrowest (4.5 rem = 72 px) plus the card's own minimum fit the left column of a 1280 px window (720 px: the side menu takes 264 px)
     expect(5 * 72 + 4 * 6 + cardMinWidth(5, 4) + 6).toBeLessThanOrEqual(720);

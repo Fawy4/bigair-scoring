@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { CriteriaRows } from "./criteria-rows";
 import { Footer, Modal, off, plain, primary, Reason, btn } from "./console-parts";
+import { RiderBar } from "./rider-bar";
 import { ScorePad } from "./score-pad";
 import { judgeTrickScore } from "@/lib/engine/scoring";
 import { ABSENT_REASON } from "@/lib/live/sheet-rule";
@@ -142,18 +143,7 @@ export function ImpressionDialog({ model, heatId, seatId, judgeNo, judge, riders
       <ul data-testid="impression-sheet" aria-label={H.sheetTitle(who, name)} className="flex flex-col gap-1">
         {riders.map((r) => (
           <li key={r.id}>
-            <button
-              type="button"
-              data-testid="sheet-rider"
-              data-rider={r.id}
-              data-state={drafts[r.id] ? (drafts[r.id].missed ? "absent" : "typed") : r.now.state}
-              aria-pressed={entry === r.id}
-              onClick={() => setEntry(r.id)}
-              className={cn(btn, "flex w-full items-center justify-between gap-2", entry === r.id ? "border-beach-accent bg-beach-surface" : "border-beach-border bg-beach-bg")}
-            >
-              <span className="min-w-0 text-left">{r.word}</span>
-              <span className="tabular-nums">{shown(r)}</span>
-            </button>
+            <RiderBar testId="sheet-rider" label={r.label} selected={entry === r.id} onSelect={() => setEntry(r.id)} scoreText={shown(r)} data-rider={r.id} data-state={drafts[r.id] ? (drafts[r.id].missed ? "absent" : "typed") : r.now.state} />
           </li>
         ))}
       </ul>
