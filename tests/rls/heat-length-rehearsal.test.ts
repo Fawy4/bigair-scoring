@@ -11,7 +11,7 @@ import { codeOf } from "./live-helpers";
 import { gounaTemplate, sharedFixture } from "./audit-1b-world";
 
 // Fix heat length — the audit's rehearsal harness (audit-1b-rehearsal.test.ts), one run, with TWO heats given another length in the run order (R1's second heat 7 minutes,
-// the Friday run order's third heat 4 minutes; the draw says otherwise): every heat's clock must match its run-order length at ×20, and the placings must agree with the
+// R1's fifth heat 14 minutes; the draw says otherwise): every heat's clock must match its run-order length at ×20, and the placings must agree with the
 // published results. Original header follows. Audit 1b, part 8 — event-day rehearsal, fully virtual at ×20 (docs/AUDIT.md). The Arrow format (24 riders, 15 heats over two days, KOTA, 3 judges + a head judge
 // who scores, 2 spotters, flags on with a 1:00 pre-start and a 1:00 last minute) is copied three times with "Run as simulation" and played from the first heat to
 // the final with the whole-event auto-play, each run with another judge spread and scenario buttons pressed at random moments. After each run: the final placings
@@ -19,7 +19,8 @@ import { gounaTemplate, sharedFixture } from "./audit-1b-world";
 // "tie", "judge_dies", "wind_hold" and "rerun" are left out: the first two block Publish until the head judge decides (a person, not this runner); the last two
 // call server actions that need a Next request. They are exercised in the browser (simulator.spec.ts, live-console.spec.ts, publish-blockers tests).
 const RUNS: Array<{ spread: "agree" | "normal" | "disagree"; scenarios: string[]; seed: number }> = [{ spread: "normal", scenarios: ["duplicate"], seed: 22 }];
-const OVERRIDE = { R1_SECOND: 7 * 60, FRIDAY_THIRD: 4 * 60 };
+const CONTROL = process.env.HEAT_LENGTH_CONTROL === "1"; // a control run without any run-order length, to tell this fix from the rest of the system
+const OVERRIDE = { R1_SECOND: 7 * 60, FRIDAY_THIRD: 14 * 60 };
 const overridden: { seven?: string; four?: string } = {};
 const expectedSec = new Map<string, number>(); // draw_uid -> the length the run order gives (the draw's own copy where the run order has none)
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -32,8 +33,11 @@ describe.skipIf(!ENV_OK)("Audit 1b — event-day rehearsal at ×20, three runs",
   beforeAll(async () => {
     const f = await sharedFixture();
     const s = f.s;
-    const today = "2026-10-08";
-    source = (await s.from("events").insert({ organisation_id: f.ids.orgA, name: "Gouna rehearsal source", slug: `a1b-reh-${randomUUID().slice(0, 6)}`, status: "published", timezone: "Africa/Cairo", start_date: today, end_date: "2026-10-09", settings: { flags: { enabled: true, prestartSec: 60, lastMinuteSec: 60 }, maxRunningHeats: 1, publicLiveScores: "live" } as never }).select("id").single()).data!.id;
+    // the days are today and tomorrow: a run order pinned to a day that is still days away makes the auto-play (rightly) wait for it, scaled by the speed
+    const cairo = (ms: number) => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" }).format(ms);
+    const today = cairo(Date.now());
+    const tomorrow = cairo(Date.now() + 24 * 3600_000);
+    source = (await s.from("events").insert({ organisation_id: f.ids.orgA, name: "Gouna rehearsal source", slug: `a1b-reh-${randomUUID().slice(0, 6)}`, status: "published", timezone: "Africa/Cairo", start_date: today, end_date: tomorrow, settings: { flags: { enabled: true, prestartSec: 60, lastMinuteSec: 60 }, maxRunningHeats: 1, publicLiveScores: "live" } as never }).select("id").single()).data!.id;
     const panel = (await s.from("panels").insert({ event_id: source, name: "Panel" }).select("id").single()).data!.id;
     let seatNo = 0;
     for (const [name, role, scores] of [["Judge 1", "judge", true], ["Judge 2", "judge", true], ["Judge 3", "judge", true], ["Head judge", "head", true], ["Spotter 1", "spotter", false], ["Spotter 2", "spotter", false]] as const) {
@@ -53,11 +57,13 @@ describe.skipIf(!ENV_OK)("Audit 1b — event-day rehearsal at ×20, three runs",
     const rest = heats.filter((h) => !h.draw_uid?.startsWith("R1"));
     for (const h of heats) expectedSec.set(h.draw_uid!, h.duration_sec);
     overridden.seven = r1[1].draw_uid!;
-    overridden.four = rest[2].draw_uid!;
-    expectedSec.set(overridden.seven!, OVERRIDE.R1_SECOND);
-    expectedSec.set(overridden.four!, OVERRIDE.FRIDAY_THIRD);
-    await s.from("schedule_plans").insert({ event_id: source, day: today, name: "Thursday", active: true, items: r1.map((h, i) => ({ id: `t${i}`, kind: "heat", heatId: h.id, ...(i === 1 ? { durationMin: OVERRIDE.R1_SECOND / 60 } : {}) })), anchors: { t0: "10:00" } });
-    await s.from("schedule_plans").insert({ event_id: source, day: "2026-10-09", name: "Friday", active: true, items: rest.map((h, i) => ({ id: `f${i}`, kind: "heat", heatId: h.id, ...(i === 2 ? { durationMin: OVERRIDE.FRIDAY_THIRD / 60 } : {}) })), anchors: { f0: "10:00" } });
+    overridden.four = r1[4].draw_uid!;
+    if (!CONTROL) {
+      expectedSec.set(overridden.seven!, OVERRIDE.R1_SECOND);
+      expectedSec.set(overridden.four!, OVERRIDE.FRIDAY_THIRD);
+    }
+    await s.from("schedule_plans").insert({ event_id: source, day: today, name: "Thursday", active: true, items: r1.map((h, i) => ({ id: `t${i}`, kind: "heat", heatId: h.id, ...(i === 1 && !CONTROL ? { durationMin: OVERRIDE.R1_SECOND / 60 } : {}), ...(i === 4 && !CONTROL ? { durationMin: OVERRIDE.FRIDAY_THIRD / 60 } : {}) })), anchors: { t0: "10:00" } });
+    await s.from("schedule_plans").insert({ event_id: source, day: tomorrow, name: "Friday", active: true, items: rest.map((h, i) => ({ id: `f${i}`, kind: "heat", heatId: h.id,  })), anchors: {} });
   }, 600_000);
 
   afterAll(async () => {
@@ -92,6 +98,8 @@ describe.skipIf(!ENV_OK)("Audit 1b — event-day rehearsal at ×20, three runs",
       const blockers: string[] = [];
       const started = Date.now();
       let ticks = 0;
+      let lastPublished = 0;
+      let lastProgress = Date.now();
       let stuckSince: number | null = null;
       for (;;) {
         ticks++;
@@ -112,6 +120,9 @@ describe.skipIf(!ENV_OK)("Audit 1b — event-day rehearsal at ×20, three runs",
         const ctl = (await s.from("sim_control").select("state, blocker").eq("event_id", sim).single()).data!;
         if (ctl.state === "stopped") break;
         if (Date.now() - started > 45 * 60_000) break;
+        const pub = (await s.from("heats").select("id", { count: "exact", head: true }).eq("event_id", sim).eq("status", "published")).count ?? 0;
+        if (pub > lastPublished) { lastPublished = pub; lastProgress = Date.now(); }
+        if (Date.now() - lastProgress > 8 * 60_000) break; // nothing published for 8 minutes: stuck, stop and look
         if (stuckSince && Date.now() - stuckSince > 180_000) break;
         await sleep(800);
       }
@@ -131,18 +142,9 @@ describe.skipIf(!ENV_OK)("Audit 1b — event-day rehearsal at ×20, three runs",
       const placings = divisionPlacings(draw);
       const finalHeat = heats.find((h) => h.draw_uid === draw.rounds.at(-1)!.heats[0].uid && h.status !== "cancelled");
       const finalRes = results.filter((r) => r.heat_id === finalHeat?.id && r.version === latest.get(finalHeat!.id)).sort((a, b) => a.place - b.place);
+      report.push({ stuck: heats.filter((h) => h.status !== "published").map((h) => `${h.draw_uid}:${h.status}`) });
       report.push({ run: n + 1, spread: run.spread, ticks, minutes: Math.round((Date.now() - started) / 6000) / 10, pressed, blockers, published: heats.filter((h) => h.status === "published").length, cancelled: heats.filter((h) => h.status === "cancelled").length });
 
-      expect(owned, "one live heat per draw position").toHaveLength(15);
-      expect(owned.every((h) => h.status === "published"), `every heat published (blockers: ${blockers.join(" | ")})`).toBe(true);
-      expect(heats.filter((h) => h.armed_at)).toHaveLength(0);
-      expect(heats.filter((h) => ["running", "paused"].includes(h.status))).toHaveLength(0);
-      for (const [from, to] of [["R1", "R2"], ["R2", "SF"], ["SF", "F"]]) expect(await ridersOf(to), `${to} riders = ${from} winners`).toEqual(winners(from));
-      expect(Object.keys(draw.results ?? {})).toHaveLength(15);
-      // the champion and the runner-up of the placings are the final's 1st and 2nd
-      expect(finalRes.map((r) => r.entry_id).slice(0, 2)).toEqual([1, 2].map((pl) => placings.find((p) => p.place === pl)?.entrantId));
-      // every rider is placed exactly once
-      expect(new Set(placings.map((p) => p.entrantId)).size).toBe(24);
       // every heat's clock matched its run-order length: the fast clock holds the run order's seconds (original) and ran them divided by 20; nobody ran past it
       const clocks = (await s.from("sim_clock").select("heat_id, original_sec, speed").eq("event_id", sim)).data ?? [];
       const rows = (await s.from("heats").select("id, draw_uid, duration_sec, extra_sec, started_at, ended_at, paused_total_sec").eq("event_id", sim)).data ?? [];
@@ -159,9 +161,21 @@ describe.skipIf(!ENV_OK)("Audit 1b — event-day rehearsal at ×20, three runs",
       }
       const seven = rows.find((x) => x.draw_uid === overridden.seven);
       const four = rows.find((x) => x.draw_uid === overridden.four);
-      expect(seven!.duration_sec - seven!.extra_sec).toBe(21);
-      expect(four!.duration_sec - four!.extra_sec).toBe(12);
+      if (!CONTROL) {
+        expect(seven!.duration_sec - seven!.extra_sec).toBe(21);
+        expect(four!.duration_sec - four!.extra_sec).toBe(42);
+      }
       report.push({ lengths });
+      expect(owned, "one live heat per draw position").toHaveLength(15);
+      expect(owned.every((h) => h.status === "published"), `every heat published (blockers: ${blockers.join(" | ")})`).toBe(true);
+      expect(heats.filter((h) => h.armed_at)).toHaveLength(0);
+      expect(heats.filter((h) => ["running", "paused"].includes(h.status))).toHaveLength(0);
+      for (const [from, to] of [["R1", "R2"], ["R2", "SF"], ["SF", "F"]]) expect(await ridersOf(to), `${to} riders = ${from} winners`).toEqual(winners(from));
+      expect(Object.keys(draw.results ?? {})).toHaveLength(15);
+      // the champion and the runner-up of the placings are the final's 1st and 2nd
+      expect(finalRes.map((r) => r.entry_id).slice(0, 2)).toEqual([1, 2].map((pl) => placings.find((p) => p.place === pl)?.entrantId));
+      // every rider is placed exactly once
+      expect(new Set(placings.map((p) => p.entrantId)).size).toBe(24);
     }, 50 * 60_000);
   }
 });
