@@ -2,7 +2,7 @@
 
 Step 6 of an event (/org/events/‹id›/schedule): the order of the day's heats and breaks, one or more plans per day, the pinned start times, and every time that follows from them.
 
-Last checked: 3 Oct 2026 · Product version 0.12.0
+Last checked: 6 Oct 2026 · Product version 0.17.1
 
 ## What it is for {#ro-purpose}
 
@@ -25,7 +25,7 @@ The timetable works like a spreadsheet: a row's end = its start + its length (wa
 | **Heats not in the run order** | **Add** one heat, **Add all ‹n›**, or drag a heat in. |
 | Row: drag handle, ↑ ↓, ✕ | Move or take out a row. |
 | Row: start time (“Tap to pin a start time”) → **Pin** / **Remove pin** | Pin a “not before” time. Pin at least the first row: without it there is no finish (“No finish yet: pin the first start time”). |
-| Row: **Length**, **Break**, warm-up | A row's own length (minutes; any heat that has not started), the break after it, the warm-up before it. |
+| Row: **Length**, **Break**, warm-up | A row's own length (minutes; any heat that has not started), the break after it, the warm-up before it. **The length here is what the heat runs:** when the heat starts, its clock (on the head console, the judges' phones, the Flag view, the big screens and the public live page) counts down from this row's length, not from the length the draw gave the heat; a row with no length of its own (left blank) uses the draw's. Change it as often as you like until the heat starts; a heat that has started, ended or been published never changes. The head judge's **+1 min** adds on top. |
 | **Add break** (**Break name**, **Minutes**), **Add note** | A break row (Lunch, 45) or a note row (“Wind call 09:00”). |
 | **Break after every heat** + **Set for all heats** | One break for every heat row. |
 | Header | Projected finish, heats left, first warm-up, “On hold since ‹time›”, the drift badge (“On schedule”, “6 min late”), the time now; “Heats already ran on ‹day›” once heats of the plan have real start times. |
@@ -37,4 +37,4 @@ The timetable works like a spreadsheet: a row's end = its start + its length (wa
 
 ## What it depends on {#ro-depends}
 
-Heats exist only after a draw (“There are no heats yet. Make each division's draw first.”). Heat lengths come from Divisions → Format (heat length per round). The ready call is set once in the Event step. The Go live checklist asks for a plan active **for today** in the event's time zone ([dependency map](../dependencies.md#dep-times)).
+Heats exist only after a draw (“There are no heats yet. Make each division's draw first.”). Heat lengths start from Divisions → Format (**Timing per round**, the starting plan); once a heat is in the run order, the length on its row is the one that counts. The ready call is set once in the Event step. The Go live checklist asks for a plan active **for today** in the event's time zone ([dependency map](../dependencies.md#dep-times)).

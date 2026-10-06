@@ -24,6 +24,7 @@ export {
   activate,
   deletePlan,
   changeHeatLength,
+  clockLengthSec,
   lengthText,
   timetableExportRows,
   ladderTime,
