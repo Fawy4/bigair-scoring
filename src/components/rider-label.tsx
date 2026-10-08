@@ -49,7 +49,7 @@ export function RiderLabel({
     // the Draw step: the whole label on one line, small: the colour (or number) block, the name, the seed. `dense` (the Impression card) adds the rest of the label after the name.
     const style = labelStyleOfPrimary(p);
     const name = label.secondary.find((x) => x.key === "name");
-    const nameText = style === "name-first" ? p.text : name?.text;
+    const nameText = style === "name-first" ? p.text : (name?.text ?? label.name);
     const rest = dense ? label.secondary.filter((x) => x.key !== "name").map((x) => x.text).join(" · ") : "";
     const lh = dense ? "leading-4" : "leading-6";
     const tx = dense ? "text-small" : "text-sm";
@@ -69,7 +69,7 @@ export function RiderLabel({
             <span data-testid="rider-label-text">{p.text}</span>
           </span>
         ) : null}
-        <span data-testid={style === "name-first" ? "rider-label-primary" : "rider-label-name"} className={cn("min-w-0 flex-1 truncate font-semibold text-beach-ink", tx, lh)}>
+        <span data-testid={style === "name-first" ? "rider-label-primary" : "rider-label-name"} className={cn("min-w-0 flex-1 font-semibold text-beach-ink", dense ? "truncate" : "break-words", tx, dense ? lh : "leading-5")}>
           {style === "name-first" ? <span data-testid="rider-label-text">{nameText}</span> : nameText}
         </span>
         {rest ? (
@@ -89,7 +89,7 @@ export function RiderLabel({
     const style = labelStyleOfPrimary(p);
     const name = label.secondary.find((x) => x.key === "name");
     const rest = label.secondary.filter((x) => x.key !== "name");
-    const nameText = style === "name-first" ? p.text : name?.text;
+    const nameText = style === "name-first" ? p.text : (name?.text ?? label.name);
     const S = screen
       ? { gap: "gap-[1.2vw]", colour: "rounded-[0.6vw] px-[1vw] py-[0.1vw] text-[2.6vw] font-semibold leading-tight tracking-wide", number: "rounded-[0.6vw] border-[0.25vw] border-[var(--bs-ink)] bg-[var(--bs-bg)] px-[1vw] text-[2.6vw] font-semibold leading-tight text-[var(--bs-ink)]", name: "text-[2.8vw] font-semibold text-[var(--bs-ink)]", rest: "text-[1.8vw] font-medium text-[var(--bs-muted)]", ring: "var(--bs-ring)" }
       : { gap: "gap-2", colour: "rounded-lg px-2 py-0.5 text-name font-semibold leading-tight tracking-wide", number: "rounded-lg border-2 border-beach-ink bg-beach-surface px-2 py-0.5 text-name font-semibold leading-tight text-beach-ink", name: "text-name font-semibold text-beach-ink", rest: "text-small font-medium text-beach-muted", ring: "var(--beach-ink)" };

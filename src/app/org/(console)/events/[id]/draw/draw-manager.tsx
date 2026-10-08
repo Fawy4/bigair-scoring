@@ -22,6 +22,7 @@ import {
   type DrawHeat,
   type DrawRound,
 } from "@/lib/engine/ladder";
+import { dealsSeatColours, staleColours } from "@/lib/draw/seat-colours";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
 import { copy } from "@/lib/ui-copy";
 import { editDraw, generateDraw, lockDraw, unlockDraw } from "./actions";
@@ -45,6 +46,7 @@ export interface SelectedDivision {
   started: boolean;
   draw: DivisionDraw | null;
   scheme: IdentificationScheme;
+  schemeFrom: "event" | "division";
   riders: number;
   formatName: string | null;
   formatProblem: string | null;
@@ -392,6 +394,14 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
             </div>
           ) : null}
 
+          {dealsSeatColours(selected.scheme) ? (
+            <div className="flex flex-col gap-0.5" data-testid="seat-colour-list">
+              <p className="text-body font-semibold" data-testid="seat-colour-sentence">
+                {(selected.schemeFrom === "division" ? copy.draw.seatColours.usingDivision : copy.draw.seatColours.usingEvent)(selected.scheme.palette.map((c) => c.label).join(", "))}
+              </p>
+              {staleColours(draw, selected.scheme) ? <p className="text-body font-semibold" data-testid="seat-colour-stale">{copy.draw.seatColours.stale}</p> : null}
+            </div>
+          ) : null}
           <Ladder
             draw={draw}
             scheme={selected.scheme}

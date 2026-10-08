@@ -12,6 +12,25 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.18.2 — 8 Oct 2026 {#release-0-18-2}
+
+PR: #43
+
+### What changed
+- **The Draw page's seat colours follow the event's own colour list.** Fault seen on the live address: with the list cut to Red, Black, White, seat 1 showed RED but seats 2 and 3 showed "NOT SET" with no rider name; after putting the list back in order Red, Black, White and regenerating, seats still showed RED / YELLOW / BLUE. Cause: the draw dealt colours from the built-in list of the format, not from the event's list. Now seat 1 gets the first colour of the event's list, seat 2 the second, seat 3 the third, when a draw is made, regenerated, when a rider is moved by hand and in every later round. A division with its own list uses its own, and a line above the ladder says which list is in use.
+- **A list with too few colours is refused**: "Heats here have up to 3 riders — keep at least 3 colours." (when saving the list, and when pressing Generate draw).
+- **The rider label always shows the colour word and the name**, wrapping on a second line instead of being cut. If a colour is ever missing the name still shows.
+- **"Changed by hand" now sits under the seat**, never over the colour or the name.
+- A draw made before this fix keeps its old colours until **Regenerate draw** is pressed (a hand change also re-deals heats that have not started). A line on the Draw page says when that is the case.
+
+### What to test
+- [ ] Event step → More settings → Rider identification: the colour palette is Red, Black, White in that order. Draw → pick "Big Air Open" → **Regenerate draw**: every heat shows seat 1 RED, seat 2 BLACK, seat 3 WHITE, each with the rider's name, and the line above the ladder says "Seat colours follow the event's list: Red, Black, White."
+- [ ] Move a rider by hand into another heat's seat 3: the rider now shows WHITE, the "changed by hand" tag sits under their name, not over it.
+- [ ] On a phone, join as a judge in a heat of three: the rider strip shows the same colour word and name per rider as the Draw page.
+
+### Known issues
+- The list is checked against the draws already made and when a draw is generated; a division that has no draw yet is checked when you press Generate draw.
+
 ## 0.18.1 — 6 Oct 2026 {#release-0-18-1}
 
 PR: #42

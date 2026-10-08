@@ -44,11 +44,16 @@ function SeatBody({ draw, scheme, round, slot, compact }: { draw: DivisionDraw; 
   const rider = riderOf(draw, slot);
   if (rider) {
     return (
-      <span className="flex min-w-0 items-center gap-1.5">
-        <RiderLabel scheme={scheme} variant="row" seed={slot.seed} className="min-w-0 flex-1" rider={{ name: rider.name, identifiers: rider.identifiers, slotColour: slot.vestColour }} />
-        {slot.modifier === "DNS" ? <span className="badge-note">{T.walkover}</span> : null}
-        {slot.manual ? <span className="badge-note">{T.byHand}</span> : null}
-        {rider.withdrawn && slot.modifier !== "DNS" ? <span className="badge-note">{T.withdrawn}</span> : null}
+      <span className="flex min-w-0 flex-col gap-0.5 py-0.5">
+        <RiderLabel scheme={scheme} variant="row" seed={slot.seed} className="min-w-0" rider={{ name: rider.name, identifiers: rider.identifiers, slotColour: slot.vestColour }} />
+        {slot.modifier === "DNS" || slot.manual || rider.withdrawn ? (
+          // the tags sit under the label, so they never cover the colour or the name
+          <span className="flex flex-wrap gap-1" data-testid="seat-tags">
+            {slot.modifier === "DNS" ? <span className="badge-note">{T.walkover}</span> : null}
+            {slot.manual ? <span className="badge-note" data-testid="seat-by-hand">{T.byHand}</span> : null}
+            {rider.withdrawn && slot.modifier !== "DNS" ? <span className="badge-note">{T.withdrawn}</span> : null}
+          </span>
+        ) : null}
       </span>
     );
   }

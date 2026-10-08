@@ -7,7 +7,8 @@ import { canonicalHash } from "@/lib/presets/plan";
 import { asNewPreset, importFormatTemplate, importScoringModel, type PresetKind } from "@/lib/presets/io";
 import type { PresetRow } from "@/lib/presets/options";
 import { FormatTemplateSchema } from "@/lib/schemas/format-template";
-import { IdentificationSchemeSchema } from "@/lib/schemas/identification";
+import { colourListRefusal } from "@/lib/draw/server";
+import { IdentificationSchemeSchema, type IdentificationScheme } from "@/lib/schemas/identification";
 import { EVENT_VOCABULARY_KEY, loadEventBlocks, loadEventVocabulary } from "@/lib/org/trick-vocabulary";
 import { addLocalBlock, FAMILIES, familiesOf, type BuiltInFamily, type LocalBlock } from "@/lib/trick-base";
 import { ScoringModelSchema } from "@/lib/schemas/scoring-model";
@@ -233,6 +234,10 @@ export async function saveDivisionIdentification(input: { divisionId: string; sc
   const { supabase } = await getDb();
   const d = await eventOf(supabase, input.divisionId);
   if (!d) return { ok: false, error: E.notFound };
+  if (stored) {
+    const tooFew = await colourListRefusal(supabase, d.event_id, (stored.scheme as IdentificationScheme), { divisionId: input.divisionId });
+    if (tooFew) return { ok: false, error: tooFew };
+  }
   const { data, error } = await supabase.from("divisions").update({ identification: stored as never }).eq("id", input.divisionId).select("id");
   if (error || !data?.length) return { ok: false, error: I.failed };
   return { ok: true };

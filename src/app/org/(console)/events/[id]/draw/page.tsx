@@ -70,6 +70,7 @@ export default async function DrawStepPage({ params, searchParams }: { params: P
           started: ctx.started,
           draw: ctx.draw,
           scheme: ctx.scheme,
+          schemeFrom: ctx.schemeFrom,
           riders: summaries.find((s) => s.id === current.id)!.riders,
           formatName: ctx.template ? (ctx.template.name ?? format?.name ?? null) : null,
           formatProblem: ctx.templateError,

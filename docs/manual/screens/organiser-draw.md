@@ -2,7 +2,7 @@
 
 Step 5 of an event (/org/events/‹id›/draw): each division's ladder made from its format and its confirmed riders, moved by hand if needed, then locked.
 
-Last checked: 3 Oct 2026 · Product version 0.13.0
+Last checked: 8 Oct 2026 · Product version 0.18.2
 
 ## What it is for {#dr-purpose}
 
@@ -15,6 +15,17 @@ The cards are compact: a seat is one line (its number, the Lycra block, the name
 
 ![Draw on a phone](../img/org-draw-390.png)
 *org-draw-390.png — the ladder on a phone (scrolls sideways inside its box).*
+
+## Seat colours {#dr-seat-colours}
+
+When Lycras change every heat, **seat 1 of every heat wears the first colour of the event's list, seat 2 the second, seat 3 the third**, in the order set in the Rider identification card of the [Event step](organiser-event.md#ev-lycra-colours). A line above the ladder says which list is used (“Seat colours follow the event's list: Red, Black, White.”); a division with its own scheme (Divisions → Rider identification, when the event allows it) uses its own list and the line says “this division's own list”. A rider moved by hand wears the colour of the seat they land in, and the later rounds (“1st H2”, “2nd H5”) get the same colours once their seats fill. The judge's phone, the spotter, the head judge console and the public pages show the same colour word and name as this page.
+
+Each seat shows the colour word and the rider's name, wrapped on a second line when the name is long, never cut. A small “changed by hand” tag sits under the seat, never over the colour or the name.
+
+![Seats of a heat with Red, Black, White](../img/org-draw-seat-colours-1280.png)
+*org-draw-seat-colours-1280.png — Round 1 with the list Red, Black, White: every heat shows RED, BLACK, WHITE in seat order with the rider's name; two seats carry the “changed by hand” tag under the label.*
+
+**A draw made before the list was changed keeps its old colours** until you press **Regenerate draw** (any hand change also re-deals the colours of heats that have not started). The line “Some seats still wear colours from an older list. Press Regenerate draw to deal the list above.” appears while that is the case. A list with fewer colours than the biggest heat is refused: “Heats here have up to 3 riders — keep at least 3 colours.”
 
 ## Controls {#dr-controls}
 
@@ -41,6 +52,7 @@ Each sentence below appears under the button you pressed, with a **Learn more** 
 | “Choose a format for this division first.” ([row](../errors.md#err-draw-errors-noformat)) | The division has no format: Divisions → Format. |
 | “There are no confirmed riders to draw.” ([row](../errors.md#err-draw-errors-noriders)) | Confirm riders in the Riders step first. |
 | “There is no draw yet.” ([row](../errors.md#err-draw-errors-nodraw)) | Lock and Unlock need a draw: press **Generate draw**. |
+| “Heats here have up to ‹n› riders — keep at least ‹n› colours.” | The event's (or division's) colour list is shorter than the biggest heat. Add colours in the Rider identification card of the Event step (or the division's own), then save or regenerate. Refused when saving the list and when pressing **Generate draw** / **Regenerate draw**. |
 | (no refusal) | **Unlock draw** has a **Reason (optional, for the audit log)** box. One click unlocks; with the box empty the log says “no reason given”. |
 | “The format cannot make a draw: ‹why›” ([row](../errors.md#err-draw-errors-badformat)) | The format has no ladder for this number of riders: fix it in Divisions → Format. |
 | “You are not allowed to change this draw.” ([row](../errors.md#err-draw-errors-notallowed)) | Only organisers of the event change its draw. |

@@ -176,6 +176,8 @@ export interface ApplyResult {
 export interface DrawOverrides {
   /** Scheme that decides slot colours and which identifiers may clash (default `vests-per-heat`). */
   identification?: IdentificationSchemeId;
+  /** The event's own lycra colours (palette keys, in the organiser's order): seat 1 gets the first, seat 2 the second … Falls back to the format's list for draws made before this existed. */
+  vestColours?: string[];
   /** Seed of the shuffle for `random` seeding; stored in the draw so the draw is reproducible. */
   rngSeed?: number;
   /** roundId → number of heats; wins over `uneven`. */

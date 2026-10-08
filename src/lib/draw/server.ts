@@ -10,6 +10,7 @@ import { FORMAT_NULLABLE, mergeOverrides } from "@/lib/scoring-ui/overrides";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { applyHeatStatuses, confirmedEntrants, engineSchemeId, syncEntrants, toEntrantIdentifiers, type EntryInput } from "./entrants";
 import { drawProjection } from "./projection";
+import { biggestHeat, colourKeys, coloursRefusal, dealsSeatColours, recolour } from "./seat-colours";
 
 export type Db = SupabaseClient<Database>;
 
@@ -30,6 +31,8 @@ export interface DivisionContext {
   locked: boolean;
   draw: DivisionDraw | null;
   scheme: IdentificationScheme;
+  /** Whose colour list the seats follow: the event's, or this division's own (when the event allows it). */
+  schemeFrom: "event" | "division";
   template: FormatTemplate | null;
   templateError: string | null;
   entries: EntryInput[];
@@ -72,6 +75,7 @@ export function divisionContextFrom(div: ContextDivisionRow, entryRows: readonly
     : { scheme: defaultScheme(), allowDivisionOverride: false };
   const own = divisionScheme(div.identification);
   const scheme = effectiveScheme(eventIdentification, own ? { scheme: own } : null);
+  const schemeFrom = own && eventIdentification.allowDivisionOverride ? "division" : "event";
 
   let template: FormatTemplate | null = null;
   let templateError: string | null = null;
@@ -100,6 +104,7 @@ export function divisionContextFrom(div: ContextDivisionRow, entryRows: readonly
     locked: Boolean(div.draw_locked_at),
     draw,
     scheme,
+    schemeFrom,
     template,
     templateError,
     entries,
@@ -156,10 +161,12 @@ export async function generate(supabase: Db, divisionId: string, options: { keep
   if (entrants.length === 0) throw new DrawError("no_riders", "No confirmed riders.");
   let fresh: DivisionDraw;
   try {
-    fresh = expandFormat(ctx.template, entrants, { identification: engineSchemeId(ctx.scheme) });
+    fresh = expandFormat(ctx.template, entrants, { identification: engineSchemeId(ctx.scheme), vestColours: colourKeys(ctx.scheme) });
   } catch (e) {
     throw new DrawError("bad_format", (e as Error).message);
   }
+  const refusal = coloursRefusal(ctx.scheme, biggestHeat(fresh));
+  if (refusal) throw new DrawError("failed", refusal);
   let kept: string[] = [];
   let dropped: string[] = [];
   if (options.keepArranged && ctx.draw && arrangedParts(ctx.draw).heats.length > 0) {
@@ -219,7 +226,9 @@ export async function edit(supabase: Db, divisionId: string, e: DrawEdit): Promi
   const before = snapshot(ctx.draw, touchedHeatIds(e));
   let result;
   try {
-    result = applyDrawEdit(ctx.draw, e);
+    // the seats follow the scheme's list as it is now, so a rider moved by hand wears the colour of the seat he lands in
+    const current = dealsSeatColours(ctx.scheme) ? recolour(ctx.draw, colourKeys(ctx.scheme)) : ctx.draw;
+    result = applyDrawEdit(current, e);
   } catch (err) {
     throw new DrawError("failed", (err as Error).message);
   }
@@ -236,4 +245,18 @@ export async function lock(supabase: Db, divisionId: string): Promise<void> {
 export async function unlock(supabase: Db, divisionId: string, reason: string): Promise<void> {
   const { error } = await supabase.rpc("unlock_division_draw", { p_division: divisionId, p_reason: reason });
   if (error) throw drawErrorOf(error.message);
+}
+
+/** Before a colour list is saved: the sentence if any drawn heat of these divisions has more riders than the list has colours, otherwise null. */
+export async function colourListRefusal(supabase: Db, eventId: string, scheme: IdentificationScheme, only?: { divisionId: string }): Promise<string | null> {
+  if (!dealsSeatColours(scheme)) return null;
+  let q = supabase.from("divisions").select("id, draw, identification").eq("event_id", eventId);
+  if (only) q = q.eq("id", only.divisionId);
+  const { data } = await q;
+  let biggest = 0;
+  for (const d of data ?? []) {
+    const draw = d.draw as unknown as DivisionDraw | null;
+    if (draw?.rounds) biggest = Math.max(biggest, biggestHeat(draw));
+  }
+  return coloursRefusal(scheme, biggest);
 }

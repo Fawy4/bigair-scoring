@@ -38,7 +38,7 @@ export const seedNumber = (draw: DivisionDraw, entrantId: string): number => dra
 export function vestColourFor(draw: DivisionDraw, index: number): string | undefined {
   const scheme = draw.overrides.identification ?? DEFAULT_SCHEME;
   if (!VEST_SCHEMES.includes(scheme)) return undefined;
-  const palette = draw.template.vestColours;
+  const palette = draw.overrides.vestColours?.length ? draw.overrides.vestColours : draw.template.vestColours;
   return palette[index % palette.length];
 }
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { colourListRefusal } from "@/lib/draw/server";
 import { getDb, getOrgContext } from "@/lib/org/context";
 import { canonicalHash } from "@/lib/presets/plan";
 import { brandingPathFromUrl } from "@/lib/branding/image";
@@ -50,6 +51,9 @@ export async function saveEvent(id: string | null, raw: unknown, status: "draft"
 
   const { data: before } = await supabase.from("events").select("organisation_id, status, settings, branding").eq("id", id).maybeSingle();
   if (!before) return { ok: false, error: T.notFound };
+  const list = form.settings.identification?.scheme;
+  const tooFew = list ? await colourListRefusal(supabase, id, list) : null;
+  if (tooFew) return { ok: false, error: tooFew, fields: { identification: tooFew } };
   const patch: Record<string, unknown> = {
     name: form.name,
     slug: form.slug,

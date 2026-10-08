@@ -35,6 +35,8 @@ export interface LabelPrimary {
 
 export interface LabelModel {
   primary: LabelPrimary;
+  /** The rider's name, always: a label whose scheme does not list the name (or whose colour is missing) still says who it is. */
+  name: string;
   secondary: Array<{ key: string; text: string }>;
   /** What the spotter calls out for this rider. */
   callout: string;
@@ -107,6 +109,8 @@ export function riderLabelModel(scheme: IdentificationScheme, rider: LabelRider)
     primaryFor(scheme, rider, scheme.primary, false) ??
     (scheme.fallbackPrimary ? primaryFor(scheme, rider, scheme.fallbackPrimary, true) : null) ?? {
       kind: "none" as const,
+      // keeps the look of the scheme's main identifier, so a missing colour is a plain "NOT SET" block next to the name, never in place of it
+      source: scheme.primary,
       text: copy.riderLabel.notSet,
       outlined: true,
       ink: "#111111" as const,
@@ -150,7 +154,7 @@ export function riderLabelModel(scheme: IdentificationScheme, rider: LabelRider)
         break;
     }
   }
-  return { primary, secondary, callout: calloutFor(scheme, rider, primary) };
+  return { primary, name: rider.name.trim(), secondary, callout: calloutFor(scheme, rider, primary) };
 }
 
 function calloutFor(scheme: IdentificationScheme, rider: LabelRider, primary: LabelPrimary): string {
