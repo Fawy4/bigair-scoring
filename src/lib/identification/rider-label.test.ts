@@ -65,3 +65,13 @@ describe("rider label: name call-out", () => {
     expect(c.secondary.map((x) => x.text)).toEqual(["EG", "Sample Co."]);
   });
 });
+
+describe("a colour that is not on the event's list", () => {
+  it("never takes the rider's name away: NOT SET is a block beside the name", () => {
+    const scheme = builtInSchemes().find((s) => s.id === "vests-per-heat")!;
+    const m = riderLabelModel({ ...scheme, palette: scheme.palette.filter((c) => ["red", "black", "white"].includes(c.key)) }, { name: "Robert Ghitulescu", slotColour: "yellow" });
+    expect(m.primary.text).toBe("NOT SET");
+    expect(m.primary.source).toBe("vest_colour");
+    expect(m.name).toBe("Robert Ghitulescu");
+  });
+});

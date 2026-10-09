@@ -2,7 +2,7 @@
 
 Step 1 of an event (/org/events/‹id›/event, or **+ New event** on the events list): name, dates, place, time zone, branding, what the public sees, timing, registration, the officials' join details, rehearsal and visibility.
 
-Last checked: 4 Oct 2026 · Product version 0.15.1
+Last checked: 8 Oct 2026 · Product version 0.18.2
 
 ## What it is for {#ev-purpose}
 
@@ -47,6 +47,13 @@ Behind **More settings**, every section card (Web address, Branding and sponsor 
 | **Create event** / **Save event** | Saves the step; it answers when it is stored (under a second), and the left rail catches up a moment later. “● Unsaved changes” shows until you save. Problems are highlighted (“Some settings need fixing. They are highlighted below.”). |
 | **Next: Divisions →** | Saves first, then opens Divisions; stays with the error if the save fails. |
 | **Delete or archive this event** | Platform owner only: **Archive event** (hidden everywhere, nothing deleted, **Restore event** brings it back) and **Delete event** (type the web address; only while no result was published). Organisers see “Only platform owners can delete or archive an event here.” |
+
+## The Lycra colour list {#ev-lycra-colours}
+
+In the **Rider identification** card (under **More settings**), **Colour palette (in slot order)** is the event's list of Lycra colours. With “The lycra colour changes every heat”, seat 1 of each heat gets the first colour, seat 2 the second, and so on: keep only the colours you really have (for example Red, Black, White) and put them in the order you want, with ↑ ↓. The list needs at least as many colours as the biggest heat has riders: “Heats here have up to 3 riders — keep at least 3 colours.” See [Draw](organiser-draw.md#dr-seat-colours).
+
+![Rider identification card with Red, Black, White](../img/org-event-lycra-colours-1280.png)
+*org-event-lycra-colours-1280.png — the Rider identification card with the palette Red, Black, White (in this order) and the preview label.*
 
 ## What it depends on {#ev-depends}
 

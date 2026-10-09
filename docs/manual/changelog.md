@@ -2,7 +2,16 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 6 Oct 2026 · Product version 0.18.1
+Last checked: 8 Oct 2026 · Product version 0.18.2
+
+## 0.18.2 — 8 Oct 2026 {#cl-0-18-2}
+
+Release entry: [0.18.2](/admin/releases#release-0-18-2) (platform owner only)
+
+**What changed for users**
+- **Draw: seat colours follow the event's colour list.** Seat 1 gets the first colour of the list, seat 2 the second, seat 3 the third (also for a division's own list, hand moves and later rounds). The Draw page says which list it uses; a list shorter than the biggest heat is refused with “Heats here have up to 3 riders — keep at least 3 colours.” The rider label always shows the colour word and the name, and “changed by hand” sits under the seat. A draw made before keeps its old colours until **Regenerate draw**.
+
+**Manual pages updated:** [Draw](screens/organiser-draw.md), [Event](screens/organiser-event.md).
 
 ## 0.18.1 — 6 Oct 2026 {#cl-0-18-1}
 

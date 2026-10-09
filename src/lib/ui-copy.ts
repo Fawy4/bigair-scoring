@@ -1114,6 +1114,12 @@ export const copy = {
     removeHeatYes: "Yes, take it out",
     renameLabel: (name: string) => `Rename ${name}`,
     emptyState: "No draw yet. Generate one from the format and the confirmed riders.",
+    seatColours: {
+      tooFew: (biggest: number) => `Heats here have up to ${biggest} riders — keep at least ${biggest} colours.`,
+      usingEvent: (colours: string) => `Seat colours follow the event's list: ${colours}.`,
+      usingDivision: (colours: string) => `Seat colours follow this division's own list: ${colours}.`,
+      stale: "Some seats still wear colours from an older list. Press Regenerate draw to deal the list above.",
+    },
     ladder: {
       walkover: "walkover",
       byHand: "changed by hand",
