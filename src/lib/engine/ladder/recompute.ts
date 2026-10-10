@@ -100,7 +100,8 @@ const walkover = (from: Arrival["from"]): Arrival => ({ originalSeed: Number.MAX
 
 function slotFromArrival(draw: DivisionDraw, index: number, a: Arrival): Slot {
   const entrant = a.entrantId ? draw.entrants.find((e) => e.id === a.entrantId) : undefined;
-  const dns = a.modifier === "DNS" || entrant?.withdrawn;
+  // a walkover seat (nobody comes) or a rider who is out of the event is DNS; a rider who only did not start his last heat keeps his seat (Console – Walkover, "this heat only")
+  const dns = (a.modifier === "DNS" && !a.entrantId) || entrant?.withdrawn;
   return makeSlot(draw, index, {
     ...(a.entrantId ? { entrantId: a.entrantId, seed: a.originalSeed, history: a.history } : {}),
     from: a.from,

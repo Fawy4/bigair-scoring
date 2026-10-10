@@ -134,6 +134,8 @@ export interface RankedEntry {
   modifier?: LadderModifier;
   /** Tie-break keys from the scoring model, best first, higher is better (e.g. best counted trick, next, impression). */
   tieKeys?: number[];
+  /** 1st place without riding: the only rider who could ride (Console – Walkover). No total; in a round dealt by score he counts as a 1st place below every 1st place with a score. */
+  walkover?: boolean;
 }
 
 /** What the scoring engine hands over when a heat is published. */

@@ -41,7 +41,7 @@ let shared: Promise<Fixture> | null = null;
 /** One throwaway fixture per test file (its logins are named after the file's run id, so a second fixture in the same file would collide). */
 export const sharedFixture = (): Promise<Fixture> => (shared ??= buildFixture());
 
-export async function buildGouna(o: { reseed?: "by_original_seed" | "by_heat_score" | "by_place_then_score"; riders?: number; fixture?: Fixture; name?: string } = {}): Promise<GounaWorld> {
+export async function buildGouna(o: { reseed?: "by_original_seed" | "by_heat_score" | "by_place_then_score"; riders?: number; fixture?: Fixture; name?: string; template?: FormatTemplate } = {}): Promise<GounaWorld> {
   const f = o.fixture ?? (await sharedFixture());
   const s = f.s;
   await s.from("heats").update({ status: "ended", ended_at: ago(5) }).in("id", [f.ids.H1, f.ids.H4, f.ids.H5]).in("status", ["running", "paused"]);
@@ -65,7 +65,7 @@ export async function buildGouna(o: { reseed?: "by_original_seed" | "by_heat_sco
   const rows = (await s.from("entries").insert(riders.map((r, i) => ({ division_id: div, rider_id: r.id, seed: i + 1, status: "confirmed", source: "manual" }))).select("id, seed")).data!;
   rows.sort((a, b) => a.seed - b.seed);
   for (const r of rows) entries.push(r.id);
-  const draw = expandFormat(gounaTemplate(o.reseed), entries.map((id, i) => ({ id, name: `G${i + 1}` })), { identification: "vests-per-heat" });
+  const draw = expandFormat(o.template ?? gounaTemplate(o.reseed), entries.map((id, i) => ({ id, name: `G${i + 1}` })), { identification: "vests-per-heat" });
   const saved = await f.clients.orgA.rpc("save_division_draw", { p_division: div, p_draw: draw as never, p_projection: drawProjection(draw) as never, p_action: "generate", p_audit: { after: { summary: "audit 1b" } } as never });
   if (codeOf(saved)) throw new Error(`save draw: ${codeOf(saved)}`);
   const locked = await f.clients.orgA.rpc("lock_division_draw", { p_division: div });
