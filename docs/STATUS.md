@@ -1344,3 +1344,22 @@ Release entry 0.17.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 
 ### How to test on a phone
 - See the release entry 0.18.0 in docs/RELEASES.md.
+
+## Console – Walkover and absent riders (0.19.0)
+
+### Done
+- Engine: `heatCanWalkover` / `walkoverRanking` (`src/lib/engine/ladder/walkover.ts`): a heat with exactly one rider who can ride is a walkover (rider 1st, no total, `walkover` mark; the others Did not start); nobody left = empty result (nobody goes through, the seat it feeds is a walkover); a heat of three with one missing is not a walkover. A rider who only did not start keeps his next seat (the next seat is DNS only for a rider who is out of the event or a seat nobody fills). A walkover winner is dealt below every 1st place with a score.
+- Run order: a walkover heat has `started_at = ended_at = published_at`; it is "done", takes no time, no break follows it, the heats after it move up (never before a pin). Console, public timetable and `Walkover · 14:05` line.
+- Database (`20261107100000_console_walkover.sql`, adds only): `set_rider_status` also on a heat not started; `head_out_of_event`; `walkover_heat_commit` (service role); `walkover_reopen`; `get_public_results` names a rider who holds a seat but is out of the event. **Not applied to the hosted project: the management token in the environment answers 401.** Database tests (`tests/rls/walkover.test.ts`) and the browser tests (`e2e/walkover.spec.ts`) are written and have not run against the new functions.
+- Console (laptop): **···** on every rider card (not started, running, ended, under review), Did not start (this heat only) / Back in the heat / Out of the event, optional reason with quick picks, the big **Walkover — ‹rider› goes through** / **No rider — finish this heat** button, words instead of scores, Ties box empty and Publish asks once on a heat nobody rode, Re-open on a walkover heat.
+- Words: ladder, public results/live/Follow/big screen/rider page, results CSV and printable page, event backup (`status_word`), audit lines.
+- Simulator: scenario **Rider no-show → walkover** (virtual head presses the same function; a person who is head presses it themselves).
+- Manual: console page section, Riders step, simulator, troubleshooting row, glossary, resets, changelog; release 0.19.0.
+
+### Not done
+- Phone Control tab: no rider menu or Walkover button (laptop only).
+- Screenshots for the manual (spec `e2e/manual-shots-walkover.spec.ts` is in `npm run manual:shots`; not retaken: needs the migration on the hosted project).
+- `npm run db:types` not run (token); the new functions are called with untyped arguments until it is.
+
+### How to test
+Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm run test:rls -- tests/rls/walkover.test.ts tests/rls/observer.test.ts`; browser (one worker, no retries): `e2e/walkover.spec.ts`.
