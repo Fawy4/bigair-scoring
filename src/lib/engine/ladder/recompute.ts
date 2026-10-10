@@ -100,7 +100,8 @@ const walkover = (from: Arrival["from"]): Arrival => ({ originalSeed: Number.MAX
 
 function slotFromArrival(draw: DivisionDraw, index: number, a: Arrival): Slot {
   const entrant = a.entrantId ? draw.entrants.find((e) => e.id === a.entrantId) : undefined;
-  const dns = a.modifier === "DNS" || entrant?.withdrawn;
+  // a walkover seat (nobody comes) or a rider who is out of the event is DNS; a rider who only did not start his last heat keeps his seat (Console – Walkover, "this heat only")
+  const dns = (a.modifier === "DNS" && !a.entrantId) || entrant?.withdrawn;
   return makeSlot(draw, index, {
     ...(a.entrantId ? { entrantId: a.entrantId, seed: a.originalSeed, history: a.history } : {}),
     from: a.from,
@@ -141,7 +142,10 @@ function fillKnownSeats(draw: DivisionDraw, slots: Slot[][], arrivals: Arrival[]
     heat.map((slot) => {
       if (!slot.from || slot.from.heat === 0) return slot; // a place across all heats of a pool is only known when the pool is complete
       const arrival = arrivals.find((a) => a.entrantId && sameSource(a.from, slot.from!));
-      return arrival ? slotFromArrival(draw, slot.index, arrival) : slot;
+      if (arrival) return slotFromArrival(draw, slot.index, arrival);
+      // the feeding heat is decided and nobody holds this place (a heat finished with "No rider"): nobody comes, so the seat is a walkover seat, not a seat still waiting
+      const source = draw.rounds.find((r) => r.id === slot.from!.round)?.heats.find((h) => h.index === slot.from!.heat);
+      return source && draw.results[source.id] ? slotFromArrival(draw, slot.index, walkover(slot.from)) : slot;
     }),
   );
 }

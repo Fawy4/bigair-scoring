@@ -2,6 +2,7 @@ import { breakCountdown, computeTimetable, utcToLocalHHMM, type HeatLive, type R
 import { activePlanFor, type ActivePlan } from "@/lib/live/run-order";
 import { rowToPlan, todayIn } from "@/lib/schedule/plans";
 import { driftOf, plannedTimetable, type Drift } from "@/lib/schedule/drift";
+import { isWalkoverHeat } from "@/lib/live/walkover";
 import type { PublicTimetable, TimetableHeat } from "./types";
 
 export type PublicRowState = RowStatus;
@@ -29,6 +30,8 @@ export interface PublicRow {
   warmUpStart: string | null;
   /** Published but held back: the heat ran, its result will be announced. */
   resultHeld: boolean;
+  /** The heat was given as a walkover: nobody rode, it took no time. */
+  walkover?: boolean;
 }
 
 export interface PublicTimetableModel {
@@ -71,6 +74,7 @@ export function livesFromPublic(t: PublicTimetable): HeatLive[] {
       durationMin: h.duration_sec / 60,
       warmUpMin: h.warm_up_sec / 60,
       cancelled: h.status === "cancelled",
+      ...(isWalkoverHeat(h) ? { walkover: true } : {}),
       ...(h.break_after_heat_min !== null ? { breakAfterHeatMin: h.break_after_heat_min } : {}),
       ...(h.break_after_round_min !== null ? { breakAfterRoundMin: h.break_after_round_min } : {}),
     };
@@ -120,6 +124,7 @@ export function buildPublicTimetable(t: PublicTimetable | null, nowIso: string):
       readyCallUtc: r.readyCallUtc,
       warmUpStart: r.warmUpMin > 0 ? r.warmUpStart : null,
       resultHeld: r.heatId ? heldResult.has(r.heatId) : false,
+      walkover: Boolean(r.walkover),
     }));
   // a simulation at x10 has a break a tenth as long: the next heat shows the same start the head judge's break countdown and the auto-play use (Polish 3, item 3)
   const lastEnded = t.heats.filter((h) => h.ended_at).sort((a, b) => Date.parse(b.ended_at!) - Date.parse(a.ended_at!))[0];

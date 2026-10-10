@@ -18,7 +18,7 @@ export interface BoxVM {
   scoreLabel: string | null;
 }
 
-export type RiderState = "ok" | "DNS" | "DSQ" | "DNF";
+export type RiderState = "ok" | "DNS" | "DSQ" | "DNF" | "WO" | "OUT";
 
 export interface RiderRowVM {
   entryId: string | null;
@@ -110,7 +110,7 @@ function seatRows(slots: SlotRowPublic[], entries: Map<string, PublicEntry>, sch
       totalLabel: null,
       formula: null,
       percentLabel: null,
-      state: s.modifier === "DNS" ? "DNS" : "ok",
+      state: s.modifier === "DNS" ? (s.entry_id && entries.get(s.entry_id)?.withdrawn ? "OUT" : "DNS") : "ok",
       boxes: [],
     }));
 }
@@ -142,7 +142,7 @@ export function buildHeatTabs(results: PublicResults | null, site: PublicSite | 
             .map((x) => {
               const bd = x.breakdown;
               const status = (bd?.status ?? "ok") as RiderState;
-              const none = status === "DNS" || status === "DSQ";
+              const none = status === "DNS" || status === "DSQ" || status === "WO" || status === "OUT";
               const slot = h.slots.find((s) => s.entry_id === x.entry_id);
               return {
                 entryId: x.entry_id,

@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MoreVertical } from "lucide-react";
+import { MoreHorizontal, MoreVertical } from "lucide-react";
 import { Chip } from "./chip";
 import { plain } from "./console-parts";
-import { AddAttemptDialog, CellDialog, ClearNoteDialog, DeleteDialog, EditAttemptDialog, FlagOutDialog, ImpressionDialog, MergeDialog, StatusDialog } from "./head-console-dialogs";
+import { AddAttemptDialog, CellDialog, ClearNoteDialog, DeleteDialog, EditAttemptDialog, FlagOutDialog, ImpressionDialog, MergeDialog, StatusDialog, WalkoverDialog } from "./head-console-dialogs";
 import { TieDialog } from "./head-dialogs";
 import { HeadMatrix } from "./head-matrix";
 import { LearnMore } from "@/components/manual/learn-more";
@@ -22,6 +22,8 @@ import { Pill } from "./pill";
 import { RiderLabel } from "@/components/rider-label";
 import { outlierTolerance } from "@/lib/live/cell-tone";
 import { canMerge } from "@/lib/live/console-ops";
+import { heatCanWalkover } from "@/lib/engine/ladder";
+import { isWalkoverHeat, noRideText, type NoRideWord } from "@/lib/live/walkover";
 import type { HeadModel } from "@/lib/live/head-model";
 import type { FixTarget } from "@/lib/live/publish-checklist";
 import { impressionStatus } from "@/lib/live/impression-status";
@@ -39,6 +41,7 @@ import { cn } from "@/lib/utils";
 const C = copy.live.console;
 const H = copy.headLive;
 const V = copy.headV2;
+const W = copy.walkover;
 
 type Menu = { kind: "attempt"; attemptId: string } | { kind: "rider"; entryId: string } | null;
 type Dialog =
@@ -47,7 +50,8 @@ type Dialog =
   | { kind: "merge"; ids: string[] }
   | { kind: "edit"; attemptId: string }
   | { kind: "add" }
-  | { kind: "status"; entryId: string; status: "DNS" | "DNF" | "DSQ" | "INT" | "CLEAR" | "UNDO_INT"; penaltyId?: string }
+  | { kind: "status"; entryId: string; status: "DNS" | "DNF" | "DSQ" | "INT" | "CLEAR" | "UNDO_INT" | "BACK" | "OUT"; penaltyId?: string }
+  | { kind: "walkover" }
   | { kind: "impression"; seatId: string; entryId: string }
   | { kind: "tie"; riders: string[] }
   | { kind: "flagOut" }
@@ -55,6 +59,8 @@ type Dialog =
   | null;
 
 const editable = (status: string) => ["running", "paused", "ended", "under_review"].includes(status);
+/** The rider menu is there in every state a rider can still be marked: not started, running, ended, under review (a published heat is final until it is re-opened). */
+const riderMenuOpen = (status: string) => status === "scheduled" || editable(status);
 
 /**
  * The head judge's console for one heat on a laptop or tablet (docs/PLAN-phase-5 step 4): the live score table with each judge's cell coloured by its distance
@@ -105,6 +111,10 @@ export function HeadLiveConsole({
   const [order, setOrder] = useState<TableOrder>("newest");
   const [more, setMore] = useState(false);
   const [highlight, setHighlight] = useState<string | null>(null);
+  // riders taken out of the event on this screen (the rider list is read when the page loads; the next load has them from the database)
+  const [justOut, setJustOut] = useState<Set<string>>(new Set());
+  const [flash, setFlash] = useState<string | null>(null);
+  useEffect(() => setFlash(null), [heat.id]);
   useEffect(() => setOrder(readTableOrder(typeof window === "undefined" ? null : window.localStorage)), []);
   const side = useSideData(supabase, ctx.event.id, heat, head.matrix.judgeIds, ctx.seatNames, refreshKey, { audit: more });
   const judgeWord = (seatId: string) => judgeWordOf(side.judges.find((j) => j.id === seatId) ?? { name: null, tag: copy.live.matrix.aJudge });
@@ -190,11 +200,19 @@ export function HeadLiveConsole({
   const status = menuRider ? slotOf(menuRider.entryId)?.modifier : null;
   const riderItems: Array<[string, () => void, boolean]> = menuRider
     ? [
-        [C.dns, () => setDialog({ kind: "status", entryId: menuRider.entryId, status: "DNS" }), true],
-        [C.dnf, () => setDialog({ kind: "status", entryId: menuRider.entryId, status: "DNF" }), true],
-        [C.dsq, () => setDialog({ kind: "status", entryId: menuRider.entryId, status: "DSQ" }), true],
-        [C.interference, () => setDialog({ kind: "status", entryId: menuRider.entryId, status: "INT" }), true],
-        ...(status ? ([[H.clearStatus, () => setDialog({ kind: "status", entryId: menuRider.entryId, status: "CLEAR" }), true]] as Array<[string, () => void, boolean]>) : []),
+        // Did not start (this heat only) or, once it is set, Back in the heat; Out of the event; then the marks of a heat that is on the water
+        status === "DNS"
+          ? [W.backIn, () => setDialog({ kind: "status", entryId: menuRider.entryId, status: "BACK" }), true]
+          : [W.didNotStart, () => setDialog({ kind: "status", entryId: menuRider.entryId, status: "DNS" }), true],
+        [W.outOfEvent, () => setDialog({ kind: "status", entryId: menuRider.entryId, status: "OUT" }), !menuRider.outOfEvent && !justOut.has(menuRider.entryId)],
+        ...(open
+          ? ([
+              [C.dnf, () => setDialog({ kind: "status", entryId: menuRider.entryId, status: "DNF" }), true],
+              [C.dsq, () => setDialog({ kind: "status", entryId: menuRider.entryId, status: "DSQ" }), true],
+              [C.interference, () => setDialog({ kind: "status", entryId: menuRider.entryId, status: "INT" }), true],
+            ] as Array<[string, () => void, boolean]>)
+          : []),
+        ...(status && status !== "DNS" ? ([[H.clearStatus, () => setDialog({ kind: "status", entryId: menuRider.entryId, status: "CLEAR" }), true]] as Array<[string, () => void, boolean]>) : []),
         ...(penaltyOf(menuRider.entryId) ? ([[H.removeInterference, () => setDialog({ kind: "status", entryId: menuRider.entryId, status: "UNDO_INT", penaltyId: penaltyOf(menuRider.entryId)!.id }), true]] as Array<[string, () => void, boolean]>) : []),
       ]
     : [];
@@ -204,6 +222,17 @@ export function HeadLiveConsole({
   const title = heatTitle(ctx, heat);
   const dialogRows = (ids: string[]) => ids.flatMap((id) => (rowById(id) ? [rowById(id)!] : []));
 
+  // a rider who did not ride says so in words, never a score (Did not start · Out of the event · Walkover)
+  const walkedOver = isWalkoverHeat(heat);
+  const seatsNow = live.slots.filter((s) => s.heat_id === heat.id);
+  const winnerOfWalkover = walkedOver ? seatsNow.find((s) => s.entry_id && s.modifier !== "DNS")?.entry_id : undefined;
+  const noRideOf = (entryId: string): NoRideWord | null => {
+    if (slotOf(entryId)?.modifier === "DNS") return riderOf(entryId)?.outOfEvent || justOut.has(entryId) ? "outOfEvent" : "didNotStart";
+    return walkedOver && winnerOfWalkover === entryId ? "walkover" : null;
+  };
+  // the one big button: exactly one rider can ride (or none) in a heat that has not started
+  const armedNow = Boolean(heat.armed_at);
+  const walkoverState = heat.status === "scheduled" && !armedNow ? heatCanWalkover(seatsNow.map((s) => ({ entrantId: s.entry_id, modifier: s.modifier }))) : null;
   const stripTiles = riders.map((r) => {
     const total = head.totals.find((t) => t.entryId === r.entryId);
     const slot = slotOf(r.entryId);
@@ -223,37 +252,70 @@ export function HeadLiveConsole({
       <div className="flex min-w-0 flex-col gap-2">
         {!open ? <p className="text-small font-medium text-beach-muted">{heat.status === "published" ? C.published : ""}</p> : null}
 
+        {walkoverState && (walkoverState.kind === "walkover" || walkoverState.kind === "nobody") ? (
+          <button type="button" data-testid="walkover-button" data-kind={walkoverState.kind} onClick={() => setDialog({ kind: "walkover" })} className="flex min-h-[64px] w-full items-center justify-center rounded-card border-2 border-beach-accent bg-beach-accent px-3 py-2 text-center text-name font-bold text-beach-on-accent">
+            {walkoverState.kind === "walkover" ? W.button(wordFor(walkoverState.winner)) : W.nobodyButton}
+          </button>
+        ) : null}
+        {walkoverState?.kind === "waiting" && seatsNow.some((s) => s.entry_id && s.modifier === "DNS") ? (
+          <p data-testid="walkover-waiting" className="text-small font-medium text-beach-muted">{W.waitingNote}</p>
+        ) : null}
+        {flash ? (
+          <p data-testid="walkover-flash" role="status" className="rounded-lg border border-beach-line bg-beach-surface px-2 py-1 text-body font-semibold">
+            {flash}
+          </p>
+        ) : null}
+        {walkedOver ? <p data-testid="walkover-banner" className="rounded-lg border border-beach-live bg-beach-surface px-2 py-1 text-body font-semibold">{W.word.walkover}</p> : null}
         <section data-testid="rider-strip" aria-label={V.ridersStrip} className="flex flex-nowrap items-start gap-1.5" style={showImpressionCard ? { minHeight: CARD_ROW_MIN } : undefined}>
           {/* up to six riders share one line (the cards shrink a little before they wrap, so the table never moves); more riders wrap as before */}
           <div data-testid="rider-tiles" className={cn("flex min-w-0 flex-[0_1_auto] items-start gap-1.5", stripTiles.length <= 6 && showImpressionCard ? "flex-nowrap" : "flex-wrap")}>
-          {stripTiles.map(({ r, total, slot }) => (
-              <button
-                key={r.entryId}
-                type="button"
-                data-testid="rider-strip-tile"
-                data-rider={r.entryId}
-                disabled={!open}
-                aria-label={`${wordFor(r.entryId)}: ${C.riderMenu}`}
-                onClick={() => setMenu({ kind: "rider", entryId: r.entryId })}
-                className="flex min-h-tap min-w-[4.5rem] shrink flex-col items-start gap-0.5 rounded-card border border-beach-line bg-beach-surface px-2 py-1 text-left"
-              >
-                <span className="min-w-0 whitespace-normal break-words">{<RiderLabel model={r.label} variant="live" bare />}</span>
-                <span className="flex w-full flex-wrap items-baseline justify-between gap-x-2">
-                  <span data-testid="rider-strip-total" className="text-name font-semibold tabular-nums">
-                    {total?.totalLabel ?? copy.live.result.noTotal}
+          {stripTiles.map(({ r, total, slot }) => {
+            const noRide = noRideOf(r.entryId);
+            return (
+              <div key={r.entryId} data-testid="rider-card" data-rider={r.entryId} className="flex min-w-[4.5rem] shrink flex-col rounded-card border border-beach-line bg-beach-surface">
+                <button
+                  type="button"
+                  data-testid="rider-strip-tile"
+                  data-rider={r.entryId}
+                  disabled={!open}
+                  aria-label={`${wordFor(r.entryId)}: ${C.riderMenu}`}
+                  onClick={() => setMenu({ kind: "rider", entryId: r.entryId })}
+                  className="flex min-h-tap w-full flex-col items-start gap-0.5 rounded-card px-2 py-1 text-left"
+                >
+                  <span className="min-w-0 whitespace-normal break-words">{<RiderLabel model={r.label} variant="live" bare />}</span>
+                  <span className="flex w-full flex-wrap items-baseline justify-between gap-x-2">
+                    <span data-testid="rider-strip-total" className="text-name font-semibold tabular-nums">
+                      {noRide ? noRideText(noRide) : (heat.status === "scheduled" ? copy.live.result.noTotal : (total?.totalLabel ?? copy.live.result.noTotal))}
+                    </span>
+                    <span data-testid="rider-strip-attempts" className="text-small font-medium text-beach-muted tabular-nums">
+                      {V.attemptsShort(counts.get(r.entryId) ?? 0, cap)}
+                    </span>
                   </span>
-                  <span data-testid="rider-strip-attempts" className="text-small font-medium text-beach-muted tabular-nums">
-                    {V.attemptsShort(counts.get(r.entryId) ?? 0, cap)}
-                  </span>
-                </span>
-                {slot?.modifier ? <Pill tone="outlier">{slot.modifier}</Pill> : null}
-              </button>
-            ))}
+                  {slot?.modifier && !noRide ? <Pill tone="outlier">{slot.modifier}</Pill> : null}
+                  {noRide ? <Pill tone="outlier"><span data-testid="rider-noride">{noRideText(noRide)}</span></Pill> : null}
+                </button>
+                {riderMenuOpen(heat.status) ? (
+                  <button
+                    type="button"
+                    data-testid="rider-card-menu"
+                    data-rider={r.entryId}
+                    aria-label={W.menuButton(wordFor(r.entryId))}
+                    aria-haspopup="menu"
+                    onClick={() => setMenu({ kind: "rider", entryId: r.entryId })}
+                    className="flex min-h-[44px] w-full items-center justify-center rounded-b-card border-t border-beach-line text-name font-bold leading-none text-beach-ink"
+                  >
+                    <MoreHorizontal aria-hidden className="size-5" />
+                    <span aria-hidden className="sr-only">···</span>
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
           </div>
           {showImpressionCard ? <ImpressionCardInline name={impressionName} judges={side.judges} impressions={impressions} riders={riders} tolerance={impressionTolerance} onCell={open ? (seatId, entryId) => setDialog({ kind: "impression", seatId, entryId }) : undefined} /> : null}
         </section>
 
-        {open && menu ? (
+        {(menu?.kind === "rider" ? riderMenuOpen(heat.status) : open) && menu ? (
           <div role="menu" data-testid={menu.kind === "attempt" ? "attempt-menu" : "rider-menu"} className="flex flex-wrap items-center gap-1.5 rounded-card border border-beach-border bg-beach-surface p-1.5">
             <span className="text-small font-semibold text-beach-muted">
               {menu.kind === "attempt" && menuRow ? `${C.attemptMenu}: ${attemptWord(menuRow)}` : menuRider ? `${C.riderMenu}: ${wordFor(menuRider.entryId)}` : ""}
@@ -357,9 +419,9 @@ export function HeadLiveConsole({
                   </button>
                   <span className="flex flex-col items-end">
                     <span data-testid="console-total-value" className="text-name font-semibold tabular-nums">
-                      {t.totalLabel}
+                      {noRideOf(t.entryId) ? noRideText(noRideOf(t.entryId)!) : heat.status === "scheduled" ? copy.live.result.noTotal : t.totalLabel}
                     </span>
-                    {slot?.modifier ? <Pill tone="outlier">{slot.modifier}</Pill> : null}
+                    {slot?.modifier && !noRideOf(t.entryId) ? <Pill tone="outlier">{slot.modifier}</Pill> : null}
                   </span>
                 </div>
                 {t.formula ? <p className="text-small font-medium text-beach-muted">{t.formula}</p> : null}
@@ -477,7 +539,32 @@ export function HeadLiveConsole({
           })()
         : null}
       {dialog?.kind === "add" ? <AddAttemptDialog heatId={heat.id} riders={riders} counts={counts} cap={cap} role={role} hasActiveHead={hasActiveHead} wordFor={wordFor} onClose={close} onDone={done} /> : null}
-      {dialog?.kind === "status" ? <StatusDialog heatId={heat.id} entryId={dialog.entryId} who={wordFor(dialog.entryId)} status={dialog.status} penaltyId={dialog.penaltyId} onClose={close} onDone={done} /> : null}
+      {dialog?.kind === "status" ? (
+        <StatusDialog
+          heatId={heat.id}
+          entryId={dialog.entryId}
+          who={wordFor(dialog.entryId)}
+          status={dialog.status}
+          penaltyId={dialog.penaltyId}
+          onClose={close}
+          onDone={() => {
+            if (dialog.status === "OUT") setJustOut((all) => new Set(all).add(dialog.entryId));
+            done();
+          }}
+        />
+      ) : null}
+      {dialog?.kind === "walkover" && walkoverState && (walkoverState.kind === "walkover" || walkoverState.kind === "nobody") ? (
+        <WalkoverDialog
+          heatId={heat.id}
+          winner={walkoverState.kind === "walkover" ? wordFor(walkoverState.winner) : null}
+          others={walkoverState.others.map((id) => wordFor(id))}
+          onClose={close}
+          onDone={(text) => {
+            setFlash(text);
+            done();
+          }}
+        />
+      ) : null}
       {dialog?.kind === "impression" ? (
         <ImpressionDialog
           model={model}

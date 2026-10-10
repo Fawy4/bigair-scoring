@@ -2,6 +2,7 @@ import { holdPlan, resumePlanAt } from "@/lib/live/heat-actions";
 import { errorSentence } from "@/lib/live/errors";
 import { isArmedNow } from "@/lib/live/flags";
 import { rerunHeat } from "@/lib/live/head-actions";
+import { walkoverHeatCore } from "@/lib/live/walkover-core";
 import { publishHeatCore } from "@/lib/live/publish-core";
 import { trickKit } from "@/lib/live/screen-model";
 import type { AttemptRow, HeatRow } from "@/lib/live/types";
@@ -13,7 +14,7 @@ import { planAttempt, seedFrom } from "./attempts";
 import { simErrorCode, simErrorSentence } from "./errors";
 import { logLine, readRunOrder, updateConfig } from "./io";
 import { finishPublish } from "./publish-step";
-import { isFinalHeat, isScenarioKey, pickCapRider, pickDnsRider, pickTieRiders, SCENARIOS, type RiderNow, type ScenarioKey } from "./scenarios";
+import { isFinalHeat, isScenarioKey, pickCapRider, pickDnsRider, pickNoShowHeat, pickTieRiders, SCENARIOS, type RiderNow, type ScenarioKey } from "./scenarios";
 import { forgetContext, heatName, loadSnapshot, riderName, type SimDb, type Snapshot } from "./snapshot";
 
 const T = copy.simulator;
@@ -135,6 +136,24 @@ export async function attemptScenario(db: SimDb, snap: Snapshot, key: ScenarioKe
       const r = await db.user.rpc("set_rider_status", { p_heat: h.id, p_entry: entry, p_modifier: "DNS", p_reason: "Simulator: did not show up" });
       if (r.error) return failed(db, snap, key, simErrorSentence(r.error.message));
       return done(db, snap, key, L.dns(riderName(snap.ctx, entry), heatName(h)));
+    }
+
+    case "walkover": {
+      // the next 1 v 1 heat that has not started: its second rider does not show up, through the same function the console's Did not start uses; then the walkover
+      const ordered = [...snap.heats].sort((a, b) => (snap.ctx.divisions.find((d) => d.id === a.division_id)?.sortOrder ?? 0) - (snap.ctx.divisions.find((d) => d.id === b.division_id)?.sortOrder ?? 0) || (snap.ctx.rounds.find((r) => r.id === a.round_id)?.sort_order ?? 0) - (snap.ctx.rounds.find((r) => r.id === b.round_id)?.sort_order ?? 0) || a.number - b.number);
+      const pick = pickNoShowHeat(ordered.map((h) => ({ id: h.id, status: h.status, armed: Boolean(h.armed_at), seats: snap.slots.filter((s) => s.heat_id === h.id).sort((a, b) => a.position - b.position).map((s) => ({ entryId: s.entry_id, modifier: s.modifier })) })));
+      if (!pick) return { status: "wait" };
+      const target = snap.heats.find((h) => h.id === pick.heatId)!;
+      const marked = await db.user.rpc("set_rider_status", { p_heat: pick.heatId, p_entry: pick.entryId, p_modifier: "DNS", p_reason: "Simulator: did not show up" });
+      if (marked.error) return failed(db, snap, key, simErrorSentence(marked.error.message));
+      forgetContext(snap.eventId);
+      const who = riderName(snap.ctx, pick.entryId);
+      // a person who is the head judge presses Walkover themselves; the simulator's virtual head presses it for them otherwise
+      if (snap.seats.some((s) => s.role === "head" && s.person)) return done(db, snap, key, L.walkoverLeft(who, heatName(target)));
+      const given = await walkoverHeatCore({ user: db.user, service: db.service }, pick.heatId);
+      if (!given.ok) return failed(db, snap, key, given.message);
+      const winner = snap.slots.find((s) => s.heat_id === pick.heatId && s.entry_id && s.entry_id !== pick.entryId)?.entry_id;
+      return done(db, snap, key, L.walkoverGiven(who, winner ? riderName(snap.ctx, winner) : "", heatName(target)));
     }
 
     case "duplicate": {

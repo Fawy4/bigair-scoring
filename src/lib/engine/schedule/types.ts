@@ -23,6 +23,8 @@ export interface HeatLive {
   breakAfterRoundMin?: number;
   /** The heat was cancelled (for example replaced by a re-run). One that ran keeps its real times; one that never started takes no time. */
   cancelled?: boolean;
+  /** The heat was finished without being ridden (Console – Walkover): `startedAt` and `endedAt` are the moment it was given; it takes no time and no break follows it. */
+  walkover?: boolean;
 }
 
 export type RowStatus = "done" | "live" | "next" | "est" | "held" | "pinned" | "cancelled";
@@ -48,6 +50,8 @@ export interface TimetableRow {
   /** Minutes of break after this row; null on the last row of the day ("—"). */
   breakAfterMin: number | null;
   status: RowStatus;
+  /** The heat was a walkover: its line reads "Walkover" with the time it was given. */
+  walkover?: boolean;
   /** The item has a pin ("not before") in this plan. */
   pinned: boolean;
   /** "Be at the launch" time: start minus readyCallMin (heats only). */

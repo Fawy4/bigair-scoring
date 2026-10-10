@@ -12,6 +12,36 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.19.0 — 10 Oct 2026 {#release-0-19-0}
+
+PR: #44
+
+### What changed
+- **A rider who does not show up, is injured or withdraws now has a clear way through on the head judge's laptop console.** At Gouna, twice, the other rider could not be sent through: the rider menu was only there once a heat had started, so the heat was started, one rider was given a made-up score, and 15 minutes were lost. Now every rider card has a **···** button in every state (not started, running, ended, under review).
+- **Did not start (this heat only)** — the rider stays in the event, ranks last, and in a format with a second chance still gets the next heat. **Back in the heat** undoes it until the heat is published.
+- **Out of the event (injured or withdrew)** — exactly what **Withdrawn** on the Riders step does: every seat the rider would fill, this heat and every later one (second-chance heats too), becomes a walkover for the others.
+- **Walkover.** When a heat that has not started has only one rider who can ride, one big button appears: **Walkover — ‹rider› goes through**. One press, one question: the heat is finished and published at once (no clock, no flags, no judges, no scores), the rider is 1st and reads **Walkover**, the seats it feeds fill, and the heats after it move up in the run order. A heat of three with one rider missing still runs with two. If nobody is left the button reads **No rider — finish this heat**.
+- **In words everywhere:** the ladder, the public results and live pages, Follow the heat, the big screen, the results download (spreadsheet and printable page) and the event backup say **Walkover**, **Did not start** or **Out of the event** — never 0.0 for someone who did not ride.
+- **Re-open** on a walkover heat puts it back to Not started with its riders (refused once a heat it fed has started).
+- **Only the head judge's seat and an organiser can do this;** every press is in the audit log in words ("Head judge gave a walkover in R3 · H11: Adam Arrow goes through; Mariam Graff did not start (injured)").
+- Two small guards on a heat nobody has ridden: the Ties box stays empty, and **Publish** asks once ("Nobody has ridden this heat. To send a rider through without riding, use Walkover. Publish anyway?").
+- The simulator has a new scenario, **Rider no-show → walkover**, so officials can rehearse it at ×1.
+
+### What to test
+- [ ] Start a simulation of an event with a knockout that has a second chance, at ×1. On the head judge's laptop console open a 1 v 1 heat that has not started and press **···** on one of the two riders: the menu offers **Did not start (this heat only)** and **Out of the event (injured or withdrew)**.
+- [ ] Choose **Did not start (this heat only)**, tap **Injured**, **Confirm**: the card says **Did not start**, and one big button appears: **Walkover — ‹rider› goes through**. Press it and confirm: within a few seconds the heat reads **Walkover**, nobody typed a score, and the run-order line reads "Walkover" with a time.
+- [ ] Open that rider's next heat: he is in his seat. On the public results page (the address on the Go live page) the heat shows **Walkover** for the winner and **Did not start** for the other, with no total.
+- [ ] Press **Re-open** on the walkover heat: it is **Not started** again, the missing rider still says **Did not start**, and the Walkover button is back. (Give the walkover again before moving on.)
+- [ ] In a heat of three, press **···** on one rider → **Out of the event (injured or withdrew)** → **Injured** → **Confirm**: no Walkover button (two riders can ride), the heat starts and runs with two; his later heat shows **Out of the event** on his card and, if it has only one other rider, the Walkover button.
+- [ ] On a heat nobody has ridden, press **Publish**: the question names Walkover ("Nobody has ridden this heat. To send a rider through without riding, use Walkover. Publish anyway?"). Choose cancel.
+- [ ] Download results (Go live → **Download results**): the walkover rider's status is **Walkover**, the other's **Did not start** or **Out of the event**, and nobody has a total of 0.
+- [ ] Open Admin → Releases on a phone-sized window: this entry's checks tick as usual (nothing changes there).
+
+### Known issues
+- The phone's Control tab does not have the rider menu or the Walkover button (laptop or tablet at 900 px or wider only).
+- "Out of the event" shows on a rider card as soon as it is pressed on that screen; another head-judge screen that was already open shows **Did not start** for that rider until it is reloaded.
+- Screenshots of the new console section are not in the manual yet (see the pull request).
+
 ## 0.18.2 — 8 Oct 2026 {#release-0-18-2}
 
 PR: #43

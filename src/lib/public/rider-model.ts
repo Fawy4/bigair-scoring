@@ -17,6 +17,8 @@ export interface RiderHeatVM {
   readyCall: string | null;
   place: number | null;
   totalLabel: string | null;
+  /** In words when the rider did not ride this heat: "Walkover", "Did not start", "Out of the event". */
+  note?: string | null;
 }
 
 export interface RiderPageVM {
@@ -50,7 +52,7 @@ export function buildRiderPage(entryId: string, results: PublicResults | null, s
   const heats: RiderHeatVM[] = mine.map((t) => {
     const r = rowOf(t.id);
     const me = t.riders.find((x) => x.entryId === entryId)!;
-    return { heatId: t.id, title: t.title, state: t.state, start: r?.start ?? null, estimated: Boolean(r?.estimated), readyCall: r?.readyCall ?? null, place: me.place, totalLabel: me.totalLabel };
+    return { heatId: t.id, title: t.title, state: t.state, start: r?.start ?? null, estimated: Boolean(r?.estimated), readyCall: r?.readyCall ?? null, place: me.place, totalLabel: me.totalLabel, note: me.state === "WO" || me.state === "DNS" || me.state === "OUT" ? copy.pub.results.notRiding[me.state] : null };
   });
   const order = new Map(tt.rows.map((r, i) => [r.heatId, i]));
   const upcoming = heats.filter((h) => h.state !== "complete" && rowOf(h.heatId) && !["done", "live"].includes(rowOf(h.heatId)!.status)).sort((a, b) => (order.get(a.heatId) ?? 99) - (order.get(b.heatId) ?? 99));

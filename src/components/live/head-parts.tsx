@@ -1,5 +1,6 @@
 "use client";
 
+import { isWalkoverHeat } from "@/lib/live/walkover";
 import { useState } from "react";
 import { Check, Clock, Volume2, VolumeX, Wind } from "lucide-react";
 import { HoldDialog, PublishDialog, ReopenDialog, RerunDialog, ResetHeatDialog } from "./head-dialogs";
@@ -446,7 +447,7 @@ function OrderRow({ c, entry, nextId, divisionName }: { c: HeadController; entry
   const st = stateOf(heat, c.nowServer);
   const word = st === "scheduled" ? null : (T.status[st === "ended" && heat.status === "under_review" ? "under_review" : st] ?? st);
   const round = c.ctx.rounds.find((r) => r.id === heat.round_id);
-  const line = runLine({ round, heat, startedHhmm: heat.started_at ? utcToLocalHHMM(heat.started_at, c.ctx.event.timezone) : null, estimatedHhmm: time, plannedHhmm: planned ?? null, held, statusWord: word });
+  const line = runLine({ round, heat, startedHhmm: heat.started_at ? utcToLocalHHMM(heat.started_at, c.ctx.event.timezone) : null, estimatedHhmm: time, plannedHhmm: planned ?? null, held, statusWord: word, walkover: isWalkoverHeat(heat) });
   const selectedHere = c.selected?.id === heat.id;
   const isNext = nextId === heat.id && st === "scheduled";
   return (
@@ -722,6 +723,7 @@ export function HeatDialogs({ c }: { c: HeadController }) {
           title={title}
           items={review.items}
           canOverride={review.canOverride}
+          nobodyRode={review.nobodyRode ?? false}
           onChooseOrder={(riders) => {
             close();
             review.onChooseOrder(riders);
@@ -748,10 +750,10 @@ export function HeatDialogs({ c }: { c: HeadController }) {
           heatId={selected.id}
           title={title}
           onClose={close}
-          onDone={(text) => {
+          onDone={(text, walkover) => {
             close();
             c.setMessage({ ok: true, text });
-            c.patchHeat?.(selected.id, { status: "published" });
+            c.patchHeat?.(selected.id, walkover ? { status: "scheduled", started_at: null, ended_at: null } : { status: "published" });
             review.onChanged();
           }}
         />

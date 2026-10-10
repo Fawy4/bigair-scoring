@@ -3526,6 +3526,17 @@ export type Database = {
         Args: { p_note: string; p_reason?: string }
         Returns: undefined
       }
+      head_out_of_event: {
+        Args: {
+          p_draw?: Json
+          p_entry: string
+          p_heat: string
+          p_projection?: Json
+          p_reason: string
+          p_words: string
+        }
+        Returns: undefined
+      }
       head_set_impression: {
         Args: {
           p_entry: string
@@ -4741,6 +4752,28 @@ export type Database = {
         Returns: undefined
       }
       update_event_trick_base: { Args: { p_event: string }; Returns: Json }
+      walkover_heat_commit: {
+        Args: {
+          p_actor: string
+          p_draw: Json
+          p_heat: string
+          p_hold: boolean
+          p_projection: Json
+          p_results: Json
+          p_words: string
+        }
+        Returns: Json
+      }
+      walkover_reopen: {
+        Args: {
+          p_before: Json
+          p_draw: Json
+          p_heat: string
+          p_reason: string
+          p_seats: Json
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

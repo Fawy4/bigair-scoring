@@ -8,7 +8,7 @@ import { ScorePad } from "./score-pad";
 import { judgeTrickScore } from "@/lib/engine/scoring";
 import { ABSENT_REASON } from "@/lib/live/sheet-rule";
 import { nextOpenRider, type SheetDraft as Draft, type SheetRider } from "@/lib/live/impression-sheet";
-import { clearPendingByHead, addAttemptByHead, addInterference, deleteAttempts, editAttempt, flagOutRiders, headSaveImpressionSheet, headSetScore, mergeAttempts, removePenalty, setRiderStatus, type HeadResult } from "@/lib/live/head-actions";
+import { clearPendingByHead, addAttemptByHead, addInterference, deleteAttempts, editAttempt, flagOutRiders, headSaveImpressionSheet, headSetScore, mergeAttempts, outOfEvent, removePenalty, setRiderStatus, walkoverHeat, type HeadResult } from "@/lib/live/head-actions";
 import { canAddPastCap, defaultKeep, mergePlan, type PastCapRole } from "@/lib/live/merge-plan";
 import { formatCell } from "@/lib/live/matrix-model";
 import { markOf } from "@/lib/live/heat-input";
@@ -361,21 +361,34 @@ export function AddAttemptDialog({ heatId, riders, counts, cap, role, hasActiveH
 }
 
 // ---------------------------------------------------------------- DNS / DNF / DSQ / Interference
-export function StatusDialog({ heatId, entryId, who, status, penaltyId, onClose, onDone }: { heatId: string; entryId: string; who: string; status: "DNS" | "DNF" | "DSQ" | "INT" | "CLEAR" | "UNDO_INT"; penaltyId?: string; onClose: () => void; onDone: () => void }) {
+export function StatusDialog({ heatId, entryId, who, status, penaltyId, onClose, onDone }: { heatId: string; entryId: string; who: string; status: "DNS" | "DNF" | "DSQ" | "INT" | "CLEAR" | "UNDO_INT" | "BACK" | "OUT"; penaltyId?: string; onClose: () => void; onDone: () => void }) {
   const [reason, setReason] = useState("");
   const { error, pending, run } = useRun(onDone);
-  const title = status === "CLEAR" ? H.clearStatus : status === "UNDO_INT" ? H.removeInterference : C.statusSet(status === "INT" ? C.interference : status);
+  const W = copy.walkover;
+  // Did not start and Out of the event say what they do, in the owner's words; Back in the heat undoes a Did not start
+  const title = status === "DNS" ? W.dnsTitle(who) : status === "OUT" ? W.outTitle(who) : status === "BACK" ? W.backTitle(who) : status === "CLEAR" ? H.clearStatus : status === "UNDO_INT" ? H.removeInterference : C.statusSet(status === "INT" ? C.interference : status);
+  const ask = status === "DNS" ? W.dnsAsk(who) : status === "OUT" ? W.outAsk(who) : status === "BACK" ? W.backAsk(who) : null;
+  const picks = status === "DNS" || status === "OUT" ? W.quickPicks : undefined;
   return (
     <Modal screen title={title} onClose={onClose}>
       <p className="text-body font-medium text-beach-muted">{who}</p>
-      <Reason value={reason} onChange={setReason} />
+      {ask ? <p data-testid="status-ask" className="text-body font-medium">{ask}</p> : null}
+      <Reason value={reason} onChange={setReason} {...(picks ? { picks } : {})} />
       <ErrorLine error={error} />
       <Footer
         canSave={!pending}
-        saveLabel={pending ? H.working : title}
+        saveLabel={pending ? H.working : status === "DNS" || status === "OUT" ? W.confirm : title}
         onCancel={onClose}
         onSave={() =>
-          run(() => (status === "INT" ? addInterference({ heatId, entryId, reason }) : status === "UNDO_INT" ? removePenalty(penaltyId ?? "", reason) : setRiderStatus({ heatId, entryId, modifier: status === "CLEAR" ? null : status, reason })))
+          run(() =>
+            status === "INT"
+              ? addInterference({ heatId, entryId, reason })
+              : status === "UNDO_INT"
+                ? removePenalty(penaltyId ?? "", reason)
+                : status === "OUT"
+                  ? outOfEvent({ heatId, entryId, reason })
+                  : setRiderStatus({ heatId, entryId, modifier: status === "CLEAR" || status === "BACK" ? null : status, reason }),
+          )
         }
       />
     </Modal>
@@ -407,3 +420,16 @@ export function FlagOutDialog({ heatId, riders, preselected, undecided, count, w
   );
 }
 
+
+// ---------------------------------------------------------------- Walkover: one big button, one question
+export function WalkoverDialog({ heatId, winner, others, onClose, onDone }: { heatId: string; /** The one rider who can ride, as a word; null when nobody can (No rider). */ winner: string | null; others: string[]; onClose: () => void; onDone: (text: string) => void }) {
+  const W = copy.walkover;
+  const { error, pending, run } = useRun(() => onDone(winner ? W.walkoverDone(winner) : W.nobodyDone));
+  return (
+    <Modal screen title={winner ? W.walkoverTitle : W.nobodyTitle} onClose={onClose}>
+      <p data-testid="walkover-ask" className="text-body font-medium">{winner ? W.walkoverAsk(winner, others) : W.nobodyAsk}</p>
+      <ErrorLine error={error} />
+      <Footer canSave={!pending} saveLabel={pending ? H.working : winner ? W.walkoverYes : W.nobodyYes} onCancel={onClose} onSave={() => run(async () => (await walkoverHeat(heatId)) as HeadResult)} />
+    </Modal>
+  );
+}

@@ -1,8 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { reasonOf } from "@/lib/reason";
-import { drawProjection } from "@/lib/draw/projection";
-import { applyHeatStatuses } from "@/lib/draw/entrants";
-import { applyHeatResult, type DivisionDraw, type DrawHeat } from "@/lib/engine/ladder";
+import type { DivisionDraw } from "@/lib/engine/ladder";
+import { ladderStep } from "./ladder-step";
 import { computeHeat, roundHalfUp, type TieDecision } from "@/lib/engine/scoring";
 import { toLadderResult } from "@/lib/engine/scoring/ladder-adapter";
 import { mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
@@ -134,35 +133,9 @@ export async function publishHeatCore(
   }
 
   // the ladder: places into the draw, the next heats' seats from the result; a heat that has started is never changed
-  const draw = (division.draw ?? null) as DivisionDraw | null;
-  const drawHeat = draw && heat.draw_uid ? draw.rounds.flatMap((r) => r.heats).find((h: DrawHeat) => (h.uid ?? h.id) === heat.draw_uid) : undefined;
-  let newDraw: DivisionDraw | null = null;
-  let projection: Array<{ uid: string; slots: Array<{ position: number; entry_id: string | null; modifier: string | null }> }> = [];
-  let roundIsLast = false;
-  if (draw && drawHeat) {
-    const synced = applyHeatStatuses(draw, divisionHeats);
-    let applied;
-    try {
-      applied = applyHeatResult(synced, drawHeat.id, toLadderResult(model, result));
-    } catch (e) {
-      return fail("DRAW_MISMATCH", e instanceof Error ? e.message : undefined);
-    }
-    if (applied.conflict) {
-      const names = applied.conflict.affectedHeats.map((a) => {
-        const h = applied.draw.rounds.flatMap((r) => r.heats).find((x) => x.id === a.heatId);
-        return h?.name ?? (h?.number ? `Heat ${h.number}` : a.heatId);
-      });
-      return fail("DOWNSTREAM_STARTED", copy.publish.downstream(names));
-    }
-    newDraw = applied.draw;
-    const before = new Map(drawProjection(synced).heats.map((h) => [h.uid, h]));
-    const key = (s: { entry_id: string | null; modifier: string | null }) => `${s.entry_id ?? ""}|${s.modifier ?? ""}`;
-    projection = drawProjection(newDraw).heats
-      .filter((h) => h.uid !== (drawHeat.uid ?? drawHeat.id))
-      .filter((h) => (before.get(h.uid)?.slots ?? []).map(key).join(",") !== h.slots.map(key).join(","))
-      .map((h) => ({ uid: h.uid, slots: h.slots.map((s) => ({ position: s.position, entry_id: s.entry_id, modifier: s.modifier })) }));
-    roundIsLast = draw.rounds[draw.rounds.length - 1]?.id === drawHeat.round;
-  }
+  const step = ladderStep((division.draw ?? null) as DivisionDraw | null, heat.draw_uid, divisionHeats, toLadderResult(model, result));
+  if (!step.ok) return fail(step.code, step.message);
+  const { draw: newDraw, projection, roundIsLast } = step;
 
   const settings = parseEventSettings(event?.settings);
   const dl = parseDivisionLive(division.live_settings);

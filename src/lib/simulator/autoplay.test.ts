@@ -87,3 +87,21 @@ describe("who plays each seat", () => {
     expect(whoJoins({ mode: "real", boundUser: "phone", virtualUser: "v1" })).toBe("person");
   });
 });
+
+describe("a heat with one rider who can ride (Console – Walkover)", () => {
+  it("is not started: a person who is the head judge presses Walkover, so the auto-play waits", () => {
+    const a = heat({ id: "a", walkover: "walkover" });
+    expect(nextStep({ ordered: [a], hold: false, maxRunning: 1, personHead: true })).toEqual({ kind: "wait", reason: "walkover", heatId: "a" });
+  });
+  it("when the head judge is the simulator's, the virtual head gives the walkover (or finishes the heat with no rider)", () => {
+    expect(nextStep({ ordered: [heat({ id: "a", walkover: "walkover" })], hold: false, maxRunning: 1, personHead: false })).toEqual({ kind: "walkover", heatId: "a" });
+    expect(nextStep({ ordered: [heat({ id: "b", walkover: "nobody" })], hold: false, maxRunning: 1, personHead: false })).toEqual({ kind: "walkover", heatId: "b" });
+  });
+  it("a heat that can be ridden starts as before", () => {
+    expect(nextStep({ ordered: [heat({ id: "a", walkover: null })], hold: false, maxRunning: 1 })).toEqual({ kind: "start", heatId: "a" });
+  });
+  it("the hold still holds it", () => {
+    expect(nextStep({ ordered: [heat({ id: "a", walkover: "walkover" })], hold: true, maxRunning: 1, personHead: false })).toMatchObject({ kind: "wait", reason: "hold" });
+  });
+});
+

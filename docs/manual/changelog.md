@@ -2,7 +2,19 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 8 Oct 2026 · Product version 0.18.2
+Last checked: 10 Oct 2026 · Product version 0.19.0
+
+## 0.19.0 — 10 Oct 2026 {#cl-0-19-0}
+
+Release entry: [0.19.0](/admin/releases#release-0-19-0) (platform owner only)
+
+**What changed for users**
+- **A rider who does not show up, is injured or withdraws.** Head console (laptop): every rider card has a **···** button in every state; the menu has **Did not start (this heat only)** (with **Back in the heat**) and **Out of the event (injured or withdrew)** (the same as **Withdrawn** on the Riders step), each asking once with an optional reason (**Didn't show**, **Injured**, **Withdrew**).
+- **Walkover.** A heat that has not started and has only one rider who can ride shows **Walkover — ‹rider› goes through**: one press finishes and publishes the heat with no clock and no scores; the seats it feeds fill; the run order moves up. With nobody left: **No rider — finish this heat**. **Re-open** takes a walkover back. Head judge and organiser only.
+- **In words everywhere:** ladder, public results and live pages, Follow the heat, big screen, results download and event backup say **Walkover**, **Did not start** or **Out of the event**, never 0.0.
+- The Ties box stays empty on a heat nobody has ridden, and **Publish** asks once there. The simulator has a **Rider no-show → walkover** scenario.
+
+**Manual pages updated:** [Head console on a laptop](screens/console-laptop.md#cl-no-show), [Riders step](screens/organiser-riders.md), [Simulator](screens/simulator.md), [Troubleshooting](troubleshooting.md), [Glossary](glossary.md), [Resets and undo](resets-and-undo.md), [Errors and refusals](errors.md).
 
 ## 0.18.2 — 8 Oct 2026 {#cl-0-18-2}
 
