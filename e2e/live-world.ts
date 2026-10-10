@@ -1,6 +1,8 @@
 import type { Page } from "@playwright/test";
 import { drawProjection } from "../src/lib/draw/projection";
-import { expandFormat } from "../src/lib/engine/ladder";
+import { applyHeatResult, expandFormat, lockDraw, type DivisionDraw } from "../src/lib/engine/ladder";
+import { loadFormat } from "../src/lib/engine/ladder/fixtures";
+import { ladderStep } from "../src/lib/live/ladder-step";
 import { parseFormatTemplate } from "../src/lib/schemas/format-template";
 import { builtInSchemes } from "../src/lib/schemas/identification";
 import { createOrganiser } from "./organiser";
@@ -171,4 +173,97 @@ export async function addLadder(w: LiveWorld) {
     for (const s of h.slots) await db.from("heat_slots").insert({ heat_id: row.id, position: s.position, entry_id: s.entry_id, vest_colour: s.vest_colour, source: s.source as never });
   }
   return { divisionId: division.id, entries, names, heats, draw };
+}
+
+/**
+ * Console – Walkover: a division with the real "Knockout with a second chance" ladder for 12 riders (heats of 3), saved the way the Draw step saves it, with a run order
+ * for tomorrow (so the estimated times are exact and do not depend on the clock). `stage: "round2"` has Round 1 already published (its winners in Round 3, the others in the
+ * second-chance round, which is dealt); `stage: "round1"` has only Heats 2–4 of Round 1 published, Heat 1 waits. Everything hangs off the throwaway organisation.
+ */
+export async function addSecondChance(w: LiveWorld, stage: "round1" | "round2") {
+  const db = w.db;
+  const must = <T extends { id: string }>(r: { data: T | null; error: { message: string } | null }, what: string): T => {
+    if (r.error || !r.data) throw new Error(`${what}: ${r.error?.message}`);
+    return r.data;
+  };
+  const division = must(
+    await db.from("divisions").insert({ event_id: w.eventId, name: "Second chance", sort_order: 2, scoring_model_id: w.modelId, panel_id: w.panelId, draw_locked_at: new Date().toISOString() }).select("id").single(),
+    "second-chance division",
+  );
+  const first = ["Ana", "Ben", "Cy", "Di", "Eli", "Flo", "Gus", "Hal", "Ida", "Jon", "Kim", "Lou"];
+  const entries: string[] = [];
+  for (let i = 0; i < 12; i++) {
+    const rider = must(await db.from("riders").insert({ organisation_id: w.orgId, first_name: first[i], last_name: "Chance", nationality: "EG" }).select("id").single(), "rider");
+    entries.push(must(await db.from("entries").insert({ division_id: division.id, rider_id: rider.id, seed: i + 1, status: "confirmed", source: "manual" }).select("id").single(), "entry").id);
+  }
+  const template = loadFormat("kota-dingle");
+  const draw0 = lockDraw(expandFormat(template, entries.map((id, i) => ({ id, name: `${first[i]} Chance` })), { identification: "vests-per-heat" }));
+  // Round 1 as it was ridden: the lower seed wins every heat (the engine fixtures' rule); `stage` decides how much of it has been published
+  let draw = draw0;
+  const ridden = stage === "round2" ? draw0.rounds[0].heats.map((h) => h.id) : draw0.rounds[0].heats.map((h) => h.id).slice(1);
+  for (const id of ridden) draw = publishHeat(draw, id);
+  const projection = drawProjection(draw);
+  await db.from("divisions").update({ draw: draw as never, draw_at_lock: draw0 as never }).eq("id", division.id);
+  const roundIds = new Map<string, string>();
+  for (const r of projection.rounds) roundIds.set(r.key, must(await db.from("rounds").insert({ division_id: division.id, sort_order: r.sort_order, name: r.name, short_name: r.short_name, spec: r.spec as never }).select("id").single(), "round").id);
+  const heats: Record<string, string> = {};
+  const order: string[] = [];
+  const published = new Set(ridden.map((id) => draw.rounds.flatMap((r) => r.heats).find((h) => h.id === id)!.uid ?? id));
+  const then = new Date(Date.now() - 3_600_000).toISOString();
+  for (const h of projection.heats) {
+    const isPublished = published.has(h.uid);
+    const row = must(
+      await db
+        .from("heats")
+        .insert({ round_id: roundIds.get(h.round_key)!, division_id: division.id, event_id: w.eventId, number: h.number, draw_uid: h.uid, duration_sec: h.duration_sec, warm_up_sec: 0, ...(isPublished ? { status: "published", started_at: then, ended_at: then, published_at: then } : {}) })
+        .select("id")
+        .single(),
+      "second-chance heat",
+    );
+    heats[h.uid] = row.id;
+    order.push(row.id);
+    for (const s of h.slots) await db.from("heat_slots").insert({ heat_id: row.id, position: s.position, entry_id: s.entry_id, vest_colour: s.vest_colour, source: s.source as never, modifier: s.modifier });
+  }
+  // the published heats of Round 1 started and ended an hour ago; a ridden heat has a length, so a walkover (one instant) is told from them
+  for (const uid of published) await db.from("heats").update({ ended_at: new Date(Date.now() - 3_000_000).toISOString() }).eq("id", heats[uid]);
+  // tomorrow's run order, Heat 1 pinned at 10:00: the times are exact whatever the clock says
+  const tomorrow = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" }).format(new Date(Date.now() + 86_400_000));
+  const unpublished = projection.heats.filter((h) => !published.has(h.uid));
+  const items = unpublished.map((h, i) => ({ id: `s${i + 1}`, kind: "heat", heatId: heats[h.uid] }));
+  const plan = must(await db.from("schedule_plans").insert({ event_id: w.eventId, day: tomorrow, name: "Second chance day", active: true, items: items as never, anchors: { s1: "10:00" } }).select("id").single(), "plan");
+  const draftRows = await db.from("heats").select("id, number, draw_uid, status").eq("division_id", division.id).order("number");
+  return { divisionId: division.id, entries, names: first.map((f) => `${f} Chance`), heats, draw, draw0, planId: plan.id, tomorrow, rows: draftRows.data ?? [] };
+}
+
+/** The draw after a heat is published with the lower seed winning (the engine's own rule), for building the stage a browser test starts from. */
+function publishHeat(draw: DivisionDraw, heatId: string): DivisionDraw {
+  const h = draw.rounds.flatMap((r) => r.heats).find((x) => x.id === heatId)!;
+  const ranked = h.slots
+    .filter((s) => s.entrantId)
+    .map((s, i) => ({ entrantId: s.entrantId as string, place: i + 1, total: 100 - (s.seed ?? i + 1), tieKeys: [] as number[] }))
+    .sort((a, b) => b.total - a.total)
+    .map((r, i) => ({ ...r, place: i + 1 }));
+  const out = applyHeatResult(draw, heatId, { ranked });
+  if (out.conflict) throw new Error(out.conflict.message);
+  return out.draw;
+}
+
+/** A heat of the second-chance division finished the way a published normal heat is (service key): used to set up what a browser test then looks at. */
+export async function publishDirect(w: LiveWorld, draw: DivisionDraw, heatId: string, uid: string, tieBreak = (seed: number) => 100 - seed) {
+  const { data: slots } = await w.db.from("heat_slots").select("entry_id, modifier, position").eq("heat_id", heatId).order("position");
+  const drawHeat = draw.rounds.flatMap((r) => r.heats).find((x) => (x.uid ?? x.id) === uid)!;
+  const seedOf = (id: string) => draw.seedOrder.indexOf(id) + 1;
+  const able = (slots ?? []).filter((s) => s.entry_id && s.modifier !== "DNS").map((s) => ({ entrantId: s.entry_id as string, total: tieBreak(seedOf(s.entry_id as string)) })).sort((a, b) => b.total - a.total);
+  const dns = (slots ?? []).filter((s) => s.entry_id && s.modifier === "DNS").map((s) => s.entry_id as string);
+  const ranked = [...able.map((r, i) => ({ entrantId: r.entrantId, place: i + 1, total: r.total, tieKeys: [] as number[] })), ...dns.map((id, i) => ({ entrantId: id, place: able.length + i + 1, total: null, modifier: "DNS" as const }))];
+  const out = applyHeatResult(draw, drawHeat.id, { ranked });
+  if (out.conflict) throw new Error(out.conflict.message);
+  const { data: heats } = await w.db.from("heats").select("id, draw_uid, status, started_at").eq("division_id", (await w.db.from("heats").select("division_id").eq("id", heatId).single()).data!.division_id);
+  const step = ladderStep(draw, uid, heats ?? [], { ranked });
+  if (!step.ok) throw new Error(step.message);
+  await w.db.from("heats").update({ status: "ended", started_at: new Date(Date.now() - 900_000).toISOString(), ended_at: new Date(Date.now() - 300_000).toISOString() }).eq("id", heatId);
+  const results = ranked.map((r) => ({ entry_id: r.entrantId, place: r.place, total: r.total, percent: null, breakdown: r.total === null ? { status: "DNS" } : { status: "ok", total: r.total, totalLabel: String(r.total), components: { tricks: r.total, impression: 0, bonus: 0, penalty: 0 }, allAttempts: [] } }));
+  const { error } = await w.db.rpc("publish_heat_commit", { p_heat: heatId, p_expected_version: 1, p_results: results as never, p_draw: step.draw as never, p_projection: step.projection as never, p_hold: false, p_override_reason: null as never, p_actor: w.seats.head.userId, p_blockers: [] as never });
+  if (error) throw new Error(`publish_heat_commit: ${error.message}`);
+  return step.draw ?? draw;
 }

@@ -5,6 +5,7 @@ import { errorSentence, parseError } from "./errors";
 import { impressionRefusal, trickScoreRefusal, type ScoreRefusal } from "./head-validate";
 import { defaultKeep } from "./merge-plan";
 import { publishHeatCore, type PublishResult } from "./publish-core";
+import { outOfEventCore, reopenWalkoverCore, walkoverHeatCore } from "./walkover-core";
 import { mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { planOfRow, type PlanRow } from "@/lib/schedule/plans";
 import type { RunItem } from "@/lib/schemas/schedule";
@@ -21,7 +22,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Json } from "@/lib/supabase/database.types";
 
-export type HeadResult = { ok: true } | { ok: false; code: string | null; message: string };
+export type HeadResult = { ok: true; /** Re-open only: the heat was a walkover and is Not started again. */ walkover?: boolean } | { ok: false; code: string | null; message: string };
 export type { PublishResult };
 
 const uuid = z.string().uuid();
@@ -238,8 +239,24 @@ export async function reopenHeat(heatId: string, reason: string): Promise<HeadRe
   if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
   reason = reasonOf(reason);
   const db = await createClient();
+  // a walkover heat goes back to Not started with its riders (Console – Walkover); any other heat is re-opened for correction as before
+  const walkover = await reopenWalkoverCore(db, heatId, reason);
+  if (walkover) return walkover.ok ? { ok: true, walkover: true } : walkover;
   const { error } = await db.rpc("reopen_heat", { p_heat: heatId, p_reason: reason.trim() });
   return error ? from(error) : { ok: true };
+}
+
+/** The walkover button: the only rider who can ride goes through without riding (or, with nobody left, the heat is finished with no rider). One server action, one database transaction, safe to press twice. */
+export async function walkoverHeat(heatId: string): Promise<{ ok: true; winner: string | null } | Failure> {
+  if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
+  const out = await walkoverHeatCore({ user: await createClient(), service: createServiceClient() }, heatId);
+  return out.ok ? { ok: true, winner: out.winner } : out;
+}
+
+/** Out of the event (injured or withdrew): what Withdrawn on the Riders step does, from the head judge's console. */
+export async function outOfEvent(input: { heatId: string; entryId: string; reason: string }): Promise<HeadResult> {
+  if (!uuid.safeParse(input.heatId).success || !uuid.safeParse(input.entryId).success) return fail("RIDER_NOT_IN_HEAT");
+  return outOfEventCore(await createClient(), input);
 }
 
 /** Add an attempt as the head judge (or an organiser): past the rider's cap only with a reason, and only the head judge, or an organiser when the event has no head judge. */

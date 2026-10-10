@@ -87,7 +87,9 @@ export function buildHeadModel(input: {
     judgeTag: (id) => copy.live.matrix.judgeTag((panelSeatIds.indexOf(id) < 0 ? 0 : panelSeatIds.indexOf(id)) + 1),
   });
   const decisions = input.decisions;
-  const ties = result ? tieSentences(model, result, input.wordFor, decisions) : [];
+  // a heat nobody has ridden has no ties yet: two riders with no score are not "tied"
+  const anyScore = Boolean(result?.riders.some((r) => r.allAttempts.length > 0 || (r.impression?.judgeScores.length ?? 0) > 0));
+  const ties = result && anyScore ? tieSentences(model, result, input.wordFor, decisions) : [];
   const owes = (result?.publishBlockers ?? []).flatMap((b) => (b.type === "impression_missing" ? [{ seatId: b.judge, judgeNo: seatNo.get(b.judge) ?? 0, judge: judgeWord(b.judge), entryId: b.rider }] : []));
   const engineAttempts: Attempt[] = heatInput.riders.flatMap((r) => r.attempts);
   const agreement = agreementReport(model, panelSeatIds, engineAttempts);

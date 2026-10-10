@@ -162,6 +162,8 @@ export interface PublicEntry {
   last_name: string | null;
   nationality: string | null;
   identifiers: EntrantIdentifiers | null;
+  /** Out of the event (the entry is withdrawn); the results function names such a rider only when they hold a seat. */
+  withdrawn?: boolean;
 }
 
 export interface PublicResults {

@@ -69,7 +69,7 @@ export default async function RiderPage({ params }: { params: Promise<{ slug: st
                 {h.title}
               </Link>
               <span className="shrink-0 text-right text-small font-semibold tabular-nums">
-                {h.state === "complete" ? `${h.place ?? ""}${h.totalLabel ? ` · ${h.totalLabel}` : ""}` : h.start ? `${h.estimated ? `${copy.pub.common.est} ` : ""}${h.start}${h.readyCall ? ` · ${T.ready(h.readyCall)}` : ""}` : T.pending}
+                {h.state === "complete" ? `${h.place ?? ""}${h.totalLabel ? ` · ${h.totalLabel}` : ""}${h.note ? ` · ${h.note}` : ""}` : h.start ? `${h.estimated ? `${copy.pub.common.est} ` : ""}${h.start}${h.readyCall ? ` · ${T.ready(h.readyCall)}` : ""}` : T.pending}
               </span>
             </li>
           ))}

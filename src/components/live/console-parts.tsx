@@ -28,7 +28,24 @@ export function Modal({ title, children, onClose, screen = false }: { title: str
   );
 }
 
-export function Reason({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function Reason({ value, onChange, picks }: { value: string; onChange: (v: string) => void; /** Quick picks (Didn't show · Injured · Withdrew): one tap fills the box; the box can still be typed in. */ picks?: readonly string[] }) {
+  return (
+    <div className="flex flex-col gap-1">
+      {picks?.length ? (
+        <div role="group" aria-label={copy.walkover.reasonLabel} className="flex flex-wrap gap-1.5">
+          {picks.map((p) => (
+            <button key={p} type="button" data-testid="reason-pick" aria-pressed={value === p} onClick={() => onChange(p)} className={cn(btn, value === p ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}>
+              {p}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <ReasonBox value={value} onChange={onChange} />
+    </div>
+  );
+}
+
+function ReasonBox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <label className="flex flex-col gap-0.5 text-small font-medium text-beach-muted">
       {C.reason}

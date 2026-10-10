@@ -22,6 +22,8 @@ export interface LadderRiderVM {
   /** Somebody is on the way ("Sam · 1st H1 · seat pending"). */
   pending: boolean;
   walkover: boolean;
+  /** In words, never a score: "Walkover" (went through without riding), "Did not start", "Out of the event"; null for a rider with a result or a seat still to ride. */
+  note?: string | null;
 }
 
 export interface LadderHeatVM {
@@ -69,12 +71,15 @@ export function buildLadder(draw: DivisionDraw | null, division: Pick<ResultsDiv
           const c = scheme.primary === "vest_colour" || scheme.fallbackPrimary === "vest_colour" ? colour(s.vestColour) : undefined;
           const style = { hex: c?.hex ?? null, ink: c ? bestInk(c.hex) : "#111111", colourWord: c?.label ?? null };
           if (s.entrantId) {
-            const total = ranked.find((x) => x.entrantId === s.entrantId)?.total;
-            return { entryId: s.entrantId, name: nameOf(s.entrantId), ...style, totalLabel: state === "complete" && total !== null && total !== undefined ? total.toFixed(decimals) : copy.live.result.noTotal, placeholder: false, pending: false, walkover: s.modifier === "DNS" };
+            const res = ranked.find((x) => x.entrantId === s.entrantId);
+            const total = res?.total;
+            const out = Boolean(draw.entrants.find((e) => e.id === s.entrantId)?.withdrawn);
+            const note = state === "complete" && res?.walkover ? copy.walkover.word.walkover : res?.modifier === "DNS" || s.modifier === "DNS" ? (out ? copy.walkover.word.outOfEvent : copy.walkover.word.didNotStart) : null;
+            return { entryId: s.entrantId, name: nameOf(s.entrantId), ...style, totalLabel: state === "complete" && total !== null && total !== undefined ? total.toFixed(decimals) : copy.live.result.noTotal, placeholder: false, pending: false, walkover: s.modifier === "DNS", note };
           }
           const coming = s.from ? provisionalSeat(draw, round, s) : null;
-          if (coming) return { entryId: coming.entrantId, name: L.seatPending(coming.name, coming.placeholder), hex: null, ink: "#111111", colourWord: null, totalLabel: copy.live.result.noTotal, placeholder: true, pending: true, walkover: false };
-          return { entryId: null, name: s.from ? placeholderText(draw, s.from, round.id) : copy.live.result.noTotal, hex: null, ink: "#111111", colourWord: null, totalLabel: copy.live.result.noTotal, placeholder: true, pending: false, walkover: false };
+          if (coming) return { entryId: coming.entrantId, name: L.seatPending(coming.name, coming.placeholder), hex: null, ink: "#111111", colourWord: null, totalLabel: copy.live.result.noTotal, placeholder: true, pending: true, walkover: false, note: null };
+          return { entryId: null, name: s.from ? placeholderText(draw, s.from, round.id) : copy.live.result.noTotal, hex: null, ink: "#111111", colourWord: null, totalLabel: copy.live.result.noTotal, placeholder: true, pending: false, walkover: false, note: null };
         }),
       };
     }),

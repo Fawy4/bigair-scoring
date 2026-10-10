@@ -12,6 +12,10 @@ export interface HeatRider {
   position: number;
   /** Not riding: did not start, or flagged out. */
   riding: boolean;
+  /** The mark on the seat (DNS, DNF, DSQ), if any. */
+  modifier: string | null;
+  /** Out of the event: the entry is withdrawn. */
+  outOfEvent: boolean;
 }
 
 /** The riders of a heat in seat order, each with the Rider label the division's scheme gives them (the Lycra colour is the seat's). */
@@ -23,7 +27,7 @@ export function ridersForHeat(ctx: Pick<LiveContext, "riders">, division: Pick<L
     .flatMap((s) => {
       const r = ctx.riders.find((x) => x.entryId === s.entry_id);
       if (!r) return [];
-      return [{ entryId: r.entryId, name: r.name, position: s.position, riding: !s.modifier && !s.flagged_out, label: riderLabelModel(division.scheme, { ...r, slotColour: s.vest_colour }) }];
+      return [{ entryId: r.entryId, name: r.name, position: s.position, riding: !s.modifier && !s.flagged_out, modifier: s.modifier, outOfEvent: r.status === "withdrawn", label: riderLabelModel(division.scheme, { ...r, slotColour: s.vest_colour }) }];
     });
 }
 

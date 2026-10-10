@@ -16,7 +16,7 @@ const H = copy.headLive;
  * the order. The answer of the server (not the screen's own working) decides: a heat that has already been published answers "Already published" and nothing
  * is written twice.
  */
-export function PublishDialog({ heatId, title, items, canOverride, onChooseOrder, onFix, onClose, onDone }: { heatId: string; title: string; items: ChecklistItem[]; canOverride: boolean; onChooseOrder: (riders: string[]) => void; /** "Fix" on a line: closes the dialog and opens the place on the console. */ onFix?: (target: FixTarget) => void; onClose: () => void; onDone: (text: string) => void }) {
+export function PublishDialog({ heatId, title, items, canOverride, nobodyRode = false, onChooseOrder, onFix, onClose, onDone }: { heatId: string; title: string; items: ChecklistItem[]; canOverride: boolean; /** Nobody has ridden this heat: the question names Walkover and asks once. */ nobodyRode?: boolean; onChooseOrder: (riders: string[]) => void; /** "Fix" on a line: closes the dialog and opens the place on the console. */ onFix?: (target: FixTarget) => void; onClose: () => void; onDone: (text: string) => void }) {
   const [reason, setReason] = useState("");
   const [answer, setAnswer] = useState<PublishResult | null>(null);
   const [pending, start] = useTransition();
@@ -33,6 +33,7 @@ export function PublishDialog({ heatId, title, items, canOverride, onChooseOrder
     <Modal screen title={H.publishTitle(title)} onClose={onClose}>
       {withBlockers ? (
         <>
+          {nobodyRode ? <p data-testid="publish-nobody-rode" className="text-body font-semibold">{copy.walkover.publishAsk}</p> : null}
           <p className="text-body font-semibold">{copy.live.console.publishBlocked}</p>
           <ul data-testid="publish-blockers" className="flex flex-col gap-1">
             {blocked.map((b) => (
@@ -67,7 +68,7 @@ export function PublishDialog({ heatId, title, items, canOverride, onChooseOrder
           )}
         </>
       ) : (
-        <p className="text-body font-medium">{H.publishAsk}</p>
+        <p data-testid={nobodyRode ? "publish-nobody-rode" : undefined} className="text-body font-medium">{nobodyRode ? copy.walkover.publishAsk : H.publishAsk}</p>
       )}
       {answer && !answer.ok && !answer.blockers ? (
         <p role="alert" data-testid="publish-error" className="rounded-lg border border-beach-failed bg-beach-surface px-2 py-1 text-body font-semibold">
@@ -78,14 +79,14 @@ export function PublishDialog({ heatId, title, items, canOverride, onChooseOrder
         canSave={!pending && (!withBlockers || (override))}
         onSave={go}
         onCancel={onClose}
-        saveLabel={pending ? H.working : withBlockers ? H.publishWithReason : H.publishYes}
+        saveLabel={pending ? H.working : withBlockers ? H.publishWithReason : nobodyRode ? copy.walkover.publishAnyway : H.publishYes}
       />
     </Modal>
   );
 }
 
 /** Re-open a published heat: one confirmation and a reason. Publishing again writes the next version. */
-export function ReopenDialog({ heatId, title, onClose, onDone }: { heatId: string; title: string; onClose: () => void; onDone: (text: string) => void }) {
+export function ReopenDialog({ heatId, title, onClose, onDone }: { heatId: string; title: string; onClose: () => void; onDone: (text: string, walkover?: boolean) => void }) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -105,8 +106,9 @@ export function ReopenDialog({ heatId, title, onClose, onDone }: { heatId: strin
         onSave={() =>
           start(async () => {
             const r = await reopenHeat(heatId, reason);
-            if (r.ok) onDone(H.reopened);
-            else setError(r.message);
+            if (!r.ok) setError(r.message);
+            else if (r.walkover) onDone(copy.walkover.reopenedWalkover, true);
+            else onDone(H.reopened);
           })
         }
       />

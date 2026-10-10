@@ -1,4 +1,5 @@
 import type { HeatLive, TimetableOptions } from "@/lib/engine/schedule";
+import { isWalkoverHeat } from "./walkover";
 import { todayIn } from "@/lib/schedule/plans";
 import type { ScheduleDefaults, SchedulePlan } from "@/lib/schemas/schedule";
 import type { HeatRow, LiveContext } from "./types";
@@ -36,6 +37,7 @@ export function livesFor(ctx: Pick<LiveContext, "divisions" | "rounds">, heats: 
       durationMin: h.duration_sec / 60,
       warmUpMin: h.warm_up_sec / 60,
       cancelled: h.status === "cancelled",
+      ...(isWalkoverHeat(h) ? { walkover: true } : {}),
       ...(m?.breakAfterHeatMin !== undefined ? { breakAfterHeatMin: m.breakAfterHeatMin } : {}),
       ...(m?.breakAfterRoundMin !== undefined ? { breakAfterRoundMin: m.breakAfterRoundMin } : {}),
     };

@@ -1,3 +1,4 @@
+import { noRideText, noRideWord } from "@/lib/live/walkover";
 import type { Access } from "@/lib/exports/access";
 import { excludeSimulations } from "@/lib/exports/exclude-simulations";
 import { buildBackup, SEAT_COLUMNS, type BackupFile, type Row } from "@/lib/export-format/backup";
@@ -100,7 +101,11 @@ export async function loadBackup(a: Ok, now: string = new Date().toISOString()):
       attemptFlags,
       judgeSheets,
       decisions,
-      results,
+      // a rider who did not ride reads in words in the file too: "Walkover", "Did not start", "Out of the event" (the stored breakdown keeps WO / DNS / OUT)
+      results: results.map((r) => {
+        const word = noRideWord((r as { breakdown?: { status?: string } | null }).breakdown);
+        return word ? { ...r, status_word: noRideText(word) } : r;
+      }),
       windCalls,
       feedbackNotes,
       auditLog,

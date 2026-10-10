@@ -7,12 +7,12 @@ import { cn } from "@/lib/utils";
 const H = copy.pub.home;
 const ICON: Record<PublicRowState, typeof Check> = { done: Check, live: Radio, next: Flag, est: Clock, held: Pause, pinned: Pin, cancelled: Clock };
 
-export function StateBadge({ status }: { status: PublicRowState }) {
+export function StateBadge({ status, walkover = false }: { status: PublicRowState; walkover?: boolean }) {
   const Icon = ICON[status];
   return (
     <span data-testid="row-state" className={cn("inline-flex items-center gap-1 rounded-full border px-1.5 text-small font-semibold", status === "live" ? "border-beach-live text-beach-live" : "border-beach-line text-beach-muted")}>
       <Icon aria-hidden className="size-3" />
-      {H.states[status]}
+      {walkover ? copy.walkover.word.walkover : H.states[status]}
     </span>
   );
 }
@@ -43,7 +43,7 @@ export function TimetableList({ rows, heatHref }: { rows: PublicRow[]; heatHref?
             <span data-testid="row-time" className="text-name font-semibold tabular-nums">
               {timeText(r)}
             </span>
-            {r.kind === "heat" ? <StateBadge status={r.status} /> : null}
+            {r.kind === "heat" ? <StateBadge status={r.status} walkover={r.walkover} /> : null}
           </div>
         </li>
       ))}
