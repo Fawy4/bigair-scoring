@@ -2,7 +2,7 @@
 
 Every word the product uses that a newcomer might not know, alphabetically, one line each with a beach example.
 
-Last checked: 4 Oct 2026 · Product version 0.15.0
+Last checked: 10 Oct 2026 · Product version 0.19.0
 
 | Term | Meaning, with a beach example |
 |---|---|
@@ -28,6 +28,7 @@ Last checked: 4 Oct 2026 · Product version 0.15.0
 | {#g-crash} **Crash** | An attempt that was not landed; it scores nothing and does not count (unless the rules count it as zero). *Spotter taps CRASH; the result box is red.* |
 | {#g-csv} **CSV (results spreadsheet)** | A plain table file that opens in Excel: the results of every published heat, one row per rider per heat. *Pressed after every published heat, so a copy exists outside the product.* |
 | {#g-custom-ladder} **Custom ladder** | A ladder you draw yourself, round by round, with a checker. *24 riders: 8 heats of 3, then 4, 2, 1 heats of 2.* |
+| {#g-did-not-start} **Did not start** | A rider who did not ride this heat (a no-show). Only this heat: the rider stays in the event, ranks last here and, in a format with a second chance, still gets the next heat. Set from **···** on the rider's card; **Back in the heat** undoes it until the heat is published. *Mariam did not show up for Heat 11 (injured).* |
 | {#g-direction} **Direction** | Left or right, logged with the trick. *Left backroll, right backroll: “Left 3 · Right 2”.* |
 | {#g-division} **Division** | A group that ranks together with its own rules. *Pro Men, Pro Women, Youth U16.* |
 | {#g-dns} **DNS / DNF / DSQ** | Did not start (ranked last) / did not finish (keeps or loses the scores, per rules) / disqualified (ranked last). *Blue never launched: DNS.* |
@@ -45,6 +46,7 @@ Last checked: 4 Oct 2026 · Product version 0.15.0
 | {#g-heat-length} **Heat length** | How long a heat's clock runs. The draw gives every heat the length from **Timing per round**; the length on the heat's row in the run order replaces it until the heat starts, and the clock runs that. *Drawn at 10 minutes, set to 6 in the run order: it runs 6.* |
 | {#g-height} **Height** | A jump's measured height in metres, when a sensor is used; can fill the Height criterion, add a bonus, or give “Highest jump”. *Highest jump: 24.1 m.* |
 | {#g-flags} **Flags** | The four flag states the clock drives: **Before start** (yellow), **Running** (green), **Last minute** (yellow), **Stopped or paused** (red). On by default for every event. *The marshal's screen turns yellow, then green when the heat starts.* See [Flags and the start heat sequence](screens/flags.md). |
+| {#g-out-of-the-event} **Out of the event** | A rider who is injured or has withdrawn: every seat they would fill, in this heat and every later one, is a walkover for the others. The same as **Withdrawn** on the Riders step. *Mariam is out of the event: her Round 3 seat is a walkover.* |
 | {#g-start-sequence} **Start heat sequence** | What **Start heat** becomes with the flags on: the yellow with the pre-start countdown, then the heat starts by itself. *Press Start heat sequence, 1:00 of yellow, green, the clock runs.* |
 | {#g-prestart} **Pre-start** | The length of the yellow before a heat starts by itself: the event's default, **Other…** (0:10 to 15:00, typed as 1:30 or whole minutes) or **Start now** (none), chosen in the **Pre-start:** box next to the button. During the yellow **+1 min** adds exactly one minute to what is left. *1:00, or Other… 1:30.* |
 | {#g-flag-view} **Flag view** | The flag marshal's screen at /e/‹event›/flag: the whole screen is the flag. *Turns grey and says “No connection — check with the head judge” after 10 seconds without the server.* |
@@ -102,6 +104,7 @@ Last checked: 4 Oct 2026 · Product version 0.15.0
 | {#g-trick-block} **Trick block** | One building block of a trick name. *“double”, “backroll”, “to blind”.* |
 | {#g-version} **Version (result, preset)** | A result published again after Re-open, or a new saved preset, gets the next version number. *“Published — version 2”.* |
 | {#g-view-as} **View as** | Simulator buttons that open a real screen (spectator or official) for your login. *View as Judge 1.* |
+| {#g-walkover} **Walkover** | A heat in which only one rider can ride: the head judge presses **Walkover — ‹rider› goes through** and the heat is finished and published at once, with no clock and no score; the rider is 1st, shown as “Walkover”. *Heat 11 had only Adam: Walkover, Adam goes to Round 4.* |
 | {#g-warm-up} **Warm-up** | Minutes before a heat, shown as its own part of the timetable row; not on the heat timer. *Warm-up 10:00, heat 10:05.* |
 | {#g-wind-call} **Wind call** | Red / amber / green with a message, as a banner on public pages and the big screen. *Amber — “gusty, heats on hold”.* |
 | {#g-woo-id} **WOO ID** | A rider's ID with WOO (the jump sensor), asked on registration (optional). *Used later for heights.* |

@@ -27,7 +27,7 @@ Every route answers `401` to a signed-out visitor and `403` (print: `404`) to an
 | `Rider label` | What the division's identification scheme shows for the rider in this heat (Lycra colour, bib, name…), as text. |
 | `Rider` | First and last name. |
 | `Lycra` | The Lycra colour of the seat in this heat (its name, or the key if the palette no longer has it); empty when the seat has none. |
-| `Rider status` | `Riding`, `Did not start`, `Did not finish` or `Disqualified`. |
+| `Rider status` | `Riding`, `Did not start`, `Out of the event`, `Walkover`, `Did not finish` or `Disqualified`. A rider who did not ride has no `Heat total` (never 0.0); the rider who went through without riding is `Walkover` with place 1. |
 | `Attempt n trick`, `Attempt n result`, `Attempt n score`, `Attempt n counted` | Repeated for n = 1 … the highest attempt count of any rider in the file (shorter riders leave the rest empty). Result is `Landed` or `Crashed`; score is the **panel** score (empty for a crash); counted is `Yes` / `No` (a counted attempt is one of the tricks that make the total). Attempts above the heat's cap are left out, as on the public page. |
 | `<name> score` | The impression score under the event's configured name (Event step → *Name of the impression score*); when there is none, what the divisions' scoring models call it (joined with ` / ` when they differ; the house default is "Impression / Variety score"). |
 | `Heat total` | The total as the public page shows it (empty for Did not start / Disqualified). |
@@ -70,7 +70,7 @@ File name `<event slug>-backup-<yyyy-mm-dd>-<hhmm>.json`. One object; the schema
 | `rounds[]`, `heats[]`, `heatSlots[]` | The ladder's rows with every state: times, status, hold, flag state (`flag_out`, `armed_at`, `prestart_sec`…), draw uid, re-run links; the seats with Lycra colour, source, place, total and breakdown. | |
 | `plans[]` | Every run order and plan: items, anchors, pins (`hand_pins`), `actual_starts`, hold, defaults, active flag. | `schedule_plans` |
 | `attempts[]`, `scores[]`, `impressionScores[]`, `penalties[]`, `attemptFlags[]`, `judgeSheets[]`, `decisions[]` | Everything scored: attempts with their idempotency `client_key`, each judge's score or criteria, impression scores, interference, flags, who submitted a sheet, tie decisions and publish overrides. | |
-| `results[]` | `heat_results`: **every version** of every published result, with its breakdown. | `heat_results` |
+| `results[]` | `heat_results`: **every version** of every published result, with its breakdown. A rider who did not ride has `breakdown.status` `WO` (walkover), `DNS` (did not start) or `OUT` (out of the event), no total, and a `status_word` in words (`Walkover`, `Did not start`, `Out of the event`). A walkover heat has `started_at = ended_at = published_at` in `heats[]`: it took no time and no attempt was logged. | `heat_results` |
 | `windCalls[]`, `feedbackNotes[]` | Wind calls and the notes people left with the Note button. | |
 | `auditLog[]` | Every audit line of the event (including the export lines of earlier downloads), with the secret keys of any before/after copy removed. | `audit_log` |
 | `counts` | `{ <section>: <length> }` for every row list. | — |
