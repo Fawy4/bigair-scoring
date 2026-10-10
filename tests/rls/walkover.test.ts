@@ -39,6 +39,8 @@ describe.skipIf(!ENV_OK)("Walkover — a fixed ladder (Gouna, 12 riders)", () =>
   beforeAll(async () => {
     w = await buildGouna({ riders: 12, name: "Walkover A" });
     heat1 = await state(w, w.uids[0][0]);
+    // results are held back until the head judge releases them unless the event says "public results on publish"
+    await w.f.s.from("events").update({ settings: { publicResultsOnPublish: true } }).eq("id", w.f.ids.evA1);
   }, 600_000);
 
   const run = (client: SupabaseClient, heat: string) => walkoverHeatCore({ user: client, service: w.f.s }, heat);
@@ -143,7 +145,9 @@ describe.skipIf(!ENV_OK)("Walkover — a fixed ladder (Gouna, 12 riders)", () =>
 
   it("walkover again after a Re-open is version 2, and Re-open is refused once a heat it fed has started", async () => {
     expect(await run(w.head, heat1.id)).toMatchObject({ ok: true });
-    expect((await w.f.s.from("heat_results").select("version").eq("heat_id", heat1.id)).data!.map((r) => r.version)).toEqual([2, 2, 2]);
+    // the first walkover's snapshot stays (version 1, for the audit trail); the new one is version 2, one row per rider
+    const versions = (await w.f.s.from("heat_results").select("version").eq("heat_id", heat1.id)).data!.map((r) => r.version).sort();
+    expect(versions).toEqual([1, 1, 1, 2, 2, 2]);
     const r2 = await state(w, w.uids[1][0]);
     await w.f.s.from("heats").update({ status: "running", started_at: ago(60) }).eq("id", r2.id);
     const out = await reopenWalkoverCore(w.head, heat1.id, "too late");

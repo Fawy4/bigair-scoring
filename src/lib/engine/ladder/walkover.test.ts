@@ -141,3 +141,22 @@ describe("rounds dealt by score: a walkover winner counts as a 1st place below e
     void seeds;
   });
 });
+
+describe("a ladder with fixed seats (Gouna: heats of 3, one goes on, seats named \"1st of Heat 3\")", () => {
+  const GOUNA = loadFormat("heats4-top2-single-elim", (j) => Object.assign(j.generator.params, { heatSize: 3, minHeatSize: 3, maxHeatSize: 3, advancePerHeat: 1, finalSize: 2 }));
+  const fed = (d: DivisionDraw, source: string) => round(d, "SF").heats.flatMap((h) => h.slots.map((s) => ({ heat: h.id, slot: s }))).find((x) => x.slot.from && heat(d, source).index === x.slot.from.heat && x.slot.from.round === "R1")!;
+
+  it("a heat finished with nobody leaves the seat it feeds empty and marked as a walkover seat; Re-open puts the placeholder back", () => {
+    let d = lockDraw(expandFormat(GOUNA, makeEntrants(12)));
+    const src = round(d, "R1").heats[3];
+    const before = fed(d, src.id);
+    expect(before.slot.entrantId).toBeUndefined();
+    expect(before.slot.modifier).toBeUndefined();
+    d = applyHeatResult(d, src.id, walkoverRanking(src.slots.map((s) => seat(s.entrantId, "DNS")))).draw;
+    const after = fed(d, src.id);
+    expect(after.slot.entrantId).toBeUndefined();
+    expect(after.slot.modifier).toBe("DNS");
+    // the heat it feeds now knows the seat is decided: the other rider (once seated) can take a walkover of his own
+    expect(heatCanWalkover([seat("x"), seat(undefined, "DNS")]).kind).toBe("walkover");
+  });
+});
