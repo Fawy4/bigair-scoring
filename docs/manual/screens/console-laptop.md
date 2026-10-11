@@ -69,6 +69,12 @@ Works on the laptop console (and for an organiser). The phone's Control tab does
 7. **Taking it back.** **Re-open** on a walkover heat puts it back to Not started with its riders (riders set to Did not start stay as they were; **Back in the heat** is on their menu). It is refused once a heat it fed has started: “A later heat that depends on this result has already started (‹heat›). Reset that heat first, then this one.”
 8. **Who may do it:** the head judge's seat and an organiser. Judges, spotters, the announcer, observers and other organisations are refused. Every press is in the audit log in words, for example “Head judge gave a walkover in R3 · H11: Adam Arrow goes through; Mariam Graff did not start (injured)”.
 
+![The rider menu on a rider's card](../img/console-rider-menu-1280.png)
+*console-rider-menu-1280.png — ··· on Yellow's card in a heat that has not started: Did not start (this heat only), Out of the event (injured or withdrew).*
+
+![The Walkover button after Did not start](../img/console-walkover-1280.png)
+*console-walkover-1280.png — Yellow did not start: one rider can ride, so the big button reads “Walkover — Red goes through”. Yellow's card says Did not start, never 0.0.*
+
 Two small guards on a heat nobody has ridden: the **Ties** box stays empty (two riders with no score are not “tied — choose the order”), and **Publish** asks once: “Nobody has ridden this heat. To send a rider through without riding, use Walkover. Publish anyway?”
 
 In a format that re-seeds by score, a walkover winner counts as a 1st place below every 1st place that has a score. In a fixed ladder (seats such as “1st H2”) nothing special happens.
