@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
-import { replaceHeatSlots, type AppliedState } from "@/lib/live/applied-state";
+import { mergeFresh, replaceHeatSlots, type AppliedState } from "@/lib/live/applied-state";
 import { pickCurrentHeat, type HeatPhase } from "@/lib/live/current-heat";
 import { overlayHeats } from "./use-flag";
 import { maskFor } from "@/lib/live/observer";
@@ -140,7 +140,8 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
     for (let attempt = 0; attempt < 3; attempt++) {
       const { data, error } = await supabase.from("heats").select(HEAT_COLUMNS).eq("event_id", ctx.event.id);
       if (data && !error) {
-        setHeats(data as unknown as HeatRow[]);
+        // merged by age: a read that started before a press can finish after it and must not put the old heat back
+        setHeats((l) => mergeFresh(l, data as unknown as HeatRow[]));
         return;
       }
       await new Promise((r) => setTimeout(r, 700));
@@ -213,8 +214,8 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
         q("heat_decisions", DECISION_COLUMNS),
         q("pending_scores", PENDING_COLUMNS),
       ]);
-      setSnap({
-        slots: (slots.data ?? []) as unknown as SlotRow[],
+      setSnap((s) => ({
+        slots: mergeFresh(s.slots, (slots.data ?? []) as unknown as SlotRow[]),
         attempts: (attempts.data ?? []) as unknown as AttemptRow[],
         scores: (scores.data ?? []) as unknown as ScoreRow[],
         impressions: (impressions.data ?? []) as unknown as ImpressionRow[],
@@ -223,7 +224,7 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
         penalties: (penalties.data ?? []) as unknown as PenaltyRowLive[],
         decisions: (decisions.data ?? []) as unknown as DecisionRow[],
         pending: (pending.data ?? []) as unknown as PendingRow[],
-      });
+      }));
     },
     [supabase],
   );

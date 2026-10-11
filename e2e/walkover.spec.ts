@@ -239,3 +239,36 @@ test("reasons stay optional: Did not start, Walkover and Out of the event each g
   expect(outLine).toHaveLength(1);
   expect(outLine[0].reason).toMatch(/took .* out of the event in .* \(no reason given\)$/);
 });
+
+test("a refresh that was started before the press and arrives after it never puts the old heat back on the console", async ({ browser }) => {
+  test.setTimeout(300_000);
+  const ladder = await addSecondChance(w, "round2");
+  const r2 = ladder.draw.rounds.find((r) => r.id === "R2")!;
+  const oneVsOne = r2.heats.find((h) => h.slots.length === 2)!;
+  const heatId = ladder.heats[oneVsOne.uid ?? oneVsOne.id];
+  const [, missing] = oneVsOne.slots.map((s) => s.entrantId!);
+  const head = await laptop(browser, `/head/${w.eventId}`);
+  await pickHeat(head, heatId);
+  await expect(head.getByTestId("rider-card")).toHaveCount(2, { timeout: 40_000 });
+  // every read of the heats is answered by the database at once but reaches the page 7 seconds later: a read that starts before the walkover (the one the Did-not-start press
+  // asks for) lands after it, carrying the heat as it was
+  await head.context().route(/\/rest\/v1\/heats\?/, async (route) => {
+    const answer = await route.fetch();
+    await new Promise((r) => setTimeout(r, 7_000));
+    await route.fulfill({ response: answer }).catch(() => {});
+  });
+  await head.locator(`[data-testid="rider-card-menu"][data-rider="${missing}"]`).click();
+  await head.getByRole("menuitem", { name: "Did not start (this heat only)" }).click();
+  await dialog(head).getByTestId("dialog-save").click();
+  await head.getByTestId("walkover-button").click({ timeout: 10_000 });
+  await dialog(head).getByTestId("dialog-save").click();
+  await expect(head.getByTestId("walkover-banner")).toContainText("Walkover", { timeout: 10_000 });
+  // the late answers arrive now; the console keeps the Walkover the whole time (watched every 200 ms: a later refresh could hide a flicker, and on the beach the
+  // button coming back is what makes the head judge press again)
+  let flickered = false;
+  for (let waited = 0; waited < 14_000; waited += 200) {
+    if ((await head.getByTestId("walkover-banner").count()) === 0 || (await head.getByTestId("walkover-button").count()) > 0) flickered = true;
+    await head.waitForTimeout(200);
+  }
+  expect(flickered).toBe(false);
+});
