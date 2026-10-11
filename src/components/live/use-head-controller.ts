@@ -5,6 +5,7 @@ import { breakCountdown, computeTimetable, startsOutOfOrder, utcToLocalHHMM, typ
 import { extensionSec } from "@/lib/live/extend";
 import { abortStart, armHeat, cancelHeat, endHeat, setBreakAction, extendHeat, extendPrestart, holdPlan, pauseHeat, resumeBreakAction, resumeHeat, resumePlanAt, shiftPlan, startHeat, type ActionResult, type PlanActionResult } from "@/lib/live/heat-actions";
 import { controlsFor, type Control, type ControlId, type HeatState } from "@/lib/live/head-state";
+import type { AppliedState } from "@/lib/live/applied-state";
 import type { ReviewProps } from "./heat-control";
 import { isLiveHeat } from "@/lib/live/division-pick";
 import { activePlanFor, heatTitle, livesFor, timetableOptions, type ActivePlan } from "@/lib/live/run-order";
@@ -37,8 +38,8 @@ export type DialogKind = "publish" | "reopen" | "rerun" | "hold" | "reset" | nul
  * buttons: the run order (with the real order of the timetable), the selected heat's state and controls, Start (with its out-of-order warning), Hold,
  * Resume at, Shift, the break after a heat (+1 min, Pause break, Resume), Cancel and the dialogs. Every press is a server action on the database's clock.
  */
-export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; plans: ActivePlan[]; nowServer: number; selectedId: string | null; nextHeatId?: string | null; onSelect: (id: string) => void; onPlanChanged?: (planId: string, hold: Json | null, anchors: Json, items?: Json) => void; onPatchHeat?: (heatId: string, patch: Partial<HeatRow>) => void; review?: ReviewProps; divisionId: string | null }) {
-  const { ctx, heats, plans, nowServer, selectedId, nextHeatId = null, onSelect, onPlanChanged, onPatchHeat, review, divisionId } = input;
+export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; plans: ActivePlan[]; nowServer: number; selectedId: string | null; nextHeatId?: string | null; onSelect: (id: string) => void; onPlanChanged?: (planId: string, hold: Json | null, anchors: Json, items?: Json) => void; onPatchHeat?: (heatId: string, patch: Partial<HeatRow>) => void; onApplyState?: (state: AppliedState) => void; review?: ReviewProps; divisionId: string | null }) {
+  const { ctx, heats, plans, nowServer, selectedId, nextHeatId = null, onSelect, onPlanChanged, onPatchHeat, onApplyState, review, divisionId } = input;
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [restart, setRestart] = useState("");
@@ -255,6 +256,7 @@ export function useHeadController(input: { ctx: LiveContext; heats: HeatRow[]; p
     onSelect,
     onPlanChanged,
     patchHeat: onPatchHeat,
+    applyState: onApplyState,
     review,
     alreadyRerun,
     startWarning: shownWarning,

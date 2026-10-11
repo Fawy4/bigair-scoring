@@ -750,10 +750,12 @@ export function HeatDialogs({ c }: { c: HeadController }) {
           heatId={selected.id}
           title={title}
           onClose={close}
-          onDone={(text, walkover) => {
+          onDone={(text, walkover, state) => {
             close();
             c.setMessage({ ok: true, text });
-            c.patchHeat?.(selected.id, walkover ? { status: "scheduled", started_at: null, ended_at: null } : { status: "published" });
+            // the server's own answer (heat and seats) when it gave one, else the guess
+            if (state && c.applyState) c.applyState(state);
+            else c.patchHeat?.(selected.id, walkover ? { status: "scheduled", started_at: null, ended_at: null } : { status: "published" });
             review.onChanged();
           }}
         />

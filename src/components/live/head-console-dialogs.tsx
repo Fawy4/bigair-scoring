@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { CriteriaRows } from "./criteria-rows";
 import { Footer, Modal, off, plain, primary, Reason, btn } from "./console-parts";
 import { RiderBar } from "./rider-bar";
@@ -24,17 +24,28 @@ const C = copy.live.console;
 const H = copy.headLive;
 const field = "min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink";
 
-/** Runs a server action; on success the dialog closes and the console refreshes, otherwise the answer is shown in words inside the dialog. */
-function useRun(onDone: () => void) {
+/**
+ * Runs a server action; on success the dialog closes and the console shows what the server answered (the heat and its seats) before anything else, otherwise the answer is
+ * shown in words inside the dialog. While one press is working a second press does nothing (the button says it is working).
+ */
+function useRun(onDone: (r?: HeadResult) => void) {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const run = (fn: () => Promise<HeadResult>) =>
+  const busy = useRef(false);
+  const run = (fn: () => Promise<HeadResult>) => {
+    if (busy.current) return;
+    busy.current = true;
     start(async () => {
-      setError(null);
-      const r = await fn();
-      if (r.ok) onDone();
-      else setError(r.message);
+      try {
+        setError(null);
+        const r = await fn();
+        if (r.ok) onDone(r);
+        else setError(r.message);
+      } finally {
+        busy.current = false;
+      }
     });
+  };
   return { error, pending, run };
 }
 
@@ -361,7 +372,7 @@ export function AddAttemptDialog({ heatId, riders, counts, cap, role, hasActiveH
 }
 
 // ---------------------------------------------------------------- DNS / DNF / DSQ / Interference
-export function StatusDialog({ heatId, entryId, who, status, penaltyId, onClose, onDone }: { heatId: string; entryId: string; who: string; status: "DNS" | "DNF" | "DSQ" | "INT" | "CLEAR" | "UNDO_INT" | "BACK" | "OUT"; penaltyId?: string; onClose: () => void; onDone: () => void }) {
+export function StatusDialog({ heatId, entryId, who, status, penaltyId, onClose, onDone }: { heatId: string; entryId: string; who: string; status: "DNS" | "DNF" | "DSQ" | "INT" | "CLEAR" | "UNDO_INT" | "BACK" | "OUT"; penaltyId?: string; onClose: () => void; onDone: (r?: HeadResult) => void }) {
   const [reason, setReason] = useState("");
   const { error, pending, run } = useRun(onDone);
   const W = copy.walkover;
@@ -422,9 +433,9 @@ export function FlagOutDialog({ heatId, riders, preselected, undecided, count, w
 
 
 // ---------------------------------------------------------------- Walkover: one big button, one question
-export function WalkoverDialog({ heatId, winner, others, onClose, onDone }: { heatId: string; /** The one rider who can ride, as a word; null when nobody can (No rider). */ winner: string | null; others: string[]; onClose: () => void; onDone: (text: string) => void }) {
+export function WalkoverDialog({ heatId, winner, others, onClose, onDone }: { heatId: string; /** The one rider who can ride, as a word; null when nobody can (No rider). */ winner: string | null; others: string[]; onClose: () => void; onDone: (text: string, r?: HeadResult) => void }) {
   const W = copy.walkover;
-  const { error, pending, run } = useRun(() => onDone(winner ? W.walkoverDone(winner) : W.nobodyDone));
+  const { error, pending, run } = useRun((r) => onDone(winner ? W.walkoverDone(winner) : W.nobodyDone, r));
   return (
     <Modal screen title={winner ? W.walkoverTitle : W.nobodyTitle} onClose={onClose}>
       <p data-testid="walkover-ask" className="text-body font-medium">{winner ? W.walkoverAsk(winner, others) : W.nobodyAsk}</p>

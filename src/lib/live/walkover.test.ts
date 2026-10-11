@@ -38,10 +38,10 @@ describe("the audit sentence", () => {
     );
   });
   it("an organiser, a rider out of the event, no reason", () => {
-    expect(walkoverSentence({ who: "organiser", heat: "R2 · H5", winner: "Sam", others: [{ name: "Lee", outOfEvent: true, reason: null }] })).toBe("Organiser gave a walkover in R2 · H5: Sam goes through; Lee is out of the event");
+    expect(walkoverSentence({ who: "organiser", heat: "R2 · H5", winner: "Sam", others: [{ name: "Lee", outOfEvent: true, reason: null }] })).toBe("Organiser gave a walkover in R2 · H5: Sam goes through; Lee is out of the event (no reason given)");
   });
   it("nobody left", () => {
-    expect(walkoverSentence({ who: "head", heat: "R2 · H5", winner: null, others: [{ name: "Sam", outOfEvent: false, reason: null }, { name: "Lee", outOfEvent: true, reason: "Withdrew" }] })).toBe("Head judge finished R2 · H5 with no rider: Sam did not start; Lee is out of the event (Withdrew)");
+    expect(walkoverSentence({ who: "head", heat: "R2 · H5", winner: null, others: [{ name: "Sam", outOfEvent: false, reason: null }, { name: "Lee", outOfEvent: true, reason: "Withdrew" }] })).toBe("Head judge finished R2 · H5 with no rider: Sam did not start (no reason given); Lee is out of the event (Withdrew)");
   });
   it("'no reason given' is not a reason", () => {
     expect(meaningfulReason("no reason given")).toBeNull();

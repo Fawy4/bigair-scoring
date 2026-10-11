@@ -18,11 +18,13 @@ import type { DivisionDraw } from "@/lib/engine/ladder";
 import { heatResetPlan } from "@/lib/reset/plan";
 import { reasonOf } from "@/lib/reason";
 import { copy } from "@/lib/ui-copy";
+import type { AppliedState } from "./applied-state";
+import { HEAT_COLUMNS, SLOT_COLUMNS, type HeatRow, type SlotRow } from "./types";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Json } from "@/lib/supabase/database.types";
 
-export type HeadResult = { ok: true; /** Re-open only: the heat was a walkover and is Not started again. */ walkover?: boolean } | { ok: false; code: string | null; message: string };
+export type HeadResult = { ok: true; /** Re-open only: the heat was a walkover and is Not started again. */ walkover?: boolean; /** The heat and its seats as the server read them after the press, for the screen to show at once. */ state?: AppliedState } | { ok: false; code: string | null; message: string };
 export type { PublishResult };
 
 const uuid = z.string().uuid();
@@ -33,6 +35,14 @@ const from = (error: { message: string }, impressionName?: string): Failure => (
 const refuse = (r: ScoreRefusal, impressionName?: string): Failure => fail(r.code, errorSentence(r.detail ? `${r.code}: ${r.detail}` : r.code, impressionName ? { impressionName } : {}));
 
 type Db = Awaited<ReturnType<typeof createClient>>;
+
+
+/** The heat and its seats as they are now, read as the signed-in user straight after a press (the console shows them without waiting for the live update). null if a read fails: the normal refresh then covers it. */
+async function stateOf(db: Db, heatId: string): Promise<AppliedState | undefined> {
+  const [heat, slots] = await Promise.all([db.from("heats").select(HEAT_COLUMNS).eq("id", heatId).maybeSingle(), db.from("heat_slots").select(SLOT_COLUMNS).eq("heat_id", heatId)]);
+  if (!heat.data || slots.error || !slots.data) return undefined;
+  return { heat: heat.data as unknown as HeatRow, slots: slots.data as unknown as SlotRow[] };
+}
 
 /** The merged scoring model of a heat's division, read as the signed-in head judge (row security decides). */
 async function modelForHeat(db: Db, heatId: string): Promise<ScoringModel | null> {
@@ -192,7 +202,9 @@ export async function setRiderStatus(input: { heatId: string; entryId: string; m
   input = { ...input, reason: reasonOf(input.reason) };
   const db = await createClient();
   const { error } = await db.rpc("set_rider_status", { p_heat: input.heatId, p_entry: input.entryId, p_modifier: input.modifier as never, p_reason: input.reason.trim() });
-  return error ? from(error) : { ok: true };
+  if (error) return from(error);
+  const state = await stateOf(db, input.heatId);
+  return { ok: true, ...(state ? { state } : {}) };
 }
 
 export async function addInterference(input: { heatId: string; entryId: string; reason: string }): Promise<HeadResult> {
@@ -241,22 +253,35 @@ export async function reopenHeat(heatId: string, reason: string): Promise<HeadRe
   const db = await createClient();
   // a walkover heat goes back to Not started with its riders (Console – Walkover); any other heat is re-opened for correction as before
   const walkover = await reopenWalkoverCore(db, heatId, reason);
-  if (walkover) return walkover.ok ? { ok: true, walkover: true } : walkover;
+  if (walkover) {
+    if (!walkover.ok) return walkover;
+    const state = await stateOf(db, heatId);
+    return { ok: true, walkover: true, ...(state ? { state } : {}) };
+  }
   const { error } = await db.rpc("reopen_heat", { p_heat: heatId, p_reason: reason.trim() });
-  return error ? from(error) : { ok: true };
+  if (error) return from(error);
+  const state = await stateOf(db, heatId);
+  return { ok: true, ...(state ? { state } : {}) };
 }
 
 /** The walkover button: the only rider who can ride goes through without riding (or, with nobody left, the heat is finished with no rider). One server action, one database transaction, safe to press twice. */
-export async function walkoverHeat(heatId: string): Promise<{ ok: true; winner: string | null } | Failure> {
+export async function walkoverHeat(heatId: string): Promise<{ ok: true; winner: string | null; state?: AppliedState } | Failure> {
   if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
-  const out = await walkoverHeatCore({ user: await createClient(), service: createServiceClient() }, heatId);
-  return out.ok ? { ok: true, winner: out.winner } : out;
+  const user = await createClient();
+  const out = await walkoverHeatCore({ user, service: createServiceClient() }, heatId);
+  if (!out.ok) return out;
+  const state = await stateOf(user, heatId);
+  return { ok: true, winner: out.winner, ...(state ? { state } : {}) };
 }
 
 /** Out of the event (injured or withdrew): what Withdrawn on the Riders step does, from the head judge's console. */
 export async function outOfEvent(input: { heatId: string; entryId: string; reason: string }): Promise<HeadResult> {
   if (!uuid.safeParse(input.heatId).success || !uuid.safeParse(input.entryId).success) return fail("RIDER_NOT_IN_HEAT");
-  return outOfEventCore(await createClient(), input);
+  const db = await createClient();
+  const out = await outOfEventCore(db, input);
+  if (!out.ok) return out;
+  const state = await stateOf(db, input.heatId);
+  return { ok: true, ...(state ? { state } : {}) };
 }
 
 /** Add an attempt as the head judge (or an organiser): past the rider's cap only with a reason, and only the head judge, or an organiser when the event has no head judge. */

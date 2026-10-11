@@ -177,7 +177,7 @@ export async function addLadder(w: LiveWorld) {
 
 /**
  * Console – Walkover: a division with the real "Knockout with a second chance" ladder for 12 riders (heats of 3), saved the way the Draw step saves it, with a run order
- * for today (the world's own run order is switched off). `stage: "round2"` has Round 1 already published (its winners in Round 3, the others in the
+ * for tomorrow (so the estimated times are exact and do not depend on the clock). `stage: "round2"` has Round 1 already published (its winners in Round 3, the others in the
  * second-chance round, which is dealt); `stage: "round1"` has only Heats 2–4 of Round 1 published, Heat 1 waits. Everything hangs off the throwaway organisation.
  */
 export async function addSecondChance(w: LiveWorld, stage: "round1" | "round2") {
@@ -226,14 +226,18 @@ export async function addSecondChance(w: LiveWorld, stage: "round1" | "round2") 
   }
   // the published heats of Round 1 started and ended an hour ago; a ridden heat has a length, so a walkover (one instant) is told from them
   for (const uid of published) await db.from("heats").update({ ended_at: new Date(Date.now() - 3_000_000).toISOString() }).eq("id", heats[uid]);
-  // today's run order for this division (the one the console shows: the world's own "Main" plan is switched off); its first heat is pinned in the past, so every time
-  // is "now" plus the lengths and breaks of the heats before it, and a heat that takes no time moves everything after it up
-  await db.from("schedule_plans").update({ active: false }).eq("id", w.planId);
+  // tomorrow's run order, Heat 1 pinned at 10:00: the times are exact whatever the clock says
+  const tomorrow = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" }).format(new Date(Date.now() + 86_400_000));
   const unpublished = projection.heats.filter((h) => !published.has(h.uid));
   const items = unpublished.map((h, i) => ({ id: `s${i + 1}`, kind: "heat", heatId: heats[h.uid] }));
-  const plan = must(await db.from("schedule_plans").insert({ event_id: w.eventId, day: w.today, name: "Second chance day", active: true, items: items as never, anchors: { s1: "00:01" } }).select("id").single(), "plan");
+  // a published heat's results go public at once only if the event says so (as for any heat): this event does
+  const ev = (await db.from("events").select("settings").eq("id", w.eventId).single()).data;
+  await db.from("events").update({ settings: { ...((ev?.settings ?? {}) as object), publicResultsOnPublish: true } as never }).eq("id", w.eventId);
+  // the console shows one run order (today's, else the nearest day): this one must be it, or the second-chance heats show no times
+  await db.from("schedule_plans").update({ active: false }).eq("event_id", w.eventId);
+  const plan = must(await db.from("schedule_plans").insert({ event_id: w.eventId, day: tomorrow, name: "Second chance day", active: true, items: items as never, anchors: { s1: "10:00" } }).select("id").single(), "plan");
   const draftRows = await db.from("heats").select("id, number, draw_uid, status").eq("division_id", division.id).order("number");
-  return { divisionId: division.id, entries, names: first.map((f) => `${f} Chance`), heats, draw, draw0, planId: plan.id, rows: draftRows.data ?? [] };
+  return { divisionId: division.id, entries, names: first.map((f) => `${f} Chance`), heats, draw, draw0, planId: plan.id, tomorrow, rows: draftRows.data ?? [] };
 }
 
 /** The draw after a heat is published with the lower seed winning (the engine's own rule), for building the stage a browser test starts from. */
@@ -264,7 +268,7 @@ export async function publishDirect(w: LiveWorld, draw: DivisionDraw, heatId: st
   if (!step.ok) throw new Error(step.message);
   await w.db.from("heats").update({ status: "ended", started_at: new Date(Date.now() - 900_000).toISOString(), ended_at: new Date(Date.now() - 300_000).toISOString() }).eq("id", heatId);
   const results = ranked.map((r) => ({ entry_id: r.entrantId, place: r.place, total: r.total, percent: null, breakdown: r.total === null ? { status: "DNS" } : { status: "ok", total: r.total, totalLabel: String(r.total), components: { tricks: r.total, impression: 0, bonus: 0, penalty: 0 }, allAttempts: [] } }));
-  const { error } = await w.db.rpc("publish_heat_commit", { p_heat: heatId, p_expected_version: 1, p_results: results as never, p_draw: step.draw as never, p_projection: step.projection as never, p_hold: false, p_override_reason: "Test setup: no judges score this heat" as never, p_actor: w.seats.head.userId, p_blockers: [] as never });
+  const { error } = await w.db.rpc("publish_heat_commit", { p_heat: heatId, p_expected_version: 1, p_results: results as never, p_draw: step.draw as never, p_projection: step.projection as never, p_hold: false, p_override_reason: "Set up by the test: no sheets were scored" as never, p_actor: w.seats.head.userId, p_blockers: [] as never });
   if (error) throw new Error(`publish_heat_commit: ${error.message}`);
   return step.draw ?? draw;
 }

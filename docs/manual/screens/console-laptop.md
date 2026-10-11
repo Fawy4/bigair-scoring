@@ -2,7 +2,7 @@
 
 The head judge's working screen at /head/‹event› on a laptop or tablet (1280 px and wider): division tabs, the heat's timer and buttons, the run order with times, the break countdown, the live score table, Publish and everything around it.
 
-Last checked: 10 Oct 2026 · Product version 0.19.0
+Last checked: 11 Oct 2026 · Product version 0.19.0
 
 ## What it is for {#cl-purpose}
 
@@ -73,7 +73,13 @@ Works on the laptop console (and for an organiser). The phone's Control tab does
 5. **Nobody left.** If every rider in the heat is Did not start or Out of the event, the button reads **No rider — finish this heat**: nobody goes through and the seat the heat feeds stays empty; a later heat left with one rider then offers its own Walkover. Nothing ever happens by itself: the head judge always presses.
 6. **The run order.** A walkover takes no time. Its line reads “R3 · H11 · Walkover · 14:05” (the time it was given); the heats after it move up, never before a pinned time. **Hold**, **Shift** and **+1 min** work as before.
 7. **Taking it back.** **Re-open** on a walkover heat puts it back to Not started with its riders (riders set to Did not start stay as they were; **Back in the heat** is on their menu). It is refused once a heat it fed has started: “A later heat that depends on this result has already started (‹heat›). Reset that heat first, then this one.”
-8. **Who may do it:** the head judge's seat and an organiser. Judges, spotters, the announcer, observers and other organisations are refused. Every press is in the audit log in words, for example “Head judge gave a walkover in R3 · H11: Adam Arrow goes through; Mariam Graff did not start (injured)”.
+8. **Who may do it:** the head judge's seat and an organiser. Judges, spotters, the announcer, observers and other organisations are refused. Every press is in the audit log in words, for example “Head judge gave a walkover in R3 · H11: Adam Arrow goes through; Mariam Graff did not start (injured)”. A reason is always optional: with none picked or typed, one press confirms and the line says “(no reason given)”, for example “Head judge gave a walkover in R3 · H11: Adam Arrow goes through; Mariam Graff did not start (no reason given)”.
+
+![The rider menu on a rider's card](../img/console-rider-menu-1280.png)
+*console-rider-menu-1280.png — ··· on Yellow's card in a heat that has not started: Did not start (this heat only), Out of the event (injured or withdrew).*
+
+![The Walkover button after Did not start](../img/console-walkover-1280.png)
+*console-walkover-1280.png — Yellow did not start: one rider can ride, so the big button reads “Walkover — Red goes through”. Yellow's card says Did not start, never 0.0.*
 
 Two small guards on a heat nobody has ridden: the **Ties** box stays empty (two riders with no score are not “tied — choose the order”), and **Publish** asks once: “Nobody has ridden this heat. To send a rider through without riding, use Walkover. Publish anyway?”
 

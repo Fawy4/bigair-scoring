@@ -91,18 +91,29 @@ test("a 1 v 1 heat: ··· on the rider who is missing, Did not start, Walkover:
   expect((await w.db.from("entries").select("status").eq("id", missing).single()).data!.status).toBe("confirmed");
 
   // the console says it in words, and the run order moved on
-  await expect(head.getByTestId("walkover-banner")).toContainText("Walkover", { timeout: 40_000 });
+  await expect(head.getByTestId("walkover-banner")).toContainText("Walkover", { timeout: 10_000 });
   await expect(head.locator(`[data-testid="rider-card"][data-rider="${winner}"]`)).toContainText("Walkover");
   await expect(head.locator(`[data-testid="rider-card"][data-rider="${missing}"]`)).toContainText("Did not start");
   await expect(head.locator(`[data-testid="rider-card"]`).filter({ hasText: /0\.0/ })).toHaveCount(0);
-  await expect(head.locator(`[data-testid="order-row"][data-heat="${heatId}"]`)).toContainText("Walkover", { timeout: 40_000 });
-  await expect.poll(() => rowText(head, nextId), { timeout: 40_000 }).not.toBe(before);
+  await expect(head.locator(`[data-testid="order-row"][data-heat="${heatId}"]`)).toContainText("Walkover", { timeout: 10_000 });
+  await expect.poll(() => rowText(head, nextId), { timeout: 10_000 }).not.toBe(before);
 
   // the public results page
   const pub = await laptop(browser, `/e/e2e-live-${w.org.run}/results?heat=${heatId}`);
   await expect(pub.getByTestId("public-rider").first()).toContainText("Walkover", { timeout: 40_000 });
   await expect(pub.getByTestId("public-rider").nth(1)).toContainText("Did not start");
   await expect(pub.getByTestId("public-total")).toHaveCount(0);
+
+  // the results download and Follow the heat say the same words, and no 0.0 anywhere
+  const csv = await head.request.get(`/export/${w.eventId}/results.csv`);
+  expect(csv.status()).toBe(200);
+  const csvText = await csv.text();
+  expect(csvText).toMatch(/Heat 5,,RED,Eli Chance,Red,Walkover,,,,,,,1,/);
+  expect(csvText).toMatch(/Heat 5,,YELLOW,Jon Chance,Yellow,Did not start,,,,,,,2,/);
+  const follow = await (await head.request.get(`/screen/e2e-live-${w.org.run}/follow/data`)).text();
+  expect(follow).toContain('"note":"Walkover"');
+  expect(follow).toContain('"note":"Did not start"');
+  expect(follow).not.toMatch(/\b0\.0\b/);
 
   // Re-open puts it back to Not started with its riders
   await head.getByTestId("reopen").click();
@@ -186,4 +197,87 @@ test("nobody left: every rider Did not start or Out of the event — 'No rider �
   await expect(head.getByTestId("walkover-flash")).toContainText("Heat finished with no rider", { timeout: 40_000 });
   const results = (await w.db.from("heat_results").select("place").eq("heat_id", heatId)).data!;
   expect(results.every((r) => r.place === null)).toBe(true);
+  // nothing was typed or picked: the audit log says so, in words
+  const lines = (await w.db.from("audit_log").select("action, reason").eq("event_id", w.eventId).eq("row_id", heatId).eq("action", "heat_walkover")).data!;
+  expect(lines).toHaveLength(1);
+  expect(lines[0].reason).toMatch(/with no rider: .*did not start \(no reason given\); .*did not start \(no reason given\)$/);
+});
+
+test("reasons stay optional: Did not start, Walkover and Out of the event each go through in one click with nothing picked or typed, and the audit log says \"no reason given\"", async ({ browser }) => {
+  test.setTimeout(300_000);
+  const ladder = await addSecondChance(w, "round2");
+  const r2 = ladder.draw.rounds.find((r) => r.id === "R2")!;
+  const oneVsOne = r2.heats.find((h) => h.slots.length === 2)!;
+  const heatId = ladder.heats[oneVsOne.uid ?? oneVsOne.id];
+  const [winner, missing] = oneVsOne.slots.map((s) => s.entrantId!);
+  const three = r2.heats.find((h) => h.slots.length === 3)!;
+  const threeId = ladder.heats[three.uid ?? three.id];
+  const out = three.slots[1].entrantId!;
+  const head = await laptop(browser, `/head/${w.eventId}`);
+
+  // Did not start: ··· → the menu item → ONE press of Confirm, no quick pick, nothing typed
+  await pickHeat(head, heatId);
+  await head.locator(`[data-testid="rider-card-menu"][data-rider="${missing}"]`).click();
+  await head.getByRole("menuitem", { name: "Did not start (this heat only)" }).click();
+  await expect(dialog(head).getByTestId("dialog-save")).toBeEnabled();
+  await dialog(head).getByTestId("dialog-save").click();
+  await expect(dialog(head)).toHaveCount(0, { timeout: 10_000 });
+  await expect(head.locator(`[data-testid="rider-card"][data-rider="${missing}"]`)).toContainText("Did not start", { timeout: 10_000 });
+  const dns = (await w.db.from("audit_log").select("reason").eq("event_id", w.eventId).eq("action", "rider_status_set")).data!;
+  expect(dns.map((r) => r.reason)).toEqual(["no reason given"]);
+
+  // Walkover: one press of the big button, one press of the question's Confirm
+  await head.getByTestId("walkover-button").click();
+  await expect(dialog(head).getByTestId("dialog-save")).toBeEnabled();
+  await dialog(head).getByTestId("dialog-save").click();
+  await expect(head.getByTestId("walkover-banner")).toContainText("Walkover", { timeout: 10_000 });
+  await expect(head.getByTestId("walkover-button")).toHaveCount(0);
+  const wo = (await w.db.from("audit_log").select("reason").eq("event_id", w.eventId).eq("row_id", heatId).eq("action", "heat_walkover")).data!;
+  expect(wo).toHaveLength(1);
+  expect(wo[0].reason).toMatch(/goes through; .*did not start \(no reason given\)$/);
+  expect((await w.db.from("heat_results").select("entry_id").eq("heat_id", heatId).eq("place", 1)).data![0].entry_id).toBe(winner);
+
+  // Out of the event: one press of Confirm, nothing picked or typed
+  await pickHeat(head, threeId);
+  await head.locator(`[data-testid="rider-card-menu"][data-rider="${out}"]`).click();
+  await head.getByRole("menuitem", { name: "Out of the event (injured or withdrew)" }).click();
+  await expect(dialog(head).getByTestId("dialog-save")).toBeEnabled();
+  await dialog(head).getByTestId("dialog-save").click();
+  await expect(head.locator(`[data-testid="rider-card"][data-rider="${out}"]`)).toContainText("Out of the event", { timeout: 10_000 });
+  const outLine = (await w.db.from("audit_log").select("reason").eq("event_id", w.eventId).eq("action", "rider_out_of_event")).data!;
+  expect(outLine).toHaveLength(1);
+  expect(outLine[0].reason).toMatch(/took .* out of the event in .* \(no reason given\)$/);
+});
+
+test("a refresh that was started before the press and arrives after it never puts the old heat back on the console", async ({ browser }) => {
+  test.setTimeout(300_000);
+  const ladder = await addSecondChance(w, "round2");
+  const r2 = ladder.draw.rounds.find((r) => r.id === "R2")!;
+  const oneVsOne = r2.heats.find((h) => h.slots.length === 2)!;
+  const heatId = ladder.heats[oneVsOne.uid ?? oneVsOne.id];
+  const [, missing] = oneVsOne.slots.map((s) => s.entrantId!);
+  const head = await laptop(browser, `/head/${w.eventId}`);
+  await pickHeat(head, heatId);
+  await expect(head.getByTestId("rider-card")).toHaveCount(2, { timeout: 40_000 });
+  // every read of the heats is answered by the database at once but reaches the page 7 seconds later: a read that starts before the walkover (the one the Did-not-start press
+  // asks for) lands after it, carrying the heat as it was
+  await head.context().route(/\/rest\/v1\/heats\?/, async (route) => {
+    const answer = await route.fetch();
+    await new Promise((r) => setTimeout(r, 7_000));
+    await route.fulfill({ response: answer }).catch(() => {});
+  });
+  await head.locator(`[data-testid="rider-card-menu"][data-rider="${missing}"]`).click();
+  await head.getByRole("menuitem", { name: "Did not start (this heat only)" }).click();
+  await dialog(head).getByTestId("dialog-save").click();
+  await head.getByTestId("walkover-button").click({ timeout: 10_000 });
+  await dialog(head).getByTestId("dialog-save").click();
+  await expect(head.getByTestId("walkover-banner")).toContainText("Walkover", { timeout: 10_000 });
+  // the late answers arrive now; the console keeps the Walkover the whole time (watched every 200 ms: a later refresh could hide a flicker, and on the beach the
+  // button coming back is what makes the head judge press again)
+  let flickered = false;
+  for (let waited = 0; waited < 14_000; waited += 200) {
+    if ((await head.getByTestId("walkover-banner").count()) === 0 || (await head.getByTestId("walkover-button").count()) > 0) flickered = true;
+    await head.waitForTimeout(200);
+  }
+  expect(flickered).toBe(false);
 });
