@@ -95,6 +95,17 @@ test("a 1 v 1 heat: ··· on the rider who is missing, Did not start, Walkover:
   await expect(pub.getByTestId("public-rider").nth(1)).toContainText("Did not start");
   await expect(pub.getByTestId("public-total")).toHaveCount(0);
 
+  // the results download and Follow the heat say the same words, and no 0.0 anywhere
+  const csv = await head.request.get(`/export/${w.eventId}/results.csv`);
+  expect(csv.status()).toBe(200);
+  const csvText = await csv.text();
+  expect(csvText).toMatch(/Heat 5,,RED,Eli Chance,Red,Walkover,,,,,,,1,/);
+  expect(csvText).toMatch(/Heat 5,,YELLOW,Jon Chance,Yellow,Did not start,,,,,,,2,/);
+  const follow = await (await head.request.get(`/screen/e2e-live-${w.org.run}/follow/data`)).text();
+  expect(follow).toContain('"note":"Walkover"');
+  expect(follow).toContain('"note":"Did not start"');
+  expect(follow).not.toMatch(/\b0\.0\b/);
+
   // Re-open puts it back to Not started with its riders
   await head.getByTestId("reopen").click();
   await dialog(head).getByTestId("dialog-save").click();
