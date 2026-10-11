@@ -8,6 +8,9 @@ import type { DivisionDraw } from "../src/lib/engine/ladder";
 let w: LiveWorld;
 test.beforeEach(async () => {
   w = await createLiveWorld();
+  // a published result reaches the public pages at once (as on an event that shows results automatically); otherwise it waits for Release, as for any heat
+  const { data } = await w.db.from("events").select("settings").eq("id", w.eventId).single();
+  await w.db.from("events").update({ settings: { ...((data?.settings ?? {}) as object), publicResultsOnPublish: true } as never }).eq("id", w.eventId);
 });
 test.afterEach(async () => {
   await w?.cleanup();
@@ -26,10 +29,16 @@ async function laptop(browser: import("@playwright/test").Browser, path: string)
 }
 const dialog = (p: Page) => p.getByTestId("console-dialog");
 const pickHeat = async (p: Page, heat: string) => {
+  // the second-chance division is not the one the console opens on
+  await p.getByTestId("division-tab").filter({ hasText: "Second chance" }).click({ timeout: 40_000 });
   const row = p.locator(`[data-testid="order-row"][data-heat="${heat}"]`);
   await row.waitFor({ state: "attached", timeout: 40_000 });
   if (!(await row.isVisible())) await p.getByTestId("other-divisions").locator("summary").click();
-  await row.click();
+  // press it until the console really shows that heat (the page may still be switching division)
+  await expect(async () => {
+    await row.click();
+    await expect(row).toHaveAttribute("aria-pressed", "true", { timeout: 3_000 });
+  }).toPass({ timeout: 30_000 });
 };
 const rowText = (p: Page, heat: string) => p.locator(`[data-testid="order-row"][data-heat="${heat}"]`).innerText();
 const slotsOf = async (heat: string) => (await w.db.from("heat_slots").select("entry_id, modifier, position").eq("heat_id", heat).order("position")).data!;
@@ -48,11 +57,11 @@ test("a 1 v 1 heat: ··· on the rider who is missing, Did not start, Walkover:
   const head = await laptop(browser, `/head/${w.eventId}`);
   await pickHeat(head, heatId);
   await expect(head.getByTestId("rider-card")).toHaveCount(2, { timeout: 40_000 });
-  // two riders can ride: no Walkover yet; every card has its ··· button (44 px or more)
+  // two riders can ride: no Walkover yet; every card has a small ··· button in its corner (about 24 px; the card is not taller for it: see walkover-card.spec.ts)
   await expect(head.getByTestId("walkover-button")).toHaveCount(0);
   const dots = head.locator(`[data-testid="rider-card-menu"][data-rider="${missing}"]`);
   await expect(dots).toBeVisible();
-  expect((await dots.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect((await dots.boundingBox())!.height).toBeLessThanOrEqual(42);
   const before = await rowText(head, nextId);
 
   await dots.click();

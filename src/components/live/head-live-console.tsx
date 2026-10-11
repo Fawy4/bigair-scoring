@@ -272,7 +272,7 @@ export function HeadLiveConsole({
           {stripTiles.map(({ r, total, slot }) => {
             const noRide = noRideOf(r.entryId);
             return (
-              <div key={r.entryId} data-testid="rider-card" data-rider={r.entryId} className="flex min-w-[4.5rem] shrink flex-col rounded-card border border-beach-line bg-beach-surface">
+              <div key={r.entryId} data-testid="rider-card" data-rider={r.entryId} className="relative flex min-w-[4.5rem] shrink flex-col rounded-card border border-beach-line bg-beach-surface">
                 <button
                   type="button"
                   data-testid="rider-strip-tile"
@@ -282,19 +282,23 @@ export function HeadLiveConsole({
                   onClick={() => setMenu({ kind: "rider", entryId: r.entryId })}
                   className="flex min-h-tap w-full flex-col items-start gap-0.5 rounded-card px-2 py-1 text-left"
                 >
-                  <span className="min-w-0 whitespace-normal break-words">{<RiderLabel model={r.label} variant="live" bare />}</span>
+                  {/* the right margin keeps the name and nationality clear of the ··· button in the corner: they wrap, never run under it */}
+                  <span data-testid="rider-card-label" className={cn("min-w-0 whitespace-normal break-words", riderMenuOpen(heat.status) && "mr-6 max-w-[calc(100%-1.5rem)]")}>
+                    <RiderLabel model={r.label} variant="live" bare />
+                  </span>
                   <span className="flex w-full flex-wrap items-baseline justify-between gap-x-2">
-                    <span data-testid="rider-strip-total" className="text-name font-semibold tabular-nums">
-                      {noRide ? noRideText(noRide) : (heat.status === "scheduled" ? copy.live.result.noTotal : (total?.totalLabel ?? copy.live.result.noTotal))}
+                    {/* a rider who did not ride shows the words where the total was, never 0.0 */}
+                    <span data-testid="rider-strip-total" data-noride={noRide ?? undefined} className="text-name font-semibold tabular-nums">
+                      {noRide ? noRideText(noRide) : heat.status === "scheduled" ? copy.live.result.noTotal : (total?.totalLabel ?? copy.live.result.noTotal)}
                     </span>
                     <span data-testid="rider-strip-attempts" className="text-small font-medium text-beach-muted tabular-nums">
                       {V.attemptsShort(counts.get(r.entryId) ?? 0, cap)}
                     </span>
                   </span>
                   {slot?.modifier && !noRide ? <Pill tone="outlier">{slot.modifier}</Pill> : null}
-                  {noRide ? <Pill tone="outlier"><span data-testid="rider-noride">{noRideText(noRide)}</span></Pill> : null}
                 </button>
                 {riderMenuOpen(heat.status) ? (
+                  /* small and in the card's corner: 24 px to see, a little more to tap on a touch screen, inside the card and out of its layout */
                   <button
                     type="button"
                     data-testid="rider-card-menu"
@@ -302,10 +306,11 @@ export function HeadLiveConsole({
                     aria-label={W.menuButton(wordFor(r.entryId))}
                     aria-haspopup="menu"
                     onClick={() => setMenu({ kind: "rider", entryId: r.entryId })}
-                    className="flex min-h-[44px] w-full items-center justify-center rounded-b-card border-t border-beach-line text-name font-bold leading-none text-beach-ink"
+                    className="absolute right-0 top-0 grid size-6 place-items-center rounded-md text-beach-ink [@media(pointer:coarse)]:size-10 [@media(pointer:coarse)]:place-items-start [@media(pointer:coarse)]:justify-items-end"
                   >
-                    <MoreHorizontal aria-hidden className="size-5" />
-                    <span aria-hidden className="sr-only">···</span>
+                    <span data-testid="rider-card-menu-icon" className="grid size-6 place-items-center rounded-md border border-beach-line bg-beach-bg">
+                      <MoreHorizontal aria-hidden className="size-4" />
+                    </span>
                   </button>
                 ) : null}
               </div>
@@ -412,7 +417,7 @@ export function HeadLiveConsole({
             const slot = slotOf(t.entryId);
             return (
               <div key={t.entryId} data-testid="console-total" data-rider={t.entryId} className="flex flex-col gap-0.5">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                   <button type="button" aria-label={`${wordFor(t.entryId)}: ${C.riderMenu}`} disabled={!open} onClick={() => setMenu({ kind: "rider", entryId: t.entryId })} className="flex min-h-tap min-w-0 items-center gap-1 rounded-lg text-left">
                     {r ? <RiderLabel model={r.label} variant="live" bare /> : <span>{wordFor(t.entryId)}</span>}
                     {open ? <MoreVertical aria-hidden className="size-4 shrink-0 text-beach-muted" /> : null}
@@ -561,6 +566,9 @@ export function HeadLiveConsole({
           onClose={close}
           onDone={(text) => {
             setFlash(text);
+            // the heat is published at one instant: show it so at once (the same as Publish and Re-open do), the next refresh confirms it
+            const at = new Date(nowServer).toISOString();
+            c.patchHeat?.(heat.id, { status: "published", started_at: at, ended_at: at });
             done();
           }}
         />

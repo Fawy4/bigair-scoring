@@ -17,7 +17,7 @@ How to write an entry (copy the newest one):
 PR: #44
 
 ### What changed
-- **A rider who does not show up, is injured or withdraws now has a clear way through on the head judge's laptop console.** At Gouna, twice, the other rider could not be sent through: the rider menu was only there once a heat had started, so the heat was started, one rider was given a made-up score, and 15 minutes were lost. Now every rider card has a **···** button in every state (not started, running, ended, under review).
+- **A rider who does not show up, is injured or withdraws now has a clear way through on the head judge's laptop console.** At Gouna, twice, the other rider could not be sent through: the rider menu was only there once a heat had started, so the heat was started, one rider was given a made-up score, and 15 minutes were lost. Now every rider card has a small **···** button in its top-right corner in every state (not started, running, ended, under review); it adds no height to the card.
 - **Did not start (this heat only)** — the rider stays in the event, ranks last, and in a format with a second chance still gets the next heat. **Back in the heat** undoes it until the heat is published.
 - **Out of the event (injured or withdrew)** — exactly what **Withdrawn** on the Riders step does: every seat the rider would fill, this heat and every later one (second-chance heats too), becomes a walkover for the others.
 - **Walkover.** When a heat that has not started has only one rider who can ride, one big button appears: **Walkover — ‹rider› goes through**. One press, one question: the heat is finished and published at once (no clock, no flags, no judges, no scores), the rider is 1st and reads **Walkover**, the seats it feeds fill, and the heats after it move up in the run order. A heat of three with one rider missing still runs with two. If nobody is left the button reads **No rider — finish this heat**.
@@ -40,7 +40,6 @@ PR: #44
 ### Known issues
 - The phone's Control tab does not have the rider menu or the Walkover button (laptop or tablet at 900 px or wider only).
 - "Out of the event" shows on a rider card as soon as it is pressed on that screen; another head-judge screen that was already open shows **Did not start** for that rider until it is reloaded.
-- Screenshots of the new console section are not in the manual yet (see the pull request).
 
 ## 0.18.2 — 8 Oct 2026 {#release-0-18-2}
 

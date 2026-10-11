@@ -23,6 +23,7 @@ test("the rider menu on a card, and the Walkover button", async ({ browser }) =>
     await installSupabaseProxy(laptop);
     const head = await laptop.newPage();
     await w.signInAs(head, "head", `/head/${w.eventId}`);
+    await head.getByTestId("division-tab").filter({ hasText: "Second chance" }).click({ timeout: 60_000 });
     const row = head.locator(`[data-testid="order-row"][data-heat="${heatId}"]`);
     await row.waitFor({ state: "attached", timeout: 60_000 });
     if (!(await row.isVisible())) await head.getByTestId("other-divisions").locator("summary").click();
