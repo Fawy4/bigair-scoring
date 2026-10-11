@@ -63,7 +63,7 @@ test("a judge scores on the Rider sheet before the spotter logs; the scores land
   await head.locator(`[data-testid="order-row"][data-heat="${H}"]`).click({ timeout: 60_000 });
   await expect(spotter.getByTestId("trick-builder")).toBeVisible({ timeout: 30_000 });
 
-  // ---- the switch: Queue is the default; the choice is remembered on the device
+  // ---- the switch: these phones chose the Queue (the new default is tested in spotter-rider-sheet.spec.ts); the choice is remembered on the device
   await expect(j1.getByTestId("view-queue")).toHaveAttribute("aria-pressed", "true", { timeout: 30_000 });
   await expect(j1.getByTestId("all-scored")).toBeVisible();
   await j1.getByTestId("view-sheet").click();
@@ -75,9 +75,10 @@ test("a judge scores on the Rider sheet before the spotter logs; the scores land
 
   // ---- three scores on lines 1-3, before any attempt exists (the Red card is the first rider)
   await expect(j1.getByTestId("rider-tile").first()).toContainText("RED");
-  await type(j1, 3, "8");
+  // line by line (0.20.0): a score is typed on the first line with no score yet, so 1, then 2, then 3
   await type(j1, 1, "7.5");
   await type(j1, 2, "6");
+  await type(j1, 3, "8");
   await expect.poll(async () => (await notes()).map((n) => Number(n.score)), { timeout: 30_000 }).toEqual([7.5, 6, 8]);
   await expect(line(j1, 1).getByTestId("line-pending")).toBeVisible();
   // the off-step refusal is the pad's own sentence, and nothing is saved for it
@@ -209,8 +210,8 @@ test("the head judge's Score tab has the same switch, no listener is added to a 
     await expect(page.getByTestId("all-scored")).toBeVisible();
     // a note typed on the head judge's own sheet is the head judge's, and only theirs
     await page.getByTestId("view-sheet").click();
-    await box(page, 2).fill("6.5");
-    await box(page, 2).blur();
+    await box(page, 1).fill("6.5");
+    await box(page, 1).blur();
     await expect.poll(async () => ((await hw.db.from("pending_scores").select("score").eq("heat_id", H)).data ?? []).length, { timeout: 30_000 }).toBe(1);
     expect(problems.filter((p) => /after `?subscribe\(\)/i.test(p) || /postgres_changes callbacks/i.test(p))).toEqual([]);
   } finally {
@@ -231,16 +232,17 @@ test("the head judge clears a judge's pending note from the console (reason opti
   await expect(j1.getByTestId("view-queue")).toBeVisible({ timeout: 30_000 });
   await j1.getByTestId("view-sheet").click();
 
-  // ---- the judge's phone "dies" with a note on line 2: the head judge clears it on the console
+  // ---- the judge's phone "dies" with a note on line 2 (line 1 first: line by line): the head judge clears it on the console
+  await type(j1, 1, "7");
   await type(j1, 2, "6.5");
-  await expect.poll(async () => (await notes()).length, { timeout: 30_000 }).toBe(1);
-  await expect(head.getByTestId("pending-row")).toHaveCount(1, { timeout: 40_000 });
-  await head.getByTestId("clear-note").click();
+  await expect.poll(async () => (await notes()).length, { timeout: 30_000 }).toBe(2);
+  await expect(head.getByTestId("pending-row")).toHaveCount(2, { timeout: 40_000 });
+  await head.locator('[data-testid="pending-row"][data-line="2"]').getByTestId("clear-note").click();
   const dialog = head.getByTestId("console-dialog");
   await expect(dialog.getByTestId("clear-note-ask")).toContainText("Clear J1's pending score on Sam Rivera, attempt 2?");
   await dialog.getByTestId("dialog-save").click(); // no reason
-  await expect.poll(async () => (await notes()).length, { timeout: 30_000 }).toBe(0);
-  await expect(head.getByTestId("pending-row")).toHaveCount(0, { timeout: 40_000 });
+  await expect.poll(async () => (await notes()).length, { timeout: 30_000 }).toBe(1);
+  await expect(head.getByTestId("pending-row")).toHaveCount(1, { timeout: 40_000 });
   const audit = (await w.db.from("audit_log").select("reason, before").eq("event_id", w.eventId).eq("action", "pending_cleared_by_head")).data ?? [];
   expect(audit).toHaveLength(1);
   expect(audit[0].reason).toBeNull();

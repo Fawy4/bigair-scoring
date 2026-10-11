@@ -231,6 +231,7 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
       set_entry_order: { p_division: d.div, p_entry_ids: [p[2], p[1], p[0]], p_shuffle_seed: 1 },
       set_event_archived: { p_event: f.ids.evA1, p_archived: true },
       set_heat_public_live: { p_heat: running, p_value: false },
+      set_line_missed: { p_heat: running, p_entry: p[0], p_line: 3, p_client_key: ck(), p_client_rev: 900 }, // Rider sheets: Missed on a line
       set_line_score: { p_heat: running, p_entry: p[0], p_line: 3, p_score: 6, p_client_key: ck(), p_client_rev: 900 },
       set_plan_anchors: { p_plan: planId, p_anchors: { a: "10:00" } },
       set_plan_break: { p_plan: planId, p_item: "i1", p_break_min: 3, p_anchors: {} },
@@ -261,6 +262,7 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
       sim_view_as: { p_event: f.ids.evA1, p_seat: f.ids.seat_j1 },
       sim_view_beat: { p_event: f.ids.evA1 },
       sim_view_leave: { p_event: f.ids.evA1 },
+      spotter_edit_attempt: { p_client_key: ck(), p_status: "crashed" }, // Rider sheets: the spotter corrects its own line
       start_heat: { p_heat: running },
       submit_flag: { p_attempt: attR, p_kind: "crash", p_note: null, p_client_key: ck() },
       submit_impression: { p_heat: ended, p_entry: p[0], p_value: 3, p_client_key: ck(), p_client_rev: 900 },

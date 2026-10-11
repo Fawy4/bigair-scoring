@@ -2,7 +2,7 @@
  * The send queue of the official phones (docs/08 §1G-7). Pure: storage and the network are passed in, the tests use an in-memory store.
  * Every score and attempt is saved on the phone first and sent in order; a newer edit of the same score replaces an older one that is still waiting.
  */
-export type QueueKind = "attempt" | "trick_score" | "impression" | "flag" | "line_score" | "line_clear";
+export type QueueKind = "attempt" | "trick_score" | "impression" | "flag" | "line_score" | "line_clear" | "line_missed" | "attempt_edit";
 export type ItemState = "pending" | "synced" | "failed" | "refused";
 
 export interface QueueEntry {
@@ -37,6 +37,10 @@ export const REFUSALS: ReadonlySet<string> = new Set([
   "ENTRY_NOT_IN_DIVISION",
   "LINE_PAST_CAP",
   "LINE_SCORE_NOT_AVAILABLE",
+  "HEAT_PUBLISHED",
+  "HEAT_CANCELLED",
+  "BAD_STATUS",
+  "BAD_DIRECTION",
 ]);
 
 /** 1, 2, 4, 8 and 16 seconds, then 30 seconds every time. */
@@ -104,6 +108,7 @@ export class SendQueue {
     const waiting = input.kind === "attempt" ? undefined : this.items.find((i) => i.key === input.key && i.state === "pending" && !this.inFlight.has(i.clientKey));
     let entry: QueueEntry;
     if (waiting) {
+      waiting.kind = input.kind; // a score typed over a Missed (or the other way round) on the same line replaces it
       waiting.payload = input.payload;
       waiting.clientKey = clientKey;
       waiting.clientRev = rev;

@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import { computeHeat } from "@/lib/engine/scoring";
 import { preset } from "@/lib/engine/scoring/fixtures";
 import {
+  activeLine,
   allowedLine,
   buildLines,
+  lineDone,
+  lineTypable,
   consoleRows,
   lineOfSlot,
   noteBlockers,
@@ -264,17 +267,99 @@ describe("mixed views: two judges on the Queue and two on the Rider sheet", () =
     expect(mixed.riders[0].counted).toHaveLength(3);
   });
 
-  it("the view is a per-device choice, kept apart from the scores: Queue unless the device chose the Rider sheet", () => {
+  it("the view is a per-device choice, kept apart from the scores: the Rider sheet unless the device chose the Queue", () => {
     const store = new Map<string, string>();
     const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
-    expect(viewPreference.read(storage)).toBe("queue");
-    viewPreference.write("sheet", storage);
     expect(viewPreference.read(storage)).toBe("sheet");
     viewPreference.write("queue", storage);
     expect(viewPreference.read(storage)).toBe("queue");
+    viewPreference.write("sheet", storage);
+    expect(viewPreference.read(storage)).toBe("sheet");
     store.set(viewPreference.key, "nonsense");
-    expect(viewPreference.read(storage)).toBe("queue");
-    expect(viewPreference.read(null)).toBe("queue");
-    expect(viewPreference.read({ getItem: () => { throw new Error("blocked"); } })).toBe("queue");
+    expect(viewPreference.read(storage)).toBe("sheet");
+    expect(viewPreference.read(null)).toBe("sheet");
+    expect(viewPreference.read({ getItem: () => { throw new Error("blocked"); } })).toBe("sheet");
+  });
+});
+
+// ---- line by line: a score can only land on the first line of the rider that has no score yet
+describe("the judge types only on the first line with no score yet", () => {
+  const scored = (...scores: Array<number | "missed" | null>) => {
+    const mine = new Map<string, number | "missed">();
+    scores.forEach((s, i) => {
+      if (s !== null) mine.set(`a${i + 1}`, s);
+    });
+    return mine;
+  };
+
+  it("on a fresh sheet only line 1 takes a score; the lines below wait", () => {
+    const lines = buildLines({ attempts: [], notes: [], cap: 7 });
+    expect(activeLine(lines)).toBe(1);
+    expect(lineTypable(lines, 1)).toBe(true);
+    for (const n of [2, 3, 7]) expect(lineTypable(lines, n)).toBe(false);
+  });
+
+  it("a line with a score (or a note typed ahead of the spotter) is done and opens the next one", () => {
+    const lines = buildLines({ attempts: [att(1), att(2)], notes: [note(3, 6)], cap: 7, mine: scored(7.5, null) });
+    // line 1 scored, line 2 has an attempt and no score, line 3 holds a note
+    expect(lines.map(lineDone).slice(0, 4)).toEqual([true, false, true, false]);
+    expect(activeLine(lines)).toBe(2);
+    expect(lineTypable(lines, 3)).toBe(false); // it holds a note, but line 2 comes first: the note is changed again only when line 2 is done
+  });
+
+  it("a filled line can still be changed until Submit: every line up to the first empty one takes typing", () => {
+    const lines = buildLines({ attempts: [att(1), att(2), att(3)], notes: [], cap: 7, mine: scored(7, 8, null) });
+    expect(activeLine(lines)).toBe(3);
+    expect([1, 2, 3].map((n) => lineTypable(lines, n))).toEqual([true, true, true]);
+    expect(lineTypable(lines, 4)).toBe(false);
+  });
+
+  it("a line greyed by a crash counts as done", () => {
+    const lines = buildLines({ attempts: [att(1), att(2, "crashed"), att(3)], notes: [], cap: 7, mine: scored(7) });
+    expect(lineDone(lines[1])).toBe(true);
+    expect(activeLine(lines)).toBe(3);
+  });
+
+  it("Missed counts as done and opens the next line (an attempt, or a line the spotter has not logged yet)", () => {
+    const withAttempt = buildLines({ attempts: [att(1), att(2)], notes: [], cap: 7, mine: scored(7, "missed") });
+    expect(lineDone(withAttempt[1])).toBe(true);
+    expect(activeLine(withAttempt)).toBe(3);
+    const ahead = buildLines({ attempts: [att(1)], notes: [{ seatId: "J1", slot: 2, score: 0, missed: true }, ], cap: 7, mine: scored(7) });
+    expect(ahead[1]).toMatchObject({ kind: "empty", pending: "missed" });
+    expect(lineDone(ahead[1])).toBe(true);
+    expect(activeLine(ahead)).toBe(3);
+    expect(lineTypable(ahead, 3)).toBe(true);
+  });
+
+  it("when every line is done, every line takes typing until Submit", () => {
+    const lines = buildLines({ attempts: [att(1), att(2)], notes: [], cap: 2, mine: scored(7, 8) });
+    expect(activeLine(lines)).toBeNull();
+    expect(lines.map((l) => lineTypable(lines, l.n))).toEqual([true, true]);
+  });
+
+  it("with no limit the one empty line ahead is the only empty line, so the rule holds there too", () => {
+    const lines = buildLines({ attempts: [att(1)], notes: [], cap: null, mine: scored(7) });
+    expect(lines.map((l) => l.n)).toEqual([1, 2]);
+    expect(activeLine(lines)).toBe(2);
+  });
+});
+
+describe("a Missed note on a line the spotter has not logged", () => {
+  it("becomes the judge's Missed on the attempt that takes the line, and nothing else", () => {
+    const got = settleNotes([att(1), att(2)], [{ seatId: "J1", slot: 2, score: 0, missed: true }, note(1, 7)]);
+    expect(got.scores).toEqual([
+      { attemptId: "a1", seatId: "J1", score: 7 },
+      { attemptId: "a2", seatId: "J1", score: null, missed: true },
+    ]);
+    expect(got.remaining).toEqual([]);
+  });
+  it("a crash discards it like any note", () => {
+    const got = settleNotes([att(1, "crashed")], [{ seatId: "J1", slot: 1, score: 0, missed: true }]);
+    expect(got.scores).toEqual([]);
+    expect(got.discarded).toHaveLength(1);
+  });
+  it("the head judge's pending row names it 'Missed' instead of a number", () => {
+    const rows = consoleRows([], [{ seatId: "J1", slot: 1, score: 0, missed: true }]);
+    expect(rows[0].missed).toEqual({ J1: true });
   });
 });

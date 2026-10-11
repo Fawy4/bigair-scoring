@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, X, Zap } from "lucide-react";
+import { Check, Mic, X, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Chip } from "./chip";
 import { composeTrick, type BuilderState, type TrickVocab } from "@/lib/engine/tricks";
@@ -124,35 +124,33 @@ export function TrickBuilder({
   return (
     <div data-testid="trick-builder" className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 flex-col gap-1 px-2 py-1" data-testid="builder-body">
-        {rows.map((v) => (
-          <div key={v.family} className="flex flex-wrap items-center gap-1" role="group" aria-label={v.family === "direction" ? T.direction : v.label}>
-            {v.blocks.map(chip)}
-            {v.family === "multiplier" && typed ? (
-              <>
-                <input
-                  id="trick-text"
-                  aria-label={T.type}
-                  value={typed.value}
-                  enterKeyHint="go"
-                  onChange={(e) => typed.onChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") typed.onRead();
-                  }}
-                  placeholder={T.typePlaceholder}
-                  className="min-h-tap min-w-0 flex-1 rounded-lg border border-beach-border bg-beach-bg px-1.5 text-small font-medium text-beach-ink placeholder:text-beach-muted"
-                />
-                {typed.value.trim() ? (
-                  <Chip variant="accent" data-testid="read-text" onClick={typed.onRead}>
-                    {T.read}
-                  </Chip>
-                ) : null}
-                {typed.micSupported ? (
-                  <Chip icon={Mic} data-testid="mic-button" aria-label={typed.listening ? T.listening : T.speak} pressed={typed.listening} onClick={typed.onMic} />
-                ) : null}
-              </>
-            ) : null}
-          </div>
-        ))}
+        {rows.map((v) =>
+          v.family === "direction" ? (
+            <div key={v.family} className="grid grid-cols-2 gap-1.5" role="group" aria-label={T.direction}>
+              {v.blocks.map((b) => {
+                const on = state.direction === b.key;
+                return (
+                  <button
+                    key={blockId(b)}
+                    type="button"
+                    data-block={blockId(b)}
+                    data-direction-button
+                    aria-pressed={on}
+                    onClick={() => onTapDirection(b.key)}
+                    className={cn("inline-flex min-h-bar w-full items-center justify-center gap-1.5 rounded-lg text-name font-semibold", on ? "border-4 border-beach-ink bg-beach-surface text-beach-ink" : "border border-beach-border bg-beach-bg text-beach-ink")}
+                  >
+                    {on ? <Check aria-hidden className="size-5" strokeWidth={3} /> : null}
+                    {b.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div key={v.family} className="flex flex-wrap items-center gap-1" role="group" aria-label={v.label}>
+              {v.blocks.map(chip)}
+            </div>
+          ),
+        )}
         {typed?.micNote ? (
           <p role="note" className="rounded-lg border border-beach-line bg-beach-surface px-1.5 py-1 text-small font-medium">
             {typed.micNote}
@@ -231,6 +229,30 @@ export function TrickBuilder({
           <p data-testid="free-text-note" className="text-small font-semibold text-beach-ink">
             {T.freeTextNote}
           </p>
+        ) : null}
+        {typed ? (
+          <div className="flex items-center gap-1" data-testid="typed-row">
+            <input
+              id="trick-text"
+              aria-label={T.type}
+              value={typed.value}
+              enterKeyHint="done"
+              autoComplete="off"
+              autoCorrect="off"
+              onChange={(e) => typed.onChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") typed.onRead(); // reads the words into blocks; it never logs (Log is its own button)
+              }}
+              placeholder={T.typePlaceholder}
+              className="min-h-bar min-w-0 flex-1 rounded-lg border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink placeholder:text-beach-muted"
+            />
+            {typed.value.trim() ? (
+              <Chip variant="accent" data-testid="read-text" onClick={typed.onRead}>
+                {T.read}
+              </Chip>
+            ) : null}
+            {typed.micSupported ? <Chip icon={Mic} data-testid="mic-button" aria-label={typed.listening ? T.listening : T.speak} pressed={typed.listening} onClick={typed.onMic} /> : null}
+          </div>
         ) : null}
         {confirmCrash ? (
           <div role="alertdialog" aria-label={T.crashConfirm(riderLabelText)} className="flex min-h-bar items-center justify-between gap-2 rounded-lg border border-beach-crash bg-beach-surface px-1.5">

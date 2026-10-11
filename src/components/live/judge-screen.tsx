@@ -80,8 +80,8 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
     const key = kind === "attempt" ? "attempts" : kind === "trick_score" ? "scores" : kind === "impression" ? "impressions" : "flags";
     live.apply(key, row as never);
   });
-  // the view this device scores in: the Queue, or the Rider sheet (one choice for the whole phone; read after the page is up, so the server and the browser draw the same first screen)
-  const [view, setView] = useState<JudgeView>("queue");
+  // the view this device scores in: the Rider sheet (the default) or the Queue (one choice for the whole phone; read after the page is up, so the server and the browser draw the same first screen)
+  const [view, setView] = useState<JudgeView>("sheet");
   useEffect(() => setView(viewPreference.read(typeof window === "undefined" ? null : window.localStorage)), []);
   const chooseView = (v: JudgeView) => {
     setView(v);
@@ -213,12 +213,13 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const sheetAvailable = entry === "single";
   const myNotes = useMemo<Array<SheetNote & { entryId: string }>>(() => {
     const byKey = new Map<string, SheetNote & { entryId: string }>();
-    for (const n of live.pending) if (n.judge_seat_id === seatId) byKey.set(`${n.entry_id}:${n.slot}`, { entryId: n.entry_id, seatId, slot: n.slot, score: Number(n.score) });
+    for (const n of live.pending) if (n.judge_seat_id === seatId) byKey.set(`${n.entry_id}:${n.slot}`, { entryId: n.entry_id, seatId, slot: n.slot, score: Number(n.score), ...(n.missed ? { missed: true } : {}) });
     // what is still waiting on the phone shows at once (and a Clear shows at once)
     for (const i of q.items) {
       if (i.state === "refused") continue;
       const pl = i.payload as { entryId: string; slot: number; score?: number };
       if (i.kind === "line_score") byKey.set(`${pl.entryId}:${pl.slot}`, { entryId: pl.entryId, seatId, slot: pl.slot, score: Number(pl.score) });
+      else if (i.kind === "line_missed") byKey.set(`${pl.entryId}:${pl.slot}`, { entryId: pl.entryId, seatId, slot: pl.slot, score: 0, missed: true });
       else if (i.kind === "line_clear") byKey.delete(`${pl.entryId}:${pl.slot}`);
     }
     return [...byKey.values()];
@@ -246,6 +247,19 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
     if (slot === null) return;
     q.enqueue("line_score", `line:${riderId}:${slot}`, { heatId: heat.id, entryId: riderId, line: line.n, slot, score: value });
     setSaved(copy.live.saved.line(formatPadValue(value, scale), labelOf(riderId)?.primary.text ?? "", line.n));
+  };
+  /** "I did not see this attempt": Missed on the attempt of that line, or a Missed note on a line the spotter has not logged yet. It counts as done and opens the next line. */
+  const onLineMissed = (riderId: string, line: SheetLine) => {
+    if (!heat) return;
+    if (line.kind === "attempt" && line.attemptId) {
+      onScore(line.attemptId, "missed");
+      return;
+    }
+    if (line.kind !== "empty") return;
+    const slot = line.slot ?? slotForLine(attemptsOf(riderId), line.n);
+    if (slot === null) return;
+    q.enqueue("line_missed", `line:${riderId}:${slot}`, { heatId: heat.id, entryId: riderId, line: line.n, slot });
+    setSaved(copy.live.saved.missed(labelOf(riderId)?.primary.text ?? "", line.n));
   };
   const onLineClear = (riderId: string, line: SheetLine) => {
     if (!heat || line.kind !== "empty") return;
@@ -370,6 +384,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
             lockedMessage={lockedMessage}
             notice={heldSentence ? <p role="alert" data-testid="held-notes" className="rounded-card border border-beach-outlier bg-beach-bg px-2 py-1 text-body font-semibold">{heldSentence}</p> : null}
             onScore={onLineScore}
+            onMissed={onLineMissed}
             onClear={onLineClear}
           />
         ) : tab === "review" && !onlyImpression ? (
@@ -483,6 +498,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
           lockedMessage={lockedMessage}
           settings={settingsBlock}
           onScore={onLineScore}
+          onMissed={onLineMissed}
           onClear={onLineClear}
         />
       ) : (

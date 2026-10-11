@@ -24,6 +24,8 @@ export interface SheetNote {
   seatId: string;
   slot: number;
   score: number;
+  /** The judge did not see the attempt that will take this line: the note is "Missed" (the score field is then not read). */
+  missed?: boolean;
 }
 
 const live = (attempts: SheetAttempt[]) => attempts.filter((a) => !a.deleted).sort((a, b) => a.seq - b.seq);
@@ -62,8 +64,8 @@ export interface SheetLine {
   direction: "left" | "right" | null;
   /** This judge's score on the attempt (a number, "missed", or null when none yet). */
   mine: number | "missed" | null;
-  /** This judge's pending note on an empty line. */
-  pending: number | null;
+  /** This judge's pending note on an empty line: a score, or "missed". */
+  pending: number | "missed" | null;
   /** Where a note on this empty line is kept (null on a line with an attempt). */
   slot: number | null;
 }
@@ -81,14 +83,14 @@ export function buildLines(i: { attempts: SheetAttempt[]; notes: SheetNote[]; ca
     }
     const slot = slotForLine(i.attempts, n);
     const held = i.notes.find((x) => x.slot === slot);
-    out.push({ n, kind: "empty", trickName: null, direction: null, mine: null, pending: held ? held.score : null, slot });
+    out.push({ n, kind: "empty", trickName: null, direction: null, mine: null, pending: held ? (held.missed ? "missed" : held.score) : null, slot });
   }
   return out;
 }
 
 export interface Settled {
   /** Notes that became a judge's score on a landed attempt. */
-  scores: Array<{ attemptId: string; seatId: string; score: number }>;
+  scores: Array<{ attemptId: string; seatId: string; score: number | null; missed?: true }>;
   /** Notes discarded because the attempt on their line was a crash (judges never score crashes), or their line is gone. */
   discarded: SheetNote[];
   /** Notes still waiting for their attempt. */
@@ -109,7 +111,7 @@ export function settleNotes(attempts: SheetAttempt[], notes: SheetNote[]): Settl
     if (n.slot > top) out.remaining.push(n);
     else {
       const a = bySeq.get(n.slot);
-      if (a && a.status === "landed") out.scores.push({ attemptId: a.id, seatId: n.seatId, score: n.score });
+      if (a && a.status === "landed") out.scores.push(n.missed ? { attemptId: a.id, seatId: n.seatId, score: null, missed: true } : { attemptId: a.id, seatId: n.seatId, score: n.score });
       else out.discarded.push(n); // a crash, or an attempt number that no longer exists
     }
   }
@@ -123,6 +125,8 @@ export interface ConsoleRow {
   judges: string[];
   /** Each judge's note by the judge's own key (seat or "J1"). */
   cells: Record<string, number>;
+  /** The judges whose note is "Missed" (their cell is not a number). */
+  missed: Record<string, true>;
 }
 
 /** The console's pending rows for one rider: one per line that holds a note, after the logged attempts, in line order. */
@@ -131,9 +135,10 @@ export function consoleRows(attempts: SheetAttempt[], notes: SheetNote[]): Conso
   for (const x of notes) {
     const n = lineOfSlot(attempts, x.slot);
     if (n === null) continue;
-    const row = rows.get(n) ?? { n, judges: [], cells: {} };
+    const row = rows.get(n) ?? { n, judges: [], cells: {}, missed: {} };
     row.judges.push(x.seatId);
     row.cells[x.seatId] = x.score;
+    if (x.missed) row.missed[x.seatId] = true;
     rows.set(n, row);
   }
   return [...rows.values()].sort((a, b) => a.n - b.n).map((r) => ({ ...r, judges: [...r.judges].sort() }));
@@ -171,15 +176,35 @@ export function submitBlockLines(notes: Array<SheetNote & { entryId: string }>, 
   return [...out.entries()].map(([entryId, lines]) => ({ entryId, lines: lines.sort((a, b) => a - b) })).sort((a, b) => a.entryId.localeCompare(b.entryId));
 }
 
-// ---- the switch "Queue / Rider sheet": remembered per device (one choice for the whole phone, also on the head judge's Score tab), default Queue
+// ---- line by line: a score can only land on the first line of the rider that has no score yet
+/** A line is done when it needs nothing more from this judge: it has their score (or Missed), it is greyed by a crash, or it holds their note (or Missed) ahead of the spotter. */
+export function lineDone(line: SheetLine): boolean {
+  if (line.kind === "crash") return true;
+  if (line.kind === "attempt") return line.mine !== null;
+  return line.pending !== null;
+}
+
+/** The first line of the rider that is not done: the only one a new score can be typed on. Null when every line is done. */
+export function activeLine(lines: SheetLine[]): number | null {
+  return lines.find((l) => !lineDone(l))?.n ?? null;
+}
+
+/** May a score be typed on line n? The first line that is not done, and any line above it (a filled line can be changed until Submit); the lines below wait. */
+export function lineTypable(lines: SheetLine[], n: number): boolean {
+  const a = activeLine(lines);
+  return a === null || n <= a;
+}
+
+// ---- the switch "Queue / Rider sheet": remembered per device (one choice for the whole phone, also on the head judge's Score tab), default Rider sheet.
+// Only a phone whose user picked a view has a stored value; every other phone opens on the default.
 export type JudgeView = "queue" | "sheet";
 export const viewPreference = {
   key: "bigair.judgeView",
   read(storage: Pick<Storage, "getItem"> | null | undefined): JudgeView {
     try {
-      return storage?.getItem(viewPreference.key) === "sheet" ? "sheet" : "queue";
+      return storage?.getItem(viewPreference.key) === "queue" ? "queue" : "sheet";
     } catch {
-      return "queue";
+      return "sheet";
     }
   },
   write(view: JudgeView, storage: Pick<Storage, "setItem"> | null | undefined): void {

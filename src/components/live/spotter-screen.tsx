@@ -5,7 +5,9 @@ import { AttemptLogger, enabledIdsOf, type LoggedAttempt } from "./attempt-logge
 import { useOnline, useEndAtZero, useFlagHorns, useTimerSound, useWakeLock } from "./live-hooks";
 import { useFlagStrip } from "./use-flag";
 import { LiveShell, ScreenSettings, useLiveSettings } from "./live-shell";
+import { Chip } from "./chip";
 import { Pill } from "./pill";
+import { SpotterSheetView, type LineEdit } from "./spotter-sheet";
 import { ScreenHeader } from "./screen-header";
 import { useLiveHeat } from "./use-live-heat";
 import { useSendQueue } from "./use-send-queue";
@@ -16,6 +18,7 @@ import { pendingAttempts } from "@/lib/live/pending";
 import { activePlanFor, heatTitle, livesFor, timetableOptions } from "@/lib/live/run-order";
 import { nextHeat } from "@/lib/live/next-heat";
 import { attemptCounts, feedLines, ridersForHeat, trickKit } from "@/lib/live/screen-model";
+import { spotterViewPreference, type SpotterView } from "@/lib/live/spotter-sheet";
 import { remainingMs } from "@/lib/live/timer";
 import type { LiveContext } from "@/lib/live/types";
 import { createClient } from "@/lib/supabase/browser";
@@ -26,7 +29,7 @@ const T = copy.spotter;
 
 export function SpotterRoot({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?: string | null }) {
   return (
-    <LiveShell>
+    <LiveShell fitKeyboard>
       <SpotterScreen ctx={ctx} pinnedHeatId={pinnedHeatId} />
     </LiveShell>
   );
@@ -47,7 +50,14 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
   const live = useLiveHeat(supabase, ctx, nowServer, pinnedHeatId);
   const viewer = ctx.viewer.kind === "seat" ? ctx.viewer : null;
   const seatId = viewer?.seatId ?? "organiser";
-  const q = useSendQueue(supabase, clock.now, `spot-${ctx.event.id}-${seatId}`, online && live.connected, (kind, row) => kind === "attempt" && live.apply("attempts", row as never));
+  const q = useSendQueue(supabase, clock.now, `spot-${ctx.event.id}-${seatId}`, online && live.connected, (kind, row) => (kind === "attempt" || kind === "attempt_edit") && live.apply("attempts", row as never));
+  // the view this phone logs in: the Rider sheet (the default) or the Trick list; read after the page is up, so the server and the browser draw the same first screen
+  const [view, setView] = useState<SpotterView>("sheet");
+  useEffect(() => setView(spotterViewPreference.read(typeof window === "undefined" ? null : window.localStorage)), []);
+  const chooseView = (v: SpotterView) => {
+    setView(v);
+    spotterViewPreference.write(v, typeof window === "undefined" ? null : window.localStorage);
+  };
   // an observer cannot tap "Feed", so an observed spotter screen shows the feed already open
   const [feedOpen, setFeedOpen] = useState(useObserving());
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -55,14 +65,20 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
   const heat = live.heat;
   const division = ctx.divisions.find((d) => d.id === heat?.division_id);
   const kit = useMemo(() => trickKit(ctx), [ctx]);
-  const view = useMemo(() => kit?.viewFor(division) ?? [], [kit, division]);
-  const enabledIds = useMemo(() => enabledIdsOf(view), [view]);
+  const blocksView = useMemo(() => kit?.viewFor(division) ?? [], [kit, division]);
+  const enabledIds = useMemo(() => enabledIdsOf(blocksView), [blocksView]);
   const riders = useMemo(() => ridersForHeat(ctx, division, live.slots).filter((r) => r.riding), [ctx, division, live.slots]);
   const pending = useMemo(() => pendingAttempts(q.items).filter((p) => p.heatId === heat?.id), [q.items, heat?.id]);
   const counts = useMemo(() => attemptCounts(live.attempts, pending), [live.attempts, pending]);
   const max = division?.maxAttempts ?? null;
   const loggerRiders = riders.map((r) => ({ id: r.entryId, label: r.label, attempts: counts.get(r.entryId) ?? 0, max }));
 
+  const sheetAttempts = useMemo(
+    () => live.attempts.map((a) => ({ entryId: a.entry_id, id: a.id, seq: a.seq, clientKey: a.client_key, status: a.status, trickName: a.trick_name, direction: a.direction, rawText: a.raw_text, mine: viewer !== null && a.created_by_seat === viewer.seatId, deleted: Boolean(a.deleted_at) })),
+    [live.attempts, viewer],
+  );
+  const sheetQueued = useMemo(() => pending.map((p) => ({ entryId: p.entryId, clientKey: p.clientKey, status: p.status, trickName: p.trickName, direction: p.direction, rawText: p.rawText })), [pending]);
+  const changing = useMemo(() => new Set(q.items.filter((i) => i.kind === "attempt_edit" && i.state !== "refused").map((i) => (i.payload as { clientKey: string }).clientKey)), [q.items]);
   const assignedIds = useMemo(() => {
     if (!viewer) return [];
     const colours = new Set(viewer.spotterColours.map((c) => c.toLowerCase()));
@@ -83,14 +99,20 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
   useEffect(() => {
     const refused = q.items.filter((i) => i.state === "refused");
     if (!refused.length) return;
-    const made = refused.map((i): Notice => {
+    // a change to a line whose attempt was refused (or taken back) has nothing to change: the attempt's own refusal already said what happened
+    const silent = refused.filter((i) => i.kind === "attempt_edit" && i.code === "ATTEMPT_NOT_FOUND");
+    for (const i of silent) q.queue.clearRefused(i.clientKey);
+    const told = refused.filter((i) => !silent.includes(i));
+    if (!told.length) return;
+    const made = told.map((i): Notice => {
+      if (i.kind === "attempt_edit") return { key: i.clientKey, text: copy.spotterSheet.changeFailed(errorSentence(i.code ?? i.message)) };
       const p = i.payload as { entryId?: string };
       const word = riders.find((r) => r.entryId === p.entryId)?.label.primary.text ?? "";
       const code = i.code ?? parseError(i.message).code ?? "";
       return { key: i.clientKey, text: code === "ATTEMPT_CAP_REACHED" ? T.refusedCap(word, max ?? 0) : T.refusedOther(word, errorSentence(code || i.message)) };
     });
     setNotices((n) => [...n, ...made]);
-    for (const i of refused) q.queue.clearRefused(i.clientKey);
+    for (const i of told) q.queue.clearRefused(i.clientKey);
   }, [q.items, q.queue, riders, max]);
 
   const log = (riderId: string, a: LoggedAttempt): string => {
@@ -103,6 +125,10 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
       key,
     );
     return key;
+  };
+
+  const edit = (e: LineEdit) => {
+    q.enqueue("attempt_edit", `edit:${e.clientKey}`, { ...e });
   };
 
   const undo = async (key: string) => {
@@ -159,6 +185,16 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
     ) : null;
 
   const feed = feedLines(live.attempts, pending);
+  const switcher = (
+    <div role="group" aria-label={copy.spotterSheet.switchLabel} data-testid="view-switch" className="flex items-center gap-1.5">
+      <Chip data-testid="spot-view-sheet" pressed={view === "sheet"} onClick={() => chooseView("sheet")}>
+        {copy.spotterSheet.sheet}
+      </Chip>
+      <Chip data-testid="spot-view-list" pressed={view === "list"} onClick={() => chooseView("list")}>
+        {copy.spotterSheet.list}
+      </Chip>
+    </div>
+  );
 
   return (
     <>
@@ -193,12 +229,29 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
             </ol>
           )}
         </div>
-      ) : heat && kit && division ? (
-        <AttemptLogger
+      ) : heat && kit && division && view === "sheet" ? (
+        <SpotterSheetView
           riders={loggerRiders}
           assignedIds={assignedIds}
           vocab={kit.vocab}
-          view={view}
+          enabledIds={enabledIds}
+          cap={max}
+          attempts={sheetAttempts}
+          queued={sheetQueued}
+          changing={changing}
+          canLog={running}
+          disabledNote={live.phase === "paused" ? T.paused : T.notRunning}
+          onLog={log}
+          onEdit={edit}
+          topSlot={switcher}
+        />
+      ) : heat && kit && division ? (
+        <AttemptLogger
+          topSlot={switcher}
+          riders={loggerRiders}
+          assignedIds={assignedIds}
+          vocab={kit.vocab}
+          view={blocksView}
           enabledIds={enabledIds}
           canLog={running}
           disabledNote={live.phase === "paused" ? T.paused : T.notRunning}

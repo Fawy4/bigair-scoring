@@ -55,3 +55,43 @@ test("the Rider sheet on a judge's phone, and the console's pending rows", async
     await w.cleanup();
   }
 });
+
+test("the spotter's Rider sheet, and the Trick list cut to the height a keyboard leaves", async ({ browser }) => {
+  test.setTimeout(300_000);
+  const w = await createLiveWorld();
+  try {
+    const H = w.heats[0];
+    await w.startHeat(H);
+    const att = (seq: number, status: "landed" | "crashed", trick: string, direction: "left" | "right") =>
+      w.db.from("trick_attempts").insert({ heat_id: H, entry_id: w.entries[0], seq, status, trick_name: trick, raw_text: trick.replace(/^(Left|Right) /, ""), direction, client_key: crypto.randomUUID(), created_by_seat: w.seats.spotter.id }).select("id").single();
+    await att(1, "landed", "Left Backroll", "left");
+    await att(2, "landed", "Right Frontroll", "right");
+    await att(3, "crashed", "Left Kiteloop", "left");
+
+    // a spotter's phone that never chose a view opens on the Rider sheet; line 4 is being typed
+    const phone = await browser.newContext({ viewport: { width: 390, height: 600 } });
+    await installSupabaseProxy(phone, { newViews: true });
+    const sp = await phone.newPage();
+    await w.signInAs(sp, "spotter", `/spot/${w.eventId}`);
+    await expect(sp.getByTestId("spotter-sheet")).toBeVisible({ timeout: 60_000 });
+    await expect(sp.locator('[data-testid="spotter-line"][data-line="3"][data-state="logged"]')).toBeVisible({ timeout: 30_000 });
+    const box = sp.locator('[data-testid="spotter-line"][data-line="4"] [data-testid="line-trick"]');
+    await box.click();
+    await box.fill("back");
+    await expect(sp.getByTestId("suggestion").first()).toBeVisible();
+    await hideDevOverlay(sp);
+    await sp.waitForTimeout(500);
+    await sp.screenshot({ path: path.join(OUT, "spotter-rider-sheet-390.png") });
+
+    // the Trick list at 390 x 508: the height left above a phone keyboard; the text box, Log and CRASH stay in view
+    await sp.getByTestId("spot-view-list").click();
+    await sp.setViewportSize({ width: 390, height: 508 });
+    await sp.locator("#trick-text").fill("left back");
+    await hideDevOverlay(sp);
+    await sp.waitForTimeout(500);
+    await sp.screenshot({ path: path.join(OUT, "spotter-keyboard-390.png") });
+    await phone.close();
+  } finally {
+    await w.cleanup();
+  }
+});

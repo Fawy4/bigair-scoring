@@ -1362,3 +1362,18 @@ Release entry 0.17.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 
 ### How to test
 Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm run test:rls -- tests/rls/walkover.test.ts tests/rls/observer.test.ts`; browser (one worker, no retries): `e2e/walkover.spec.ts`.
+
+## Rider sheets – spotter sheet, judges line by line, Trick list fixes (0.20.0)
+
+### Done (code, unit tests, manual text)
+- **Spotter Rider sheet** (`src/components/live/spotter-sheet.tsx`, rules in `src/lib/live/spotter-sheet.ts`): the default spotter view; one line per attempt, lines that log themselves (tapped suggestion, ~2 s pause for free text, Crash), later changes update the same attempt (`attempt_edit` in the phone's send queue, `spotter_edit_attempt` in the database), switch "Rider sheet / Trick list" remembered per phone (`bigair.spotterView`).
+- **Trick list fixes**: text box above Log / CRASH, Left / Right two wide buttons with a thick border and a tick, keyboard rule (`use-keyboard-fit.ts`: the spotter screen is as tall as the visual viewport while a keyboard is open).
+- **Judges' Rider sheet**: line by line (`activeLine`, `lineTypable`, `lineDone` in `src/lib/live/rider-sheet.ts`), **Missed** on every line (a Missed note on an empty line: `pending_scores.missed`, `set_line_missed`), default view is now the Rider sheet (criteria divisions keep the Queue).
+- Migration `20261107110000_spotter_rider_sheet.sql` (additive). Console: a Missed note reads "Missed" in the pending row.
+- Manual: spotter and judge pages, changelog, release entry 0.20.0.
+
+### Not done yet (waiting for the go on the shared hosted database)
+- Apply the migration, `npm run db:types`, run `tests/rls/spotter-sheet.test.ts` and `tests/rls/rider-sheet.test.ts`, the browser files (`spotter-rider-sheet`, `rider-sheet`, `live-spotter`, `live-judge`), retake the manual pictures (`spotter-rider-sheet-390.png` and `spotter-keyboard-390.png` are copies of `spotter-390.png` until then).
+
+### How to test on a phone
+- See the release entry 0.20.0 in docs/RELEASES.md.

@@ -62,6 +62,7 @@ export function AttemptLogger({
   onUndo,
   categoryLabelOf,
   lastSeq,
+  topSlot,
 }: {
   riders: LoggerRider[];
   /** Riders this spotter is assigned to; the others are behind "Other riders". */
@@ -78,6 +79,8 @@ export function AttemptLogger({
   categoryLabelOf: (key: string | null) => string;
   /** Overrides the number shown in the "Logged — RED — attempt n" line (the rider's attempts after this one). */
   lastSeq?: (riderId: string) => number;
+  /** Something drawn above the rider cards (the spotter's switch between the Rider sheet and the Trick list). */
+  topSlot?: React.ReactNode;
 }) {
   const T = copy.spotter;
   const [selectedId, setSelectedId] = useState(riders[0]?.id ?? "");
@@ -188,6 +191,7 @@ export function AttemptLogger({
   return (
     <>
       <div className="flex flex-col gap-0.5 px-2 pt-1.5">
+        {topSlot}
         <div role="group" aria-label={copy.live.tile.strip} data-testid="rider-strip" className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(1, shown.length)}, minmax(0, 1fr))` }}>
           {shown.map((r) => (
             <RiderTile key={r.id} compact lockWhenOut label={r.label} attempts={r.attempts} max={r.max} selected={selected?.id === r.id} onSelect={() => setSelectedId(r.id)} />

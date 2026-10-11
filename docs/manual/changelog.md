@@ -2,6 +2,19 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
+Last checked: 11 Oct 2026 · Product version 0.20.0
+
+## 0.20.0 — 11 Oct 2026 {#cl-0-20-0}
+
+Release entry: [0.20.0](/admin/releases#release-0-20-0) (platform owner only)
+
+**What changed for users**
+- **Spotter: a Rider sheet (the new default view) whose lines log themselves.** One numbered line per attempt, a trick box with suggestions, **L** / **R** and **Crash**; no Log button. Logged lines can be corrected (the same attempt is updated, the judges' scores stay, an audit line is written). Rider sheet / Trick list switch, remembered per phone.
+- **Spotter: Trick list fixes.** The text box sits directly above Log and CRASH; Left and Right are two wide buttons with a thick border and a tick; with the keyboard open, the text box, Log and CRASH sit directly above it. The same keyboard rule holds on the Rider sheet.
+- **Judge: the Rider sheet is the default view and works line by line.** A score can only be typed on the first line with no score yet; **Missed** on a line counts as done and opens the next. A criteria division stays on the Queue.
+
+**Manual pages updated:** [Spotter screen](screens/spotter.md), [Judge screen](screens/judge.md).
+
 Last checked: 10 Oct 2026 · Product version 0.19.0
 
 ## 0.19.0 — 10 Oct 2026 {#cl-0-19-0}

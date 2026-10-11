@@ -12,6 +12,34 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.20.0 — 11 Oct 2026 {#release-0-20-0}
+
+PR: #45
+
+### What changed
+- **The spotter has a Rider sheet, and it is the spotter's new default view.** The rider cards across the top (tap one to see that rider's sheet) and one numbered line per attempt (7 for Arrow; with no limit 10 lines and an **Add attempt** button). Each line has a trick box, **L** and **R** (only one can be on) and a **Crash** toggle. **There is no Log button: a line logs itself** as soon as you tap a suggestion under the box (type "back", tap Backroll), or when text that matches no suggestion has been still for about 2 seconds, or when Crash is on. L and R can be set before or after. Each line says **Empty**, **Saving…** or **Logged ✓**. Only the first empty line takes typing.
+- **A logged line can be corrected.** Changing the trick, L / R or Crash of a line updates the same attempt within a second on the judges' phones and the console (never a second attempt); the judges' scores stay on it. The spotter's seat can change the attempts it logged until the heat is published, and every change leaves a line in the audit log in words. Emptying a trick box does not delete the attempt.
+- **Crash on the sheet** logs the line at once as a crash; the line shows CRASH with the typed trick kept small under it (the console keeps it too). A crash needs no trick.
+- **Attempts logged by anyone** (a second spotter, the head judge) appear on the sheet in order; the next empty line is always the next attempt.
+- **The Trick list got three fixes.** The trick text box is now at the bottom, directly above Log and CRASH. Left and Right are two wide buttons sharing the row, the chosen one with a thick border and a tick. And with the keyboard open, the text box, Log and CRASH sit directly above the keyboard, so you see what you type and tap Log without closing it. The same keyboard rule holds on the Rider sheet: the line being typed stays just above the keyboard.
+- **The judges' Rider sheet is line by line.** A judge can type only on the first line of a rider that has no score yet; the lines below wait. A line with a score, a crash line and a line set to **Missed** count as done. The Rider sheet now has a **Missed** button on each line (a line the spotter has not logged yet too): no score from that judge for that attempt, exactly like Missed on the Queue.
+- **Defaults.** A spotter's phone and a judge's phone that never chose a view open on the **Rider sheet**. A phone whose user picked a view (Trick list, Queue) keeps it. A division scored by criteria stays on the Queue.
+- Needs one database addition (a new function for the spotter's corrections and Missed on a sheet line); nothing was dropped or renamed.
+
+### What to test
+- [ ] On an iPhone, join as a spotter in a running simulation (×1): the **Rider sheet** opens by itself. Tap a rider, type "back" on line 1, tap **Backroll**, tap **L**: the judges' phones show **Left Backroll** within a second and you pressed nothing else. Tap **R**: the judges' card follows to Right, still one attempt.
+- [ ] On line 2 type "front" and turn **Crash** on: the judges' line greys, the head judge's console shows the crash, and the trick shows as Frontroll. Turn Crash off: it is a normal attempt again.
+- [ ] Type something that is not a trick (for example "zzz") on the next line and wait 2 seconds: the line says **Logged ✓** by itself and the console flags it as free text for the head judge.
+- [ ] In a division with no attempt limit, the sheet shows **10 lines** and **Add attempt** makes it **11**.
+- [ ] Switch to the **Trick list**: the text box sits just above CRASH and Log; Left and Right fill their row, and the one you tap has a thick border and a tick. Tap the text box so the keyboard opens: you can see what you type and tap **Log** without closing the keyboard. Do the same from the home-screen icon, and on an Android phone in Chrome if you have one.
+- [ ] As a judge on the Rider sheet: while line 2 has no score you cannot type on line 3. Tap **Missed** on line 2: line 3 opens. After the spotter logs three attempts, attempt 2 has no score from you and the console shows "Missed" in your column. Change line 1's score: it is accepted.
+- [ ] A judge phone that never chose a view opens on the **Rider sheet**; pick **Queue**, reload the page: it stays on the Queue.
+
+### Known issues
+- A browser test cannot open a real phone keyboard: the keyboard behaviour is tested with the screen height cut the way a keyboard cuts it, so the owner's check on the iPhone (home-screen icon and Safari) is the real test.
+- On the spotter's sheet, tapping the L or R that is already on keeps it on (a logged attempt never goes back to "no direction").
+- A trick typed on the sheet is read one suggestion at a time: for a combination ("Backroll" then "Tic Tac") tap the first suggestion, then keep typing: the line is updated each time.
+
 ## 0.19.0 — 10 Oct 2026 {#release-0-19-0}
 
 PR: #44

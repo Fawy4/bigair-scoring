@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { auditLine, isScoreChange, timeOfDay, type AuditRow } from "./audit-lines";
 import { buildHeadModel } from "./head-model";
+import { pendingRows } from "./matrix";
 import { pendingBlockers, publishChecklist } from "./publish-checklist";
 import type { AttemptRow, ImpressionRow, PendingRow, ScoreRow, SheetRow, SlotRow } from "./types";
 import { preset } from "@/lib/engine/scoring/fixtures";
@@ -18,7 +19,7 @@ const attempt = (entry: string, seq: number, extra: Partial<AttemptRow> = {}): A
 const score = (a: string, judge: string, value: number): ScoreRow => ({ id: `${a}-${judge}`, attempt_id: a, heat_id: "h", judge_seat_id: judge, score: value, missed: false, criteria: {}, client_rev: 1, version: 1, edit_reason: null, updated_at: "" });
 const imp = (entry: string, judge: string, value: number): ImpressionRow => ({ id: `${entry}-${judge}`, heat_id: "h", entry_id: entry, judge_seat_id: judge, value, missed: false, client_rev: 1, updated_at: "" });
 const sheet = (judge: string): SheetRow => ({ id: `sh-${judge}`, heat_id: "h", judge_seat_id: judge, submitted_at: "2026-10-02T10:30:00Z", reopened_at: null, updated_at: "" });
-const note = (entry: string, judge: string, slotNo: number, value: number): PendingRow => ({ id: `${entry}-${judge}-${slotNo}`, heat_id: "h", entry_id: entry, judge_seat_id: judge, slot: slotNo, score: value, client_rev: 1, updated_at: "" });
+const note = (entry: string, judge: string, slotNo: number, value: number): PendingRow => ({ id: `${entry}-${judge}-${slotNo}`, heat_id: "h", entry_id: entry, judge_seat_id: judge, slot: slotNo, score: value, missed: false, client_rev: 1, updated_at: "" });
 
 const attempts = [attempt("omar", 1), attempt("omar", 2)];
 const scores = PANEL.flatMap((j, i) => [score("omar-1", j, 7 + i * 0.5), score("omar-2", j, 6 + i * 0.5)]);
@@ -126,5 +127,11 @@ describe("audit: a judge changing their own score", () => {
   it("a save that changed no number is not a change; a score that came from a pending note says so", () => {
     expect(isScoreChange(row({ before: { score: 7 }, after: { score: 7, version: 2 } }))).toBe(false);
     expect(auditLine(row({ action: "score_from_note", before: null, after: { attempt_id: "a3", judge_seat_id: "J2", score: 7.5 } }), w)).toBe("J2 · attempt 3: 7.50 (typed before the attempt was logged)");
+  });
+
+  it("a judge's Missed note on a line the spotter has not logged shows the word, not a number", () => {
+    const rows = pendingRows([], [{ ...note("e1", "J1", 1, 0), missed: true }, note("e1", "J2", 1, 6.5)], ["J1", "J2"], () => ({}) as never, ["e1"]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].cells.map((c) => c.label)).toEqual(["Missed", "6.50"]);
   });
 });
