@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import type { AppliedState } from "@/lib/live/applied-state";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Footer, Modal, plain, Reason } from "./console-parts";
 import { decideTie, previewResetHeat, publishHeat, reopenHeat, rerunHeat, resetHeat, setPublishHold, type HeatResetPreview, type PublishResult } from "@/lib/live/head-actions";
@@ -86,10 +87,11 @@ export function PublishDialog({ heatId, title, items, canOverride, nobodyRode = 
 }
 
 /** Re-open a published heat: one confirmation and a reason. Publishing again writes the next version. */
-export function ReopenDialog({ heatId, title, onClose, onDone }: { heatId: string; title: string; onClose: () => void; onDone: (text: string, walkover?: boolean) => void }) {
+export function ReopenDialog({ heatId, title, onClose, onDone }: { heatId: string; title: string; onClose: () => void; onDone: (text: string, walkover?: boolean, state?: AppliedState) => void }) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const busy = useRef(false);
   return (
     <Modal screen title={H.reopenTitle(title)} onClose={onClose}>
       <p className="text-body font-medium">{H.reopenAsk}</p>
@@ -103,14 +105,20 @@ export function ReopenDialog({ heatId, title, onClose, onDone }: { heatId: strin
         canSave={!pending}
         saveLabel={pending ? H.working : H.reopenYes}
         onCancel={onClose}
-        onSave={() =>
+        onSave={() => {
+          if (busy.current) return; // one press at a time: a second press while this one is working does nothing
+          busy.current = true;
           start(async () => {
-            const r = await reopenHeat(heatId, reason);
-            if (!r.ok) setError(r.message);
-            else if (r.walkover) onDone(copy.walkover.reopenedWalkover, true);
-            else onDone(H.reopened);
-          })
-        }
+            try {
+              const r = await reopenHeat(heatId, reason);
+              if (!r.ok) setError(r.message);
+              else if (r.walkover) onDone(copy.walkover.reopenedWalkover, true, r.state);
+              else onDone(H.reopened, false, r.state);
+            } finally {
+              busy.current = false;
+            }
+          });
+        }}
       />
     </Modal>
   );

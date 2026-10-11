@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
+import { replaceHeatSlots, type AppliedState } from "@/lib/live/applied-state";
 import { pickCurrentHeat, type HeatPhase } from "@/lib/live/current-heat";
 import { overlayHeats } from "./use-flag";
 import { maskFor } from "@/lib/live/observer";
@@ -73,6 +74,8 @@ export interface LiveHeatState extends Snapshot {
   plans: ActivePlan[];
   /** Puts a change of one heat on the screen at once: a guess before the server answers, then the row the server answered with. The stream confirms it. A row older than the one held is ignored. */
   patchHeat: (heatId: string, patch: Partial<HeatRow>) => void;
+  /** Put what the server answered after a press (the heat and its seats) on the screen at once. */
+  applyState: (state: AppliedState) => void;
   /** Shows a hold or pins the server has just answered with, before the stream delivers them. */
   applyPlan: (planId: string, hold: Json | null, anchors: Json, items?: Json) => void;
   /** Puts a row the server has just returned (our own attempt, score, impression, flag or sheet) into the list at once, without waiting for the stream. */
@@ -133,8 +136,15 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
 
   // ---- the event's heats
   const refreshHeats = useCallback(async () => {
-    const { data } = await supabase.from("heats").select(HEAT_COLUMNS).eq("event_id", ctx.event.id);
-    if (data) setHeats(data as unknown as HeatRow[]);
+    // a read that fails is asked again (twice at most): one lost answer used to leave the console unchanged until some other live update arrived
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data, error } = await supabase.from("heats").select(HEAT_COLUMNS).eq("event_id", ctx.event.id);
+      if (data && !error) {
+        setHeats(data as unknown as HeatRow[]);
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 700));
+    }
   }, [supabase, ctx.event.id]);
   const refreshPlans = useCallback(async () => {
     const { data } = await supabase.from("schedule_plans").select("id, event_id, day, name, items, anchors, actual_starts, hold, defaults, active, updated_at").eq("event_id", ctx.event.id).eq("active", true);
@@ -163,6 +173,13 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
   const patchHeat = useCallback<LiveHeatState["patchHeat"]>((id, patch) => {
     setHeats((l) => l.map((h) => (h.id !== id || (patch.updated_at && h.updated_at && h.updated_at > patch.updated_at) ? h : { ...h, ...patch })));
   }, []);
+  const applyState = useCallback<LiveHeatState["applyState"]>(
+    (state) => {
+      patchHeat(state.heat.id, state.heat);
+      if (state.heat.id === heatId) setSnap((s) => ({ ...s, slots: replaceHeatSlots(s.slots, state.heat.id, state.slots) }));
+    },
+    [patchHeat, heatId],
+  );
   useEffect(() => {
     const ch = supabase
       .channel(`heats-${ctx.event.id}-${instance.current}`)
@@ -281,5 +298,5 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
     setSnap((s) => ({ ...s, pending: s.pending.filter((r) => r.id !== id) }));
   }, []);
 
-  return { heats, heat, phase, ...shownSnap, apply, drop, plans, applyPlan, patchHeat, connected: up && (typeof navigator === "undefined" || navigator.onLine), submittedHeatIds: submittedMemory.current, refresh };
+  return { heats, heat, phase, ...shownSnap, apply, drop, plans, applyPlan, patchHeat, applyState, connected: up && (typeof navigator === "undefined" || navigator.onLine), submittedHeatIds: submittedMemory.current, refresh };
 }

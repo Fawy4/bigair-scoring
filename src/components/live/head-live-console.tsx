@@ -1,5 +1,6 @@
 "use client";
 
+import type { HeadResult } from "@/lib/live/head-actions";
 import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MoreHorizontal, MoreVertical } from "lucide-react";
@@ -174,7 +175,9 @@ export function HeadLiveConsole({
     openSheetDialog: (seatId, entryId) => setDialog({ kind: "impression", seatId, entryId }),
   });
   const { bar, barPending, barError, openSheet, markAbsent, showImpressionCard, impressionTolerance } = review;
-  const done = () => {
+  const done = (r?: HeadResult) => {
+    // what the server answered goes on the screen first (the heat and its seats); the normal refresh follows as a backup
+    if (r && r.ok && r.state) live.applyState(r.state);
     setDialog(null);
     setMenu(null);
     setSelection([]);
@@ -547,9 +550,9 @@ export function HeadLiveConsole({
           status={dialog.status}
           penaltyId={dialog.penaltyId}
           onClose={close}
-          onDone={() => {
+          onDone={(r) => {
             if (dialog.status === "OUT") setJustOut((all) => new Set(all).add(dialog.entryId));
-            done();
+            done(r);
           }}
         />
       ) : null}
@@ -559,9 +562,9 @@ export function HeadLiveConsole({
           winner={walkoverState.kind === "walkover" ? wordFor(walkoverState.winner) : null}
           others={walkoverState.others.map((id) => wordFor(id))}
           onClose={close}
-          onDone={(text) => {
+          onDone={(text, r) => {
             setFlash(text);
-            done();
+            done(r);
           }}
         />
       ) : null}
@@ -577,7 +580,7 @@ export function HeadLiveConsole({
           onDone={done}
         />
       ) : null}
-      {dialog?.kind === "tie" ? <TieDialog heatId={heat.id} riders={dialog.riders.map((id) => ({ id, word: wordFor(id) }))} onClose={close} onDone={done} /> : null}
+      {dialog?.kind === "tie" ? <TieDialog heatId={heat.id} riders={dialog.riders.map((id) => ({ id, word: wordFor(id) }))} onClose={close} onDone={() => done()} /> : null}
       {dialog?.kind === "flagOut" && division.flagOut ? (
         <FlagOutDialog heatId={heat.id} riders={riders} preselected={head.flagOut?.riders ?? []} undecided={head.flagOut?.undecided ?? false} count={division.flagOut.count} wordFor={wordFor} onClose={close} onDone={done} />
       ) : null}
