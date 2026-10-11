@@ -16,6 +16,8 @@ test("the rider menu on a card, and the Walkover button", async ({ browser }) =>
   const w = await createLiveWorld();
   try {
     const ladder = await addSecondChance(w, "round2");
+    // a picture of today's run order (the browser tests use tomorrow's, whose break timer would read thousands of minutes)
+    await w.db.from("schedule_plans").update({ day: w.today, anchors: { s1: "00:01" } as never }).eq("id", ladder.planId);
     const oneVsOne = ladder.draw.rounds.find((r) => r.id === "R2")!.heats.find((h) => h.slots.length === 2)!;
     const heatId = ladder.heats[oneVsOne.uid ?? oneVsOne.id];
     const [, missing] = oneVsOne.slots.map((s) => s.entrantId!);
