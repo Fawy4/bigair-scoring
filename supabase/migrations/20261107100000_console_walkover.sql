@@ -14,7 +14,7 @@ create or replace function public.set_rider_status(p_heat uuid, p_entry uuid, p_
 language plpgsql security definer set search_path = '' as $$
 declare h public.heats; slot public.heat_slots; v_before text;
 begin
-  h := private.head_heat(p_heat, array['scheduled', 'running', 'paused', 'ended', 'under_review'], p_reason, false);
+  h := private.head_heat(p_heat, array['scheduled', 'running', 'paused', 'ended', 'under_review'], p_reason);
   if p_modifier is not null and p_modifier not in ('DNS', 'DNF', 'DSQ') then raise exception 'BAD_MODIFIER'; end if;
   select * into slot from public.heat_slots where heat_id = p_heat and entry_id = p_entry;
   if not found then raise exception 'RIDER_NOT_IN_HEAT'; end if;
