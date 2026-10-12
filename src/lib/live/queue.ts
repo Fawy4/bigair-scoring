@@ -2,7 +2,7 @@
  * The send queue of the official phones (docs/08 §1G-7). Pure: storage and the network are passed in, the tests use an in-memory store.
  * Every score and attempt is saved on the phone first and sent in order; a newer edit of the same score replaces an older one that is still waiting.
  */
-export type QueueKind = "attempt" | "trick_score" | "impression" | "flag" | "line_score" | "line_clear" | "line_missed" | "attempt_edit";
+export type QueueKind = "attempt" | "trick_score" | "impression" | "flag" | "line_score" | "line_clear" | "line_missed" | "line_missed_clear" | "attempt_edit";
 export type ItemState = "pending" | "synced" | "failed" | "refused";
 
 export interface QueueEntry {

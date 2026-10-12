@@ -62,6 +62,9 @@ async function send(supabase: SupabaseClient, item: QueueEntry, onSaved?: (kind:
     case "line_missed":
       // "I did not see this attempt" on a Rider sheet line: a Missed note, or (the attempt has been logged meanwhile) Missed on that attempt
       return done(await supabase.rpc("set_line_missed", { p_heat: p.heatId, p_entry: p.entryId, p_line: p.line, p_client_key: item.clientKey, p_client_rev: item.clientRev }));
+    case "line_missed_clear":
+      // "Missed" switched off on a line that has its attempt: the judge's own Missed is removed (a number never is)
+      return classify(await supabase.rpc("clear_line_missed", { p_heat: p.heatId, p_entry: p.entryId, p_line: p.line }));
     case "attempt_edit": {
       // the spotter changing a line it logged: the same attempt (found by its client key), never a second one
       const r = await supabase.rpc("spotter_edit_attempt", {

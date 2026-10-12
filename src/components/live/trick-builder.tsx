@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Mic, X, Zap } from "lucide-react";
+import { Check, X, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Chip } from "./chip";
 import { composeTrick, type BuilderState, type TrickVocab } from "@/lib/engine/tricks";
@@ -16,10 +16,6 @@ export interface BuilderTyped {
   onChange: (v: string) => void;
   /** Read the typed text into blocks (Enter does the same). */
   onRead: () => void;
-  micSupported: boolean;
-  listening: boolean;
-  onMic: () => void;
-  micNote?: string | null;
 }
 
 /**
@@ -33,6 +29,7 @@ export function TrickBuilder({
   vocab,
   state,
   freeText,
+  times,
   onTapDirection,
   onTapBlock,
   onTapMultiplier,
@@ -53,6 +50,8 @@ export function TrickBuilder({
   vocab: TrickVocab;
   state: BuilderState;
   freeText: string;
+  /** How many times ("6x"), written in front of the trick. */
+  times?: number | null;
   onTapDirection: (key: string) => void;
   onTapBlock: (id: string) => void;
   onTapMultiplier: (key: string) => void;
@@ -76,7 +75,7 @@ export function TrickBuilder({
   const T = copy.live.builder;
   const [confirmCrash, setConfirmCrash] = useState(false);
   const strip = useRef<HTMLDivElement>(null);
-  const name = composeTrick(vocab, { direction: state.direction, items: state.items, freeText }).name;
+  const name = composeTrick(vocab, { direction: state.direction, items: state.items, freeText, ...(times ? { count: times } : {}) }).name;
   const last = state.items.at(-1);
   const count = (id: string) => state.items.filter((i) => i.id === id).length;
   const blockOf = (id: string): Block | undefined => view.flatMap((v) => v.blocks).find((b) => blockId(b) === id);
@@ -151,11 +150,6 @@ export function TrickBuilder({
             </div>
           ),
         )}
-        {typed?.micNote ? (
-          <p role="note" className="rounded-lg border border-beach-line bg-beach-surface px-1.5 py-1 text-small font-medium">
-            {typed.micNote}
-          </p>
-        ) : null}
         {note ? (
           <p role="status" data-testid="builder-note" className="rounded-lg border border-beach-line bg-beach-surface px-1.5 py-0.5 text-small font-semibold">
             {note}
@@ -232,26 +226,43 @@ export function TrickBuilder({
         ) : null}
         {typed ? (
           <div className="flex items-center gap-1" data-testid="typed-row">
-            <input
-              id="trick-text"
-              aria-label={T.type}
-              value={typed.value}
-              enterKeyHint="done"
-              autoComplete="off"
-              autoCorrect="off"
-              onChange={(e) => typed.onChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") typed.onRead(); // reads the words into blocks; it never logs (Log is its own button)
-              }}
-              placeholder={T.typePlaceholder}
-              className="min-h-bar min-w-0 flex-1 rounded-lg border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink placeholder:text-beach-muted"
-            />
+            <div className="relative min-w-0 flex-1">
+              <input
+                id="trick-text"
+                aria-label={T.type}
+                value={typed.value}
+                enterKeyHint="done"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="sentences"
+                onChange={(e) => typed.onChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") typed.onRead(); // reads the words into blocks; it never logs (Log is its own button)
+                }}
+                placeholder={T.typePlaceholder}
+                className="min-h-bar w-full min-w-0 rounded-lg border border-beach-border bg-beach-bg py-0 pl-2 pr-10 text-body font-medium text-beach-ink placeholder:text-beach-muted"
+              />
+              {typed.value ? (
+                <button
+                  type="button"
+                  data-testid="trick-text-clear"
+                  aria-label={T.clearTyped}
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    typed.onChange("");
+                    document.getElementById("trick-text")?.focus();
+                  }}
+                  className="absolute right-0.5 top-1/2 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-lg text-beach-muted"
+                >
+                  <X aria-hidden className="size-5" strokeWidth={2.5} />
+                </button>
+              ) : null}
+            </div>
             {typed.value.trim() ? (
               <Chip variant="accent" data-testid="read-text" onClick={typed.onRead}>
                 {T.read}
               </Chip>
             ) : null}
-            {typed.micSupported ? <Chip icon={Mic} data-testid="mic-button" aria-label={typed.listening ? T.listening : T.speak} pressed={typed.listening} onClick={typed.onMic} /> : null}
           </div>
         ) : null}
         {confirmCrash ? (

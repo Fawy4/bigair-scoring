@@ -194,8 +194,6 @@ Last checked: 3 Oct 2026 · Product version 0.9.2
 |---|---|---|---|
 | {#err-live-connection-failed} “Failed — tap to retry” | Judge and spotter screens | A score or attempt failed to send after retries. | Tap the badge to retry. If it still fails, read the sentence; the head judge can type the score on the console. |
 | {#err-live-queue-memoryonly} “This phone cannot keep unsent scores through a reload. Keep this page open until it says Synced.” | Judge and spotter screens | The phone's browser does not keep unsent scores through a reload (private mode or storage blocked). | Keep the page open until Synced; on iPhone use the home-screen app. |
-| {#err-live-builder-micdenied} “The microphone is not allowed on this phone. Type the trick instead.” | Judge and spotter screens | The phone could not do what was asked. | Allow the microphone in the phone's settings, or type the trick. |
-| {#err-live-builder-micfailed} “Could not hear that. Try again or type it.” | Judge and spotter screens | The phone could not do what was asked. | Follow the sentence. |
 | {#err-live-impression-submitwaiting} “Submit is on when every rider has a score” | Judge and spotter screens | Submit is grey until every rider has an Impression / Variety score. | Follow the sentence. |
 | {#err-live-impression-submitted} “Submitted. Ask the head judge to reopen it.” | Judge and spotter screens | The sheet is submitted and locked. | Head judge: console → judge's row → reopen the sheet. |
 | {#err-judge-locked} “Your sheet is locked. Ask the head judge to reopen it.” | Judge screen | The judge submitted the sheet; scores are locked. | Head judge reopens the sheet, or edits the score with a reason on the console. |

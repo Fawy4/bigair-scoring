@@ -211,8 +211,6 @@ export const EXTRA_REFUSAL_PATHS: readonly string[] = [
   "registration.failed",
   "live.queue.memoryOnly",
   "live.connection.failed",
-  "live.builder.micDenied",
-  "live.builder.micFailed",
   "live.impression.submitWaiting",
   "live.impression.submitted",
   "pub.common.notFound",

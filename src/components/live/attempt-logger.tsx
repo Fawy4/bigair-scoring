@@ -9,7 +9,6 @@ import {
   categoryOf,
   composeTrick,
   emptyBuilder,
-  parseTrickText,
   removeTrickItem,
   tapBlock,
   tapDirection,
@@ -20,7 +19,8 @@ import {
   type TrickVocab,
 } from "@/lib/engine/tricks";
 import type { LabelModel } from "@/lib/identification/rider-label";
-import { listenOnce, speechSupported } from "@/lib/live/speech";
+import { parseTyped } from "@/lib/live/spotter-sheet";
+import { capitaliseName } from "@/lib/live/trick-text";
 import type { FamilyView } from "@/lib/trick-base/layout";
 import { blockId, type FamilyKey } from "@/lib/trick-base";
 import { copy } from "@/lib/ui-copy";
@@ -88,17 +88,12 @@ export function AttemptLogger({
   const [freeText, setFreeText] = useState("");
   const [raw, setRaw] = useState<{ method: "text" | "speech"; text: string } | null>(null);
   const [typed, setTyped] = useState("");
-  const [listening, setListening] = useState(false);
-  // only known in the browser: deciding it while rendering would not match what the server drew
-  const [micSupported, setMicSupported] = useState(false);
-  useEffect(() => setMicSupported(speechSupported()), []);
-  const [micNote, setMicNote] = useState<string | null>(null);
+  /** How many times ("6 front rolls" is 6x Frontroll): written in front of the trick. */
+  const [count, setCount] = useState<number | null>(null);
   const [showOthers, setShowOthers] = useState(false);
   const [logged, setLogged] = useState<{ text: string; key: string; at: number } | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const stopListening = useRef<() => void>(() => {});
 
-  useEffect(() => () => stopListening.current(), []);
   useEffect(() => {
     if (!logged) return;
     const left = UNDO_MS - (Date.now() - logged.at);
@@ -113,7 +108,7 @@ export function AttemptLogger({
   const assigned = assignedIds && assignedIds.length > 0 && assignedIds.length < riders.length ? new Set(assignedIds) : null;
   const shown = assigned && !showOthers ? riders.filter((r) => assigned.has(r.id)) : riders;
 
-  const composed = useMemo(() => composeTrick(vocab, { direction: state.direction, items: state.items, freeText }), [vocab, state, freeText]);
+  const composed = useMemo(() => composeTrick(vocab, { direction: state.direction, items: state.items, freeText, ...(count ? { count } : {}) }), [vocab, state, freeText, count]);
   const category = categoryOf(vocab, state.items.map((i) => i.id));
   const ready = canLog && !out && Boolean(selected) && builderCanLog(state, freeText);
 
@@ -122,7 +117,7 @@ export function AttemptLogger({
     setFreeText("");
     setRaw(null);
     setTyped("");
-    setMicNote(null);
+    setCount(null);
   };
   const touch = (fn: (s: BuilderState) => BuilderState) => {
     setLogged(null);
@@ -132,10 +127,11 @@ export function AttemptLogger({
   const readText = (text: string, method: "text" | "speech") => {
     const t = text.trim();
     if (!t) return;
-    const r = parseTrickText(vocab, t, enabledIds);
+    const { count: typedCount, parsed: r } = parseTyped(vocab, enabledIds, t);
     setLogged(null);
     setState({ direction: r.parts.direction, items: r.parts.items, pendingMultiplier: null });
     setFreeText(r.parts.freeText ?? "");
+    setCount(typedCount);
     setRaw({ method, text: t });
     setTyped("");
   };
@@ -143,10 +139,10 @@ export function AttemptLogger({
   const record = (status: "landed" | "crashed") => {
     if (!selected) return;
     const dir = state.direction === "left" || state.direction === "right" ? state.direction : null;
-    const parts = toParts(state, freeText ? { freeText, needsReview: true } : {});
+    const parts = { ...toParts(state, freeText ? { freeText, needsReview: true } : {}), ...(count ? { count } : {}) };
     const a: LoggedAttempt = {
       status,
-      trickName: composed.name || null,
+      trickName: composed.name ? capitaliseName(composed.name) : null,
       direction: dir,
       categoryKey: category,
       trickParts: parts,
@@ -163,26 +159,6 @@ export function AttemptLogger({
     value: typed,
     onChange: setTyped,
     onRead: () => readText(typed, "text"),
-    micSupported,
-    listening,
-    micNote,
-    onMic: () => {
-      if (listening) {
-        stopListening.current();
-        return;
-      }
-      setMicNote(null);
-      setListening(true);
-      stopListening.current = listenOnce(
-        "en-GB",
-        (text) => readText(text, "speech"),
-        (error) => {
-          setListening(false);
-          if (error === "not-allowed" || error === "service-not-allowed") setMicNote(copy.live.builder.micDenied);
-          else if (error && error !== "aborted" && error !== "no-speech") setMicNote(copy.live.builder.micFailed);
-        },
-      );
-    },
   };
 
   const undoLeft = logged ? UNDO_MS - (now - logged.at) : 0;
@@ -210,6 +186,7 @@ export function AttemptLogger({
         vocab={vocab}
         state={state}
         freeText={freeText}
+        times={count}
         onTapDirection={(k) => touch((s) => tapDirection(s, k))}
         onTapBlock={(id) => touch((s) => tapBlock(vocab, s, id))}
         onTapMultiplier={(k) => touch((s) => tapMultiplier(vocab, s, k))}

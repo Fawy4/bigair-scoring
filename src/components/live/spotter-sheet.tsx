@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Zap } from "lucide-react";
+import { Check, X, Zap } from "lucide-react";
 import { Chip } from "./chip";
 import type { LoggerRider, LoggedAttempt } from "./attempt-logger";
 import { RiderTile } from "./rider-tile";
@@ -87,6 +87,8 @@ function SheetLineRow({
   const [focused, setFocused] = useState(false);
   const picked = useRef(false);
   const dirty = useRef(false);
+  // the box was emptied with the clear button: it stays empty until a new trick is typed (the attempt keeps its trick meanwhile)
+  const cleared = useRef(false);
   const typedAt = useRef(0);
   const ownKey = useRef<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -106,7 +108,7 @@ function SheetLineRow({
       return;
     }
     if (line.state === "saving") return;
-    if (focused || dirty.current) return;
+    if (focused || dirty.current || cleared.current) return;
     setText(initialText(line));
     setDir(line.direction);
     setCrash(line.crash);
@@ -161,9 +163,17 @@ function SheetLineRow({
 
   const onType = (v: string) => {
     setText(v);
+    cleared.current = false;
     picked.current = false;
     dirty.current = true;
     typedAt.current = Date.now();
+  };
+  const clearBox = () => {
+    setText("");
+    cleared.current = true;
+    dirty.current = false;
+    picked.current = false;
+    input.current?.focus();
   };
   const pick = (i: number) => {
     const next = applySuggestion(text, suggestions[i]);
@@ -190,17 +200,17 @@ function SheetLineRow({
   const stateWord = line.state === "saving" ? T.states.saving : line.state === "logged" ? T.states.logged : tapToLog ? T.states.tapToLog : T.states.empty;
   const keptTrick = crash ? (readTrick(vocab, enabledIds, text, dir).trickName ?? line.trickName ?? "") : "";
   const dim = line.state === "waiting";
-  const btn = "inline-flex h-14 shrink-0 items-center justify-center rounded-lg text-name font-semibold disabled:opacity-50";
+  const btn = "inline-flex h-12 shrink-0 items-center justify-center rounded-lg text-name font-semibold disabled:opacity-50";
 
   return (
-    <li ref={row} data-testid="spotter-line" data-line={line.n} data-state={line.state} data-crash={crash ? "true" : "false"} className={cn("flex flex-col gap-1 px-2 py-1.5", dim && "bg-beach-bg text-beach-muted", crash && logged && "bg-beach-surface")}>
+    <li ref={row} data-testid="spotter-line" data-line={line.n} data-state={line.state} data-crash={crash ? "true" : "false"} className={cn("flex scroll-mt-20 flex-col gap-1 px-2 py-1.5", dim && "bg-beach-bg text-beach-muted", crash && logged && "bg-beach-surface")}>
       <div className="flex items-center gap-1.5">
         <span data-testid="line-number" className="w-6 shrink-0 text-center text-name font-semibold tabular-nums">
           {line.n}
         </span>
         <div className="flex min-w-0 flex-1 flex-col">
           {crash && logged ? (
-            <div data-testid="line-crash-word" className="flex min-h-14 flex-col justify-center">
+            <div data-testid="line-crash-word" className="flex min-h-12 flex-col justify-center">
               <span className="inline-flex items-center gap-1 text-name font-semibold text-beach-crash">
                 <Zap aria-hidden className="size-4" />
                 {T.crashWord}
@@ -212,26 +222,40 @@ function SheetLineRow({
               ) : null}
             </div>
           ) : (
-            <input
-              ref={input}
-              data-testid="line-trick"
-              aria-label={T.trickBox(line.n)}
-              placeholder={T.placeholder}
-              value={text}
-              disabled={!canType}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              enterKeyHint="done"
-              onChange={(e) => onType(e.target.value)}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") (e.target as HTMLInputElement).blur(); // closes the keyboard; it never logs
-              }}
-              className="h-14 min-w-0 rounded-lg border border-beach-border bg-beach-bg px-2 text-body font-semibold text-beach-ink placeholder:font-medium placeholder:text-beach-muted disabled:bg-beach-surface"
-            />
+            <div className="relative">
+              <input
+                ref={input}
+                data-testid="line-trick"
+                aria-label={T.trickBox(line.n)}
+                placeholder={T.placeholder}
+                value={text}
+                disabled={!canType}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="sentences"
+                spellCheck={false}
+                enterKeyHint="done"
+                onChange={(e) => onType(e.target.value)}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.target as HTMLInputElement).blur(); // closes the keyboard; it never logs
+                }}
+                className="h-12 w-full min-w-0 rounded-lg border border-beach-border bg-beach-bg py-0 pl-2 pr-10 text-body font-semibold text-beach-ink placeholder:font-medium placeholder:text-beach-muted disabled:bg-beach-surface"
+              />
+              {text && canType ? (
+                <button
+                  type="button"
+                  data-testid="line-trick-clear"
+                  aria-label={T.clearBox(line.n)}
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={clearBox}
+                  className="absolute right-0.5 top-1/2 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-lg text-beach-muted"
+                >
+                  <X aria-hidden className="size-5" strokeWidth={2.5} />
+                </button>
+              ) : null}
+            </div>
           )}
         </div>
         {(["left", "right"] as const).map((d) => (
@@ -244,7 +268,7 @@ function SheetLineRow({
             disabled={!canType}
             onPointerDown={(e) => e.preventDefault()}
             onClick={() => tapDirection(d)}
-            className={cn(btn, "w-[3.25rem] gap-0.5", dir === d ? "border-4 border-beach-ink bg-beach-surface text-beach-ink" : "border border-beach-border bg-beach-bg text-beach-ink")}
+            className={cn(btn, "w-10 gap-0.5 px-0", dir === d ? "border-4 border-beach-ink bg-beach-surface text-beach-ink" : "border border-beach-border bg-beach-bg text-beach-ink")}
           >
             {dir === d ? <Check aria-hidden className="size-3.5" strokeWidth={3} /> : null}
             {d === "left" ? T.left : T.right}
@@ -258,10 +282,10 @@ function SheetLineRow({
           disabled={!canType}
           onPointerDown={(e) => e.preventDefault()}
           onClick={tapCrash}
-          className={cn(btn, "w-[4.5rem] gap-1 px-1", crash ? "border border-beach-crash bg-beach-crash text-beach-on-crash" : "border border-beach-border bg-beach-bg text-beach-ink")}
+          className={cn(btn, "w-[4.75rem] gap-1 border border-beach-crash bg-beach-crash px-1 text-small text-beach-on-crash", crash && "ring-[3px] ring-beach-ink ring-offset-1 ring-offset-beach-bg")}
         >
-          {crash ? <Check aria-hidden className="size-3.5" strokeWidth={3} /> : null}
-          {T.crash}
+          {crash ? <Check aria-hidden className="size-4" strokeWidth={3} /> : <Zap aria-hidden className="size-4" />}
+          {copy.live.builder.crash}
         </button>
       </div>
       <div className="flex items-center justify-between gap-2 pl-8 text-small font-medium">
@@ -305,20 +329,22 @@ export function SpotterSheetView(p: SpotterSheetProps) {
   const out = rider ? rider.max !== null && rider.attempts >= rider.max : false;
   const note = !p.canLog ? (p.disabledNote ?? null) : out && rider ? T.outOfAttempts(rider.label.primary.text, rider.attempts, rider.max ?? rider.attempts) : null;
   return (
-    <div data-testid="screen-body" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 py-1.5">
-      {p.topSlot}
-      <div role="group" aria-label={T.strip} data-testid="rider-strip" className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(1, shown.length)}, minmax(0, 1fr))` }}>
-        {shown.map((r) => (
-          <RiderTile key={r.id} compact lockWhenOut label={r.label} attempts={r.attempts} max={r.max} selected={rider?.id === r.id} onSelect={() => setPicked(r.id)} />
-        ))}
-      </div>
-      {assigned ? (
-        <div className="flex justify-end">
-          <Chip data-testid="other-riders" pressed={showOthers} onClick={() => setShowOthers((v) => !v)}>
-            {showOthers ? copy.spotter.assignedOnly : copy.spotter.otherRiders}
-          </Chip>
+    <div data-testid="screen-body" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-1.5">
+      <div className="pt-1.5">{p.topSlot}</div>
+      <div className="sticky top-0 z-10 -mx-2 flex flex-col gap-0.5 bg-beach-bg px-2 pb-1 pt-0.5" data-testid="rider-strip-sticky">
+        <div role="group" aria-label={T.strip} data-testid="rider-strip" className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(1, shown.length)}, minmax(0, 1fr))` }}>
+          {shown.map((r) => (
+            <RiderTile key={r.id} compact lockWhenOut label={r.label} attempts={r.attempts} max={r.max} selected={rider?.id === r.id} onSelect={() => setPicked(r.id)} />
+          ))}
         </div>
-      ) : null}
+        {assigned ? (
+          <div className="flex justify-end">
+            <Chip data-testid="other-riders" pressed={showOthers} onClick={() => setShowOthers((v) => !v)}>
+              {showOthers ? copy.spotter.assignedOnly : copy.spotter.otherRiders}
+            </Chip>
+          </div>
+        ) : null}
+      </div>
       {note ? (
         <p role="status" data-testid="sheet-note" className="rounded-lg border border-beach-line bg-beach-surface px-1.5 py-0.5 text-small font-semibold">
           {note}

@@ -118,19 +118,27 @@ export interface ReadTrick {
 const isDirection = (d: string | null | undefined): d is Direction => d === "left" || d === "right";
 
 /**
+ * Typed words read the way both spotter views read them: a one- or two-digit count at the start is split off ("6 front rolls" → 6 and "front rolls"), and the rest is read
+ * with the vocabulary. A count goes with a plural but the vocabulary is singular: when the words as typed leave something unrecognised, they are tried in the singular.
+ */
+export function parseTyped(vocab: TrickVocab, enabledIds: ReadonlySet<string>, text: string): { count: number | null; parsed: ReturnType<typeof parseTrickText> } {
+  const { count, rest } = splitCount(text.trim());
+  let parsed = parseTrickText(vocab, rest, enabledIds);
+  if (count && parsed.parts.freeText?.trim()) {
+    const singular = parseTrickText(vocab, rest.replace(/\b([A-Za-z]{3,})s\b/g, "$1"), enabledIds);
+    if (!singular.parts.freeText?.trim() && singular.parts.items.length > 0) parsed = singular;
+  }
+  return { count, parsed };
+}
+
+/**
  * What a line's box and its L / R buttons say, read the way the Trick list reads typed text (the same vocabulary matching). A button wins over a direction word typed
  * in the box. Words that match nothing stay free text and are flagged for the head judge.
  */
 export function readTrick(vocab: TrickVocab, enabledIds: ReadonlySet<string>, text: string, button: Direction | null): ReadTrick {
   const t = text.trim();
   if (!t) return { trickName: null, direction: button, categoryKey: null, trickParts: { direction: button, items: [] }, needsReview: false, rawText: null };
-  const { count, rest } = splitCount(t);
-  let r = parseTrickText(vocab, rest, enabledIds);
-  // "6 front rolls": a count goes with a plural, but the vocabulary is singular: when the words as typed leave something unrecognised, try them in the singular
-  if (count && r.parts.freeText?.trim()) {
-    const singular = parseTrickText(vocab, rest.replace(/\b([A-Za-z]{3,})s\b/g, "$1"), enabledIds);
-    if (!singular.parts.freeText?.trim() && singular.parts.items.length > 0) r = singular;
-  }
+  const { count, parsed: r } = parseTyped(vocab, enabledIds, t);
   const direction = button ?? (isDirection(r.parts.direction) ? r.parts.direction : null);
   const needsReview = Boolean(r.parts.freeText?.trim()) || r.needsReview;
   const parts: TrickParts = { ...r.parts, direction, ...(count ? { count } : {}), ...(needsReview ? { needsReview: true } : {}) };

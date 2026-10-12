@@ -133,7 +133,6 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Could not copy: use Download instead.” | Follow the sentence. | [Feedback notes](errors.md#err-feedback-exportcopyfailed) |
 | “Could not do that: ‹why›” | Follow the sentence. | [Organiser: Go live](errors.md#err-org-dashboard-failed) |
 | “Could not find a free PIN; try again.” | Press again: a new random PIN is tried. | [Organiser: Officials](errors.md#err-officials-errors-pininuse) |
-| “Could not hear that. Try again or type it.” | Follow the sentence. | [Judge and spotter phones](errors.md#err-live-builder-micfailed) |
 | “Could not keep: ‹names› (they no longer fit).” | Follow the sentence. | [Organiser: Draw](errors.md#err-draw-droppednote) |
 | “Could not undo: ‹why›” | Ask the head judge to delete the attempt. | [Judge and spotter phones](errors.md#err-spotter-undofailed) |
 | “Database: not reachable” | Open the Supabase dashboard and press Resume; load the home page once. | [Platform owner (/admin)](errors.md#err-admin-health-databasedown) |
@@ -434,7 +433,6 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “The master trick base could not be found. Ask the owner to seed the presets.” | On a computer with the keys: npm run seed:presets. | [Organiser: Divisions](errors.md#err-trickbase-errors-novocabulary) |
 | “the maximum per heat cannot be less than the target” | Change the highlighted number; the preview comes back when the format can run. | [Organiser: Divisions](errors.md#err-formatsimple-maxbelowtarget) |
 | “The message is too long (300 characters at most)” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-closedmessagemax) |
-| “The microphone is not allowed on this phone. Type the trick instead.” | Allow the microphone in the phone's settings, or type the trick. | [Judge and spotter phones](errors.md#err-live-builder-micdenied) |
 | “the minimum per heat cannot be more than the target” | Change the highlighted number; the preview comes back when the format can run. | [Organiser: Divisions](errors.md#err-formatsimple-minabovetarget) |
 | “The naming template has an unknown part: ‹part›. Use {direction} and {blocks}.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-namingunknown) |
 | “The naming template must contain {blocks}.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-namingmissingblocks) |
