@@ -63,8 +63,9 @@ function LineRow({ line, scale, locked, ended, typable, askable, ask, onAsk, onS
       data-kind={line.kind}
       data-waits={waits ? "true" : undefined}
       data-needs-score={needs ? "true" : undefined}
-      className={cn("flex flex-col gap-0.5 px-2 py-1", crash && "bg-beach-surface text-beach-muted", line.kind === "empty" && "bg-beach-bg", needs && "text-beach-ink shadow-[inset_0_0_0_2px_var(--beach-crash)]")}
+      className={cn("flex flex-col gap-0.5 px-2 py-1", crash && "bg-beach-surface text-beach-muted", line.kind === "empty" && "bg-beach-bg", needs && "relative text-beach-ink")}
     >
+      {needs ? <span aria-hidden data-testid="line-needs-bar" className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-beach-crash" /> : null}
       <div className="flex min-h-row items-center gap-2">
         <span data-testid="line-number" className="w-6 shrink-0 text-center text-name font-semibold tabular-nums">
           {line.n}
@@ -81,7 +82,11 @@ function LineRow({ line, scale, locked, ended, typable, askable, ask, onAsk, onS
             </span>
           )}
           {needs ? (
-            <span data-testid="line-needs-score" className="text-small font-semibold text-beach-ink">
+            <span
+              data-testid="line-needs-score"
+              className="mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--beach-crash)_45%,transparent)] bg-[color-mix(in_srgb,var(--beach-crash)_9%,transparent)] px-2 py-0.5 text-small font-semibold text-beach-ink"
+            >
+              <span aria-hidden className="size-2 rounded-full bg-beach-crash motion-safe:animate-pulse" />
               {T.needsScore}
             </span>
           ) : null}
@@ -120,7 +125,7 @@ function LineRow({ line, scale, locked, ended, typable, askable, ask, onAsk, onS
               onKeyDown={(e) => {
                 if (e.key === "Enter") (e.target as HTMLInputElement).blur();
               }}
-              className={cn("h-12 w-[4.5rem] rounded-lg border bg-beach-bg px-1.5 text-center text-digit font-semibold text-beach-ink placeholder:text-beach-muted", refusal ? "border-beach-failed" : "border-beach-border", line.kind === "empty" && line.pending !== null && "border-dashed")}
+              className={cn("h-12 w-[4.5rem] rounded-lg border bg-beach-bg px-1.5 text-center text-digit font-semibold text-beach-ink placeholder:text-beach-muted", refusal ? "border-beach-failed" : "border-beach-border", line.kind === "empty" && line.pending !== null && "border-dashed", needs && !refusal && "border-2 border-beach-crash shadow-[0_0_0_3px_color-mix(in_srgb,var(--beach-crash)_22%,transparent)]")}
             />
           </span>
         )}

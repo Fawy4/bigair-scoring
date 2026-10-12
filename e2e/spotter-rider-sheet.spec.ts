@@ -433,10 +433,13 @@ test("tapping a line below one with no score asks once, in one line, and one tap
     await expect(jline(j1, n).getByTestId("line-needs-score")).toHaveText("Needs your score");
   }
   await expect(jline(j1, 4)).not.toHaveAttribute("data-needs-score", "true");
-  // an outline around the line (no filled row): a 2 px red inset outline on the highlighted lines, none on the others
-  expect(await jline(j1, 1).evaluate((e) => getComputedStyle(e).boxShadow)).toMatch(/inset.* 0px 0px 0px 2px|0px 0px 0px 2px.*inset/);
-  expect(await jline(j1, 4).evaluate((e) => getComputedStyle(e).boxShadow)).toBe("none");
-  expect(await jline(j1, 1).evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgba(0, 0, 0, 0)"); // the row itself is not filled
+  // sleek, not a box: a slim bar on the left edge, a rounded tag with the words, a glow on the score box; the row itself is not filled and has no frame
+  for (const n of [1, 2, 3]) await expect(jline(j1, n).getByTestId("line-needs-bar")).toBeVisible();
+  await expect(jline(j1, 4).getByTestId("line-needs-bar")).toHaveCount(0);
+  expect(await jline(j1, 1).evaluate((e) => getComputedStyle(e).boxShadow)).toBe("none");
+  expect(await jline(j1, 1).evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+  expect(await jbox(j1, 1).evaluate((e) => getComputedStyle(e).boxShadow)).not.toBe("none"); // the glow on the box to type in
+  expect(await jbox(j1, 4).evaluate((e) => getComputedStyle(e).boxShadow)).toBe("none");
   // line 4 is below them: tapping it asks, it does not do nothing
   await jbox(j1, 4).click();
   await expect(j1.getByTestId("skip-ask")).toHaveText(/Lines 1–3 have no score from you\. Set them to Missed and score line 4\?/);
