@@ -106,7 +106,7 @@ describe("console: Publish is blocked by name while a pending row remains", () =
   });
 
   it("the blockers list one entry per rider and judge on the panel only", () => {
-    expect(pendingBlockers([{ entry_id: "a", judge_seat_id: "J2" }, { entry_id: "a", judge_seat_id: "J2" }, { entry_id: "a", judge_seat_id: "X" }], PANEL)).toEqual([{ riderId: "a", judgeId: "J2" }]);
+    expect(pendingBlockers([{ entry_id: "a", judge_seat_id: "J2" }, { entry_id: "a", judge_seat_id: "J2" }, { entry_id: "a", judge_seat_id: "X" }], PANEL)).toEqual([{ riderId: "a", judgeId: "J2", missed: false }]);
   });
 });
 
@@ -123,6 +123,10 @@ describe("audit: a judge changing their own score", () => {
     const named = { ...w, riderName: () => "Omar Hassan" };
     expect(auditLine(cleared("phone died"), named)).toBe("Head judge cleared J2's pending score on Omar Hassan line 4: phone died");
     expect(auditLine(cleared(null), named)).toBe("Head judge cleared J2's pending score on Omar Hassan line 4: no reason given");
+  });
+  it("the head judge clearing a Missed note says Missed note, not score", () => {
+    const r = row({ action: "pending_cleared_by_head", table_name: "pending_scores", reason: null, before: { judge_seat_id: "J2", entry_id: "omar", line: 2, missed: true }, after: null });
+    expect(auditLine(r, { ...w, riderName: () => "Omar Hassan" })).toBe("Head judge cleared J2's Missed note on Omar Hassan line 2: no reason given");
   });
   it("a save that changed no number is not a change; a score that came from a pending note says so", () => {
     expect(isScoreChange(row({ before: { score: 7 }, after: { score: 7, version: 2 } }))).toBe(false);

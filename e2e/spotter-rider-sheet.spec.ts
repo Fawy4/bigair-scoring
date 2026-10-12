@@ -328,3 +328,39 @@ test("the defaults: a phone that never chose opens on the Rider sheet; a chosen 
     await cw.cleanup();
   }
 });
+
+test("a Missed note left at the end of the heat blocks Publish and says it is a Missed note (no score is lost by clearing it); the head judge's Clear removes it", async ({ browser }) => {
+  test.setTimeout(600_000);
+  const H = w.heats[0];
+  await w.db.from("heat_slots").update({ modifier: "DNS" }).eq("heat_id", H).neq("entry_id", w.entries[0]);
+  await w.startHeat(H);
+  const j1 = await phone(browser, "j1", `/judge/${w.eventId}`, { newViews: true });
+  const head = await phone(browser, "head", `/head/${w.eventId}`, { size: { width: 1500, height: 1000 } });
+  await head.locator(`[data-testid="order-row"][data-heat="${H}"]`).click({ timeout: 60_000 });
+  await expect(j1.getByTestId("rider-sheet")).toBeVisible({ timeout: 30_000 });
+
+  // the judge did not see an attempt that the spotter never logged: Missed on line 1 is a note
+  await jline(j1, 1).getByTestId("line-missed").click();
+  await expect.poll(async () => ((await w.db.from("pending_scores").select("slot, missed").eq("heat_id", H)).data ?? []).map((n) => [n.slot, n.missed]), { timeout: 30_000 }).toEqual([[1, true]]);
+  await expect(head.getByTestId("pending-row")).toHaveCount(1, { timeout: 40_000 });
+  await expect(head.getByTestId("pending-row").first().getByTestId("pending-cell").first()).toContainText("Missed");
+
+  // the heat ends with the note still there: the blocker says Missed note, and there is no override
+  await w.db.from("heats").update({ status: "ended", ended_at: new Date().toISOString() }).eq("id", H);
+  const blockerLine = head.getByTestId("blockers").getByTestId("blocker-line").filter({ hasText: "Missed note with no attempt" });
+  await expect(blockerLine).toContainText("no score is lost by clearing it", { timeout: 60_000 });
+  await head.getByTestId("publish").click();
+  const dialog = head.getByTestId("console-dialog");
+  await expect(dialog.getByTestId("publish-blockers")).toContainText("Missed note with no attempt");
+  await expect(dialog.getByTestId("dialog-save")).toBeDisabled();
+  await dialog.getByTestId("dialog-cancel").click();
+
+  // the head judge's Clear removes it, and the blocker goes
+  await head.getByTestId("clear-note").click();
+  await dialog.getByTestId("dialog-save").click();
+  await expect.poll(async () => ((await w.db.from("pending_scores").select("id").eq("heat_id", H)).data ?? []).length, { timeout: 30_000 }).toBe(0);
+  await expect(blockerLine).toHaveCount(0, { timeout: 60_000 });
+  const audit = (await w.db.from("audit_log").select("action, before").eq("event_id", w.eventId).eq("action", "pending_cleared_by_head")).data ?? [];
+  expect(audit).toHaveLength(1);
+  expect(audit[0].before).toMatchObject({ judge_seat_id: w.seats.j1.id, missed: true });
+});

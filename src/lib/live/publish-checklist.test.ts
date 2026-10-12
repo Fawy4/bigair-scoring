@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { publishChecklist } from "./publish-checklist";
+import { pendingBlockers, publishChecklist } from "./publish-checklist";
 
 // docs/08 §1H-7 (wording changed by the owner in Polish 2, item 1: "<judge>: <what> missing", each line with the place to fix it)
 const judgeWord = (id: string) => ({ J1: "Judge 1", J2: "Judge 2", J3: "Judge 3" })[id as "J1"];
@@ -72,5 +72,19 @@ describe("1H-7 what blocks Publish, in words", () => {
     const c = publishChecklist({ ...base, attemptIdOf: undefined, blockers: [{ type: "score_missing", judge: "J3", rider: "red", attemptSeq: 3 }] });
     expect(c.items[0].text).toBe("Judge 3: score for Red, attempt 3 missing");
     expect(c.items[0].target).toBeUndefined();
+  });
+
+  it("a leftover Missed note says it is a Missed note, that no score is lost by clearing it, and still has no override", () => {
+    const c = publishChecklist({ ...base, blockers: [], pending: [{ riderId: "red", judgeId: "J3", missed: true }, { riderId: "blue", judgeId: "J3" }] });
+    expect(c.items.map((i) => i.text)).toEqual([
+      "Red: Judge 3 has a Missed note with no attempt — no score is lost by clearing it; ask Judge 3 to clear it, or clear it here",
+      "Blue: Judge 3 has a score with no attempt — ask Judge 3 to clear it, or clear it here",
+    ]);
+    expect(c.canOverride).toBe(false);
+  });
+
+  it("a judge who holds a score note and a Missed note on the same rider is told about the score (a score would be lost)", () => {
+    const out = pendingBlockers([{ entry_id: "red", judge_seat_id: "J1", missed: true }, { entry_id: "red", judge_seat_id: "J1", missed: false }, { entry_id: "red", judge_seat_id: "J2", missed: true }, { entry_id: "red", judge_seat_id: "J9", missed: true }], ["J1", "J2"]);
+    expect(out).toEqual([{ riderId: "red", judgeId: "J1", missed: false }, { riderId: "red", judgeId: "J2", missed: true }]);
   });
 });

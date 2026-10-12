@@ -72,6 +72,7 @@ export function auditLine(r: AuditRow, w: AuditWords): string {
         return T.scoreChanged(w.judgeWord(String(after.judge_seat_id ?? before.judge_seat_id ?? "")), attempt(after), val(r.before), val(r.after), w.clock ? w.clock(r.at) : null);
       return rowFallback(r, because);
     case "pending_cleared_by_head":
+      if (before.missed === true) return T.noteMissedClearedByHead(w.judgeWord(String(before.judge_seat_id ?? "")), (w.riderName ?? w.riderWord)(String(before.entry_id ?? "")), Number(before.line ?? 0), r.reason);
       return T.noteClearedByHead(w.judgeWord(String(before.judge_seat_id ?? "")), (w.riderName ?? w.riderWord)(String(before.entry_id ?? "")), Number(before.line ?? 0), r.reason);
     case "score_from_note":
       return T.scoreFromNote(w.judgeWord(String(after.judge_seat_id ?? "")), attempt(after), val(r.after));

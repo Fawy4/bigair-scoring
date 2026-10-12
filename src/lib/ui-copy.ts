@@ -3973,6 +3973,8 @@ export const copy = {
     tie: (names: string) => `${names} are tied — choose the order`,
     /** A judge's score typed before the attempt, still waiting for it. There is no override: the judge clears it, or the attempt is added. */
     pending: (rider: string, judge: string) => `${rider}: ${judge} has a score with no attempt — ask ${judge} to clear it, or clear it here`,
+    /** A judge's Missed note on a line the spotter never logged: clearing it loses no score. */
+    pendingMissed: (rider: string, judge: string) => `${rider}: ${judge} has a Missed note with no attempt — no score is lost by clearing it; ask ${judge} to clear it, or clear it here`,
     and: " and ",
   },
   /** Publish: the words of the dialogs and of the answers (src/lib/live/publish-core.ts). */
@@ -4313,6 +4315,7 @@ export const copy = {
     /** A score typed on the Rider sheet before the attempt was logged, now on the attempt. */
     /** The head judge clearing a judge's pending note: "Head judge cleared J3's pending score on Omar Hassan line 4: phone died". */
     noteClearedByHead: (judge: string, rider: string, line: number, reason: string | null) => `Head judge cleared ${judge}'s pending score on ${rider} line ${line}: ${reason ?? "no reason given"}`,
+    noteMissedClearedByHead: (judge: string, rider: string, line: number, reason: string | null) => `Head judge cleared ${judge}'s Missed note on ${rider} line ${line}: ${reason ?? "no reason given"}`,
     scoreFromNote: (judge: string, attempt: string, score: string) => `${judge} · ${attempt}: ${score} (typed before the attempt was logged)`,
     impression: "Impression / Variety score",
     deleted: (a: string) => `Deleted attempt ${a}`,

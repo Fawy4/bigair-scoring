@@ -42,7 +42,7 @@ export function publishChecklist(input: {
   /** The attempt's id from the rider and the attempt number, so a missing score's line opens that cell. */
   attemptIdOf?: (riderId: string, seq: number) => string | undefined;
   /** Scores judges typed on the Rider sheet that still have no attempt: one entry per rider and judge. They hold Publish back with no override. */
-  pending?: Array<{ riderId: string; judgeId: string }>;
+  pending?: Array<{ riderId: string; judgeId: string; /** Every note of this judge on this rider is a Missed note (clearing it loses no score). */ missed?: boolean }>;
   /** The rider as the blocker names them ("Omar Hassan"); the rider's word when not given. */
   riderName?: (riderId: string) => string;
   /** The judge as the blocker names them ("J3"); the judge's word when not given. */
@@ -75,22 +75,26 @@ export function publishChecklist(input: {
     }
   }
   for (const n of input.pending ?? []) {
-    items.push({ kind: "pending", judge: n.judgeId, text: C.pending((input.riderName ?? input.riderLabel)(n.riderId), (input.judgeTag ?? judge)(n.judgeId)), riders: [n.riderId] });
+    items.push({ kind: "pending", judge: n.judgeId, text: (n.missed ? C.pendingMissed : C.pending)((input.riderName ?? input.riderLabel)(n.riderId), (input.judgeTag ?? judge)(n.judgeId)), riders: [n.riderId] });
   }
   items.sort((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind));
   return { items, canOverride: !items.some((i) => i.kind === "tie" || i.kind === "pending") };
 }
 
-/** One blocker per rider and panel judge who still holds a note typed on the Rider sheet with no attempt behind it. */
-export function pendingBlockers(notes: Array<{ entry_id: string; judge_seat_id: string }>, panelSeatIds: string[]): Array<{ riderId: string; judgeId: string }> {
-  const seen = new Set<string>();
-  const out: Array<{ riderId: string; judgeId: string }> = [];
+/**
+ * One blocker per rider and panel judge who still holds a note typed on the Rider sheet with no attempt behind it. `missed` is true when every note the judge holds
+ * on that rider is a Missed note: the blocker then says so, because clearing it loses no score.
+ */
+export function pendingBlockers(notes: Array<{ entry_id: string; judge_seat_id: string; missed?: boolean }>, panelSeatIds: string[]): Array<{ riderId: string; judgeId: string; missed: boolean }> {
+  const seen = new Map<string, { riderId: string; judgeId: string; missed: boolean }>();
   for (const n of notes) {
+    if (!panelSeatIds.includes(n.judge_seat_id)) continue;
     const key = `${n.entry_id}|${n.judge_seat_id}`;
-    if (!panelSeatIds.includes(n.judge_seat_id) || seen.has(key)) continue;
-    seen.add(key);
-    out.push({ riderId: n.entry_id, judgeId: n.judge_seat_id });
+    const held = seen.get(key);
+    if (held) held.missed = held.missed && Boolean(n.missed);
+    else seen.set(key, { riderId: n.entry_id, judgeId: n.judge_seat_id, missed: Boolean(n.missed) });
   }
+  const out = [...seen.values()];
   // rider by rider (in the order the notes arrive), the judges of one rider in panel order
   const riders = [...new Set(out.map((o) => o.riderId))];
   return out.sort((a, b) => riders.indexOf(a.riderId) - riders.indexOf(b.riderId) || panelSeatIds.indexOf(a.judgeId) - panelSeatIds.indexOf(b.judgeId));

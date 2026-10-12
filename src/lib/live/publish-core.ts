@@ -43,7 +43,7 @@ export interface PublishInputs {
   members: Array<{ judge_seat_id: string; seat_no: number }>;
   seats: Array<{ id: string; name: string; active: boolean; status: string }>;
   /** Scores judges typed on the Rider sheet that still have no attempt (never counted; they hold Publish back, with no override). Absent from an older database. */
-  pending?: Array<{ entry_id: string; judge_seat_id: string; slot: number; line: number }>;
+  pending?: Array<{ entry_id: string; judge_seat_id: string; slot: number; line: number; missed?: boolean }>;
 }
 
 const fail = (code: string | null, message?: string): PublishResult => ({ ok: false, code, message: message ?? errorSentence(code) });
@@ -73,6 +73,12 @@ export async function publishHeatCore(
   const user = await signedInUser(db.user);
   if (!user) return fail("NOT_ALLOWED");
   const read = got as unknown as PublishInputs;
+  // the answer says which judge holds a note on which rider; whether the note is a Missed one (clearing it loses no score) is read here, so the blocker can say so
+  if (read.pending?.length) {
+    const { data: held } = await service.from("pending_scores").select("entry_id, judge_seat_id, slot, missed").eq("heat_id", heatId);
+    const missedKeys = new Set((held ?? []).filter((n) => n.missed).map((n) => `${n.entry_id}|${n.judge_seat_id}|${n.slot}`));
+    read.pending = read.pending.map((n) => ({ ...n, missed: missedKeys.has(`${n.entry_id}|${n.judge_seat_id}|${n.slot}`) }));
+  }
   const { heat, latest, division, model: modelJson, members, seats, entries } = read;
   const slots = read.slots as SlotRow[];
   const attempts = read.attempts as AttemptRow[];

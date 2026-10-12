@@ -24,6 +24,7 @@ PR: #45
 - **The Trick list got three fixes.** The trick text box is now at the bottom, directly above Log and CRASH. Left and Right are two wide buttons sharing the row, the chosen one with a thick border and a tick. And with the keyboard open, the text box, Log and CRASH sit directly above the keyboard, so you see what you type and tap Log without closing it. The same keyboard rule holds on the Rider sheet: the line being typed stays just above the keyboard.
 - **The judges' Rider sheet is line by line.** A judge can type only on the first line of a rider that has no score yet; the lines below wait. A line with a score, a crash line and a line set to **Missed** count as done. The Rider sheet now has a **Missed** button on each line (a line the spotter has not logged yet too): no score from that judge for that attempt, exactly like Missed on the Queue.
 - **Defaults.** A spotter's phone and a judge's phone that never chose a view open on the **Rider sheet**. A phone whose user picked a view (Trick list, Queue) keeps it. A division scored by criteria stays on the Queue.
+- **A Missed note left at the end of the heat** blocks Publish and says it is a Missed note (no score is lost by clearing it); the head judge's Clear removes it, and the audit log says "Missed note".
 - Needs one database addition (a new function for the spotter's corrections and Missed on a sheet line); nothing was dropped or renamed.
 
 ### What to test
