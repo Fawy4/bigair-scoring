@@ -181,6 +181,7 @@ function SheetLineRow({
   const tapCrash = () => {
     const next = !crash;
     setCrash(next);
+    setFocused(false); // the box is replaced by the CRASH word (it never gets its blur), so the suggestions go with it
     if (next || key) commit({ crash: next });
   };
 
@@ -270,7 +271,7 @@ function SheetLineRow({
         {logged && !mine ? <span className="text-beach-muted">{T.othersLine}</span> : null}
         {logged && mine && read(line, text, vocab, enabledIds) ? <span className="text-beach-muted">{T.freeTag}</span> : null}
       </div>
-      {focused && suggestions.length > 0 ? (
+      {focused && !(crash && logged) && suggestions.length > 0 ? (
         <div role="group" aria-label={T.suggestions} data-testid="line-suggestions" className="flex flex-wrap gap-1 pl-8">
           {suggestions.map((s, i) => (
             <Chip key={s.id} data-testid="suggestion" onPointerDown={(e) => e.preventDefault()} onClick={() => pick(i)}>

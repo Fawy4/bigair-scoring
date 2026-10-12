@@ -68,13 +68,13 @@ test("the spotter's Rider sheet: a line logs itself, later changes update the sa
   // ---- line 1: type "back", tap Backroll: the attempt exists with nothing else pressed, on the judge's phone and on the console
   await strick(spotter, 1).click();
   await strick(spotter, 1).fill("back");
-  await expect(spotter.getByTestId("suggestion").filter({ hasText: "Backroll" })).toBeVisible();
+  await expect(sline(spotter, 1).getByTestId("suggestion").filter({ hasText: "Backroll" })).toBeVisible();
   // typed but not logged: the suggestions are open and wait for a tap, and the line says so in words (never taken for a logged one), even after a long pause
   await expect(sline(spotter, 1).getByTestId("line-state")).toHaveText("Tap a trick to log");
   await spotter.waitForTimeout(3000);
   expect(await attempts(H, E)).toHaveLength(0);
   await expect(sline(spotter, 1).getByTestId("line-state")).toHaveText("Tap a trick to log");
-  await spotter.getByTestId("suggestion").filter({ hasText: "Backroll" }).click();
+  await sline(spotter, 1).getByTestId("suggestion").filter({ hasText: "Backroll" }).click();
   await expect.poll(async () => (await attempts(H, E)).map((a) => a.trick_name), { timeout: 30_000 }).toEqual(["Backroll"]);
   await expect(sline(spotter, 1).getByTestId("line-state")).toHaveText("Logged ✓", { timeout: 20_000 });
   await expect(jline(j1, 1)).toContainText("Backroll", { timeout: 40_000 });
@@ -124,7 +124,7 @@ test("the spotter's Rider sheet: a line logs itself, later changes update the sa
   // ---- correct line 1's trick: the same attempt, the judge's score stays, an audit line is written in words
   await strick(spotter, 1).click();
   await strick(spotter, 1).fill("front");
-  await spotter.getByTestId("suggestion").filter({ hasText: "Frontroll" }).click();
+  await sline(spotter, 1).getByTestId("suggestion").filter({ hasText: "Frontroll" }).click();
   await expect.poll(async () => (await attempts(H, E))[0].trick_name, { timeout: 30_000 }).toBe("Left Frontroll");
   const rows = await attempts(H, E);
   expect(rows).toHaveLength(3);
@@ -283,7 +283,7 @@ test("the Trick list: the text box sits directly above Log and CRASH, Left and R
   await expect(strick(spotter, 1)).toBeInViewport();
   await expect(sline(spotter, 1).getByTestId("line-left")).toBeInViewport();
   await expect(sline(spotter, 1).getByTestId("line-crash")).toBeInViewport();
-  await expect(spotter.getByTestId("suggestion").first()).toBeInViewport({ timeout: 5000 });
+  await expect(sline(spotter, 1).getByTestId("suggestion").first()).toBeInViewport({ timeout: 5000 });
 });
 
 test("the defaults: a phone that never chose opens on the Rider sheet; a chosen view is kept after a reload; a criteria division stays on the Queue", async ({ browser }) => {
