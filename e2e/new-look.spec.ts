@@ -118,15 +118,15 @@ test("(a) (b) (c) the officials' screens at 390 × 844 in Normal: 7 lines withou
 
   // ---- the observer
   const { data: obs } = await w.db.auth.admin.createUser({ email: `e2e-${w.org.run}-obs@example.com`, password: `Pw-${w.org.run}-live`, email_confirm: true });
-  w.org.trackUser(obs.user!.id);
-  await w.db.from("judge_seats").insert({ event_id: w.eventId, name: "Observer 1", role: "observer", scores: false, auth_user_id: obs.user!.id, status: "active", active: true } as never);
+  w.org.trackUser(obs!.user!.id);
+  await w.db.from("judge_seats").insert({ event_id: w.eventId, name: "Observer 1", role: "observer", scores: false, auth_user_id: obs!.user!.id, status: "active", active: true } as never);
   const link = await w.db.auth.admin.generateLink({ type: "magiclink", email: `e2e-${w.org.run}-obs@example.com` });
   const observer = await (async () => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
     contexts.push(context);
     await installSupabaseProxy(context, { newViews: true });
     const page = await context.newPage();
-    await page.goto(`/auth/confirm?token_hash=${link.data!.properties.hashed_token}&type=magiclink&next=${encodeURIComponent(`/observe/${w.eventId}`)}`);
+    await page.goto(`/auth/confirm?token_hash=${link.data?.properties?.hashed_token ?? ""}&type=magiclink&next=${encodeURIComponent(`/observe/${w.eventId}`)}`);
     return page;
   })();
   await expect(observer.getByTestId("observer-page")).toBeVisible({ timeout: 40_000 });
