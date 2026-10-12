@@ -194,6 +194,7 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
       end_heat_if_due: { p_heat: running },
       ensure_division_panel: { p_division: d.div },
       flag_out: { p_heat: running, p_entries: [p[0]], p_reason: "flag out" },
+      clear_line_missed: { p_heat: running, p_entry: p[0], p_line: 1 }, // Rider sheets: Missed switched off
       get_seat_contacts: { p_event: f.ids.evA1 },
       head_out_of_event: { p_heat: running, p_entry: p[0], p_reason: "injured", p_words: "x", p_draw: null, p_projection: [] }, // Console – Walkover: out of the event
       head_clear_pending: { p_note: randomUUID(), p_reason: "x y z" },

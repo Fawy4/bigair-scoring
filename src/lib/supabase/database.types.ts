@@ -3131,6 +3131,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      clear_line_missed: {
+        Args: { p_entry: string; p_heat: string; p_line: number }
+        Returns: number
+      }
       clear_line_score: {
         Args: { p_entry: string; p_heat: string; p_line: number }
         Returns: number

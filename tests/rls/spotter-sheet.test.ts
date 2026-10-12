@@ -11,6 +11,7 @@ const MODEL = { trick: { entry: "single", scale: { min: 0, max: 10, step: 0.1 } 
 describe.skipIf(!ENV_OK)("Rider sheets: spotter corrections and Missed notes (hosted development project)", () => {
   let f: Fixture;
   let d: LiveDivision;
+  let open: LiveDivision;
   let obs: SupabaseClient;
   let spotter2: SupabaseClient;
   let bSpotter: SupabaseClient;
@@ -41,6 +42,7 @@ describe.skipIf(!ENV_OK)("Rider sheets: spotter corrections and Missed notes (ho
   beforeAll(async () => {
     f = await buildFixture();
     d = await mkDivision(f, { name: "SpotSheet", seats: ["j1", "j2"], model: MODEL });
+    open = await mkDivision(f, { name: "SpotSheetNoCap", seats: ["j1", "j2"], model: { trick: { entry: "single", scale: { min: 0, max: 10, step: 0.1 } }, panel: { minJudges: 2 }, heat: {} } });
     obs = await seatUser("observer", f.ids.evA1, "observer");
     spotter2 = await seatUser("spotter2", f.ids.evA1, "spotter");
     bSpotter = await seatUser("bspotter", f.ids.evB1, "spotter");
@@ -219,5 +221,97 @@ describe.skipIf(!ENV_OK)("Rider sheets: spotter corrections and Missed notes (ho
     expect(await seen(f.clients.j1)).toBe(1);
     expect(await seen(f.clients.head)).toBe(1);
     for (const c of [f.clients.j2, f.clients.spotter, f.clients.anon, f.clients.bJudge]) expect(await seen(c)).toBe(0);
+  });
+
+  // ---------------------------------------------------------------- 0.20.0, last round: a judge never waits for the spotter (also with no attempt limit)
+  const runningOpen = () => mkHeat(f, open, { status: "running", started_at: ago(60) }, { riders: 3 });
+  const noteNoCap = (heat: string, entry: string, line: number) => f.clients.j1.rpc("set_line_score", { p_heat: heat, p_entry: entry, p_line: line, p_score: 6, p_client_key: key(), p_client_rev: 1 });
+
+  it("no attempt limit, nothing logged: lines 1-10 take a score, line 11 is refused; after the spotter logs one attempt line 11 is accepted; the same for Missed", async () => {
+    const h = await runningOpen();
+    const e = open.entries[0];
+    for (const line of [1, 5, 10]) expect(codeOf(await noteNoCap(h, e, line)), `score ${line}`).toBe("");
+    expect(codeOf(await noteNoCap(h, e, 11))).toContain("LINE_PAST_CAP");
+    for (const line of [2, 10]) expect(codeOf(await missed("j1", h, e, line)), `missed ${line}`).toBe("");
+    expect(codeOf(await missed("j1", h, e, 11))).toContain("LINE_PAST_CAP");
+    await log(f.clients.spotter, h, e);
+    expect(codeOf(await noteNoCap(h, e, 11))).toBe("");
+    expect(codeOf(await missed("j1", h, e, 11))).toBe("");
+    expect(codeOf(await noteNoCap(h, e, 12))).toContain("LINE_PAST_CAP");
+    expect(codeOf(await missed("j1", h, e, 12))).toContain("LINE_PAST_CAP");
+  });
+
+  it("a 7-attempt division is as before: line 7 is accepted, line 8 refused, for a score and for Missed", async () => {
+    const h = await running();
+    const e = d.entries[1];
+    expect(codeOf(await note(h, e, 7, 5))).toBe("");
+    expect(codeOf(await note(h, e, 8, 5))).toContain("LINE_PAST_CAP");
+    expect(codeOf(await missed("j1", h, e, 7))).toBe("");
+    expect(codeOf(await missed("j1", h, e, 8))).toContain("LINE_PAST_CAP");
+  });
+
+  it("the owner's case with no limit: three scores ahead of the spotter land on attempts 1, 2 and 3 in order", async () => {
+    const h = await runningOpen();
+    const e = open.entries[0];
+    for (const [line, v] of [[1, 7], [2, 8], [3, 6.5]] as const) await f.clients.j1.rpc("set_line_score", { p_heat: h, p_entry: e, p_line: line, p_score: v, p_client_key: key(), p_client_rev: 1 });
+    const ids = [(await log(f.clients.spotter, h, e)).id, (await log(f.clients.spotter, h, e)).id, (await log(f.clients.spotter, h, e)).id];
+    const got = await Promise.all(ids.map(async (id) => (await scoresOf(id)).map((s) => Number(s.score))));
+    expect(got).toEqual([[7], [8], [6.5]]);
+    expect(await notes(h)).toHaveLength(0);
+  });
+
+  it("a crash logged late: a score or a Missed note typed ahead on that line is absorbed, the other lines land on their own attempts, nothing shifts and no note is left to block Publish", async () => {
+    for (const second of ["score", "missed"] as const) {
+      const h = await running();
+      const e = d.entries[2];
+      await note(h, e, 1, 7);
+      if (second === "score") await note(h, e, 2, 8);
+      else await missed("j1", h, e, 2);
+      await note(h, e, 3, 6);
+      const a1 = await log(f.clients.spotter, h, e);
+      const a2 = await log(f.clients.spotter, h, e, { p_status: "crashed" });
+      const a3 = await log(f.clients.spotter, h, e);
+      expect((await scoresOf(a1.id)).map((s) => Number(s.score)), second).toEqual([7]);
+      expect(await scoresOf(a2.id), second).toEqual([]); // the crash absorbed the typed score / Missed
+      expect((await scoresOf(a3.id)).map((s) => Number(s.score)), second).toEqual([6]);
+      expect(await notes(h), second).toHaveLength(0);
+      expect(((await f.s.from("trick_attempts").select("seq").eq("heat_id", h).eq("entry_id", e).order("seq")).data ?? []).map((a) => a.seq), second).toEqual([1, 2, 3]);
+      // nothing left that holds Publish back
+      await f.s.from("heats").update({ status: "ended", ended_at: new Date().toISOString() }).eq("id", h);
+      const inputs = await f.clients.head.rpc("publish_heat_inputs", { p_heat: h });
+      expect((inputs.data as { pending?: unknown[] }).pending ?? [], second).toEqual([]);
+    }
+  });
+
+  it("Missed is a switch: clear_line_missed removes the judge's own Missed on a line that has its attempt, never a number, never somebody else's", async () => {
+    const h = await running();
+    const e = d.entries[0];
+    const a = await log(f.clients.spotter, h, e);
+    expect(codeOf(await missed("j1", h, e, 1))).toBe("");
+    expect(codeOf(await missed("j2", h, e, 1))).toBe("");
+    const off = (who: "j1" | "j2" | "j3" | "spotter" | "head" | "anon", line = 1) => f.clients[who].rpc("clear_line_missed", { p_heat: h, p_entry: e, p_line: line });
+    for (const who of ["j3", "spotter", "anon"] as const) expect(codeOf(await off(who)), who).not.toBe("");
+    expect((await off("j1")).data).toBe(1);
+    expect(await scoresOf(a.id)).toEqual([{ judge_seat_id: f.ids.seat_j2, score: null, missed: true }]); // j2's Missed is untouched
+    expect((await off("j1")).data).toBe(0); // nothing left to clear
+    // a number is never removed
+    await f.clients.j1.rpc("submit_trick_score", { p_attempt: a.id, p_criteria: {}, p_score: 7, p_missed: false, p_flag: null, p_client_key: key(), p_client_rev: 5 });
+    expect((await off("j1")).data).toBe(0);
+    const after = await scoresOf(a.id);
+    expect(after.map((s) => (s.score === null ? null : Number(s.score))).sort()).toEqual([7, null]);
+    // an empty line has nothing to clear here (its Missed note is cleared by clear_line_score)
+    expect((await off("j1", 5)).data).toBe(0);
+    // the removal is audited
+    expect(((await f.s.from("audit_log").select("action").eq("event_id", f.ids.evA1).eq("action", "missed_cleared")).data ?? []).length).toBeGreaterThan(0);
+  });
+
+  it("clear_line_missed is refused on a sheet that is locked (Submit)", async () => {
+    const h = await running();
+    const e = d.entries[0];
+    await log(f.clients.spotter, h, e);
+    await missed("j1", h, e, 1);
+    await f.s.from("heats").update({ status: "ended", ended_at: new Date().toISOString() }).eq("id", h);
+    await f.s.from("judge_sheets").insert({ event_id: f.ids.evA1, heat_id: h, judge_seat_id: f.ids.seat_j1, submitted_at: new Date().toISOString() });
+    expect(codeOf(await f.clients.j1.rpc("clear_line_missed", { p_heat: h, p_entry: e, p_line: 1 }))).not.toBe("");
   });
 });

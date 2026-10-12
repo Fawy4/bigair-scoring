@@ -51,7 +51,7 @@ The judge's default view (since 0.20.0), for the judge who wants to score the ju
 - **Mixed views.** Judges on the same heat can use different views, and it makes no difference to the result: the Queue judge scores an attempt when it lands, the Rider-sheet judge may have scored it before. Switching view in the middle of the heat keeps every score and every pending note.
 
 ![The Rider sheet](../img/judge-rider-sheet-390.png)
-*judge-rider-sheet-390.png — Red's sheet with all 7 lines: four attempts logged (the second a crash), lines 3 and 4 marked with the red bar and the "Needs your score" tag, and the Missed buttons.*
+*judge-rider-sheet-390.png — Red's sheet with all 7 lines: four attempts logged (the second a crash), lines 3 and 4 with the bar and the "Needs your score" tag, and the Missed buttons.*
 
 ## A typed score that is off the step {#ju-pad-step}
 

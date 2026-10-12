@@ -486,7 +486,6 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “There are no heats yet. Make each division's draw first.” | Draw step → Generate draw for each division. | [Organiser: Run order](errors.md#err-runorder-noheats) |
 | “There are no open notes to export.” | Follow the sentence. | [Feedback notes](errors.md#err-feedback-exportnone) |
 | “There is no active run order for today.” | Run order step → pick today → Activate this plan. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-no-active-plan) |
-| “There is no attempt NaN to score: this rider can have at most ‹n› attempts.” | Type on one of the numbered lines of the sheet. The head judge can add an attempt past the limit, with a reason; its line then appears. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-line-past-cap) |
 | “There is no draw yet.” | Follow the sentence. | [Organiser: Draw](errors.md#err-draw-errors-nodraw) |
 | “There is no newer draft to publish.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-nothingtopublish) |
 | “There is no other organisation to move it to.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-org-movenoothers) |
@@ -616,6 +615,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “You are not allowed to do this.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-not-allowed) |
 | “You are not allowed to reset this event.” | Follow the sentence. | [Resets](errors.md#err-reset-errors-not-allowed) |
 | “You are not on the panel of a heat that is running.” | Organiser: Officials → Panels → tick the judge for that division. | [Judge and spotter phones](errors.md#err-judge-notonpanel) |
+| “You can score up to attempt ‹n› for this rider for now.” | Type on one of the numbered lines of the sheet. The head judge can add an attempt past the limit, with a reason; its line then appears. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-line-past-cap) |
 | “You cannot remove your own login.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-cannot-remove-self) |
 | “You do not have permission to do that.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-errors-notallowed) |
 | “You still have scores with no attempt: ‹what›. Clear them, then submit.” | Press Clear on those lines (Review → Rider sheet), then Submit. | [Other](errors.md#err-ridersheet-submitheld) |

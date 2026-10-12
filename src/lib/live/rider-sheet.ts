@@ -44,6 +44,8 @@ export function lineOfSlot(attempts: SheetAttempt[], slot: number): number | nul
 
 /** With no attempt limit the judge's sheet starts with this many lines, like the spotter's. */
 export const OPEN_LINES = 10;
+/** With no attempt limit a judge may score this many lines past the attempts the spotter has logged (the database's rule: the 10 lines the sheet starts with). */
+export const NO_LIMIT_AHEAD = 10;
 
 /**
  * Number of lines on a rider's sheet at the start: the cap (7 for Arrow), never fewer than the attempts logged; with no cap 10 lines (or the attempts logged, if
@@ -61,7 +63,7 @@ export function lineCount(attempts: SheetAttempt[], cap: number | null): number 
 export function allowedLine(attempts: SheetAttempt[], cap: number | null, line: number): boolean {
   const n = live(attempts).length;
   if (!Number.isInteger(line) || line <= n || line < 1) return false;
-  return cap === null ? line <= n + 1 : line <= cap;
+  return cap === null ? line <= n + NO_LIMIT_AHEAD : line <= cap;
 }
 
 export interface SheetLine {
@@ -79,19 +81,34 @@ export interface SheetLine {
   slot: number | null;
   /**
    * The server can keep a score here. Always true with an attempt limit (every line up to the limit) and on a line that has its attempt; with no limit the server keeps
-   * a note only on the one line ahead of the attempts logged (`allowedLine`), so lines further down are shown but wait for the spotter.
+   * a note up to 10 lines past the attempts logged (`allowedLine`), so a line further down is shown but closed until the spotter has logged more.
    */
   open: boolean;
 }
 
 /** The lines of one rider's sheet for one judge. With no cap, a new empty line follows as soon as the last line is done, so the judge never runs out of lines. */
-export function buildLines(i: { attempts: SheetAttempt[]; notes: SheetNote[]; cap: number | null; mine?: Map<string, number | "missed"> }): SheetLine[] {
+export function buildLines(i: {
+  attempts: SheetAttempt[];
+  notes: SheetNote[];
+  cap: number | null;
+  mine?: Map<string, number | "missed">;
+  /**
+   * What this judge typed ahead of the spotter, by attempt number, remembered by the phone. A line the judge filled ahead is covered the moment its attempt arrives:
+   * the note on the server turns into the score a moment later, and until then the line shows what the judge typed and nothing lights up.
+   */
+  ahead?: Map<number, number | "missed">;
+}): SheetLine[] {
   const logged = live(i.attempts);
   const total = lineCount(i.attempts, i.cap);
   const out: SheetLine[] = [];
   const make = (n: number): SheetLine => {
     const a = logged[n - 1];
-    if (a) return { n, kind: a.status === "crashed" ? "crash" : "attempt", attemptId: a.id, seq: a.seq, trickName: a.trickName, direction: a.direction, mine: a.status === "crashed" ? null : (i.mine?.get(a.id) ?? null), pending: null, slot: null, open: true };
+    if (a) {
+      const held = i.notes.find((x) => x.slot === a.seq);
+      const typedAhead = held ? (held.missed ? ("missed" as const) : held.score) : (i.ahead?.get(a.seq) ?? null);
+      const mine = a.status === "crashed" ? null : (i.mine?.get(a.id) ?? typedAhead);
+      return { n, kind: a.status === "crashed" ? "crash" : "attempt", attemptId: a.id, seq: a.seq, trickName: a.trickName, direction: a.direction, mine, pending: null, slot: null, open: true };
+    }
     const slot = slotForLine(i.attempts, n);
     const held = i.notes.find((x) => x.slot === slot);
     return { n, kind: "empty", trickName: null, direction: null, mine: null, pending: held ? (held.missed ? "missed" : held.score) : null, slot, open: allowedLine(i.attempts, i.cap, n) };
@@ -200,6 +217,18 @@ export function lineDone(line: SheetLine): boolean {
 /** A logged attempt this judge has not scored yet: the line the sheet highlights, because it needs the judge's score (an empty line has no attempt to score, a crash needs none). */
 export function needsScore(line: SheetLine): boolean {
   return line.kind === "attempt" && line.mine === null;
+}
+
+/** The line that pulses and glows: the first line without a score from this judge, when it is a logged attempt waiting for his score. Only one at a time; null otherwise. */
+export function pulseLine(lines: SheetLine[]): number | null {
+  const n = activeLine(lines);
+  const line = n === null ? undefined : lines.find((l) => l.n === n);
+  return line && needsScore(line) ? line.n : null;
+}
+
+/** What a tap on a line's Missed does: turn it on ("set"), or, when the line is already Missed, turn it off ("clear"). Typing a score on a Missed line turns it off by itself. */
+export function missedSwitch(line: SheetLine): "set" | "clear" {
+  return (line.kind === "attempt" && line.mine === "missed") || (line.kind === "empty" && line.pending === "missed") ? "clear" : "set";
 }
 
 /** The first line of the rider that is not done: the only one a new score can be typed on. Null when every line is done. */

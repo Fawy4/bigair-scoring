@@ -1,4 +1,5 @@
 import { composeTrick, normaliseText, parseTrickText, type TrickParts, type TrickVocab } from "@/lib/engine/tricks";
+import { capitaliseName, splitCount } from "./trick-text";
 
 /**
  * The spotter's Rider sheet. Pure: no I/O. One numbered line per attempt; a line logs itself (a tapped suggestion, a pause in the typing, or Crash), and every
@@ -123,12 +124,18 @@ const isDirection = (d: string | null | undefined): d is Direction => d === "lef
 export function readTrick(vocab: TrickVocab, enabledIds: ReadonlySet<string>, text: string, button: Direction | null): ReadTrick {
   const t = text.trim();
   if (!t) return { trickName: null, direction: button, categoryKey: null, trickParts: { direction: button, items: [] }, needsReview: false, rawText: null };
-  const r = parseTrickText(vocab, t, enabledIds);
+  const { count, rest } = splitCount(t);
+  let r = parseTrickText(vocab, rest, enabledIds);
+  // "6 front rolls": a count goes with a plural, but the vocabulary is singular: when the words as typed leave something unrecognised, try them in the singular
+  if (count && r.parts.freeText?.trim()) {
+    const singular = parseTrickText(vocab, rest.replace(/\b([A-Za-z]{3,})s\b/g, "$1"), enabledIds);
+    if (!singular.parts.freeText?.trim() && singular.parts.items.length > 0) r = singular;
+  }
   const direction = button ?? (isDirection(r.parts.direction) ? r.parts.direction : null);
   const needsReview = Boolean(r.parts.freeText?.trim()) || r.needsReview;
-  const parts: TrickParts = { ...r.parts, direction, ...(needsReview ? { needsReview: true } : {}) };
+  const parts: TrickParts = { ...r.parts, direction, ...(count ? { count } : {}), ...(needsReview ? { needsReview: true } : {}) };
   const composed = composeTrick(vocab, parts);
-  return { trickName: composed.name || null, direction, categoryKey: composed.categoryKey, trickParts: parts, needsReview, rawText: t };
+  return { trickName: composed.name ? capitaliseName(composed.name) : null, direction, categoryKey: composed.categoryKey, trickParts: parts, needsReview, rawText: t };
 }
 
 export interface Suggestion {

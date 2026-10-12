@@ -3597,7 +3597,7 @@ export const copy = {
       IMPRESSION_NOT_OPEN: (_d?: string, c?: { impressionName?: string }) => `The ${scoreName(c)} opens when the heat has ended.`,
       NOT_SCORABLE: () => "A crash is not scored.",
       /** Detail: the most lines this rider can have right now. */
-      LINE_PAST_CAP: (n?: string) => (n ? `There is no attempt ${Number(n) + 1} to score: this rider can have at most ${n} attempts.` : "There is no such attempt to score."),
+      LINE_PAST_CAP: (n?: string) => (n ? `You can score up to attempt ${n} for this rider for now.` : "There is no such attempt to score."),
       LINE_SCORE_NOT_AVAILABLE: () => "This division is scored by criteria. Use the Queue.",
       /** Detail: "‹rider id›:‹lines›;…" (the phone words it with the rider's name). */
       PENDING_NOTES: () => "You still have scores with no attempt. Clear them first, then submit.",

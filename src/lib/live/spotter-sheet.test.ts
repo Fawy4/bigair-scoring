@@ -13,6 +13,7 @@ import {
   toggleDirection,
   type LoggedAttemptRow,
 } from "./spotter-sheet";
+import { capitaliseName, splitCount } from "./trick-text";
 
 // The spotter's Rider sheet: one numbered line per attempt, and a line logs itself. These tests state the line rules in plain cases.
 const vocab = buildTrickVocab(vocabularyJson as unknown as VocabularyInput);
@@ -132,7 +133,7 @@ describe("what the box becomes", () => {
   });
   it("words that match nothing stay free text and are flagged for the head judge", () => {
     const r = readTrick(vocab, enabled, "zzzflip", null);
-    expect(r.trickName).toBe("zzzflip");
+    expect(r.trickName).toBe("Zzzflip"); // names start with a capital
     expect(r.needsReview).toBe(true);
     expect(r.trickParts.freeText).toBe("zzzflip");
   });
@@ -144,6 +145,57 @@ describe("what the box becomes", () => {
   it("Crash keeps the typed trick", () => {
     const r = readTrick(vocab, enabled, "front", "right");
     expect(r.trickName).toBe("Right Frontroll");
+  });
+});
+
+describe("tidy trick names", () => {
+  const name = (text: string, dir: "left" | "right" | null = null) => readTrick(vocab, enabled, text, dir).trickName;
+
+  it("the first letter is a capital", () => {
+    expect(name("backroll")).toBe("Backroll");
+    expect(name("zzzflip")).toBe("Zzzflip");
+    expect(name("front")).toBe("Frontroll");
+  });
+
+  it("a one- or two-digit number at the start becomes a count in front of the trick, in the vocabulary's spelling and in the singular", () => {
+    expect(name("6 front rolls")).toBe("6x Frontroll");
+    expect(name("2 backrolls")).toBe("2x Backroll");
+    expect(name("3x kiteloop")).toBe("3x Kiteloop");
+    expect(name("3 x kiteloop")).toBe("3x Kiteloop");
+    expect(name("12 kite loops")).toBe("12x Kiteloop");
+    expect(name("2×backroll")).toBe("2x Backroll");
+  });
+
+  it("the direction keeps its place at the front: 'Left 6x Frontroll'", () => {
+    expect(name("6 front rolls", "left")).toBe("Left 6x Frontroll");
+  });
+
+  it("a number of three digits is not a count: '720' stays '720'", () => {
+    expect(name("720")).toBe("720");
+    expect(name("360")).toBe("360");
+  });
+
+  it("if the rest matches no trick, the count still goes in front of the free text (and it is flagged for the head judge)", () => {
+    const r = readTrick(vocab, enabled, "6 zzzflip", null);
+    expect(r.trickName).toBe("6x Zzzflip");
+    expect(r.needsReview).toBe(true);
+    expect(r.trickParts.count).toBe(6);
+  });
+
+  it("the count is kept in the trick parts, and a number with nothing after it is not a count", () => {
+    expect(readTrick(vocab, enabled, "3x backroll", null).trickParts.count).toBe(3);
+    expect(readTrick(vocab, enabled, "backroll", null).trickParts.count).toBeUndefined();
+    expect(splitCount("6")).toEqual({ count: null, rest: "6" });
+    expect(splitCount("6 front rolls")).toEqual({ count: 6, rest: "front rolls" });
+    expect(splitCount("3x kiteloop")).toEqual({ count: 3, rest: "kiteloop" });
+    expect(splitCount("1080 backroll")).toEqual({ count: null, rest: "1080 backroll" });
+  });
+
+  it("capitalName leaves a name that already starts with a capital or a count alone", () => {
+    expect(capitaliseName("left backroll")).toBe("Left backroll");
+    expect(capitaliseName("6x zzz")).toBe("6x Zzz");
+    expect(capitaliseName("Backroll")).toBe("Backroll");
+    expect(capitaliseName("")).toBe("");
   });
 });
 

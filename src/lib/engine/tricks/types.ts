@@ -35,6 +35,8 @@ export interface TrickParts {
   /** Key of the direction ("left" | "right"), or null. */
   direction: string | null;
   items: TrickItem[];
+  /** How many times: "6 front rolls" is 6 × Frontroll. Written in front of the trick as "6x". */
+  count?: number;
   /** Words nobody recognised, kept for the head judge. */
   freeText?: string;
   needsReview?: boolean;
