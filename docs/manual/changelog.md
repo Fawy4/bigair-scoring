@@ -2,6 +2,21 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
+Last checked: 13 Oct 2026 · Product version 0.21.0
+
+## 0.21.0 — 13 Oct 2026 {#cl-0-21-0}
+
+Release entry: [0.21.0](/admin/releases#release-0-21-0) (platform owner only)
+
+**What changed for users**
+- **A new look for the whole product, the same as the Instagram posts.** Near-black and electric orange, the font Rubik (Bold for headings, rider names, heats, timers and scores), pill buttons and fields, and rows with thin dividers instead of boxed white cards. Every page picks it up: organiser steps, admin, the head judge's console, the officials' screens, the public pages, the big screen, the Flag view and the join page. The big screen keeps its 10-metre sizes and the Flag view its flag colours.
+- **Daylight stays the default everywhere** and reads in full sun (orange is only ever a fill there, never text); **Dark** is a true near-black and a choice. The accent moved from teal to orange, including "Needs your score".
+- **A smaller Normal on the officials' screens.** On an iPhone 14 in Normal the judges' and the spotter's Rider sheets show the header, the rider cards and all 7 lines without scrolling. **Large** is what Normal used to be. Every tap target is at least 44 px; the text in every typed-in box is at least 16 px.
+- **Officials' screens:** a slim header (flag strip or timer; heat, seat and sync state) with **one round Settings button** that opens Daylight / Dark, Normal / Large and Sound, instead of the row at the bottom; attempt lines as rows with thin dividers; pills for **Missed**, **Flag** (now a flag-icon pill beside Missed), **L** / **R**, **Crash** and the **Queue / Rider sheet** switch.
+- **/design** shows the Judge and Spotter Rider sheets and the Head judge phone in Daylight and in Dark, side by side.
+
+**Manual pages updated:** [Judge screen](screens/judge.md), [Spotter screen](screens/spotter.md), [Head judge — phone](screens/console-phone.md), [Observer](screens/observer.md). The pictures of the Judge and Spotter Rider sheets and the head judge's phone are retaken; the other pictures still show the old colours until the next `npm run manual:shots`.
+
 Last checked: 12 Oct 2026 · Product version 0.20.1
 
 ## 0.20.1 — 12 Oct 2026 {#cl-0-20-1}

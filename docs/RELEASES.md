@@ -12,6 +12,30 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.21.0 — 13 Oct 2026 {#release-0-21-0}
+
+PR: #46
+
+### What changed
+- **The whole product has a new look, the same as the Instagram posts:** near-black and electric orange, the font Rubik, pill-shaped buttons and fields, and rows with thin dividers instead of white boxes. It is on every page: organiser steps, admin, the head judge's console, judges, spotters, the flag marshal's Flag view, the big screen, the public pages and the join page. Only looks changed; every button does what it did.
+- **Daylight is still what everything opens in** and still reads in full sun. **Dark** is a true near-black and stays a choice. The accent colour moved from teal to orange, including "Needs your score".
+- **Normal text is smaller** on the officials' screens: on an iPhone 14 the judges' and the spotter's Rider sheets show the header, the rider cards and all 7 lines without scrolling. **Large** is the size Normal used to be. Buttons stay at least 44 px, so they are still easy to hit.
+- **Officials' screens:** a slim header with the heat, the seat, the sync state and **one round Settings button** (Daylight / Dark, Normal / Large, Sound) instead of the row at the bottom of every screen; **Flag** is now a small flag-icon button beside **Missed**.
+- **/design** shows the Rider sheets and the head judge's phone in Daylight and Dark, side by side.
+
+### What to test
+- [ ] On an iPhone, open a judge's phone in Normal (Daylight) in a heat: you see the header, the rider cards and all 7 lines of the Rider sheet without scrolling. Do the same on a spotter's phone.
+- [ ] Tap the round button at the right end of the header: Daylight / Dark, Normal / Large and Sound open in a small sheet; choose Dark, then reload: it is still Dark. Choose Daylight again. There is no settings row at the bottom of the screen.
+- [ ] In the sun, with Daylight: you can read the heat, the timer, the rider names, the scores and "Needs your score" without squinting; orange never carries small text.
+- [ ] On the judge's Rider sheet: **Missed** and the flag-icon button sit side by side on every line; tap each one with your thumb and it does what it did before (Missed switches on and off, Flag opens the choices).
+- [ ] Open the head judge's console on a laptop and on a phone, the Event steps as the organiser, and Admin: same colours and font everywhere, nothing cut off or overlapping, every button still works.
+- [ ] Open the public event page, the live page and the big screen in a browser: orange and near-black, readable; the Flag view still shows its flag colours with their words.
+- [ ] Open /design: the Judge, Spotter and Head judge phones are shown in Daylight and Dark; type a score on a line of the judge's sheet and nothing is saved.
+
+### Known issues
+- The pictures in the manual are retaken for the judge, spotter and head judge's phone only; the other pictures still show the old teal look until the next screenshot run.
+- Destructive buttons (Cancel heat, Reset, Delete) keep their red; the front door (/) still follows the device's own light or dark setting, as before.
+
 ## 0.20.1 — 12 Oct 2026 {#release-0-20-1}
 
 PR: #47

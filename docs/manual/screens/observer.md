@@ -2,7 +2,7 @@
 
 A read-only official's screen (/observe/‹event›): every official's real screen, live, with every control disabled — for a sponsor, an engineer, a trainee head judge, a journalist, or the owner watching a customer's event.
 
-Last checked: 3 Oct 2026 · Product version 0.13.0
+Last checked: 13 Oct 2026 · Product version 0.21.0
 
 ## What it is for {#ob-purpose}
 
@@ -31,3 +31,7 @@ When the organiser switches the seat off or regenerates its PIN, the screen goes
 ## What it depends on {#ob-depends}
 
 An Observer seat (Officials → Add a seat → Role **Observer**) and its PIN, joined on the event's join page. The database refuses every change from an observer seat, whatever the phone sends; the only thing it keeps is “I am here” every 30 seconds, which the head judge sees as “‹n› observers watching” under **Judges** ([Head console on a laptop](console-laptop.md)). **Never give an observer PIN to a judge of the event**: an observer sees every judge's scores. From the simulator, **View as… → Observer** opens this view for the organiser.
+
+## The New look {#ob-new-look}
+
+Since 0.21.0 the observer's own bar (event, seat, the screen picker and **Fit** / **Actual size**) wears the product's new look: Daylight by default, a pill-shaped picker and buttons, Rubik. The screens inside it are the real screens and look exactly as the officials see them; the colours and the size an official chose on that phone apply to them too.

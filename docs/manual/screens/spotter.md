@@ -2,7 +2,7 @@
 
 The spotter's phone at /spot/‹event›: log every attempt — which rider, which trick, landed or CRASH — the moment it happens.
 
-Last checked: 13 Oct 2026 · Product version 0.20.0
+Last checked: 13 Oct 2026 · Product version 0.21.0
 
 ## What it is for {#sp-purpose}
 
@@ -19,7 +19,7 @@ Like the judges' Rider sheet, but the spotter fills in the lines and **nothing n
 
 - **The rider cards** (Rider label with the colour word, name, nationality, “n / max” attempts) sit across the top. Tap a rider to show that rider's sheet. Assigned riders come first; **Other riders** shows the rest.
 - **The lines.** One numbered line per attempt, empty until it is filled in: as many lines as the division's attempt limit (7 for Arrow). With **no limit** there are 10 lines from the start and an **Add attempt** button under the last line adds one more line each time it is pressed.
-- **Each line** reads, from the left: the attempt number, two narrow buttons **L** and **R** for the direction (at least 44 px tall; only one can be on; tapping the other switches; the one that is on has a thick border and a tick), a wide **trick box** (type or speak the trick) with the microphone inside it while it is empty and a **×** that empties it in one tap once it has text, a **CRASH** button that looks like the Trick list's (red; ringed with a tick when it is on), and its state in words: **Empty**, **Saving…**, **Logged ✓**. A line with a trick typed whose suggestions are open says **Tap a trick to log**.
+- **Each line** reads, from the left: the attempt number, two pill buttons **L** and **R** for the direction (44 px; only one can be on; tapping the other switches; the one that is on has a thick border and a tick), a wide **trick box** (type or speak the trick) with the microphone inside it while it is empty and a **×** that empties it in one tap once it has text, a **CRASH** pill that looks like the Trick list's (red; ringed with a tick when it is on), and its state in words: **Empty**, **Saving…**, **Logged ✓**. A line with a trick typed whose suggestions are open says **Tap a trick to log**.
 - **Tidy names.** The first letter of a trick is a capital (the phone's keyboard starts with a capital too): “backroll” becomes “Backroll”. A one- or two-digit number at the start is a **count** written in front of the trick, in the vocabulary's own spelling and in the singular: “6 front rolls” becomes “6x Frontroll”, “2 backrolls” “2x Backroll”, “3x kiteloop” “3x Kiteloop”. A number of three digits (“720”) is not a count. If the rest matches no trick, the count still goes in front of the free text (“6x Zzzflip”). The same tidying happens in the Trick list's text box.
 - **Emptying the box.** The **×** (or deleting the words) does nothing to an attempt that is already logged: it keeps its trick, and the box stays empty until you log a new trick. Use **Undo** or ask the head judge to remove an attempt.
 - **Two ways to speak a trick.** (1) **The app's microphone**: on the Rider sheet it sits inside the trick box of a line that is empty (the **×** takes its place once there is text, so the box keeps its width); on the Trick list it is the button beside **Read**. Tap it: **Listening…** shows at once; say the trick; the words go into the box as if you had typed them (the same tidy names, the same “6x Frontroll”, the same rule that the line logs itself). Tap it again while it listens to stop. It works only where the browser offers speech recognition, so the button is missing otherwise. (2) **The keyboard's own dictation key** (the microphone on the iPhone keyboard) in the trick box: it types the words for you and works wherever the keyboard does.
@@ -32,6 +32,10 @@ Like the judges' Rider sheet, but the spotter fills in the lines and **nothing n
 - **Crash.** Turning Crash on logs the line at once as a crash, as the CRASH button of the Trick list does: the judges' line greys and takes no score. The line shows **CRASH** in place of the trick, with the typed trick kept small under it (“typed: Frontroll”), so a rider's dispute can be checked later. A crash needs no trick. Turning Crash off makes it a normal attempt again.
 - **Attempts logged by anyone** (a second spotter, the head judge) show in their lines, live and in order, labelled “Logged by another seat”; they cannot be changed from this phone, and the next empty line is always the next attempt.
 - **The keyboard.** While the keyboard is open the whole screen is as tall as what the keyboard leaves free: the line being typed, with its L, R and Crash and its suggestions, moves up to sit just above the keyboard, so you see what you type.
+
+### The New look {#sp-new-look}
+
+Since 0.21.0 the spotter's screens wear the product's new look (see [The New look](judge.md#ju-new-look) on the judge page): rows with thin dividers, pill buttons, Rubik, Daylight by default. On an iPhone 14 in **Normal** the header, the rider cards and all **7 lines** fit without scrolling. The row of settings that used to sit at the bottom is now the one round **Settings** button at the end of the header (Daylight / Dark, Normal / Large, Sound). The **Rider sheet / Trick list** switch is a pair of pills.
 
 ## The Trick list {#sp-trick-list}
 

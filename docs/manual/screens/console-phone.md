@@ -2,7 +2,7 @@
 
 The head judge's /head/‹event› page on a phone: the same controls as the laptop console in one column, and a Score tab when the head judge also scores.
 
-Last checked: 5 Oct 2026 · Product version 0.17.0
+Last checked: 13 Oct 2026 · Product version 0.21.0
 
 ## What it is for {#cp-purpose}
 
@@ -24,7 +24,7 @@ Running heats from the beach without a laptop. The score table needs a wider scr
 | Heat buttons | **Start heat sequence** (**Start heat** when the Flags are off), the one primary button, with the labelled **Pre-start:** setting above or beside it (the event's default ticked, **Other…** for any length from 0:10 to 15:00 typed as 1:30 or whole minutes, **Start now**); during the yellow **Start now**, **+1 min** (one more minute on every screen within a second), **Pause** / **Resume** (the countdown freezes) and **Abort**; **+1 min** beside the clock while the heat is running (one more minute on every screen; the yellow comes back at the new last minute: [laptop console](console-laptop.md)); **End heat** (asks once: “End this heat now? The clock stops and the heat goes to review.” → **Confirm** / **Cancel**; after End and after Publish the next heat's **Start heat sequence** and **Pre-start** group are back within a second, as on the [laptop console](console-laptop.md)), the **Break:** group between heats, under the Start buttons (planned length, **+1 min**, **+ Other…** to add a typed time, **Set length…** for the whole break; each changes the real break in the run order), **Hold (wind)**, **Resume at** (restart time), **Shift +5**, **Shift +10**, **Reset this heat…** (immediately before **Cancel heat**, same confirmation and reason as on the laptop), **Cancel heat**, **Re-run heat**, **Publish**, **Re-open**, and **Release result** beside Publish for a held result; the **Live scores** switch (Follow division / Live / Not live) is under **More**. A grey button says why under it. **Pause**, **Resume**, **Start heat sequence**, **Abort** and **+1 min** show at the moment you tap them and the database's answer follows within half a second (if it refuses, the button goes back and the sentence says why); **Publish** shows the heat as published as soon as the result is stored. |
 | Run order | Pick a heat; lines show planned, started and estimated times. |
 | **Details** / **Hide details** | **Rider totals** (with the formula and attempts used), **What blocks Publish** (with **Choose order** for a tie). |
-| Screen settings | Daylight / Dark, Normal / Large, on this phone only. |
+| **Settings** (round button in the header) | Daylight / Dark, Normal / Large and Sound, on this phone only (since 0.21.0 the round button replaces the row of settings at the bottom). |
 | Practice heat | On a simulation event, for an organiser: the practice feed ([Simulator](simulator.md)). |
 
 ## What it depends on {#cp-depends}
