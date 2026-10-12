@@ -14,7 +14,7 @@ How to write an entry (copy the newest one):
 
 ## 0.20.1 — 12 Oct 2026 {#release-0-20-1}
 
-PR: #46
+PR: #47
 
 ### What changed
 - **Security clean-up: the rider list is now read through a function, and the old view `v_entries` is removed.** Supabase's Security Advisor reported the view as a critical issue ("Security Definer View"). Nothing looks different on any screen: the spotter's and judges' Rider sheets and Trick list, the head judge console, the observer, the walkover card, the public results and rider pages and the organiser's Riders step show the same riders as before.
