@@ -30,7 +30,7 @@ Like the judges' Rider sheet, but the spotter fills in the lines and **nothing n
 ## The Trick list {#sp-trick-list}
 
 ![Spotter screen during a heat](../img/spotter-390.png)
-*spotter-390.png — riders in one row with attempts used; Left and Right as two wide buttons; multipliers, base tricks, add-ons and grabs; the text box, then CRASH and Log fixed at the bottom. (“Offline”: the browser of the screenshot machine reports no network.)*
+*spotter-390.png — riders in one row with attempts used; Left and Right as two wide buttons; multipliers, base tricks, add-ons and grabs; the text box, then CRASH and Log fixed at the bottom.*
 
 Three things to know about the layout:
 

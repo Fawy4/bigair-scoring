@@ -85,6 +85,12 @@ test("the spotter's Rider sheet, and the Trick list cut to the height a keyboard
 
     // the Trick list at 390 x 508: the height left above a phone keyboard; the text box, Log and CRASH stay in view
     await sp.getByTestId("spot-view-list").click();
+    // the Trick list at full phone height (the picture of the Spotter page)
+    await sp.setViewportSize({ width: 390, height: 844 });
+    await expect(sp.getByTestId("trick-builder")).toBeVisible();
+    await hideDevOverlay(sp);
+    await sp.waitForTimeout(500);
+    await sp.screenshot({ path: path.join(OUT, "spotter-390.png") });
     await sp.setViewportSize({ width: 390, height: 508 });
     await sp.locator("#trick-text").fill("left back");
     await hideDevOverlay(sp);
