@@ -63,7 +63,7 @@ function LineRow({ line, scale, locked, ended, typable, askable, ask, onAsk, onS
       data-kind={line.kind}
       data-waits={waits ? "true" : undefined}
       data-needs-score={needs ? "true" : undefined}
-      className={cn("flex flex-col gap-0.5 px-2 py-1", crash && "bg-beach-surface text-beach-muted", line.kind === "empty" && "bg-beach-bg", needs && "bg-beach-tint-dist3 text-beach-ink shadow-[inset_6px_0_0_0_var(--beach-crash)]")}
+      className={cn("flex flex-col gap-0.5 px-2 py-1", crash && "bg-beach-surface text-beach-muted", line.kind === "empty" && "bg-beach-bg", needs && "text-beach-ink shadow-[inset_0_0_0_2px_var(--beach-crash)]")}
     >
       <div className="flex min-h-row items-center gap-2">
         <span data-testid="line-number" className="w-6 shrink-0 text-center text-name font-semibold tabular-nums">
