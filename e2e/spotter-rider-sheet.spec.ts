@@ -69,6 +69,11 @@ test("the spotter's Rider sheet: a line logs itself, later changes update the sa
   await strick(spotter, 1).click();
   await strick(spotter, 1).fill("back");
   await expect(spotter.getByTestId("suggestion").filter({ hasText: "Backroll" })).toBeVisible();
+  // typed but not logged: the suggestions are open and wait for a tap, and the line says so in words (never taken for a logged one), even after a long pause
+  await expect(sline(spotter, 1).getByTestId("line-state")).toHaveText("Tap a trick to log");
+  await spotter.waitForTimeout(3000);
+  expect(await attempts(H, E)).toHaveLength(0);
+  await expect(sline(spotter, 1).getByTestId("line-state")).toHaveText("Tap a trick to log");
   await spotter.getByTestId("suggestion").filter({ hasText: "Backroll" }).click();
   await expect.poll(async () => (await attempts(H, E)).map((a) => a.trick_name), { timeout: 30_000 }).toEqual(["Backroll"]);
   await expect(sline(spotter, 1).getByTestId("line-state")).toHaveText("Logged ✓", { timeout: 20_000 });

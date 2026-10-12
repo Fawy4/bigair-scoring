@@ -184,7 +184,9 @@ function SheetLineRow({
     if (next || key) commit({ crash: next });
   };
 
-  const stateWord = line.state === "saving" ? T.states.saving : line.state === "logged" ? T.states.logged : T.states.empty;
+  // text typed on a line that is not logged yet, with its suggestions still open: it waits for a tap, and the line says so (never mistaken for a logged one)
+  const tapToLog = !logged && active && !crash && Boolean(text.trim()) && suggestions.length > 0;
+  const stateWord = line.state === "saving" ? T.states.saving : line.state === "logged" ? T.states.logged : tapToLog ? T.states.tapToLog : T.states.empty;
   const keptTrick = crash ? (readTrick(vocab, enabledIds, text, dir).trickName ?? line.trickName ?? "") : "";
   const dim = line.state === "waiting";
   const btn = "inline-flex h-14 shrink-0 items-center justify-center rounded-lg text-name font-semibold disabled:opacity-50";
@@ -262,7 +264,7 @@ function SheetLineRow({
         </button>
       </div>
       <div className="flex items-center justify-between gap-2 pl-8 text-small font-medium">
-        <span data-testid="line-state" className={cn(line.state === "logged" ? "font-semibold text-beach-ink" : "text-beach-muted")}>
+        <span data-testid="line-state" data-tap-to-log={tapToLog ? "true" : undefined} className={cn(line.state === "logged" || tapToLog ? "font-semibold text-beach-ink" : "text-beach-muted")}>
           {stateWord}
         </span>
         {logged && !mine ? <span className="text-beach-muted">{T.othersLine}</span> : null}

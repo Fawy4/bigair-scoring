@@ -3694,7 +3694,7 @@ export const copy = {
     crashAria: (n: number) => `Attempt ${n}: Crash`,
     crashWord: "CRASH",
     typedKept: (trick: string) => `typed: ${trick}`,
-    states: { empty: "Empty", saving: "Saving…", logged: "Logged ✓", waits: "Fill in the line above first" },
+    states: { empty: "Empty", saving: "Saving…", logged: "Logged ✓", waits: "Fill in the line above first", tapToLog: "Tap a trick to log" },
     suggestions: "Suggestions",
     addAttempt: "Add attempt",
     othersLine: "Logged by another seat",

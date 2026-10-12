@@ -1606,6 +1606,7 @@ export type Database = {
           heat_id: string
           id: string
           judge_seat_id: string
+          missed: boolean
           score: number
           slot: number
           updated_at: string
@@ -1619,6 +1620,7 @@ export type Database = {
           heat_id: string
           id?: string
           judge_seat_id: string
+          missed?: boolean
           score: number
           slot: number
           updated_at?: string
@@ -1632,6 +1634,7 @@ export type Database = {
           heat_id?: string
           id?: string
           judge_seat_id?: string
+          missed?: boolean
           score?: number
           slot?: number
           updated_at?: string
@@ -4138,6 +4141,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_line_missed: {
+        Args: {
+          p_client_key: string
+          p_client_rev: number
+          p_entry: string
+          p_heat: string
+          p_line: number
+        }
+        Returns: Json
+      }
       set_line_score: {
         Args: {
           p_client_key: string
@@ -4509,6 +4522,51 @@ export type Database = {
       sim_view_as: { Args: { p_event: string; p_seat: string }; Returns: Json }
       sim_view_beat: { Args: { p_event: string }; Returns: boolean }
       sim_view_leave: { Args: { p_event: string }; Returns: boolean }
+      spotter_edit_attempt: {
+        Args: {
+          p_category?: string
+          p_client_key: string
+          p_direction?: string
+          p_input_method?: string
+          p_raw_text?: string
+          p_set_trick?: boolean
+          p_status?: string
+          p_trick_name?: string
+          p_trick_parts?: Json
+        }
+        Returns: {
+          category_key: string | null
+          client_key: string
+          created_at: string
+          created_by_seat: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          direction: string | null
+          entry_id: string
+          event_id: string
+          heat_id: string
+          height_at: string | null
+          height_m: number | null
+          height_ref: string | null
+          height_source: string | null
+          id: string
+          input_method: string
+          possible_duplicate_of: string | null
+          raw_text: string | null
+          seq: number
+          status: string
+          trick_name: string | null
+          trick_parts: Json
+          updated_at: string
+          video_ts: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trick_attempts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       start_armed_if_due: {
         Args: { p_heat: string }
         Returns: {
