@@ -71,8 +71,8 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const viewer = ctx.viewer.kind === "seat" ? ctx.viewer : null;
   const seatId = viewer?.seatId ?? "";
   const q = useSendQueue(supabase, clock.now, `judge-${ctx.event.id}-${seatId}`, online && live.connected, (kind, row) => {
-    if (kind === "line_score") {
-      // the answer to a score typed on a Rider sheet line: a pending note, or (the attempt had been logged meanwhile) the score on that attempt
+    if (kind === "line_score" || kind === "line_missed") {
+      // the answer to a score (or a Missed) typed on a Rider sheet line: a pending note, or (the attempt had been logged meanwhile) the score on that attempt
       const got = row as unknown as { kind: "pending" | "score"; row: { id: string } };
       live.apply(got.kind === "pending" ? "pending" : "scores", got.row as never);
       return;
@@ -273,7 +273,6 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
    */
   const onLineMissed = (riderId: string, line: SheetLine) => {
     if (!heat) return;
-    if (typeof window !== "undefined" && (window as unknown as { __dbg?: boolean }).__dbg) console.log("DBG-MISSED", line.kind, String(line.pending), String(line.mine), missedSwitch(line));
     if (missedSwitch(line) === "clear") {
       if (line.kind === "attempt" && line.attemptId) {
         if (line.seq !== undefined) aheadRef.current.delete(`${riderId}:${line.seq}`);
