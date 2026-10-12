@@ -433,7 +433,8 @@ test("tapping a line below one with no score asks once, in one line, and one tap
     await expect(jline(j1, n).getByTestId("line-needs-score")).toHaveText("Needs your score");
   }
   await expect(jline(j1, 4)).not.toHaveAttribute("data-needs-score", "true");
-  expect(await jline(j1, 1).evaluate((e) => getComputedStyle(e).borderLeftWidth)).toBe("6px");
+  expect(await jline(j1, 1).evaluate((e) => getComputedStyle(e).boxShadow)).toContain("inset"); // the thick red edge
+  expect(await jline(j1, 4).evaluate((e) => getComputedStyle(e).boxShadow)).toBe("none");
   expect(await jline(j1, 1).evaluate((e) => getComputedStyle(e).backgroundColor)).not.toBe(await jline(j1, 4).evaluate((e) => getComputedStyle(e).backgroundColor));
   // line 4 is below them: tapping it asks, it does not do nothing
   await jbox(j1, 4).click();
