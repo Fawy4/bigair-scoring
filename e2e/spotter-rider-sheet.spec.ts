@@ -21,10 +21,42 @@ test.afterEach(async () => {
 });
 
 /** A phone with its own login. `newViews: true` is a phone that never chose a view; the default is a phone that chose the old ones (Queue, Trick list). */
-async function phone(browser: Browser, key: Parameters<LiveWorld["signInAs"]>[1], path: string, o: { newViews?: boolean; size?: { width: number; height: number }; trackLit?: boolean } = {}): Promise<Page> {
+async function phone(browser: Browser, key: Parameters<LiveWorld["signInAs"]>[1], path: string, o: { newViews?: boolean; size?: { width: number; height: number }; trackLit?: boolean; speech?: "words" | "blocked" | "silent" } = {}): Promise<Page> {
   const context = await browser.newContext({ viewport: o.size ?? { width: 390, height: 844 } });
   contexts.push(context);
   await installSupabaseProxy(context, { newViews: o.newViews });
+  // a stand-in for the browser's speech recognition (the sandbox has no microphone): it "hears" a trick, is refused, or never answers; every tap makes a new object
+  if (o.speech)
+    await context.addInitScript((mode) => {
+      const w = window as unknown as { __speechObjects: number; __speechLang: string };
+      w.__speechObjects = 0;
+      class Fake {
+        lang = "";
+        interimResults = false;
+        maxAlternatives = 1;
+        continuous = false;
+        onresult: ((e: unknown) => void) | null = null;
+        onerror: ((e: unknown) => void) | null = null;
+        onend: (() => void) | null = null;
+        constructor() {
+          w.__speechObjects++;
+        }
+        start() {
+          w.__speechLang = this.lang;
+          if (mode === "silent") return;
+          setTimeout(() => {
+            if (mode === "blocked") this.onerror?.({ error: "not-allowed" });
+            else this.onresult?.({ results: [[{ transcript: "6 front rolls", confidence: 0.9 }]] });
+            this.onend?.();
+          }, 600);
+        }
+        stop() {
+          if (mode === "silent") setTimeout(() => this.onend?.(), 50); // a stopped listening ends with what it heard: nothing
+        }
+        abort() {}
+      }
+      for (const key of ["webkitSpeechRecognition", "SpeechRecognition"]) Object.defineProperty(window, key, { value: Fake, configurable: true, writable: true });
+    }, o.speech);
   // counts every moment a line is highlighted as needing a score (a line the judge filled ahead must never light up, not even for a moment)
   if (o.trackLit)
     await context.addInitScript(() => {
@@ -670,6 +702,104 @@ test("(d) Missed is a switch: a tap turns it on (the box stays empty), another t
   await jtype(j1, 2, "6");
   await expect(sw(2)).toHaveAttribute("aria-pressed", "false", { timeout: 20_000 });
   await expect.poll(async () => ((await w.db.from("pending_scores").select("missed, score").eq("heat_id", H)).data ?? []).map((n) => [n.missed, Number(n.score)]), { timeout: 30_000 }).toEqual([[false, 6]]);
+});
+
+test("(j) a Missed switched off on a judge's phone leaves the head judge's console within a few seconds, without a reload", async ({ browser }) => {
+  test.setTimeout(600_000);
+  const H = w.heats[0];
+  await onlyRed(H);
+  await w.startHeat(H);
+  await mkAttempts(H, w.entries[0], 1, w.seats.spotter.id);
+  const j1 = await phone(browser, "j1", `/judge/${w.eventId}`, { newViews: true });
+  const head = await phone(browser, "head", `/head/${w.eventId}`, { size: { width: 1500, height: 1000 } });
+  await head.locator(`[data-testid="order-row"][data-heat="${H}"]`).click({ timeout: 60_000 });
+  await expect(jline(j1, 1)).toContainText("Left Backroll 1", { timeout: 40_000 });
+  await jline(j1, 1).getByTestId("line-missed").click();
+  await expect(cellOf(head, 1, 0)).toHaveAttribute("data-state", "missed", { timeout: 40_000 });
+  await jline(j1, 1).getByTestId("line-missed").click(); // switched off
+  const started = Date.now();
+  await expect(cellOf(head, 1, 0)).not.toHaveAttribute("data-state", "missed", { timeout: 20_000 }); // gone, with the page never reloaded
+  expect(Date.now() - started).toBeLessThan(20_000);
+});
+
+test("(k) the spotter's lines read: number, L, R, the trick box with the mic or the × inside it, Crash; the judge's score box is small and no taller than Missed", async ({ browser }) => {
+  test.setTimeout(600_000);
+  const H = w.heats[0];
+  await onlyRed(H);
+  await w.startHeat(H);
+  await mkAttempts(H, w.entries[0], 1, w.seats.spotter.id);
+  const spotter = await phone(browser, "spotter", `/spot/${w.eventId}`, { newViews: true, speech: "silent" });
+  const j1 = await phone(browser, "j1", `/judge/${w.eventId}`, { newViews: true });
+  await expect(strick(spotter, 1)).toBeVisible({ timeout: 40_000 });
+  for (const n of [1, 2, 3, 7]) {
+    const at = async (id: string) => (await sline(spotter, n).getByTestId(id).boundingBox())!;
+    const [num, l, r, box, crash] = [await at("line-number"), await at("line-left"), await at("line-right"), await at("line-trick"), await at("line-crash")];
+    expect(num.x + num.width, `line ${n}`).toBeLessThanOrEqual(l.x + 1);
+    expect(l.x + l.width, `line ${n}`).toBeLessThanOrEqual(r.x + 1);
+    expect(r.x + r.width, `line ${n}`).toBeLessThanOrEqual(box.x + 1); // L and R sit left of the trick box
+    expect(box.x + box.width, `line ${n}`).toBeLessThanOrEqual(crash.x + 1);
+    expect(box.width, `line ${n}`).toBeGreaterThan(110);
+  }
+  // line 1 is logged: L and R are left of its box too; the empty line 2 has the mic inside its box, the × takes its place once there is text
+  const l1 = (await sline(spotter, 1).getByTestId("line-left").boundingBox())!;
+  const b1 = (await strick(spotter, 1).boundingBox())!;
+  expect(l1.x + l1.width).toBeLessThanOrEqual(b1.x + 1);
+  const mic = (await sline(spotter, 2).getByTestId("line-mic").boundingBox())!;
+  const b2 = (await strick(spotter, 2).boundingBox())!;
+  expect(mic.x).toBeGreaterThanOrEqual(b2.x);
+  expect(mic.x + mic.width).toBeLessThanOrEqual(b2.x + b2.width + 1);
+  await strick(spotter, 2).fill("zzz");
+  await expect(sline(spotter, 2).getByTestId("line-mic")).toHaveCount(0);
+  const clear = (await sline(spotter, 2).getByTestId("line-trick-clear").boundingBox())!;
+  expect(clear.x + clear.width).toBeLessThanOrEqual(b2.x + b2.width + 1);
+  expect(Math.abs((await strick(spotter, 2).boundingBox())!.width - b2.width), "the box keeps its width").toBeLessThan(1);
+
+  // the judge's score box: wide enough for 10.0, at most 64 px, no taller than Missed, at least 44 px to tap
+  await expect(jline(j1, 1)).toContainText("Left Backroll 1", { timeout: 40_000 });
+  for (const n of [1, 2]) {
+    const sb = (await jbox(j1, n).boundingBox())!;
+    const mb = (await jline(j1, n).getByTestId("line-missed").boundingBox())!;
+    expect(sb.width, `line ${n}`).toBeLessThanOrEqual(64);
+    expect(sb.width, `line ${n}`).toBeGreaterThanOrEqual(44);
+    expect(sb.height, `line ${n}`).toBeLessThanOrEqual(mb.height + 0.5);
+    expect(sb.height, `line ${n}`).toBeGreaterThanOrEqual(44);
+  }
+  await jtype(j1, 1, "10.0");
+  await expect(jbox(j1, 1)).toHaveValue("10.0");
+  expect(await jbox(j1, 1).evaluate((e) => (e as HTMLInputElement).scrollWidth <= (e as HTMLInputElement).clientWidth)).toBe(true); // "10.0" fits without clipping
+});
+
+test("(l) the microphone: a tap shows Listening… at once and the words go into the box as typed (6x Frontroll); a refusal says why, with the browser's word; a new object every tap; lang en-US", async ({ browser }) => {
+  test.setTimeout(600_000);
+  const H = w.heats[0];
+  const E = w.entries[0];
+  await onlyRed(H);
+  await w.startHeat(H);
+  const ok = await phone(browser, "spotter", `/spot/${w.eventId}`, { newViews: true, speech: "words" });
+  await expect(strick(ok, 1)).toBeEnabled({ timeout: 40_000 });
+  await sline(ok, 1).getByTestId("line-mic").click();
+  await expect(sline(ok, 1).getByTestId("mic-listening")).toHaveText("Listening…"); // at once
+  await expect(strick(ok, 1)).toHaveValue("6 front rolls", { timeout: 10_000 });
+  await expect.poll(async () => (await attempts(H, E)).map((a) => a.trick_name), { timeout: 30_000 }).toEqual(["6x Frontroll"]);
+  await sline(ok, 2).getByTestId("line-mic").click();
+  await expect(strick(ok, 2)).toHaveValue("6 front rolls", { timeout: 10_000 });
+  expect(await ok.evaluate(() => (window as unknown as { __speechObjects: number }).__speechObjects)).toBe(2);
+  expect(await ok.evaluate(() => (window as unknown as { __speechLang: string }).__speechLang)).toBe("en-US");
+
+  const blocked = await phone(browser, "spotter", `/spot/${w.eventId}`, { newViews: true, speech: "blocked" });
+  await expect(strick(blocked, 3)).toBeEnabled({ timeout: 40_000 });
+  await sline(blocked, 3).getByTestId("line-mic").click();
+  await expect(sline(blocked, 3).getByTestId("mic-note")).toContainText("microphone is blocked", { timeout: 10_000 });
+  await expect(sline(blocked, 3).getByTestId("mic-code")).toHaveText("Browser says: not-allowed");
+
+  // a second tap while it is listening stops it
+  const silent = await phone(browser, "spotter", `/spot/${w.eventId}`, { newViews: true, speech: "silent" });
+  await expect(strick(silent, 3)).toBeEnabled({ timeout: 40_000 });
+  await sline(silent, 3).getByTestId("line-mic").click();
+  await expect(sline(silent, 3).getByTestId("mic-listening")).toBeVisible();
+  await sline(silent, 3).getByTestId("line-mic").click();
+  await expect(sline(silent, 3).getByTestId("mic-note")).toContainText("Nothing heard", { timeout: 10_000 });
+  await expect(sline(silent, 3).getByTestId("mic-listening")).toHaveCount(0);
 });
 
 test("(e) a Flag from the Rider sheet reaches the head judge as one from the Queue does: the same kinds, the same record, on a landing and on a crash line", async ({ browser }) => {

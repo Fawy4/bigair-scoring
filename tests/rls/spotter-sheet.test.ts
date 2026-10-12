@@ -314,4 +314,33 @@ describe.skipIf(!ENV_OK)("Rider sheets: spotter corrections and Missed notes (ho
     await f.s.from("judge_sheets").insert({ event_id: f.ids.evA1, heat_id: h, judge_seat_id: f.ids.seat_j1, submitted_at: new Date().toISOString() });
     expect(codeOf(await f.clients.j1.rpc("clear_line_missed", { p_heat: h, p_entry: e, p_line: 1 }))).not.toBe("");
   });
+
+  it("clear_line_missed: refused for the public key with no sign-in, a signed-in user with no seat, the organisers, an observer, a spotter, another event's seat and a judge clearing another judge's Missed; and for a judge after Submit and after Publish", async () => {
+    const h = await running();
+    const e = d.entries[0];
+    const a = await log(f.clients.spotter, h, e);
+    expect(codeOf(await missed("j1", h, e, 1))).toBe("");
+    expect(codeOf(await missed("j2", h, e, 1))).toBe("");
+    const off = (who: SupabaseClient) => who.rpc("clear_line_missed", { p_heat: h, p_entry: e, p_line: 1 });
+    // no sign-in at all (the public key): the function is not even callable
+    expect((await off(f.clients.anon)).error).not.toBeNull();
+    // signed in but no seat in this event: the organiser of another organisation, and this event's own organiser
+    expect(codeOf(await off(f.clients.orgB))).toContain("NOT_ALLOWED");
+    expect(codeOf(await off(f.clients.orgA))).toContain("NOT_ALLOWED");
+    // seats that are not on the panel, and a seat of another event
+    for (const [who, c] of [["observer", obs], ["spotter", f.clients.spotter], ["second spotter", spotter2], ["another event's spotter", bSpotter], ["head judge", f.clients.head]] as const) expect(codeOf(await off(c)), who).toContain("NOT_ALLOWED");
+    // nothing was removed by any of them
+    expect((await scoresOf(a.id)).filter((x) => x.missed)).toHaveLength(2);
+    // a judge clears only their own: j3 is not on this panel, and j1's tap leaves j2's Missed alone
+    expect(codeOf(await off(f.clients.j3))).toContain("NOT_ALLOWED");
+    expect((await off(f.clients.j1)).data).toBe(1);
+    expect(await scoresOf(a.id)).toEqual([{ judge_seat_id: f.ids.seat_j2, score: null, missed: true }]);
+    // after Submit (the judge's sheet is locked) and after Publish (the heat is closed)
+    await f.s.from("heats").update({ status: "ended", ended_at: new Date().toISOString() }).eq("id", h);
+    await f.s.from("judge_sheets").insert({ event_id: f.ids.evA1, heat_id: h, judge_seat_id: f.ids.seat_j2, submitted_at: new Date().toISOString() });
+    expect(codeOf(await f.clients.j2.rpc("clear_line_missed", { p_heat: h, p_entry: e, p_line: 1 }))).not.toBe("");
+    await f.s.from("heats").update({ status: "published" }).eq("id", h);
+    expect(codeOf(await f.clients.j2.rpc("clear_line_missed", { p_heat: h, p_entry: e, p_line: 1 }))).not.toBe("");
+    expect((await scoresOf(a.id)).filter((x) => x.missed)).toHaveLength(1);
+  });
 });

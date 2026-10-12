@@ -20,6 +20,7 @@ import {
 } from "@/lib/engine/tricks";
 import type { LabelModel } from "@/lib/identification/rider-label";
 import { parseTyped } from "@/lib/live/spotter-sheet";
+import { useSpeech } from "./use-speech";
 import { capitaliseName } from "@/lib/live/trick-text";
 import type { FamilyView } from "@/lib/trick-base/layout";
 import { blockId, type FamilyKey } from "@/lib/trick-base";
@@ -155,10 +156,13 @@ export function AttemptLogger({
     reset();
   };
 
+  // the microphone: the words are read as if typed (count, direction, blocks); another rider stops it
+  const speech = useSpeech((t) => readText(t, "speech"), selectedId);
   const typedProps: BuilderTyped = {
     value: typed,
     onChange: setTyped,
     onRead: () => readText(typed, "text"),
+    mic: { supported: speech.supported, listening: speech.listening, note: speech.note, onTap: speech.toggle },
   };
 
   const undoLeft = logged ? UNDO_MS - (now - logged.at) : 0;

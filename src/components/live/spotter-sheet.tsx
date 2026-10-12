@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, X, Zap } from "lucide-react";
+import { Check, Mic, X, Zap } from "lucide-react";
 import { Chip } from "./chip";
 import type { LoggerRider, LoggedAttempt } from "./attempt-logger";
 import { RiderTile } from "./rider-tile";
+import { MicStatus } from "./trick-builder";
+import { useSpeech } from "./use-speech";
 import type { TrickVocab } from "@/lib/engine/tricks";
 import {
   applySuggestion,
@@ -114,6 +116,12 @@ function SheetLineRow({
     setCrash(line.crash);
   }, [line.state, line.clientKey, line.trickName, line.rawText, line.direction, line.crash, focused]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // the microphone: the words go into the box as if typed (so the same suggestions, tidy-up and logging rules apply); another line, rider or view stops it
+  const speech = useSpeech((t) => {
+    onType(t);
+    input.current?.focus({ preventScroll: true });
+  }, `${riderId}:${line.n}`);
+
   const suggestions = useMemo(() => suggestionsFor(vocab, enabledIds, text).filter((s) => !s.exact), [vocab, enabledIds, text]);
 
   /** Logs the line (when it is the empty one) or sends the change (when it is logged). */
@@ -208,6 +216,22 @@ function SheetLineRow({
         <span data-testid="line-number" className="w-6 shrink-0 text-center text-name font-semibold tabular-nums">
           {line.n}
         </span>
+        {(["left", "right"] as const).map((d) => (
+          <button
+            key={d}
+            type="button"
+            data-testid={d === "left" ? "line-left" : "line-right"}
+            aria-label={d === "left" ? T.leftAria(line.n) : T.rightAria(line.n)}
+            aria-pressed={dir === d}
+            disabled={!canType}
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={() => tapDirection(d)}
+            className={cn(btn, "w-10 gap-0.5 px-0", dir === d ? "border-4 border-beach-ink bg-beach-surface text-beach-ink" : "border border-beach-border bg-beach-bg text-beach-ink")}
+          >
+            {dir === d ? <Check aria-hidden className="size-3.5" strokeWidth={3} /> : null}
+            {d === "left" ? T.left : T.right}
+          </button>
+        ))}
         <div className="flex min-w-0 flex-1 flex-col">
           {crash && logged ? (
             <div data-testid="line-crash-word" className="flex min-h-12 flex-col justify-center">
@@ -243,6 +267,19 @@ function SheetLineRow({
                 }}
                 className="h-12 w-full min-w-0 rounded-lg border border-beach-border bg-beach-bg py-0 pl-2 pr-10 text-body font-semibold text-beach-ink placeholder:font-medium placeholder:text-beach-muted disabled:bg-beach-surface"
               />
+              {!text && canType && speech.supported ? (
+                <button
+                  type="button"
+                  data-testid="line-mic"
+                  aria-label={speech.listening ? copy.live.builder.stopListening : copy.live.builder.speak}
+                  aria-pressed={speech.listening}
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={speech.toggle}
+                  className={cn("absolute right-0.5 top-1/2 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-lg", speech.listening ? "bg-beach-accent text-beach-on-accent" : "text-beach-muted")}
+                >
+                  <Mic aria-hidden className="size-5" strokeWidth={2.5} />
+                </button>
+              ) : null}
               {text && canType ? (
                 <button
                   type="button"
@@ -258,22 +295,6 @@ function SheetLineRow({
             </div>
           )}
         </div>
-        {(["left", "right"] as const).map((d) => (
-          <button
-            key={d}
-            type="button"
-            data-testid={d === "left" ? "line-left" : "line-right"}
-            aria-label={d === "left" ? T.leftAria(line.n) : T.rightAria(line.n)}
-            aria-pressed={dir === d}
-            disabled={!canType}
-            onPointerDown={(e) => e.preventDefault()}
-            onClick={() => tapDirection(d)}
-            className={cn(btn, "w-10 gap-0.5 px-0", dir === d ? "border-4 border-beach-ink bg-beach-surface text-beach-ink" : "border border-beach-border bg-beach-bg text-beach-ink")}
-          >
-            {dir === d ? <Check aria-hidden className="size-3.5" strokeWidth={3} /> : null}
-            {d === "left" ? T.left : T.right}
-          </button>
-        ))}
         <button
           type="button"
           data-testid="line-crash"
@@ -295,6 +316,11 @@ function SheetLineRow({
         {logged && !mine ? <span className="text-beach-muted">{T.othersLine}</span> : null}
         {logged && mine && read(line, text, vocab, enabledIds) ? <span className="text-beach-muted">{T.freeTag}</span> : null}
       </div>
+      {speech.listening || speech.note ? (
+        <div className="pl-8">
+          <MicStatus listening={speech.listening} note={speech.note} />
+        </div>
+      ) : null}
       {focused && !(crash && logged) && suggestions.length > 0 ? (
         <div role="group" aria-label={T.suggestions} data-testid="line-suggestions" className="flex flex-wrap gap-1 pl-8">
           {suggestions.map((s, i) => (

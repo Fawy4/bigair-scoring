@@ -1,8 +1,9 @@
 "use client";
 
-import { Check, X, Zap } from "lucide-react";
+import { Check, Mic, X, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Chip } from "./chip";
+import type { SpeechNote } from "./use-speech";
 import { composeTrick, type BuilderState, type TrickVocab } from "@/lib/engine/tricks";
 import { blockId, type Block, type FamilyKey } from "@/lib/trick-base";
 import type { FamilyView } from "@/lib/trick-base/layout";
@@ -16,6 +17,8 @@ export interface BuilderTyped {
   onChange: (v: string) => void;
   /** Read the typed text into blocks (Enter does the same). */
   onRead: () => void;
+  /** The microphone (where the browser has speech recognition): the state of the one tap, and its handler. */
+  mic?: { supported: boolean; listening: boolean; note: SpeechNote | null; onTap: () => void };
 }
 
 /**
@@ -263,8 +266,10 @@ export function TrickBuilder({
                 {T.read}
               </Chip>
             ) : null}
+            {typed.mic?.supported ? <Chip icon={Mic} data-testid="mic-button" aria-label={typed.mic.listening ? T.stopListening : T.speak} pressed={typed.mic.listening} onClick={typed.mic.onTap} /> : null}
           </div>
         ) : null}
+        {typed?.mic ? <MicStatus listening={typed.mic.listening} note={typed.mic.note} /> : null}
         {confirmCrash ? (
           <div role="alertdialog" aria-label={T.crashConfirm(riderLabelText)} className="flex min-h-bar items-center justify-between gap-2 rounded-lg border border-beach-crash bg-beach-surface px-1.5">
             <p className="min-w-0 text-body font-semibold">{T.crashConfirm(riderLabelText)}</p>
@@ -287,6 +292,28 @@ export function TrickBuilder({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** "Listening…" at once on a tap; and when it ends without words, one line that says why, with the browser's own error word under it in small print. */
+export function MicStatus({ listening, note }: { listening: boolean; note: SpeechNote | null }) {
+  const T = copy.live.builder;
+  if (listening)
+    return (
+      <p role="status" data-testid="mic-listening" className="text-small font-semibold text-beach-ink">
+        {T.listening}
+      </p>
+    );
+  if (!note) return null;
+  return (
+    <div role="status" data-testid="mic-note" className="flex flex-col rounded-lg border border-beach-line bg-beach-surface px-1.5 py-1">
+      <p className="text-small font-medium">{note.text}</p>
+      {note.code ? (
+        <p data-testid="mic-code" className="text-[0.6875rem] text-beach-muted">
+          {T.micCode(note.code)}
+        </p>
+      ) : null}
     </div>
   );
 }

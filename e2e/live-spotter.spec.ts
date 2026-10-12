@@ -15,8 +15,29 @@ test.afterEach(async () => {
 const attemptsOf = async (entry: string) => (await w.db.from("trick_attempts").select("id, seq, status, trick_name, trick_parts, input_method, raw_text, deleted_at, possible_duplicate_of, created_by_seat").eq("heat_id", w.heats[0]).eq("entry_id", entry).order("seq")).data ?? [];
 const block = (page: import("@playwright/test").Page, id: string) => page.locator(`[data-block="${id}"]`);
 
-test("the spotter phone opens the running heat by itself and logs by tap and by typing; CRASH asks once", async ({ page }) => {
+test("the spotter phone opens the running heat by itself and logs by tap, by typing and by speaking; CRASH asks once", async ({ page }) => {
   test.setTimeout(240_000);
+  await page.addInitScript(() => {
+    // a stand-in for the browser's speech recognition: it "hears" the same words every time
+    class Fake {
+      lang = "";
+      interimResults = false;
+      maxAlternatives = 1;
+      continuous = false;
+      onresult: ((e: unknown) => void) | null = null;
+      onerror: ((e: unknown) => void) | null = null;
+      onend: (() => void) | null = null;
+      start() {
+        setTimeout(() => {
+          this.onresult?.({ results: [[{ transcript: "left banana jump", confidence: 0.9 }]] });
+          this.onend?.();
+        }, 100);
+      }
+      stop() {}
+    }
+    // Chromium has its own; replace both names so the page hears what the test says
+    for (const key of ["webkitSpeechRecognition", "SpeechRecognition"]) Object.defineProperty(window, key, { value: Fake, configurable: true, writable: true });
+  });
   await w.signInAs(page, "spotter", "/seat");
   // joining sends the phone to its own screen; with no heat running it waits and says what is next
   await expect(page).toHaveURL(new RegExp(`/spot/${w.eventId}`));
@@ -48,17 +69,15 @@ test("the spotter phone opens the running heat by itself and logs by tap and by 
   await expect.poll(async () => (await attemptsOf(w.entries[0])).length).toBe(2);
   expect((await attemptsOf(w.entries[0]))[1]).toMatchObject({ trick_name: "Right Megaloop", input_method: "text", raw_text: "right mega" });
 
-  // no microphone button (it does not work reliably on an iPhone: the keyboard's own dictation key does the job in the trick box); words nobody knows stay free text for the head judge
-  await expect(page.getByTestId("mic-button")).toHaveCount(0);
-  await page.locator("#trick-text").fill("left banana jump");
-  await page.locator("#trick-text").press("Enter");
+  // by speaking: "banana jump" is not guessed, it is shown as free text for the head judge
+  await page.getByTestId("mic-button").click();
   await expect(page.getByTestId("free-text")).toContainText("banana jump");
   await expect(page.getByTestId("free-text-note")).toHaveText("Free text — head judge will check");
   await page.getByTestId("log-button").click();
   await expect(name).toContainText("Logged — RED — attempt 3");
   await expect.poll(async () => (await attemptsOf(w.entries[0])).length).toBe(3);
   const third = (await attemptsOf(w.entries[0]))[2];
-  expect(third).toMatchObject({ input_method: "text", trick_name: "Left banana jump" });
+  expect(third).toMatchObject({ input_method: "speech", trick_name: "Left banana jump" });
   expect((third.trick_parts as { needsReview?: boolean }).needsReview).toBe(true);
 
   // CRASH asks once, then logs a crash with the trick that was built

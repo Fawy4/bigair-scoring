@@ -165,11 +165,11 @@ function LineRow({
           <span className="flex shrink-0 items-center gap-1.5">
             {line.kind === "empty" && line.pending !== null && !isMissed ? <Pill tone="pending">{T.pendingTag}</Pill> : null}
             <span className="flex w-[4.75rem] flex-col gap-1">
-              <Chip data-testid="line-missed" aria-label={T.missedAria(line.n)} aria-pressed={isMissed} pressed={isMissed} disabled={locked || (waits && !tappable)} onClick={() => (waits ? tap() : onMissed(line))} className="w-full px-1">
+              <Chip data-testid="line-missed" aria-label={T.missedAria(line.n)} aria-pressed={isMissed} pressed={isMissed} disabled={locked || (waits && !tappable)} onClick={() => (waits ? tap() : onMissed(line))} className="h-[max(2.75rem,var(--size-tap))] w-full px-1">
                 {isMissed ? <Check aria-hidden className="size-4 shrink-0" strokeWidth={3} /> : null}
                 {T.missed}
               </Chip>
-              <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked || line.kind === "empty"} onClick={() => onFlagOpen(line)} className="w-full px-1">
+              <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked || line.kind === "empty"} onClick={() => onFlagOpen(line)} className="h-[max(2.75rem,var(--size-tap))] w-full px-1">
                 {T.flag}
               </Chip>
             </span>
@@ -191,7 +191,7 @@ function LineRow({
                 if (e.key === "Enter") (e.target as HTMLInputElement).blur();
               }}
               className={cn(
-                "h-12 w-[4.5rem] self-start rounded-lg border bg-beach-bg px-1.5 text-center text-digit font-semibold text-beach-ink",
+                "h-[max(2.75rem,var(--size-tap))] w-[max(3.5rem,4.4ch)] self-start rounded-lg border bg-beach-bg px-1 py-0 text-center text-digit font-semibold leading-none text-beach-ink",
                 refusal ? "border-beach-failed" : "border-beach-border",
                 line.kind === "empty" && line.pending !== null && !isMissed && "border-dashed",
                 pulse && !refusal && "border-2 border-beach-accent shadow-[0_0_0_3px_color-mix(in_srgb,var(--beach-accent)_28%,transparent)]",

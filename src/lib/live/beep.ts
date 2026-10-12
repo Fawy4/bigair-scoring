@@ -1,3 +1,5 @@
+import { abortSpeech } from "./speech";
+
 /** The timer's sound (docs/PLAN-phase-5 step 1, addition B): a 0.2 s beep from the browser's Web Audio, and a short vibration where the phone has one. */
 let ctx: AudioContext | null = null;
 
@@ -19,6 +21,7 @@ export function unlockSound(): void {
 }
 
 export function beep(times = 1): void {
+  abortSpeech(); // a running microphone is stopped before any app sound (WebKit bugs 317741 and 321436)
   const a = audio();
   if (a) {
     for (let i = 0; i < times; i++) {
@@ -68,6 +71,7 @@ export function writeSoundPref(on: boolean): void {
  * play sound after a tap on the page.
  */
 export function horn(times: 1 | 2 = 1): void {
+  abortSpeech();
   const a = audio();
   if (!a) return;
   for (let i = 0; i < times; i++) {

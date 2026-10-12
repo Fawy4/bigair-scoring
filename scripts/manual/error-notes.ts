@@ -262,7 +262,10 @@ export const NOTES: Record<string, Note> = {
   // ---- live phones
   "live.connection.failed": { m: "A score or attempt failed to send after retries.", f: "Tap the badge to retry. If it still fails, read the sentence; the head judge can type the score on the console." },
   "live.queue.memoryOnly": { m: "The phone's browser does not keep unsent scores through a reload (private mode or storage blocked).", f: "Keep the page open until Synced; on iPhone use the home-screen app." },
-  "live.builder.micDenied": { f: "Allow the microphone in the phone's settings, or type the trick." },
+  "live.builder.micBlocked": { f: "Allow the microphone in the iPhone's settings (Settings, Safari, Microphone, Allow; for the home-screen icon also Settings, the app's name), reload the page, or type the trick." },
+  "live.builder.micUnavailable": { f: "This browser or phone has no speech recognition here: type the trick, or use the keyboard's own microphone key." },
+  "live.builder.micNothing": { f: "Tap the microphone and say the trick again, closer to the phone." },
+  "live.builder.micTimeout": { f: "Tap the microphone to try again, or type the trick; if it keeps happening, send a screenshot of the small print under the message." },
   "live.impression.submitWaiting": { m: "Submit is grey until every rider has an Impression / Variety score." },
   "live.impression.submitted": { m: "The sheet is submitted and locked.", f: "Head judge: console → judge's row → reopen the sheet." },
   "judge.locked": { m: "The judge submitted the sheet; scores are locked.", f: "Head judge reopens the sheet, or edits the score with a reason on the console." },
