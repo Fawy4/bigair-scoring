@@ -626,6 +626,10 @@ test("(d) Missed is a switch: a tap turns it on (the box stays empty), another t
   const j1 = await phone(browser, "j1", `/judge/${w.eventId}`, { newViews: true });
   await expect(jline(j1, 1)).toContainText("Left Backroll 1", { timeout: 40_000 });
   const sw = (n: number) => jline(j1, n).getByTestId("line-missed");
+  if (process.env.DEBUG_RPC) {
+    await j1.addInitScript(() => ((window as unknown as { __dbg: boolean }).__dbg = true));
+    j1.on("console", (m) => m.text().startsWith("DBG") && console.log(m.text()));
+  }
   if (process.env.DEBUG_RPC) j1.on("request", (r) => /\/rpc\//.test(r.url()) && !/heartbeat|seat_/.test(r.url()) && console.log("RPC", r.url().split("/rpc/")[1], r.postData()));
   // a line that has its attempt
   await sw(1).click();

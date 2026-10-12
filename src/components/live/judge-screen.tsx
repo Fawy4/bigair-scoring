@@ -273,6 +273,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
    */
   const onLineMissed = (riderId: string, line: SheetLine) => {
     if (!heat) return;
+    if (typeof window !== "undefined" && (window as unknown as { __dbg?: boolean }).__dbg) console.log("DBG-MISSED", line.kind, String(line.pending), String(line.mine), missedSwitch(line));
     if (missedSwitch(line) === "clear") {
       if (line.kind === "attempt" && line.attemptId) {
         if (line.seq !== undefined) aheadRef.current.delete(`${riderId}:${line.seq}`);
