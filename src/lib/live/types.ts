@@ -163,6 +163,8 @@ export interface LiveDivisionContext {
 export interface LiveRiderInfo extends LabelRider {
   entryId: string;
   divisionId: string;
+  /** The entry's status ("confirmed", "withdrawn" = Out of the event …). */
+  status?: string | null;
 }
 
 export interface LiveContext {

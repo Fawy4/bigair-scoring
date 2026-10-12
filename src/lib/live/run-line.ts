@@ -23,7 +23,8 @@ export function shortTitle(input: { division?: string; round?: { name: string; s
  * One line of the run order. A heat that has started: "R1 · H2 · planned 14:05 · started 14:11 · Ended"; one that has not: "R1 · H3 · est. 14:35".
  * `planned` is the time in the plan as written, `started` the real one; `held` (wind hold) replaces the estimate with the word "held". It is never cut short: the row wraps.
  */
-export function runLine(input: { round?: { name: string; short_name: string | null }; heat: Pick<HeatRow, "name" | "number" | "number_suffix" | "started_at">; startedHhmm: string | null; estimatedHhmm: string | null; plannedHhmm?: string | null; held: boolean; statusWord: string | null }): string {
+export function runLine(input: { round?: { name: string; short_name: string | null }; heat: Pick<HeatRow, "name" | "number" | "number_suffix" | "started_at">; startedHhmm: string | null; estimatedHhmm: string | null; plannedHhmm?: string | null; held: boolean; statusWord: string | null; /** The heat was given as a walkover: its line reads "Walkover" with the time it was given. */ walkover?: boolean }): string {
+  if (input.walkover) return H.line([shortRound(input.round), shortHeat(input.heat), copy.walkover.runOrder(input.startedHhmm ?? "")]);
   const started = input.heat.started_at && input.startedHhmm;
   const times = started
     ? [input.plannedHhmm ? H.timePlanned(input.plannedHhmm) : null, H.timeStarted(input.startedHhmm!)]

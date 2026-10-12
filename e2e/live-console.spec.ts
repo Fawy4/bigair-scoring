@@ -115,13 +115,13 @@ test("the head judge edits a score with a reason and sees it in the audit log; a
 
   // Blue did not start: DNS from the rider menu, ranked last with no total
   await head.getByTestId("rider-menu-button").first().click();
-  await head.getByRole("menuitem", { name: /DNS/ }).click();
+  await head.getByRole("menuitem", { name: /Did not start/ }).click();
   await dialog(head).getByTestId("reason-input").fill("did not come to the beach");
   await dialog(head).getByTestId("dialog-save").click();
   const totals = head.getByTestId("console-total");
   await expect(totals).toHaveCount(4, { timeout: 30_000 });
   const last = totals.last();
-  await expect(last).toContainText("—");
+  await expect(last).toContainText("Did not start"); // in words, never a score
   expect((await w.db.from("heat_slots").select("modifier").eq("heat_id", w.heats[0]).eq("entry_id", w.entries[0]).single()).data!.modifier).toBe("DNS");
 });
 

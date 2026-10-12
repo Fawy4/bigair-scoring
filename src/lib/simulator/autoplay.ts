@@ -12,6 +12,8 @@ export interface PlanHeat {
   locked: boolean;
   /** Every seat that has to ride has a rider (no "1st H2" still waiting). */
   filled: boolean;
+  /** Only one rider can ride ("walkover"), or none ("nobody"): the head judge gives the walkover instead of starting the heat. */
+  walkover?: "walkover" | "nobody" | null;
 }
 
 const byDefault = (a: PlanHeat, b: PlanHeat) => a.divisionSort - b.divisionSort || a.roundSort - b.roundSort || a.number - b.number || (a.suffix ?? "").localeCompare(b.suffix ?? "");
@@ -28,11 +30,11 @@ export function runOrder(heats: readonly PlanHeat[], planHeatIds: readonly strin
   return [...listed, ...rest];
 }
 
-export type WaitReason = "heat_running" | "review" | "hold" | "not_ready";
-export type Next = { kind: "start"; heatId: string } | { kind: "wait"; reason: WaitReason; heatId?: string } | { kind: "finished" };
+export type WaitReason = "heat_running" | "review" | "hold" | "not_ready" | "walkover";
+export type Next = { kind: "start"; heatId: string } | { kind: "walkover"; heatId: string } | { kind: "wait"; reason: WaitReason; heatId?: string } | { kind: "finished" };
 
 /** Start the first heat that has not started, in order; wait while another is running, until a finished one is published, while on hold, or while the next one is not ready. */
-export function nextStep(input: { ordered: readonly PlanHeat[]; hold: boolean; maxRunning: number }): Next {
+export function nextStep(input: { ordered: readonly PlanHeat[]; hold: boolean; maxRunning: number; /** A person holds the head judge seat: a walkover is theirs to press. */ personHead?: boolean }): Next {
   const running = input.ordered.filter((h) => h.status === "running" || h.status === "paused");
   if (running.length >= Math.max(1, input.maxRunning)) return { kind: "wait", reason: "heat_running", heatId: running[0].id };
   const unpublished = input.ordered.find((h) => h.status === "ended" || h.status === "under_review");
@@ -41,6 +43,7 @@ export function nextStep(input: { ordered: readonly PlanHeat[]; hold: boolean; m
   if (!next) return { kind: "finished" };
   if (input.hold) return { kind: "wait", reason: "hold", heatId: next.id };
   if (!next.locked || !next.filled) return { kind: "wait", reason: "not_ready", heatId: next.id };
+  if (next.walkover) return input.personHead ? { kind: "wait", reason: "walkover", heatId: next.id } : { kind: "walkover", heatId: next.id };
   return { kind: "start", heatId: next.id };
 }
 

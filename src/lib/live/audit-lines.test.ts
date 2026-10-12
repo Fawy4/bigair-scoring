@@ -34,4 +34,10 @@ describe("audit lines in words", () => {
   it("an action nobody has a sentence for still reads as words", () => {
     expect(auditLine(row("some_new_thing", { reason: "why" }), ctx)).toBe("Some new thing — why");
   });
+  it("Console – Walkover: the sentence the database wrote is the line", () => {
+    const words = "Head judge gave a walkover in R3 · H11: Adam Arrow goes through; Mariam Graff did not start (injured)";
+    expect(auditLine(row("heat_walkover", { reason: words }), ctx)).toBe(words);
+    expect(auditLine(row("rider_out_of_event", { reason: "Head judge took Mariam Graff out of the event in R3 · H11 (injured)" }), ctx)).toBe("Head judge took Mariam Graff out of the event in R3 · H11 (injured)");
+    expect(auditLine(row("heat_walkover_reopened", { reason: "Head judge took back the walkover in R3 · H11 — no reason given" }), ctx)).toBe("Head judge took back the walkover in R3 · H11 — no reason given");
+  });
 });

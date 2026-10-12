@@ -113,6 +113,11 @@ export function auditLine(r: AuditRow, w: AuditWords): string {
       return `${T.cancelled}${because}`;
     case "heat_rerun":
       return `${T.rerun}${because}`;
+    // Console – Walkover: the database writes the whole sentence in the reason ("Head judge gave a walkover in R3 · H11: Adam Arrow goes through; Mariam Graff did not start (injured)")
+    case "heat_walkover":
+    case "heat_walkover_reopened":
+    case "rider_out_of_event":
+      return r.reason ?? rowFallback(r, "");
     default:
       return rowFallback(r, because);
   }

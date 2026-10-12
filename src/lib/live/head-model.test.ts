@@ -92,3 +92,14 @@ describe("the head judge's model of one heat", () => {
     expect(m.flagOut?.riders).toEqual(["red"]);
   });
 });
+
+describe("a heat nobody has ridden (Console – Walkover)", () => {
+  const unridden = () => build({ slots: [slot("red", 1), slot("blue", 2)], attempts: [], scores: [], impressions: [], sheets: [] });
+  it("the Ties box stays empty: two riders with no score are not tied", () => {
+    expect(unridden().ties).toEqual([]);
+  });
+  it("it is still empty with only one rider scored (no tie is possible), and still reports a real tie once riders have scores", () => {
+    expect(build().ties).toEqual([]);
+  });
+});
+

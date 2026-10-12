@@ -1,3 +1,5 @@
+import { heatCanWalkover } from "@/lib/engine/ladder";
+import { walkoverHeatCore } from "@/lib/live/walkover-core";
 import { armedStartMs } from "@/lib/live/flags";
 import { livesFor } from "@/lib/live/run-order";
 import { publishHeatCore } from "@/lib/live/publish-core";
@@ -91,6 +93,11 @@ function planHeats(snap: Snapshot): PlanHeat[] {
       suffix: h.number_suffix,
       locked: snap.lockedDivisions.has(h.division_id),
       filled: slots.length > 0 && slots.every((s) => s.entry_id !== null || s.modifier === "DNS"),
+      walkover: ((): "walkover" | "nobody" | null => {
+        if (h.status !== "scheduled" || h.armed_at) return null;
+        const state = heatCanWalkover(slots.map((s) => ({ entrantId: s.entry_id, modifier: s.modifier })));
+        return state.kind === "walkover" || state.kind === "nobody" ? state.kind : null;
+      })(),
     };
   });
 }
@@ -356,15 +363,23 @@ async function step(db: SimDb, snap: Snapshot): Promise<string> {
     return T.play.lines.starting(name);
   }
 
-  const next = nextStep({ ordered, hold: order.hold, maxRunning: snap.event.maxRunningHeats });
+  const next = nextStep({ ordered, hold: order.hold, maxRunning: snap.event.maxRunningHeats, personHead: snap.seats.some((s) => s.role === "head" && s.person) });
   if (next.kind === "finished") {
     await db.user.rpc("sim_set", { p_event: snap.eventId, p_patch: { state: "stopped", blocker: null } });
     await logLine(db, snap.eventId, "heat", null, whole ? T.log.wholeComplete : T.log.complete);
     if (whole) await updateConfig(db, snap.eventId, (c) => ({ ...c, wholeEvent: false }));
     return whole ? T.play.lines.wholeFinished : T.play.lines.finished;
   }
+  if (next.kind === "walkover") {
+    // the simulator's virtual head judge presses the same button a person would, through the same function
+    const target = byId.get(next.heatId)!;
+    const given = await walkoverHeatCore({ user: db.user, service: db.service }, target.id);
+    forgetContext(snap.eventId);
+    return given.ok ? T.play.lines.walkoverGiven(heatName(target)) : T.play.lines.stoppedAtBlocker(given.message);
+  }
   if (next.kind === "wait") {
     const h = next.heatId ? byId.get(next.heatId) : undefined;
+    if (next.reason === "walkover" && h) return T.play.lines.walkoverWait(heatName(h));
     if (next.reason === "hold") return T.play.lines.hold;
     if (next.reason === "not_ready" && h) return T.play.lines.notReady(heatName(h));
     return T.play.lines.idle;

@@ -343,6 +343,8 @@ export const NOTES: Record<string, Note> = {
   "liveErrors.codes.NOT_A_SIMULATION": { m: "The Practice heat feed plays only on a simulation event.", f: "Use Run as simulation, or tick Simulation event before any heat starts." },
   "liveErrors.codes.SIMULATION_LOCKED": { m: "“Simulation event” can be changed only before the first heat starts." },
   "liveErrors.codes.DOWNSTREAM_STARTED": { m: "The result already filled a seat of a heat that has started; changing it now would change who rode.", f: "Reset or finish the later heat first, or leave the result." },
+  "liveErrors.codes.WALKOVER_NOT_POSSIBLE": { m: "A walkover needs exactly one rider who can ride. Two or more riders can still ride, a seat is still waiting for the result of an earlier heat, or the heat has already started.", f: "If two riders can ride, run the heat as usual. If a seat is waiting, publish the earlier heat first. If the heat has started, finish it as usual (Did not start still works there)." },
+  "liveErrors.codes.NOT_A_WALKOVER": { m: "Re-open as a walkover works only on a heat that was given as a walkover.", f: "Use Re-open on the console; it takes a ridden heat back for correction." },
   "liveErrors.codes.DRAW_MISMATCH": { m: "The stored draw and this heat disagree (it was changed elsewhere).", f: "Reload the page; if it repeats, tell the owner." },
   "liveErrors.codes.RIDER_NOT_RIDING": { m: "The rider is DNS or flagged out." },
   "liveErrors.codes.CLIENT_KEY_REUSED": { m: "A queued tap from an earlier heat was sent again.", f: "Reload the page." },

@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { checklistFromLog, isFinalHeat, pickCapRider, pickDnsRider, pickTieRiders, SCENARIO_KEYS, SCENARIOS, type LogRow, type RiderNow } from "./scenarios";
+import { checklistFromLog, isFinalHeat, pickCapRider, pickDnsRider, pickNoShowHeat, pickTieRiders, SCENARIO_KEYS, SCENARIOS, type LogRow, type RiderNow } from "./scenarios";
 
 const at = (n: number) => `2026-10-16T10:0${n}:00Z`;
 const row = (scenario: string | null, kind: LogRow["kind"], n: number, text = "x", run = 1): LogRow => ({ scenario, kind, at: at(n), text, runNo: run });
 const rider = (entryId: string, used: number, riding = true, position = 1): RiderNow => ({ entryId, used, riding, position });
 
 describe("the scenario list", () => {
-  it("is the twelve scenarios (the eleven of the brief and Abort the start), each once", () => {
-    expect(SCENARIO_KEYS.length).toBe(12);
-    expect(new Set(SCENARIO_KEYS).size).toBe(12);
-    expect(SCENARIO_KEYS).toEqual(expect.arrayContaining(["wind_hold", "dns", "duplicate", "judge_dies", "tie", "past_cap", "reopen", "plan_b", "out_of_attempts", "hold_final", "rerun", "abort_start"]));
+  it("is the thirteen scenarios (the eleven of the brief, Abort the start and the walkover), each once", () => {
+    expect(SCENARIO_KEYS.length).toBe(13);
+    expect(new Set(SCENARIO_KEYS).size).toBe(13);
+    expect(SCENARIO_KEYS).toEqual(expect.arrayContaining(["wind_hold", "dns", "duplicate", "judge_dies", "tie", "past_cap", "reopen", "plan_b", "out_of_attempts", "hold_final", "rerun", "abort_start", "walkover"]));
   });
   it("says which need a heat that is running", () => {
     expect(SCENARIOS.plan_b.needsRunningHeat).toBe(false);
@@ -22,7 +22,7 @@ describe("the scenario list", () => {
 describe("the checklist", () => {
   it("lists every scenario, ticked when it has been exercised", () => {
     const rows = checklistFromLog([row("dns", "scenario", 1, "Rider Red did not show up"), row("tie", "scenario_failed", 2, "no heat")]);
-    expect(rows.length).toBe(12);
+    expect(rows.length).toBe(13);
     expect(rows.find((r) => r.key === "dns")).toMatchObject({ done: true, count: 1, lastText: "Rider Red did not show up" });
     expect(rows.find((r) => r.key === "tie")).toMatchObject({ done: false, count: 0, failedText: "no heat" });
     expect(rows.find((r) => r.key === "rerun")).toMatchObject({ done: false, count: 0 });
@@ -81,3 +81,23 @@ describe("which heat is the final", () => {
     expect(isFinalHeat("h1", heats, rounds)).toBe(false);
   });
 });
+
+describe("the no-show that ends in a walkover (Console – Walkover)", () => {
+  const seat = (entryId: string | null, modifier: string | null = null) => ({ entryId, modifier });
+  const heat = (id: string, seats: ReturnType<typeof seat>[], status = "scheduled", armed = false) => ({ id, status, armed, seats });
+  it("is a scenario of its own, waits for a heat that has not started, and is on the checklist", () => {
+    expect(SCENARIO_KEYS).toContain("walkover");
+    expect(SCENARIOS.walkover).toEqual({ needsRunningHeat: false, needsFreshHeat: true });
+  });
+  it("picks the first heat that has not started and has exactly two riders (a 1 v 1); the rider in the last seat does not show up", () => {
+    const pick = pickNoShowHeat([heat("h1", [seat("a"), seat("b"), seat("c")]), heat("h2", [seat("d"), seat("e")]), heat("h3", [seat("f"), seat("g")])]);
+    expect(pick).toEqual({ heatId: "h2", entryId: "e" });
+  });
+  it("skips heats that are running, armed, have a seat still waiting, or already have a rider out", () => {
+    expect(pickNoShowHeat([heat("h1", [seat("a"), seat("b")], "running"), heat("h2", [seat("a"), seat("b")], "scheduled", true), heat("h3", [seat("a"), seat(null)]), heat("h4", [seat("a"), seat("b", "DNS")])])).toBeNull();
+  });
+  it("a heat of three is not a walkover heat for this scenario", () => {
+    expect(pickNoShowHeat([heat("h1", [seat("a"), seat("b"), seat("c")])])).toBeNull();
+  });
+});
+

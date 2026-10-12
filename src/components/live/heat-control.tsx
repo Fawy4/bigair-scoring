@@ -8,6 +8,8 @@ import type { ChecklistItem, FixTarget } from "@/lib/live/publish-checklist";
 export interface ReviewProps {
   items: ChecklistItem[];
   canOverride: boolean;
+  /** Nobody has ridden the shown heat (no attempt logged): Publish asks once whether to use Walkover instead. */
+  nobodyRode?: boolean;
   /** The riders of the shown heat, for Re-run heat ("who does not ride again"). */
   riders: Array<{ entryId: string; word: string; name: string }>;
   /** The riders of a tie (for "Choose order"). */

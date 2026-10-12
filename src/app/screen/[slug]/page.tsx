@@ -49,6 +49,7 @@ function BigRider({ r }: { r: RiderRowVM }) {
         ) : null}
         <span className="min-w-0 break-words text-[4vw] font-semibold">{nameOf(r)}</span>
       </span>
+      {r.state !== "ok" && !r.totalLabel ? <span data-testid="screen-noride" className="text-[3.4vw] font-semibold">{copy.pub.results.notRiding[r.state] ?? r.state}</span> : null}
       <span className="text-[7vw] font-semibold tabular-nums">{r.totalLabel ?? ""}</span>
     </li>
   );

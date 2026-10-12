@@ -1,6 +1,6 @@
 /** The scenario buttons of the simulator (owner brief, 1 Oct 2026). Words for the labels live in ui-copy.ts; this file is the list and the small pure choices behind it. */
 
-export const SCENARIO_KEYS = ["wind_hold", "dns", "duplicate", "judge_dies", "tie", "past_cap", "reopen", "plan_b", "out_of_attempts", "hold_final", "rerun", "abort_start"] as const;
+export const SCENARIO_KEYS = ["wind_hold", "dns", "walkover", "duplicate", "judge_dies", "tie", "past_cap", "reopen", "plan_b", "out_of_attempts", "hold_final", "rerun", "abort_start"] as const;
 export type ScenarioKey = (typeof SCENARIO_KEYS)[number];
 export const isScenarioKey = (k: string): k is ScenarioKey => (SCENARIO_KEYS as readonly string[]).includes(k);
 
@@ -14,6 +14,8 @@ export interface ScenarioInfo {
 export const SCENARIOS: Record<ScenarioKey, ScenarioInfo> = {
   wind_hold: { needsRunningHeat: false, needsFreshHeat: false },
   dns: { needsRunningHeat: true, needsFreshHeat: false },
+  /** Waits for a 1 v 1 heat that has not started: one rider does not show up, then the walkover is given (Console – Walkover). */
+  walkover: { needsRunningHeat: false, needsFreshHeat: true },
   duplicate: { needsRunningHeat: true, needsFreshHeat: false },
   judge_dies: { needsRunningHeat: true, needsFreshHeat: false },
   tie: { needsRunningHeat: true, needsFreshHeat: true },
@@ -68,6 +70,19 @@ export function pickDnsRider(riders: readonly RiderNow[]): string | null {
   const riding = riders.filter((r) => r.riding);
   if (!riding.length) return null;
   return [...riding].sort((a, b) => a.used - b.used || a.position - b.position)[0].entryId;
+}
+
+/**
+ * The heat for the walkover rehearsal: the first heat that has not started (and is not in its start sequence) with exactly two riders and no seat still waiting, and
+ * the rider in its last seat, who does not show up. Null when there is no such heat yet. Heats come in the order they will run.
+ */
+export function pickNoShowHeat(heats: ReadonlyArray<{ id: string; status: string; armed: boolean; seats: ReadonlyArray<{ entryId: string | null; modifier: string | null }> }>): { heatId: string; entryId: string } | null {
+  for (const h of heats) {
+    if (h.status !== "scheduled" || h.armed) continue;
+    if (h.seats.some((s) => !s.entryId) || h.seats.length !== 2 || h.seats.some((s) => s.modifier)) continue;
+    return { heatId: h.id, entryId: h.seats[1].entryId as string };
+  }
+  return null;
 }
 
 /** Two riders who have not ridden yet, in seat order (a forced tie needs identical attempts, so it starts before either has one). Null when there are not two. */

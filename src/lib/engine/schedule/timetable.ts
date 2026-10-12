@@ -67,7 +67,7 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
     const orphan = item.kind === "heat" && (!item.heatId || !live);
 
     const emit = (
-      row: Pick<TimetableRow, "status" | "reason"> & { start: number | null; end: number | null; breakAfter: number | null },
+      row: Pick<TimetableRow, "status" | "reason" | "walkover"> & { start: number | null; end: number | null; breakAfter: number | null },
     ) => {
       const startMs = row.start;
       const heatRow = item.kind === "heat";
@@ -83,6 +83,7 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
         end: row.end === null ? null : hhmm(row.end),
         breakAfterMin: row.breakAfter,
         status: row.status,
+        ...(row.walkover ? { walkover: true } : {}),
         readyCallUtc: heatRow && startMs !== null ? toIso(startMs - defaults.readyCallMin * MIN) : null,
         readyCall: heatRow && startMs !== null ? hhmm(startMs - defaults.readyCallMin * MIN) : null,
         reason: row.reason,
@@ -130,6 +131,11 @@ export function computeTimetable(plan: SchedulePlan, heats: HeatLive[], opts: Ti
       let end: number;
       let status: RowStatus;
       let reason: string;
+      if (item.kind === "heat" && live?.walkover) {
+        // a walkover takes no time and no break follows it: the heats after it move up, and the clock stays where the last ridden heat left it
+        emit({ start, end: start, breakAfter: null, status: "done", reason: `Walkover at ${hhmm(start)}: nobody rode, so it takes no time`, walkover: true });
+        return;
+      }
       if (item.kind === "heat" && live) {
         if (live.endedAt) {
           end = Date.parse(live.endedAt);

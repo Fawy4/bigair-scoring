@@ -7,6 +7,7 @@ export { heatCount, capacities, roundLayout, byeCount, dealSnake, dealSequential
 export { generateSingleElimination, generateDingleElimination, generatePoolsToFinal } from "./generators";
 export { expandFormat } from "./expand";
 export { applyHeatResult, unpublishHeat, seedNow, lockDraw, setHeatStatus, withdrawEntrant, heatCanRun, manualMove } from "./progress";
+export { heatCanWalkover, walkoverRanking, type WalkoverSeat, type WalkoverState } from "./walkover";
 export { divisionPlacings } from "./placings";
 export { applyDrawEdit, checkDraw, arrangedParts, regenerateKeeping, ridersInRound, placesBefore, placeholderText, provisionalSeat, heatLabel, riderName, findHeat, expectedFor, DrawEditError, type DrawEdit, type DrawCheckWarning, type EditResult, type SeatRef as DrawSeatRef, type KeepResult } from "./draw-edit";
 export * from "./custom-ladder";

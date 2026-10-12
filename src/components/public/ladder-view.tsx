@@ -24,7 +24,7 @@ function HeatCard({ heat, href }: { heat: LadderHeatVM; href: string | null }) {
           <span className="min-w-0 truncate">
             {r.colourWord ? <span className="mr-1 text-small font-semibold uppercase tracking-wide">{r.colourWord}</span> : null}
             {r.name}
-            {r.walkover ? " · DNS" : ""}
+            {r.note ? ` · ${r.note}` : ""}
           </span>
           <span className="shrink-0 tabular-nums">{r.totalLabel}</span>
         </div>

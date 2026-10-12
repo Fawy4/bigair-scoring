@@ -108,6 +108,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
     return {
       entryId: e.id ?? "",
       divisionId: e.division_id ?? "",
+      status: e.status,
       name: `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || "Rider",
       nationality: e.nationality,
       sponsor: e.sponsor,

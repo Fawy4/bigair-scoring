@@ -50,7 +50,7 @@ export function liveRows(live: PublicLiveHeat, model: ScoringModel | null, entri
           totalLabel: none ? null : hasAny ? r.totalLabel : null,
           formula: none || !hasAny ? null : formulaLine(r.totalLabel, r.components, impressionLabel, decimals),
           percentLabel: null,
-          state: r.status as RiderState,
+          state: (r.status === "DNS" && entries.get(r.riderId)?.withdrawn ? "OUT" : r.status) as RiderState,
           boxes,
         };
       });

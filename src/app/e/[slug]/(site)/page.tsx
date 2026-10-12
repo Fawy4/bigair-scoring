@@ -82,7 +82,7 @@ export default async function PublicHome({ params }: { params: Promise<{ slug: s
                 <span className="min-w-0 text-body font-semibold">{r.title}</span>
                 <span className="flex shrink-0 items-center gap-2">
                   <span className="text-name font-semibold tabular-nums">{timeText(r)}</span>
-                  <StateBadge status={r.status} />
+                  <StateBadge status={r.status} walkover={r.walkover} />
                 </span>
               </li>
             ))}
