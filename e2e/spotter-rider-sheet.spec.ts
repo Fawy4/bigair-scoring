@@ -463,7 +463,26 @@ test("tapping a line below one with no score asks once, in one line, and one tap
   await jbox(j1, 4).click();
   await expect(j1.getByTestId("skip-ask")).toHaveText(/Lines 1–3 have no score from you\. Set them to Missed and score line 4\?/);
   await expect(jbox(j1, 4)).toHaveAttribute("readonly", "");
+  // the question and both buttons are fully on the screen (below the header and the rider cards), without scrolling by hand
+  const inView = async (page: Page, what: string) => {
+    const vp = page.viewportSize()!;
+    const strip = (await page.getByTestId("rider-strip").boundingBox())!;
+    for (const id of ["skip-ask", "skip-confirm", "skip-cancel"]) {
+      const b = (await page.getByTestId(id).boundingBox())!;
+      expect(b.y, `${what}: ${id} top`).toBeGreaterThanOrEqual(strip.y + strip.height - 2);
+      expect(b.y + b.height, `${what}: ${id} bottom`).toBeLessThanOrEqual(vp.height);
+      expect(b.x, `${what}: ${id} left`).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.width, `${what}: ${id} right`).toBeLessThanOrEqual(vp.width);
+    }
+  };
+  await inView(j1, "line 4");
   // Not now leaves everything as it was
+  await j1.getByTestId("skip-cancel").click();
+  // a line near the bottom of the sheet (line 7 of 7): the question is brought into view as well
+  await jbox(j1, 7).click();
+  await expect(j1.getByTestId("skip-ask")).toHaveText(/Lines 1–6 have no score from you\. Set them to Missed and score line 7\?/);
+  await expect(j1.getByTestId("skip-confirm")).toBeInViewport();
+  await inView(j1, "line 7");
   await j1.getByTestId("skip-cancel").click();
   await expect(j1.getByTestId("skip-ask")).toHaveCount(0);
   expect(await myScores("j1", H)).toHaveLength(0);
