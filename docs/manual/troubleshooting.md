@@ -133,7 +133,6 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Could not copy: use Download instead.” | Follow the sentence. | [Feedback notes](errors.md#err-feedback-exportcopyfailed) |
 | “Could not do that: ‹why›” | Follow the sentence. | [Organiser: Go live](errors.md#err-org-dashboard-failed) |
 | “Could not find a free PIN; try again.” | Press again: a new random PIN is tried. | [Organiser: Officials](errors.md#err-officials-errors-pininuse) |
-| “Could not hear that. Try again or type it.” | Follow the sentence. | [Judge and spotter phones](errors.md#err-live-builder-micfailed) |
 | “Could not keep: ‹names› (they no longer fit).” | Follow the sentence. | [Organiser: Draw](errors.md#err-draw-droppednote) |
 | “Could not undo: ‹why›” | Ask the head judge to delete the attempt. | [Judge and spotter phones](errors.md#err-spotter-undofailed) |
 | “Database: not reachable” | Open the Supabase dashboard and press Resume; load the home page once. | [Platform owner (/admin)](errors.md#err-admin-health-databasedown) |
@@ -209,6 +208,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “‹names› has already started — this correction would change who rides in it. Nothing was changed.” | Leave the result, or reset the later heat first. | [Head console](errors.md#err-publish-downstream) |
 | “Needs at least two riders.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-needtwo) |
 | “No active run order — create one in Run order & timetable.” | Run order step → pick today → Activate this plan. | [Grey buttons on the head console](errors.md#err-controlwhy-noplan) |
+| “No answer after 8 seconds. Tap the microphone to try again, or type the trick.” | Tap the microphone to try again, or type the trick; if it keeps happening, send a screenshot of the small print under the message. | [Judge and spotter phones](errors.md#err-live-builder-mictimeout) |
 | “No connection. It will be sent when the connection is back.” | Keep the page open; move toward the hotspot. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-network) |
 | “No countdown: no heat is left in the run order.” | Follow the sentence. | [Head console](errors.md#err-headv2-breaknone-nothing-next) |
 | “No countdown: the next heat has no start time yet.” | Run order step → pin a start time on the first row. | [Head console](errors.md#err-headv2-breaknone-no-time) |
@@ -227,6 +227,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Not drawn again (no format, no riders or nothing to draw): ‹names›.” | Follow the sentence. | [Simulator](errors.md#err-simulator-reset-rebuildskipped) |
 | “Not logged for ‹label›: ‹why›” | Follow the sentence. | [Judge and spotter phones](errors.md#err-spotter-refusedother) |
 | “Not the next heat in the run order — ‹next› was next” | Start anyway (the timetable re-flows) or Don’t start. | [Head console](errors.md#err-headv2-notnext) |
+| “Nothing heard. Tap the microphone and say the trick again.” | Tap the microphone and say the trick again, closer to the phone. | [Judge and spotter phones](errors.md#err-live-builder-micnothing) |
 | “Nothing is left to shift: every heat has started.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-nothing-to-shift) |
 | “Nothing is on hold.” | Follow the sentence. | [Organiser: Go live](errors.md#err-org-dashboard-notheld) |
 | “Nothing to import yet.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-importnothing) |
@@ -434,7 +435,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “The master trick base could not be found. Ask the owner to seed the presets.” | On a computer with the keys: npm run seed:presets. | [Organiser: Divisions](errors.md#err-trickbase-errors-novocabulary) |
 | “the maximum per heat cannot be less than the target” | Change the highlighted number; the preview comes back when the format can run. | [Organiser: Divisions](errors.md#err-formatsimple-maxbelowtarget) |
 | “The message is too long (300 characters at most)” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-closedmessagemax) |
-| “The microphone is not allowed on this phone. Type the trick instead.” | Allow the microphone in the phone's settings, or type the trick. | [Judge and spotter phones](errors.md#err-live-builder-micdenied) |
+| “The microphone is blocked. On an iPhone: Settings, Safari, Microphone, choose Allow, then reload this page. Or type the trick.” | Allow the microphone in the iPhone's settings (Settings, Safari, Microphone, Allow; for the home-screen icon also Settings, the app's name), reload the page, or type the trick. | [Judge and spotter phones](errors.md#err-live-builder-micblocked) |
 | “the minimum per heat cannot be more than the target” | Change the highlighted number; the preview comes back when the format can run. | [Organiser: Divisions](errors.md#err-formatsimple-minabovetarget) |
 | “The naming template has an unknown part: ‹part›. Use {direction} and {blocks}.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-namingunknown) |
 | “The naming template must contain {blocks}.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-namingmissingblocks) |
@@ -486,7 +487,6 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “There are no heats yet. Make each division's draw first.” | Draw step → Generate draw for each division. | [Organiser: Run order](errors.md#err-runorder-noheats) |
 | “There are no open notes to export.” | Follow the sentence. | [Feedback notes](errors.md#err-feedback-exportnone) |
 | “There is no active run order for today.” | Run order step → pick today → Activate this plan. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-no-active-plan) |
-| “There is no attempt NaN to score: this rider can have at most ‹n› attempts.” | Type on one of the numbered lines of the sheet. The head judge can add an attempt past the limit, with a reason; its line then appears. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-line-past-cap) |
 | “There is no draw yet.” | Follow the sentence. | [Organiser: Draw](errors.md#err-draw-errors-nodraw) |
 | “There is no newer draft to publish.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-nothingtopublish) |
 | “There is no other organisation to move it to.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-org-movenoothers) |
@@ -598,6 +598,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “Use only lowercase letters, numbers and hyphens, starting with a letter or number” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-slugchars) |
 | “Use the form 18:30” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-usetime) |
 | “Use the heat buttons to change a heat.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-use-heat-functions) |
+| “Voice is not available here. Type the trick, or use the microphone key on the keyboard.” | This browser or phone has no speech recognition here: type the trick, or use the keyboard's own microphone key. | [Judge and spotter phones](errors.md#err-live-builder-micunavailable) |
 | “Wait until ‹heat› ends, or end the heat first.” | Wait until the heat ends. | [Organiser: Officials](errors.md#err-officials-inheat) |
 | “We could not find a “First” and a “Last” column. The columns in the file are: ‹found›.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-nonamecolumns) |
 | “We could not find that event.” | Follow the sentence. | [Rider registration](errors.md#err-registration-notfound) |
@@ -616,6 +617,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “You are not allowed to do this.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-not-allowed) |
 | “You are not allowed to reset this event.” | Follow the sentence. | [Resets](errors.md#err-reset-errors-not-allowed) |
 | “You are not on the panel of a heat that is running.” | Organiser: Officials → Panels → tick the judge for that division. | [Judge and spotter phones](errors.md#err-judge-notonpanel) |
+| “You can score up to attempt ‹n› for this rider for now.” | Type on one of the numbered lines of the sheet. The head judge can add an attempt past the limit, with a reason; its line then appears. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-line-past-cap) |
 | “You cannot remove your own login.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-cannot-remove-self) |
 | “You do not have permission to do that.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-divisions-errors-notallowed) |
 | “You still have scores with no attempt: ‹what›. Clear them, then submit.” | Press Clear on those lines (Review → Rider sheet), then Submit. | [Other](errors.md#err-ridersheet-submitheld) |

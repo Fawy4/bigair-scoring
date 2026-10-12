@@ -2786,13 +2786,18 @@ export const copy = {
       none: "Nothing chosen yet",
       type: "Or type the trick",
       typePlaceholder: "or type: left double backroll",
+      clearTyped: "Clear the typed words",
       speak: "Speak",
       listening: "Listening…",
+      stopListening: "Stop listening",
+      micBlocked: "The microphone is blocked. On an iPhone: Settings, Safari, Microphone, choose Allow, then reload this page. Or type the trick.",
+      micUnavailable: "Voice is not available here. Type the trick, or use the microphone key on the keyboard.",
+      micNothing: "Nothing heard. Tap the microphone and say the trick again.",
+      micTimeout: "No answer after 8 seconds. Tap the microphone to try again, or type the trick.",
+      micCode: (code: string) => `Browser says: ${code}`,
       read: "Read",
       freeTextNote: "Free text — head judge will check",
       removeBlock: (label: string) => `Remove ${label}`,
-      micDenied: "The microphone is not allowed on this phone. Type the trick instead.",
-      micFailed: "Could not hear that. Try again or type it.",
       crash: "CRASH",
       log: "Log",
       rider: "Rider",
@@ -3597,7 +3602,7 @@ export const copy = {
       IMPRESSION_NOT_OPEN: (_d?: string, c?: { impressionName?: string }) => `The ${scoreName(c)} opens when the heat has ended.`,
       NOT_SCORABLE: () => "A crash is not scored.",
       /** Detail: the most lines this rider can have right now. */
-      LINE_PAST_CAP: (n?: string) => (n ? `There is no attempt ${Number(n) + 1} to score: this rider can have at most ${n} attempts.` : "There is no such attempt to score."),
+      LINE_PAST_CAP: (n?: string) => (n ? `You can score up to attempt ${n} for this rider for now.` : "There is no such attempt to score."),
       LINE_SCORE_NOT_AVAILABLE: () => "This division is scored by criteria. Use the Queue.",
       /** Detail: "‹rider id›:‹lines›;…" (the phone words it with the rider's name). */
       PENDING_NOTES: () => "You still have scores with no attempt. Clear them first, then submit.",
@@ -3654,7 +3659,8 @@ export const copy = {
     crash: "Crash",
     crashNote: "Crashed: no score",
     scoreBox: (n: number) => `Score for attempt ${n}`,
-    placeholder: "0.0",
+    /** An empty score box shows nothing: a grey 0.0 reads as a score of zero next to a real one. */
+    placeholder: "",
     pendingTag: "pending",
     pendingNote: "Your private note: it becomes your score when the spotter logs this attempt.",
     noAttempt: "no attempt logged here",
@@ -3666,6 +3672,53 @@ export const copy = {
     submitHeldPart: (rider: string, lines: number[]) => `${rider}, attempt ${lines.join(", ")}`,
     lockedNote: "Your sheet is locked: scores cannot be changed.",
     openSheet: "Open the Rider sheet",
+    /** Line by line: a score can only be typed on the first line that has none yet. */
+    missed: "Missed",
+    missedAria: (n: number) => `Missed: I did not see attempt ${n}`,
+    waitsAria: (n: number) => `Score for attempt ${n}: score the lines above first`,
+    waitsNote: "Score the line above first",
+    /** Tapping a line below one with no score from this judge: asks once, and one tap marks the lines above Missed and opens the tapped line. */
+    skipAsk: (lines: string, count: number, n: number) => (count === 1 ? `Line ${lines} has no score from you. Set it to Missed and score line ${n}?` : `Lines ${lines} have no score from you. Set them to Missed and score line ${n}?`),
+    /** The highlighted lines: a logged attempt with no score from you yet (the words go with the colour, never colour alone). */
+    needsScore: "Needs your score",
+    skipConfirm: "Set to Missed",
+    /** A line more than 10 past the attempts the spotter has logged (no attempt limit): shown, but not open yet. */
+    closedLine: (n: number) => `Line ${n} is not open yet: the spotter has to log more attempts first.`,
+    flag: "Flag",
+    flagAria: (n: number) => `Flag attempt ${n} for the head judge`,
+    skipCancel: "Not now",
+    lineByLineHelp: "You can only type on the first line that has no score yet. If you did not see an attempt, tap Missed on its line: that counts as done and opens the next line.",
+    lineByLineExample: "Example: line 2 is empty, so line 3 waits. Tap Missed on line 2 and line 3 opens.",
+  },
+  /** The spotter's Rider sheet: one line per attempt, and a line logs itself. */
+  spotterSheet: {
+    switchLabel: "Logging view",
+    sheet: "Rider sheet",
+    list: "Trick list",
+    switchHelp: "Rider sheet: one numbered line per attempt; a line logs itself when you pick the trick or turn on Crash. Trick list: build the trick with taps and press Log.",
+    switchExample: "Example: type “back” on line 1, tap Backroll, tap L. The judges see Left Backroll without anything else pressed.",
+    strip: "Riders",
+    sheetFor: (rider: string) => `${rider}: attempts`,
+    noRider: "No rider to log yet.",
+    trickBox: (n: number) => `Trick for attempt ${n}`,
+    placeholder: "Type the trick",
+    left: "L",
+    right: "R",
+    leftAria: (n: number) => `Attempt ${n}: Left`,
+    rightAria: (n: number) => `Attempt ${n}: Right`,
+    crash: "Crash",
+    crashAria: (n: number) => `Attempt ${n}: Crash`,
+    clearBox: (n: number) => `Clear the trick box of attempt ${n}`,
+    crashWord: "CRASH",
+    typedKept: (trick: string) => `typed: ${trick}`,
+    states: { empty: "Empty", saving: "Saving…", logged: "Logged ✓", waits: "Fill in the line above first", tapToLog: "Tap a trick to log" },
+    suggestions: "Suggestions",
+    addAttempt: "Add attempt",
+    othersLine: "Logged by another seat",
+    freeTag: "Free text: the head judge will check it",
+    outOfAttempts: (label: string, n: number, max: number) => `${label} is out of attempts · ${n} / ${max}`,
+    clearedBox: "The trick was left empty: the attempt keeps its trick. Use Undo or the head judge to remove an attempt.",
+    changeFailed: (why: string) => `The change was not saved: ${why}`,
   },
   /** The spotter's phone (docs/PLAN-phase-5 step 2). */
   spotter: {
@@ -3937,6 +3990,8 @@ export const copy = {
     tie: (names: string) => `${names} are tied — choose the order`,
     /** A judge's score typed before the attempt, still waiting for it. There is no override: the judge clears it, or the attempt is added. */
     pending: (rider: string, judge: string) => `${rider}: ${judge} has a score with no attempt — ask ${judge} to clear it, or clear it here`,
+    /** A judge's Missed note on a line the spotter never logged: clearing it loses no score. */
+    pendingMissed: (rider: string, judge: string) => `${rider}: ${judge} has a Missed note with no attempt — no score is lost by clearing it; ask ${judge} to clear it, or clear it here`,
     and: " and ",
   },
   /** Publish: the words of the dialogs and of the answers (src/lib/live/publish-core.ts). */
@@ -4277,12 +4332,19 @@ export const copy = {
     /** A score typed on the Rider sheet before the attempt was logged, now on the attempt. */
     /** The head judge clearing a judge's pending note: "Head judge cleared J3's pending score on Omar Hassan line 4: phone died". */
     noteClearedByHead: (judge: string, rider: string, line: number, reason: string | null) => `Head judge cleared ${judge}'s pending score on ${rider} line ${line}: ${reason ?? "no reason given"}`,
+    noteMissedClearedByHead: (judge: string, rider: string, line: number, reason: string | null) => `Head judge cleared ${judge}'s Missed note on ${rider} line ${line}: ${reason ?? "no reason given"}`,
+    /** A judge switching their own Missed off again on a line that has its attempt. */
+    missedCleared: (judge: string, attempt: string) => `${judge} took back Missed on ${attempt}`,
     scoreFromNote: (judge: string, attempt: string, score: string) => `${judge} · ${attempt}: ${score} (typed before the attempt was logged)`,
     impression: "Impression / Variety score",
     deleted: (a: string) => `Deleted attempt ${a}`,
     undone: (a: string) => `Spotter took back attempt ${a}`,
     merged: (a: string) => `Merged attempt ${a} into the first logged`,
     edited: (a: string) => `Edited attempt ${a}`,
+    /** The spotter correcting an attempt of their own line: "Spotter changed Red 3: Backroll → Frontroll (crash)". */
+    spotterEdited: (a: string, from: string, to: string) => `Spotter changed ${a}: ${from} → ${to}`,
+    noTrick: "no trick",
+    crashWord: "crash",
     capOverride: (r: string) => `Attempt added past the cap for ${r}`,
     status: { DNS: "Did not start", DNF: "Did not finish", DSQ: "Disqualified" } as Record<string, string>,
     statusCleared: "status cleared",

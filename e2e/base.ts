@@ -6,7 +6,20 @@ import { EVENT_FOLD_IDS, foldKey } from "../src/lib/org/fold-state";
  * certificate. There, calls to Supabase are forwarded from Playwright's Node side (which trusts the proxy CA).
  * On a normal machine (no HTTPS_PROXY) this does nothing.
  */
-export async function installSupabaseProxy(context: BrowserContext): Promise<void> {
+export async function installSupabaseProxy(context: BrowserContext, opts: { newViews?: boolean } = {}): Promise<void> {
+  // Rider sheets (0.20.0): a phone that never chose a view now opens a judge on the Rider sheet and a spotter on the Rider sheet. The browser tests written before
+  // that drive the Queue and the Trick list, so their phones start with those two chosen (the way a person picks them with the switch); the tests of the new
+  // defaults pass `newViews: true` and get a phone that never chose anything.
+  if (!opts.newViews) {
+    await context.addInitScript(() => {
+      try {
+        if (window.localStorage.getItem("bigair.judgeView") === null) window.localStorage.setItem("bigair.judgeView", "queue");
+        if (window.localStorage.getItem("bigair.spotterView") === null) window.localStorage.setItem("bigair.spotterView", "list");
+      } catch {
+        /* no storage on this page */
+      }
+    });
+  }
   if (!process.env.HTTPS_PROXY) return;
   await context.route(/https:\/\/[a-z0-9]+\.supabase\.co\//, async (route) => {
     const response = await route.fetch();

@@ -101,17 +101,19 @@ describe.skipIf(!ENV_OK)("Rider sheet: pending notes (hosted development project
     expect(await notes(h)).toHaveLength(0);
   });
 
-  it("never past the cap: line 8 of 7 is refused; with no cap only the one line ahead is allowed", async () => {
+  it("never past the cap: line 8 of 7 is refused; with no cap up to 10 lines past the attempts logged", async () => {
     const h = await running();
     expect(codeOf(await note("j1", h, d.entries[0], 7, 5))).toBe("");
     expect(codeOf(await note("j1", h, d.entries[0], 8, 5))).toContain("LINE_PAST_CAP");
     expect(codeOf(await note("j1", h, d.entries[0], 0, 5))).toContain("LINE_PAST_CAP");
     const u = await running(open);
+    // no limit: 10 lines past the attempts the spotter has logged (nothing logged: lines 1-10, never 11)
     expect(codeOf(await note("j1", u, open.entries[0], 1, 5))).toBe("");
-    expect(codeOf(await note("j1", u, open.entries[0], 2, 5))).toContain("LINE_PAST_CAP");
+    expect(codeOf(await note("j1", u, open.entries[0], 10, 5))).toBe("");
+    expect(codeOf(await note("j1", u, open.entries[0], 11, 5))).toContain("LINE_PAST_CAP");
     await att(u, open.entries[0], 1);
-    expect(codeOf(await note("j1", u, open.entries[0], 2, 5))).toBe("");
-    expect(codeOf(await note("j1", u, open.entries[0], 3, 5))).toContain("LINE_PAST_CAP");
+    expect(codeOf(await note("j1", u, open.entries[0], 11, 5))).toBe(""); // one attempt logged: 10 past it
+    expect(codeOf(await note("j1", u, open.entries[0], 12, 5))).toContain("LINE_PAST_CAP");
   });
 
   it("a newer edit of a note wins; a late older one is ignored", async () => {

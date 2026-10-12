@@ -59,6 +59,27 @@ async function send(supabase: SupabaseClient, item: QueueEntry, onSaved?: (kind:
     case "line_score":
       // a score typed on a Rider sheet line: the server keeps it as a pending note, or (when the attempt has been logged meanwhile) gives it to that attempt
       return done(await supabase.rpc("set_line_score", { p_heat: p.heatId, p_entry: p.entryId, p_line: p.line, p_score: p.score, p_client_key: item.clientKey, p_client_rev: item.clientRev }));
+    case "line_missed":
+      // "I did not see this attempt" on a Rider sheet line: a Missed note, or (the attempt has been logged meanwhile) Missed on that attempt
+      return done(await supabase.rpc("set_line_missed", { p_heat: p.heatId, p_entry: p.entryId, p_line: p.line, p_client_key: item.clientKey, p_client_rev: item.clientRev }));
+    case "line_missed_clear":
+      // "Missed" switched off on a line that has its attempt: the judge's own Missed is removed (a number never is)
+      return classify(await supabase.rpc("clear_line_missed", { p_heat: p.heatId, p_entry: p.entryId, p_line: p.line }));
+    case "attempt_edit": {
+      // the spotter changing a line it logged: the same attempt (found by its client key), never a second one
+      const r = await supabase.rpc("spotter_edit_attempt", {
+        p_client_key: p.clientKey,
+        p_set_trick: Boolean(p.setTrick),
+        p_trick_name: p.trickName ?? null,
+        p_trick_parts: p.trickParts ?? null,
+        p_category: p.categoryKey ?? null,
+        p_raw_text: p.rawText ?? null,
+        p_input_method: p.inputMethod ?? null,
+        p_status: p.status ?? null,
+        p_direction: p.direction ?? null,
+      });
+      return done(r);
+    }
     case "line_clear": {
       const r = await supabase.rpc("clear_line_score", { p_heat: p.heatId, p_entry: p.entryId, p_line: p.line });
       return classify(r);

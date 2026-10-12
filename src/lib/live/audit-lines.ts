@@ -50,6 +50,14 @@ const impressionVal = (o: Record<string, unknown> | null): string => {
   return typeof o.value === "number" || typeof o.value === "string" ? formatCell(Number(o.value)) : T.noScore;
 };
 
+/** An attempt as the spotter's correction line shows it: the trick, then the direction when it is not already in the name, then "crash". */
+const attemptText = (o: Record<string, unknown>): string => {
+  const name = typeof o.trick_name === "string" && o.trick_name ? o.trick_name : T.noTrick;
+  const dir = o.direction === "left" ? copy.live.summary.left : o.direction === "right" ? copy.live.summary.right : "";
+  const dirShown = dir && !name.toLowerCase().includes(dir.toLowerCase()) ? ` ${dir}` : "";
+  return `${name}${dirShown}${o.status === "crashed" ? ` (${T.crashWord})` : ""}`;
+};
+
 /** One line of the audit log in plain words, for the head judge's console (docs/PLAN-phase-5 step 4: "the audit log shows the old and new value"). */
 export function auditLine(r: AuditRow, w: AuditWords): string {
   const after = r.after ?? {};
@@ -64,7 +72,10 @@ export function auditLine(r: AuditRow, w: AuditWords): string {
         return T.scoreChanged(w.judgeWord(String(after.judge_seat_id ?? before.judge_seat_id ?? "")), attempt(after), val(r.before), val(r.after), w.clock ? w.clock(r.at) : null);
       return rowFallback(r, because);
     case "pending_cleared_by_head":
+      if (before.missed === true) return T.noteMissedClearedByHead(w.judgeWord(String(before.judge_seat_id ?? "")), (w.riderName ?? w.riderWord)(String(before.entry_id ?? "")), Number(before.line ?? 0), r.reason);
       return T.noteClearedByHead(w.judgeWord(String(before.judge_seat_id ?? "")), (w.riderName ?? w.riderWord)(String(before.entry_id ?? "")), Number(before.line ?? 0), r.reason);
+    case "missed_cleared":
+      return T.missedCleared(w.judgeWord(String(before.judge_seat_id ?? "")), attempt(before));
     case "score_from_note":
       return T.scoreFromNote(w.judgeWord(String(after.judge_seat_id ?? "")), attempt(after), val(r.after));
     case "score_merged":
@@ -79,6 +90,8 @@ export function auditLine(r: AuditRow, w: AuditWords): string {
       return `${T.merged(w.attemptWord(String(after.id ?? "")))}${because}`;
     case "attempt_edited":
       return `${T.edited(w.attemptWord(String(after.id ?? "")))}${because}`;
+    case "attempt_edited_by_spotter":
+      return `${T.spotterEdited(w.attemptWord(String(after.id ?? "")), attemptText(before), attemptText(after))}${because}`;
     case "attempt_cap_override":
       return `${T.capOverride(w.riderWord(String(after.entry_id ?? "")))}${because}`;
     case "rider_status_set": {

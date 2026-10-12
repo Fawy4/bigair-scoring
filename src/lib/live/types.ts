@@ -138,10 +138,12 @@ export interface PendingRow {
   judge_seat_id: string;
   slot: number;
   score: number;
+  /** The judge did not see the attempt that will take this line (the score is then not read). */
+  missed: boolean;
   client_rev: number;
   updated_at: string;
 }
-export const PENDING_COLUMNS = "id, heat_id, entry_id, judge_seat_id, slot, score, client_rev, updated_at";
+export const PENDING_COLUMNS = "id, heat_id, entry_id, judge_seat_id, slot, score, missed, client_rev, updated_at";
 
 export type SeatRole = "judge" | "head" | "spotter" | "announcer" | "observer";
 

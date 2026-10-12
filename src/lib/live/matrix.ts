@@ -5,6 +5,7 @@ import type { ScoringModel } from "@/lib/schemas/scoring-model";
 import { markOf } from "./heat-input";
 import { formatCell, type CellState, type MatrixCell, type MatrixRow, type PanelState, type PendingMatrixRow } from "./matrix-model";
 import { consoleRows, lineOfSlot, type SheetAttempt } from "./rider-sheet";
+import { copy } from "@/lib/ui-copy";
 import type { AttemptRow, FlagRow, PendingRow, ScoreRow } from "./types";
 
 /** A row of the head judge's table with what the console needs to act on it. */
@@ -110,7 +111,7 @@ export function pendingRows(attempts: AttemptRow[], notes: PendingRow[], panelSe
   const out: PendingMatrixRow[] = [];
   for (const riderKey of riders) {
     const sheet: SheetAttempt[] = attempts.filter((a) => a.entry_id === riderKey).map((a) => ({ id: a.id, seq: a.seq, status: a.status, trickName: a.trick_name, direction: a.direction, deleted: Boolean(a.deleted_at) }));
-    const mine = notes.filter((n) => n.entry_id === riderKey && panel.has(n.judge_seat_id)).map((n) => ({ seatId: n.judge_seat_id, slot: n.slot, score: Number(n.score) }));
+    const mine = notes.filter((n) => n.entry_id === riderKey && panel.has(n.judge_seat_id)).map((n) => ({ seatId: n.judge_seat_id, slot: n.slot, score: Number(n.score), ...(n.missed ? { missed: true } : {}) }));
     for (const row of consoleRows(sheet, mine)) {
       out.push({
         kind: "pending",
@@ -122,7 +123,7 @@ export function pendingRows(attempts: AttemptRow[], notes: PendingRow[], panelSe
         cells: panelSeatIds.map((judgeId) => {
           const v = row.cells[judgeId];
           const note = notes.find((n) => n.entry_id === riderKey && n.judge_seat_id === judgeId && lineOfSlot(sheet, n.slot) === row.n);
-          return { judgeId, value: v === undefined ? null : v, label: v === undefined ? "—" : formatCell(v), noteId: note?.id ?? null };
+          return { judgeId, value: v === undefined ? null : v, label: v === undefined ? "—" : row.missed[judgeId] ? copy.live.queue.missedRow : formatCell(v), noteId: note?.id ?? null };
         }),
       });
     }

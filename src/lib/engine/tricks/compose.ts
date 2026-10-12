@@ -24,7 +24,12 @@ export function composeTrick(vocab: TrickVocab, parts: TrickParts): { name: stri
     const mult = item.multiplier && item.multiplier !== vocab.hideMultiplierWhen ? findKey(vocab, "multiplier", item.multiplier) : undefined;
     return [mult ? `${mult.label} ${block.label}` : block.label];
   });
-  const name = renderTrickName(vocab.namingTemplate, direction?.label ?? "", words, parts.freeText?.trim() ?? "");
+  // a count ("6x") goes in front of the trick: the first block, or the free text when no block was recognised
+  const count = parts.count && parts.count > 0 ? `${parts.count}x ` : "";
+  let free = parts.freeText?.trim() ?? "";
+  if (count && words.length) words[0] = `${count}${words[0]}`;
+  else if (count && free) free = `${count}${free}`;
+  const name = renderTrickName(vocab.namingTemplate, direction?.label ?? "", words, free);
   return { name, categoryKey: categoryOf(vocab, parts.items.map((i) => i.id)) };
 }
 

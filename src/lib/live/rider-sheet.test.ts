@@ -2,8 +2,16 @@ import { describe, expect, it } from "vitest";
 import { computeHeat } from "@/lib/engine/scoring";
 import { preset } from "@/lib/engine/scoring/fixtures";
 import {
+  activeLine,
   allowedLine,
   buildLines,
+  lineDone,
+  lineTypable,
+  missedSwitch,
+  needsScore,
+  pulseLine,
+  rangesOf,
+  skipLines,
   consoleRows,
   lineOfSlot,
   noteBlockers,
@@ -35,10 +43,51 @@ describe("lines of a rider's sheet", () => {
     expect(lines[1].kind).toBe("crash");
   });
 
-  it("with no cap: the logged attempts plus one empty line ahead", () => {
-    expect(buildLines({ attempts: [], notes: [], cap: null }).map((l) => l.n)).toEqual([1]);
+  it("with no cap: 10 lines from the start, like the spotter's sheet, whatever the spotter has logged", () => {
+    expect(buildLines({ attempts: [], notes: [], cap: null }).map((l) => l.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     const lines = buildLines({ attempts: [att(1), att(2)], notes: [], cap: null });
-    expect(lines.map((l) => l.kind)).toEqual(["attempt", "attempt", "empty"]);
+    expect(lines.map((l) => l.kind).slice(0, 4)).toEqual(["attempt", "attempt", "empty", "empty"]);
+    expect(lines).toHaveLength(10);
+  });
+
+  it("with no cap, every time the last line is filled a new empty line appears under it at once, so the judge never runs out", () => {
+    const withLast = (extra: Partial<Parameters<typeof buildLines>[0]>) => buildLines({ attempts: [], notes: [], cap: null, ...extra });
+    // line 10 holds a note (nothing logged): line 11 appears
+    const notes = Array.from({ length: 10 }, (_, i) => note(i + 1, 5));
+    expect(withLast({ notes }).map((l) => l.n)).toHaveLength(11);
+    expect(withLast({ notes })[10]).toMatchObject({ n: 11, kind: "empty", pending: null });
+    // line 11 filled too: line 12
+    expect(withLast({ notes: [...notes, note(11, 6)] })).toHaveLength(12);
+    // line 10 empty: no new line
+    expect(withLast({ notes: notes.slice(0, 9) })).toHaveLength(10);
+    // a Missed note on the last line counts as filled
+    expect(withLast({ notes: [...notes.slice(0, 9), { seatId: "J1", slot: 10, score: 0, missed: true }] })).toHaveLength(11);
+    // ten attempts logged and scored: line 11 is there for the next one
+    const ten = Array.from({ length: 10 }, (_, i) => att(i + 1));
+    const mine = new Map(ten.map((a) => [a.id, 7] as [string, number]));
+    expect(buildLines({ attempts: ten, notes: [], cap: null, mine })).toHaveLength(11);
+    expect(buildLines({ attempts: ten, notes: [], cap: null })).toHaveLength(10); // last line has an attempt but no score yet: it is the line to score
+  });
+
+  it("with no limit a judge may score up to 10 past the attempts the spotter has logged: the 10 lines the sheet starts with are all open, a line beyond is shown and closed", () => {
+    const none = buildLines({ attempts: [], notes: [], cap: null });
+    expect(none).toHaveLength(10);
+    expect(none.every((l) => l.open)).toBe(true);
+    // line 10 filled: line 11 appears, and it is 11 past nothing logged: closed
+    const full = buildLines({ attempts: [], notes: Array.from({ length: 10 }, (_, i) => note(i + 1, 5)), cap: null });
+    expect(full).toHaveLength(11);
+    expect(full[10]).toMatchObject({ n: 11, open: false });
+    // one attempt logged: line 11 is open
+    const one = buildLines({ attempts: [att(1)], notes: Array.from({ length: 10 }, (_, i) => note(i + 2, 5)), cap: null, mine: new Map([["a1", 7]]) });
+    expect(one.find((l) => l.n === 11)?.open).toBe(true);
+    expect(one.find((l) => l.n === 12)).toMatchObject({ open: false });
+    // with a limit every line is open
+    expect(buildLines({ attempts: [], notes: [], cap: 7 }).every((l) => l.open)).toBe(true);
+  });
+
+  it("a capped division never grows: the cap is the number of lines", () => {
+    const notes = Array.from({ length: 7 }, (_, i) => note(i + 1, 5));
+    expect(buildLines({ attempts: [], notes, cap: 7 })).toHaveLength(7);
   });
 
   it("an attempt the head judge added past the cap gets its own line (the sheet never hides a logged attempt)", () => {
@@ -88,11 +137,12 @@ describe("where a note is kept", () => {
     expect(slotForLine([att(1), att(2)], 2)).toBeNull();
   });
 
-  it("which empty lines may hold a note: up to the cap; with no cap only the one line ahead", () => {
+  it("which empty lines may hold a note: up to the cap; with no cap up to 10 past the attempts logged", () => {
     expect(allowedLine([att(1)], 7, 7)).toBe(true);
     expect(allowedLine([att(1)], 7, 8)).toBe(false);
     expect(allowedLine([att(1), att(2)], null, 3)).toBe(true);
-    expect(allowedLine([att(1), att(2)], null, 4)).toBe(false);
+    expect(allowedLine([att(1), att(2)], null, 12)).toBe(true); // 10 past the attempts the spotter has logged
+    expect(allowedLine([att(1), att(2)], null, 13)).toBe(false);
     expect(allowedLine([att(1), att(2)], 7, 2)).toBe(false); // that line has an attempt: it is a score, not a note
   });
 });
@@ -264,17 +314,260 @@ describe("mixed views: two judges on the Queue and two on the Rider sheet", () =
     expect(mixed.riders[0].counted).toHaveLength(3);
   });
 
-  it("the view is a per-device choice, kept apart from the scores: Queue unless the device chose the Rider sheet", () => {
+  it("the view is a per-device choice, kept apart from the scores: the Rider sheet unless the device chose the Queue", () => {
     const store = new Map<string, string>();
     const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
-    expect(viewPreference.read(storage)).toBe("queue");
-    viewPreference.write("sheet", storage);
     expect(viewPreference.read(storage)).toBe("sheet");
     viewPreference.write("queue", storage);
     expect(viewPreference.read(storage)).toBe("queue");
+    viewPreference.write("sheet", storage);
+    expect(viewPreference.read(storage)).toBe("sheet");
     store.set(viewPreference.key, "nonsense");
-    expect(viewPreference.read(storage)).toBe("queue");
-    expect(viewPreference.read(null)).toBe("queue");
-    expect(viewPreference.read({ getItem: () => { throw new Error("blocked"); } })).toBe("queue");
+    expect(viewPreference.read(storage)).toBe("sheet");
+    expect(viewPreference.read(null)).toBe("sheet");
+    expect(viewPreference.read({ getItem: () => { throw new Error("blocked"); } })).toBe("sheet");
   });
+});
+
+// ---- line by line: a score can only land on the first line of the rider that has no score yet
+describe("the judge types only on the first line with no score yet", () => {
+  const scored = (...scores: Array<number | "missed" | null>) => {
+    const mine = new Map<string, number | "missed">();
+    scores.forEach((s, i) => {
+      if (s !== null) mine.set(`a${i + 1}`, s);
+    });
+    return mine;
+  };
+
+  it("on a fresh sheet only line 1 takes a score; the lines below wait", () => {
+    const lines = buildLines({ attempts: [], notes: [], cap: 7 });
+    expect(activeLine(lines)).toBe(1);
+    expect(lineTypable(lines, 1)).toBe(true);
+    for (const n of [2, 3, 7]) expect(lineTypable(lines, n)).toBe(false);
+  });
+
+  it("a line with a score (or a note typed ahead of the spotter) is done and opens the next one", () => {
+    const lines = buildLines({ attempts: [att(1), att(2)], notes: [note(3, 6)], cap: 7, mine: scored(7.5, null) });
+    // line 1 scored, line 2 has an attempt and no score, line 3 holds a note
+    expect(lines.map(lineDone).slice(0, 4)).toEqual([true, false, true, false]);
+    expect(activeLine(lines)).toBe(2);
+    expect(lineTypable(lines, 3)).toBe(false); // it holds a note, but line 2 comes first: the note is changed again only when line 2 is done
+  });
+
+  it("a filled line can still be changed until Submit: every line up to the first empty one takes typing", () => {
+    const lines = buildLines({ attempts: [att(1), att(2), att(3)], notes: [], cap: 7, mine: scored(7, 8, null) });
+    expect(activeLine(lines)).toBe(3);
+    expect([1, 2, 3].map((n) => lineTypable(lines, n))).toEqual([true, true, true]);
+    expect(lineTypable(lines, 4)).toBe(false);
+  });
+
+  it("a line greyed by a crash counts as done", () => {
+    const lines = buildLines({ attempts: [att(1), att(2, "crashed"), att(3)], notes: [], cap: 7, mine: scored(7) });
+    expect(lineDone(lines[1])).toBe(true);
+    expect(activeLine(lines)).toBe(3);
+  });
+
+  it("Missed counts as done and opens the next line (an attempt, or a line the spotter has not logged yet)", () => {
+    const withAttempt = buildLines({ attempts: [att(1), att(2)], notes: [], cap: 7, mine: scored(7, "missed") });
+    expect(lineDone(withAttempt[1])).toBe(true);
+    expect(activeLine(withAttempt)).toBe(3);
+    const ahead = buildLines({ attempts: [att(1)], notes: [{ seatId: "J1", slot: 2, score: 0, missed: true }, ], cap: 7, mine: scored(7) });
+    expect(ahead[1]).toMatchObject({ kind: "empty", pending: "missed" });
+    expect(lineDone(ahead[1])).toBe(true);
+    expect(activeLine(ahead)).toBe(3);
+    expect(lineTypable(ahead, 3)).toBe(true);
+  });
+
+  it("when every line is done, every line takes typing until Submit", () => {
+    const lines = buildLines({ attempts: [att(1), att(2)], notes: [], cap: 2, mine: scored(7, 8) });
+    expect(activeLine(lines)).toBeNull();
+    expect(lines.map((l) => lineTypable(lines, l.n))).toEqual([true, true]);
+  });
+
+  it("with no limit the rule holds the same way: the first line without a score is the active one", () => {
+    const lines = buildLines({ attempts: [att(1)], notes: [], cap: null, mine: scored(7) });
+    expect(lines).toHaveLength(10);
+    expect(activeLine(lines)).toBe(2);
+  });
+});
+
+// ---- the judge never waits for the spotter
+describe("scoring ahead of the spotter", () => {
+  it("the first line without a score takes a score at once, logged or not, and a pending note counts as a score for the rule: typing ahead always works", () => {
+    // the spotter has logged nothing: the judge types line 1, line 2, line 3, each time the next one opens
+    let notes: SheetNote[] = [];
+    for (const n of [1, 2, 3]) {
+      const lines = buildLines({ attempts: [], notes, cap: 7 });
+      expect(activeLine(lines)).toBe(n);
+      expect(lineTypable(lines, n)).toBe(true);
+      expect(lines[n - 1].kind).toBe("empty"); // the attempt does not exist yet
+      notes = [...notes, note(n, 6 + n / 10)];
+    }
+    expect(activeLine(buildLines({ attempts: [], notes, cap: 7 }))).toBe(4);
+  });
+
+  it("the spotter two jumps behind: lines 1 and 2 have attempts (no score yet), line 3 is empty: the judge scores 1, 2, then 3 straight away", () => {
+    const attempts = [att(1), att(2)];
+    let mine = new Map<string, number | "missed">();
+    expect(activeLine(buildLines({ attempts, notes: [], cap: 7, mine }))).toBe(1);
+    mine = new Map([["a1", 7]]);
+    expect(activeLine(buildLines({ attempts, notes: [], cap: 7, mine }))).toBe(2);
+    mine = new Map([["a1", 7], ["a2", 8]]);
+    const lines = buildLines({ attempts, notes: [], cap: 7, mine });
+    expect(activeLine(lines)).toBe(3);
+    expect(lines[2].kind).toBe("empty");
+    expect(lineTypable(lines, 3)).toBe(true);
+  });
+
+  it("the notes attach to the rider's next logged attempts in order", () => {
+    const notes = [note(1, 7), note(2, 8), note(3, 6)];
+    const got = settleNotes([att(1), att(2), att(3)], notes);
+    expect(got.scores.map((x) => [x.attemptId, x.score])).toEqual([["a1", 7], ["a2", 8], ["a3", 6]]);
+  });
+});
+
+describe("tapping a line below an empty one asks once", () => {
+  const mineOf = (...v: Array<number | "missed" | null>) => new Map(v.flatMap((x, i) => (x === null ? [] : [[`a${i + 1}`, x] as [string, number | "missed"]])));
+
+  it("lists the lines above that have no score from this judge", () => {
+    const lines = buildLines({ attempts: [att(1), att(2), att(3)], notes: [], cap: 7, mine: mineOf() });
+    expect(skipLines(lines, 4)).toEqual([1, 2, 3]);
+    expect(skipLines(lines, 3)).toEqual([1, 2]);
+    expect(skipLines(lines, 2)).toEqual([1]);
+  });
+
+  it("nothing to ask for the active line or any line above it (they take a score at once), nor for a line whose lines above are all done", () => {
+    const lines = buildLines({ attempts: [att(1), att(2)], notes: [], cap: 7, mine: mineOf(7) });
+    expect(skipLines(lines, 1)).toEqual([]);
+    expect(skipLines(lines, 2)).toEqual([]);
+    expect(skipLines(lines, 3)).toEqual([2]);
+  });
+
+  it("lines already done (a score, a note, Missed, a crash) are not marked again", () => {
+    const lines = buildLines({ attempts: [att(1), att(2, "crashed"), att(3)], notes: [], cap: 7, mine: mineOf("missed") });
+    expect(skipLines(lines, 4)).toEqual([3]);
+    const ahead = buildLines({ attempts: [], notes: [note(1, 5)], cap: 7 });
+    expect(skipLines(ahead, 4)).toEqual([2, 3]);
+  });
+
+  it("the question names the lines as ranges: 1–2, 1–3, 1, 1–2 and 4", () => {
+    expect(rangesOf([1, 2])).toBe("1–2");
+    expect(rangesOf([1, 2, 3])).toBe("1–3");
+    expect(rangesOf([1])).toBe("1");
+    expect(rangesOf([1, 2, 4])).toBe("1–2 and 4");
+    expect(rangesOf([2, 4, 6])).toBe("2, 4 and 6");
+  });
+
+  it("after the answer (those lines Missed) the tapped line is the active one and takes a score; a Missed line can still be given a score", () => {
+    const attempts = [att(1), att(2), att(3)];
+    const lines = buildLines({ attempts, notes: [], cap: 7, mine: mineOf("missed", "missed", "missed") });
+    expect(activeLine(lines)).toBe(4);
+    expect(lineTypable(lines, 4)).toBe(true);
+    expect([1, 2, 3].map((n) => lineTypable(lines, n))).toEqual([true, true, true]); // a Missed line can still be given a score until Submit
+  });
+});
+
+describe("a Missed note on a line the spotter has not logged", () => {
+  it("becomes the judge's Missed on the attempt that takes the line, and nothing else", () => {
+    const got = settleNotes([att(1), att(2)], [{ seatId: "J1", slot: 2, score: 0, missed: true }, note(1, 7)]);
+    expect(got.scores).toEqual([
+      { attemptId: "a1", seatId: "J1", score: 7 },
+      { attemptId: "a2", seatId: "J1", score: null, missed: true },
+    ]);
+    expect(got.remaining).toEqual([]);
+  });
+  it("a crash discards it like any note", () => {
+    const got = settleNotes([att(1, "crashed")], [{ seatId: "J1", slot: 1, score: 0, missed: true }]);
+    expect(got.scores).toEqual([]);
+    expect(got.discarded).toHaveLength(1);
+  });
+  it("the head judge's pending row names it 'Missed' instead of a number", () => {
+    const rows = consoleRows([], [{ seatId: "J1", slot: 1, score: 0, missed: true }]);
+    expect(rows[0].missed).toEqual({ J1: true });
+  });
+
+describe("which lines are highlighted as needing a score", () => {
+  const mineOf = (...v: Array<number | "missed" | null>) => new Map(v.flatMap((x, i) => (x === null ? [] : [[`a${i + 1}`, x] as [string, number | "missed"]])));
+  it("a logged attempt with no score from this judge needs one; a scored, Missed or crashed line, and an empty line the spotter has not logged, do not", () => {
+    const lines = buildLines({ attempts: [att(1), att(2), att(3, "crashed"), att(4), att(5)], notes: [note(6, 5)], cap: 7, mine: mineOf(7, "missed", null, null) });
+    expect(lines.map(needsScore)).toEqual([false, false, false, true, true, false, false]);
+  });
+  it("it follows the judge: scoring a line takes the highlight off, and a note typed ahead on an empty line never had one", () => {
+    const before = buildLines({ attempts: [att(1), att(2)], notes: [], cap: 7 });
+    expect(before.filter(needsScore).map((l) => l.n)).toEqual([1, 2]);
+    const after = buildLines({ attempts: [att(1), att(2)], notes: [], cap: 7, mine: mineOf(7) });
+    expect(after.filter(needsScore).map((l) => l.n)).toEqual([2]);
+  });
+});
+
+describe("a score typed ahead covers the attempt that takes it: nothing lights up, not even for a moment", () => {
+  it("while the note is still on the phone (the attempt has arrived, the score has not), the line shows the note's value as the judge's mark and is not highlighted", () => {
+    const lines = buildLines({ attempts: [att(1), att(2)], notes: [note(1, 7), { seatId: "J1", slot: 2, score: 0, missed: true }], cap: 7 });
+    expect(lines[0]).toMatchObject({ kind: "attempt", mine: 7 });
+    expect(lines[1]).toMatchObject({ kind: "attempt", mine: "missed" });
+    expect(lines.filter(needsScore)).toEqual([]);
+    expect(activeLine(lines)).toBe(3);
+  });
+
+  it("when the note has already gone but the score has not arrived yet, the remembered value covers the line the same way", () => {
+    const ahead = new Map<number, number | "missed">([[1, 7], [2, "missed"]]);
+    const lines = buildLines({ attempts: [att(1), att(2), att(3)], notes: [], cap: 7, ahead });
+    expect(lines.filter(needsScore).map((l) => l.n)).toEqual([3]);
+    expect(activeLine(lines)).toBe(3);
+  });
+
+  it("the server's score wins over the remembered value", () => {
+    const lines = buildLines({ attempts: [att(1)], notes: [], cap: 7, ahead: new Map([[1, 7]]), mine: new Map([["a1", 8]]) });
+    expect(lines[0].mine).toBe(8);
+  });
+
+  it("a crash line is never highlighted, whatever the judge had typed ahead on it, and the typed value does not move to another line", () => {
+    const ahead = new Map<number, number | "missed">([[1, 7], [2, 6], [3, 8]]);
+    const lines = buildLines({ attempts: [att(1), att(2, "crashed"), att(3)], notes: [], cap: 7, ahead });
+    expect(lines.map((l) => [l.kind, l.mine])).toEqual([["attempt", 7], ["crash", null], ["attempt", 8], ["empty", null], ["empty", null], ["empty", null], ["empty", null]]);
+    expect(lines.filter(needsScore)).toEqual([]);
+  });
+});
+
+describe("only one line pulses and glows: the first line without a score, when it is a logged attempt", () => {
+  const mineOf = (...v: Array<number | "missed" | null>) => new Map(v.flatMap((x, i) => (x === null ? [] : [[`a${i + 1}`, x] as [string, number | "missed"]])));
+  it("three attempts logged, only line 1 scored: lines 2 and 3 need a score, only line 2 pulses; scoring line 2 moves it to line 3", () => {
+    const attempts = [att(1), att(2), att(3)];
+    let lines = buildLines({ attempts, notes: [], cap: 7, mine: mineOf(7) });
+    expect(lines.filter(needsScore).map((l) => l.n)).toEqual([2, 3]);
+    expect(pulseLine(lines)).toBe(2);
+    lines = buildLines({ attempts, notes: [], cap: 7, mine: mineOf(7, 8) });
+    expect(pulseLine(lines)).toBe(3);
+    lines = buildLines({ attempts, notes: [], cap: 7, mine: mineOf(7, 8, 6) });
+    expect(pulseLine(lines)).toBeNull();
+  });
+  it("when the first line without a score is an empty line (the spotter is behind) nothing pulses: there is no attempt waiting for a score", () => {
+    expect(pulseLine(buildLines({ attempts: [att(1)], notes: [], cap: 7, mine: mineOf(7) }))).toBeNull();
+    expect(pulseLine(buildLines({ attempts: [], notes: [], cap: 7 }))).toBeNull();
+  });
+});
+
+describe("Missed is a switch", () => {
+  const mineOf = (...v: Array<number | "missed" | null>) => new Map(v.flatMap((x, i) => (x === null ? [] : [[`a${i + 1}`, x] as [string, number | "missed"]])));
+  it("a tap turns it on; on a line that is already Missed a tap turns it off", () => {
+    const lines = buildLines({ attempts: [att(1), att(2)], notes: [{ seatId: "J1", slot: 3, score: 0, missed: true }], cap: 7, mine: mineOf("missed", 7) });
+    expect(missedSwitch(lines[0])).toBe("clear"); // an attempt line set to Missed
+    expect(missedSwitch(lines[1])).toBe("set"); // a scored line
+    expect(missedSwitch(lines[2])).toBe("clear"); // an empty line with a Missed note
+    expect(missedSwitch(lines[3])).toBe("set"); // an empty line
+  });
+  it("typing a score on a Missed line turns Missed off by itself: the line then holds the score and the switch reads 'set'", () => {
+    const missed = buildLines({ attempts: [att(1)], notes: [], cap: 7, mine: mineOf("missed") });
+    const typed = buildLines({ attempts: [att(1)], notes: [], cap: 7, mine: mineOf(8) });
+    expect(missedSwitch(missed[0])).toBe("clear");
+    expect(typed[0].mine).toBe(8);
+    expect(missedSwitch(typed[0])).toBe("set");
+  });
+  it("turned off, the line has no score from this judge again: it is the active line, and a logged attempt needs a score", () => {
+    const off = buildLines({ attempts: [att(1)], notes: [], cap: 7 });
+    expect(off[0].mine).toBeNull();
+    expect(activeLine(off)).toBe(1);
+    expect(needsScore(off[0])).toBe(true);
+  });
+});
 });

@@ -572,3 +572,9 @@ html[data-observing] select:disabled {
     margin: 12mm;
   }
 }
+
+/* iPhone Safari zooms into any box whose text is smaller than 16 px, and the page then has to be zoomed out by hand. Every box on the officials' screens (spotter, judge,
+   head judge, observer) is at least 16 px; the digit size grows in Large. Zooming itself is never blocked. */
+:is(.beach-day, .beach-dark) :is(input:not([type="checkbox"], [type="radio"], [type="range"]), textarea, select) {
+  font-size: max(16px, var(--size-digit, 16px));
+}

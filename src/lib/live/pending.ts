@@ -36,6 +36,7 @@ export interface PendingAttempt {
   trickName: string | null;
   direction: "left" | "right" | null;
   needsReview: boolean;
+  rawText?: string | null;
   createdAt: number;
 }
 
@@ -43,8 +44,8 @@ export function pendingAttempts(items: QueueEntry[]): PendingAttempt[] {
   return items
     .filter((i) => i.kind === "attempt" && i.state !== "refused")
     .map((i) => {
-      const p = i.payload as { heatId: string; entryId: string; status: "landed" | "crashed"; trickName: string | null; direction: "left" | "right" | null; needsReview?: boolean };
-      return { clientKey: i.clientKey, entryId: p.entryId, heatId: p.heatId, status: p.status, trickName: p.trickName, direction: p.direction, needsReview: Boolean(p.needsReview), createdAt: i.clientRev };
+      const p = i.payload as { heatId: string; entryId: string; status: "landed" | "crashed"; trickName: string | null; direction: "left" | "right" | null; needsReview?: boolean; rawText?: string | null };
+      return { clientKey: i.clientKey, entryId: p.entryId, heatId: p.heatId, status: p.status, trickName: p.trickName, direction: p.direction, needsReview: Boolean(p.needsReview), rawText: p.rawText ?? null, createdAt: i.clientRev };
     });
 }
 
