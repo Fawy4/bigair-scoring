@@ -265,7 +265,7 @@ function SheetLineRow({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") (e.target as HTMLInputElement).blur(); // closes the keyboard; it never logs
                 }}
-                className="h-11 w-full min-w-0 rounded-full border border-beach-border bg-beach-bg py-0 pl-3 pr-11 text-body font-bold text-beach-ink placeholder:font-medium placeholder:text-beach-muted disabled:bg-beach-surface"
+                className="h-11 w-full min-w-0 rounded-full border border-beach-border bg-beach-bg py-0 pl-3 pr-11 text-body font-medium text-ellipsis text-beach-ink placeholder:font-medium placeholder:text-beach-muted disabled:bg-beach-surface"
               />
               {!text && canType && speech.supported ? (
                 <button

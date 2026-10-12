@@ -2,7 +2,7 @@ import { useId, type ComponentProps, type MouseEventHandler, type ReactNode } fr
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Per screen exactly one primary (teal fill), then secondary (1 px frame), quiet (text and icon) and danger (red, only for something that cannot be undone). */
+/** Per screen exactly one primary (orange fill), then secondary (1 px frame), quiet (text and icon) and danger (red, only for something that cannot be undone). */
 export type ButtonVariant = "primary" | "secondary" | "quiet" | "danger";
 
 interface Base {
@@ -35,7 +35,7 @@ const DISABLED = "cursor-not-allowed border-dashed border-beach-border bg-beach-
 export function Button({ variant = "secondary", icon: Icon, iconOnly, href, target, className, children, disabled, disabledReason, type = "button", ...rest }: ButtonProps) {
   const reasonId = useId();
   const classes = cn(
-    "inline-flex min-h-[var(--org-ctl)] items-center justify-center gap-2 rounded-[8px] border px-3 py-1.5 text-body font-semibold",
+    "inline-flex min-h-[var(--org-ctl)] items-center justify-center gap-2 rounded-full border px-4 py-1.5 text-body font-bold",
     disabled ? DISABLED : VARIANT[variant],
     iconOnly && "min-w-[var(--org-ctl)] px-0",
     className,

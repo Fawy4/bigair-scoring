@@ -100,11 +100,11 @@ export function ObserverShell({ eventId, eventName, observerName, views, start }
   ];
 
   return (
-    <main data-testid="observer-page" className="flex h-[100dvh] flex-col bg-[#f4f6f6] text-[#111]">
+    <main data-testid="observer-page" className="beach-day flex h-[100dvh] flex-col bg-beach-surface text-beach-ink">
       <SeatHeartbeat />
-      <header data-testid="observer-bar" className="flex flex-col gap-2 border-b-2 border-[#111] bg-white px-3 py-2">
+      <header data-testid="observer-bar" className="flex flex-col gap-2 border-b border-beach-line bg-beach-bg px-3 py-2">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-          <p className="text-base font-extrabold">{eventName}</p>
+          <p className="text-base font-bold">{eventName}</p>
           <p className="text-sm font-semibold">{T.seatLine(observerName)}</p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
@@ -116,7 +116,7 @@ export function ObserverShell({ eventId, eventName, observerName, views, start }
               value={view.key}
               onChange={(e) => setKey(e.target.value)}
               disabled={!still}
-              className="h-14 w-full min-w-0 rounded-lg border-2 border-[#111] bg-white px-3 text-lg font-bold"
+              className="h-12 w-full min-w-0 rounded-full border border-beach-border bg-beach-bg px-4 text-lg font-bold"
             >
               {groups.map(([g, label]) => {
                 const list = views.filter((v) => v.group === g);
@@ -133,20 +133,20 @@ export function ObserverShell({ eventId, eventName, observerName, views, start }
             </select>
           </label>
           {view.frame !== "phone" ? (
-            <button type="button" data-testid="observer-fit" onClick={() => setActual((a) => !a)} className="h-14 rounded-lg border-2 border-[#111] bg-white px-3 text-base font-bold">
+            <button type="button" data-testid="observer-fit" onClick={() => setActual((a) => !a)} className="h-12 rounded-full border border-beach-border bg-beach-bg px-4 text-base font-bold">
               {actual ? T.fit : T.actual}
             </button>
           ) : null}
         </div>
         {views.every((v) => v.group !== "judges") ? <p className="text-sm font-semibold">{T.noJudges}</p> : null}
       </header>
-      <p data-testid="observer-strip" role="status" title={T.stripNote} className="flex items-center gap-2 bg-[#e8ecec] px-3 py-1 text-sm font-semibold text-[#333]">
+      <p data-testid="observer-strip" role="status" title={T.stripNote} className="flex min-h-11 items-center gap-2 border-b border-beach-line bg-beach-surface px-3 py-1 text-sm font-medium text-beach-muted">
         <Eye aria-hidden className="size-4" />
         {T.strip}
       </p>
       <div ref={box} className={cn("relative min-h-0 flex-1", actual ? "overflow-auto" : "overflow-hidden", view.frame === "phone" && "flex justify-center overflow-y-hidden")}>
         {still ? (
-          <div style={{ width: frame.w * frame.scale, height: frame.h * frame.scale }} className="overflow-hidden bg-white">
+          <div style={{ width: frame.w * frame.scale, height: frame.h * frame.scale }} className="overflow-hidden bg-beach-bg">
             <iframe
               key={view.key}
               data-testid="observer-frame"
@@ -154,13 +154,13 @@ export function ObserverShell({ eventId, eventName, observerName, views, start }
               title={view.label}
               src={frameSrc(eventId, view)}
               style={{ width: frame.w, height: frame.h, transform: frame.scale === 1 ? undefined : `scale(${frame.scale})`, transformOrigin: "0 0" }}
-              className="block border-0"
+              className="block border-0 bg-beach-bg"
             />
           </div>
         ) : (
-          <div data-testid="observer-revoked" role="alert" className="m-4 flex max-w-md flex-col gap-3 rounded-lg border-4 border-[#111] bg-white p-4">
+          <div data-testid="observer-revoked" role="alert" className="m-4 flex max-w-md flex-col gap-3 rounded-3xl border border-beach-border bg-beach-bg p-4">
             <p className="text-lg font-bold">{T.revoked}</p>
-            <Link href="/join" className="flex h-14 items-center justify-center rounded-md bg-[#111] text-lg font-bold text-white">
+            <Link href="/join" className="flex h-12 items-center justify-center rounded-full bg-beach-accent text-lg font-bold text-beach-on-accent">
               {T.joinAgain}
             </Link>
           </div>

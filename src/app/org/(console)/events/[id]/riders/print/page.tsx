@@ -40,7 +40,7 @@ export default async function StartListPage({ params, searchParams }: { params: 
     });
   const printed = new Intl.DateTimeFormat("en-GB", { dateStyle: "long", timeStyle: "short", timeZone: event.timezone }).format(new Date());
   const C = copy.riders.printColumns;
-  const cell = "border-2 border-[#111] p-2 text-left text-lg";
+  const cell = "border-2 border-beach-ink p-2 text-left text-lg";
 
   return (
     <main className="print-page flex max-w-4xl flex-col gap-4">

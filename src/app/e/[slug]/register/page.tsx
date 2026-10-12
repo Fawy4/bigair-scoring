@@ -52,7 +52,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
   const closes = closingText(info.closesOn, info.closesTime, info.event.timezone);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-6 p-4 text-[#111]">
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-6 p-4 text-beach-ink">
       <Link href={`/e/${info.event.slug}`} className="pt-4 font-bold underline">
         ← {info.event.name}
       </Link>
@@ -67,12 +67,12 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
       </header>
 
       {!info.open ? (
-        <section className="rounded-lg border-4 border-[#111] p-4" data-testid="registration-closed">
+        <section className="rounded-lg border-4 border-beach-ink p-4" data-testid="registration-closed">
           <p className="text-xl font-extrabold">{copy.registration.closedTitle}</p>
           <p className="mt-2 text-lg font-semibold">{info.closedMessage?.trim() || copy.registration.closedDefault}</p>
         </section>
       ) : divisions.length === 0 ? (
-        <p className="rounded-lg border-4 border-[#111] p-4 text-lg font-semibold">{copy.registration.noDivisions}</p>
+        <p className="rounded-lg border-4 border-beach-ink p-4 text-lg font-semibold">{copy.registration.noDivisions}</p>
       ) : (
         <>
           <p className="text-lg font-semibold">{copy.registration.intro}</p>
@@ -82,7 +82,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
       )}
 
       {branding.sponsors.length > 0 ? (
-        <footer className="flex flex-wrap items-center gap-4 border-t-2 border-[#111] pt-4" aria-label={copy.registration.sponsors}>
+        <footer className="flex flex-wrap items-center gap-4 border-t-2 border-beach-ink pt-4" aria-label={copy.registration.sponsors}>
           {branding.sponsors.map((s) =>
             s.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

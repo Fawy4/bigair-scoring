@@ -7,7 +7,7 @@ const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLI
     <input
       type={type}
       className={cn(
-        "flex min-h-[var(--org-ctl)] w-full rounded-[8px] border border-input bg-background px-3 text-body font-medium text-foreground placeholder:text-beach-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:border-dashed disabled:bg-secondary",
+        "flex min-h-[var(--org-ctl)] w-full rounded-[12px] border border-input bg-background px-3 text-body font-medium text-foreground placeholder:text-beach-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:border-dashed disabled:bg-secondary",
         type === "number" && "w-[8ch] min-w-[var(--org-ctl)] max-w-full text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [field-sizing:content]",
         className,
       )}

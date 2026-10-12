@@ -55,7 +55,7 @@ test("the control shows on mouse move, hides after three seconds; Dark is the de
   await page.goto(screen());
   const frame = page.getByTestId("big-screen");
   await expect(frame).toHaveAttribute("data-mode", "dark");
-  expect(await frame.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(11, 14, 15)");
+  expect(await frame.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(0, 0, 0)");
   await expect(page.getByTestId("screen-mode-toggle")).toHaveCount(0); // the screen stays clean
   await wake(page);
   await expect(page.getByTestId("screen-mode-toggle")).toHaveAccessibleName("Day colours");
@@ -65,7 +65,7 @@ test("the control shows on mouse move, hides after three seconds; Dark is the de
   await wake(page);
   await page.getByTestId("screen-mode-toggle").click();
   await expect(frame).toHaveAttribute("data-mode", "day");
-  expect(await frame.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(251, 250, 245)");
+  expect(await frame.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(255, 255, 255)");
   await page.reload();
   await expect(frame).toHaveAttribute("data-mode", "day"); // remembered in this browser
   await page.keyboard.press("d");

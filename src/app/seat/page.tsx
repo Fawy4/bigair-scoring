@@ -17,10 +17,10 @@ export default async function SeatPage({ searchParams }: { searchParams: Promise
   const seat = seats?.[0];
   if (seat && seat.active && !card && SCREEN[seat.role]) redirect(`/${SCREEN[seat.role]}/${seat.event_id}`);
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 p-4 text-[#111]">
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 p-4 text-beach-ink">
       {seat ? (
         <>
-          <div role="status" className="rounded-lg border-4 border-[#111] p-4">
+          <div role="status" className="rounded-lg border-4 border-beach-ink p-4">
             <p className="text-lg font-semibold">{copy.seat.connected}</p>
             <p className="text-3xl font-extrabold">{seat.name}</p>
             <p className="text-xl font-bold">{copy.seat.roles[seat.role] ?? seat.role} · {seat.events?.name}</p>

@@ -39,7 +39,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
 
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: "#0b0e0f", color: "#ffffff", padding: 64, fontFamily: "sans-serif" }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: "#111111", color: "#ffffff", padding: 64, fontFamily: "sans-serif" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
           {logo ? (
             // eslint-disable-next-line @next/next/no-img-element

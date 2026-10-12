@@ -33,9 +33,9 @@ export function StepRail({ steps, activeKey, onSelect }: { steps: readonly RailS
                     onSelect(s.key);
                   }
                 }}
-                className={cn("flex min-h-[var(--org-ctl)] flex-col gap-1 rounded-[8px] border-l-4 px-3 py-2 hover:bg-beach-surface", active ? "border-beach-accent bg-beach-surface" : "border-transparent")}
+                className={cn("flex min-h-[var(--org-ctl)] flex-col gap-1 rounded-2xl border-l-4 px-3 py-2 hover:bg-beach-surface", active ? "border-beach-accent bg-beach-surface" : "border-transparent")}
               >
-                <span className="text-body font-semibold">
+                <span className="text-body font-bold">
                   <span className="tabular-nums text-beach-muted">{i + 1}</span> {s.label}
                 </span>
                 <StatusPill state={s.state} />

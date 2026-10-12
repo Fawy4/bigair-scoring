@@ -65,7 +65,7 @@ export default async function RiderLinksPage({ params }: { params: Promise<{ id:
             <h2 className="text-xl font-bold">{g.division.name}</h2>
             <ul data-testid="rider-links" className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(15rem,1fr))]">
               {g.riders.map((r) => (
-                <li key={r.id} data-testid="rider-link-card" data-entry={r.id} className="flex break-inside-avoid items-center gap-3 rounded-card border-2 border-[#111] bg-white p-2 text-[#111]">
+                <li key={r.id} data-testid="rider-link-card" data-entry={r.id} className="flex break-inside-avoid items-center gap-3 rounded-card border-2 border-beach-ink bg-white p-2 text-beach-ink">
                   <Qr url={r.url} size={104} />
                   <span className="flex min-w-0 flex-col gap-1">
                     <span className="text-lg font-extrabold leading-tight">{r.name}</span>

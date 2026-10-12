@@ -42,9 +42,9 @@ export function LogoField({
       <div className="flex flex-wrap items-center gap-3">
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={value} alt={copy.logo.current(label)} className="h-16 max-w-[12rem] rounded border-2 border-[#111] bg-white object-contain p-1" />
+          <img src={value} alt={copy.logo.current(label)} className="h-16 max-w-[12rem] rounded border-2 border-beach-ink bg-white object-contain p-1" />
         ) : (
-          <span className="flex h-16 w-24 items-center justify-center rounded border-2 border-dashed border-[#111] text-sm font-semibold">{copy.logo.none}</span>
+          <span className="flex h-16 w-24 items-center justify-center rounded border-2 border-dashed border-beach-ink text-sm font-semibold">{copy.logo.none}</span>
         )}
         <label className="btn cursor-pointer">
           {busy ? copy.logo.uploading : value ? copy.logo.replace : copy.logo.choose}

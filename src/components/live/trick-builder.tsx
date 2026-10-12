@@ -139,7 +139,7 @@ export function TrickBuilder({
                     data-direction-button
                     aria-pressed={on}
                     onClick={() => onTapDirection(b.key)}
-                    className={cn("inline-flex min-h-bar w-full items-center justify-center gap-1.5 rounded-lg text-name font-semibold", on ? "border-4 border-beach-ink bg-beach-surface text-beach-ink" : "border border-beach-border bg-beach-bg text-beach-ink")}
+                    className={cn("inline-flex min-h-bar w-full items-center justify-center gap-1.5 rounded-full text-name font-bold", on ? "border-4 border-beach-ink bg-beach-surface text-beach-ink" : "border border-beach-border bg-beach-bg text-beach-ink")}
                   >
                     {on ? <Check aria-hidden className="size-5" strokeWidth={3} /> : null}
                     {b.label}
@@ -282,11 +282,11 @@ export function TrickBuilder({
           </div>
         ) : (
           <div className="grid min-h-bar grid-cols-2 gap-1.5">
-            <button type="button" data-testid="crash-button" disabled={!canCrash} onClick={() => setConfirmCrash(true)} className={cn("inline-flex items-center justify-center gap-1.5 rounded-lg border text-name font-semibold", canCrash ? "border-beach-crash bg-beach-crash text-beach-on-crash" : "border-beach-line bg-beach-surface text-beach-muted")}>
+            <button type="button" data-testid="crash-button" disabled={!canCrash} onClick={() => setConfirmCrash(true)} className={cn("inline-flex items-center justify-center gap-1.5 rounded-full border text-name font-bold", canCrash ? "border-beach-crash bg-beach-crash text-beach-on-crash" : "border-beach-line bg-beach-surface text-beach-muted")}>
               <Zap aria-hidden className="size-4" />
               {T.crash}
             </button>
-            <button type="button" data-testid="log-button" disabled={!canLog} onClick={onLog} className={cn("inline-flex items-center justify-center rounded-lg border text-name font-semibold", canLog ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-line bg-beach-surface text-beach-muted")}>
+            <button type="button" data-testid="log-button" disabled={!canLog} onClick={onLog} className={cn("inline-flex items-center justify-center rounded-full border text-name font-bold", canLog ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-line bg-beach-surface text-beach-muted")}>
               {T.log}
             </button>
           </div>

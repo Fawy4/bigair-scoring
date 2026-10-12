@@ -21,7 +21,7 @@ export function HeatTimer({ remainingMs, state, size = "slim", soundOn, onToggle
       <span
         data-testid="heat-timer-clock"
         aria-label={`${T.remaining} ${formatClock(remainingMs)}`}
-        className={cn("font-semibold tabular-nums", size === "head" ? "text-timer-head" : "text-timer-slim")}
+        className={cn("font-bold tabular-nums", size === "head" ? "text-timer-head" : "text-timer-slim")}
       >
         {formatClock(remainingMs)}
       </span>
@@ -31,7 +31,7 @@ export function HeatTimer({ remainingMs, state, size = "slim", soundOn, onToggle
         </Pill>
       </span>
       {onToggleSound ? (
-        <button type="button" aria-pressed={!!soundOn} onClick={onToggleSound} className="inline-flex min-h-tap items-center gap-1 rounded-xl border border-beach-border bg-beach-bg px-3 text-small font-semibold text-beach-ink">
+        <button type="button" aria-pressed={!!soundOn} onClick={onToggleSound} className="inline-flex min-h-tap items-center gap-1 rounded-full border border-beach-border bg-beach-bg px-4 text-small font-bold text-beach-ink">
           {soundOn ? <Volume2 aria-hidden className="size-4" /> : <VolumeX aria-hidden className="size-4" />}
           {soundOn ? T.soundOn : T.soundOff}
         </button>

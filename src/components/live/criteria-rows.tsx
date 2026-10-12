@@ -35,7 +35,7 @@ export function CriteriaRows({ criteria, values, onChange, computedLabel, captio
               data-criterion={c.key}
               aria-pressed={on}
               onClick={() => setActive(c.key)}
-              className={cn("flex min-h-[52px] min-w-0 flex-col items-center justify-center rounded-xl px-1 py-1", on ? "border-2 border-beach-accent bg-beach-bg" : "border border-beach-line bg-beach-surface")}
+              className={cn("flex min-h-[52px] min-w-0 flex-col items-center justify-center rounded-xl px-1 py-1", on ? "border-2 border-beach-ink bg-beach-bg shadow-[inset_0_-4px_0_var(--beach-accent)]" : "border border-beach-line bg-beach-surface")}
             >
               <span className="max-w-full truncate text-small font-semibold text-beach-ink">{c.label}</span>
               <span className={cn("text-body tabular-nums", v === undefined ? "font-medium text-beach-muted" : "font-semibold text-beach-ink")}>{v === undefined ? copy.live.pad.none : formatPadValue(v, c.scale)}</span>

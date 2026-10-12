@@ -5,6 +5,7 @@ import { CircleOff, Clock, FastForward, Pause, Play, RotateCcw, Send, Square, Un
 import type { LucideIcon } from "lucide-react";
 import { HeatTimer } from "./heat-timer";
 import { Chip } from "./chip";
+import { SettingsMenu } from "./live-shell";
 import { ConnectionBadge } from "./connection-badge";
 import { Pill } from "./pill";
 import { RiderLabel } from "@/components/rider-label";
@@ -38,12 +39,13 @@ export function HeadControlTab() {
   return (
     <div data-testid="head-control" data-state={state} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 py-1.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-small font-semibold">{h.heatName}</p>
+        <p className="min-w-0 truncate text-body font-bold">{h.heatName}</p>
         <span className="flex items-center gap-1.5">
           <ConnectionBadge status="synced" />
           <Chip data-testid="details-toggle" pressed={details} onClick={() => setDetails((d) => !d)}>
             {details ? copy.live.header.detailsOn : copy.live.header.details}
           </Chip>
+          <SettingsMenu />
         </span>
       </div>
       {details ? (
@@ -51,7 +53,7 @@ export function HeadControlTab() {
           <h3 className="text-heading font-semibold text-beach-muted">{T.totals}</h3>
           <ul className="flex flex-col gap-1">
             {h.totals.map((t) => (
-              <li key={t.place} className="flex items-center justify-between gap-2 rounded-xl border border-beach-line bg-beach-surface px-2 py-1">
+              <li key={t.place} className="flex min-h-row items-center justify-between gap-2 border-b border-beach-line px-1 py-1">
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="text-name font-semibold tabular-nums">{t.place}</span>
                   <RiderLabel model={t.label} variant="live" bare />
@@ -75,10 +77,10 @@ export function HeadControlTab() {
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-2 rounded-card border border-beach-line bg-beach-surface p-2">
+          <div className="flex items-center gap-3 border-y border-beach-line py-2">
             {state === "scheduled" || state === "published" ? (
               <>
-                <span className="text-timer-head font-semibold tabular-nums">{formatClock(state === "scheduled" ? 600_000 : 0)}</span>
+                <span className="text-timer-head font-bold tabular-nums">{formatClock(state === "scheduled" ? 600_000 : 0)}</span>
                 <Pill tone="ink">{T.stateWord[state]}</Pill>
               </>
             ) : (

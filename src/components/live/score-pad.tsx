@@ -23,9 +23,9 @@ function PadButton({ selected, disabled, onClick, children, label }: { selected:
       onClick={onClick}
       style={{ height: "var(--size-pad-height)", width: "var(--size-pad-height)" }}
       className={cn(
-        "shrink-0 rounded-lg text-digit",
+        "shrink-0 rounded-xl text-digit",
         // weight 700 is for the selected score only
-        selected ? "border border-beach-accent bg-beach-accent font-bold text-beach-on-accent" : disabled ? "border border-beach-line bg-beach-surface font-semibold text-beach-muted" : "border border-beach-border bg-beach-bg font-semibold text-beach-ink",
+        selected ? "border border-beach-accent bg-beach-accent font-bold text-beach-on-accent" : disabled ? "border border-beach-line bg-beach-surface font-bold text-beach-muted" : "border border-beach-border bg-beach-bg font-bold text-beach-ink",
       )}
     >
       {children}

@@ -37,7 +37,7 @@ export function FlagStrip({ model, size = "slim", soundOn, onToggleSound, classN
       role="status"
       aria-label={`${state.label}${state.countdownMs !== null ? ` ${formatClock(state.countdownMs)}` : ""}${model.heatName ? `, ${model.heatName}` : ""}`}
       style={{ backgroundColor: state.colour, color: ink }}
-      className={cn("flex min-h-tap min-w-0 flex-1 items-center gap-x-2 rounded-xl px-2", model.nextPart ? "flex-wrap gap-y-0.5 py-1" : "overflow-hidden", className)}
+      className={cn("flex min-h-tap min-w-0 flex-1 items-center gap-x-2 rounded-[22px] px-3", model.nextPart ? "flex-wrap gap-y-0.5 py-1" : "overflow-hidden", className)}
     >
       <span data-testid="heat-timer-state" className={cn("min-w-0 text-small font-bold", model.nextPart ? "shrink-0" : "shrink truncate")}>
         {model.words}
@@ -58,7 +58,7 @@ export function FlagStrip({ model, size = "slim", soundOn, onToggleSound, classN
         </span>
       ) : null}
       {onToggleSound ? (
-        <button type="button" aria-pressed={!!soundOn} onClick={onToggleSound} className="inline-flex min-h-tap shrink-0 items-center gap-1 rounded-lg border border-current px-2 text-small font-semibold">
+        <button type="button" aria-pressed={!!soundOn} onClick={onToggleSound} className="inline-flex min-h-tap shrink-0 items-center gap-1 rounded-full border border-current px-3 text-small font-bold">
           {soundOn ? <Volume2 aria-hidden className="size-4" /> : <VolumeX aria-hidden className="size-4" />}
           {soundOn ? copy.live.timer.soundOn : copy.live.timer.soundOff}
         </button>
