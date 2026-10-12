@@ -787,8 +787,10 @@ test("(i) the clear button empties the trick box in one tap (the attempt keeps i
   await spotter.getByTestId("spot-view-list").click();
   await spotter.locator("#trick-text").fill("3x kiteloop");
   await expect(spotter.getByTestId("trick-text-clear")).toBeVisible();
-  await spotter.locator("#trick-text").press("Enter");
-  await expect(spotter.getByTestId("composed-name").locator("p.sr-only")).toHaveText("3x Kiteloop");
-  await spotter.getByTestId("trick-text-clear").click();
+  await spotter.getByTestId("trick-text-clear").click(); // one tap empties it
   await expect(spotter.locator("#trick-text")).toHaveValue("");
+  await expect(spotter.getByTestId("trick-text-clear")).toHaveCount(0);
+  await spotter.locator("#trick-text").fill("3x kiteloop");
+  await spotter.locator("#trick-text").press("Enter"); // reads the words: the count goes in front, in the singular
+  await expect(spotter.getByTestId("composed-name").locator("p.sr-only")).toHaveText("3x Kiteloop");
 });
