@@ -42,13 +42,22 @@ export function lineOfSlot(attempts: SheetAttempt[], slot: number): number | nul
   return slot > maxSeq(attempts) ? live(attempts).length + (slot - maxSeq(attempts)) : null;
 }
 
-/** Number of lines on a rider's sheet: the cap (7 for Arrow), never fewer than the attempts logged; with no cap the logged attempts plus one empty line ahead. */
+/** With no attempt limit the judge's sheet starts with this many lines, like the spotter's. */
+export const OPEN_LINES = 10;
+
+/**
+ * Number of lines on a rider's sheet at the start: the cap (7 for Arrow), never fewer than the attempts logged; with no cap 10 lines (or the attempts logged, if
+ * more). With no cap `buildLines` then adds a line each time the last one is filled.
+ */
 export function lineCount(attempts: SheetAttempt[], cap: number | null): number {
   const n = live(attempts).length;
-  return cap === null ? n + 1 : Math.max(cap, n);
+  return cap === null ? Math.max(OPEN_LINES, n) : Math.max(cap, n);
 }
 
-/** May a note be typed on this line? Only an empty line, and only up to the cap (with no cap: only the one line ahead). */
+/**
+ * May a note be typed on this line, as the database allows it? Only an empty line, and only up to the cap (with no cap: only the one line ahead of the attempts
+ * logged). A rule of the server: the sheet asks the server's question, so a line it cannot keep a note on is not offered.
+ */
 export function allowedLine(attempts: SheetAttempt[], cap: number | null, line: number): boolean {
   const n = live(attempts).length;
   if (!Number.isInteger(line) || line <= n || line < 1) return false;
@@ -68,23 +77,27 @@ export interface SheetLine {
   pending: number | "missed" | null;
   /** Where a note on this empty line is kept (null on a line with an attempt). */
   slot: number | null;
+  /**
+   * The server can keep a score here. Always true with an attempt limit (every line up to the limit) and on a line that has its attempt; with no limit the server keeps
+   * a note only on the one line ahead of the attempts logged (`allowedLine`), so lines further down are shown but wait for the spotter.
+   */
+  open: boolean;
 }
 
-/** The lines of one rider's sheet for one judge. */
+/** The lines of one rider's sheet for one judge. With no cap, a new empty line follows as soon as the last line is done, so the judge never runs out of lines. */
 export function buildLines(i: { attempts: SheetAttempt[]; notes: SheetNote[]; cap: number | null; mine?: Map<string, number | "missed"> }): SheetLine[] {
   const logged = live(i.attempts);
   const total = lineCount(i.attempts, i.cap);
   const out: SheetLine[] = [];
-  for (let n = 1; n <= total; n++) {
+  const make = (n: number): SheetLine => {
     const a = logged[n - 1];
-    if (a) {
-      out.push({ n, kind: a.status === "crashed" ? "crash" : "attempt", attemptId: a.id, seq: a.seq, trickName: a.trickName, direction: a.direction, mine: a.status === "crashed" ? null : (i.mine?.get(a.id) ?? null), pending: null, slot: null });
-      continue;
-    }
+    if (a) return { n, kind: a.status === "crashed" ? "crash" : "attempt", attemptId: a.id, seq: a.seq, trickName: a.trickName, direction: a.direction, mine: a.status === "crashed" ? null : (i.mine?.get(a.id) ?? null), pending: null, slot: null, open: true };
     const slot = slotForLine(i.attempts, n);
     const held = i.notes.find((x) => x.slot === slot);
-    out.push({ n, kind: "empty", trickName: null, direction: null, mine: null, pending: held ? (held.missed ? "missed" : held.score) : null, slot });
-  }
+    return { n, kind: "empty", trickName: null, direction: null, mine: null, pending: held ? (held.missed ? "missed" : held.score) : null, slot, open: allowedLine(i.attempts, i.cap, n) };
+  };
+  for (let n = 1; n <= total; n++) out.push(make(n));
+  if (i.cap === null) while (out.length > 0 && lineDone(out[out.length - 1])) out.push(make(out.length + 1));
   return out;
 }
 
@@ -191,8 +204,32 @@ export function activeLine(lines: SheetLine[]): number | null {
 
 /** May a score be typed on line n? The first line that is not done, and any line above it (a filled line can be changed until Submit); the lines below wait. */
 export function lineTypable(lines: SheetLine[], n: number): boolean {
+  const line = lines.find((l) => l.n === n);
+  if (!line || !line.open) return false;
   const a = activeLine(lines);
   return a === null || n <= a;
+}
+
+/**
+ * Tapping line n when it is below the first line without a score: the lines above that have no score from this judge, which one tap can mark Missed. Empty when line n
+ * takes a score at once (it is the active line or above it).
+ */
+export function skipLines(lines: SheetLine[], n: number): number[] {
+  const line = lines.find((l) => l.n === n);
+  if (!line || !line.open || lineTypable(lines, n)) return [];
+  return lines.filter((l) => l.n < n && !lineDone(l)).map((l) => l.n);
+}
+
+/** Line numbers as the question names them: "1–2", "1–3", "1–2 and 4", "2, 4 and 6". */
+export function rangesOf(nums: number[]): string {
+  const runs: string[] = [];
+  for (let k = 0; k < nums.length; ) {
+    let e = k;
+    while (e + 1 < nums.length && nums[e + 1] === nums[e] + 1) e++;
+    runs.push(e > k ? `${nums[k]}–${nums[e]}` : String(nums[k]));
+    k = e + 1;
+  }
+  return runs.length <= 1 ? (runs[0] ?? "") : `${runs.slice(0, -1).join(", ")} and ${runs[runs.length - 1]}`;
 }
 
 // ---- the switch "Queue / Rider sheet": remembered per device (one choice for the whole phone, also on the head judge's Score tab), default Rider sheet.

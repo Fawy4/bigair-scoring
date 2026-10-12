@@ -3671,6 +3671,10 @@ export const copy = {
     missedAria: (n: number) => `Missed: I did not see attempt ${n}`,
     waitsAria: (n: number) => `Score for attempt ${n}: score the lines above first`,
     waitsNote: "Score the line above first",
+    /** Tapping a line below one with no score from this judge: asks once, and one tap marks the lines above Missed and opens the tapped line. */
+    skipAsk: (lines: string, count: number, n: number) => (count === 1 ? `Line ${lines} has no score from you. Set it to Missed and score line ${n}?` : `Lines ${lines} have no score from you. Set them to Missed and score line ${n}?`),
+    skipConfirm: "Set to Missed",
+    skipCancel: "Not now",
     lineByLineHelp: "You can only type on the first line that has no score yet. If you did not see an attempt, tap Missed on its line: that counts as done and opens the next line.",
     lineByLineExample: "Example: line 2 is empty, so line 3 waits. Tap Missed on line 2 and line 3 opens.",
   },

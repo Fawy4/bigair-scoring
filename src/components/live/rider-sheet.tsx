@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Flame } from "lucide-react";
 import { Chip } from "./chip";
 import type { ConnectionStatus } from "./connection-badge";
@@ -11,7 +11,7 @@ import { RiderTile } from "./rider-tile";
 import { ScreenHeader } from "./screen-header";
 import { LearnMore } from "@/components/manual/learn-more";
 import { errorSentence } from "@/lib/live/errors";
-import { activeLine, lineTypable, type SheetLine } from "@/lib/live/rider-sheet";
+import { activeLine, lineTypable, rangesOf, skipLines, type SheetLine } from "@/lib/live/rider-sheet";
 import { formatPadValue, padRefusal, parsePadInput } from "@/lib/live/score-pad";
 import type { LiveRider } from "@/lib/live/view-types";
 import type { Scale } from "@/lib/schemas/scoring-model";
@@ -40,7 +40,7 @@ export function ViewSwitch({ view, onChange }: { view: "queue" | "sheet"; onChan
  * box. A valid score is saved the moment it is typed (nothing to press); a score the scale does not allow is refused with the pad's own sentence and is not
  * saved. On an empty line the score is the judge's private note ("pending"); a crash line is greyed and takes none.
  */
-function LineRow({ line, scale, locked, ended, typable, onScore, onMissed, onClear }: { line: SheetLine; scale: Scale; locked: boolean; ended: boolean; /** Line by line: only the first line with no score yet (and the ones above it) take typing. */ typable: boolean; onScore: (line: SheetLine, value: number) => void; onMissed: (line: SheetLine) => void; onClear: (line: SheetLine) => void }) {
+function LineRow({ line, scale, locked, ended, typable, askable, ask, onAsk, onScore, onMissed, onClear }: { line: SheetLine; scale: Scale; locked: boolean; ended: boolean; /** Line by line: only the first line with no score yet (and the ones above it) take typing. */ typable: boolean; /** A line below the first one with no score: tapping it asks once whether to mark the lines above Missed. */ askable: boolean; /** The question, when it is open on this line. */ ask: { text: string; onConfirm: () => void; onCancel: () => void } | null; onAsk: (line: SheetLine) => void; onScore: (line: SheetLine, value: number) => void; onMissed: (line: SheetLine) => void; onClear: (line: SheetLine) => void }) {
   const [draft, setDraft] = useState<string | null>(null);
   const stored = line.kind === "attempt" ? line.mine : line.kind === "empty" ? line.pending : null;
   const waits = !typable && line.kind !== "crash";
@@ -61,7 +61,7 @@ function LineRow({ line, scale, locked, ended, typable, onScore, onMissed, onCle
       data-line={line.n}
       data-kind={line.kind}
       data-waits={waits ? "true" : undefined}
-      className={cn("flex flex-col gap-0.5 px-2 py-1", crash && "bg-beach-surface text-beach-muted", line.kind === "empty" && "bg-beach-bg", waits && "text-beach-muted")}
+      className={cn("flex flex-col gap-0.5 px-2 py-1", crash && "bg-beach-surface text-beach-muted", line.kind === "empty" && "bg-beach-bg")}
     >
       <div className="flex min-h-row items-center gap-2">
         <span data-testid="line-number" className="w-6 shrink-0 text-center text-name font-semibold tabular-nums">
@@ -93,7 +93,7 @@ function LineRow({ line, scale, locked, ended, typable, onScore, onMissed, onCle
         ) : (
           <span className="flex shrink-0 items-center gap-1">
             {line.kind === "empty" && line.pending !== null ? <Pill tone="pending">{T.pendingTag}</Pill> : null}
-            <Chip data-testid="line-missed" aria-label={T.missedAria(line.n)} pressed={stored === "missed"} disabled={locked || !typable} onClick={() => onMissed(line)}>
+            <Chip data-testid="line-missed" aria-label={T.missedAria(line.n)} pressed={stored === "missed"} disabled={locked || (waits && !askable)} onClick={() => (waits ? onAsk(line) : onMissed(line))}>
               {T.missed}
             </Chip>
             <input
@@ -104,8 +104,11 @@ function LineRow({ line, scale, locked, ended, typable, onScore, onMissed, onCle
               aria-label={waits ? T.waitsAria(line.n) : T.scoreBox(line.n)}
               placeholder={T.placeholder}
               value={text}
-              disabled={locked || !typable}
+              disabled={locked || (waits && !askable)}
+              readOnly={waits}
+              onPointerDown={waits && askable ? (e) => { e.preventDefault(); onAsk(line); } : undefined}
               onChange={(e) => change(e.target.value)}
+              onFocus={waits && askable ? () => onAsk(line) : undefined}
               onBlur={() => setDraft(null)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") (e.target as HTMLInputElement).blur();
@@ -120,6 +123,19 @@ function LineRow({ line, scale, locked, ended, typable, onScore, onMissed, onCle
           <Chip data-testid="line-clear" aria-label={T.clearAria(line.n)} onClick={() => onClear(line)}>
             {T.clear}
           </Chip>
+        </div>
+      ) : null}
+      {ask ? (
+        <div role="alert" data-testid="skip-ask" className="flex flex-col gap-1 rounded-lg border border-beach-border bg-beach-surface px-2 py-1">
+          <p className="text-body font-semibold">{ask.text}</p>
+          <div className="flex gap-1.5">
+            <Chip variant="accent" data-testid="skip-confirm" onClick={ask.onConfirm}>
+              {T.skipConfirm}
+            </Chip>
+            <Chip data-testid="skip-cancel" onClick={ask.onCancel}>
+              {T.skipCancel}
+            </Chip>
+          </div>
         </div>
       ) : null}
       {crash ? (
@@ -181,6 +197,23 @@ export function RiderSheetView(p: RiderSheetViewProps) {
   const shown = p.ended ? all.filter((l) => l.kind !== "empty" || l.pending !== null) : all;
   const locked = Boolean(p.lockedMessage);
   const active = activeLine(all);
+  // the question "Lines 1–2 have no score from you. Mark them Missed and score line 3?": open on one tapped line at a time
+  const [asking, setAsking] = useState<{ riderId: string; n: number } | null>(null);
+  const [focusN, setFocusN] = useState<number | null>(null);
+  const skip = asking && rider && asking.riderId === rider.id ? skipLines(all, asking.n) : [];
+  useEffect(() => {
+    if (focusN === null) return;
+    const el = document.querySelector<HTMLInputElement>(`[data-testid="sheet-line"][data-line="${focusN}"] [data-testid="line-score"]`);
+    if (el && !el.disabled && !el.readOnly) {
+      el.focus();
+      setFocusN(null);
+    }
+  });
+  useEffect(() => {
+    if (focusN === null) return;
+    const t = setTimeout(() => setFocusN(null), 4000);
+    return () => clearTimeout(t);
+  }, [focusN]);
   return (
     <>
       {p.bare ? null : <ScreenHeader heatName={p.heatName} seat={p.seat} remainingMs={p.remainingMs} timerState={p.timerState} connection={p.connection} pending={p.pendingCount} onRetry={p.onRetry} clock={p.clock} flag={p.flag} />}
@@ -205,7 +238,7 @@ export function RiderSheetView(p: RiderSheetViewProps) {
               </h2>
               <ol data-testid="sheet-lines" data-active-line={active ?? undefined} aria-label={T.sheetFor(rider.label.primary.text)} className="flex flex-col divide-y divide-beach-line rounded-xl border border-beach-line">
                 {shown.map((line) => (
-                  <LineRow key={line.n} line={line} scale={p.scale} locked={locked} ended={Boolean(p.ended)} typable={lineTypable(all, line.n)} onScore={(l, v) => p.onScore(rider.id, l, v)} onMissed={(l) => p.onMissed(rider.id, l)} onClear={(l) => p.onClear(rider.id, l)} />
+                  <LineRow key={line.n} line={line} scale={p.scale} locked={locked} ended={Boolean(p.ended)} typable={lineTypable(all, line.n)} askable={skipLines(all, line.n).length > 0} onAsk={(l) => setAsking({ riderId: rider.id, n: l.n })} ask={asking && asking.riderId === rider.id && asking.n === line.n && skip.length > 0 ? { text: T.skipAsk(rangesOf(skip), skip.length, line.n), onConfirm: () => { for (const n of skip) { const l = all.find((x) => x.n === n); if (l) p.onMissed(rider.id, l); } setAsking(null); setFocusN(line.n); }, onCancel: () => setAsking(null) } : null} onScore={(l, v) => p.onScore(rider.id, l, v)} onMissed={(l) => p.onMissed(rider.id, l)} onClear={(l) => p.onClear(rider.id, l)} />
                 ))}
               </ol>
             </>

@@ -184,18 +184,18 @@ test("the judges' Rider sheet is line by line: line 3 takes no score while line 
   await expect(spotter.getByTestId("trick-builder")).toBeVisible({ timeout: 30_000 });
 
   // only line 1 takes a score on a fresh sheet
-  await expect(jbox(j1, 1)).toBeEnabled();
-  for (const n of [2, 3, 7]) await expect(jbox(j1, n)).toBeDisabled();
+  await expect(jbox(j1, 1)).toBeEditable();
+  for (const n of [2, 3, 7]) await expect(jbox(j1, n)).toHaveAttribute("readonly", "");
   await jtype(j1, 1, "7");
   await expect.poll(async () => ((await w.db.from("pending_scores").select("slot").eq("heat_id", H)).data ?? []).length, { timeout: 30_000 }).toBe(1);
   // line 2 is empty (nothing scored there): line 3 waits
-  await expect(jbox(j1, 2)).toBeEnabled();
-  await expect(jbox(j1, 3)).toBeDisabled();
+  await expect(jbox(j1, 2)).toBeEditable();
+  await expect(jbox(j1, 3)).toHaveAttribute("readonly", "");
   // Missed on line 2 counts as done and opens line 3
   await jline(j1, 2).getByTestId("line-missed").click();
   await expect.poll(async () => ((await w.db.from("pending_scores").select("slot, missed").eq("heat_id", H).order("slot")).data ?? []).map((n) => [n.slot, n.missed]), { timeout: 30_000 }).toEqual([[1, false], [2, true]]);
-  await expect(jbox(j1, 3)).toBeEnabled();
-  await expect(jbox(j1, 4)).toBeDisabled();
+  await expect(jbox(j1, 3)).toBeEditable();
+  await expect(jbox(j1, 4)).toHaveAttribute("readonly", "");
   await jtype(j1, 3, "8");
 
   // j2 on the same attempts scores normally, line by line
@@ -222,11 +222,11 @@ test("the judges' Rider sheet is line by line: line 3 takes no score while line 
   await jtype(j1, 1, "7.5");
   await expect.poll(async () => (await scoresOf(rows[0].id)).filter((s) => s.judge_seat_id === w.seats.j1.id).map((s) => Number(s.score)), { timeout: 30_000 }).toEqual([7.5]);
   // j2 has scored lines 1 and 2; line 3 is its first line without a score, line 4 waits
-  await expect(jbox(j2, 3)).toBeEnabled({ timeout: 40_000 });
-  await expect(jbox(j2, 4)).toBeDisabled();
+  await expect(jbox(j2, 3)).toBeEditable({ timeout: 40_000 });
+  await expect(jbox(j2, 4)).toHaveAttribute("readonly", "");
   await jline(j2, 3).getByTestId("line-missed").click();
   await expect.poll(async () => (await scoresOf(rows[2].id)).filter((s) => s.judge_seat_id === w.seats.j2.id), { timeout: 30_000 }).toEqual([{ judge_seat_id: w.seats.j2.id, score: null, missed: true }]);
-  await expect(jbox(j2, 4)).toBeEnabled({ timeout: 40_000 });
+  await expect(jbox(j2, 4)).toBeEditable({ timeout: 40_000 });
 });
 
 test("the Trick list: the text box sits directly above Log and CRASH, Left and Right fill their row, and the text box and Log stay visible when the height is cut the way a keyboard cuts it", async ({ browser }) => {
@@ -363,4 +363,109 @@ test("a Missed note left at the end of the heat blocks Publish and says it is a 
   const audit = (await w.db.from("audit_log").select("action, before").eq("event_id", w.eventId).eq("action", "pending_cleared_by_head")).data ?? [];
   expect(audit).toHaveLength(1);
   expect(audit[0].before).toMatchObject({ judge_seat_id: w.seats.j1.id, missed: true });
+});
+
+
+// ---- Judges' Rider sheet 0.20.0: every line visible, the judge never waits for the spotter
+const mkAttempts = async (heat: string, entry: string, n: number, seat?: string) => {
+  const ids: string[] = [];
+  for (let i = 1; i <= n; i++) {
+    const r = await w.db.from("trick_attempts").insert({ heat_id: heat, entry_id: entry, seq: i, status: "landed", trick_name: `Left Backroll ${i}`, direction: "left", client_key: crypto.randomUUID(), ...(seat ? { created_by_seat: seat } : {}) }).select("id").single();
+    ids.push(r.data!.id as string);
+  }
+  return ids;
+};
+const myScores = async (judge: "j1" | "j2", heat: string) => (await w.db.from("trick_scores").select("score, missed, trick_attempts!inner(seq)").eq("heat_id", heat).eq("judge_seat_id", w.seats[judge].id)).data ?? [];
+
+test("the judge never waits for the spotter: all 7 lines are there, lines 1, 2 and 3 take a score at once, the console shows three pending rows, and the scores land on attempts 1, 2 and 3 in order", async ({ browser }) => {
+  test.setTimeout(900_000);
+  const H = w.heats[0];
+  const E = w.entries[0];
+  await w.db.from("heat_slots").update({ modifier: "DNS" }).eq("heat_id", H).neq("entry_id", E);
+  await w.startHeat(H);
+  const j1 = await phone(browser, "j1", `/judge/${w.eventId}`, { newViews: true });
+  const spotter = await phone(browser, "spotter", `/spot/${w.eventId}`); // the Trick list
+  const head = await phone(browser, "head", `/head/${w.eventId}`, { size: { width: 1500, height: 1000 } });
+  await head.locator(`[data-testid="order-row"][data-heat="${H}"]`).click({ timeout: 60_000 });
+  await expect(j1.getByTestId("rider-sheet")).toBeVisible({ timeout: 30_000 });
+
+  // every line is there from the start (the division's limit), none hidden or greyed like a crash
+  await expect(j1.getByTestId("sheet-line")).toHaveCount(7);
+  for (const n of [1, 2, 3, 4, 5, 6, 7]) await expect(jline(j1, n)).toBeVisible();
+  await expect(j1.locator('[data-testid="sheet-line"][data-kind="crash"]')).toHaveCount(0);
+
+  // the spotter has logged nothing: the judge scores lines 1, 2 and 3 straight away, each one opening the next
+  await jtype(j1, 1, "7");
+  await jtype(j1, 2, "8");
+  await jtype(j1, 3, "6.5");
+  await expect.poll(async () => ((await w.db.from("pending_scores").select("slot, score").eq("heat_id", H).order("slot")).data ?? []).map((n) => [n.slot, Number(n.score)]), { timeout: 30_000 }).toEqual([[1, 7], [2, 8], [3, 6.5]]);
+  await expect(head.getByTestId("pending-row")).toHaveCount(3, { timeout: 40_000 });
+  await expect(jbox(j1, 4)).toBeEditable(); // the next line is open
+
+  // the spotter catches up: three attempts, and the scores land on attempts 1, 2 and 3 in order, with the spotter's trick names on the lines
+  for (const base of ["backroll", "frontroll", "kiteloop"]) {
+    await block(spotter, "direction:left").click();
+    await block(spotter, `base:${base}`).click();
+    await spotter.getByTestId("log-button").click();
+  }
+  await expect.poll(async () => (await myScores("j1", H)).map((s) => [(s.trick_attempts as unknown as { seq: number }).seq, Number(s.score)]).sort(), { timeout: 40_000 }).toEqual([[1, 7], [2, 8], [3, 6.5]]);
+  await expect(jline(j1, 1)).toContainText("Left Backroll", { timeout: 40_000 });
+  await expect(jline(j1, 3)).toContainText("Left Kiteloop");
+  await expect(head.getByTestId("pending-row")).toHaveCount(0, { timeout: 40_000 });
+});
+
+test("tapping a line below one with no score asks once, in one line, and one tap marks the lines above Missed and opens the tapped line; a Missed line can still be given a score", async ({ browser }) => {
+  test.setTimeout(600_000);
+  const H = w.heats[0];
+  const E = w.entries[0];
+  await w.db.from("heat_slots").update({ modifier: "DNS" }).eq("heat_id", H).neq("entry_id", E);
+  await w.startHeat(H);
+  const ids = await mkAttempts(H, E, 3, w.seats.spotter.id);
+  const j1 = await phone(browser, "j1", `/judge/${w.eventId}`, { newViews: true });
+  await expect(jline(j1, 3)).toContainText("Left Backroll 3", { timeout: 40_000 });
+  await expect(j1.getByTestId("sheet-line")).toHaveCount(7);
+
+  // lines 1-3 have attempts and no score from this judge; line 4 is below them: tapping it asks, it does not do nothing
+  await jbox(j1, 4).click();
+  await expect(j1.getByTestId("skip-ask")).toHaveText(/Lines 1–3 have no score from you\. Set them to Missed and score line 4\?/);
+  await expect(jbox(j1, 4)).toHaveAttribute("readonly", "");
+  // Not now leaves everything as it was
+  await j1.getByTestId("skip-cancel").click();
+  await expect(j1.getByTestId("skip-ask")).toHaveCount(0);
+  expect(await myScores("j1", H)).toHaveLength(0);
+
+  // one tap: 1-3 are Missed, line 4 is open (and focused)
+  await jbox(j1, 4).click();
+  await j1.getByTestId("skip-confirm").click();
+  await expect.poll(async () => (await myScores("j1", H)).map((s) => [(s.trick_attempts as unknown as { seq: number }).seq, s.missed, s.score]).sort(), { timeout: 30_000 }).toEqual([[1, true, null], [2, true, null], [3, true, null]]);
+  await expect(jbox(j1, 4)).toBeEditable({ timeout: 30_000 });
+  await expect(j1.getByTestId("skip-ask")).toHaveCount(0);
+  await expect(jbox(j1, 1)).toHaveValue("Missed");
+  await jtype(j1, 4, "8"); // the spotter has not logged attempt 4: a pending note, as always
+  await expect.poll(async () => ((await w.db.from("pending_scores").select("slot, score").eq("heat_id", H)).data ?? []).map((n) => [n.slot, Number(n.score)]), { timeout: 30_000 }).toEqual([[4, 8]]);
+
+  // a Missed line can still be given a score until Submit
+  await jtype(j1, 2, "6");
+  await expect.poll(async () => (await myScores("j1", H)).filter((s) => (s.trick_attempts as unknown as { seq: number }).seq === 2).map((s) => [s.missed, Number(s.score)]), { timeout: 30_000 }).toEqual([[false, 6]]);
+  expect(ids).toHaveLength(3);
+});
+
+test("with no attempt limit the judge's sheet starts with 10 lines and filling the last one makes a new line appear at once", async ({ browser }) => {
+  test.setTimeout(600_000);
+  await w.db.from("divisions").update({ scoring_overrides: { heat: { maxAttemptsPerRider: null } } as never }).eq("id", w.divisionId);
+  const H = w.heats[0];
+  const E = w.entries[0];
+  await w.db.from("heat_slots").update({ modifier: "DNS" }).eq("heat_id", H).neq("entry_id", E);
+  await w.startHeat(H);
+  // nine attempts logged and scored by this judge: line 10 is the line ahead (the server keeps a note only one line ahead of the attempts logged)
+  const ids = await mkAttempts(H, E, 9, w.seats.spotter.id);
+  for (const id of ids) await w.db.from("trick_scores").insert({ attempt_id: id, judge_seat_id: w.seats.j1.id, score: 7, client_key: crypto.randomUUID(), client_rev: 1 });
+  const j1 = await phone(browser, "j1", `/judge/${w.eventId}`, { newViews: true });
+  await expect(jline(j1, 9)).toContainText("Left Backroll 9", { timeout: 40_000 });
+  await expect(j1.getByTestId("sheet-line")).toHaveCount(10); // 10 lines, none hidden
+  await expect(jbox(j1, 10)).toBeEditable();
+  await jtype(j1, 10, "7.5");
+  await expect(j1.getByTestId("sheet-line")).toHaveCount(11, { timeout: 30_000 }); // a new line appears under the last one at once
+  await expect(jline(j1, 11)).toBeVisible();
+  await expect.poll(async () => ((await w.db.from("pending_scores").select("slot").eq("heat_id", H)).data ?? []).length, { timeout: 30_000 }).toBe(1);
 });
