@@ -3,11 +3,12 @@ import { HeatTimer, type TimerState } from "./heat-timer";
 import { FlagStrip, type FlagStripModel } from "./flag-strip";
 import { ConnectionBadge, type ConnectionStatus } from "./connection-badge";
 import { Chip } from "./chip";
+import { SettingsMenu } from "./live-shell";
 import { copy } from "@/lib/ui-copy";
 
 /**
- * The slim header of the judge and spotter screens: the small timer, the sync pill and a "Details" toggle, then one muted line with the heat and the seat.
- * The timer is small and out of the way (never between the first card and the pad). The Details toggle switches the whole screen to the detailed view.
+ * The slim header of the judge and spotter screens (New look): one row with the flag strip (or the plain timer) and the one round settings button, a second small row with the heat,
+ * the seat and the sync state, and a thin divider under it. The "Details" / "Feed" / "Review" switch, when a screen has one, sits in the first row. No boxes.
  */
 export function ScreenHeader({
   heatName,
@@ -44,10 +45,10 @@ export function ScreenHeader({
   onToggleDetails?: () => void;
 }) {
   return (
-    <header data-testid="screen-header" className="flex flex-col border-b border-beach-line bg-beach-bg px-2 pb-0.5 pt-0.5">
-      <div className="flex min-h-tap items-center justify-between gap-2">
-        <div className={flag ? "flex min-w-0 flex-1 items-center gap-2" : "flex items-baseline gap-2"}>
-          {flag ? <FlagStrip model={flag} /> : showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className="text-name font-semibold">{copy.live.header.between}</span>}
+    <header data-testid="screen-header" className="flex flex-col border-b border-beach-line bg-beach-bg px-2 pb-1 pt-1">
+      <div className="flex min-h-[44px] items-center justify-between gap-2">
+        <div className={flag ? "flex min-w-0 flex-1 items-center gap-2" : "flex min-w-0 flex-1 items-baseline gap-2"}>
+          {flag ? <FlagStrip model={flag} /> : showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className="text-name font-bold">{copy.live.header.between}</span>}
           {clock ? <ClockText timezone={clock.timezone} nowMs={clock.nowMs} /> : null}
         </div>
         {details !== undefined ? (
@@ -55,9 +56,12 @@ export function ScreenHeader({
             {details ? (detailsLabels?.on ?? copy.live.header.detailsOn) : (detailsLabels?.off ?? copy.live.header.details)}
           </Chip>
         ) : null}
+        <SettingsMenu />
       </div>
-      <div className="flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-small font-medium text-beach-muted">{copy.live.header.heatLine(heatName, seat)}</p>
+      <div className="flex items-center justify-between gap-2 pt-0.5">
+        <p className="min-w-0 truncate text-small font-medium text-beach-muted">
+          <span className="font-bold text-beach-ink">{heatName}</span> · {seat}
+        </p>
         <ConnectionBadge status={connection} pending={pending} onRetry={onRetry} />
       </div>
     </header>

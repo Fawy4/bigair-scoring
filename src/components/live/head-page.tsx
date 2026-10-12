@@ -13,7 +13,7 @@ import { HeatControl, type ReviewProps } from "./heat-control";
 import { useHeadController } from "./use-head-controller";
 import { JudgeScreen } from "./judge-screen";
 import { useEndAtZero, useFlagHorns, useTimerSound, useWakeLock } from "./live-hooks";
-import { LiveShell, ScreenSettings, useLiveSettings } from "./live-shell";
+import { LiveShell, SettingsMenu, useLiveSettings } from "./live-shell";
 import { PracticePanel } from "./practice-panel";
 import { ExportButtons } from "@/components/export/export-buttons";
 import { useLiveHeat } from "./use-live-heat";
@@ -274,7 +274,6 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
         </>
       ) : null}
       {practice}
-      <ScreenSettings />
     </div>
   );
   // the review bar and the Impression card on a phone (a laptop's console draws its own)
@@ -288,9 +287,12 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
     );
 
   const header = (
-    <header className="border-b border-beach-line px-3 py-2">
-      <h1 className="whitespace-normal break-words text-name font-semibold">{shown ? heatTitle(ctx, shown) : ctx.event.name}</h1>
-      <p className="text-small font-medium text-beach-muted">{[ctx.event.name, viewer.name].join(" · ")}</p>
+    <header className="flex items-center justify-between gap-2 border-b border-beach-line px-3 py-1.5">
+      <div className="min-w-0">
+        <h1 className="whitespace-normal break-words text-name font-bold">{shown ? heatTitle(ctx, shown) : ctx.event.name}</h1>
+        <p className="text-small font-medium text-beach-muted">{[ctx.event.name, viewer.name].join(" · ")}</p>
+      </div>
+      <SettingsMenu />
     </header>
   );
 

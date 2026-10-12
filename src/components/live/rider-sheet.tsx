@@ -119,20 +119,20 @@ function LineRow({
       data-waits={waits ? "true" : undefined}
       data-needs-score={needs ? "true" : undefined}
       data-pulse={pulse ? "true" : undefined}
-      className={cn("relative flex scroll-mt-20 flex-col gap-0.5 px-2 py-1", crash && "bg-beach-surface text-beach-muted", line.kind === "empty" && "bg-beach-bg")}
+      className={cn("relative flex scroll-mt-20 flex-col gap-0.5 px-2 py-1.5", crash && "bg-beach-surface text-beach-muted", line.kind === "empty" && "bg-beach-bg")}
     >
-      {needs ? <span aria-hidden data-testid="line-needs-bar" className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-beach-accent" /> : null}
-      <div className="flex items-center gap-2">
-        <span data-testid="line-number" className="w-6 shrink-0 self-start pt-1.5 text-center text-name font-semibold tabular-nums">
+      {needs ? <span aria-hidden data-testid="line-needs-bar" className="absolute bottom-1.5 left-0 top-1.5 w-1.5 rounded-r-full bg-beach-accent" /> : null}
+      <div className="flex items-center gap-1.5">
+        <span data-testid="line-number" className="w-5 shrink-0 text-center text-name font-bold tabular-nums">
           {line.n}
         </span>
-        <span className="flex min-w-0 flex-1 flex-col self-start pt-1">
+        <span className="flex min-w-0 flex-1 flex-col">
           {line.kind === "empty" ? (
             <span data-testid="line-trick" className="text-body font-medium leading-tight text-beach-muted">
               {orphan ? T.noAttempt : T.waitingTrick}
             </span>
           ) : (
-            <span data-testid="line-trick" className={cn("flex flex-wrap items-baseline gap-x-1.5 text-body font-semibold", crash && "line-through")}>
+            <span data-testid="line-trick" className={cn("flex flex-wrap items-baseline gap-x-1.5 text-body font-bold", crash && "line-through")}>
               <span>{line.trickName || "—"}</span>
               {line.direction ? <span className="text-small font-medium text-beach-muted">{dirWord(line.direction)}</span> : null}
             </span>
@@ -140,7 +140,7 @@ function LineRow({
           {needs ? (
             <span
               data-testid="line-needs-score"
-              className="mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--beach-accent)_50%,transparent)] bg-[color-mix(in_srgb,var(--beach-accent)_9%,transparent)] px-2 py-0.5 text-small font-semibold text-beach-ink"
+              className="mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-beach-accent bg-[color-mix(in_srgb,var(--beach-accent)_9%,transparent)] px-2 py-0.5 text-small font-bold text-beach-ink"
             >
               <span aria-hidden data-testid="line-needs-dot" className={cn("size-2 rounded-full bg-beach-accent", pulse && "motion-safe:animate-pulse")} />
               {T.needsScore}
@@ -157,22 +157,16 @@ function LineRow({
             <Pill icon={Flame} tone="crash">
               {T.crash}
             </Pill>
-            <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked} onClick={() => onFlagOpen(line)}>
-              {T.flag}
-            </Chip>
+            <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} title={T.flag} icon={Flag} pressed={flagged} disabled={locked} onClick={() => onFlagOpen(line)} className="size-11 px-0" />
           </span>
         ) : (
           <span className="flex shrink-0 items-center gap-1.5">
             {line.kind === "empty" && line.pending !== null && !isMissed ? <Pill tone="pending">{T.pendingTag}</Pill> : null}
-            <span className="flex w-[4.75rem] flex-col gap-1">
-              <Chip data-testid="line-missed" aria-label={T.missedAria(line.n)} aria-pressed={isMissed} pressed={isMissed} disabled={locked || (waits && !tappable)} onClick={() => (waits ? tap() : onMissed(line))} className="h-[max(2.75rem,var(--size-tap))] w-full px-1">
-                {isMissed ? <Check aria-hidden className="size-4 shrink-0" strokeWidth={3} /> : null}
-                {T.missed}
-              </Chip>
-              <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked || line.kind === "empty"} onClick={() => onFlagOpen(line)} className="h-[max(2.75rem,var(--size-tap))] w-full px-1">
-                {T.flag}
-              </Chip>
-            </span>
+            <Chip data-testid="line-missed" aria-label={T.missedAria(line.n)} aria-pressed={isMissed} pressed={isMissed} disabled={locked || (waits && !tappable)} onClick={() => (waits ? tap() : onMissed(line))} className="h-11 px-2.5">
+              {isMissed ? <Check aria-hidden className="size-4 shrink-0" strokeWidth={3} /> : null}
+              {T.missed}
+            </Chip>
+            <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} title={T.flag} icon={Flag} pressed={flagged} disabled={locked || line.kind === "empty"} onClick={() => onFlagOpen(line)} className="size-11 px-0" />
             <input
               data-testid="line-score"
               inputMode="decimal"
@@ -191,10 +185,10 @@ function LineRow({
                 if (e.key === "Enter") (e.target as HTMLInputElement).blur();
               }}
               className={cn(
-                "h-[max(2.75rem,var(--size-tap))] w-[max(3.5rem,4.4ch)] self-start rounded-lg border bg-beach-bg px-1 py-0 text-center text-digit font-semibold leading-none text-beach-ink",
+                "h-11 w-14 shrink-0 rounded-full border bg-beach-bg px-1 py-0 text-center text-digit font-bold leading-none text-beach-ink",
                 refusal ? "border-beach-failed" : "border-beach-border",
                 line.kind === "empty" && line.pending !== null && !isMissed && "border-dashed",
-                pulse && !refusal && "border-2 border-beach-accent shadow-[0_0_0_3px_color-mix(in_srgb,var(--beach-accent)_28%,transparent)]",
+                pulse && !refusal && "border-2 border-beach-accent shadow-[0_0_0_3px_color-mix(in_srgb,var(--beach-accent)_35%,transparent)]",
               )}
             />
           </span>
@@ -208,7 +202,7 @@ function LineRow({
         </div>
       ) : null}
       {note ? (
-        <p role="status" data-testid="line-closed-note" className="rounded-lg border border-beach-border bg-beach-surface px-2 py-1 text-body font-semibold">
+        <p role="status" data-testid="line-closed-note" className="rounded-2xl bg-beach-surface px-3 py-1.5 text-body font-bold">
           {note}
         </p>
       ) : null}
@@ -361,10 +355,10 @@ export function RiderSheetView(p: RiderSheetViewProps) {
           </div>
           {rider ? (
             <>
-              <h2 data-testid="sheet-heading" className="text-heading font-semibold text-beach-muted">
+              <h2 data-testid="sheet-heading" className="text-heading font-bold uppercase tracking-wide text-beach-muted">
                 {T.sheetFor(rider.label.primary.text)}
               </h2>
-              <ol data-testid="sheet-lines" data-active-line={active ?? undefined} aria-label={T.sheetFor(rider.label.primary.text)} className="flex flex-col divide-y divide-beach-line rounded-xl border border-beach-line">
+              <ol data-testid="sheet-lines" data-active-line={active ?? undefined} aria-label={T.sheetFor(rider.label.primary.text)} className="flex flex-col divide-y divide-beach-line border-y border-beach-line">
                 {shown.map((line) => {
                   const asked = here(asking);
                   const mine = (x: { riderId: string; n: number } | null) => x !== null && x.n === line.n;

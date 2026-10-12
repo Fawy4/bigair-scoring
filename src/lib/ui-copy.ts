@@ -2718,6 +2718,10 @@ export const copy = {
       heatLine: (heat: string, seat: string) => `${heat} · ${seat}`,
       between: "Between heats",
       judgeTitle: "Judge",
+      /** The one round button at the end of the slim header: Daylight / Dark, Normal / Large and Sound. */
+      settingsButton: "Settings",
+      settingsTitle: "This phone",
+      settingsClose: "Close settings",
     },
     queue: {
       waiting: (n: number) => `${n} waiting`,

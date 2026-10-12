@@ -6,7 +6,7 @@ import { ImpressionCard } from "./impression-card";
 import { JudgeQueueView, type FlagKind, type JudgeCard } from "./judge-queue";
 import { useEndAtZero, useFlagHorns, useOnline, useTimerSound, useWakeLock } from "./live-hooks";
 import { useFlagStrip } from "./use-flag";
-import { LiveShell, ScreenSettings, useLiveSettings } from "./live-shell";
+import { LiveShell, useLiveSettings } from "./live-shell";
 import { ScreenHeader } from "./screen-header";
 import { useLiveHeat } from "./use-live-heat";
 import { useSendQueue } from "./use-send-queue";
@@ -372,8 +372,6 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
       </div>
     ) : null;
 
-  const settingsBlock = <ScreenSettings />;
-
   // ---- nothing to score
   if (!heat || !division || !model) {
     return (
@@ -391,7 +389,6 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
             <p className="text-body font-medium text-beach-muted">{copy.spotter.noMoreHeats}</p>
           )}
         </div>
-        <div className="px-2 pb-2">{settingsBlock}</div>
       </>
     );
   }
@@ -496,7 +493,6 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
                 {nextLine}
               </p>
             ) : null}
-            {settingsBlock}
           </div>
         )}
       </>
@@ -513,7 +509,6 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
         {noticeList}
         <div data-testid="screen-body" className="flex flex-1 flex-col gap-2 px-3 py-3">
           <p className="text-name font-semibold">{T.impressionOnly}</p>
-          {settingsBlock}
         </div>
       </>
     );
@@ -535,7 +530,6 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
           lines={sheetLines}
           scale={scale}
           lockedMessage={lockedMessage}
-          settings={settingsBlock}
           onScore={onLineScore}
           flaggedIds={flaggedIds}
           onFlag={(id, kind) => onFlag(id, kind as FlagKind)}
@@ -560,7 +554,6 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
         riders={liveRiders}
         sheets={sheets}
         lockedMessage={lockedMessage}
-        settings={settingsBlock}
         detailsExtra={(riderId) =>
           canJudgeLog && live.phase === "running" ? (
             <Chip data-testid="log-for-rider" onClick={() => setLogFor(riderId)} className="self-start">

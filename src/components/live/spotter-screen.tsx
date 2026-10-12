@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AttemptLogger, enabledIdsOf, type LoggedAttempt } from "./attempt-logger";
 import { useOnline, useEndAtZero, useFlagHorns, useTimerSound, useWakeLock } from "./live-hooks";
 import { useFlagStrip } from "./use-flag";
-import { LiveShell, ScreenSettings, useLiveSettings } from "./live-shell";
+import { LiveShell, useLiveSettings } from "./live-shell";
 import { Chip } from "./chip";
 import { Pill } from "./pill";
 import { SpotterSheetView, type LineEdit } from "./spotter-sheet";
@@ -204,7 +204,6 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
       {q.memoryOnly ? <p className="px-2 pt-1 text-small font-semibold text-beach-muted">{copy.live.queue.memoryOnly}</p> : null}
       {feedOpen ? (
         <div data-testid="screen-body" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 py-1.5">
-          <ScreenSettings />
           <h2 className="text-heading font-semibold text-beach-muted">{T.attemptsHeading}</h2>
           {feed.length === 0 ? (
             <p data-testid="feed-empty" className="text-body font-medium text-beach-muted">

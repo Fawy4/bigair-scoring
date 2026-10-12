@@ -21,10 +21,12 @@ export interface BeachTokens {
   border: string;
   /** Keyboard focus ring. */
   focus: string;
-  /** The one accent colour (deep teal): selected state, primary button and progress. Text is never accent-coloured. */
+  /** The one accent colour (electric orange #FF6A00, the brand): the main button, selected state, bars and glows. A fill, never text on a light page. */
   accent: string;
-  /** Text on an `accent` fill. */
+  /** Text on an `accent` fill: black (7.31:1); white on orange is only 2.87:1. */
   onAccent: string;
+  /** The accent as text. In Day it is the page ink (orange on white is 2.87:1, so orange is never text there); in Dark it is the orange itself, and only on `bg` (#000000, 7.31:1). */
+  accentText: string;
   /** Live / synced. */
   live: string;
   /** Waiting to be sent. */
@@ -59,14 +61,15 @@ export interface BeachTokens {
 export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
   day: {
     bg: "#ffffff",
-    surface: "#f4f6f6",
-    line: "#d5dadc",
+    surface: "#f4f4f4",
+    line: "#dcdcdc",
     ink: "#111111",
-    muted: "#3d4246",
-    border: "#5f6970",
-    focus: "#0b4a46",
-    accent: "#0f5c57",
-    onAccent: "#ffffff",
+    muted: "#3a3a3a",
+    border: "#6b6b6b",
+    focus: "#111111",
+    accent: "#ff6a00",
+    onAccent: "#000000",
+    accentText: "#111111",
     live: "#14532d",
     pending: "#1e3a8a",
     failed: "#9f1239",
@@ -87,24 +90,25 @@ export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
     tintDist3: "#f29a9a",
   },
   dark: {
-    bg: "#0b0e0f",
-    surface: "#151a1b",
-    line: "#2b3436",
-    ink: "#f2f5f5",
-    muted: "#c9d1d3",
-    border: "#8d999c",
-    focus: "#9ee7de",
-    accent: "#5fd3c6",
-    onAccent: "#04211e",
+    bg: "#000000",
+    surface: "#111111",
+    line: "#2a2a2a",
+    ink: "#ffffff",
+    muted: "#b0b0b0",
+    border: "#8c8c8c",
+    focus: "#ffffff",
+    accent: "#ff6a00",
+    onAccent: "#000000",
+    accentText: "#ff6a00",
     live: "#86efac",
     pending: "#9ec5ff",
     failed: "#fda4af",
     crash: "#fca5a5",
-    onCrash: "#0b0e0f",
+    onCrash: "#000000",
     outlier: "#fcd34d",
     missing: "#c4c4c4",
     tintCrash: "#5a1f1f",
-    tintGrey: "#2a3133",
+    tintGrey: "#1f1f1f",
     tintGrade0: "#5a4a0c",
     tintGrade1: "#4a5410",
     tintGrade2: "#38581a",
@@ -138,6 +142,7 @@ export const TEXT_PAIRS: ReadonlyArray<readonly [TokenName, TokenName]> = [
   ["missing", "bg"],
   ["missing", "surface"],
   ["onAccent", "accent"],
+  ["accentText", "bg"],
   ["onCrash", "crash"],
   ["ink", "tintCrash"],
   ["ink", "tintGrey"],

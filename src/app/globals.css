@@ -21,7 +21,7 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-rubik), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-variant-numeric: tabular-nums;
   }
 }
@@ -386,14 +386,15 @@ body:has(.print-sheet) {
 :root,
 .beach-day {
   --beach-bg: #ffffff;
-  --beach-surface: #f4f6f6;
-  --beach-line: #d5dadc;
+  --beach-surface: #f4f4f4;
+  --beach-line: #dcdcdc;
   --beach-ink: #111111;
-  --beach-muted: #3d4246;
-  --beach-border: #5f6970;
-  --beach-focus: #0b4a46;
-  --beach-accent: #0f5c57;
-  --beach-on-accent: #ffffff;
+  --beach-muted: #3a3a3a;
+  --beach-border: #6b6b6b;
+  --beach-focus: #111111;
+  --beach-accent: #ff6a00;
+  --beach-on-accent: #000000;
+  --beach-accent-text: #111111;
   --beach-live: #14532d;
   --beach-pending: #1e3a8a;
   --beach-failed: #9f1239;
@@ -415,24 +416,25 @@ body:has(.print-sheet) {
   color-scheme: light;
 }
 .beach-dark {
-  --beach-bg: #0b0e0f;
-  --beach-surface: #151a1b;
-  --beach-line: #2b3436;
-  --beach-ink: #f2f5f5;
-  --beach-muted: #c9d1d3;
-  --beach-border: #8d999c;
-  --beach-focus: #9ee7de;
-  --beach-accent: #5fd3c6;
-  --beach-on-accent: #04211e;
+  --beach-bg: #000000;
+  --beach-surface: #111111;
+  --beach-line: #2a2a2a;
+  --beach-ink: #ffffff;
+  --beach-muted: #b0b0b0;
+  --beach-border: #8c8c8c;
+  --beach-focus: #ffffff;
+  --beach-accent: #ff6a00;
+  --beach-on-accent: #000000;
+  --beach-accent-text: #ff6a00;
   --beach-live: #86efac;
   --beach-pending: #9ec5ff;
   --beach-failed: #fda4af;
   --beach-crash: #fca5a5;
-  --beach-on-crash: #0b0e0f;
+  --beach-on-crash: #000000;
   --beach-outlier: #fcd34d;
   --beach-missing: #c4c4c4;
   --beach-tint-crash: #5a1f1f;
-  --beach-tint-grey: #2a3133;
+  --beach-tint-grey: #1f1f1f;
   --beach-tint-grade0: #5a4a0c;
   --beach-tint-grade1: #4a5410;
   --beach-tint-grade2: #38581a;
@@ -446,44 +448,44 @@ body:has(.print-sheet) {
 }
 :root,
 .beach-text-normal {
-  --size-body: 14px;
+  --size-body: 13px;
   --size-small: 12px;
-  --size-name: 15px;
+  --size-name: 14px;
   --size-digit: 16px;
-  --size-pad-height: 38px;
+  --size-pad-height: 44px;
   --size-pad-gap: 4px;
-  --size-tap: 36px;
+  --size-tap: 44px;
   --size-timer-slim: 18px;
   --size-timer-head: 48px;
-  --size-radius: 10px;
-  --size-readout: 26px;
+  --size-radius: 16px;
+  --size-readout: 24px;
   --size-heading: 12px;
-  --size-row: 38px;
-  --size-composed: 15px;
+  --size-row: 44px;
+  --size-composed: 14px;
   --size-bar: 44px;
 }
 .beach-text-large {
-  --size-body: 15px;
-  --size-small: 13px;
-  --size-name: 17px;
-  --size-digit: 19px;
-  --size-pad-height: 46px;
+  --size-body: 14px;
+  --size-small: 12px;
+  --size-name: 15px;
+  --size-digit: 17px;
+  --size-pad-height: 48px;
   --size-pad-gap: 6px;
-  --size-tap: 44px;
+  --size-tap: 48px;
   --size-timer-slim: 20px;
   --size-timer-head: 48px;
-  --size-radius: 12px;
-  --size-readout: 30px;
-  --size-heading: 14px;
-  --size-row: 44px;
-  --size-composed: 17px;
+  --size-radius: 16px;
+  --size-readout: 26px;
+  --size-heading: 12px;
+  --size-row: 48px;
+  --size-composed: 15px;
   --size-bar: 48px;
 }
 .beach-day,
 .beach-dark {
   background: var(--beach-bg);
   color: var(--beach-ink);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-rubik), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: var(--size-body);
   font-weight: 500;
   font-variant-numeric: tabular-nums;

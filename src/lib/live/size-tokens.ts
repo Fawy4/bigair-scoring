@@ -22,7 +22,7 @@ export interface SizeTokens {
   timerSlim: number;
   /** The timer on the head console and the big screen. */
   timerHead: number;
-  /** Corner radius of cards. */
+  /** Corner radius of a card or sheet that still has one (the New look uses rows and pills instead; buttons are fully round). */
   radius: number;
   /** The selected score: the only large number on the screen. */
   readout: number;
@@ -36,28 +36,28 @@ export interface SizeTokens {
   bar: number;
 }
 
-export const NORMAL: SizeTokens = { body: 14, small: 12, name: 15, digit: 16, padHeight: 38, padGap: 4, tap: 36, timerSlim: 18, timerHead: 48, radius: 10, readout: 26, heading: 12, row: 38, composed: 15, bar: 44 };
-/** "Large" is what Normal was in round 3 (the owner's request in round 4): every size there is one step up. */
-export const LARGE: SizeTokens = { body: 15, small: 13, name: 17, digit: 19, padHeight: 46, padGap: 6, tap: 44, timerSlim: 20, timerHead: 48, radius: 12, readout: 30, heading: 14, row: 44, composed: 17, bar: 48 };
+export const NORMAL: SizeTokens = { body: 13, small: 12, name: 14, digit: 16, padHeight: 44, padGap: 4, tap: 44, timerSlim: 18, timerHead: 48, radius: 16, readout: 24, heading: 12, row: 44, composed: 14, bar: 44 };
+/** "Large" is what Normal was before the New look (the owner found Normal still too large on an iPhone 14): the sizes of 0.20.0's Normal, with a 48 px tap size. */
+export const LARGE: SizeTokens = { body: 14, small: 12, name: 15, digit: 17, padHeight: 48, padGap: 6, tap: 48, timerSlim: 20, timerHead: 48, radius: 16, readout: 26, heading: 12, row: 48, composed: 15, bar: 48 };
 
 /**
- * The owner's ranges for Normal (round 4, 1 Oct 2026): pad digits 15–16 px on pad buttons 36–40 tall, rows 36–40, the composed trick name 14–15 px,
- * CRASH and Log 44 px high, headings small. Body, status words, names, gaps and the slim timer follow from that.
+ * The ranges for Normal. Round 4 (1 Oct 2026) made it calm; the New look (0.21.0) makes the text one step smaller again (owner: "Normal is still too large on my iPhone 14")
+ * and every tap target at least 44 px (pad buttons, rows, chips, CRASH and Log), so a smaller Normal is smaller TEXT, never smaller buttons.
  */
 export const SIZE_RANGES: Partial<Record<keyof SizeTokens, readonly [number, number]>> = {
-  body: [13, 15],
+  body: [12, 14],
   small: [11, 13],
-  name: [14, 16],
-  digit: [15, 16],
-  padHeight: [36, 40],
+  name: [13, 15],
+  digit: [16, 16],
+  padHeight: [44, 44],
   padGap: [4, 6],
-  tap: [36, 40],
+  tap: [44, 44],
   timerSlim: [18, 22],
   heading: [11, 13],
-  readout: [24, 28],
-  radius: [8, 12],
-  row: [36, 40],
-  composed: [14, 15],
+  readout: [22, 26],
+  radius: [8, 24],
+  row: [44, 44],
+  composed: [13, 15],
   bar: [44, 44],
 };
 

@@ -31,6 +31,7 @@ const config: Config = {
           focus: "var(--beach-focus)",
           accent: "var(--beach-accent)",
           "on-accent": "var(--beach-on-accent)",
+          "accent-text": "var(--beach-accent-text)",
           live: "var(--beach-live)",
           pending: "var(--beach-pending)",
           failed: "var(--beach-failed)",
