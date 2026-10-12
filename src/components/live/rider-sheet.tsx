@@ -153,8 +153,8 @@ function LineRow({
           ) : null}
         </span>
         {crash ? (
-          <span className="flex shrink-0 items-center gap-1.5">
-            <Pill icon={Flame} tone="crash" data-testid="line-crash">
+          <span data-testid="line-crash" className="flex shrink-0 items-center gap-1.5">
+            <Pill icon={Flame} tone="crash">
               {T.crash}
             </Pill>
             <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked} onClick={() => onFlagOpen(line)}>
