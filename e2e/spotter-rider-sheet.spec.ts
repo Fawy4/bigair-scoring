@@ -216,7 +216,7 @@ test("the judges' Rider sheet is line by line: line 3 takes no score while line 
   expect(two).toEqual([{ judge_seat_id: w.seats.j1.id, score: null, missed: true }]);
   expect(((await w.db.from("pending_scores").select("id").eq("heat_id", H)).data ?? []).length).toBe(0);
   await expect(jline(j1, 2).getByTestId("line-score")).toHaveValue("Missed", { timeout: 40_000 });
-  await expect(cellOf(head, 2, 0)).toContainText("Missed", { timeout: 40_000 });
+  await expect(cellOf(head, 2, 0)).toHaveAttribute("data-state", "missed", { timeout: 40_000 }); // the console's own word for a Missed score
 
   // a filled line can still be changed until Submit (line 1), and Missed can be marked on a line that has its attempt
   await jtype(j1, 1, "7.5");
