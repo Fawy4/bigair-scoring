@@ -129,7 +129,7 @@ export async function outOfEventCore(user: SupabaseClient, input: { heatId: stri
   const [{ data: division }, { data: siblings }, { data: entry }, { data: round }] = await Promise.all([
     user.from("divisions").select("draw, draw_locked_at").eq("id", heat.division_id).maybeSingle(),
     user.from("heats").select("draw_uid, status, started_at").eq("division_id", heat.division_id),
-    user.from("v_entries").select("first_name, last_name").eq("id", input.entryId).maybeSingle(),
+    user.rpc("visible_entries", { p_entry: input.entryId }).select("first_name, last_name").maybeSingle(),
     user.from("rounds").select("short_name, name").eq("id", heat.round_id).maybeSingle(),
   ]);
   const draw = (division?.draw ?? null) as DivisionDraw | null;

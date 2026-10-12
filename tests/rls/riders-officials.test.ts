@@ -112,7 +112,7 @@ describe.skipIf(!ENV_OK)("Riders, officials, registration, trick base and feedba
       expect(failed(await f.clients.orgA.from("entries").update({ status: "declined", decline_reason: "Over the age limit" }).eq("id", entry))).toBe("");
       const row = (await f.clients.orgA.from("entries").select("status, decline_reason").eq("id", entry).single()).data!;
       expect(row).toMatchObject({ status: "declined", decline_reason: "Over the age limit" });
-      expect(((await f.clients.anon.from("v_entries").select("id").eq("id", entry)).data ?? []).length).toBe(0);
+      expect(((await f.clients.orgB.rpc("visible_entries", { p_entry: entry })).data ?? []).length).toBe(0); // a declined rider is on nobody's public list
       expect(failed(await f.clients.orgA.from("entries").update({ status: "banana" }).eq("id", entry))).not.toBe("");
     });
   });

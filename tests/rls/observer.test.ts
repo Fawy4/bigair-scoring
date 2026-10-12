@@ -31,6 +31,7 @@ const READS = new Set([
   "get_public_site",
   "get_public_timetable",
   "sim_live_heat", // the public live view of a simulation heat (an observer of that simulation may read it)
+  "visible_entries", // the rider list (names and identifiers, no contact details): an observer holds a seat, so it reads its own event's riders, as the old v_entries view did
   "touch_seat", // the one write an observer makes: its own last-seen time (checked below)
 ]);
 

@@ -66,7 +66,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
     db.from("rounds").select("id, division_id, name, short_name, sort_order").eq("event_id", eventId),
     db.from("heats").select(HEAT_COLUMNS).eq("event_id", eventId),
     db.from("panel_members").select("panel_id, judge_seat_id, seat_no").eq("event_id", eventId).order("seat_no"),
-    db.from("v_entries").select("id, division_id, status, identifiers, first_name, last_name, nationality, sponsor, photo_url").eq("event_id", eventId),
+    db.rpc("visible_entries", { p_event: eventId }).select("id, division_id, status, identifiers, first_name, last_name, nationality, sponsor, photo_url"),
     db.from("schedule_plans").select(PLAN_COLUMNS).eq("event_id", eventId).eq("active", true),
     loadEventVocabulary(db, eventId),
     loadEventBlocks(db, eventId),
