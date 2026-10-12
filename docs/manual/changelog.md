@@ -4,7 +4,7 @@ One entry per product version: the date, what changed for users, and which manua
 
 Last checked: 11 Oct 2026 · Product version 0.20.0
 
-## 0.20.0 — 11 Oct 2026 {#cl-0-20-0}
+## 0.20.0 — 13 Oct 2026 {#cl-0-20-0}
 
 Release entry: [0.20.0](/admin/releases#release-0-20-0) (platform owner only)
 
@@ -13,6 +13,7 @@ Release entry: [0.20.0](/admin/releases#release-0-20-0) (platform owner only)
 - **Spotter: Trick list fixes.** The text box sits directly above Log and CRASH; Left and Right are two wide buttons with a thick border and a tick; with the keyboard open, the text box, Log and CRASH sit directly above it. The same keyboard rule holds on the Rider sheet.
 - **Judge: the Rider sheet is the default view and works line by line.** A score can only be typed on the first line with no score yet; **Missed** on a line counts as done and opens the next. A criteria division stays on the Queue.
 
+- **Judges' Rider sheet, last round:** scoring ahead of the spotter also with no attempt limit (10 past the attempts logged), a late Crash absorbs what was typed on its line, the "Needs your score" highlight in teal on one pulsing line, empty score boxes, Missed as a switch, Flag under Missed, rider cards that stay at the top (both sheets). **All officials' screens:** 16 px boxes (no zoom on an iPhone), no Note button, no microphone button. **Spotter:** a wider trick box with ×, narrower L and R, a Crash button like the Trick list's, tidy names ("6 front rolls" → "6x Frontroll").
 - **Judge: every line visible, never waiting for the spotter.** All lines show from the start; a logged attempt you have not scored is highlighted ("Needs your score"); the first line with no score from you takes a score at once (a note until the spotter logs the attempt); tapping a lower line asks once and one tap sets the lines above to Missed; with no limit, 10 lines and a new one each time the last fills.
 
 **Manual pages updated:** [Spotter screen](screens/spotter.md), [Judge screen](screens/judge.md).

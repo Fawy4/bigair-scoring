@@ -4325,6 +4325,8 @@ export const copy = {
     /** The head judge clearing a judge's pending note: "Head judge cleared J3's pending score on Omar Hassan line 4: phone died". */
     noteClearedByHead: (judge: string, rider: string, line: number, reason: string | null) => `Head judge cleared ${judge}'s pending score on ${rider} line ${line}: ${reason ?? "no reason given"}`,
     noteMissedClearedByHead: (judge: string, rider: string, line: number, reason: string | null) => `Head judge cleared ${judge}'s Missed note on ${rider} line ${line}: ${reason ?? "no reason given"}`,
+    /** A judge switching their own Missed off again on a line that has its attempt. */
+    missedCleared: (judge: string, attempt: string) => `${judge} took back Missed on ${attempt}`,
     scoreFromNote: (judge: string, attempt: string, score: string) => `${judge} · ${attempt}: ${score} (typed before the attempt was logged)`,
     impression: "Impression / Variety score",
     deleted: (a: string) => `Deleted attempt ${a}`,

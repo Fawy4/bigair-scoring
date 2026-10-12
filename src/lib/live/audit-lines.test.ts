@@ -39,6 +39,9 @@ describe("audit lines in words", () => {
     expect(auditLine(row("attempt_edited_by_spotter", { before: { ...before, trick_name: "Left Backroll" }, after: { ...before, trick_name: "Left Frontroll" } }), ctx)).toBe("Spotter changed Red 3: Left Backroll → Left Frontroll");
     expect(auditLine(row("attempt_edited_by_spotter", { before: { ...before, trick_name: null }, after: { ...before, trick_name: null, status: "crashed" } }), ctx)).toBe("Spotter changed Red 3: no trick Left → no trick Left (crash)");
   });
+  it("a judge switching Missed off again reads in words, with the judge and the attempt", () => {
+    expect(auditLine(row("missed_cleared", { before: { attempt_id: "a3", judge_seat_id: "s1", missed: true } }), ctx)).toBe("Judge 1 took back Missed on Red 3");
+  });
   it("an action nobody has a sentence for still reads as words", () => {
     expect(auditLine(row("some_new_thing", { reason: "why" }), ctx)).toBe("Some new thing — why");
   });

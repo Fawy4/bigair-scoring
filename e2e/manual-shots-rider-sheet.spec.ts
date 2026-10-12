@@ -41,13 +41,21 @@ test("the Rider sheet on a judge's phone, and the console's pending rows", async
     await hideDevOverlay(j1);
     await j1.waitForTimeout(500);
     await j1.screenshot({ path: path.join(OUT, "judge-rider-sheet-390.png") });
-    // tapping line 7 while lines 3 to 6 have no score from this judge asks once (nothing is marked until the judge taps Mark Missed)
+    // tapping line 7 while lines 3 to 6 have no score from this judge asks once (nothing is set until the judge taps Set to Missed)
     await j1.locator('[data-testid="sheet-line"][data-line="7"] [data-testid="line-score"]').click();
     await expect(j1.getByTestId("skip-ask")).toBeVisible();
     await j1.getByTestId("skip-confirm").scrollIntoViewIfNeeded();
     await hideDevOverlay(j1);
     await j1.waitForTimeout(500);
     await j1.screenshot({ path: path.join(OUT, "judge-rider-sheet-skip-390.png") });
+    // the same sheet in Dark (Daylight and Dark are both looked at before anything is pushed)
+    await j1.getByTestId("skip-cancel").click();
+    await j1.getByRole("button", { name: "Dark", exact: true }).click();
+    await j1.evaluate(() => document.querySelector('[data-testid="screen-body"]')?.scrollTo(0, 0));
+    await expect(j1.getByTestId("live-root")).toHaveAttribute("data-theme", "dark");
+    await hideDevOverlay(j1);
+    await j1.waitForTimeout(500);
+    await j1.screenshot({ path: path.join(OUT, "judge-rider-sheet-dark-390.png") });
     await phone.close();
 
     const laptop = await browser.newContext({ viewport: { width: 1280, height: 900 } });
