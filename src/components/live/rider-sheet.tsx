@@ -11,7 +11,7 @@ import { RiderTile } from "./rider-tile";
 import { ScreenHeader } from "./screen-header";
 import { LearnMore } from "@/components/manual/learn-more";
 import { errorSentence } from "@/lib/live/errors";
-import { activeLine, lineTypable, rangesOf, skipLines, type SheetLine } from "@/lib/live/rider-sheet";
+import { activeLine, lineTypable, needsScore, rangesOf, skipLines, type SheetLine } from "@/lib/live/rider-sheet";
 import { formatPadValue, padRefusal, parsePadInput } from "@/lib/live/score-pad";
 import type { LiveRider } from "@/lib/live/view-types";
 import type { Scale } from "@/lib/schemas/scoring-model";
@@ -44,6 +44,7 @@ function LineRow({ line, scale, locked, ended, typable, askable, ask, onAsk, onS
   const [draft, setDraft] = useState<string | null>(null);
   const stored = line.kind === "attempt" ? line.mine : line.kind === "empty" ? line.pending : null;
   const waits = !typable && line.kind !== "crash";
+  const needs = needsScore(line);
   const storedText = typeof stored === "number" ? formatPadValue(stored, scale) : stored === "missed" ? copy.live.queue.missedRow : "";
   const text = draft ?? storedText;
   const refusal = draft !== null ? padRefusal(draft, scale) : null;
@@ -61,7 +62,8 @@ function LineRow({ line, scale, locked, ended, typable, askable, ask, onAsk, onS
       data-line={line.n}
       data-kind={line.kind}
       data-waits={waits ? "true" : undefined}
-      className={cn("flex flex-col gap-0.5 px-2 py-1", crash && "bg-beach-surface text-beach-muted", line.kind === "empty" && "bg-beach-bg")}
+      data-needs-score={needs ? "true" : undefined}
+      className={cn("flex flex-col gap-0.5 px-2 py-1", crash && "bg-beach-surface text-beach-muted", line.kind === "empty" && "bg-beach-bg", needs && "border-l-[6px] border-beach-crash bg-beach-tint-dist3 text-beach-ink")}
     >
       <div className="flex min-h-row items-center gap-2">
         <span data-testid="line-number" className="w-6 shrink-0 text-center text-name font-semibold tabular-nums">
@@ -78,6 +80,11 @@ function LineRow({ line, scale, locked, ended, typable, askable, ask, onAsk, onS
               {line.direction ? <span className="text-small font-medium text-beach-muted">{dirWord(line.direction)}</span> : null}
             </span>
           )}
+          {needs ? (
+            <span data-testid="line-needs-score" className="text-small font-semibold text-beach-ink">
+              {T.needsScore}
+            </span>
+          ) : null}
           {line.kind === "empty" && line.pending !== null && !orphan ? (
             <span data-testid="line-pending" className="text-small font-medium text-beach-muted">
               {T.pendingNote}

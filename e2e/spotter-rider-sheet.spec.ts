@@ -394,6 +394,7 @@ test("the judge never waits for the spotter: all 7 lines are there, lines 1, 2 a
   for (const n of [1, 2, 3, 4, 5, 6, 7]) await expect(jline(j1, n)).toBeVisible();
   await expect(j1.locator('[data-testid="sheet-line"][data-kind="crash"]')).toHaveCount(0);
 
+  await expect(j1.locator('[data-needs-score="true"]')).toHaveCount(0); // nothing logged yet: nothing to highlight
   // the spotter has logged nothing: the judge scores lines 1, 2 and 3 straight away, each one opening the next
   await jtype(j1, 1, "7");
   await jtype(j1, 2, "8");
@@ -412,6 +413,7 @@ test("the judge never waits for the spotter: all 7 lines are there, lines 1, 2 a
   await expect(jline(j1, 1)).toContainText("Left Backroll", { timeout: 40_000 });
   await expect(jline(j1, 3)).toContainText("Left Kiteloop");
   await expect(head.getByTestId("pending-row")).toHaveCount(0, { timeout: 40_000 });
+  await expect(j1.locator('[data-needs-score="true"]')).toHaveCount(0); // the three attempts arrived already scored by the notes
 });
 
 test("tapping a line below one with no score asks once, in one line, and one tap marks the lines above Missed and opens the tapped line; a Missed line can still be given a score", async ({ browser }) => {
@@ -425,7 +427,15 @@ test("tapping a line below one with no score asks once, in one line, and one tap
   await expect(jline(j1, 3)).toContainText("Left Backroll 3", { timeout: 40_000 });
   await expect(j1.getByTestId("sheet-line")).toHaveCount(7);
 
-  // lines 1-3 have attempts and no score from this judge; line 4 is below them: tapping it asks, it does not do nothing
+  // lines 1-3 have attempts and no score from this judge: they are highlighted with the words "Needs your score"; line 4 (no attempt yet) is not
+  for (const n of [1, 2, 3]) {
+    await expect(jline(j1, n)).toHaveAttribute("data-needs-score", "true");
+    await expect(jline(j1, n).getByTestId("line-needs-score")).toHaveText("Needs your score");
+  }
+  await expect(jline(j1, 4)).not.toHaveAttribute("data-needs-score", "true");
+  expect(await jline(j1, 1).evaluate((e) => getComputedStyle(e).borderLeftWidth)).toBe("6px");
+  expect(await jline(j1, 1).evaluate((e) => getComputedStyle(e).backgroundColor)).not.toBe(await jline(j1, 4).evaluate((e) => getComputedStyle(e).backgroundColor));
+  // line 4 is below them: tapping it asks, it does not do nothing
   await jbox(j1, 4).click();
   await expect(j1.getByTestId("skip-ask")).toHaveText(/Lines 1–3 have no score from you\. Set them to Missed and score line 4\?/);
   await expect(jbox(j1, 4)).toHaveAttribute("readonly", "");
@@ -440,6 +450,7 @@ test("tapping a line below one with no score asks once, in one line, and one tap
   await expect.poll(async () => (await myScores("j1", H)).map((s) => [(s.trick_attempts as unknown as { seq: number }).seq, s.missed, s.score]).sort(), { timeout: 30_000 }).toEqual([[1, true, null], [2, true, null], [3, true, null]]);
   await expect(jbox(j1, 4)).toBeEditable({ timeout: 30_000 });
   await expect(j1.getByTestId("skip-ask")).toHaveCount(0);
+  await expect(j1.locator('[data-needs-score="true"]')).toHaveCount(0); // Missed lines are done: nothing is highlighted any more
   await expect(jbox(j1, 1)).toHaveValue("Missed");
   await jtype(j1, 4, "8"); // the spotter has not logged attempt 4: a pending note, as always
   await expect.poll(async () => ((await w.db.from("pending_scores").select("slot, score").eq("heat_id", H)).data ?? []).map((n) => [n.slot, Number(n.score)]), { timeout: 30_000 }).toEqual([[4, 8]]);

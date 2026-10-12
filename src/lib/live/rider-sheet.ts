@@ -197,6 +197,11 @@ export function lineDone(line: SheetLine): boolean {
   return line.pending !== null;
 }
 
+/** A logged attempt this judge has not scored yet: the line the sheet highlights, because it needs the judge's score (an empty line has no attempt to score, a crash needs none). */
+export function needsScore(line: SheetLine): boolean {
+  return line.kind === "attempt" && line.mine === null;
+}
+
 /** The first line of the rider that is not done: the only one a new score can be typed on. Null when every line is done. */
 export function activeLine(lines: SheetLine[]): number | null {
   return lines.find((l) => !lineDone(l))?.n ?? null;

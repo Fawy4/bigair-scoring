@@ -7,6 +7,7 @@ import {
   buildLines,
   lineDone,
   lineTypable,
+  needsScore,
   rangesOf,
   skipLines,
   consoleRows,
@@ -475,4 +476,18 @@ describe("a Missed note on a line the spotter has not logged", () => {
     const rows = consoleRows([], [{ seatId: "J1", slot: 1, score: 0, missed: true }]);
     expect(rows[0].missed).toEqual({ J1: true });
   });
+
+describe("which lines are highlighted as needing a score", () => {
+  const mineOf = (...v: Array<number | "missed" | null>) => new Map(v.flatMap((x, i) => (x === null ? [] : [[`a${i + 1}`, x] as [string, number | "missed"]])));
+  it("a logged attempt with no score from this judge needs one; a scored, Missed or crashed line, and an empty line the spotter has not logged, do not", () => {
+    const lines = buildLines({ attempts: [att(1), att(2), att(3, "crashed"), att(4), att(5)], notes: [note(6, 5)], cap: 7, mine: mineOf(7, "missed", null, null) });
+    expect(lines.map(needsScore)).toEqual([false, false, false, true, true, false, false]);
+  });
+  it("it follows the judge: scoring a line takes the highlight off, and a note typed ahead on an empty line never had one", () => {
+    const before = buildLines({ attempts: [att(1), att(2)], notes: [], cap: 7 });
+    expect(before.filter(needsScore).map((l) => l.n)).toEqual([1, 2]);
+    const after = buildLines({ attempts: [att(1), att(2)], notes: [], cap: 7, mine: mineOf(7) });
+    expect(after.filter(needsScore).map((l) => l.n)).toEqual([2]);
+  });
+});
 });

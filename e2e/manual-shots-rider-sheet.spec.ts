@@ -21,12 +21,15 @@ test("the Rider sheet on a judge's phone, and the console's pending rows", async
       w.db.from("trick_attempts").insert({ heat_id: H, entry_id: w.entries[0], seq, status, trick_name: trick, direction, client_key: crypto.randomUUID() }).select("id").single();
     const a1 = (await att(1, "landed", "Left Backroll", "left")).data!.id;
     await att(2, "crashed", "Right Frontroll", "right");
+    // two more jumps the spotter has logged and judge 1 has not scored yet: their lines are highlighted "Needs your score"
+    await att(3, "landed", "Left Kiteloop", "left");
+    await att(4, "landed", "Right Backroll", "right");
     await w.db.from("trick_scores").insert({ attempt_id: a1, judge_seat_id: w.seats.j1.id, score: 7.5, client_key: crypto.randomUUID(), client_rev: 1 });
     await w.db.from("trick_scores").insert({ attempt_id: a1, judge_seat_id: w.seats.j2.id, score: 7, client_key: crypto.randomUUID(), client_rev: 1 });
+    // judge 3 scored ahead of the spotter: two pending rows on the console
     const note = (seat: "j1" | "j3", slot: number, score: number) => w.db.from("pending_scores").insert({ event_id: w.eventId, heat_id: H, entry_id: w.entries[0], judge_seat_id: w.seats[seat].id, slot, score, client_key: crypto.randomUUID(), client_rev: 1 });
-    await note("j1", 3, 6.5);
-    await note("j3", 3, 7);
-    await note("j1", 4, 8);
+    await note("j3", 5, 7);
+    await note("j3", 6, 6.5);
 
     const phone = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await installSupabaseProxy(phone);
@@ -34,11 +37,11 @@ test("the Rider sheet on a judge's phone, and the console's pending rows", async
     await w.signInAs(j1, "j1", `/judge/${w.eventId}`);
     await expect(j1.getByTestId("view-switch")).toBeVisible({ timeout: 60_000 });
     await j1.getByTestId("view-sheet").click();
-    await expect(j1.locator('[data-testid="sheet-line"][data-line="3"] [data-testid="line-pending"]')).toBeVisible({ timeout: 30_000 });
+    await expect(j1.locator('[data-testid="sheet-line"][data-line="3"][data-needs-score="true"]')).toBeVisible({ timeout: 30_000 });
     await hideDevOverlay(j1);
     await j1.waitForTimeout(500);
     await j1.screenshot({ path: path.join(OUT, "judge-rider-sheet-390.png") });
-    // tapping line 7 while lines 5 and 6 have no score from this judge asks once (nothing is marked until the judge taps Mark Missed)
+    // tapping line 7 while lines 3 to 6 have no score from this judge asks once (nothing is marked until the judge taps Mark Missed)
     await j1.locator('[data-testid="sheet-line"][data-line="7"] [data-testid="line-score"]').click();
     await expect(j1.getByTestId("skip-ask")).toBeVisible();
     await j1.getByTestId("skip-confirm").scrollIntoViewIfNeeded();

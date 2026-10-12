@@ -13,7 +13,7 @@ Release entry: [0.20.0](/admin/releases#release-0-20-0) (platform owner only)
 - **Spotter: Trick list fixes.** The text box sits directly above Log and CRASH; Left and Right are two wide buttons with a thick border and a tick; with the keyboard open, the text box, Log and CRASH sit directly above it. The same keyboard rule holds on the Rider sheet.
 - **Judge: the Rider sheet is the default view and works line by line.** A score can only be typed on the first line with no score yet; **Missed** on a line counts as done and opens the next. A criteria division stays on the Queue.
 
-- **Judge: every line visible, never waiting for the spotter.** All lines show from the start; the first line with no score from you takes a score at once (a note until the spotter logs the attempt); tapping a lower line asks once and one tap sets the lines above to Missed; with no limit, 10 lines and a new one each time the last fills.
+- **Judge: every line visible, never waiting for the spotter.** All lines show from the start; a logged attempt you have not scored is highlighted ("Needs your score"); the first line with no score from you takes a score at once (a note until the spotter logs the attempt); tapping a lower line asks once and one tap sets the lines above to Missed; with no limit, 10 lines and a new one each time the last fills.
 
 **Manual pages updated:** [Spotter screen](screens/spotter.md), [Judge screen](screens/judge.md).
 
