@@ -41,6 +41,7 @@ test("the Rider sheet on a judge's phone, and the console's pending rows", async
     // tapping line 7 while lines 5 and 6 have no score from this judge asks once (nothing is marked until the judge taps Mark Missed)
     await j1.locator('[data-testid="sheet-line"][data-line="7"] [data-testid="line-score"]').click();
     await expect(j1.getByTestId("skip-ask")).toBeVisible();
+    await j1.getByTestId("skip-confirm").scrollIntoViewIfNeeded();
     await hideDevOverlay(j1);
     await j1.waitForTimeout(500);
     await j1.screenshot({ path: path.join(OUT, "judge-rider-sheet-skip-390.png") });

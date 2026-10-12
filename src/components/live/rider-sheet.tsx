@@ -69,7 +69,7 @@ function LineRow({ line, scale, locked, ended, typable, askable, ask, onAsk, onS
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           {line.kind === "empty" ? (
-            <span data-testid="line-trick" className="truncate text-body font-medium text-beach-muted">
+            <span data-testid="line-trick" className="text-body font-medium leading-tight text-beach-muted">
               {orphan ? T.noAttempt : T.waitingTrick}
             </span>
           ) : (
