@@ -133,19 +133,22 @@ for (const profile of PROFILES) {
         const selectors = [".home-wordmark", ".home-tagline", ".home-label", ".home-name", ".home-meta", ".home-status", ".home-tag", ".home-code label", ".home-go", ".home-quiet", ".home a.link", ".home-footer a", ".home-footer span", ".home-live", ".home-input"];
         for (const sel of selectors) {
           const ratio = await contrastOf(page, sel);
-          expect(ratio, `${sel} on ${scheme}`).toBeGreaterThanOrEqual(7);
+          // the orange links are the owner's choice: #BA4800 on white is 5.2:1 (Dark: #FF6A00, 6.6:1); other text keeps 7:1
+          const min = sel === ".home a.link" || sel === ".home-footer a" ? 4.5 : 7;
+          expect(ratio, `${sel} on ${scheme}`).toBeGreaterThanOrEqual(min);
         }
-        // the accent (teal) appears in two places only: the primary action and the live dot
-        const accent = await page.evaluate(() => {
-          const orange = scheme === "dark" ? "rgb(95, 211, 198)" : "rgb(15, 92, 87)";
+        // orange is this page's accent (buttons, links, live dot): the Go button carries it, and nothing else uses it
+        const accent = await page.evaluate((day) => {
+          const orange = day ? ["rgb(255, 106, 0)", "rgb(186, 72, 0)"] : ["rgb(255, 106, 0)"];
           const hits: string[] = [];
-          for (const el of document.querySelectorAll<Element>(".home *")) {
+          for (const el of document.querySelectorAll<Element>(".home-wrap *")) {
             const cs = getComputedStyle(el);
-            if ([cs.color, cs.backgroundColor, cs.borderTopColor, cs.stroke, cs.fill].includes(orange)) hits.push((el.getAttribute("class") ?? el.tagName).split(" ")[0]);
+            if ([cs.color, cs.backgroundColor, cs.borderTopColor, cs.stroke, cs.fill].some((c) => orange.includes(c))) hits.push((el.getAttribute("class") ?? el.tagName).split(" ")[0]);
           }
           return [...new Set(hits)].sort();
-        });
-        expect(accent).toEqual(["home-dot", "home-go"]);
+        }, scheme === "light");
+        expect(accent).toContain("home-go");
+        for (const hit of accent) expect(["home-go", "home-dot", "link", "A", "admin"], `${hit} on ${scheme}`).toContain(hit);
       });
     }
   });

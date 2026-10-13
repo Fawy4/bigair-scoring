@@ -444,7 +444,8 @@ body:has(.home[data-theme="dark"]) {
   --sky-kite: #ffac73;
   position: relative;
   isolation: isolate;
-  background: linear-gradient(180deg, #fff1e6 0%, #ffffff 50%);
+  background-color: var(--h-bg);
+  background-image: linear-gradient(180deg, #fff1e6 0%, #ffffff 50%);
 }
 .home.home-sky[data-theme="dark"] {
   --h-accent: #ff6a00;
@@ -457,7 +458,7 @@ body:has(.home[data-theme="dark"]) {
   --sky-crest: rgba(255, 106, 0, 0.25);
   --sky-kiter: #8c4210;
   --sky-kite: #b34a00;
-  background: linear-gradient(180deg, #160a03 0%, #111111 50%);
+  background-image: linear-gradient(180deg, #160a03 0%, #111111 50%);
 }
 .home-sky-canvas {
   position: fixed;

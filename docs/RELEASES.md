@@ -12,6 +12,29 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.22.0 — 13 Oct 2026 {#release-0-22-0}
+
+PR: #50
+
+### What changed
+- **The home page (/) has the Sendbook background.** Thin orange air streams flow left to right across the page, low orange water moves along the bottom, and one rider hangs upside down in a megaloop with his kite looping just below him. All of it is drawn (no photos). **The air and the water move; the rider does not.** On a laptop he sits to the right of the wordmark; on a phone he sits in a band under the wordmark and scrolls away with the page. He is never behind text, and the event cards, the event list and the code box keep solid backgrounds.
+- **Daylight** is white fading from a warm tint at the top; **Dark** is near-black fading from a deep brown at the top. The Daylight / Dark switch works as before.
+- **On this page only, buttons and links are orange** (the **Go** button, "Sign in", "Join with your PIN", the footer links and the live dot). Everything else in the product, including the Join page, stays teal. The words on the orange **Go** button are black (not the near-black #111111) because that is the pair that reaches 7:1 (7.31:1); Dark's orange links read at 6.6:1 on the page colour.
+- **Reduce motion** shows one still picture. The movement pauses when the tab is hidden, and the picture is never drawn sharper than 2×.
+- **It loads after the page is visible:** the words and cards appear first; the background starts a moment later (two small pictures, 24 KB, and about 8 KB of script). It takes no space in the layout, so nothing jumps. On a phone the band under the wordmark pushes the event list down by about 200 px.
+
+### What to test
+- [ ] Open the home page on your phone (Daylight): a warm tint at the top, thin orange streams moving, water moving along the bottom, and the rider upside down in the band under "Sendbook". Scroll: the rider scrolls away with the page; the cards stay on solid white.
+- [ ] Switch to Dark with the switch at the top right: near-black page, orange streams and water, the rider in a darker orange. Reload: still Dark. Switch back to Daylight.
+- [ ] On a laptop: the rider is to the right of the "Sendbook" wordmark, and never over any text or card.
+- [ ] The **Go** button is orange with black words; "Sign in" and "Join with your PIN" are orange and underlined. Open /join: its button is still teal.
+- [ ] Switch your phone's "Reduce motion" on (iPhone: Settings → Accessibility → Motion) and reload: the picture is the same but nothing moves.
+- [ ] Open the home page, switch to another app for 10 seconds and come back: it keeps moving smoothly. Rotate the phone: the picture refits, with no sideways scrolling.
+
+### Known issues
+- On the home page the live event's pulsing dot keeps pulsing besides the air and the water.
+- If a logo is uploaded in Platform settings, its own white box shows on the tinted Daylight page (and on the dark page, as before).
+
 ## 0.21.0 — 13 Oct 2026 {#release-0-21-0}
 
 PR: #46

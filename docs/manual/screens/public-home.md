@@ -2,11 +2,13 @@
 
 The product's home page (/) for riders and spectators: live events, upcoming events, recent results, and a box for an event code.
 
-Last checked: 4 Oct 2026 · Product version 0.17.0
+Last checked: 13 Oct 2026 · Product version 0.22.0
 
 ## What it is for {#ph-purpose}
 
-The front door. At the top: the product name large, the tagline on one line; the only accent colour on the page (electric orange) is the **Go** button. Under it, only published, public events: **Live now** first (the first live event is a larger card with a gently pulsing dot and “Now: Pro Men · R1 · Heat 3”), then **Coming up**, then **Results** (a quiet “Results” tag on each finished event). Every card is one tap target that opens the event page. Simulation and archived events never appear. The page follows the phone's light or dark setting.
+The front door. At the top: the product name large, the tagline on one line. This is the only page with orange buttons and links (the **Go** button, **Sign in**, **Join with your PIN** and the footer links); everything else in the product is teal. Under it, only published, public events: **Live now** first (the first live event is a larger card with a gently pulsing dot and “Now: Pro Men · R1 · Heat 3”), then **Coming up**, then **Results** (a quiet “Results” tag on each finished event). Every card is one tap target that opens the event page. Simulation and archived events never appear. The page opens in Daylight and has the Daylight / Dark switch at the top right (kept on the device).
+
+**The background** is drawn, never photos: thin orange air streams flowing left to right, low water along the bottom (both move) and one rider upside down in a megaloop with his kite looping below him (he never moves). On a laptop he is to the right of the wordmark; on a phone he is in a band under it and scrolls away with the page. He is never behind text, and the cards, the event list and the code box have solid backgrounds. With the phone's **Reduce motion** on, the picture is still. The background loads after the page is visible, so the words never wait for it.
 
 ![Home page: a live event, light, laptop](../img/public-home-live-light-1280.png)
 *public-home-live-light-1280.png — a live event first and larger, then the event code field.*
