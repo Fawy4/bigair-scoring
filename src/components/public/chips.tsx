@@ -13,7 +13,7 @@ export function ChipLinks({ items, label, testId }: { items: Array<{ href: strin
               prefetch={false}
               data-testid={i.testId}
               aria-current={i.current ? "true" : undefined}
-              className={cn("inline-flex min-h-[36px] items-center rounded-xl border px-3 text-body font-semibold", i.current ? "border-beach-selected bg-beach-selected text-beach-on-selected" : "border-beach-line bg-beach-surface text-beach-ink")}
+              className={cn("inline-flex min-h-[36px] items-center rounded-xl border px-3 text-body font-semibold", i.current ? "border-beach-selected bg-beach-selected text-beach-on-selected" : "border-beach-border bg-beach-fill text-beach-ink")}
             >
               {i.label}
             </Link>

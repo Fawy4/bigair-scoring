@@ -404,9 +404,9 @@ body:has(.print-sheet) {
   --beach-selected: #0f5c57;
   --beach-on-selected: #ffffff;
   --beach-attention: #e65f00;
-  --beach-board: #111111;
-  --beach-on-board: #ffffff;
-  --beach-board-muted: #b0b0b0;
+  --beach-board: #ffffff;
+  --beach-on-board: #111111;
+  --beach-board-muted: #3a3a3a;
   --beach-live: #14532d;
   --beach-pending: #1e3a8a;
   --beach-failed: #9f1239;

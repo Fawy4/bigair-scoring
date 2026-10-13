@@ -102,12 +102,14 @@ describe("teal is the accent; orange is kept for 'Needs your score'", () => {
     expect(BEACH_THEMES.dark.crash).toBe("#ff6b6b");
     expect(contrastRatio("#000000", "#ff6b6b")).toBeCloseTo(7.6, 1);
   });
-  it("the scoreboard bar is the brand near-black with white (and brand grey) text in both themes", () => {
+  it("the header bar is all white in Day (as before) and the brand near-black #111111 in Dark, with text at 7:1 or better in both", () => {
+    expect(BEACH_THEMES.day.board).toBe("#ffffff");
+    expect(BEACH_THEMES.dark.board).toBe("#111111");
     for (const t of Object.values(BEACH_THEMES)) {
-      expect(t.board).toBe("#111111");
       expect(contrastRatio(t.onBoard, t.board)).toBeGreaterThanOrEqual(7);
-      expect(contrastRatio(t.boardMuted, t.board)).toBeCloseTo(8.71, 2);
+      expect(contrastRatio(t.boardMuted, t.board)).toBeGreaterThanOrEqual(7);
     }
+    expect(contrastRatio("#b0b0b0", "#111111")).toBeCloseTo(8.71, 2);
   });
   it("a control at rest is white (Day) or near-black (Dark) with a thin edge: never a grey block", () => {
     expect(BEACH_THEMES.day.fill).toBe("#ffffff");

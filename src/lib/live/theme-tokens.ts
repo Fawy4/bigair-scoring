@@ -39,7 +39,7 @@ export interface BeachTokens {
   onSelected: string;
   /** Orange is kept for one thing: "Needs your score" (the bar, the tag border and the glow). A shape, never text; the words stay ink (7:1). Day #E65F00 (3.5:1 on white; #FF6A00 is only 2.87:1), Dark #FF6A00 (7.31:1 on black). */
   attention: string;
-  /** The scoreboard bar (the header of the officials' screens): near-black in both themes, with white and grey text. */
+  /** The header bar of the officials' screens: plain white with near-black text in Day (all white, as before), the brand near-black #111111 with white and grey text in Dark. */
   board: string;
   onBoard: string;
   boardMuted: string;
@@ -92,9 +92,9 @@ export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
     selected: "#0f5c57",
     onSelected: "#ffffff",
     attention: "#e65f00",
-    board: "#111111",
-    onBoard: "#ffffff",
-    boardMuted: "#b0b0b0",
+    board: "#ffffff",
+    onBoard: "#111111",
+    boardMuted: "#3a3a3a",
     live: "#14532d",
     pending: "#1e3a8a",
     failed: "#9f1239",

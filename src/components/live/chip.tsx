@@ -46,7 +46,7 @@ export function Chip({
  */
 export function PillSwitch<T extends string>({ label, value, options, onChange, testId, className }: { label: string; value: T; options: Array<{ key: T; text: string; testId?: string }>; onChange: (v: T) => void; testId?: string; className?: string }) {
   return (
-    <div role="group" aria-label={label} data-testid={testId} className={cn("inline-flex items-center gap-0.5 rounded-full border border-beach-border bg-beach-fill p-0.5", className)}>
+    <div role="group" aria-label={label} data-testid={testId} className={cn("inline-flex w-fit items-center gap-0.5 self-start rounded-full border border-beach-border bg-beach-fill p-0.5", className)}>
       {options.map((o) => (
         <button
           key={o.key}
