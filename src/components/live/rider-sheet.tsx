@@ -159,7 +159,7 @@ function LineRow({
             <Pill icon={Flame} tone="crash">
               {T.crash}
             </Pill>
-            <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked} onClick={() => onFlagOpen(line)} className="h-8 min-h-0 min-w-0 px-2 text-small">
+            <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked} onClick={() => onFlagOpen(line)} compact className="px-2 text-small">
               {T.flag}
             </Chip>
           </span>
@@ -168,11 +168,11 @@ function LineRow({
             {line.kind === "empty" && line.pending !== null && !isMissed ? <Pill tone="pending">{T.pendingTag}</Pill> : null}
             {/* Missed over Flag in one small column (the owner's choice: these two are the only controls under 44 px), so the trick name keeps the width */}
             <span className="flex w-[4.75rem] shrink-0 flex-col gap-0.5">
-              <Chip data-testid="line-missed" aria-label={T.missedAria(line.n)} aria-pressed={isMissed} pressed={isMissed} disabled={locked || (waits && !tappable)} onClick={() => (waits ? tap() : onMissed(line))} className="h-8 min-h-0 w-full min-w-0 px-1 text-small">
+              <Chip data-testid="line-missed" aria-label={T.missedAria(line.n)} aria-pressed={isMissed} pressed={isMissed} disabled={locked || (waits && !tappable)} onClick={() => (waits ? tap() : onMissed(line))} compact className="w-full text-small">
                 {isMissed ? <Check aria-hidden className="size-3.5 shrink-0" strokeWidth={3} /> : null}
                 {T.missed}
               </Chip>
-              <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked || line.kind === "empty"} onClick={() => onFlagOpen(line)} className="h-8 min-h-0 w-full min-w-0 px-1 text-small">
+              <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked || line.kind === "empty"} onClick={() => onFlagOpen(line)} compact className="w-full text-small">
                 {T.flag}
               </Chip>
             </span>

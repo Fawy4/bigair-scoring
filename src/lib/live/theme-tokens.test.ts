@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { builtInSchemes } from "@/lib/schemas/identification";
 import { inkFor } from "@/lib/identification/rider-label";
@@ -88,13 +88,12 @@ describe("teal is the accent; orange is kept for 'Needs your score'", () => {
     expect(contrastRatio(ORANGE, "#000000")).toBeCloseTo(7.31, 2);
   });
   it("orange is used for nothing but 'Needs your score' (and the logo): no component outside the Rider sheet line uses the attention colour", () => {
-    const { readdirSync, readFileSync: rf, statSync } = require("node:fs") as typeof import("node:fs");
     const hits: string[] = [];
     const walk = (dir: string) => {
       for (const f of readdirSync(dir)) {
         const p = `${dir}/${f}`;
         if (statSync(p).isDirectory()) walk(p);
-        else if (/\.(tsx|ts)$/.test(f) && !/\.test\./.test(f) && /beach-(on-)?attention/.test(rf(p, "utf8"))) hits.push(p);
+        else if (/\.(tsx|ts)$/.test(f) && !/\.test\./.test(f) && /beach-(on-)?attention/.test(readFileSync(p, "utf8"))) hits.push(p);
       }
     };
     walk("src");
