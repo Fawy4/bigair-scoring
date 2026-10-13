@@ -22,8 +22,14 @@ export async function installSupabaseProxy(context: BrowserContext, opts: { newV
   }
   if (!process.env.HTTPS_PROXY) return;
   await context.route(/https:\/\/[a-z0-9]+\.supabase\.co\//, async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({ response });
+    // A request still in flight when its test ends (the page keeps polling while the test cleans up) is dropped quietly: left alone, Playwright fails the test with the
+    // request's headers, sign-in token included, in the message.
+    try {
+      const response = await route.fetch();
+      await route.fulfill({ response });
+    } catch {
+      await route.abort().catch(() => undefined);
+    }
   });
 }
 

@@ -6,6 +6,17 @@ import { createOrganiser } from "./organiser";
 // the e-mailed link signs them in (in a private window), they choose a password, sign out and in again with it; the owner removes them (locked out at once) and
 // invites them again. No e-mail is really sent (the plan allows 2 an hour): the link is the same address the e-mail carries, made by the auth service.
 type Organiser = Awaited<ReturnType<typeof createOrganiser>>;
+
+/**
+ * Where a page is, written so a failure message never carries a sign-in secret: the address after a magic link holds the login token in its "#…" part (and sometimes in
+ * the query), and Playwright prints the whole address when `toHaveURL` fails. This keeps the origin and the path, drops the "#…" part and blanks token-like query values.
+ */
+const safeUrl = (page: Page): string => {
+  const u = new URL(page.url());
+  const search = u.search.replace(/([?&](?:access_token|refresh_token|token|token_hash|code)=)[^&]*/gi, "$1…");
+  return `${u.origin}${u.pathname}${search}`;
+};
+const expectUrl = (page: Page, re: RegExp) => expect.poll(() => safeUrl(page), { timeout: 15_000 }).toMatch(re);
 let owner: Organiser;
 const PASSWORD = "Second-customer-42";
 
@@ -57,7 +68,7 @@ test("invite, sign in with the link, set a password, sign in with it; remove, lo
   // ---- the person opens the link in a private window: signed in, in their organisation, nothing else to do
   const first = await privateWindow(browser, baseURL);
   await first.page.goto(link);
-  await expect(first.page).toHaveURL(/\/org$/);
+  await expectUrl(first.page, /\/org$/);
   await expect(first.page.getByRole("heading", { name: `${orgName}: events` })).toBeVisible();
   await expect(first.page.getByText("Access event")).toBeVisible();
   // sees only their own organisation: no admin, no other organisation, no other events
@@ -82,7 +93,7 @@ test("invite, sign in with the link, set a password, sign in with it; remove, lo
   await first.page.getByLabel("Your email address").fill(invitee);
   await first.page.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await first.page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(first.page).toHaveURL(/\/org$/);
+  await expectUrl(first.page, /\/org$/);
   await expect(first.page.getByRole("heading", { name: `${orgName}: events` })).toBeVisible();
 
   // ---- the e-mail's own link shape (auth service address, the session comes back after "#"): signs in in another window, and a used link says so
@@ -92,11 +103,11 @@ test("invite, sign in with the link, set a password, sign in with it; remove, lo
   const landing = async () => (await fetch(gen.properties.action_link, { redirect: "manual" })).headers.get("location")!;
   const emailWindow = await privateWindow(browser, baseURL);
   await emailWindow.page.goto(await landing());
-  await expect(emailWindow.page).toHaveURL(/\/org$/);
+  await expectUrl(emailWindow.page, /\/org$/);
   await expect(emailWindow.page.getByRole("heading", { name: `${orgName}: events` })).toBeVisible();
   const reused = await privateWindow(browser, baseURL);
   await reused.page.goto(await landing());
-  await expect(reused.page).toHaveURL(/\/org\/login\?error=expired/);
+  await expectUrl(reused.page, /\/org\/login\?error=expired/);
   await expect(reused.page.locator("p[role=alert]")).toContainText("already been used or has expired");
   await reused.context.close();
   await emailWindow.context.close();
@@ -119,7 +130,7 @@ test("invite, sign in with the link, set a password, sign in with it; remove, lo
   await page.getByRole("button", { name: "Yes, remove" }).click();
   await expect(page.getByRole("cell", { name: invitee })).toHaveCount(0);
   await first.page.goto("/org");
-  await expect(first.page).toHaveURL(/\/org\/login/);
+  await expectUrl(first.page, /\/org\/login/);
   // signing in again with the password works for the login but gets no further: not an organiser
   await first.page.getByLabel("Your email address").fill(invitee);
   await first.page.getByLabel("Password", { exact: true }).fill(PASSWORD);
@@ -132,7 +143,7 @@ test("invite, sign in with the link, set a password, sign in with it; remove, lo
   const again = await invite();
   const second = await privateWindow(browser, baseURL);
   await second.page.goto(again);
-  await expect(second.page).toHaveURL(/\/org$/);
+  await expectUrl(second.page, /\/org$/);
   await expect(second.page.getByRole("heading", { name: `${orgName}: events` })).toBeVisible();
   await second.context.close();
 });
