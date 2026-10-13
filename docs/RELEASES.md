@@ -34,7 +34,7 @@ PR: #46
 - [ ] Open /design: the Judge, Spotter and Head judge phones are shown in Daylight and Dark; type a score on a line of the judge's sheet and nothing is saved. The tab and the home-screen name say Sendbook.
 
 ### Known issues
-- The pictures in the manual are retaken for the judge, spotter and head judge's phone only; the other pictures still show the old teal look until the next screenshot run.
+- The manual's pictures still show the old look. They are retaken in the next release.
 - Destructive buttons (Cancel heat, Reset, Delete) keep their red; the front door (/) still follows the device's own light or dark setting, as before.
 
 ## 0.20.1 — 12 Oct 2026 {#release-0-20-1}

@@ -16,7 +16,7 @@ Release entry: [0.21.0](/admin/releases#release-0-21-0) (platform owner only)
 - **Officials' screens:** a clean header bar, white in Daylight and near-black in Dark (flag strip or timer; heat, seat and sync state) with **one round Settings button** that opens Daylight / Dark, Normal / Large and Sound, instead of the row at the bottom; attempt lines as rows with thin dividers; pills for **Missed**, **Flag** (now a flag-icon pill beside Missed), **L** / **R**, **Crash** and the **Queue / Rider sheet** switch.
 - **/design** shows the Judge and Spotter Rider sheets and the Head judge phone in Daylight and in Dark, side by side.
 
-**Manual pages updated:** [Judge screen](screens/judge.md), [Spotter screen](screens/spotter.md), [Head judge — phone](screens/console-phone.md), [Observer](screens/observer.md). The pictures of the Judge and Spotter Rider sheets and the head judge's phone are retaken; the other pictures still show the old colours until the next `npm run manual:shots`.
+**Manual pages updated:** [Judge screen](screens/judge.md), [Spotter screen](screens/spotter.md), [Head judge — phone](screens/console-phone.md), [Observer](screens/observer.md). The manual's pictures still show the old look; they are retaken in the next release.
 
 Last checked: 12 Oct 2026 · Product version 0.20.1
 
