@@ -52,6 +52,18 @@ docs/manual/        the product manual (Markdown + img/), rendered in the produc
 10. **Every PR is a release.** Before a PR is ready to merge it raises `version` in package.json (fix +0.0.1, feature +0.1.0; rebase onto main first so the number follows the last merged one) and adds its entry at the top of `docs/RELEASES.md`: version, date, `PR: #number`, "What changed" in plain words for the owner, "What to test" as 3–8 `- [ ] ` checks a non-developer can do on the live address in 15 minutes (a PR that changes no screen — tests only, docs only — still bumps and adds an entry, and may write the single line "Nothing to test on the live address." instead), "Known issues". The matching `docs/manual/changelog.md` entry links to it (`/admin/releases#release-x-y-z`). A unit test fails if package.json's version has no entry. The owner ticks the checks at /admin/releases.
 11. **Dependencies:** the stack above plus shadcn/ui's helper packages (Radix UI primitives, class-variance-authority, clsx, tailwind-merge, lucide-react, tailwindcss-animate) are pre-approved; anything else, ask first.
 
+## Design rules (every session, and any design skill, follows these; where a design skill disagrees, these win)
+The look of the product is the owner's brand, shared with his Instagram (Sendbook). It is decided; do not "improve" it away.
+- **Brand, fixed:** near-black #111111, electric orange #FF6A00, white #FFFFFF, grey #B0B0B0, and teal as the *selected-state* colour (Day #115E59 with white text, 7.6:1; Dark #2DD4BF with black text, 11.3:1). Font: Rubik (Bold for headings, rider names, heats, timers, scores; Regular/Medium for the rest). Never replace any of it, never add another colour, font or decoration. Orange means "act now" (the primary button, "Needs your score") and nothing else; teal means "selected" (switches, tabs, chips, the selected step and rider card).
+- **Day is the default on every page** and must read in full sun. Dark is an option, never the only mode.
+- **Contrast:** essential text at least 7:1, other text 4.5:1, shapes (frames, bars, icons that carry meaning) at least 3:1 on their ground. Orange is never text on white. A test computes this from the tokens (`src/lib/live/theme-tokens.test.ts`).
+- **Never colour alone:** words or icons always. **Red only** for crashes, lycra and destructive buttons that also say what they do in words.
+- **Controls at rest are soft filled shapes** (a light grey fill in Day, a dark grey fill in Dark) with at most a thin mid-grey hairline; the thick dark outline is for a selected or focused control only. Rows with thin dividers instead of boxed cards.
+- **Motion:** at most one thing moves on a screen; transitions about 150 ms; reduce motion is respected.
+- **Sizes:** tap targets at least 44 px; text inside boxes at least 16 px; the Rider sheets show header, rider cards and 7 lines at 390 × 844 in Normal without scrolling.
+- **Words:** no wording changes without the copy test (`src/lib/ui-copy.ts`, `ui-copy.test.ts`). The product is called **Sendbook**; "Big Air" stays only where it names the sport.
+- **Design skill:** `.claude/skills/frontend-design` (Anthropic, Apache-2.0, unchanged) may be used for design passes. Its "avoid near-black with one bright accent" does not apply: that palette is the brand. Make screens distinctive through type scale and weight, spacing, rhythm and one signature element (the scoreboard header bar), not through new colours.
+
 ## Workflow rules
 - Start each phase by reading `docs/STATUS.md` and ONLY the docs the prompt references. Use plan mode for multi-file work; keep plans short.
 - Small commits per phase: `feat(engine): ...`, `feat(ui): ...`, `fix: ...`, `docs: ...`. Push after each green phase (Vercel deploys `main`).
