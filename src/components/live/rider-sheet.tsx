@@ -25,6 +25,7 @@ const dirWord = (d: "left" | "right" | null) => (d === "left" ? copy.live.summar
 export function ViewSwitch({ view, onChange }: { view: "queue" | "sheet"; onChange: (v: "queue" | "sheet") => void }) {
   return (
     <PillSwitch
+      compact
       label={T.switchLabel}
       testId="view-switch"
       value={view}

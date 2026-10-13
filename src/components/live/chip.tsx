@@ -42,9 +42,11 @@ export function Chip({
 
 /**
  * A switch of two or three choices drawn as one soft track with a pill for the chosen one (teal, with its word): the Queue / Rider sheet switch, Rider sheet / Trick list, Daylight / Dark, Normal / Large.
- * Every segment is a 44 px button with aria-pressed, so the choice is never colour alone.
+ * Every segment is a button with aria-pressed (44 px, or 32 px in the slim `compact` size), so the choice is never colour alone.
  */
-export function PillSwitch<T extends string>({ label, value, options, onChange, testId, className }: { label: string; value: T; options: Array<{ key: T; text: string; testId?: string }>; onChange: (v: T) => void; testId?: string; className?: string }) {
+export function PillSwitch<T extends string>({ label, value, options, onChange, testId, className, compact = false }: {
+  /** The slim size (32 px segments) for the view switches at the top of the Rider sheets, so they take less vertical space (the owner's choice). */
+  compact?: boolean; label: string; value: T; options: Array<{ key: T; text: string; testId?: string }>; onChange: (v: T) => void; testId?: string; className?: string }) {
   return (
     <div role="group" aria-label={label} data-testid={testId} className={cn("inline-flex w-fit items-center gap-0.5 self-start rounded-full border border-beach-border bg-beach-fill p-0.5", className)}>
       {options.map((o) => (
@@ -54,7 +56,7 @@ export function PillSwitch<T extends string>({ label, value, options, onChange, 
           data-testid={o.testId}
           aria-pressed={value === o.key}
           onClick={() => onChange(o.key)}
-          className={cn("inline-flex h-11 min-w-11 items-center justify-center rounded-full px-4 text-body font-bold leading-none", value === o.key ? "bg-beach-selected text-beach-on-selected" : "bg-transparent text-beach-ink")}
+          className={cn("inline-flex min-w-11 items-center justify-center rounded-full text-body font-bold leading-none", compact ? "h-8 px-3" : "h-11 px-4", value === o.key ? "bg-beach-selected text-beach-on-selected" : "bg-transparent text-beach-ink")}
         >
           {o.text}
         </button>

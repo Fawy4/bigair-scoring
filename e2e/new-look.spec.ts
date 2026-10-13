@@ -5,7 +5,7 @@ import type { Browser, BrowserContext, Page } from "@playwright/test";
 // The New look (0.21.0) on a throwaway organisation (Arrow, EKL and Demo are never touched), phone size 390 × 844, ONE worker, on a production build:
 //   (a) all 7 lines of the judges' and the spotter's Rider sheet are visible without scrolling in Normal, with the header and the rider cards;
 //   (b) no sideways scrolling on any officials' screen at 390 px;
-//   (c) every tap target is at least 44 px (except the stacked Missed / Flag and L | R / Crash buttons: at least 32 px) and every typed-in box has text of at least 16 px, on every officials' screen;
+//   (c) every tap target is at least 44 px (except the stacked Missed / Flag and L / R / Crash buttons and the slim view switches: at least 32 px) and every typed-in box has text of at least 16 px, on every officials' screen;
 //   (d) Day is what a fresh phone and the organiser pages open in; a chosen Dark is kept after a reload.
 let w: LiveWorld;
 const contexts: BrowserContext[] = [];
@@ -40,7 +40,7 @@ async function audit(page: Page) {
       if (el instanceof HTMLInputElement && ["hidden", "checkbox", "radio"].includes(el.type)) continue;
       const box = el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement;
       // the owner's choice: the stacked buttons beside the trick name (Missed over Flag on a judge's line; L | R over Crash on a spotter's line) are the only controls allowed under 44 px, and never under 32 px
-      const stacked = ["line-missed", "line-flag", "line-left", "line-right", "line-crash"].includes(el.getAttribute("data-testid") ?? "");
+      const stacked = ["line-missed", "line-flag", "line-left", "line-right", "line-crash", "view-queue", "view-sheet", "spot-view-sheet", "spot-view-list"].includes(el.getAttribute("data-testid") ?? "");
       if (stacked ? r.height < 31.5 : r.height < 43.5 || r.width < 43.5) bad.small.push(`${name(el)} ${Math.round(r.width)}×${Math.round(r.height)}`);
       if (box && parseFloat(cs.fontSize) < 15.99) bad.tiny.push(`${name(el)} ${cs.fontSize}`);
     }

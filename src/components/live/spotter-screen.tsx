@@ -187,6 +187,7 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
   const feed = feedLines(live.attempts, pending);
   const switcher = (
     <PillSwitch
+      compact
       label={copy.spotterSheet.switchLabel}
       testId="view-switch"
       value={view}

@@ -73,6 +73,7 @@ function SpotterSheetDemo() {
   const riders: LoggerRider[] = q.riders.map((r) => ({ id: r.id, label: r.label, attempts: attempts.filter((a) => a.entryId === r.id).length, max: r.max }));
   const switcher = (
     <PillSwitch
+      compact
       label={copy.spotterSheet.switchLabel}
       testId="view-switch"
       value={mode}
