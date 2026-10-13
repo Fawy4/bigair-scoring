@@ -92,6 +92,11 @@ test.describe("the home page pictures", () => {
         document.querySelectorAll<HTMLElement>('[data-testid$="-events"]').forEach((sec) => {
           if (!sec.querySelector("li")) sec.remove();
         });
+        // the pictures are of an illustration: the throwaway organisation's names (and run codes) are swapped for plain sample names
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          n.textContent = (n.textContent ?? "").replace(/E2E Big Air [0-9a-f]{8}/g, "Sendbook Kite League").replace(/E2E Live [0-9a-f]{8}/g, "Sendbook Open").replace(/(Open|Finished) (\d) [0-9a-f]{8}/g, "$1 Series $2");
+        }
         if (s === "empty") {
           const p = document.createElement("p");
           p.className = "home-empty";
@@ -107,27 +112,30 @@ test.describe("the home page pictures", () => {
       test(`home ${state} ${scheme} on a laptop`, async ({ browser }) => {
         test.setTimeout(120_000);
         const ctx = await browser.newContext({ viewport: { width: 1280, height: state === "many" ? 1500 : 900 }, colorScheme: scheme });
+        // the home page follows the Daylight / Dark switch (kept on the device), not the device's own setting
+        await ctx.addInitScript((t) => window.localStorage.setItem("bigair.beach-theme", t), scheme === "dark" ? "dark" : "day");
         const page = await ctx.newPage();
         await page.goto("/");
         await expect(page.getByTestId("landing-event").first()).toBeVisible({ timeout: 60_000 });
         await keepOnlyOurs(state, w.org.run)(page);
         await hideDevOverlay(page);
         await page.waitForTimeout(300);
-        await page.screenshot({ path: path.join(OUT, `public-home-${state}-${scheme}-1280.png`), fullPage: true });
+        await page.screenshot({ path: path.join(OUT, `public-home-${state}-${scheme}-1280.png`) }); // the screen only: the drawn background is fixed to it
         await ctx.close();
       });
     }
     test(`home live ${scheme} on a phone`, async ({ browser }) => {
       test.setTimeout(120_000);
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: scheme });
+      await ctx.addInitScript((t) => window.localStorage.setItem("bigair.beach-theme", t), scheme === "dark" ? "dark" : "day");
       const page = await ctx.newPage();
       await page.goto("/");
       await expect(page.getByTestId("landing-event").first()).toBeVisible({ timeout: 60_000 });
       await keepOnlyOurs("live", w.org.run)(page);
       await hideDevOverlay(page);
       await page.waitForTimeout(300);
-      await page.screenshot({ path: path.join(OUT, `public-home-live-${scheme}-390.png`), fullPage: true });
-      if (scheme === "light") await page.screenshot({ path: path.join(OUT, "public-home-390.png"), fullPage: true }); // the name the older pages use
+      await page.screenshot({ path: path.join(OUT, `public-home-live-${scheme}-390.png`) });
+      if (scheme === "light") await page.screenshot({ path: path.join(OUT, "public-home-390.png") }); // the name the older pages use
       await ctx.close();
     });
   }

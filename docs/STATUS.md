@@ -1415,3 +1415,13 @@ Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 
 ### How to test on a phone
 - Release entry 0.21.0 in `docs/RELEASES.md`.
+
+## Home page: the Sendbook background (0.22.0)
+
+### Done
+- `/` only: drawn background (air streams, low water at about 8% of the screen height, one still rider in a megaloop) in `src/components/home/home-sky.tsx` (loads after the page) and `home-sky-engine.ts` (the drawing, ported from `design/background/sendbook-background-reference.js` without the moving kiter); two small pictures in `public/home-sky/`. Orange buttons and links on this page only (`.home-sky` in `home.css`).
+- Day / Dark follow the page's own switch; reduce motion = one still picture; paused in a hidden tab; sharpness capped at 2×; no layout shift (canvas is fixed; the rider's box is reserved in CSS).
+- Tests: `home-sky.test.ts`. Manual: public-home page, changelog, release 0.22.0.
+
+### How to test on a phone
+- Release entry 0.22.0 in `docs/RELEASES.md`.

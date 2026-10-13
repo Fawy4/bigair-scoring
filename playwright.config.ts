@@ -24,6 +24,6 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : production
-      ? { command: "npm run build && PUBLIC_CACHE_MS=0 npx next start -p 3200", url: baseURL, reuseExistingServer: true, timeout: 600_000 }
-      : { command: "PUBLIC_CACHE_MS=0 npm run dev", url: baseURL, reuseExistingServer: true },
+      ? { command: "npm run build && PUBLIC_CACHE_MS=0 SHOW_TEST_EVENTS=1 npx next start -p 3200", url: baseURL, reuseExistingServer: true, timeout: 600_000 }
+      : { command: "PUBLIC_CACHE_MS=0 SHOW_TEST_EVENTS=1 npm run dev", url: baseURL, reuseExistingServer: true },
 });

@@ -12,6 +12,36 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.22.0 — 13 Oct 2026 {#release-0-22-0}
+
+PR: #50
+
+### What changed
+- **The home page (/) has the Sendbook background.** Thin orange air streams flow left to right across the page, low orange water moves along the bottom, and one rider hangs upside down in a megaloop with his kite looping just below him. All of it is drawn (no photos). **The air and the water move; the rider does not.** On a laptop he sits to the right of the wordmark; on a phone he sits in a band under the wordmark and scrolls away with the page. He is never behind text, and the event cards, the event list and the code box keep solid backgrounds.
+- **Daylight** is white fading from a warm tint at the top; **Dark** is near-black fading from a deep brown at the top. The Daylight / Dark switch works as before.
+- **On this page only, buttons and links are orange** (the **Go** button, "Sign in", "Join with your PIN", the footer links and the live dot). Everything else in the product, including the Join page, stays teal. The words on the orange **Go** button are black (not the near-black #111111) because that is the pair that reaches 7:1 (7.31:1); Dark's orange links read at 6.6:1 on the page colour.
+- **The background shows around the content, not behind boxes:** only the event cards and the code box are solid. The header, the sections and the footer are transparent; at the bottom of the page the footer ends just above the water, so its words never sit on it.
+- **The Daylight / Dark switch** has the brand orange on its selected side (black words), in both themes, like the other buttons on this page.
+- **The logo above the headline is the orange arc alone** (about 40 px tall), in both themes, because the headline already says Sendbook. The owner's transparent logos are in `design/brand/`; the home page was the only place the app shows the Sendbook logo, so no other page changed. (The logo set in Platform settings is no longer shown on the home page.)
+- **A "Get in touch" button under the tagline:** "Running a kite competition?" and an orange **Get in touch on WhatsApp** button that opens WhatsApp in a new tab with the message "Hi! I saw Sendbook and I'd like to know more." **The owner sets the number in Vercel:** Project → Settings → Environment Variables → `NEXT_PUBLIC_CONTACT_WHATSAPP`, digits only with the country code first (for example 201001234567; spaces, + and dashes are ignored), then redeploy. Until it is set, the line and the button do not show.
+- **Test events never show on the home page:** events of the throwaway organisations the automatic tests create (named "E2E Big Air" plus a code) are left out for visitors, so people arriving from Instagram never see them. Simulations were already left out.
+- **Reduce motion** shows one still picture. The movement pauses when the tab is hidden, and the picture is never drawn sharper than 2×.
+- **It loads after the page is visible:** the words and cards appear first; the background starts a moment later (two small pictures, 24 KB, and about 8 KB of script). It takes no space in the layout, so nothing jumps. On a phone the band under the wordmark pushes the event list down by about 200 px.
+
+### What to test
+- [ ] Once `NEXT_PUBLIC_CONTACT_WHATSAPP` is set in Vercel and the site redeployed: under "Live scoring and results for kite competitions" there is "Running a kite competition?" and an orange **Get in touch on WhatsApp** button; tap it: WhatsApp opens in a new tab to your number with the message "Hi! I saw Sendbook and I'd like to know more." With the variable empty, neither shows.
+- [ ] The small mark above "Sendbook" is the orange arc only, no white box, in Daylight and Dark. The Daylight / Dark switch is orange on the side you chose.
+- [ ] Open the home page on your phone (Daylight): a warm tint at the top, thin orange streams moving, water moving along the bottom, and the rider upside down in the band under "Sendbook". Scroll: the rider scrolls away with the page; the cards stay on solid white.
+- [ ] Switch to Dark with the switch at the top right: near-black page, orange streams and water, the rider in a darker orange. Reload: still Dark. Switch back to Daylight.
+- [ ] On a laptop: the rider is to the right of the "Sendbook" wordmark, and never over any text or card.
+- [ ] The **Go** button is orange with black words; "Sign in" and "Join with your PIN" are orange and underlined. Open /join: its button is still teal.
+- [ ] Switch your phone's "Reduce motion" on (iPhone: Settings → Accessibility → Motion) and reload: the picture is the same but nothing moves.
+- [ ] Open the home page, switch to another app for 10 seconds and come back: it keeps moving smoothly. Rotate the phone: the picture refits, with no sideways scrolling.
+
+### Known issues
+- Until the number is set in Vercel the WhatsApp button is hidden.
+- On the home page the live event's pulsing dot keeps pulsing besides the air and the water.
+
 ## 0.21.0 — 13 Oct 2026 {#release-0-21-0}
 
 PR: #46

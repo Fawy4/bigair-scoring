@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { HomeEventCode } from "@/components/home/home-event-code";
+import { HomeSky } from "@/components/home/home-sky";
 import { HomeTheme } from "@/components/home/home-theme";
 import { EventsView } from "@/components/home/events-view";
 import type { LandingEvent } from "@/components/landing-event-card";
@@ -13,6 +14,8 @@ import { todayIn } from "@/lib/schedule/plans";
 import { createClient } from "@/lib/supabase/server";
 import { copy } from "@/lib/ui-copy";
 import { PRODUCT_VERSION } from "@/lib/product-version";
+import { whatsappLink } from "@/lib/public/contact";
+import { withoutTestEvents } from "@/lib/public/test-events";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +55,7 @@ function CodeField() {
 async function Events() {
   const settings = await getPlatformSettings();
   const { data, error } = await (await createClient()).rpc("get_public_events", { p_limit: 100 });
-  const events = (data ?? []) as LandingEvent[];
+  const events = withoutTestEvents((data ?? []) as LandingEvent[]);
   const groups = groupOrgEvents(events, todayIn(settings.defaultTimezone, Date.now()));
   const nows = await Promise.all(groups.live.slice(0, LIVE_LOOKUPS).map((e) => nowOn(e.slug)));
   return <EventsView groups={groups} nowLines={nows} failed={Boolean(error)} />;
@@ -61,20 +64,31 @@ async function Events() {
 /** For riders and spectators. The hero (wordmark, tagline) does not wait for the events: the list streams in under it. */
 export default async function Home() {
   const settings = await getPlatformSettings();
+  const contact = whatsappLink(process.env.NEXT_PUBLIC_CONTACT_WHATSAPP, L.contactMessage);
   const hasLegal = Boolean(settings.legalTexts.terms || settings.legalTexts.privacy);
   return (
-    <div className="home" data-testid="landing">
+    <div className="home home-sky" data-testid="landing">
+      <HomeSky />
       <main className="home-wrap">
         <HomeTheme />
         <header className="home-hero">
           <div>
-            {settings.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={settings.logoUrl} alt={copy.publicSite.logoAlt(settings.productName)} className="home-logo" />
-            ) : null}
+            {/* the orange arc alone: the headline already says the name */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/sendbook-arc.png" alt="" width={58} height={40} className="home-logo" />
             <h1 className="home-wordmark">{settings.productName}</h1>
             <p className="home-tagline">{settings.tagline}</p>
+            {contact ? (
+              <div className="home-contact" data-testid="home-contact">
+                <p>{L.contactLine}</p>
+                <a href={contact} target="_blank" rel="noopener noreferrer" className="home-go">
+                  {L.contactButton}
+                </a>
+              </div>
+            ) : null}
           </div>
+          {/* where the background's rider sits: to the right of the wordmark on a laptop, a band under it on a phone */}
+          <div className="home-sky-slot" data-home-sky-slot aria-hidden />
         </header>
 
         <Suspense fallback={<div className="home-skeleton" aria-hidden />}>
