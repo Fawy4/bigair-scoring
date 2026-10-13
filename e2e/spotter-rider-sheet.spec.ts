@@ -949,3 +949,76 @@ test("(i) the clear button empties the trick box in one tap (the attempt keeps i
   await spotter.locator("#trick-text").press("Enter"); // reads the words: the count goes in front, in the singular
   await expect(spotter.getByTestId("composed-name").locator("p.sr-only")).toHaveText("3x Kiteloop");
 });
+
+test("(m) a tapped suggestion only adds the word and a space, the keyboard and the cursor stay in the box, the line logs after the pause or when the box is left; long names shrink to fit without ever dropping the box under 16 px (spotter) and on two lines (judge)", async ({ browser }) => {
+  test.setTimeout(600_000);
+  const H = w.heats[0];
+  const E = w.entries[0];
+  await onlyRed(H);
+  await w.startHeat(H);
+  const spotter = await phone(browser, "spotter", `/spot/${w.eventId}`, { newViews: true });
+  await expect(strick(spotter, 1)).toBeEnabled({ timeout: 40_000 });
+  const box = strick(spotter, 1);
+  const pick = (name: string) => sline(spotter, 1).getByTestId("suggestion").filter({ hasText: name }).first();
+
+  // type "back", tap Backroll: the word is filled in with a space, the box keeps the focus with the cursor at the end, and nothing is logged by the tap
+  await box.click();
+  await box.pressSequentially("back");
+  await pick("Backroll").click();
+  await expect(box).toHaveValue("Backroll ");
+  await expect(box).toBeFocused();
+  expect(await box.evaluate((e) => [(e as HTMLInputElement).selectionStart, (e as HTMLInputElement).selectionEnd])).toEqual(["Backroll ".length, "Backroll ".length]);
+  expect(await attempts(H, E)).toHaveLength(0);
+  // the writing goes on: "board off" is offered as Board-off, and a tap adds it
+  await box.pressSequentially("board off");
+  await expect(pick("Board-off")).toBeVisible();
+  await pick("Board-off").click();
+  await expect(box).toHaveValue("Backroll Board-off ");
+  await expect(box).toBeFocused();
+  expect(await attempts(H, E)).toHaveLength(0);
+  // after the usual pause the line logs itself
+  await expect.poll(async () => (await attempts(H, E)).map((a) => a.trick_name), { timeout: 30_000 }).toHaveLength(1);
+  const name = (await attempts(H, E))[0].trick_name as string;
+  expect(name).toMatch(/Backroll/);
+  expect(name).toMatch(/Board-off/);
+
+  // "boardoff" (and "board") are offered too
+  await strick(spotter, 2).click();
+  await strick(spotter, 2).pressSequentially("boardoff");
+  await expect(sline(spotter, 2).getByTestId("suggestion").filter({ hasText: "Board-off" })).toBeVisible();
+  await strick(spotter, 2).fill("");
+  await strick(spotter, 2).pressSequentially("board");
+  await expect(sline(spotter, 2).getByTestId("suggestion").filter({ hasText: "Board-off" })).toBeVisible();
+
+  // leaving the box logs what is in it, also when the last word is unfinished ("Tap a trick to log" is only for as long as the box is in use)
+  await strick(spotter, 2).fill("Double frontroll board-off kiteloop handle pass megaloop");
+  await expect(sline(spotter, 2).getByTestId("line-state")).toHaveText("Tap a trick to log").catch(() => undefined);
+  await spotter.getByTestId("rider-strip").click({ position: { x: 5, y: 5 } }); // leave the box
+  await expect.poll(async () => (await attempts(H, E)).length, { timeout: 30_000 }).toBe(2);
+
+  // a long name shrinks to fit (never under 12 px) when the box is not in use; the box itself never goes under 16 px
+  await expect(box).not.toBeFocused();
+  const fit = strick(spotter, 2).locator("xpath=..").getByTestId("line-trick-fit");
+  await expect(fit).toBeVisible();
+  const px = await fit.evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+  expect(px).toBeGreaterThanOrEqual(12);
+  expect(px).toBeLessThan(16);
+  expect(await fit.getByTestId("line-trick-fit-text").evaluate((e) => e.scrollHeight <= e.clientHeight + 1 && e.getBoundingClientRect().height <= 2 * 12 * 1.1 + 2), "the whole name shows, in one or two lines").toBe(true);
+  for (const focus of [false, true]) {
+    if (focus) await strick(spotter, 2).focus();
+    expect(await strick(spotter, 2).evaluate((e) => parseFloat(getComputedStyle(e).fontSize)), focus ? "in use" : "at rest").toBeGreaterThanOrEqual(16);
+  }
+  // a short name is not shrunk
+  await strick(spotter, 1).evaluate((e) => (e as HTMLInputElement).blur());
+  await expect(strick(spotter, 1).locator("xpath=..").getByTestId("line-trick-fit")).toBeVisible();
+  expect(await strick(spotter, 1).locator("xpath=..").getByTestId("line-trick-fit").evaluate((e) => parseFloat(getComputedStyle(e).fontSize))).toBeGreaterThanOrEqual(15.5);
+
+  // the judge's line: a very long name stays in two lines by shrinking (not under 12 px)
+  await w.db.from("trick_attempts").update({ trick_name: "Double Frontroll Board-off Kiteloop Handle pass" }).eq("id", (await attempts(H, E))[1].id);
+  const j1 = await phone(browser, "j1", `/judge/${w.eventId}`, { newViews: true });
+  await expect(jline(j1, 2).getByTestId("line-trick")).toContainText("Handle pass", { timeout: 60_000 });
+  const t = jline(j1, 2).getByTestId("line-trick");
+  const m = await t.evaluate((e) => ({ size: parseFloat(getComputedStyle(e).fontSize), lines: e.scrollHeight / (parseFloat(getComputedStyle(e).fontSize) * 1.25) }));
+  expect(m.size).toBeGreaterThanOrEqual(12);
+  expect(m.lines, "two lines at most").toBeLessThanOrEqual(2.2);
+});

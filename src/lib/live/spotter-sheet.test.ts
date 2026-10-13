@@ -219,6 +219,26 @@ describe("suggestions under the box", () => {
   it("the directions are not suggested (L and R are buttons)", () => {
     expect(suggestionsFor(vocab, enabled, "lef").map((s) => s.label)).not.toContain("Left");
   });
+  it("Board-off is offered for \"board\", \"board off\" and \"boardoff\" (spelled differently from its name), and a tap on it replaces the words typed", () => {
+    for (const typed of ["board", "board off", "boardoff", "Board off", "BOARD OFF"]) {
+      const open = suggestionsFor(vocab, enabled, typed).filter((s) => !s.exact);
+      expect(open.map((s) => s.label), typed).toContain("Board-off");
+    }
+    const s = suggestionsFor(vocab, enabled, "double frontroll board off").find((x) => x.label === "Board-off")!;
+    expect(applySuggestion("double frontroll board off", s)).toBe("double frontroll Board-off");
+    expect(applySuggestion("double fro", suggestionsFor(vocab, enabled, "double fro")[0])).toBe("double Frontroll");
+  });
+  it("only a word spelled exactly like the name is exact (capitals aside): Board-off typed as Board-off needs no tap", () => {
+    expect(suggestionsFor(vocab, enabled, "board-off").filter((s) => !s.exact).map((s) => s.label)).not.toContain("Board-off");
+    expect(suggestionsFor(vocab, enabled, "Board-Off").filter((s) => !s.exact).map((s) => s.label)).not.toContain("Board-off");
+  });
+  it("after a tapped suggestion the box ends with a space, so no suggestion is open and the usual 2-second pause logs the line", () => {
+    expect(suggestionsFor(vocab, enabled, "double Frontroll ")).toEqual([]);
+    expect(commitDecision({ text: "double Frontroll ", crash: false, picked: false, quietMs: 100, hasOpenSuggestions: false })).toEqual({ log: false, waitMs: 1900 });
+    expect(commitDecision({ text: "double Frontroll ", crash: false, picked: false, quietMs: 2000, hasOpenSuggestions: false })).toEqual({ log: true, why: "paused" });
+    // a last word that is still unfinished waits for a tap (or for the box to be left)
+    expect(commitDecision({ text: "double fro", crash: false, picked: false, quietMs: 5000, hasOpenSuggestions: true })).toEqual({ log: false, waitMs: null });
+  });
   it("a suggestion that is exactly what has been typed is not 'open': the pause may log it", () => {
     const open = suggestionsFor(vocab, enabled, "Backroll").filter((s) => !s.exact);
     expect(open).toEqual([]);

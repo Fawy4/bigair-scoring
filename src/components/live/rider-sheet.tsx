@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Flag, Flame } from "lucide-react";
 import { Chip, PillSwitch } from "./chip";
 import type { ConnectionStatus } from "./connection-badge";
 import type { FlagStripModel } from "./flag-strip";
 import type { TimerState } from "./heat-timer";
 import { Pill } from "./pill";
+import { useShrinkToLines } from "./use-fit-text";
 import { RiderTile } from "./rider-tile";
 import { ScreenHeader } from "./screen-header";
 import { LearnMore } from "@/components/manual/learn-more";
@@ -96,6 +97,9 @@ function LineRow({
   onClear: (line: SheetLine) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
+  // the trick name wraps to two lines; one that still does not fit shrinks (down to 12 px) rather than being cut
+  const trickBox = useRef<HTMLSpanElement>(null);
+  useShrinkToLines(trickBox, `${line.trickName ?? ""}|${line.direction ?? ""}`);
   const stored = line.kind === "attempt" ? line.mine : line.kind === "empty" ? line.pending : null;
   const isMissed = stored === "missed";
   const closed = !line.open && line.kind === "empty";
@@ -135,7 +139,7 @@ function LineRow({
               {orphan ? T.noAttempt : T.waitingTrick}
             </span>
           ) : (
-            <span data-testid="line-trick" className={cn("flex flex-wrap items-baseline gap-x-1.5 text-name font-bold leading-tight", crash && "line-through")}>
+            <span ref={trickBox} data-testid="line-trick" className={cn("flex flex-wrap items-baseline gap-x-1.5 text-name font-bold leading-tight", crash && "line-through")}>
               <span>{line.trickName || "—"}</span>
               {line.direction ? <span className="text-small font-medium text-beach-muted">{dirWord(line.direction)}</span> : null}
             </span>

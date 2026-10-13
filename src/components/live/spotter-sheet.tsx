@@ -7,6 +7,7 @@ import type { LoggerRider, LoggedAttempt } from "./attempt-logger";
 import { RiderTile } from "./rider-tile";
 import { MicStatus } from "./trick-builder";
 import { useSpeech } from "./use-speech";
+import { useFitFontSize } from "./use-fit-text";
 import type { TrickVocab } from "@/lib/engine/tricks";
 import {
   applySuggestion,
@@ -88,6 +89,8 @@ function SheetLineRow({
   const [crash, setCrash] = useState(line.crash);
   const [focused, setFocused] = useState(false);
   const picked = useRef(false);
+  const caretAtEnd = useRef(false);
+  const fitBox = useRef<HTMLSpanElement>(null);
   const dirty = useRef(false);
   // the box was emptied with the clear button: it stays empty until a new trick is typed (the attempt keeps its trick meanwhile)
   const cleared = useRef(false);
@@ -183,14 +186,23 @@ function SheetLineRow({
     picked.current = false;
     input.current?.focus();
   };
+  // a tapped suggestion fills in the word being typed and adds a space: the keyboard stays open and the cursor stays at the end, so the typing goes on. The line logs itself after the usual pause or when the box is left.
   const pick = (i: number) => {
-    const next = applySuggestion(text, suggestions[i]);
-    setText(next);
-    picked.current = true;
-    dirty.current = false;
-    commit({ text: next });
+    setText(applySuggestion(text, suggestions[i]) + " ");
+    cleared.current = false;
     picked.current = false;
+    dirty.current = true;
+    typedAt.current = Date.now();
+    caretAtEnd.current = true;
   };
+  useEffect(() => {
+    if (!caretAtEnd.current) return;
+    caretAtEnd.current = false;
+    const el = input.current;
+    if (!el) return;
+    el.focus({ preventScroll: true });
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, [text]);
   const tapDirection = (d: Direction) => {
     const next = toggleDirection(dir, d);
     setDir(next);
@@ -210,6 +222,9 @@ function SheetLineRow({
   const dim = line.state === "waiting";
   // the mic shows while the box is empty and the × only while it is in use, so the trick box gets all the width that is left
   const adorned = canType && (text ? focused : speech.supported);
+  // the box keeps its 16 px text (iPhone Safari zooms into a box under 16 px when it is tapped); out of use, a copy of a long name shrunk to fit (down to 12 px) is drawn over it
+  const fitted = Boolean(text) && !focused;
+  const fitPx = useFitFontSize(text, fitted, fitBox);
   const freeText = logged && mine && read(line, text, vocab, enabledIds);
   // one row per line: the state is a small tick by the number; the words are kept for a screen reader and show only when something needs saying (a typed trick waiting for a tap, another seat's line, free text)
   const sayState = tapToLog || (logged && !mine) || freeText;
@@ -287,12 +302,24 @@ function SheetLineRow({
                 enterKeyHint="done"
                 onChange={(e) => onType(e.target.value)}
                 onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") (e.target as HTMLInputElement).blur(); // closes the keyboard; it never logs
+                onBlur={() => {
+                  setFocused(false);
+                  // leaving the box logs what is in it (or sends the change)
+                  if (dirty.current && text.trim() && !crash && canType) commit();
                 }}
-                className={cn("h-11 w-full min-w-0 rounded-full border border-beach-border bg-beach-fill py-0 pl-3 text-body font-medium text-ellipsis text-beach-ink placeholder:font-medium placeholder:text-beach-muted disabled:bg-beach-surface", adorned ? "pr-11" : "pr-3")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.target as HTMLInputElement).blur(); // closes the keyboard (and so logs what is in the box)
+                }}
+                className={cn("h-11 w-full min-w-0 rounded-full border border-beach-border bg-beach-fill py-0 pl-3 text-body font-medium text-ellipsis text-beach-ink placeholder:font-medium placeholder:text-beach-muted disabled:bg-beach-surface", adorned ? "pr-11" : "pr-3", fitted && "text-transparent")}
               />
+              {fitted ? (
+                <span ref={fitBox} aria-hidden data-testid="line-trick-fit" className="pointer-events-none absolute inset-y-0 left-3 right-3 flex items-center overflow-hidden font-medium text-beach-ink" style={{ fontSize: fitPx }}>
+                  {/* one line while it fits at 12 px or more; a name too long even for that wraps to a second line at 12 px */}
+                  <span data-testid="line-trick-fit-text" className="line-clamp-2 break-words leading-[1.1]">
+                    {text}
+                  </span>
+                </span>
+              ) : null}
               {!text && canType && speech.supported ? (
                 <button
                   type="button"
