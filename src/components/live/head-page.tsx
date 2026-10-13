@@ -374,13 +374,13 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
         <div ref={flagFit.rowRef} className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <DivisionTabs divisions={ctx.divisionTabs} divisionId={divisionId} liveIds={liveIds} onPick={pickDivision} />
           {c.selected && c.state !== "cancelled" && !c.armed ? <BreakChoice c={c} compact /> : null}
-          <div data-flag-message className="min-w-0 flex-1 basis-48">
+          <div data-flag-message className="min-w-0" style={{ flex: "1 1 12rem" }}>
             <ControlMessage c={c} />
             <WhyLine c={c} />
           </div>
           {c.flag && flagInTop ? (
-            <div data-flag-slot data-testid="top-bar-flag" className="flex-none">
-              <FlagStrip model={c.flag} size="head" className="w-max flex-none flex-nowrap gap-x-4 [&_span]:!flex-none [&_span]:!basis-auto [&_span]:!whitespace-nowrap" />
+            <div data-flag-slot data-testid="top-bar-flag" className="min-w-0" style={{ flex: "6 1 auto" }}>
+              <FlagStrip model={c.flag} size="head" className="w-full flex-nowrap gap-x-4 [&_span]:!flex-none [&_span]:!basis-auto [&_span]:!whitespace-nowrap" />
             </div>
           ) : null}
           <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
