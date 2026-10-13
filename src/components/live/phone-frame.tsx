@@ -55,3 +55,15 @@ export function ThemedPhone({ theme, children, label }: { theme: "day" | "dark";
     </LiveSettingsProvider>
   );
 }
+
+/** A themed strip of one 390 px column (no phone frame) for putting a piece of a screen next to another in Daylight or Dark. */
+export function ThemedColumn({ theme, children }: { theme: "day" | "dark"; children: React.ReactNode }) {
+  const [t, setT] = useState<BeachTheme>(theme);
+  const [size, setSize] = useState<BeachTextSize>("normal");
+  const [soundOn, setSoundOn] = useState(false);
+  return (
+    <LiveSettingsProvider value={{ theme: t, setTheme: setT, size, setSize, soundOn, setSoundOn }}>
+      <div data-theme={t} className={cn(t === "dark" ? "beach-dark" : "beach-day", size === "large" ? "beach-text-large" : "beach-text-normal", "w-[390px] max-w-full overflow-visible bg-beach-bg text-beach-ink")}>{children}</div>
+    </LiveSettingsProvider>
+  );
+}

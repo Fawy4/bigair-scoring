@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { AttemptLogger, enabledIdsOf, type LoggerRider } from "@/components/live/attempt-logger";
 import { HeadControlTab } from "@/components/live/head-control-tab";
 import { JudgeQueue } from "@/components/live/judge-queue";
-import { ThemedPhone } from "@/components/live/phone-frame";
+import { ThemedColumn, ThemedPhone } from "@/components/live/phone-frame";
+import type { FlagStripModel } from "@/components/live/flag-strip";
+import { DEFAULT_FLAGS } from "@/lib/schemas/flags";
 import { RiderSheetView, ViewSwitch } from "@/components/live/rider-sheet";
 import { ScreenHeader } from "@/components/live/screen-header";
 import { SpotterSheetView } from "@/components/live/spotter-sheet";
@@ -126,5 +128,49 @@ export function NewLookScreens() {
         {() => <HeadPhoneDemo />}
       </Pair>
     </>
+  );
+}
+
+/** The header in each flag state, the new scoreboard bar next to the previous light header, in Daylight and in Dark, so the two can be compared. */
+export function FlagHeaderComparison() {
+  const st = DEFAULT_FLAGS.states;
+  const model = (kind: "before_start" | "running" | "last_minute" | "stopped", words: string, countdownMs: number | null): FlagStripModel => ({
+    state: { kind, why: kind === "stopped" ? "finished" : null, label: st[kind].label, colour: st[kind].colour, countdownMs, startsAtMs: null, prestartSec: null, inPrestart: false },
+    words,
+    heatName: "Pro Men · R1 · Heat 3",
+    heatShort: "Heat 3",
+  });
+  const rows: Array<[string, FlagStripModel]> = [
+    ["Yellow — before the start", model("before_start", st.before_start.label, 58_000)],
+    ["Green — running", model("running", st.running.label, 330_000)],
+    ["Yellow — last minute", model("last_minute", st.last_minute.label, 48_000)],
+    ["Red — finished", model("stopped", copy.flags.why.finished, null)],
+  ];
+  return (
+    <section id="look-flag-header" data-testid="section-look-flag-header" className="flex scroll-mt-16 flex-col gap-2">
+      <h2 className="text-heading font-bold">{N.flagHeader}</h2>
+      <p className="text-small font-medium text-beach-muted">{N.flagHeaderNote}</p>
+      {(["day", "dark"] as const).map((t) => (
+        <div key={t} className="flex flex-col gap-1">
+          <p className="text-small font-bold text-beach-muted">{t === "day" ? copy.design.day : copy.design.dark}</p>
+          <div className="grid grid-cols-[auto_auto] justify-start gap-x-4 gap-y-3">
+            <p className="text-small font-bold">{N.flagNew}</p>
+            <p className="text-small font-bold">{N.flagPrevious}</p>
+            {rows.map(([label, m]) => (
+              <div key={label} className="contents">
+                {[false, true].map((plain) => (
+                  <div key={String(plain)} className="flex flex-col gap-0.5">
+                    <ThemedColumn theme={t}>
+                      <ScreenHeader heatName="Pro Men · R1 · Heat 3" seat="Judge 1" remainingMs={330_000} flag={m} plain={plain} />
+                    </ThemedColumn>
+                    <p className="text-small font-medium text-beach-muted">{label}</p>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
   );
 }

@@ -25,7 +25,10 @@ export function ScreenHeader({
   showTimer = true,
   clock,
   flag,
+  plain = false,
 }: {
+  /** The header as it was before the scoreboard bar (a light header): only the /design comparison uses it. */
+  plain?: boolean;
   /** The flag strip (Flags): when set, it is the clock line, in the state's colour. Null/undefined (flags off): the plain timer as before. */
   flag?: FlagStripModel | null;
   /** The time now in the event time zone, small and muted next to the timer. */
@@ -46,22 +49,22 @@ export function ScreenHeader({
   onToggleDetails?: () => void;
 }) {
   return (
-    <header data-testid="screen-header" className="flex flex-col border-b border-beach-line bg-beach-board px-2 pb-1 pt-1 text-beach-on-board [&_[data-testid=heat-timer-clock]]:text-[24px]">
+    <header data-testid="screen-header" className={plain ? "flex flex-col border-b border-beach-line bg-beach-bg px-2 pb-1 pt-1" : "flex flex-col border-b border-beach-line bg-beach-board px-2 pb-1 pt-1 text-beach-on-board [&_[data-testid=heat-timer-clock]]:text-[24px]"}>
       <div className="flex min-h-[44px] items-center justify-between gap-2">
         <div className={flag ? "flex min-w-0 flex-1 items-center gap-2" : "flex min-w-0 flex-1 items-baseline gap-2"}>
-          {flag ? <FlagStrip model={flag} /> : showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className="text-name font-bold text-beach-on-board">{copy.live.header.between}</span>}
-          {clock ? <ClockText timezone={clock.timezone} nowMs={clock.nowMs} className="text-beach-board-muted" /> : null}
+          {flag ? <FlagStrip model={flag} /> : showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className={plain ? "text-name font-bold" : "text-name font-bold text-beach-on-board"}>{copy.live.header.between}</span>}
+          {clock ? <ClockText timezone={clock.timezone} nowMs={clock.nowMs} className={plain ? undefined : "text-beach-board-muted"} /> : null}
         </div>
         {details !== undefined ? (
-          <Chip onBoard data-testid="details-toggle" pressed={details} onClick={onToggleDetails}>
+          <Chip onBoard={!plain} data-testid="details-toggle" pressed={details} onClick={onToggleDetails}>
             {details ? (detailsLabels?.on ?? copy.live.header.detailsOn) : (detailsLabels?.off ?? copy.live.header.details)}
           </Chip>
         ) : null}
-        <SettingsMenu onBoard />
+        <SettingsMenu onBoard={!plain} />
       </div>
       <div className="flex items-center justify-between gap-2 pt-0.5">
-        <p className="min-w-0 truncate text-small font-medium text-beach-board-muted">
-          <span className="font-bold text-beach-on-board">{heatName}</span> · {seat}
+        <p className={plain ? "min-w-0 truncate text-small font-medium text-beach-muted" : "min-w-0 truncate text-small font-medium text-beach-board-muted"}>
+          <span className={plain ? "font-bold text-beach-ink" : "font-bold text-beach-on-board"}>{heatName}</span> · {seat}
         </p>
         <ConnectionBadge status={connection} pending={pending} onRetry={onRetry} />
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { NewLookScreens } from "./new-look";
+import { FlagHeaderComparison, NewLookScreens } from "./new-look";
 import { useMemo, useState } from "react";
 import { ConnectionBadge } from "@/components/live/connection-badge";
 import { CriteriaRows } from "@/components/live/criteria-rows";
@@ -165,6 +165,7 @@ export function DesignSections({ arrow }: { arrow: ArrowScheme | null }) {
   return (
     <>
       <NewLookScreens />
+      <FlagHeaderComparison />
       <p className="text-small font-medium text-beach-muted">{copy.design.screens.intro}</p>
       <JudgeLive />
       <JudgeDetails />
