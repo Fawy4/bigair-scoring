@@ -53,12 +53,10 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
         expect(r.error ? "denied" : (r.data ?? []).length, t).toSatisfy((v: unknown) => v === "denied" || v === 0);
       }
     });
-    it("sees rider names through the safe view but never email or phone", async () => {
-      const ok = await f.clients.anon.from("v_entries").select("first_name,last_name,identifiers").eq("event_id", f.ids.evA1);
-      expect(ok.data?.length).toBe(4);
-      expect(failed(await f.clients.anon.from("v_entries").select("email"))).not.toBe("");
-      expect(failed(await f.clients.anon.from("v_entries").select("phone"))).not.toBe("");
-      expect(((await f.clients.anon.from("v_entries").select("id").eq("event_id", f.ids.evA2)).data ?? []).length).toBe(0);
+    it("reads no rider through the rider list: neither the old view nor the function", async () => {
+      expect(failed(await f.clients.anon.from("v_entries").select("first_name,last_name,identifiers").eq("event_id", f.ids.evA1))).not.toBe("");
+      expect(failed(await f.clients.anon.rpc("visible_entries", { p_event: f.ids.evA1 }))).not.toBe("");
+      expect(failed(await f.clients.anon.rpc("visible_entries"))).not.toBe("");
     });
     it("cannot write anything", async () => {
       expect(failed(await f.clients.anon.from("events").insert({ organisation_id: f.ids.orgA, name: "x", slug: `x-${run}` }))).not.toBe("");
@@ -603,7 +601,7 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
       expect(entry[0].consent_at).not.toBeNull();
       expect((await f.clients.anon.from("riders").select("id")).data ?? []).toEqual([]);
       expect((await f.clients.anon.from("entries").select("id")).data ?? []).toEqual([]);
-      expect(((await f.clients.anon.from("v_entries").select("first_name").eq("first_name", "Zed")).data ?? []).length).toBe(0); // not public until confirmed
+      expect([(await f.clients.orgB.rpc("visible_entries").select("first_name").eq("first_name", "Zed")).data ?? []].flat()).toHaveLength(0); // not public until confirmed (and another organisation sees nothing of it)
       expect(((await f.clients.orgB.from("riders").select("id").eq("id", rider[0].id)).data ?? []).length).toBe(0);
     });
 

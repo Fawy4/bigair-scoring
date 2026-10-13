@@ -12,6 +12,23 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.20.1 — 12 Oct 2026 {#release-0-20-1}
+
+PR: #47
+
+### What changed
+- **Security clean-up: the rider list is now read through a function, and the old view `v_entries` is removed.** Supabase's Security Advisor reported the view as a critical issue ("Security Definer View"). Nothing looks different on any screen: the spotter's and judges' Rider sheets and Trick list, the head judge console, the observer, the walkover card, the public results and rider pages and the organiser's Riders step show the same riders as before.
+- **Who can see which riders did not change.** Organisers and officials of an event see all its riders; everybody else sees only the confirmed, withdrawn and no-show riders of a public event. The function returns the same eleven fields as the view (name, nationality, sponsor, photo, seed, status, Lycra / bib / kite) and never an e-mail address, phone number or date of birth. A visitor who is not signed in can no longer ask the database for the rider list at all (the public pages never did; they use the public results).
+- Two steps, so the live site never broke: the function and the switch of the public results to it went in first; the view itself is dropped once this release is merged.
+
+### What to test
+- [ ] Open Supabase → Advisors → Security Advisor and press refresh: there is no issue named "Security Definer View" for `v_entries` and no critical (red) issue.
+- [ ] Open the public results page of an event whose draw is locked (e.g. the demo event): the riders' names show in the heats, the ladder and the placings, as before.
+- [ ] Start a simulation, open a judge seat and the spotter seat: both show the riders' names (Rider sheet and Queue / Trick list) with their Lycra colours.
+
+### Known issues
+- Supabase's Security Advisor still lists warnings about other functions and settings (for example "signed-in users can run security-definer functions"). They are not part of this fix and go to the security audit. The new function appears in that same group of warnings: it is safe because it only returns rows the caller may already see (organiser or seat of the event, or a public event's riders), and it cannot be run without signing in.
+
 ## 0.20.0 — 13 Oct 2026 {#release-0-20-0}
 
 PR: #45

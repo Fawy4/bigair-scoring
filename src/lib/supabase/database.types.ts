@@ -854,13 +854,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "heat_results_entry_id_fkey"
-            columns: ["entry_id"]
-            isOneToOne: false
-            referencedRelation: "v_entries"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "heat_results_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
@@ -931,13 +924,6 @@ export type Database = {
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "entries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "heat_slots_entry_id_fkey"
-            columns: ["entry_id"]
-            isOneToOne: false
-            referencedRelation: "v_entries"
             referencedColumns: ["id"]
           },
           {
@@ -1136,13 +1122,6 @@ export type Database = {
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "entries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "impression_scores_entry_id_fkey"
-            columns: ["entry_id"]
-            isOneToOne: false
-            referencedRelation: "v_entries"
             referencedColumns: ["id"]
           },
           {
@@ -1574,13 +1553,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "penalties_entry_id_fkey"
-            columns: ["entry_id"]
-            isOneToOne: false
-            referencedRelation: "v_entries"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "penalties_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
@@ -1645,13 +1617,6 @@ export type Database = {
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "entries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pending_scores_entry_id_fkey"
-            columns: ["entry_id"]
-            isOneToOne: false
-            referencedRelation: "v_entries"
             referencedColumns: ["id"]
           },
           {
@@ -2126,13 +2091,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "sensor_bindings_entry_id_fkey"
-            columns: ["entry_id"]
-            isOneToOne: false
-            referencedRelation: "v_entries"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "sensor_bindings_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
@@ -2458,13 +2416,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "trick_attempts_entry_id_fkey"
-            columns: ["entry_id"]
-            isOneToOne: false
-            referencedRelation: "v_entries"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "trick_attempts_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
@@ -2673,37 +2624,7 @@ export type Database = {
       }
     }
     Views: {
-      v_entries: {
-        Row: {
-          division_id: string | null
-          event_id: string | null
-          first_name: string | null
-          id: string | null
-          identifiers: Json | null
-          last_name: string | null
-          nationality: string | null
-          photo_url: string | null
-          seed: number | null
-          sponsor: string | null
-          status: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "entries_division_id_fkey"
-            columns: ["division_id"]
-            isOneToOne: false
-            referencedRelation: "divisions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "entries_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       abort_start: {
@@ -4814,6 +4735,22 @@ export type Database = {
         Returns: undefined
       }
       update_event_trick_base: { Args: { p_event: string }; Returns: Json }
+      visible_entries: {
+        Args: { p_entry?: string; p_event?: string }
+        Returns: {
+          division_id: string
+          event_id: string
+          first_name: string
+          id: string
+          identifiers: Json
+          last_name: string
+          nationality: string
+          photo_url: string
+          seed: number
+          sponsor: string
+          status: string
+        }[]
+      }
       walkover_heat_commit: {
         Args: {
           p_actor: string

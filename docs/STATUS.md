@@ -78,7 +78,7 @@
 
 ### Done
 - **Database**: 7 migrations in `supabase/migrations` create all 24 tables (docs/05 §5 + approved additions), indexes on every foreign key, `updated_at` triggers, the audit trigger, Realtime publication and the functions below. Applied to the hosted **development** project (`npm run db:status` lists them). `supabase/combined.sql` holds the same SQL for the SQL Editor.
-- **Security**: Row Level Security on every table, least-privilege grants (nothing is readable or writable unless granted), safe view `v_entries` (names and identifiers, never email/phone), PIN/QR hashes unreadable by anyone but the server, published results and the audit log are append-only.
+- **Security**: Row Level Security on every table, least-privilege grants (nothing is readable or writable unless granted), safe rider list (the view `v_entries`, since 0.20.1 the function `visible_entries`: names and identifiers, never email/phone), PIN/QR hashes unreadable by anyone but the server, published results and the audit log are append-only.
 - **Server-time heat state machine**: start/pause/resume/end timestamps come from the database clock; only the server can publish.
 - **Attempt cap**: `add_attempt` rejects the extra attempt with `ATTEMPT_CAP_REACHED` (two racing phones: exactly one wins); head judge (or organiser) overrides with a written reason, audited. `delete_attempt`, `attempt_counts` for the "5 / 7" counters.
 - **Marks**: `submit_trick_score` / `submit_impression` are safe to retry and ignore stale (older) queued edits; judges see only their own marks.
@@ -1378,3 +1378,17 @@ Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 
 ### How to test on a phone
 - See the release entry 0.20.0 in docs/RELEASES.md.
+
+## Security – the rider list is a function (0.20.1)
+
+### Done
+- `public.v_entries` (a security-definer view, flagged CRITICAL by Supabase's Security Advisor) is replaced by `public.visible_entries(p_event, p_entry)`: security definer, `search_path = ''`, the same eleven columns and the same caller filter (organiser or seat of the event, or a public event's confirmed / withdrawn / no-show riders). Executable by `authenticated` and `service_role`, never `anon`.
+- Readers pointed at it: `src/lib/live/context.ts` (spotter, judge, head judge, observer pages), `src/lib/live/walkover-core.ts` and the database function `get_public_results` (the only database function that read the view, checked on the hosted project as well as in the migrations).
+- Migration `20261108100000_v_entries_function.sql` (function, `get_public_results`, anon's SELECT on the view revoked) is applied on the hosted project. Migration `20261108100100_drop_v_entries.sql` (one line) is committed but **not applied until the owner says the pull request is merged**.
+- Tests: `tests/rls/v-entries-function.test.ts` (new); `rls.test.ts`, `riders-officials.test.ts`, `observer.test.ts` updated.
+
+### Not done yet
+- Apply `20261108100100_drop_v_entries.sql` after the merge, then `npm run db:types` and the Security Advisor check again.
+
+### How to test on a phone
+- See the release entry 0.20.1 in docs/RELEASES.md.

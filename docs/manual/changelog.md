@@ -2,7 +2,16 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 11 Oct 2026 · Product version 0.20.0
+Last checked: 12 Oct 2026 · Product version 0.20.1
+
+## 0.20.1 — 12 Oct 2026 {#cl-0-20-1}
+
+Release entry: [0.20.1](/admin/releases#release-0-20-1) (platform owner only)
+
+**What changed for users**
+- **Security clean-up: no screen changes.** The riders' list the officials' screens, the public results and the Riders step use is now read through a database function instead of a view that Supabase flagged as a critical security issue. Everybody sees the same riders as before.
+
+**Manual pages updated:** none (no screen, setting or sentence changed).
 
 ## 0.20.0 — 13 Oct 2026 {#cl-0-20-0}
 
