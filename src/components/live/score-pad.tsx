@@ -105,9 +105,14 @@ export function ScorePad({ scale, value, onChange, label, caption, disabled = fa
           </output>
           <input
             data-testid="pad-input"
+            name="score"
+            type="text"
             inputMode="decimal"
             enterKeyHint="done"
             autoComplete="off"
+            data-lpignore="true"
+            data-1p-ignore
+            data-form-type="other"
             aria-label={copy.live.pad.type}
             placeholder={copy.live.pad.typePlaceholder}
             value={draft}

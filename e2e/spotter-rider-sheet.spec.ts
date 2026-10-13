@@ -3,7 +3,7 @@ import { createLiveWorld, type LiveWorld } from "./live-world";
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 
 // Rider sheets (0.20.0) on a throwaway organisation (Arrow, EKL and Demo are never touched), phone size 390 × 844, ONE worker, on a production build:
-//   - the spotter's Rider sheet: a line logs itself (a tapped suggestion, a 2-second pause with free text, Crash on), later changes update the same attempt, the judge's
+//   - the spotter's Rider sheet: a line logs itself (a tapped suggestion, a 5-second pause with free text, Crash on), later changes update the same attempt, the judge's
 //     score stays on a corrected attempt, a second spotter's log appears, no limit gives 10 lines and Add attempt makes 11;
 //   - the judges' Rider sheet: line by line, Missed opens the next line and leaves no score from that judge on that attempt, a filled line can be changed;
 //   - the Trick list: the text box sits directly above Log and CRASH, Left and Right fill their row, the text box and Log stay visible when the height is cut the way a keyboard
@@ -143,7 +143,7 @@ test("the spotter's Rider sheet: a line logs itself, later changes update the sa
   await sline(spotter, 1).getByTestId("line-left").click();
   await expect.poll(async () => (await attempts(H, E)).map((a) => a.direction), { timeout: 30_000 }).toEqual(["left"]);
 
-  // ---- line 2: free text that matches nothing logs itself after about 2 seconds, flagged for the head judge
+  // ---- line 2: free text that matches nothing logs itself after about 5 seconds, flagged for the head judge
   await strick(spotter, 2).click();
   await strick(spotter, 2).fill("zzzflip");
   await expect.poll(async () => (await attempts(H, E)).length, { timeout: 30_000 }).toBe(2);
@@ -876,7 +876,7 @@ test("(g) the text in every box on the officials' screens is at least 16 px, so 
   await expect(j1.getByTestId("view-queue")).toHaveAttribute("aria-pressed", "true");
   expect(await smallBoxes(j1), "judge Queue").toEqual([]);
   const head = await phone(browser, "head", `/head/${w.eventId}`);
-  await expect(head.getByTestId("screen-body").or(head.locator("body")).first()).toBeVisible({ timeout: 40_000 });
+  await expect(head.getByTestId("live-root")).toBeVisible({ timeout: 40_000 });
   expect(await smallBoxes(head), "head judge phone").toEqual([]);
   // zooming is never blocked
   expect(await spotter.locator('meta[name="viewport"]').getAttribute("content")).not.toMatch(/user-scalable\s*=\s*no|maximum-scale\s*=\s*1(\.0)?\b/);

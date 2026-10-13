@@ -11,7 +11,7 @@ describe("View as links", () => {
       { kind: "live" },
       { kind: "results" },
       { kind: "ladder" },
-      { kind: "rider", entryId: "22222222-2222-4222-8222-222222222222" },
+      { kind: "riders" },
       { kind: "screen" },
       { kind: "follow" },
       { kind: "seat", seatId: "33333333-3333-4333-8333-333333333333" },
@@ -27,7 +27,6 @@ describe("View as links", () => {
     expect(parseView(new URLSearchParams("as=nonsense"))).toBeNull();
     expect(parseView(new URLSearchParams("as=seat"))).toBeNull();
     expect(parseView(new URLSearchParams("as=seat&seat=not-a-uuid"))).toBeNull();
-    expect(parseView(new URLSearchParams("as=rider&entry=nope"))).toBeNull();
     expect(parseView(new URLSearchParams(""))).toBeNull();
   });
   it("sends the public views to the real public pages of the event", () => {
@@ -35,7 +34,7 @@ describe("View as links", () => {
     expect(destinationOf({ kind: "live" }, ev)).toBe(`/e/${ev.slug}/live`);
     expect(destinationOf({ kind: "results" }, ev)).toBe(`/e/${ev.slug}/results`);
     expect(destinationOf({ kind: "ladder" }, ev)).toBe(`/e/${ev.slug}/ladder`);
-    expect(destinationOf({ kind: "rider", entryId: "e1" }, ev)).toBe(`/e/${ev.slug}/riders/e1`);
+    expect(destinationOf({ kind: "riders" }, ev)).toBe(`/e/${ev.slug}/riders`);
     expect(destinationOf({ kind: "screen" }, ev)).toBe(`/screen/${ev.slug}`);
     expect(destinationOf({ kind: "follow" }, ev)).toBe(`/screen/${ev.slug}/follow`);
   });
@@ -48,7 +47,7 @@ describe("View as links", () => {
   });
   it("only the public views need the preview switched on", () => {
     for (const k of ["spectator", "live", "results", "ladder", "screen", "follow"] as const) expect(needsPreviewCookie({ kind: k })).toBe(true);
-    expect(needsPreviewCookie({ kind: "rider", entryId: "e" })).toBe(true);
+    expect(needsPreviewCookie({ kind: "riders" })).toBe(true);
     expect(needsPreviewCookie({ kind: "seat", seatId: "s" })).toBe(false);
     expect(needsPreviewCookie({ kind: "head-organiser" })).toBe(false);
   });

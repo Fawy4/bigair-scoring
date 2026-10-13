@@ -8,6 +8,7 @@ import { RiderTile } from "./rider-tile";
 import { MicStatus } from "./trick-builder";
 import { useSpeech } from "./use-speech";
 import { useFitFontSize } from "./use-fit-text";
+import { keepInView } from "./use-keyboard-fit";
 import type { TrickVocab } from "@/lib/engine/tricks";
 import {
   applySuggestion,
@@ -151,7 +152,7 @@ function SheetLineRow({
     });
   };
 
-  // free text that matches no suggestion counts as entered once the typing has been quiet for about 2 seconds
+  // free text that matches no suggestion counts as entered once the typing has been quiet for about 5 seconds
   useEffect(() => {
     if (!dirty.current || !canType) return;
     const d = commitDecision({ text, crash, picked: picked.current, quietMs: Date.now() - typedAt.current, hasOpenSuggestions: suggestions.length > 0 });
@@ -168,7 +169,7 @@ function SheetLineRow({
   // whatever is being typed stays in view above the keyboard (the screen is as tall as what the keyboard leaves free)
   useEffect(() => {
     if (!focused) return;
-    const t = setTimeout(() => row.current?.scrollIntoView({ block: "nearest" }), 250);
+    const t = setTimeout(() => keepInView(row.current), 250);
     return () => clearTimeout(t);
   }, [focused, suggestions.length]);
 
@@ -295,7 +296,12 @@ function SheetLineRow({
                 placeholder={T.placeholder}
                 value={text}
                 disabled={!canType}
+                name="trick"
+                type="text"
                 autoComplete="off"
+                data-lpignore="true"
+                data-1p-ignore
+                data-form-type="other"
                 autoCorrect="off"
                 autoCapitalize="sentences"
                 spellCheck={false}

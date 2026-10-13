@@ -30,13 +30,49 @@ export function useKeyboardFit(enabled: boolean): KeyboardFit {
         return prev.height === next.height && prev.top === next.top ? prev : next;
       });
     };
+    // iPhone sends many resize / scroll events while the keyboard slides: apply at most one per frame, so the screen follows without jumping
+    let frame = 0;
+    const schedule = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        update();
+      });
+    };
+    // when the keyboard has gone, the browser may leave the page scrolled up by the amount it moved for the typing box: put it back (header fully visible, no band at the bottom).
+    // iPhone sends the last resize before the slide has finished, so the check is repeated once the slide is over.
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    const reset = () => {
+      update();
+      if (window.innerHeight - vv.height <= KEYBOARD_MIN_PX && (window.scrollY !== 0 || window.scrollX !== 0)) window.scrollTo(0, 0);
+    };
+    const afterBlur = () => {
+      clearTimeout(settle);
+      settle = setTimeout(reset, 120);
+      setTimeout(reset, 400);
+    };
     update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
+    vv.addEventListener("resize", schedule);
+    vv.addEventListener("scroll", schedule);
+    window.addEventListener("focusout", afterBlur);
     return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
+      vv.removeEventListener("resize", schedule);
+      vv.removeEventListener("scroll", schedule);
+      window.removeEventListener("focusout", afterBlur);
+      clearTimeout(settle);
+      if (frame) cancelAnimationFrame(frame);
     };
   }, [enabled]);
   return fit;
+}
+
+/** Brings an element fully into view by scrolling only the sheet's own body (never the page, which an iPhone would leave shifted when the keyboard closes). */
+export function keepInView(el: HTMLElement | null | undefined): void {
+  if (!el) return;
+  const box = el.closest<HTMLElement>('[data-testid="screen-body"]');
+  if (!box) return;
+  const a = el.getBoundingClientRect();
+  const b = box.getBoundingClientRect();
+  if (a.bottom > b.bottom) box.scrollTop += a.bottom - b.bottom;
+  else if (a.top < b.top) box.scrollTop -= b.top - a.top;
 }

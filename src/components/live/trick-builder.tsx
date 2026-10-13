@@ -235,6 +235,10 @@ export function TrickBuilder({
                 aria-label={T.type}
                 value={typed.value}
                 enterKeyHint="done"
+                name="trick"
+                data-lpignore="true"
+                data-1p-ignore
+                data-form-type="other"
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="sentences"

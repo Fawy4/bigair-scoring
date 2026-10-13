@@ -1,7 +1,7 @@
 "use client";
 
 import { isWalkoverHeat } from "@/lib/live/walkover";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Clock, Volume2, VolumeX, Wind } from "lucide-react";
 import { HoldDialog, PublishDialog, ReopenDialog, RerunDialog, ResetHeatDialog } from "./head-dialogs";
 import { ClockText } from "@/components/clock-text";
@@ -168,7 +168,7 @@ export function SoundToggle({ on, onToggle }: { on: boolean; onToggle: () => voi
 }
 
 /** The heat's name, the timer large (48 px) and Start / Pause / Resume / End right beside it. `withSound` adds "Sound on" (the laptop; the phone has it under Details). */
-export function TimerBar({ c, withSound, onSoundToggle, soundOn, bar = false }: { c: HeadController; withSound?: boolean; onSoundToggle?: () => void; soundOn?: boolean; bar?: boolean }) {
+export function TimerBar({ c, withSound, onSoundToggle, soundOn, bar = false, flagInTopBar = false }: { c: HeadController; withSound?: boolean; onSoundToggle?: () => void; soundOn?: boolean; bar?: boolean; /** The laptop console draws the strip in its top bar when it fits whole there. */ flagInTopBar?: boolean }) {
   const { selected, state } = c;
   const live = state === "running" || state === "paused";
   const first = (["start", "end"] as ControlId[]).find((id) => !c.on(id));
@@ -190,7 +190,7 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn, bar = false }: 
         <ClockText timezone={c.ctx.event.timezone} nowMs={c.nowServer} />
         <DriftBadge drift={c.drift} />
         {/* the banner has its own full-width line: nothing sits beside it or on top of it, so its words (state, break countdown, next heat) are never cut */}
-        {c.flag ? <FlagStrip model={c.flag} size="head" className="w-full basis-full" /> : selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
+        {c.flag ? (flagInTopBar ? null : <FlagStrip model={c.flag} size="head" className="w-full basis-full" />) : selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
         {selected && state !== "cancelled" ? (
           <div className={cn(bar ? "flex flex-wrap items-center gap-2" : "grid w-full basis-full grid-cols-2 gap-2")}>
             {c.ctl && c.ctl.id !== selected.id && c.on("start") ? (
@@ -801,4 +801,37 @@ export function HeatDialogs({ c }: { c: HeadController }) {
       ) : null}
     </>
   );
+}
+
+/**
+ * Does the flag strip fit whole in the laptop console's top bar, on the same line as the other things there? The strip's natural one-line width comes from an invisible
+ * copy (`probe`); the other items count at their own width (the status text at its smallest, 12rem). If the line is too narrow the strip stays on its own row below,
+ * exactly as before. Decided from widths only, so it cannot flip back and forth.
+ */
+export function useFlagFitsTopBar(active: boolean, key: string): { rowRef: React.RefObject<HTMLDivElement | null>; probeRef: React.RefObject<HTMLDivElement | null>; fits: boolean } {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const probeRef = useRef<HTMLDivElement>(null);
+  const [fits, setFits] = useState(false);
+  useEffect(() => {
+    const row = rowRef.current;
+    const probe = probeRef.current;
+    if (!active || !row || !probe) {
+      setFits(false);
+      return;
+    }
+    const measure = () => {
+      const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+      const items = Array.from(row.children).filter((el) => !(el as HTMLElement).hasAttribute("data-flag-slot")) as HTMLElement[];
+      const MESSAGE_MIN = 192;
+      const used = items.reduce((sum, el) => sum + (el.hasAttribute("data-flag-message") ? MESSAGE_MIN : el.getBoundingClientRect().width), 0);
+      const total = used + Math.ceil(probe.getBoundingClientRect().width) + gap * items.length;
+      setFits(total <= row.clientWidth);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(row);
+    ro.observe(probe);
+    return () => ro.disconnect();
+  }, [active, key]);
+  return { rowRef, probeRef, fits };
 }

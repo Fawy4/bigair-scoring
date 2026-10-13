@@ -12,7 +12,7 @@ import { capitaliseName, splitCount } from "./trick-text";
 /** With no attempt limit the sheet starts with this many lines; "Add attempt" adds one at a time. */
 export const OPEN_LINES = 10;
 /** How long the typing must be quiet before text that matches no suggestion counts as entered. */
-export const PAUSE_MS = 2000;
+export const PAUSE_MS = 5000;
 
 /** How many lines a rider's sheet has: the limit (never fewer than the attempts logged); with no limit 10 plus the ones added. */
 export function lineTotal(i: { logged: number; cap: number | null; added: number }): number {
@@ -94,7 +94,7 @@ export type CommitDecision = { log: true; why: "picked" | "paused" | "crash" } |
 
 /**
  * When does a line log itself (or, on a logged line, send its change)? As soon as Crash is on (a crash needs no trick); and for text that shows no suggestion, once the typing
- * has been quiet for about 2 seconds (a tapped suggestion only fills in the word and adds a space, so the typing goes on); leaving the box logs what is in it. Text whose
+ * has been quiet for about 5 seconds (a tapped suggestion only fills in the word and adds a space, so the typing goes on); leaving the box logs what is in it. Text whose
  * last word still shows suggestions waits for a tap or for the box to be left. Nothing at all
  * (no trick, no Crash) never logs: L or R alone is not an attempt. `waitMs` is how long to wait before asking again (null: nothing to wait for).
  */

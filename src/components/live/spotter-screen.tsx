@@ -29,7 +29,7 @@ const T = copy.spotter;
 
 export function SpotterRoot({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?: string | null }) {
   return (
-    <LiveShell fitKeyboard>
+    <LiveShell>
       <SpotterScreen ctx={ctx} pinnedHeatId={pinnedHeatId} />
     </LiveShell>
   );

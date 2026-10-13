@@ -24,36 +24,38 @@ const timerStateOf = (s: FlagState): string => (s.kind === "stopped" ? (s.why ==
  * countdown (pre-start remaining, then heat remaining) and the heat name. Same height as the clock line it replaces ("slim" 56 px for judge and spotter, "head" for
  * the head judge's console), and the words are always there: colour is never the only signal.
  */
-export function FlagStrip({ model, size = "slim", soundOn, onToggleSound, className }: { model: FlagStripModel; size?: "slim" | "head"; soundOn?: boolean; onToggleSound?: () => void; className?: string }) {
+export function FlagStrip({ model, size = "slim", soundOn, onToggleSound, className, probe = false }: { model: FlagStripModel; size?: "slim" | "head"; soundOn?: boolean; onToggleSound?: () => void; className?: string; /** An invisible copy that is only measured (no test ids, hidden from screen readers). */ probe?: boolean }) {
+  const id = (v: string) => (probe ? undefined : v);
   const { state } = model;
   const ink = textOn(state.colour);
   return (
     <div
-      data-testid="heat-timer"
+      data-testid={id("heat-timer")}
       data-flag={state.kind}
       data-why={state.why ?? ""}
       data-state={timerStateOf(state)}
       data-size={size}
-      role="status"
-      aria-label={`${state.label}${state.countdownMs !== null ? ` ${formatClock(state.countdownMs)}` : ""}${model.heatName ? `, ${model.heatName}` : ""}`}
+      role={probe ? undefined : "status"}
+      aria-hidden={probe || undefined}
+      aria-label={probe ? undefined : `${state.label}${state.countdownMs !== null ? ` ${formatClock(state.countdownMs)}` : ""}${model.heatName ? `, ${model.heatName}` : ""}`}
       style={{ backgroundColor: state.colour, color: ink }}
       className={cn("flex min-h-tap min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 rounded-[22px] px-3 py-1", className)}
     >
-      <span data-testid="heat-timer-state" className="min-w-0 whitespace-normal break-words text-small font-bold">
+      <span data-testid={id("heat-timer-state")} className="min-w-0 whitespace-normal break-words text-small font-bold">
         {model.words}
       </span>
       {model.nextPart ? (
-        <span data-testid="flag-next-heat" className="min-w-0 flex-1 basis-48 whitespace-normal break-words text-small font-semibold tabular-nums">
+        <span data-testid={id("flag-next-heat")} className="min-w-0 flex-1 basis-48 whitespace-normal break-words text-small font-semibold tabular-nums">
           {model.nextPart}
         </span>
       ) : null}
       {state.countdownMs !== null ? (
-        <span data-testid="heat-timer-clock" className={cn("shrink-0 font-bold tabular-nums", size === "head" ? "text-timer-head" : "text-timer-slim")}>
+        <span data-testid={id("heat-timer-clock")} className={cn("shrink-0 font-bold tabular-nums", size === "head" ? "text-timer-head" : "text-timer-slim")}>
           {formatClock(state.countdownMs)}
         </span>
       ) : null}
       {model.heatName ? (
-        <span data-testid="flag-heat" className="ml-auto min-w-0 flex-1 basis-32 whitespace-normal break-words text-right text-small font-semibold">
+        <span data-testid={id("flag-heat")} className="ml-auto min-w-0 flex-1 basis-32 whitespace-normal break-words text-right text-small font-semibold">
           {model.heatName}
         </span>
       ) : null}

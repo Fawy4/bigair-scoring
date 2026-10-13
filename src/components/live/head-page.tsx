@@ -8,7 +8,8 @@ import { HeadLiveConsole } from "./head-live-console";
 import { LearnMore } from "@/components/manual/learn-more";
 import type { FixTarget } from "@/lib/live/publish-checklist";
 import { TieDialog } from "./head-dialogs";
-import { BreakChoice, ControlMessage, WhyLine, SoundToggle, DivisionTabs, HeatDialogs, RunOrderList, StartWarning, TimerBar, TimingButtons, WindButton } from "./head-parts";
+import { BreakChoice, ControlMessage, WhyLine, SoundToggle, DivisionTabs, HeatDialogs, RunOrderList, StartWarning, TimerBar, TimingButtons, WindButton, useFlagFitsTopBar } from "./head-parts";
+import { FlagStrip } from "./flag-strip";
 import { HeatControl, type ReviewProps } from "./heat-control";
 import { useHeadController } from "./use-head-controller";
 import { JudgeScreen } from "./judge-screen";
@@ -186,6 +187,10 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
 
   const c = useHeadController({ ctx, heats: live.heats, plans: live.plans, nowServer, selectedId: shownId, nextHeatId, onSelect: selectHeat, onPlanChanged: live.applyPlan, onPatchHeat: live.patchHeat, onApplyState: live.applyState, review, divisionId });
 
+  // laptop console only: the flag strip moves up into the top bar when it fits there whole
+  const flagFit = useFlagFitsTopBar(wide && !announcer && Boolean(c.flag), c.flag ? `${c.flag.words}|${c.flag.nextPart ?? ""}|${c.flag.heatName}` : "");
+  const flagInTop = Boolean(c.flag) && flagFit.fits;
+
   // the clock, the sound and the screen lock follow the heat that is on the water, wherever it is, else the heat shown
   const clockHeat = c.liveHeat ?? shown;
   const clockRemaining = clockHeat ? remainingMs({ status: clockHeat.status, durationSec: clockHeat.duration_sec, startedAt: clockHeat.started_at, pausedAt: clockHeat.paused_at, pausedTotalSec: clockHeat.paused_total_sec }, nowServer) : 0;
@@ -359,15 +364,25 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   return (
     <div data-testid="head-page" data-layout="wide" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
-      <header data-testid="top-bar" className="flex flex-col gap-1 border-b border-beach-line bg-beach-bg px-3 py-1.5">
+      <header data-testid="top-bar" className="relative flex flex-col gap-1 border-b border-beach-line bg-beach-bg px-3 py-1.5">
         <h1 className="sr-only">{T.title}</h1>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {c.flag ? (
+          <div ref={flagFit.probeRef} aria-hidden className="pointer-events-none invisible absolute left-0 top-0 flex w-max whitespace-nowrap">
+            <FlagStrip model={c.flag} size="head" probe className="w-max flex-none flex-nowrap gap-x-4 [&_span]:!flex-none [&_span]:!basis-auto [&_span]:!whitespace-nowrap" />
+          </div>
+        ) : null}
+        <div ref={flagFit.rowRef} className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <DivisionTabs divisions={ctx.divisionTabs} divisionId={divisionId} liveIds={liveIds} onPick={pickDivision} />
           {c.selected && c.state !== "cancelled" && !c.armed ? <BreakChoice c={c} compact /> : null}
-          <div className="min-w-0 flex-1 basis-48">
+          <div data-flag-message className="min-w-0 flex-1 basis-48">
             <ControlMessage c={c} />
             <WhyLine c={c} />
           </div>
+          {c.flag && flagInTop ? (
+            <div data-flag-slot data-testid="top-bar-flag" className="flex-none">
+              <FlagStrip model={c.flag} size="head" className="w-max flex-none flex-nowrap gap-x-4 [&_span]:!flex-none [&_span]:!basis-auto [&_span]:!whitespace-nowrap" />
+            </div>
+          ) : null}
           <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
             <SoundToggle on={settings.soundOn} onToggle={() => settings.setSoundOn(!settings.soundOn)} />
             <p className="text-small font-medium text-beach-muted">{[ctx.event.name, viewer.name].join(" · ")}</p>
@@ -379,7 +394,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
             <span className="text-beach-muted">{V.goToLive}</span>
           </button>
         ) : null}
-        <TimerBar c={c} bar />
+        <TimerBar c={c} bar flagInTopBar={flagInTop} />
         <StartWarning c={c} />
       </header>
       <div className="grid gap-3 px-3 py-2 min-[900px]:grid-cols-[15rem_minmax(0,1fr)]">

@@ -7,7 +7,7 @@ export type ViewTarget =
   | { kind: "live" }
   | { kind: "results" }
   | { kind: "ladder" }
-  | { kind: "rider"; entryId: string }
+  | { kind: "riders" }
   | { kind: "screen" }
   | { kind: "follow" }
   | { kind: "flag" }
@@ -19,7 +19,6 @@ const Uuid = z.string().uuid();
 /** The address of the "View as" door for one target. The door prepares the view (the preview, or giving a seat to the organiser's sign-in) and moves on to the real screen. */
 export function viewHref(eventId: string, t: ViewTarget): string {
   const q = new URLSearchParams({ as: t.kind });
-  if (t.kind === "rider") q.set("entry", t.entryId);
   if (t.kind === "seat") q.set("seat", t.seatId);
   return `/org/events/${eventId}/simulate/view?${q.toString()}`;
 }
@@ -31,15 +30,12 @@ export function parseView(params: URLSearchParams): ViewTarget | null {
     case "live":
     case "results":
     case "ladder":
+    case "riders":
     case "screen":
     case "follow":
     case "flag":
     case "head-organiser":
       return { kind: as };
-    case "rider": {
-      const entry = Uuid.safeParse(params.get("entry"));
-      return entry.success ? { kind: "rider", entryId: entry.data } : null;
-    }
     case "seat": {
       const seat = Uuid.safeParse(params.get("seat"));
       return seat.success ? { kind: "seat", seatId: seat.data } : null;
@@ -60,8 +56,8 @@ export function destinationOf(t: ViewTarget, ev: { id: string; slug: string }, r
       return `/e/${ev.slug}/results`;
     case "ladder":
       return `/e/${ev.slug}/ladder`;
-    case "rider":
-      return `/e/${ev.slug}/riders/${t.entryId}`;
+    case "riders":
+      return `/e/${ev.slug}/riders`;
     case "screen":
       return `/screen/${ev.slug}`;
     case "follow":

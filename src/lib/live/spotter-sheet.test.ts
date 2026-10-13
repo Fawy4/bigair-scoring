@@ -98,9 +98,9 @@ describe("when a line logs itself", () => {
   it("a tapped suggestion logs at once", () => {
     expect(commitDecision({ ...base, text: "Backroll", picked: true })).toEqual({ log: true, why: "picked" });
   });
-  it("free text that matches no suggestion logs after about 2 seconds of quiet, not before", () => {
-    expect(commitDecision({ ...base, text: "megaflip", quietMs: 1500 })).toEqual({ log: false, waitMs: 500 });
-    expect(commitDecision({ ...base, text: "megaflip", quietMs: 2000 })).toEqual({ log: true, why: "paused" });
+  it("free text that matches no suggestion logs after about 5 seconds of quiet, not before", () => {
+    expect(commitDecision({ ...base, text: "megaflip", quietMs: 4500 })).toEqual({ log: false, waitMs: 500 });
+    expect(commitDecision({ ...base, text: "megaflip", quietMs: 5000 })).toEqual({ log: true, why: "paused" });
   });
   it("text that still shows suggestions waits for a tap, however long the pause", () => {
     expect(commitDecision({ ...base, text: "back", quietMs: 10_000, hasOpenSuggestions: true })).toEqual({ log: false, waitMs: null });
@@ -232,10 +232,10 @@ describe("suggestions under the box", () => {
     expect(suggestionsFor(vocab, enabled, "board-off").filter((s) => !s.exact).map((s) => s.label)).not.toContain("Board-off");
     expect(suggestionsFor(vocab, enabled, "Board-Off").filter((s) => !s.exact).map((s) => s.label)).not.toContain("Board-off");
   });
-  it("after a tapped suggestion the box ends with a space, so no suggestion is open and the usual 2-second pause logs the line", () => {
+  it("after a tapped suggestion the box ends with a space, so no suggestion is open and the usual 5-second pause logs the line", () => {
     expect(suggestionsFor(vocab, enabled, "double Frontroll ")).toEqual([]);
-    expect(commitDecision({ text: "double Frontroll ", crash: false, picked: false, quietMs: 100, hasOpenSuggestions: false })).toEqual({ log: false, waitMs: 1900 });
-    expect(commitDecision({ text: "double Frontroll ", crash: false, picked: false, quietMs: 2000, hasOpenSuggestions: false })).toEqual({ log: true, why: "paused" });
+    expect(commitDecision({ text: "double Frontroll ", crash: false, picked: false, quietMs: 100, hasOpenSuggestions: false })).toEqual({ log: false, waitMs: 4900 });
+    expect(commitDecision({ text: "double Frontroll ", crash: false, picked: false, quietMs: 5000, hasOpenSuggestions: false })).toEqual({ log: true, why: "paused" });
     // a last word that is still unfinished waits for a tap (or for the box to be left)
     expect(commitDecision({ text: "double fro", crash: false, picked: false, quietMs: 5000, hasOpenSuggestions: true })).toEqual({ log: false, waitMs: null });
   });

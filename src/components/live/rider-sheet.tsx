@@ -13,6 +13,7 @@ import { ScreenHeader } from "./screen-header";
 import { LearnMore } from "@/components/manual/learn-more";
 import { errorSentence } from "@/lib/live/errors";
 import { activeLine, lineTypable, missedSwitch, needsScore, pulseLine, rangesOf, skipLines, type SheetLine } from "@/lib/live/rider-sheet";
+import { keepInView } from "./use-keyboard-fit";
 import { formatPadValue, padRefusal, parsePadInput } from "@/lib/live/score-pad";
 import type { LiveRider } from "@/lib/live/view-types";
 import type { Scale } from "@/lib/schemas/scoring-model";
@@ -183,9 +184,14 @@ function LineRow({
             </span>
             <input
               data-testid="line-score"
+              name="score"
+              type="text"
               inputMode="decimal"
               enterKeyHint="done"
               autoComplete="off"
+              data-lpignore="true"
+              data-1p-ignore
+              data-form-type="other"
               aria-label={waits ? T.waitsAria(line.n) : T.scoreBox(line.n)}
               placeholder={formatPadValue(0, scale)}
               value={text}
@@ -336,7 +342,7 @@ export function RiderSheetView(p: RiderSheetViewProps) {
   useEffect(() => {
     if (openKey === "||") return;
     const el = document.querySelector<HTMLElement>('[data-testid="skip-ask"], [data-testid="line-closed-note"], [data-testid="line-flag-sheet"]');
-    el?.scrollIntoView({ block: "nearest" });
+    keepInView(el);
   }, [openKey]);
   useEffect(() => {
     if (!closedAt) return;
