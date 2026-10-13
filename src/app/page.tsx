@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/server";
 import { copy } from "@/lib/ui-copy";
 import { PRODUCT_VERSION } from "@/lib/product-version";
 import { whatsappLink } from "@/lib/public/contact";
+import { withoutTestEvents } from "@/lib/public/test-events";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,7 @@ function CodeField() {
 async function Events() {
   const settings = await getPlatformSettings();
   const { data, error } = await (await createClient()).rpc("get_public_events", { p_limit: 100 });
-  const events = (data ?? []) as LandingEvent[];
+  const events = withoutTestEvents((data ?? []) as LandingEvent[]);
   const groups = groupOrgEvents(events, todayIn(settings.defaultTimezone, Date.now()));
   const nows = await Promise.all(groups.live.slice(0, LIVE_LOOKUPS).map((e) => nowOn(e.slug)));
   return <EventsView groups={groups} nowLines={nows} failed={Boolean(error)} />;

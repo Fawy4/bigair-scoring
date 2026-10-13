@@ -92,6 +92,11 @@ test.describe("the home page pictures", () => {
         document.querySelectorAll<HTMLElement>('[data-testid$="-events"]').forEach((sec) => {
           if (!sec.querySelector("li")) sec.remove();
         });
+        // the pictures are of an illustration: the throwaway organisation's names (and run codes) are swapped for plain sample names
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          n.textContent = (n.textContent ?? "").replace(/E2E Big Air [0-9a-f]{8}/g, "Sendbook Kite League").replace(/E2E Live [0-9a-f]{8}/g, "Sendbook Open").replace(/(Open|Finished) (\d) [0-9a-f]{8}/g, "$1 Series $2");
+        }
         if (s === "empty") {
           const p = document.createElement("p");
           p.className = "home-empty";
