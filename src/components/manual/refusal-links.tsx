@@ -26,7 +26,7 @@ function link(el: Element, anchor: string) {
   a.target = "_blank";
   a.rel = "noopener";
   a.textContent = copy.manual.learnMore;
-  a.className = "learn-more ml-1 whitespace-nowrap font-semibold underline underline-offset-2";
+  a.className = "learn-more ml-1 inline-block -my-[15px] whitespace-nowrap py-[15px] font-semibold underline underline-offset-2";
   el.append(a);
 }
 

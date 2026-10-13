@@ -403,8 +403,7 @@ body:has(.print-sheet) {
   --beach-accent-text: #0f5c57;
   --beach-selected: #0f5c57;
   --beach-on-selected: #ffffff;
-  --beach-attention: #ff6a00;
-  --beach-on-attention: #000000;
+  --beach-attention: #e65f00;
   --beach-board: #111111;
   --beach-on-board: #ffffff;
   --beach-board-muted: #b0b0b0;
@@ -445,7 +444,6 @@ body:has(.print-sheet) {
   --beach-selected: #5fd3c6;
   --beach-on-selected: #04211e;
   --beach-attention: #ff6a00;
-  --beach-on-attention: #000000;
   --beach-board: #111111;
   --beach-on-board: #ffffff;
   --beach-board-muted: #b0b0b0;

@@ -225,7 +225,7 @@ function SheetLineRow({
         </span>
         {/* L | R over Crash in one small column (the owner's choice: the only controls under 44 px), so the trick box gets all the width that is left */}
         <div className="flex w-16 shrink-0 flex-col gap-0.5">
-          <div role="group" aria-label={T.directionAria(line.n)} className="grid w-full grid-cols-2 overflow-hidden rounded-full border border-beach-border bg-beach-fill">
+          <div role="group" aria-label={T.directionAria(line.n)} className="grid w-full grid-cols-2 gap-0.5">
             {(["left", "right"] as const).map((d) => (
               <button
                 key={d}
@@ -236,7 +236,7 @@ function SheetLineRow({
                 disabled={!canType}
                 onPointerDown={(e) => e.preventDefault()}
                 onClick={() => tapDirection(d)}
-                className={cn("inline-flex h-8 items-center justify-center gap-0 text-small font-bold disabled:opacity-50", d === "right" && "border-l border-beach-border", dir === d ? "bg-beach-selected text-beach-on-selected" : "bg-transparent text-beach-ink")}
+                className={cn("inline-flex h-8 items-center justify-center gap-0 rounded-lg border text-small font-bold disabled:opacity-50", dir === d ? "border-beach-selected bg-beach-selected text-beach-on-selected" : "border-beach-border bg-beach-fill text-beach-ink")}
               >
                 {dir === d ? <Check aria-hidden className="size-3" strokeWidth={3} /> : null}
                 {d === "left" ? T.left : T.right}

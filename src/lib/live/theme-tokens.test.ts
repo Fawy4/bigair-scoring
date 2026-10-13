@@ -23,7 +23,7 @@ describe.each(themes)("%s theme tokens", (_name, t) => {
     expect(failures).toEqual([]);
   });
   it("has every named token", () => {
-    for (const key of ["bg", "surface", "line", "ink", "muted", "border", "fill", "key", "hint", "focus", "accent", "onAccent", "accentText", "selected", "onSelected", "attention", "onAttention", "board", "onBoard", "boardMuted", "live", "pending", "failed", "crash", "outlier", "missing", "onCrash", "tintCrash", "tintGrey", "tintGrade0", "tintGrade1", "tintGrade2", "tintGrade3", "tintGrade4", "tintDist0", "tintDist1", "tintDist2", "tintDist3"] as const) {
+    for (const key of ["bg", "surface", "line", "ink", "muted", "border", "fill", "key", "hint", "focus", "accent", "onAccent", "accentText", "selected", "onSelected", "attention", "board", "onBoard", "boardMuted", "live", "pending", "failed", "crash", "outlier", "missing", "onCrash", "tintCrash", "tintGrey", "tintGrade0", "tintGrade1", "tintGrade2", "tintGrade3", "tintGrade4", "tintDist0", "tintDist1", "tintDist2", "tintDist3"] as const) {
       expect(t[key]).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
@@ -78,14 +78,13 @@ describe("teal is the accent; orange is kept for 'Needs your score'", () => {
       expect(contrastRatio(t.accent, t.bg)).toBeGreaterThanOrEqual(3);
     }
   });
-  it("orange is #FF6A00 in both themes, carries black text at 7.31:1, and is never text on white (2.87:1)", () => {
-    for (const t of Object.values(BEACH_THEMES)) {
-      expect(t.attention).toBe(ORANGE);
-      expect(t.onAttention).toBe("#000000");
-    }
-    expect(contrastRatio("#000000", ORANGE)).toBeCloseTo(7.31, 2);
-    expect(contrastRatio("#ffffff", ORANGE)).toBeCloseTo(2.87, 2);
+  it("orange is the deeper #E65F00 in Day (3.5:1 on white; #FF6A00 is only 2.87:1) and #FF6A00 in Dark (7.31:1 on black): a shape of at least 3:1 in both themes", () => {
+    expect(BEACH_THEMES.day.attention).toBe("#e65f00");
+    expect(BEACH_THEMES.dark.attention).toBe(ORANGE);
+    expect(contrastRatio(BEACH_THEMES.day.attention, "#ffffff")).toBeCloseTo(3.5, 1);
+    expect(contrastRatio(ORANGE, "#ffffff")).toBeCloseTo(2.87, 2);
     expect(contrastRatio(ORANGE, "#000000")).toBeCloseTo(7.31, 2);
+    for (const t of Object.values(BEACH_THEMES)) expect(contrastRatio(t.attention, t.bg)).toBeGreaterThanOrEqual(3);
   });
   it("orange is used for nothing but 'Needs your score' (and the logo): no component outside the Rider sheet line uses the attention colour", () => {
     const hits: string[] = [];

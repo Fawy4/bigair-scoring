@@ -306,8 +306,9 @@ test("the Trick list: the text box sits directly above Log and CRASH, Left and R
   await expect(block(spotter, "direction:left")).toHaveAttribute("aria-pressed", "true");
   await expect(block(spotter, "direction:left").locator("svg")).toBeVisible();
   await expect(block(spotter, "direction:right").locator("svg")).toHaveCount(0);
-  expect(await block(spotter, "direction:left").evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe("4px");
-  expect(await block(spotter, "direction:right").evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe("1px");
+  // the chosen side is filled teal with a tick (no thick dark outline any more); the other side is white with a thin edge
+  await expect(block(spotter, "direction:left")).toHaveCSS("background-color", "rgb(15, 92, 87)");
+  await expect(block(spotter, "direction:right")).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await block(spotter, "direction:right").click();
   await expect(block(spotter, "direction:right").locator("svg")).toBeVisible();
   await expect(block(spotter, "direction:left").locator("svg")).toHaveCount(0);
@@ -632,7 +633,7 @@ for (const second of ["a score", "Missed"] as const) {
   });
 }
 
-test("(c) the highlight: three attempts logged, the judge scores only line 1: lines 2 and 3 show the teal bar and the tag, only line 2 pulses and glows, and scoring line 2 moves them to line 3", async ({ browser }) => {
+test("(c) the highlight: three attempts logged, the judge scores only line 1: lines 2 and 3 show the orange bar and the tag, only line 2 pulses and glows, and scoring line 2 moves them to line 3", async ({ browser }) => {
   test.setTimeout(600_000);
   const H = w.heats[0];
   await onlyRed(H);
@@ -655,9 +656,10 @@ test("(c) the highlight: three attempts logged, the judge scores only line 1: li
   expect(await anim(3)).toBe("none");
   expect(await jbox(j1, 2).evaluate((e) => getComputedStyle(e).boxShadow)).not.toBe("none");
   expect(await jbox(j1, 3).evaluate((e) => getComputedStyle(e).boxShadow)).toBe("none");
-  // teal, not red: the bar is the colour of the selected Rider sheet button (and not the colour of the Crash tag or the lycra card)
+  // orange is kept for exactly this (everything else is teal): the bar is orange, and it is not the teal of the selected Rider sheet button
   const bar = await jline(j1, 2).getByTestId("line-needs-bar").evaluate((e) => getComputedStyle(e).backgroundColor);
-  expect(bar).toBe(await j1.getByTestId("view-sheet").evaluate((e) => getComputedStyle(e).backgroundColor));
+  expect(bar).toBe("rgb(230, 95, 0)"); // the deeper Day orange (3.5:1 on white)
+  expect(bar).not.toBe(await j1.getByTestId("view-sheet").evaluate((e) => getComputedStyle(e).backgroundColor));
   expect(await jline(j1, 2).getByTestId("line-needs-dot").evaluate((e) => getComputedStyle(e).backgroundColor)).toBe(bar);
   // scoring line 2 moves the pulse and the glow to line 3
   await jtype(j1, 2, "8");
@@ -722,7 +724,7 @@ test("(j) a Missed switched off on a judge's phone leaves the head judge's conso
   expect(Date.now() - started).toBeLessThan(20_000);
 });
 
-test("(k) the spotter's lines read: number, L, R, the trick box with the mic or the × inside it, Crash; the judge's score box is small and no taller than Missed", async ({ browser }) => {
+test("(k) the spotter's lines read: number, L | R over Crash, the trick box with the mic or the × inside it; the judge's score box is small and no taller than Missed", async ({ browser }) => {
   test.setTimeout(600_000);
   const H = w.heats[0];
   await onlyRed(H);
@@ -737,8 +739,10 @@ test("(k) the spotter's lines read: number, L, R, the trick box with the mic or 
     expect(num.x + num.width, `line ${n}`).toBeLessThanOrEqual(l.x + 1);
     expect(l.x + l.width, `line ${n}`).toBeLessThanOrEqual(r.x + 1);
     expect(r.x + r.width, `line ${n}`).toBeLessThanOrEqual(box.x + 1); // L and R sit left of the trick box
-    expect(box.x + box.width, `line ${n}`).toBeLessThanOrEqual(crash.x + 1);
-    expect(box.width, `line ${n}`).toBeGreaterThan(110);
+    // Crash sits under L | R in the same small column, left of the trick box, which takes all the width that is left
+    expect(crash.y, `line ${n}`).toBeGreaterThanOrEqual(l.y + l.height - 1);
+    expect(crash.x + crash.width, `line ${n}`).toBeLessThanOrEqual(box.x + 1);
+    expect(box.width, `line ${n}`).toBeGreaterThan(200);
   }
   // line 1 is logged: L and R are left of its box too; the empty line 2 has the mic inside its box, the × takes its place once there is text
   const l1 = (await sline(spotter, 1).getByTestId("line-left").boundingBox())!;

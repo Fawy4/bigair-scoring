@@ -36,7 +36,6 @@ const config: Config = {
           key: "var(--beach-key)",
           hint: "var(--beach-hint)",
           attention: "var(--beach-attention)",
-          "on-attention": "var(--beach-on-attention)",
           selected: "var(--beach-selected)",
           "on-selected": "var(--beach-on-selected)",
           board: "var(--beach-board)",

@@ -37,10 +37,8 @@ export interface BeachTokens {
   selected: string;
   /** Text on a `selected` fill. */
   onSelected: string;
-  /** Orange #FF6A00 is kept for one thing: "Needs your score" (the bar, the tag border and the glow). A shape, never text; the words stay ink. */
+  /** Orange is kept for one thing: "Needs your score" (the bar, the tag border and the glow). A shape, never text; the words stay ink (7:1). Day #E65F00 (3.5:1 on white; #FF6A00 is only 2.87:1), Dark #FF6A00 (7.31:1 on black). */
   attention: string;
-  /** Text on an `attention` fill: black (7.31:1). */
-  onAttention: string;
   /** The scoreboard bar (the header of the officials' screens): near-black in both themes, with white and grey text. */
   board: string;
   onBoard: string;
@@ -93,8 +91,7 @@ export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
     accentText: "#0f5c57",
     selected: "#0f5c57",
     onSelected: "#ffffff",
-    attention: "#ff6a00",
-    onAttention: "#000000",
+    attention: "#e65f00",
     board: "#111111",
     onBoard: "#ffffff",
     boardMuted: "#b0b0b0",
@@ -134,7 +131,6 @@ export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
     selected: "#5fd3c6",
     onSelected: "#04211e",
     attention: "#ff6a00",
-    onAttention: "#000000",
     board: "#111111",
     onBoard: "#ffffff",
     boardMuted: "#b0b0b0",
@@ -183,7 +179,6 @@ export const TEXT_PAIRS: ReadonlyArray<readonly [TokenName, TokenName]> = [
   ["accentText", "bg"],
   ["accentText", "surface"],
   ["onSelected", "selected"],
-  ["onAttention", "attention"],
   ["onBoard", "board"],
   ["boardMuted", "board"],
   ["ink", "fill"],

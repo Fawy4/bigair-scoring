@@ -163,4 +163,17 @@ test("(d) Day is what a fresh phone and the organiser pages open in; a chosen Da
   expect(await j.getByTestId("live-root").evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(0, 0, 0)");
   await j.reload();
   await expect(j.getByTestId("live-root")).toHaveAttribute("data-theme", "dark", { timeout: 40_000 });
+
+  // the front door opens in Day like every other page, even on a phone that is set to dark, with the same Daylight / Dark choice
+  const door = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: "dark" });
+  contexts.push(door);
+  const home = await door.newPage();
+  await home.goto("/");
+  await expect(home.getByTestId("landing")).toBeVisible({ timeout: 60_000 });
+  expect(await home.locator(".home").evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(255, 255, 255)");
+  await home.getByTestId("home-theme").getByRole("button", { name: "Dark", exact: true }).click();
+  await expect(home.locator(".home")).toHaveAttribute("data-theme", "dark");
+  expect(await home.locator(".home").evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(17, 17, 17)");
+  await home.reload();
+  await expect(home.locator(".home")).toHaveAttribute("data-theme", "dark", { timeout: 30_000 }); // the choice is kept on the device
 });
