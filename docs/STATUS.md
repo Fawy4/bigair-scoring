@@ -1405,10 +1405,13 @@ Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 - Manual: judge, spotter, console-phone, observer pages, changelog, release 0.21.0.
 - Measured on `/design` (dev server, 390 × 844, Normal): the judge's 7 lines end at 655 px and the spotter's at 719 px of 844, nothing scrolls; no tap target under 44 px and no box under 16 px on any phone screen of /design.
 
-### Not done yet (waiting for the go-ahead: the shared hosted database is in use by another session)
-- Browser tests on a production build: `e2e/new-look.spec.ts` ((a) 7 lines, (b) no sideways scroll, (c) 44 px / 16 px, (d) Day default), then once each `spotter-rider-sheet`, `rider-sheet`, `review-console`, `live-spotter`, `live-spotter-layout`, `live-judge`, `walkover`, `observer` and the public results page.
-- Pictures for the pull request (judge sheet, spotter sheet, head judge phone in Day and Dark; console and one organiser step in Day) and the retaken manual pictures of the officials' screens.
-- Manual pictures that still show the old colours are listed in the pull request; `npm run manual:shots` retakes them.
+### Round 3 (owner's review): teal, flat buttons, trick name first
+- Teal is the one accent (every button, selected state, focus ring); orange only for "Needs your score" (Day #E65F00, Dark #FF6A00) and the logo. Buttons are white with a thin edge (no grey fill, no thick outline); the Queue keeps its filled keys. Missed over Flag (judge) and L, R over Crash (spotter) sit in small columns beside a bigger trick name; the flag strip has its own full-width row; Cancel heat is a quiet red outline; the front door opens in Day with the Day / Dark switch; the product is Sendbook; the Day header is all white; the view switches are slim.
+
+### Browser steps (done on a production build after PR #47 was rebased in)
+- `new-look.spec.ts` (a)–(d) pass; the existing files spotter-rider-sheet (22), rider-sheet, review-console, live-spotter, live-spotter-layout, live-judge, walkover, observer and the public results page pass once each (one earlier spotter-rider-sheet timeout passed on its one re-run).
+- `new-look-shots.spec.ts` looks at the console, big screen, Flag view, public event and results, Riders step and Admin with real data: no sideways scrolling anywhere; pictures in `docs/design-pass/final-*.png`.
+- Bundle-size budget (`public-budget`): main already exceeds its limits in this sandbox (home 288 KB / 261 KB of scripts); this branch adds the Rubik font: home 325 KB (+37 KB, +1 request), results 279 KB (+36), live heat 322 KB (+37); scripts unchanged.
 
 ### How to test on a phone
 - Release entry 0.21.0 in `docs/RELEASES.md`.
