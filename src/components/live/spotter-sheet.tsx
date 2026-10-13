@@ -7,6 +7,8 @@ import type { LoggerRider, LoggedAttempt } from "./attempt-logger";
 import { RiderTile } from "./rider-tile";
 import { MicStatus } from "./trick-builder";
 import { useSpeech } from "./use-speech";
+import { useFitFontSize } from "./use-fit-text";
+import { keepInView } from "./use-keyboard-fit";
 import type { TrickVocab } from "@/lib/engine/tricks";
 import {
   applySuggestion,
@@ -88,6 +90,8 @@ function SheetLineRow({
   const [crash, setCrash] = useState(line.crash);
   const [focused, setFocused] = useState(false);
   const picked = useRef(false);
+  const caretAtEnd = useRef(false);
+  const fitBox = useRef<HTMLSpanElement>(null);
   const dirty = useRef(false);
   // the box was emptied with the clear button: it stays empty until a new trick is typed (the attempt keeps its trick meanwhile)
   const cleared = useRef(false);
@@ -148,7 +152,7 @@ function SheetLineRow({
     });
   };
 
-  // free text that matches no suggestion counts as entered once the typing has been quiet for about 2 seconds
+  // free text that matches no suggestion counts as entered once the typing has been quiet for about 5 seconds
   useEffect(() => {
     if (!dirty.current || !canType) return;
     const d = commitDecision({ text, crash, picked: picked.current, quietMs: Date.now() - typedAt.current, hasOpenSuggestions: suggestions.length > 0 });
@@ -165,7 +169,7 @@ function SheetLineRow({
   // whatever is being typed stays in view above the keyboard (the screen is as tall as what the keyboard leaves free)
   useEffect(() => {
     if (!focused) return;
-    const t = setTimeout(() => row.current?.scrollIntoView({ block: "nearest" }), 250);
+    const t = setTimeout(() => keepInView(row.current), 250);
     return () => clearTimeout(t);
   }, [focused, suggestions.length]);
 
@@ -183,14 +187,23 @@ function SheetLineRow({
     picked.current = false;
     input.current?.focus();
   };
+  // a tapped suggestion fills in the word being typed and adds a space: the keyboard stays open and the cursor stays at the end, so the typing goes on. The line logs itself after the usual pause or when the box is left.
   const pick = (i: number) => {
-    const next = applySuggestion(text, suggestions[i]);
-    setText(next);
-    picked.current = true;
-    dirty.current = false;
-    commit({ text: next });
+    setText(applySuggestion(text, suggestions[i]) + " ");
+    cleared.current = false;
     picked.current = false;
+    dirty.current = true;
+    typedAt.current = Date.now();
+    caretAtEnd.current = true;
   };
+  useEffect(() => {
+    if (!caretAtEnd.current) return;
+    caretAtEnd.current = false;
+    const el = input.current;
+    if (!el) return;
+    el.focus({ preventScroll: true });
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, [text]);
   const tapDirection = (d: Direction) => {
     const next = toggleDirection(dir, d);
     setDir(next);
@@ -208,34 +221,63 @@ function SheetLineRow({
   const stateWord = line.state === "saving" ? T.states.saving : line.state === "logged" ? T.states.logged : tapToLog ? T.states.tapToLog : T.states.empty;
   const keptTrick = crash ? (readTrick(vocab, enabledIds, text, dir).trickName ?? line.trickName ?? "") : "";
   const dim = line.state === "waiting";
-  const btn = "inline-flex h-12 shrink-0 items-center justify-center rounded-lg text-name font-semibold disabled:opacity-50";
+  // the mic shows while the box is empty and the × only while it is in use, so the trick box gets all the width that is left
+  const adorned = canType && (text ? focused : speech.supported);
+  // the box keeps its 16 px text (iPhone Safari zooms into a box under 16 px when it is tapped); out of use, a copy of a long name shrunk to fit (down to 12 px) is drawn over it
+  const fitted = Boolean(text) && !focused;
+  const fitPx = useFitFontSize(text, fitted, fitBox);
+  const freeText = logged && mine && read(line, text, vocab, enabledIds);
+  // one row per line: the state is a small tick by the number; the words are kept for a screen reader and show only when something needs saying (a typed trick waiting for a tap, another seat's line, free text)
+  const sayState = tapToLog || (logged && !mine) || freeText;
 
   return (
-    <li ref={row} data-testid="spotter-line" data-line={line.n} data-state={line.state} data-crash={crash ? "true" : "false"} className={cn("flex scroll-mt-20 flex-col gap-1 px-2 py-1.5", dim && "bg-beach-bg text-beach-muted", crash && logged && "bg-beach-surface")}>
-      <div className="flex items-center gap-1.5">
-        <span data-testid="line-number" className="w-6 shrink-0 text-center text-name font-semibold tabular-nums">
-          {line.n}
+    <li ref={row} data-testid="spotter-line" data-line={line.n} data-state={line.state} data-crash={crash ? "true" : "false"} className={cn("flex scroll-mt-20 flex-col gap-0 px-1.5 py-1", dim && "bg-beach-bg text-beach-muted", crash && logged && "bg-beach-bg")}>
+      <div className="flex items-center gap-1">
+        <span className="flex w-6 shrink-0 flex-col items-center leading-none">
+          <span data-testid="line-number" className="text-lg font-bold tabular-nums">
+            {line.n}
+          </span>
+          {line.state === "logged" ? <Check aria-hidden data-testid="line-tick" className="mt-1 size-3.5 text-beach-selected" strokeWidth={4} /> : null}
         </span>
-        {(["left", "right"] as const).map((d) => (
+        {/* L | R over Crash in one small column (the owner's choice: the only controls under 44 px), so the trick box gets all the width that is left */}
+        <div className="flex w-16 shrink-0 flex-col gap-0.5">
+          <div role="group" aria-label={T.directionAria(line.n)} className="grid w-full grid-cols-2 gap-0.5">
+            {(["left", "right"] as const).map((d) => (
+              <button
+                key={d}
+                type="button"
+                data-testid={d === "left" ? "line-left" : "line-right"}
+                aria-label={d === "left" ? T.leftAria(line.n) : T.rightAria(line.n)}
+                aria-pressed={dir === d}
+                disabled={!canType}
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => tapDirection(d)}
+                className={cn("inline-flex h-8 items-center justify-center gap-0 rounded-lg border text-small font-bold disabled:opacity-50", dir === d ? "border-beach-selected bg-beach-selected text-beach-on-selected" : "border-beach-border bg-beach-fill text-beach-ink")}
+              >
+                {dir === d ? <Check aria-hidden className="size-3" strokeWidth={3} /> : null}
+                {d === "left" ? T.left : T.right}
+              </button>
+            ))}
+          </div>
           <button
-            key={d}
             type="button"
-            data-testid={d === "left" ? "line-left" : "line-right"}
-            aria-label={d === "left" ? T.leftAria(line.n) : T.rightAria(line.n)}
-            aria-pressed={dir === d}
+            data-testid="line-crash"
+            aria-label={T.crashAria(line.n)}
+            aria-pressed={crash}
             disabled={!canType}
             onPointerDown={(e) => e.preventDefault()}
-            onClick={() => tapDirection(d)}
-            className={cn(btn, "w-10 gap-0.5 px-0", dir === d ? "border-4 border-beach-ink bg-beach-surface text-beach-ink" : "border border-beach-border bg-beach-bg text-beach-ink")}
+            onClick={tapCrash}
+            className={cn("inline-flex h-8 w-full shrink-0 items-center justify-center gap-0.5 rounded-full border border-beach-crash px-1 text-small font-bold disabled:opacity-50", crash ? "bg-beach-crash text-beach-on-crash ring-[3px] ring-beach-ink ring-offset-1 ring-offset-beach-bg" : "bg-transparent text-beach-crash")}
           >
-            {dir === d ? <Check aria-hidden className="size-3.5" strokeWidth={3} /> : null}
-            {d === "left" ? T.left : T.right}
+            {crash ? <Check aria-hidden className="size-4" strokeWidth={3} /> : <Zap aria-hidden className="size-4" />}
+            {copy.live.builder.crash}
           </button>
-        ))}
+
+        </div>
         <div className="flex min-w-0 flex-1 flex-col">
           {crash && logged ? (
-            <div data-testid="line-crash-word" className="flex min-h-12 flex-col justify-center">
-              <span className="inline-flex items-center gap-1 text-name font-semibold text-beach-crash">
+            <div data-testid="line-crash-word" className="flex min-h-11 flex-col justify-center">
+              <span className="inline-flex items-center gap-1 text-name font-bold text-beach-crash">
                 <Zap aria-hidden className="size-4" />
                 {T.crashWord}
               </span>
@@ -254,19 +296,36 @@ function SheetLineRow({
                 placeholder={T.placeholder}
                 value={text}
                 disabled={!canType}
+                name="trick"
+                type="text"
                 autoComplete="off"
+                data-lpignore="true"
+                data-1p-ignore
+                data-form-type="other"
                 autoCorrect="off"
                 autoCapitalize="sentences"
                 spellCheck={false}
                 enterKeyHint="done"
                 onChange={(e) => onType(e.target.value)}
                 onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") (e.target as HTMLInputElement).blur(); // closes the keyboard; it never logs
+                onBlur={() => {
+                  setFocused(false);
+                  // leaving the box logs what is in it (or sends the change)
+                  if (dirty.current && text.trim() && !crash && canType) commit();
                 }}
-                className="h-12 w-full min-w-0 rounded-lg border border-beach-border bg-beach-bg py-0 pl-2 pr-10 text-body font-semibold text-beach-ink placeholder:font-medium placeholder:text-beach-muted disabled:bg-beach-surface"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.target as HTMLInputElement).blur(); // closes the keyboard (and so logs what is in the box)
+                }}
+                className={cn("h-11 w-full min-w-0 rounded-full border border-beach-border bg-beach-fill py-0 pl-3 text-body font-medium text-ellipsis text-beach-ink placeholder:font-medium placeholder:text-beach-muted disabled:bg-beach-surface", adorned ? "pr-11" : "pr-3", fitted && "text-transparent")}
               />
+              {fitted ? (
+                <span ref={fitBox} aria-hidden data-testid="line-trick-fit" className="pointer-events-none absolute inset-y-0 left-3 right-3 flex items-center overflow-hidden font-medium text-beach-ink" style={{ fontSize: fitPx }}>
+                  {/* one line while it fits at 12 px or more; a name too long even for that wraps to a second line at 12 px */}
+                  <span data-testid="line-trick-fit-text" className="line-clamp-2 break-words leading-[1.1]">
+                    {text}
+                  </span>
+                </span>
+              ) : null}
               {!text && canType && speech.supported ? (
                 <button
                   type="button"
@@ -275,19 +334,19 @@ function SheetLineRow({
                   aria-pressed={speech.listening}
                   onPointerDown={(e) => e.preventDefault()}
                   onClick={speech.toggle}
-                  className={cn("absolute right-0.5 top-1/2 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-lg", speech.listening ? "bg-beach-accent text-beach-on-accent" : "text-beach-muted")}
+                  className={cn("absolute right-0 top-1/2 inline-flex size-11 -translate-y-1/2 items-center justify-center rounded-full", speech.listening ? "bg-beach-selected text-beach-on-selected" : "text-beach-muted")}
                 >
                   <Mic aria-hidden className="size-5" strokeWidth={2.5} />
                 </button>
               ) : null}
-              {text && canType ? (
+              {text && canType && focused ? (
                 <button
                   type="button"
                   data-testid="line-trick-clear"
                   aria-label={T.clearBox(line.n)}
                   onPointerDown={(e) => e.preventDefault()}
                   onClick={clearBox}
-                  className="absolute right-0.5 top-1/2 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-lg text-beach-muted"
+                  className="absolute right-0 top-1/2 inline-flex size-11 -translate-y-1/2 items-center justify-center rounded-full text-beach-muted"
                 >
                   <X aria-hidden className="size-5" strokeWidth={2.5} />
                 </button>
@@ -295,34 +354,21 @@ function SheetLineRow({
             </div>
           )}
         </div>
-        <button
-          type="button"
-          data-testid="line-crash"
-          aria-label={T.crashAria(line.n)}
-          aria-pressed={crash}
-          disabled={!canType}
-          onPointerDown={(e) => e.preventDefault()}
-          onClick={tapCrash}
-          className={cn(btn, "w-[4.75rem] gap-1 border border-beach-crash bg-beach-crash px-1 text-small text-beach-on-crash", crash && "ring-[3px] ring-beach-ink ring-offset-1 ring-offset-beach-bg")}
-        >
-          {crash ? <Check aria-hidden className="size-4" strokeWidth={3} /> : <Zap aria-hidden className="size-4" />}
-          {copy.live.builder.crash}
-        </button>
       </div>
-      <div className="flex items-center justify-between gap-2 pl-8 text-small font-medium">
-        <span data-testid="line-state" data-tap-to-log={tapToLog ? "true" : undefined} className={cn(line.state === "logged" || tapToLog ? "font-semibold text-beach-ink" : "text-beach-muted")}>
+      <div className={cn("flex items-center justify-between gap-2 pl-[30px] text-small font-medium", !sayState && "sr-only")}>
+        <span data-testid="line-state" data-tap-to-log={tapToLog ? "true" : undefined} className={cn(line.state === "logged" || tapToLog ? "font-bold text-beach-ink" : "text-beach-muted")}>
           {stateWord}
         </span>
         {logged && !mine ? <span className="text-beach-muted">{T.othersLine}</span> : null}
-        {logged && mine && read(line, text, vocab, enabledIds) ? <span className="text-beach-muted">{T.freeTag}</span> : null}
+        {freeText ? <span className="text-beach-muted">{T.freeTag}</span> : null}
       </div>
       {speech.listening || speech.note ? (
-        <div className="pl-8">
+        <div className="pl-[30px]">
           <MicStatus listening={speech.listening} note={speech.note} />
         </div>
       ) : null}
       {focused && !(crash && logged) && suggestions.length > 0 ? (
-        <div role="group" aria-label={T.suggestions} data-testid="line-suggestions" className="flex flex-wrap gap-1 pl-8">
+        <div role="group" aria-label={T.suggestions} data-testid="line-suggestions" className="flex flex-wrap gap-1 pl-[30px]">
           {suggestions.map((s, i) => (
             <Chip key={s.id} data-testid="suggestion" onPointerDown={(e) => e.preventDefault()} onClick={() => pick(i)}>
               {s.label}
@@ -372,16 +418,16 @@ export function SpotterSheetView(p: SpotterSheetProps) {
         ) : null}
       </div>
       {note ? (
-        <p role="status" data-testid="sheet-note" className="rounded-lg border border-beach-line bg-beach-surface px-1.5 py-0.5 text-small font-semibold">
+        <p role="status" data-testid="sheet-note" className="rounded-2xl bg-beach-surface px-3 py-1 text-small font-bold">
           {note}
         </p>
       ) : null}
       {rider ? (
         <div data-testid="spotter-sheet" className="flex flex-col gap-1.5">
-          <h2 data-testid="sheet-heading" className="text-heading font-semibold text-beach-muted">
+          <h2 data-testid="sheet-heading" className="text-heading font-bold uppercase tracking-wide text-beach-muted">
             {T.sheetFor(rider.label.primary.text)}
           </h2>
-          <ol data-testid="sheet-lines" aria-label={T.sheetFor(rider.label.primary.text)} className="flex flex-col divide-y divide-beach-line rounded-xl border border-beach-line">
+          <ol data-testid="sheet-lines" aria-label={T.sheetFor(rider.label.primary.text)} className="flex flex-col divide-y divide-beach-line border-y border-beach-line">
             {lines.map((l) => (
               <SheetLineRow key={`${rider.id}:${l.n}`} line={l} riderId={rider.id} vocab={p.vocab} enabledIds={p.enabledIds} canLog={p.canLog && !out} onLog={p.onLog} onEdit={p.onEdit} />
             ))}

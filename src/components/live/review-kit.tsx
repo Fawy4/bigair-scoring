@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 const R = copy.headLive.reviewBar;
 const I = copy.headLive.impressionCard;
-const small = "min-h-tap rounded-lg border border-beach-border bg-beach-bg px-2 text-small font-semibold text-beach-ink";
+const small = "min-h-tap rounded-lg border border-beach-border bg-beach-fill px-2 text-small font-semibold text-beach-ink";
 // the same distance bands as the trick scores in the table: within tolerance green, then yellow, orange, red (literal class names for Tailwind)
 const DIST = ["bg-beach-tint-dist0", "bg-beach-tint-dist1", "bg-beach-tint-dist2", "bg-beach-tint-dist3"];
 

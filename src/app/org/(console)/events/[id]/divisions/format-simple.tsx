@@ -131,7 +131,7 @@ export function FormatSimple({
   const target = kind && kind !== "custom" && kind !== "ladder" ? TARGET_KEY[kind] : null;
 
   const card = (selected: boolean, radio: React.ReactNode, tag: React.ReactNode, tip: React.ReactNode, explain: string | null) => (
-    <div className={`flex flex-col rounded-[8px] border pl-3 ${selected ? "border-beach-accent bg-beach-surface" : "border-beach-line"}`} data-selected={selected}>
+    <div className={`flex flex-col rounded-[8px] border pl-3 ${selected ? "border-beach-selected bg-beach-surface" : "border-beach-line"}`} data-selected={selected}>
       <div className="flex items-center justify-between gap-2">
         {radio}
         {tip}
@@ -239,7 +239,7 @@ function PointsTable({ working, onChange, invalid, row }: { working: Record<stri
       aria-label={T.pointsTable}
       value={text}
       placeholder={T.pointsPlaceholder}
-      className="h-[var(--org-ctl)] w-40 rounded-[8px] border border-beach-border bg-beach-bg px-3 text-digit font-semibold tabular-nums text-right"
+      className="h-[var(--org-ctl)] w-40 rounded-[8px] border border-beach-border bg-beach-fill px-3 text-digit font-semibold tabular-nums text-right"
       aria-invalid={invalid || bad}
       onFocus={() => (focused.current = true)}
       onBlur={() => {

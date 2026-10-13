@@ -91,7 +91,7 @@ function HeadPhone({ id, start }: { id: "head-score" | "head-control"; start: "s
     <PhoneFrame id={id} title={NAMES[id]} note={id === "head-score" ? S.headScore : S.headControl}>
       <div role="tablist" aria-label={T.label} className="grid grid-cols-2 border-b border-beach-line bg-beach-bg">
         {(["score", "control"] as const).map((t) => (
-          <button key={t} type="button" role="tab" data-tab={t} aria-selected={tab === t} onClick={() => setTab(t)} className={cn("min-h-tap text-body font-semibold", tab === t ? "border-b-2 border-beach-accent text-beach-ink" : "border-b-2 border-transparent text-beach-muted")}>
+          <button key={t} type="button" role="tab" data-tab={t} aria-selected={tab === t} onClick={() => setTab(t)} className={cn("min-h-tap text-body font-semibold", tab === t ? "border-b-2 border-beach-selected text-beach-ink" : "border-b-2 border-transparent text-beach-muted")}>
             {t === "score" ? T.score : T.control}
           </button>
         ))}

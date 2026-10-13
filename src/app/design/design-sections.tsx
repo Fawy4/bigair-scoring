@@ -1,5 +1,6 @@
 "use client";
 
+import { FlagHeaderComparison, NewLookScreens } from "./new-look";
 import { useMemo, useState } from "react";
 import { ConnectionBadge } from "@/components/live/connection-badge";
 import { CriteriaRows } from "@/components/live/criteria-rows";
@@ -18,7 +19,7 @@ import { LARGE, NORMAL } from "@/lib/live/size-tokens";
 import { copy } from "@/lib/ui-copy";
 import { HeadControl, HeadLaptop, HeadScore, JudgeDetails, JudgeEnd, JudgeLive, SpotterLive } from "./screens";
 
-export const SCREEN_IDS = ["judge-live", "judge-details", "spotter-live", "judge-end", "head-score", "head-control", "head-laptop"] as const;
+export const SCREEN_IDS = ["look-judge-sheet", "look-spotter-sheet", "look-head-phone", "judge-live", "judge-details", "spotter-live", "judge-end", "head-score", "head-control", "head-laptop"] as const;
 export const PART_IDS = ["result", "labels", "status", "criteria", "sizes"] as const;
 export const SECTION_IDS = [...SCREEN_IDS, ...PART_IDS] as const;
 
@@ -163,6 +164,8 @@ function SizesPart() {
 export function DesignSections({ arrow }: { arrow: ArrowScheme | null }) {
   return (
     <>
+      <NewLookScreens />
+      <FlagHeaderComparison />
       <p className="text-small font-medium text-beach-muted">{copy.design.screens.intro}</p>
       <JudgeLive />
       <JudgeDetails />

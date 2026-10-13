@@ -54,7 +54,7 @@ export default async function SchedulePrintPage({ params, searchParams }: { para
       </header>
       <table className="w-full border-collapse text-lg" data-testid="schedule-print-table">
         <thead>
-          <tr className="bg-[#111] text-white">
+          <tr className="bg-beach-ink text-white">
             <th className="p-2 text-left">{T.division}</th>
             <th className="p-2 text-left">{T.session}</th>
             {showWarmUp ? <th className="p-2">{T.warmUp}</th> : null}
@@ -66,7 +66,7 @@ export default async function SchedulePrintPage({ params, searchParams }: { para
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={i} className={`border-b-2 border-[#111] ${r.kind === "heat" ? "" : "bg-[#fde68a]"}`}>
+            <tr key={i} className={`border-b-2 border-beach-ink ${r.kind === "heat" ? "" : "bg-[#fde68a]"}`}>
               <td className="p-2 font-bold">{r.division}</td>
               <td className="p-2 font-semibold">{r.session}</td>
               {showWarmUp ? <td className="p-2 text-center">{r.warmUp}</td> : null}

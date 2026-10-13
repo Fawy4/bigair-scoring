@@ -232,7 +232,7 @@ test("big screen: white on dark, pages rotate by themselves, Space pauses, a QR 
   await page.goto(`/screen/${w.slug}`);
   await expect(page.getByTestId("big-screen")).toBeVisible();
   const bg = await page.getByTestId("big-screen").evaluate((e) => getComputedStyle(e).backgroundColor);
-  expect(bg).toBe("rgb(11, 14, 15)");
+  expect(bg).toBe("rgb(0, 0, 0)");
   await expect(page.getByTestId("wind-banner")).toHaveText("Wind Call: Good to go");
   const top = await page.getByTestId("wind-banner").boundingBox();
   const head = await page.getByTestId("screen-header").boundingBox();

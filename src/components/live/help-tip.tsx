@@ -18,7 +18,7 @@ export function HelpTip({ what, text, learnMore = false }: { what: string; text:
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex min-h-tap min-w-tap items-center justify-center rounded-full border border-beach-border bg-beach-bg text-body font-semibold text-beach-ink aria-expanded:bg-beach-accent aria-expanded:text-beach-on-accent"
+        className="inline-flex min-h-tap min-w-tap items-center justify-center rounded-full border border-beach-border bg-beach-fill text-body font-semibold text-beach-ink aria-expanded:bg-beach-accent aria-expanded:text-beach-on-accent"
       >
         {copy.common.helpButton}
       </button>

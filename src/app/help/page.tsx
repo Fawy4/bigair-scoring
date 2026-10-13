@@ -3,6 +3,7 @@ import { loadManual } from "@/lib/manual/load";
 import { getProductName } from "@/lib/platform/public-settings";
 import { PRODUCT_VERSION } from "@/lib/product-version";
 import { copy } from "@/lib/ui-copy";
+import { PRODUCT_NAME } from "@/lib/product";
 import { HelpDiagrams, HelpSearch, PdfButton } from "./help-client";
 import "./help.css";
 
@@ -10,7 +11,7 @@ import "./help.css";
 export const dynamic = "force-static";
 
 export async function generateMetadata(): Promise<Metadata> {
-  let product = process.env.NEXT_PUBLIC_PRODUCT_NAME || "Big Air Scoring";
+  let product = PRODUCT_NAME;
   try {
     product = await getProductName();
   } catch {

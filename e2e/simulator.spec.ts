@@ -86,3 +86,34 @@ test("copy an event, play it at ×20 until two heats publish, look as a spectato
     await w.cleanup();
   }
 });
+
+test("View as… → Riders opens the event's public Riders page (no rider drop-down), and a tapped name opens that rider's page", async ({ page, context }) => {
+  test.setTimeout(240_000);
+  const w = await createLiveWorld();
+  const simIds: string[] = [];
+  try {
+    await addLadder(w);
+    await w.org.signIn(page, `/org/events/${w.eventId}/simulate`);
+    await page.getByTestId("run-as-simulation-button").click();
+    await expect(page.getByTestId("clone-done")).toBeVisible();
+    await page.getByTestId("clone-open").click();
+    await expect(page.getByTestId("sim-console")).toBeVisible();
+    simIds.push(/events\/([0-9a-f-]{36})\/simulate/.exec(page.url())![1]);
+    await expect(page.getByTestId("view-rider-select")).toHaveCount(0);
+    await expect(page.getByTestId("view-rider")).toHaveCount(0);
+    const [riders] = await Promise.all([context.waitForEvent("page"), page.getByTestId("view-riders").click()]);
+    await riders.waitForLoadState("domcontentloaded");
+    await expect(riders).toHaveURL(/\/e\/[^/]+-sim-[^/]+\/riders$/, { timeout: 30_000 });
+    await expect(riders.getByTestId("rider-link").first()).toBeVisible({ timeout: 30_000 });
+    if (process.env.RIDERS_PIC) {
+      await riders.setViewportSize({ width: 390, height: 844 });
+      await riders.screenshot({ path: process.env.RIDERS_PIC });
+    }
+    await riders.getByTestId("rider-link").first().click();
+    await expect(riders).toHaveURL(/\/riders\/[0-9a-f-]{36}$/, { timeout: 30_000 });
+    await riders.close();
+  } finally {
+    await removeSimulatorUsers(w, simIds);
+    await w.cleanup();
+  }
+});

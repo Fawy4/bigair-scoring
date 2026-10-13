@@ -20,7 +20,7 @@ import { fullName, type EntryRow } from "./types";
 const C = copy.riders.columns;
 const th = "sticky top-0 z-10 h-[var(--org-row)] whitespace-nowrap bg-beach-surface px-2 text-left align-middle text-small font-semibold text-beach-muted [box-shadow:inset_0_-1px_0_var(--beach-line)]";
 const td = "px-2 py-1 align-middle [box-shadow:inset_0_-1px_0_var(--beach-line)]";
-const input = "w-full min-w-[6rem] border-transparent bg-transparent hover:border-beach-border focus:border-beach-accent";
+const input = "w-full min-w-[6rem] border-transparent bg-transparent hover:border-beach-border focus:border-beach-selected";
 
 /** A cell that saves when the person leaves it (or presses Enter), and only when the value really changed. */
 function Cell({ value, label, onCommit, width, inputMode }: { value: string; label: string; onCommit: (v: string) => void; width?: string; inputMode?: "numeric" | "decimal" | "email" | "tel" }) {

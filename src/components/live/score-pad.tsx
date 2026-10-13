@@ -23,9 +23,9 @@ function PadButton({ selected, disabled, onClick, children, label }: { selected:
       onClick={onClick}
       style={{ height: "var(--size-pad-height)", width: "var(--size-pad-height)" }}
       className={cn(
-        "shrink-0 rounded-lg text-digit",
+        "shrink-0 rounded-xl text-digit",
         // weight 700 is for the selected score only
-        selected ? "border border-beach-accent bg-beach-accent font-bold text-beach-on-accent" : disabled ? "border border-beach-line bg-beach-surface font-semibold text-beach-muted" : "border border-beach-border bg-beach-bg font-semibold text-beach-ink",
+        selected ? "border border-beach-selected bg-beach-selected font-bold text-beach-on-selected" : disabled ? "border border-transparent bg-beach-key font-bold text-beach-ink opacity-50" : "border border-transparent bg-beach-key font-bold text-beach-ink",
       )}
     >
       {children}
@@ -105,9 +105,14 @@ export function ScorePad({ scale, value, onChange, label, caption, disabled = fa
           </output>
           <input
             data-testid="pad-input"
+            name="score"
+            type="text"
             inputMode="decimal"
             enterKeyHint="done"
             autoComplete="off"
+            data-lpignore="true"
+            data-1p-ignore
+            data-form-type="other"
             aria-label={copy.live.pad.type}
             placeholder={copy.live.pad.typePlaceholder}
             value={draft}
@@ -117,7 +122,7 @@ export function ScorePad({ scale, value, onChange, label, caption, disabled = fa
               if (e.key === "Enter" && canSave) save();
             }}
             style={{ height: "var(--size-pad-height)" }}
-            className={cn("w-full rounded-lg border bg-beach-bg px-1.5 text-center text-digit font-semibold text-beach-ink placeholder:text-beach-muted", draft.trim() !== "" && !typed.ok ? "border-beach-failed" : "border-beach-border")}
+            className={cn("w-full rounded-xl border bg-beach-key px-1.5 text-center text-digit font-bold text-beach-ink placeholder:text-beach-muted", draft.trim() !== "" && !typed.ok ? "border-beach-failed" : "border-transparent")}
           />
           <Chip data-testid="pad-save" variant={canSave ? "accent" : "muted"} disabled={!canSave} onClick={save} className="self-end" style={{ height: "var(--size-pad-height)" }}>
             {copy.common.save}

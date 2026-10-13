@@ -151,7 +151,7 @@ function SeatBox({
         "flex flex-col gap-1 rounded-lg border border-beach-line bg-beach-bg p-2",
         current.type === "empty" ? "border-dashed" : "",
         drop.isOver ? "bg-beach-surface" : "",
-        eligibleTarget ? "outline outline-4 outline-offset-2 outline-beach-accent" : "",
+        eligibleTarget ? "outline outline-4 outline-offset-2 outline-beach-selected" : "",
       )}
     >
       <div className="flex items-center gap-2">

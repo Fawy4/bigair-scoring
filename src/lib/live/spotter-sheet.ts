@@ -12,7 +12,7 @@ import { capitaliseName, splitCount } from "./trick-text";
 /** With no attempt limit the sheet starts with this many lines; "Add attempt" adds one at a time. */
 export const OPEN_LINES = 10;
 /** How long the typing must be quiet before text that matches no suggestion counts as entered. */
-export const PAUSE_MS = 2000;
+export const PAUSE_MS = 5000;
 
 /** How many lines a rider's sheet has: the limit (never fewer than the attempts logged); with no limit 10 plus the ones added. */
 export function lineTotal(i: { logged: number; cap: number | null; added: number }): number {
@@ -93,8 +93,9 @@ export function toggleDirection(_current: Direction | null, tapped: Direction): 
 export type CommitDecision = { log: true; why: "picked" | "paused" | "crash" } | { log: false; waitMs: number | null };
 
 /**
- * When does a line log itself (or, on a logged line, send its change)? As soon as Crash is on (a crash needs no trick); as soon as a suggestion is tapped; and for
- * text that shows no suggestion, once the typing has been quiet for about 2 seconds. Text that still shows suggestions waits for a tap. Nothing at all
+ * When does a line log itself (or, on a logged line, send its change)? As soon as Crash is on (a crash needs no trick); and for text that shows no suggestion, once the typing
+ * has been quiet for about 5 seconds (a tapped suggestion only fills in the word and adds a space, so the typing goes on); leaving the box logs what is in it. Text whose
+ * last word still shows suggestions waits for a tap or for the box to be left. Nothing at all
  * (no trick, no Crash) never logs: L or R alone is not an attempt. `waitMs` is how long to wait before asking again (null: nothing to wait for).
  */
 export function commitDecision(i: { text: string; crash: boolean; picked: boolean; quietMs: number; hasOpenSuggestions: boolean }): CommitDecision {
@@ -151,7 +152,7 @@ export interface Suggestion {
   label: string;
   /** How many of the typed words the suggestion replaces. */
   replace: number;
-  /** It is exactly what has been typed (so nothing is left to choose). */
+  /** It is exactly what has been typed, spelled the same (ignoring capitals): so nothing is left to choose. "board off" and "boardoff" are not exact for Board-off: it is offered. */
   exact: boolean;
 }
 
@@ -180,7 +181,7 @@ export function suggestionsFor(vocab: TrickVocab, enabledIds: ReadonlySet<string
     if (best <= 1) hits.splice(0, hits.length, ...hits.filter((h) => h.rank <= 1));
     if (!hits.length) continue;
     hits.sort((a, b) => a.rank - b.rank || a.b.label.length - b.b.label.length);
-    return hits.slice(0, limit).map(({ b }) => ({ id: b.id, label: b.label, replace: k, exact: squash(normaliseText(b.label)) === squash(phrase) }));
+    return hits.slice(0, limit).map(({ b }) => ({ id: b.id, label: b.label, replace: k, exact: words.slice(-k).join(" ").toLowerCase() === b.label.toLowerCase() }));
   }
   return [];
 }

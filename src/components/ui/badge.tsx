@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const badgeVariants = cva("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-small font-semibold transition-colors", {
   variants: {
     variant: {
-      default: "border-beach-accent bg-background text-foreground",
+      default: "border-beach-border bg-background text-foreground",
       secondary: "border-beach-line bg-secondary text-secondary-foreground",
       destructive: "border-beach-crash bg-background text-beach-crash",
       outline: "border-input text-foreground",

@@ -42,16 +42,17 @@ export function RiderTile({
   const style = labelStyleOfPrimary(p);
   const name = style === "name-first" ? null : label.secondary.find((x) => x.key === "name")?.text;
   const counter = max === null ? `${attempts}` : out ? T.outOfAttempts(attempts, max) : T.counter(attempts, max);
+  // selected = a thicker teal frame (the frame and the counter say it too, never colour alone)
   const frame = cn(
-    "relative w-full min-w-0 rounded-card text-left",
-    out ? "border border-dashed border-beach-missing bg-beach-surface" : selected ? "border-2 border-beach-accent bg-beach-bg" : "border border-beach-line bg-beach-bg",
+    "relative w-full min-w-0 overflow-hidden rounded-2xl text-left",
+    out ? "border border-dashed border-beach-missing bg-beach-surface" : selected ? "border-2 border-beach-selected bg-beach-bg" : "border border-beach-line bg-beach-bg",
   );
   return (
-    <button type="button" data-testid="rider-tile" data-selected={selected} data-out={out} aria-pressed={selected} disabled={out && lockWhenOut} onClick={onSelect} className={cn(frame, compact ? "p-1" : "min-h-row px-2 py-1")}>
+    <button type="button" data-testid="rider-tile" data-selected={selected} data-out={out} aria-pressed={selected} disabled={out && lockWhenOut} onClick={onSelect} className={cn(frame, compact ? "px-1.5 pb-1 pt-1" : "min-h-row px-3 py-1")}>
       {compact ? (
         <span className="flex min-w-0 flex-col items-stretch gap-px">
           {style === "colour-block" ? (
-            <span data-testid="rider-tile-word" className="truncate rounded px-1 text-center text-small font-semibold leading-tight tracking-wide" style={{ backgroundColor: p.hex, color: p.ink, boxShadow: p.outlined ? "inset 0 0 0 1.5px var(--beach-ink)" : undefined }}>
+            <span data-testid="rider-tile-word" className="truncate rounded-full px-1 text-center text-small font-bold leading-tight tracking-wide" style={{ backgroundColor: p.hex, color: p.ink, boxShadow: p.outlined ? "inset 0 0 0 1.5px var(--beach-ink)" : undefined }}>
               {p.text}
             </span>
           ) : (
@@ -60,7 +61,7 @@ export function RiderTile({
             </span>
           )}
           {name ? (
-            <span data-testid="rider-tile-name" className="truncate text-small font-medium leading-tight text-beach-ink">
+            <span data-testid="rider-tile-name" className="truncate text-small font-bold leading-tight text-beach-ink">
               {name}
             </span>
           ) : null}
@@ -78,7 +79,7 @@ export function RiderTile({
           <span className={cn("min-w-0 flex-1", out && "grayscale")}>
             <RiderLabel model={label} variant="live" bare />
           </span>
-          <span data-testid="rider-tile-counter" className={cn("flex shrink-0 items-center gap-1 text-small font-semibold", out ? "text-beach-missing" : "text-beach-ink")}>
+          <span data-testid="rider-tile-counter" className={cn("flex shrink-0 items-center gap-1 text-small font-bold", out ? "text-beach-missing" : "text-beach-ink")}>
             {out ? <Lock aria-hidden className="size-4" /> : null}
             {counter}
           </span>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_TAGLINE, resolvePlatformSettings, settingsToRows, validatePlatformSettings } from "./settings";
 
+import { productNameOf } from "@/lib/product";
 const env = { productName: "[PRODUCT_NAME]", timezone: "Africa/Cairo" };
 
 describe("platform settings: what the site shows", () => {
@@ -77,5 +78,15 @@ describe("platform settings: saving", () => {
     const r = validatePlatformSettings({ ...good, defaultTimezone: "Mars/Olympus", productName: "x".repeat(61), logoUrl: "javascript:alert(1)" });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(Object.keys(r.fields).sort()).toEqual(["defaultTimezone", "logoUrl", "productName"]);
+  });
+});
+
+describe("the product is called Sendbook", () => {
+  it("an empty value or an old name reads as Sendbook; any other name stays", () => {
+    for (const old of ["", "  ", "[PRODUCT_NAME]", "Big Air Scoring", undefined, null]) expect(productNameOf(old)).toBe("Sendbook");
+    expect(productNameOf("Arrow Scoring")).toBe("Arrow Scoring");
+  });
+  it("a stored product name that is an old name also reads as Sendbook", () => {
+    expect(resolvePlatformSettings([{ key: "product_name", value: "Big Air Scoring" }], env).productName).toBe("Sendbook");
   });
 });

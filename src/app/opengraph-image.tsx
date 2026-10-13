@@ -11,7 +11,7 @@ export default async function Image() {
   const settings = await getPlatformSettings();
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: "#0b0e0f", color: "#ffffff", padding: 64, fontFamily: "sans-serif" }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: "#111111", color: "#ffffff", padding: 64, fontFamily: "sans-serif" }}>
         <div style={{ display: "flex", fontSize: 88, fontWeight: 700, lineHeight: 1.05 }}>{settings.productName}</div>
         <div style={{ display: "flex", fontSize: 40, color: "#c9d1d3" }}>{settings.tagline}</div>
       </div>

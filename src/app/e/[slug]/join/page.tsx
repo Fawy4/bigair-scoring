@@ -1,3 +1,4 @@
+import { HomeTheme } from "@/components/home/home-theme";
 import Link from "next/link";
 import { JoinForm } from "@/app/join/join-form";
 import { SelfAddForm } from "@/app/join/self-add-form";
@@ -50,6 +51,7 @@ export default async function EventJoinPage({ params, searchParams }: { params: 
   return (
     <div className="home" data-testid="join-page">
       <main className="home-wrap home-narrow">
+        <HomeTheme />
         <header>
           <Wordmark name={settings.productName} />
           <h1 className="home-title">{event?.name ?? copy.join.joinEvent}</h1>

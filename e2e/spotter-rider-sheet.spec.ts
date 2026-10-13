@@ -3,7 +3,7 @@ import { createLiveWorld, type LiveWorld } from "./live-world";
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 
 // Rider sheets (0.20.0) on a throwaway organisation (Arrow, EKL and Demo are never touched), phone size 390 × 844, ONE worker, on a production build:
-//   - the spotter's Rider sheet: a line logs itself (a tapped suggestion, a 2-second pause with free text, Crash on), later changes update the same attempt, the judge's
+//   - the spotter's Rider sheet: a line logs itself (a tapped suggestion, a 5-second pause with free text, Crash on), later changes update the same attempt, the judge's
 //     score stays on a corrected attempt, a second spotter's log appears, no limit gives 10 lines and Add attempt makes 11;
 //   - the judges' Rider sheet: line by line, Missed opens the next line and leaves no score from that judge on that attempt, a filled line can be changed;
 //   - the Trick list: the text box sits directly above Log and CRASH, Left and Right fill their row, the text box and Log stay visible when the height is cut the way a keyboard
@@ -143,7 +143,7 @@ test("the spotter's Rider sheet: a line logs itself, later changes update the sa
   await sline(spotter, 1).getByTestId("line-left").click();
   await expect.poll(async () => (await attempts(H, E)).map((a) => a.direction), { timeout: 30_000 }).toEqual(["left"]);
 
-  // ---- line 2: free text that matches nothing logs itself after about 2 seconds, flagged for the head judge
+  // ---- line 2: free text that matches nothing logs itself after about 5 seconds, flagged for the head judge
   await strick(spotter, 2).click();
   await strick(spotter, 2).fill("zzzflip");
   await expect.poll(async () => (await attempts(H, E)).length, { timeout: 30_000 }).toBe(2);
@@ -306,8 +306,9 @@ test("the Trick list: the text box sits directly above Log and CRASH, Left and R
   await expect(block(spotter, "direction:left")).toHaveAttribute("aria-pressed", "true");
   await expect(block(spotter, "direction:left").locator("svg")).toBeVisible();
   await expect(block(spotter, "direction:right").locator("svg")).toHaveCount(0);
-  expect(await block(spotter, "direction:left").evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe("4px");
-  expect(await block(spotter, "direction:right").evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe("1px");
+  // the chosen side is filled teal with a tick (no thick dark outline any more); the other side is white with a thin edge
+  await expect(block(spotter, "direction:left")).toHaveCSS("background-color", "rgb(15, 92, 87)");
+  await expect(block(spotter, "direction:right")).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await block(spotter, "direction:right").click();
   await expect(block(spotter, "direction:right").locator("svg")).toBeVisible();
   await expect(block(spotter, "direction:left").locator("svg")).toHaveCount(0);
@@ -632,7 +633,7 @@ for (const second of ["a score", "Missed"] as const) {
   });
 }
 
-test("(c) the highlight: three attempts logged, the judge scores only line 1: lines 2 and 3 show the teal bar and the tag, only line 2 pulses and glows, and scoring line 2 moves them to line 3", async ({ browser }) => {
+test("(c) the highlight: three attempts logged, the judge scores only line 1: lines 2 and 3 show the orange bar and the tag, only line 2 pulses and glows, and scoring line 2 moves them to line 3", async ({ browser }) => {
   test.setTimeout(600_000);
   const H = w.heats[0];
   await onlyRed(H);
@@ -655,9 +656,10 @@ test("(c) the highlight: three attempts logged, the judge scores only line 1: li
   expect(await anim(3)).toBe("none");
   expect(await jbox(j1, 2).evaluate((e) => getComputedStyle(e).boxShadow)).not.toBe("none");
   expect(await jbox(j1, 3).evaluate((e) => getComputedStyle(e).boxShadow)).toBe("none");
-  // teal, not red: the bar is the colour of the selected Rider sheet button (and not the colour of the Crash tag or the lycra card)
+  // orange is kept for exactly this (everything else is teal): the bar is orange, and it is not the teal of the selected Rider sheet button
   const bar = await jline(j1, 2).getByTestId("line-needs-bar").evaluate((e) => getComputedStyle(e).backgroundColor);
-  expect(bar).toBe(await j1.getByTestId("view-sheet").evaluate((e) => getComputedStyle(e).backgroundColor));
+  expect(bar).toBe("rgb(230, 95, 0)"); // the deeper Day orange (3.5:1 on white)
+  expect(bar).not.toBe(await j1.getByTestId("view-sheet").evaluate((e) => getComputedStyle(e).backgroundColor));
   expect(await jline(j1, 2).getByTestId("line-needs-dot").evaluate((e) => getComputedStyle(e).backgroundColor)).toBe(bar);
   // scoring line 2 moves the pulse and the glow to line 3
   await jtype(j1, 2, "8");
@@ -722,7 +724,7 @@ test("(j) a Missed switched off on a judge's phone leaves the head judge's conso
   expect(Date.now() - started).toBeLessThan(20_000);
 });
 
-test("(k) the spotter's lines read: number, L, R, the trick box with the mic or the × inside it, Crash; the judge's score box is small and no taller than Missed", async ({ browser }) => {
+test("(k) the spotter's lines read: number, L | R over Crash, the trick box with the mic or the × inside it; the judge's score box is small and no taller than Missed", async ({ browser }) => {
   test.setTimeout(600_000);
   const H = w.heats[0];
   await onlyRed(H);
@@ -737,8 +739,10 @@ test("(k) the spotter's lines read: number, L, R, the trick box with the mic or 
     expect(num.x + num.width, `line ${n}`).toBeLessThanOrEqual(l.x + 1);
     expect(l.x + l.width, `line ${n}`).toBeLessThanOrEqual(r.x + 1);
     expect(r.x + r.width, `line ${n}`).toBeLessThanOrEqual(box.x + 1); // L and R sit left of the trick box
-    expect(box.x + box.width, `line ${n}`).toBeLessThanOrEqual(crash.x + 1);
-    expect(box.width, `line ${n}`).toBeGreaterThan(110);
+    // Crash sits under L | R in the same small column, left of the trick box, which takes all the width that is left
+    expect(crash.y, `line ${n}`).toBeGreaterThanOrEqual(l.y + l.height - 1);
+    expect(crash.x + crash.width, `line ${n}`).toBeLessThanOrEqual(box.x + 1);
+    expect(box.width, `line ${n}`).toBeGreaterThan(200);
   }
   // line 1 is logged: L and R are left of its box too; the empty line 2 has the mic inside its box, the × takes its place once there is text
   const l1 = (await sline(spotter, 1).getByTestId("line-left").boundingBox())!;
@@ -754,14 +758,14 @@ test("(k) the spotter's lines read: number, L, R, the trick box with the mic or 
   expect(clear.x + clear.width).toBeLessThanOrEqual(b2.x + b2.width + 1);
   expect(Math.abs((await strick(spotter, 2).boundingBox())!.width - b2.width), "the box keeps its width").toBeLessThan(1);
 
-  // the judge's score box: wide enough for 10.0, at most 64 px, no taller than Missed, at least 44 px to tap
+  // the judge's score box: wide enough for 10.0, at most 64 px, as tall as the stacked Missed and Flag together, at least 44 px to tap
   await expect(jline(j1, 1)).toContainText("Left Backroll 1", { timeout: 40_000 });
   for (const n of [1, 2]) {
     const sb = (await jbox(j1, n).boundingBox())!;
     const mb = (await jline(j1, n).getByTestId("line-missed").boundingBox())!;
     expect(sb.width, `line ${n}`).toBeLessThanOrEqual(64);
     expect(sb.width, `line ${n}`).toBeGreaterThanOrEqual(44);
-    expect(sb.height, `line ${n}`).toBeLessThanOrEqual(mb.height + 0.5);
+    expect(sb.height, `line ${n}`).toBeGreaterThanOrEqual(mb.height); // taller than Missed (Missed and Flag are stacked beside it)
     expect(sb.height, `line ${n}`).toBeGreaterThanOrEqual(44);
   }
   await jtype(j1, 1, "10.0");
@@ -872,7 +876,7 @@ test("(g) the text in every box on the officials' screens is at least 16 px, so 
   await expect(j1.getByTestId("view-queue")).toHaveAttribute("aria-pressed", "true");
   expect(await smallBoxes(j1), "judge Queue").toEqual([]);
   const head = await phone(browser, "head", `/head/${w.eventId}`);
-  await expect(head.getByTestId("screen-body").or(head.locator("body")).first()).toBeVisible({ timeout: 40_000 });
+  await expect(head.getByTestId("live-root")).toBeVisible({ timeout: 40_000 });
   expect(await smallBoxes(head), "head judge phone").toEqual([]);
   // zooming is never blocked
   expect(await spotter.locator('meta[name="viewport"]').getAttribute("content")).not.toMatch(/user-scalable\s*=\s*no|maximum-scale\s*=\s*1(\.0)?\b/);
@@ -914,19 +918,21 @@ test("(i) the clear button empties the trick box in one tap (the attempt keeps i
   // a tidy name for a plain word too
   await strick(spotter, 2).fill("zzzflip");
   await expect.poll(async () => (await attempts(H, E)).map((a) => a.trick_name).at(1), { timeout: 30_000 }).toBe("Zzzflip");
-  // narrower L and R, still at least 44 px tall; the box is wide
+  // L | R stacked over Crash in one small column (at least 32 px tall, the owner's choice); the trick box takes all the width that is left: at least 20 characters show
   const l = (await sline(spotter, 1).getByTestId("line-left").boundingBox())!;
-  expect(l.height).toBeGreaterThanOrEqual(44);
+  expect(l.height).toBeGreaterThanOrEqual(32);
   expect(l.width).toBeLessThanOrEqual(44);
-  expect((await strick(spotter, 1).boundingBox())!.width).toBeGreaterThan(130);
-  // the Crash button looks like the Trick list's CRASH button: the same red fill and the same word
-  const crashColour = await sline(spotter, 1).getByTestId("line-crash").evaluate((e) => getComputedStyle(e).backgroundColor);
+  expect((await strick(spotter, 1).boundingBox())!.width).toBeGreaterThan(200);
+  // at rest the Crash button is quiet (a red outline, no fill, the icon and the word) and the red is the Trick list's CRASH red
+  const crashColour = await sline(spotter, 1).getByTestId("line-crash").evaluate((e) => getComputedStyle(e).borderTopColor);
+  expect(await sline(spotter, 1).getByTestId("line-crash").evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
   await spotter.getByTestId("spot-view-list").click();
   expect(await spotter.getByTestId("crash-button").evaluate((e) => getComputedStyle(e).backgroundColor)).toBe(crashColour);
   await expect(spotter.getByTestId("crash-button")).toHaveText("CRASH");
   await spotter.getByTestId("spot-view-sheet").click();
   await expect(sline(spotter, 1).getByTestId("line-crash")).toContainText("CRASH");
   // the × empties the box; the attempt keeps its trick until a new trick is logged
+  await strick(spotter, 1).focus(); // the × shows only while the box is in use
   await sline(spotter, 1).getByTestId("line-trick-clear").click();
   await expect(strick(spotter, 1)).toHaveValue("");
   await spotter.waitForTimeout(3000);
@@ -942,4 +948,77 @@ test("(i) the clear button empties the trick box in one tap (the attempt keeps i
   await spotter.locator("#trick-text").fill("3x kiteloop");
   await spotter.locator("#trick-text").press("Enter"); // reads the words: the count goes in front, in the singular
   await expect(spotter.getByTestId("composed-name").locator("p.sr-only")).toHaveText("3x Kiteloop");
+});
+
+test("(m) a tapped suggestion only adds the word and a space, the keyboard and the cursor stay in the box, the line logs after the pause or when the box is left; long names shrink to fit without ever dropping the box under 16 px (spotter) and on two lines (judge)", async ({ browser }) => {
+  test.setTimeout(600_000);
+  const H = w.heats[0];
+  const E = w.entries[0];
+  await onlyRed(H);
+  await w.startHeat(H);
+  const spotter = await phone(browser, "spotter", `/spot/${w.eventId}`, { newViews: true });
+  await expect(strick(spotter, 1)).toBeEnabled({ timeout: 40_000 });
+  const box = strick(spotter, 1);
+  const pick = (name: string) => sline(spotter, 1).getByTestId("suggestion").filter({ hasText: name }).first();
+
+  // type "back", tap Backroll: the word is filled in with a space, the box keeps the focus with the cursor at the end, and nothing is logged by the tap
+  await box.click();
+  await box.pressSequentially("back");
+  await pick("Backroll").click();
+  await expect(box).toHaveValue("Backroll ");
+  await expect(box).toBeFocused();
+  expect(await box.evaluate((e) => [(e as HTMLInputElement).selectionStart, (e as HTMLInputElement).selectionEnd])).toEqual(["Backroll ".length, "Backroll ".length]);
+  expect(await attempts(H, E)).toHaveLength(0);
+  // the writing goes on: "board off" is offered as Board-off, and a tap adds it
+  await box.pressSequentially("board off");
+  await expect(pick("Board-off")).toBeVisible();
+  await pick("Board-off").click();
+  await expect(box).toHaveValue("Backroll Board-off ");
+  await expect(box).toBeFocused();
+  expect(await attempts(H, E)).toHaveLength(0);
+  // after the usual pause the line logs itself
+  await expect.poll(async () => (await attempts(H, E)).map((a) => a.trick_name), { timeout: 30_000 }).toHaveLength(1);
+  const name = (await attempts(H, E))[0].trick_name as string;
+  expect(name).toMatch(/Backroll/);
+  expect(name).toMatch(/Board-off/);
+
+  // "boardoff" (and "board") are offered too
+  await strick(spotter, 2).click();
+  await strick(spotter, 2).pressSequentially("boardoff");
+  await expect(sline(spotter, 2).getByTestId("suggestion").filter({ hasText: "Board-off" })).toBeVisible();
+  await strick(spotter, 2).fill("");
+  await strick(spotter, 2).pressSequentially("board");
+  await expect(sline(spotter, 2).getByTestId("suggestion").filter({ hasText: "Board-off" })).toBeVisible();
+
+  // leaving the box logs what is in it, also when the last word is unfinished ("Tap a trick to log" is only for as long as the box is in use)
+  await strick(spotter, 2).fill("Double frontroll board-off kiteloop handle pass megaloop");
+  await expect(sline(spotter, 2).getByTestId("line-state")).toHaveText("Tap a trick to log").catch(() => undefined);
+  await spotter.getByTestId("rider-strip").click({ position: { x: 5, y: 5 } }); // leave the box
+  await expect.poll(async () => (await attempts(H, E)).length, { timeout: 30_000 }).toBe(2);
+
+  // a long name shrinks to fit (never under 12 px) when the box is not in use; the box itself never goes under 16 px
+  await expect(box).not.toBeFocused();
+  const fit = strick(spotter, 2).locator("xpath=..").getByTestId("line-trick-fit");
+  await expect(fit).toBeVisible();
+  const px = await fit.evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+  expect(px).toBeGreaterThanOrEqual(12);
+  expect(px).toBeLessThan(16);
+  expect(await fit.getByTestId("line-trick-fit-text").evaluate((e) => e.scrollHeight <= e.clientHeight + 1 && e.getBoundingClientRect().height <= 2 * 12 * 1.1 + 2), "the whole name shows, in one or two lines").toBe(true);
+  for (const focus of [false, true]) {
+    if (focus) await strick(spotter, 2).focus();
+    expect(await strick(spotter, 2).evaluate((e) => parseFloat(getComputedStyle(e).fontSize)), focus ? "in use" : "at rest").toBeGreaterThanOrEqual(16);
+  }
+  // a short name is not shrunk
+  await strick(spotter, 1).evaluate((e) => (e as HTMLInputElement).blur());
+  await expect(strick(spotter, 1).locator("xpath=..").getByTestId("line-trick-fit")).toBeVisible();
+  expect(await strick(spotter, 1).locator("xpath=..").getByTestId("line-trick-fit").evaluate((e) => parseFloat(getComputedStyle(e).fontSize))).toBeGreaterThanOrEqual(15.5);
+
+  // the judge's line: a very long name stays in two lines by shrinking (not under 12 px)
+  await w.db.from("trick_attempts").update({ trick_name: "Double Frontroll Board-off Kiteloop Handle pass" }).eq("id", (await attempts(H, E))[1].id);
+  const j1 = await phone(browser, "j1", `/judge/${w.eventId}`, { newViews: true });
+  await expect(jline(j1, 2).getByTestId("line-trick")).toContainText("Handle pass", { timeout: 60_000 });
+  const t = jline(j1, 2).getByTestId("line-trick");
+  const m = await t.evaluate((e) => ({ size: parseFloat(getComputedStyle(e).fontSize), lines: e.scrollHeight / (parseFloat(getComputedStyle(e).fontSize) * 1.25) }));
+  expect(m.size).toBeGreaterThanOrEqual(12);
+  expect(m.lines, "two lines at most").toBeLessThanOrEqual(2.2);
 });

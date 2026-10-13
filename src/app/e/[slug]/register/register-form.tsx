@@ -10,7 +10,7 @@ import type { PaletteColour } from "@/lib/schemas/identification";
 import { requestPhotoSlot, submitRegistration } from "./actions";
 
 const T = copy.registration;
-const box = "h-14 border-2 border-[#111] text-xl font-bold";
+const box = "h-14 border border-beach-border text-xl font-bold";
 
 export interface DivisionOption {
   id: string;
@@ -97,7 +97,7 @@ export function RegisterForm({ slug, divisions }: { slug: string; divisions: Div
 
   if (done) {
     return (
-      <section role="status" className="flex flex-col gap-3 rounded-lg border-4 border-[#111] p-4" data-testid="registration-done">
+      <section role="status" className="flex flex-col gap-3 rounded-lg border border-beach-border p-4" data-testid="registration-done">
         <p className="text-2xl font-extrabold">{T.doneTitle}</p>
         <p className="text-lg font-semibold">{T.doneText}</p>
         <Button type="button" variant="outline" className="h-14 text-lg font-bold" onClick={() => { setDone(false); setV(empty); setPhoto(null); setConsent(false); }}>
@@ -108,7 +108,7 @@ export function RegisterForm({ slug, divisions }: { slug: string; divisions: Div
   }
   if (allFull) {
     return (
-      <p role="status" className="rounded-lg border-4 border-[#111] p-4 text-xl font-extrabold" data-testid="registration-full">
+      <p role="status" className="rounded-lg border border-beach-border p-4 text-xl font-extrabold" data-testid="registration-full">
         {T.fullTitle}: {T.fullLine}
       </p>
     );
@@ -129,7 +129,7 @@ export function RegisterForm({ slug, divisions }: { slug: string; divisions: Div
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-xl font-extrabold">{T.division}</legend>
         {divisions.map((d) => (
-          <label key={d.id} className={`flex flex-col gap-1 rounded-lg border-2 border-[#111] p-3 ${d.full ? "opacity-70" : ""}`}>
+          <label key={d.id} className={`flex flex-col gap-1 rounded-lg border border-beach-border p-3 ${d.full ? "opacity-70" : ""}`}>
             <span className="flex items-center gap-3 text-xl font-bold">
               <input type="radio" name="division" className="h-6 w-6" checked={divisionId === d.id} disabled={d.full} onChange={() => setDivisionId(d.id)} required />
               {d.full ? T.divisionFullOption(d.name) : d.name}
@@ -162,7 +162,7 @@ export function RegisterForm({ slug, divisions }: { slug: string; divisions: Div
               <label htmlFor="reg-rashguard" className="text-lg font-bold">
                 {T.rashguard}
               </label>
-              <select id="reg-rashguard" value={v.rashguardColour} onChange={set("rashguardColour")} className="h-14 rounded-md border-2 border-[#111] bg-white px-3 text-xl font-bold">
+              <select id="reg-rashguard" value={v.rashguardColour} onChange={set("rashguardColour")} className="h-14 rounded-md border border-beach-border bg-white px-3 text-xl font-bold">
                 <option value="">{copy.riders.pickColour}</option>
                 {(division?.palette ?? []).map((c) => (
                   <option key={c.key} value={c.key}>
@@ -206,7 +206,7 @@ export function RegisterForm({ slug, divisions }: { slug: string; divisions: Div
       </div>
 
       {error ? (
-        <p role="alert" className="rounded-lg border-4 border-[#111] p-3 text-lg font-bold" data-testid="registration-error">
+        <p role="alert" className="rounded-lg border border-beach-border p-3 text-lg font-bold" data-testid="registration-error">
           {copy.common.problem(error)}
         </p>
       ) : null}

@@ -1392,3 +1392,26 @@ Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 
 ### How to test on a phone
 - See the release entry 0.20.1 in docs/RELEASES.md.
+
+## New look – sporty, one brand with Instagram (0.21.0)
+
+### Done (code, unit tests, manual text)
+- **Tokens** (`src/lib/live/theme-tokens.ts` ↔ `.beach-day` / `.beach-dark` in `globals.css`, a test keeps them equal): Day = white page, near-black ink #111111, orange #FF6A00 accent with black text (7.31:1), orange never text; Dark = #000000 page, #111111 surface, white ink, #B0B0B0 muted, orange text only on the black page. New token `accentText`. Contrast of every pair is computed in `theme-tokens.test.ts` (both themes); the brand ratios (7.31 / 2.87 / 6.58 / 8.71) are asserted there too.
+- **Font**: Rubik (variable, Latin) through `next/font/google` in `src/app/layout.tsx`; tabular digits keep the timer from jumping (measured: "0:00", "1:11", "8:88" are the same width).
+- **Sizes** (`size-tokens.ts` ↔ `globals.css`): Normal one step smaller (body 13, names 14); Large ≈ the old Normal; tap size, pad buttons and rows 44 px (48 in Large); text in boxes 16 px.
+- **Shared components**: pill `Chip`, `Button` (ui and org), segmented control, round `SettingsMenu` (Daylight / Dark, Normal / Large, Sound) in the slim `ScreenHeader` and in the head judge's phone header; flat `Card` / `OrgCard` / `.panel` (thin divider, no box); pill `.btn`; 12 px fields; orange tabs underline.
+- **Officials' screens**: Rider sheets as rows with dividers; Flag is a 44 px flag-icon pill beside Missed; spotter lines one row + state word; rider cards with an ink frame and an orange foot when selected; Queue, Impression, Trick list and head Control tab take the pills. Observer shell moved to the tokens.
+- **/design**: Judge — Rider sheet, Spotter — Rider sheet and Head judge — phone in Daylight and Dark side by side (`src/app/design/new-look.tsx`); the laptop console and `/design/organiser` follow.
+- Manual: judge, spotter, console-phone, observer pages, changelog, release 0.21.0.
+- Measured on `/design` (dev server, 390 × 844, Normal): the judge's 7 lines end at 655 px and the spotter's at 719 px of 844, nothing scrolls; no tap target under 44 px and no box under 16 px on any phone screen of /design.
+
+### Round 3 (owner's review): teal, flat buttons, trick name first
+- Teal is the one accent (every button, selected state, focus ring); orange only for "Needs your score" (Day #E65F00, Dark #FF6A00) and the logo. Buttons are white with a thin edge (no grey fill, no thick outline); the Queue keeps its filled keys. Missed over Flag (judge) and L, R over Crash (spotter) sit in small columns beside a bigger trick name; the flag strip has its own full-width row; Cancel heat is a quiet red outline; the front door opens in Day with the Day / Dark switch; the product is Sendbook; the Day header is all white; the view switches are slim.
+
+### Browser steps (done on a production build after PR #47 was rebased in)
+- `new-look.spec.ts` (a)–(d) pass; the existing files spotter-rider-sheet (22), rider-sheet, review-console, live-spotter, live-spotter-layout, live-judge, walkover, observer and the public results page pass once each (one earlier spotter-rider-sheet timeout passed on its one re-run).
+- `new-look-shots.spec.ts` looks at the console, big screen, Flag view, public event and results, Riders step and Admin with real data: no sideways scrolling anywhere; pictures in `docs/design-pass/final-*.png`.
+- Bundle-size budget (`public-budget`): main already exceeds its limits in this sandbox (home 288 KB / 261 KB of scripts); this branch adds the Rubik font: home 325 KB (+37 KB, +1 request), results 279 KB (+36), live heat 322 KB (+37); scripts unchanged.
+
+### How to test on a phone
+- Release entry 0.21.0 in `docs/RELEASES.md`.

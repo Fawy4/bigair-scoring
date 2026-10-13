@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { HomeEventCode } from "@/components/home/home-event-code";
+import { HomeTheme } from "@/components/home/home-theme";
 import { EventsView } from "@/components/home/events-view";
 import type { LandingEvent } from "@/components/landing-event-card";
 import "./home.css";
@@ -64,6 +65,7 @@ export default async function Home() {
   return (
     <div className="home" data-testid="landing">
       <main className="home-wrap">
+        <HomeTheme />
         <header className="home-hero">
           <div>
             {settings.logoUrl ? (

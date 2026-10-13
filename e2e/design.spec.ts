@@ -637,8 +637,8 @@ test("Dark mode works, is remembered on this device, and the sticky bar stays on
   await expect(root).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await page.getByRole("button", { name: "Dark", exact: true }).click();
   await expect(root).toHaveAttribute("data-theme", "dark");
-  await expect(root).toHaveCSS("background-color", "rgb(11, 14, 15)");
-  await expect(root).toHaveCSS("color", "rgb(242, 245, 245)");
+  await expect(root).toHaveCSS("background-color", "rgb(0, 0, 0)");
+  await expect(root).toHaveCSS("color", "rgb(255, 255, 255)");
   await page.getByTestId("section-sizes").scrollIntoViewIfNeeded();
   await expect(page.getByRole("button", { name: "Daylight", exact: true })).toBeInViewport();
   await page.reload();

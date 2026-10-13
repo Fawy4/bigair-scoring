@@ -17,7 +17,9 @@ describe("live screens follow the beach readability standard", () => {
   it.each(files)("%s: no fixed small text sizes and no tap target below the tap size", (f) => {
     const src = readFileSync(f, "utf8");
     expect(src.match(/\btext-(xs|sm|\[\d+px\])\b/g) ?? [], "text sizes come from the beach tokens (text-small, text-body, …)").toEqual([]);
-    expect(src.match(/\b(min-)?h-(?:[1-9]|10)\b(?![\w.-])/g) ?? [], "heights under 44 px are not tap targets (min-h-tap, min-h-pad)").toEqual([]);
+    // the owner's one exception: the stacked pairs beside a trick name (Missed over Flag, L | R over Crash) are 32 px tall (h-8), only in the Chip's compact size and the spotter's line
+    const stackedOk = /(^|\/)(chip|spotter-sheet)\.tsx$/.test(f);
+    expect((src.match(/\b(min-)?h-(?:[1-9]|10)\b(?![\w.-])/g) ?? []).filter((m) => !(stackedOk && m === "h-8")), "heights under 44 px are not tap targets (min-h-tap, min-h-pad)").toEqual([]);
   });
 
   it.each(files)("%s: no sentence written inside the component", (f) => {

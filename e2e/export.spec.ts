@@ -169,7 +169,7 @@ test("the head judge has the results buttons on the laptop and nothing on a phon
     const page = await open(browser, { width: 1280, height: 900 });
     if (who === "observer") await signInObserver(page, screen);
     else await w.signInAs(page, who, screen);
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.locator("[data-testid=live-root], [data-testid=observer-page]").first()).toBeVisible();
     await page.waitForLoadState("networkidle");
     await expect(page.getByTestId("export-buttons"), who).toHaveCount(0);
     await expect(page.getByTestId("export-results"), who).toHaveCount(0);

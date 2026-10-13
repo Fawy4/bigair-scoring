@@ -5,6 +5,7 @@ import { CircleOff, Clock, FastForward, Pause, Play, RotateCcw, Send, Square, Un
 import type { LucideIcon } from "lucide-react";
 import { HeatTimer } from "./heat-timer";
 import { Chip } from "./chip";
+import { SettingsMenu } from "./live-shell";
 import { ConnectionBadge } from "./connection-badge";
 import { Pill } from "./pill";
 import { RiderLabel } from "@/components/rider-label";
@@ -30,6 +31,8 @@ export function HeadControlTab() {
   const T = copy.live.head;
   const label: Record<ControlId, string> = { start: T.start, pause: T.pause, resume: T.resume, end: T.end, hold: T.hold, resumeAt: T.resumeAt, shift5: T.shift5, shift10: T.shift10, publish: T.publish, cancel: T.cancel, rerun: T.rerun, reopen: T.reopen };
   const controls = controlsFor(state, blockers.length);
+  // the one filled action is the one that fits the moment: Start before the heat, Pause while it runs, Resume when paused, Publish once it can publish
+  const primary: ControlId | null = controls.find((c) => c.id === "publish" && c.enabled) ? "publish" : state === "scheduled" ? "start" : state === "running" ? "pause" : state === "paused" ? "resume" : null;
   const press = (id: ControlId) => {
     if (id === "cancel" || id === "rerun") return setAsking(id);
     if (id === "end") setBlockers(h.blockers);
@@ -38,12 +41,13 @@ export function HeadControlTab() {
   return (
     <div data-testid="head-control" data-state={state} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 py-1.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-small font-semibold">{h.heatName}</p>
+        <p className="min-w-0 truncate text-body font-bold">{h.heatName}</p>
         <span className="flex items-center gap-1.5">
           <ConnectionBadge status="synced" />
           <Chip data-testid="details-toggle" pressed={details} onClick={() => setDetails((d) => !d)}>
             {details ? copy.live.header.detailsOn : copy.live.header.details}
           </Chip>
+          <SettingsMenu />
         </span>
       </div>
       {details ? (
@@ -51,7 +55,7 @@ export function HeadControlTab() {
           <h3 className="text-heading font-semibold text-beach-muted">{T.totals}</h3>
           <ul className="flex flex-col gap-1">
             {h.totals.map((t) => (
-              <li key={t.place} className="flex items-center justify-between gap-2 rounded-xl border border-beach-line bg-beach-surface px-2 py-1">
+              <li key={t.place} className="flex min-h-row items-center justify-between gap-2 border-b border-beach-line px-1 py-1">
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="text-name font-semibold tabular-nums">{t.place}</span>
                   <RiderLabel model={t.label} variant="live" bare />
@@ -75,10 +79,10 @@ export function HeadControlTab() {
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-2 rounded-card border border-beach-line bg-beach-surface p-2">
+          <div className="flex items-center gap-3 border-y border-beach-line py-2">
             {state === "scheduled" || state === "published" ? (
               <>
-                <span className="text-timer-head font-semibold tabular-nums">{formatClock(state === "scheduled" ? 600_000 : 0)}</span>
+                <span className="text-timer-head font-bold tabular-nums">{formatClock(state === "scheduled" ? 600_000 : 0)}</span>
                 <Pill tone="ink">{T.stateWord[state]}</Pill>
               </>
             ) : (
@@ -86,9 +90,9 @@ export function HeadControlTab() {
             )}
           </div>
           <p className="text-small font-medium text-beach-muted">{T.next(h.next.heat, h.next.time)}</p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-2 gap-2">
             {controls.map((c) => (
-              <Chip key={c.id} data-control={c.id} icon={ICON[c.id]} variant={!c.enabled ? "muted" : c.id === "start" || c.id === "publish" ? "accent" : c.id === "cancel" ? "danger" : "plain"} disabled={!c.enabled} onClick={() => press(c.id)}>
+              <Chip key={c.id} data-control={c.id} icon={ICON[c.id]} variant={!c.enabled ? "muted" : c.id === primary ? "accent" : c.id === "cancel" ? "danger" : "plain"} className="w-full px-2" disabled={!c.enabled} onClick={() => press(c.id)}>
                 {label[c.id]}
               </Chip>
             ))}
@@ -102,7 +106,7 @@ export function HeadControlTab() {
           <label htmlFor="head-reason" className="text-small font-medium text-beach-muted">
             {copy.live.console.reason}
           </label>
-          <input id="head-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={copy.live.console.reasonPlaceholder} className="min-h-tap rounded-lg border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink" />
+          <input id="head-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={copy.live.console.reasonPlaceholder} className="min-h-tap rounded-lg border border-beach-border bg-beach-fill px-2 text-body font-medium text-beach-ink" />
           <div className="flex gap-1.5">
             <Chip
               variant="accent"

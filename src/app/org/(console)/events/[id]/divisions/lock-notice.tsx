@@ -16,7 +16,7 @@ export function LockNotice() {
           {copy.divisions.lockPill}
         </Pill>
         <button type="button" aria-label={copy.divisions.lockHelpLabel} aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen((o) => !o)} className="group inline-flex size-[var(--org-ctl)] items-center justify-center">
-          <span className="inline-flex size-6 items-center justify-center rounded-full border border-beach-border bg-beach-bg text-small font-semibold group-aria-expanded:border-beach-accent group-aria-expanded:bg-beach-accent group-aria-expanded:text-beach-on-accent">?</span>
+          <span className="inline-flex size-6 items-center justify-center rounded-full border border-beach-border bg-beach-fill text-small font-semibold group-aria-expanded:border-beach-selected group-aria-expanded:bg-beach-selected group-aria-expanded:text-beach-on-selected">?</span>
         </button>
       </div>
       {open ? (

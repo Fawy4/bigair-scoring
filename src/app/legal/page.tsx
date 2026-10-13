@@ -10,7 +10,7 @@ export default async function LegalPage() {
   const { legalTexts } = await getPlatformSettings();
   const c = copy.publicSite;
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 p-4 text-[#111]">
+    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 p-4 text-beach-ink">
       <Link href="/" className="pt-4 font-bold underline">
         ← {c.backHome}
       </Link>

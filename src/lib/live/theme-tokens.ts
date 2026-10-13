@@ -17,14 +17,32 @@ export interface BeachTokens {
   ink: string;
   /** Secondary text. Never light grey. */
   muted: string;
-  /** The frame of a control (pad button, field, toggle): 4.5:1 so a button is findable in the sun. */
+  /** The thin light-grey edge of a control at rest. Decoration: the control's words and icon carry it. */
   border: string;
+  /** A control at rest: white in Day, near-black in Dark, with the thin `border` edge. Never a grey block. */
+  fill: string;
+  /** The filled keys of the score pad (the Queue): light grey in Day, dark grey in Dark. */
+  key: string;
+  /** The light-grey hint in an empty box (the "0.0" in an empty score box): clearly lighter than a real score. */
+  hint: string;
   /** Keyboard focus ring. */
   focus: string;
-  /** The one accent colour (deep teal): selected state, primary button and progress. Text is never accent-coloured. */
+  /** The one accent colour (teal): every button, selected state, focus ring and progress. */
   accent: string;
   /** Text on an `accent` fill. */
   onAccent: string;
+  /** The accent as text (teal reads at 7:1 on the page in both themes). */
+  accentText: string;
+  /** The selected-state colour: the same teal as the accent. */
+  selected: string;
+  /** Text on a `selected` fill. */
+  onSelected: string;
+  /** Orange is kept for one thing: "Needs your score" (the bar, the tag border and the glow). A shape, never text; the words stay ink (7:1). Day #E65F00 (3.5:1 on white; #FF6A00 is only 2.87:1), Dark #FF6A00 (7.31:1 on black). */
+  attention: string;
+  /** The header bar of the officials' screens: plain white with near-black text in Day (all white, as before), the brand near-black #111111 with white and grey text in Dark. */
+  board: string;
+  onBoard: string;
+  boardMuted: string;
   /** Live / synced. */
   live: string;
   /** Waiting to be sent. */
@@ -59,14 +77,24 @@ export interface BeachTokens {
 export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
   day: {
     bg: "#ffffff",
-    surface: "#f4f6f6",
-    line: "#d5dadc",
+    surface: "#f4f4f4",
+    line: "#dcdcdc",
     ink: "#111111",
-    muted: "#3d4246",
-    border: "#5f6970",
+    muted: "#3a3a3a",
+    border: "#b0b0b0",
+    fill: "#ffffff",
+    key: "#f2f2f2",
+    hint: "#b0b0b0",
     focus: "#0b4a46",
     accent: "#0f5c57",
     onAccent: "#ffffff",
+    accentText: "#0f5c57",
+    selected: "#0f5c57",
+    onSelected: "#ffffff",
+    attention: "#e65f00",
+    board: "#ffffff",
+    onBoard: "#111111",
+    boardMuted: "#3a3a3a",
     live: "#14532d",
     pending: "#1e3a8a",
     failed: "#9f1239",
@@ -87,24 +115,34 @@ export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
     tintDist3: "#f29a9a",
   },
   dark: {
-    bg: "#0b0e0f",
-    surface: "#151a1b",
-    line: "#2b3436",
-    ink: "#f2f5f5",
-    muted: "#c9d1d3",
-    border: "#8d999c",
+    bg: "#000000",
+    surface: "#111111",
+    line: "#2a2a2a",
+    ink: "#ffffff",
+    muted: "#b0b0b0",
+    border: "#4d4d4d",
+    fill: "#111111",
+    key: "#1c1c1c",
+    hint: "#6b6b6b",
     focus: "#9ee7de",
     accent: "#5fd3c6",
     onAccent: "#04211e",
+    accentText: "#5fd3c6",
+    selected: "#5fd3c6",
+    onSelected: "#04211e",
+    attention: "#ff6a00",
+    board: "#111111",
+    onBoard: "#ffffff",
+    boardMuted: "#b0b0b0",
     live: "#86efac",
     pending: "#9ec5ff",
     failed: "#fda4af",
-    crash: "#fca5a5",
-    onCrash: "#0b0e0f",
+    crash: "#ff6b6b",
+    onCrash: "#000000",
     outlier: "#fcd34d",
     missing: "#c4c4c4",
     tintCrash: "#5a1f1f",
-    tintGrey: "#2a3133",
+    tintGrey: "#1f1f1f",
     tintGrade0: "#5a4a0c",
     tintGrade1: "#4a5410",
     tintGrade2: "#38581a",
@@ -131,13 +169,20 @@ export const TEXT_PAIRS: ReadonlyArray<readonly [TokenName, TokenName]> = [
   ["pending", "surface"],
   ["failed", "bg"],
   ["failed", "surface"],
+  // crash words sit on the page itself (Dark #FF6B6B is 8.6:1 on #000000, but only 6.8:1 on #111111), never on a grey surface
   ["crash", "bg"],
-  ["crash", "surface"],
   ["outlier", "bg"],
   ["outlier", "surface"],
   ["missing", "bg"],
   ["missing", "surface"],
   ["onAccent", "accent"],
+  ["accentText", "bg"],
+  ["accentText", "surface"],
+  ["onSelected", "selected"],
+  ["onBoard", "board"],
+  ["boardMuted", "board"],
+  ["ink", "fill"],
+  ["muted", "fill"],
   ["onCrash", "crash"],
   ["ink", "tintCrash"],
   ["ink", "tintGrey"],

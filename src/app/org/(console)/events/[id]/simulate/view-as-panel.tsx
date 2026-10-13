@@ -73,7 +73,6 @@ function PhoneBox({ info, onClose, onNewPin, pending }: { info: SeatJoinInfo; on
 /** Buttons that open each person's real screen in a new tab, as compact grids: the public pages as a visitor sees them, then one tile per official with a role icon. */
 export function ViewAs({ eventId, sim }: { eventId: string; sim: Sim }) {
   const { status, act, pending } = sim;
-  const [rider, setRider] = useState(status.riders[0]?.entryId ?? "");
   const [phone, setPhone] = useState<SeatJoinInfo | null>(null);
   const holding = status.seats.find((s) => s.heldBy === "you");
   const groups = seatGroups(status.seats.map((s) => ({ id: s.id, name: s.name, role: s.role, seatNo: s.seatNo })));
@@ -97,6 +96,9 @@ export function ViewAs({ eventId, sim }: { eventId: string; sim: Sim }) {
           <LinkButton icon={Trophy} testId="view-results" href={viewHref(eventId, { kind: "results" })}>
             {T.results}
           </LinkButton>
+          <LinkButton icon={User} testId="view-riders" href={viewHref(eventId, { kind: "riders" })}>
+            {T.riders}
+          </LinkButton>
           <LinkButton icon={Network} testId="view-ladder" href={viewHref(eventId, { kind: "ladder" })}>
             {T.ladder}
           </LinkButton>
@@ -110,25 +112,6 @@ export function ViewAs({ eventId, sim }: { eventId: string; sim: Sim }) {
             {T.flag}
           </LinkButton>
         </div>
-        {status.riders.length ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="text-body font-semibold" htmlFor="view-rider-select">
-              {T.pickRider}
-            </label>
-            <select id="view-rider-select" data-testid="view-rider-select" value={rider} onChange={(e) => setRider(e.target.value)} className="h-[var(--org-ctl)] max-w-full rounded-[8px] border border-beach-border bg-beach-bg px-3 text-body font-semibold text-beach-ink">
-              {status.riders.map((r) => (
-                <option key={r.entryId} value={r.entryId}>
-                  {r.name} · {r.divisionName}
-                </option>
-              ))}
-            </select>
-            {rider ? (
-              <LinkButton icon={User} testId="view-rider" href={viewHref(eventId, { kind: "rider", entryId: rider })}>
-                {T.riderPage}
-              </LinkButton>
-            ) : null}
-          </div>
-        ) : null}
       </div>
 
       <div className="flex flex-col gap-2">

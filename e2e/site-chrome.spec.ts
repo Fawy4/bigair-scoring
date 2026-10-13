@@ -85,9 +85,10 @@ test("no Home or Help link on the judge screen, the Flag view or the big screens
 for (const scheme of ["light", "dark"] as const) {
   test(`the Join page in the front door's design, ${scheme}: officials first, riders below, one accent on the PIN button, 16 px cards without shadow, 7:1`, async ({ browser }) => {
     test.setTimeout(120_000);
-    const ctx = await browser.newContext({ viewport: devices["Pixel 5"].viewport, colorScheme: scheme });
+    const ctx = await browser.newContext({ viewport: devices["Pixel 5"].viewport });
     const page = await ctx.newPage();
     await page.goto(`/e/${slug()}/join`);
+    if (scheme === "dark") await page.getByTestId("home-theme").getByRole("button", { name: "Dark", exact: true }).click();
     await expect(page.getByTestId("role-judge")).toBeVisible({ timeout: 60_000 });
     // the officials' part first, the rider part below it
     const officials = (await page.getByTestId("role-judge").boundingBox())!;
@@ -107,7 +108,7 @@ for (const scheme of ["light", "dark"] as const) {
       const hits: string[] = [];
       for (const el of document.querySelectorAll<Element>(".home *")) {
         const cs = getComputedStyle(el);
-        if ([cs.color, cs.backgroundColor, cs.borderTopColor].includes("rgb(255, 106, 0)")) hits.push((el.getAttribute("class") ?? el.tagName).split(" ")[0]);
+        if ([cs.color, cs.backgroundColor, cs.borderTopColor].includes(scheme === "dark" ? "rgb(95, 211, 198)" : "rgb(15, 92, 87)")) hits.push((el.getAttribute("class") ?? el.tagName).split(" ")[0]);
       }
       return [...new Set(hits)];
     });

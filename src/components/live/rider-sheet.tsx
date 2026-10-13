@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Flag, Flame } from "lucide-react";
-import { Chip } from "./chip";
+import { Chip, PillSwitch } from "./chip";
 import type { ConnectionStatus } from "./connection-badge";
 import type { FlagStripModel } from "./flag-strip";
 import type { TimerState } from "./heat-timer";
 import { Pill } from "./pill";
+import { useShrinkToLines } from "./use-fit-text";
 import { RiderTile } from "./rider-tile";
 import { ScreenHeader } from "./screen-header";
 import { LearnMore } from "@/components/manual/learn-more";
 import { errorSentence } from "@/lib/live/errors";
 import { activeLine, lineTypable, missedSwitch, needsScore, pulseLine, rangesOf, skipLines, type SheetLine } from "@/lib/live/rider-sheet";
+import { keepInView } from "./use-keyboard-fit";
 import { formatPadValue, padRefusal, parsePadInput } from "@/lib/live/score-pad";
 import type { LiveRider } from "@/lib/live/view-types";
 import type { Scale } from "@/lib/schemas/scoring-model";
@@ -24,14 +26,17 @@ const dirWord = (d: "left" | "right" | null) => (d === "left" ? copy.live.summar
 /** The switch "Queue / Rider sheet". Remembered per device by the parent. */
 export function ViewSwitch({ view, onChange }: { view: "queue" | "sheet"; onChange: (v: "queue" | "sheet") => void }) {
   return (
-    <div role="group" aria-label={T.switchLabel} data-testid="view-switch" className="flex items-center gap-1.5">
-      <Chip data-testid="view-queue" pressed={view === "queue"} onClick={() => onChange("queue")}>
-        {T.queue}
-      </Chip>
-      <Chip data-testid="view-sheet" pressed={view === "sheet"} onClick={() => onChange("sheet")}>
-        {T.sheet}
-      </Chip>
-    </div>
+    <PillSwitch
+      compact
+      label={T.switchLabel}
+      testId="view-switch"
+      value={view}
+      onChange={onChange}
+      options={[
+        { key: "queue", text: T.queue, testId: "view-queue" },
+        { key: "sheet", text: T.sheet, testId: "view-sheet" },
+      ]}
+    />
   );
 }
 
@@ -93,6 +98,9 @@ function LineRow({
   onClear: (line: SheetLine) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
+  // the trick name wraps to two lines; one that still does not fit shrinks (down to 12 px) rather than being cut
+  const trickBox = useRef<HTMLSpanElement>(null);
+  useShrinkToLines(trickBox, `${line.trickName ?? ""}|${line.direction ?? ""}`);
   const stored = line.kind === "attempt" ? line.mine : line.kind === "empty" ? line.pending : null;
   const isMissed = stored === "missed";
   const closed = !line.open && line.kind === "empty";
@@ -119,20 +127,20 @@ function LineRow({
       data-waits={waits ? "true" : undefined}
       data-needs-score={needs ? "true" : undefined}
       data-pulse={pulse ? "true" : undefined}
-      className={cn("relative flex scroll-mt-20 flex-col gap-0.5 px-2 py-1", crash && "bg-beach-surface text-beach-muted", line.kind === "empty" && "bg-beach-bg")}
+      className={cn("relative flex scroll-mt-20 flex-col gap-0.5 px-2 py-1.5", crash && "bg-beach-surface text-beach-muted", line.kind === "empty" && "bg-beach-bg")}
     >
-      {needs ? <span aria-hidden data-testid="line-needs-bar" className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-beach-accent" /> : null}
-      <div className="flex items-center gap-2">
-        <span data-testid="line-number" className="w-6 shrink-0 self-start pt-1.5 text-center text-name font-semibold tabular-nums">
+      {needs ? <span aria-hidden data-testid="line-needs-bar" className="absolute bottom-1.5 left-0 top-1.5 w-1.5 rounded-r-full bg-beach-attention" /> : null}
+      <div className="flex items-center gap-1.5">
+        <span data-testid="line-number" className="w-5 shrink-0 text-center text-name font-bold tabular-nums">
           {line.n}
         </span>
-        <span className="flex min-w-0 flex-1 flex-col self-start pt-1">
+        <span className="flex min-w-0 flex-1 flex-col">
           {line.kind === "empty" ? (
             <span data-testid="line-trick" className="text-body font-medium leading-tight text-beach-muted">
               {orphan ? T.noAttempt : T.waitingTrick}
             </span>
           ) : (
-            <span data-testid="line-trick" className={cn("flex flex-wrap items-baseline gap-x-1.5 text-body font-semibold", crash && "line-through")}>
+            <span ref={trickBox} data-testid="line-trick" className={cn("flex flex-wrap items-baseline gap-x-1.5 text-name font-bold leading-tight", crash && "line-through")}>
               <span>{line.trickName || "—"}</span>
               {line.direction ? <span className="text-small font-medium text-beach-muted">{dirWord(line.direction)}</span> : null}
             </span>
@@ -140,9 +148,9 @@ function LineRow({
           {needs ? (
             <span
               data-testid="line-needs-score"
-              className="mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--beach-accent)_50%,transparent)] bg-[color-mix(in_srgb,var(--beach-accent)_9%,transparent)] px-2 py-0.5 text-small font-semibold text-beach-ink"
+              className="mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-beach-attention bg-[color-mix(in_srgb,var(--beach-attention)_9%,transparent)] px-2 py-0.5 text-small font-bold text-beach-ink"
             >
-              <span aria-hidden data-testid="line-needs-dot" className={cn("size-2 rounded-full bg-beach-accent", pulse && "motion-safe:animate-pulse")} />
+              <span aria-hidden data-testid="line-needs-dot" className={cn("size-2 rounded-full bg-beach-attention", pulse && "motion-safe:animate-pulse")} />
               {T.needsScore}
             </span>
           ) : null}
@@ -157,29 +165,35 @@ function LineRow({
             <Pill icon={Flame} tone="crash">
               {T.crash}
             </Pill>
-            <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked} onClick={() => onFlagOpen(line)}>
+            <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked} onClick={() => onFlagOpen(line)} compact className="px-2 text-small">
               {T.flag}
             </Chip>
           </span>
         ) : (
           <span className="flex shrink-0 items-center gap-1.5">
             {line.kind === "empty" && line.pending !== null && !isMissed ? <Pill tone="pending">{T.pendingTag}</Pill> : null}
-            <span className="flex w-[4.75rem] flex-col gap-1">
-              <Chip data-testid="line-missed" aria-label={T.missedAria(line.n)} aria-pressed={isMissed} pressed={isMissed} disabled={locked || (waits && !tappable)} onClick={() => (waits ? tap() : onMissed(line))} className="h-[max(2.75rem,var(--size-tap))] w-full px-1">
-                {isMissed ? <Check aria-hidden className="size-4 shrink-0" strokeWidth={3} /> : null}
+            {/* Missed over Flag in one small column (the owner's choice: these two are the only controls under 44 px), so the trick name keeps the width */}
+            <span className="flex w-[4.75rem] shrink-0 flex-col gap-0.5">
+              <Chip data-testid="line-missed" aria-label={T.missedAria(line.n)} aria-pressed={isMissed} pressed={isMissed} disabled={locked || (waits && !tappable)} onClick={() => (waits ? tap() : onMissed(line))} compact className="w-full text-small">
+                {isMissed ? <Check aria-hidden className="size-3.5 shrink-0" strokeWidth={3} /> : null}
                 {T.missed}
               </Chip>
-              <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked || line.kind === "empty"} onClick={() => onFlagOpen(line)} className="h-[max(2.75rem,var(--size-tap))] w-full px-1">
+              <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked || line.kind === "empty"} onClick={() => onFlagOpen(line)} compact className="w-full text-small">
                 {T.flag}
               </Chip>
             </span>
             <input
               data-testid="line-score"
+              name="score"
+              type="text"
               inputMode="decimal"
               enterKeyHint="done"
               autoComplete="off"
+              data-lpignore="true"
+              data-1p-ignore
+              data-form-type="other"
               aria-label={waits ? T.waitsAria(line.n) : T.scoreBox(line.n)}
-              placeholder={T.placeholder}
+              placeholder={formatPadValue(0, scale)}
               value={text}
               disabled={locked || (waits && !tappable)}
               readOnly={waits}
@@ -191,10 +205,10 @@ function LineRow({
                 if (e.key === "Enter") (e.target as HTMLInputElement).blur();
               }}
               className={cn(
-                "h-[max(2.75rem,var(--size-tap))] w-[max(3.5rem,4.4ch)] self-start rounded-lg border bg-beach-bg px-1 py-0 text-center text-digit font-semibold leading-none text-beach-ink",
-                refusal ? "border-beach-failed" : "border-beach-border",
+                "h-11 w-14 shrink-0 rounded-full border bg-beach-fill px-1 py-0 text-center text-digit font-bold leading-none text-beach-ink placeholder:font-medium placeholder:text-beach-hint",
+                refusal ? "border-beach-failed" : "border-beach-line",
                 line.kind === "empty" && line.pending !== null && !isMissed && "border-dashed",
-                pulse && !refusal && "border-2 border-beach-accent shadow-[0_0_0_3px_color-mix(in_srgb,var(--beach-accent)_28%,transparent)]",
+                pulse && !refusal && "border-2 border-beach-attention shadow-[0_0_0_3px_color-mix(in_srgb,var(--beach-attention)_35%,transparent)]",
               )}
             />
           </span>
@@ -208,7 +222,7 @@ function LineRow({
         </div>
       ) : null}
       {note ? (
-        <p role="status" data-testid="line-closed-note" className="rounded-lg border border-beach-border bg-beach-surface px-2 py-1 text-body font-semibold">
+        <p role="status" data-testid="line-closed-note" className="rounded-2xl bg-beach-surface px-3 py-1.5 text-body font-bold">
           {note}
         </p>
       ) : null}
@@ -328,7 +342,7 @@ export function RiderSheetView(p: RiderSheetViewProps) {
   useEffect(() => {
     if (openKey === "||") return;
     const el = document.querySelector<HTMLElement>('[data-testid="skip-ask"], [data-testid="line-closed-note"], [data-testid="line-flag-sheet"]');
-    el?.scrollIntoView({ block: "nearest" });
+    keepInView(el);
   }, [openKey]);
   useEffect(() => {
     if (!closedAt) return;
@@ -361,10 +375,10 @@ export function RiderSheetView(p: RiderSheetViewProps) {
           </div>
           {rider ? (
             <>
-              <h2 data-testid="sheet-heading" className="text-heading font-semibold text-beach-muted">
+              <h2 data-testid="sheet-heading" className="text-heading font-bold uppercase tracking-wide text-beach-muted">
                 {T.sheetFor(rider.label.primary.text)}
               </h2>
-              <ol data-testid="sheet-lines" data-active-line={active ?? undefined} aria-label={T.sheetFor(rider.label.primary.text)} className="flex flex-col divide-y divide-beach-line rounded-xl border border-beach-line">
+              <ol data-testid="sheet-lines" data-active-line={active ?? undefined} aria-label={T.sheetFor(rider.label.primary.text)} className="flex flex-col divide-y divide-beach-line border-y border-beach-line">
                 {shown.map((line) => {
                   const asked = here(asking);
                   const mine = (x: { riderId: string; n: number } | null) => x !== null && x.n === line.n;

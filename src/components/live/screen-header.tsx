@@ -3,11 +3,13 @@ import { HeatTimer, type TimerState } from "./heat-timer";
 import { FlagStrip, type FlagStripModel } from "./flag-strip";
 import { ConnectionBadge, type ConnectionStatus } from "./connection-badge";
 import { Chip } from "./chip";
+import { SettingsMenu } from "./live-shell";
 import { copy } from "@/lib/ui-copy";
 
 /**
- * The slim header of the judge and spotter screens: the small timer, the sync pill and a "Details" toggle, then one muted line with the heat and the seat.
- * The timer is small and out of the way (never between the first card and the pad). The Details toggle switches the whole screen to the detailed view.
+ * The slim header of the judge and spotter screens (New look), drawn as the scoreboard bar: near-black across the full width, the timer (or the flag strip) in big white bold digits, the
+ * heat in bold white and the seat in brand grey, the sync pill and the one round settings button. This bar is the product's one signature element. The "Details" / "Feed" / "Review"
+ * switch, when a screen has one, sits in the first row. No boxes.
  */
 export function ScreenHeader({
   heatName,
@@ -23,7 +25,10 @@ export function ScreenHeader({
   showTimer = true,
   clock,
   flag,
+  plain = false,
 }: {
+  /** The header as it was before the scoreboard bar (a light header): only the /design comparison uses it. */
+  plain?: boolean;
   /** The flag strip (Flags): when set, it is the clock line, in the state's colour. Null/undefined (flags off): the plain timer as before. */
   flag?: FlagStripModel | null;
   /** The time now in the event time zone, small and muted next to the timer. */
@@ -44,21 +49,31 @@ export function ScreenHeader({
   onToggleDetails?: () => void;
 }) {
   return (
-    <header data-testid="screen-header" className="flex flex-col border-b border-beach-line bg-beach-bg px-2 pb-0.5 pt-0.5">
-      <div className="flex min-h-tap items-center justify-between gap-2">
-        <div className={flag ? "flex min-w-0 flex-1 items-center gap-2" : "flex items-baseline gap-2"}>
-          {flag ? <FlagStrip model={flag} /> : showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className="text-name font-semibold">{copy.live.header.between}</span>}
-          {clock ? <ClockText timezone={clock.timezone} nowMs={clock.nowMs} /> : null}
-        </div>
-        {details !== undefined ? (
-          <Chip data-testid="details-toggle" pressed={details} onClick={onToggleDetails}>
-            {details ? (detailsLabels?.on ?? copy.live.header.detailsOn) : (detailsLabels?.off ?? copy.live.header.details)}
-          </Chip>
-        ) : null}
+    <header data-testid="screen-header" className={plain ? "flex flex-col gap-1 border-b border-beach-line bg-beach-bg px-2 pb-1 pt-1" : "flex flex-col gap-1 border-b border-beach-line bg-beach-board px-2 pb-1 pt-1 text-beach-on-board [&_[data-testid=heat-timer-clock]]:text-[24px]"}>
+      {/* the first row is the flag strip (or the timer) alone and full width: nothing sits beside it to squeeze or cut its words */}
+      <div className="flex min-w-0 items-center gap-2">
+        {flag ? <FlagStrip model={flag} /> : showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className={plain ? "text-name font-bold" : "text-name font-bold text-beach-on-board"}>{copy.live.header.between}</span>}
       </div>
+      {/* the second row: the heat and seat (they wrap), then Details, the sync state and the one round settings button */}
       <div className="flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-small font-medium text-beach-muted">{copy.live.header.heatLine(heatName, seat)}</p>
-        <ConnectionBadge status={connection} pending={pending} onRetry={onRetry} />
+        <p className={plain ? "min-w-0 flex-1 text-small font-medium leading-tight text-beach-muted" : "min-w-0 flex-1 text-small font-medium leading-tight text-beach-board-muted"}>
+          <span className={plain ? "font-bold text-beach-ink" : "font-bold text-beach-on-board"}>{heatName}</span> · {seat}
+          {clock ? (
+            <>
+              {" · "}
+              <ClockText timezone={clock.timezone} nowMs={clock.nowMs} className="text-small text-inherit" />
+            </>
+          ) : null}
+        </p>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {details !== undefined ? (
+            <Chip onBoard={!plain} data-testid="details-toggle" pressed={details} onClick={onToggleDetails}>
+              {details ? (detailsLabels?.on ?? copy.live.header.detailsOn) : (detailsLabels?.off ?? copy.live.header.details)}
+            </Chip>
+          ) : null}
+          <ConnectionBadge status={connection} pending={pending} onRetry={onRetry} />
+          <SettingsMenu onBoard={!plain} />
+        </div>
       </div>
     </header>
   );

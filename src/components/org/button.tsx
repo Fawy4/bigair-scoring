@@ -25,17 +25,17 @@ export type ButtonProps = Base &
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary: "border-beach-accent bg-beach-accent text-beach-on-accent",
-  secondary: "border-beach-border bg-beach-bg text-beach-ink hover:bg-beach-surface",
+  secondary: "border-beach-border bg-beach-fill text-beach-ink hover:bg-beach-surface",
   quiet: "border-transparent bg-transparent text-beach-ink hover:bg-beach-surface",
   danger: "border-beach-crash bg-beach-bg text-beach-crash hover:bg-beach-surface",
 };
-// A disabled control is never faded to light grey: it keeps full-strength text, a dashed frame and a flat fill, and its reason sits under it.
-const DISABLED = "cursor-not-allowed border-dashed border-beach-border bg-beach-surface text-beach-muted";
+// A disabled control keeps its shape with faded words (never a grey block), and its reason sits under it.
+const DISABLED = "cursor-not-allowed border-beach-border bg-beach-fill text-beach-ink opacity-50";
 
 export function Button({ variant = "secondary", icon: Icon, iconOnly, href, target, className, children, disabled, disabledReason, type = "button", ...rest }: ButtonProps) {
   const reasonId = useId();
   const classes = cn(
-    "inline-flex min-h-[var(--org-ctl)] items-center justify-center gap-2 rounded-[8px] border px-3 py-1.5 text-body font-semibold",
+    "inline-flex min-h-[var(--org-ctl)] items-center justify-center gap-2 rounded-full border px-4 py-1.5 text-body font-bold",
     disabled ? DISABLED : VARIANT[variant],
     iconOnly && "min-w-[var(--org-ctl)] px-0",
     className,

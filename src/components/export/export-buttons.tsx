@@ -54,7 +54,7 @@ function useDownload() {
   return { busy, error, download };
 }
 
-const headButton = "inline-flex min-h-tap items-center justify-center gap-1.5 self-start rounded-xl border border-beach-border bg-beach-bg px-3 text-body font-semibold text-beach-ink disabled:cursor-not-allowed disabled:border-dashed disabled:text-beach-muted";
+const headButton = "inline-flex min-h-tap items-center justify-center gap-1.5 self-start rounded-xl border border-beach-border bg-beach-fill px-3 text-body font-semibold text-beach-ink disabled:cursor-not-allowed disabled:border-dashed disabled:text-beach-muted";
 
 /**
  * The export buttons. `organiser`: Download results, Open printable results, the draft box (with its "?"), and - on the Go live step - Download event backup.

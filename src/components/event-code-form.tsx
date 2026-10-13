@@ -35,7 +35,7 @@ export function EventCodeForm() {
           autoCorrect="off"
           spellCheck={false}
           aria-invalid={problem}
-          className="min-h-[var(--org-ctl)] min-w-0 flex-1 basis-56 rounded-[8px] border border-beach-border bg-beach-bg px-3 text-body font-medium text-beach-ink placeholder:text-beach-muted"
+          className="min-h-[var(--org-ctl)] min-w-0 flex-1 basis-56 rounded-[8px] border border-beach-border bg-beach-fill px-3 text-body font-medium text-beach-ink placeholder:text-beach-muted"
         />
         <Button type="submit" variant="secondary">
           {copy.landing.codeGo}

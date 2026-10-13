@@ -1,6 +1,6 @@
 # How to use this manual
 
-The product manual of the Big Air scoring system: how to set up and run an event alone, how every screen works, and what to do when something goes wrong.
+The product manual of Sendbook, the live scoring system for kitesurfing Big Air events: how to set up and run an event alone, how every screen works, and what to do when something goes wrong.
 
 Last checked: 3 Oct 2026 · Product version 0.10.0
 

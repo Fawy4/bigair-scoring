@@ -2,6 +2,23 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
+Last checked: 13 Oct 2026 · Product version 0.21.0
+
+## 0.21.0 — 13 Oct 2026 {#cl-0-21-0}
+
+Release entry: [0.21.0](/admin/releases#release-0-21-0) (platform owner only)
+
+**What changed for users**
+- **Keyboard on the officials' phones, the spotter's line and the console:** the screen is fixed to the display, so the keyboard opening and closing leaves no white band and no cut-off header; the typing line stays in view; the trick and score boxes are plain-text boxes for the phone's AutoFill bar. A spotter's line now logs itself after **5 seconds** without typing (leaving the box still logs at once). On the head judge's laptop the flag strip moves into the top bar when it fits whole. Simulator **View as… → Riders** opens the public Riders page. Pages: [Spotter](screens/spotter.md), [Console on a laptop](screens/console-laptop.md), [Simulator](screens/simulator.md).
+- **A new look for the whole product, the same as the Instagram posts.** Near-black, white and teal, the font Rubik (Bold for headings, rider names, heats, timers and scores), pill buttons and fields, and rows with thin dividers instead of boxed white cards. Every page picks it up: organiser steps, admin, the head judge's console, the officials' screens, the public pages, the big screen, the Flag view and the join page. The big screen keeps its 10-metre sizes and the Flag view its flag colours.
+- **Daylight stays the default everywhere** and reads in full sun **Dark** is a true near-black and a choice. **Teal** is the one accent: every button, selected state and focus ring. Orange is kept only for "Needs your score" and the logo. Buttons and boxes at rest are white (Daylight) or near-black (Dark) with a thin light-grey edge: no grey blocks, no thick outlines.
+- **A smaller Normal on the officials' screens.** On an iPhone 14 in Normal the judges' and the spotter's Rider sheets show the header, the rider cards and all 7 lines without scrolling. **Large** is what Normal used to be. Every tap target is at least 44 px; the text in every typed-in box is at least 16 px.
+- **The product is called Sendbook** (the browser tab, the home-screen name, the join page and the organiser bar); "Big Air" stays only where it names the sport.
+- **Officials' screens:** a clean header bar, white in Daylight and near-black in Dark (flag strip or timer; heat, seat and sync state) with **one round Settings button** that opens Daylight / Dark, Normal / Large and Sound, instead of the row at the bottom; attempt lines as rows with thin dividers; pills for **Missed**, **Flag** (now a flag-icon pill beside Missed), **L** / **R**, **Crash** and the **Queue / Rider sheet** switch.
+- **/design** shows the Judge and Spotter Rider sheets and the Head judge phone in Daylight and in Dark, side by side.
+
+**Manual pages updated:** [Judge screen](screens/judge.md), [Spotter screen](screens/spotter.md), [Head judge — phone](screens/console-phone.md), [Observer](screens/observer.md). The manual's pictures still show the old look; they are retaken in the next release.
+
 Last checked: 12 Oct 2026 · Product version 0.20.1
 
 ## 0.20.1 — 12 Oct 2026 {#cl-0-20-1}

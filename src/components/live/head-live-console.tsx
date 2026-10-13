@@ -340,7 +340,7 @@ export function HeadLiveConsole({
         ) : null}
 
         {open && picked.length > 0 ? (
-          <div data-testid="selection-bar" className="flex flex-wrap items-center gap-1.5 rounded-card border border-beach-accent bg-beach-surface p-1.5">
+          <div data-testid="selection-bar" className="flex flex-wrap items-center gap-1.5 rounded-card border border-beach-selected bg-beach-surface p-1.5">
             <span className="text-body font-semibold">{C.selected(picked.length)}</span>
             <Chip data-testid="merge-selected" variant={mergeable(picked) ? "accent" : "muted"} disabled={!mergeable(picked)} onClick={() => setDialog({ kind: "merge", ids: picked.map((r) => r.attemptId) })}>
               {C.mergeSelected}

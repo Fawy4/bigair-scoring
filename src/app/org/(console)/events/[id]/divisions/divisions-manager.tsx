@@ -267,7 +267,7 @@ export function DivisionsManager({
                         type="button"
                         role="tab"
                         aria-selected={tab === t}
-                        className={cn("-mb-px min-h-[var(--org-ctl)] border-b px-3 text-body font-semibold", tab === t ? "border-beach-accent text-beach-ink" : "border-transparent text-beach-muted hover:text-beach-ink")}
+                        className={cn("-mb-px min-h-[var(--org-ctl)] border-b px-3 text-body font-semibold", tab === t ? "border-beach-selected text-beach-ink" : "border-transparent text-beach-muted hover:text-beach-ink")}
                         onClick={() => setTab(t)}
                       >
                         {tabName(t)}

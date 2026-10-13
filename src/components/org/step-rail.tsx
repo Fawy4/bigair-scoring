@@ -33,9 +33,9 @@ export function StepRail({ steps, activeKey, onSelect }: { steps: readonly RailS
                     onSelect(s.key);
                   }
                 }}
-                className={cn("flex min-h-[var(--org-ctl)] flex-col gap-1 rounded-[8px] border-l-4 px-3 py-2 hover:bg-beach-surface", active ? "border-beach-accent bg-beach-surface" : "border-transparent")}
+                className={cn("flex min-h-[var(--org-ctl)] flex-col gap-1 rounded-2xl border-l-4 px-3 py-2 hover:bg-beach-surface", active ? "border-beach-selected bg-beach-surface" : "border-transparent")}
               >
-                <span className="text-body font-semibold">
+                <span className="text-body font-bold">
                   <span className="tabular-nums text-beach-muted">{i + 1}</span> {s.label}
                 </span>
                 <StatusPill state={s.state} />
@@ -61,7 +61,7 @@ export function StepPicker({ steps, activeKey, onSelect }: { steps: readonly Rai
         id="step-picker-select"
         value={active.key}
         onChange={(e) => onSelect(e.target.value)}
-        className="h-[var(--org-ctl)] w-full rounded-[8px] border border-beach-border bg-beach-bg px-3 text-body font-semibold text-beach-ink"
+        className="h-[var(--org-ctl)] w-full rounded-[8px] border border-beach-border bg-beach-fill px-3 text-body font-semibold text-beach-ink"
       >
         {steps.map((s, i) => (
           <option key={s.key} value={s.key}>

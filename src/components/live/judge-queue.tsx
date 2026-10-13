@@ -181,7 +181,7 @@ export function JudgeQueueView(p: JudgeQueueViewProps) {
         ) : (
           <>
             {cur ? (
-              <article key={String(cur.id)} data-testid="queue-card" data-attempt={String(cur.id)} className="flex animate-in fade-in flex-col gap-1.5 rounded-card border border-beach-line bg-beach-surface p-1.5 duration-150">
+              <article key={String(cur.id)} data-testid="queue-card" data-attempt={String(cur.id)} className="flex animate-in fade-in flex-col gap-1.5 bg-beach-bg px-0.5 py-1 duration-150">
                 <div className="flex items-center justify-between gap-2">
                   <RiderLabel model={cur.label} variant="live" bare />
                   <span className="flex shrink-0 flex-col items-end gap-0.5">
@@ -253,7 +253,7 @@ export function JudgeQueueView(p: JudgeQueueViewProps) {
                 {T.queue.allCaughtUp}
               </p>
             )}
-            <ol data-testid="history" aria-label={T.queue.history} className="flex flex-col divide-y divide-beach-line rounded-xl border border-beach-line bg-beach-bg">
+            <ol data-testid="history" aria-label={T.queue.history} className="flex flex-col divide-y divide-beach-line border-y border-beach-line bg-beach-bg">
               {view.history.slice(0, 3).map((h) => {
                 const crashed = h.status === "crashed";
                 const right = crashed ? T.queue.crashedRow : h.score === "missed" ? T.queue.missedRow : formatCell(h.score as number);

@@ -110,7 +110,7 @@ export function TrickBuilder({
         data-count={n}
         aria-pressed={n > 0}
         onClick={() => onTapBlock(blockId(b))}
-        className={cn("flex min-h-row w-full shrink-0 items-center justify-between gap-1 rounded-lg border px-2 text-left text-small font-semibold leading-tight", n > 0 ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}
+        className={cn("flex min-h-row w-full shrink-0 items-center justify-between gap-1 rounded-lg border px-2 text-left text-small font-semibold leading-tight", n > 0 ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-fill text-beach-ink")}
       >
         <span className="min-w-0">{b.label}</span>
         {n > 1 ? <span className="shrink-0 tabular-nums">×{n}</span> : null}
@@ -139,7 +139,7 @@ export function TrickBuilder({
                     data-direction-button
                     aria-pressed={on}
                     onClick={() => onTapDirection(b.key)}
-                    className={cn("inline-flex min-h-bar w-full items-center justify-center gap-1.5 rounded-lg text-name font-semibold", on ? "border-4 border-beach-ink bg-beach-surface text-beach-ink" : "border border-beach-border bg-beach-bg text-beach-ink")}
+                    className={cn("inline-flex min-h-bar w-full items-center justify-center gap-1.5 rounded-full text-name font-bold", on ? "border border-beach-selected bg-beach-selected text-beach-on-selected" : "border border-beach-border bg-beach-fill text-beach-ink")}
                   >
                     {on ? <Check aria-hidden className="size-5" strokeWidth={3} /> : null}
                     {b.label}
@@ -201,7 +201,7 @@ export function TrickBuilder({
                       data-testid="sequence-block"
                       aria-label={T.removeBlock(`${m}${labelOf(item.id)}`)}
                       onClick={() => onRemove(i)}
-                      className="inline-flex min-h-tap shrink-0 items-center gap-1 rounded-lg border border-beach-border bg-beach-bg px-1.5 text-composed font-semibold text-beach-ink"
+                      className="inline-flex min-h-tap shrink-0 items-center gap-1 rounded-lg border border-beach-border bg-beach-fill px-1.5 text-composed font-semibold text-beach-ink"
                     >
                       {m}
                       {labelOf(item.id)}
@@ -210,7 +210,7 @@ export function TrickBuilder({
                   );
                 })}
                 {freeText ? (
-                  <button type="button" data-testid="free-text" aria-label={T.removeBlock(freeText)} onClick={onClearFreeText} className="inline-flex min-h-tap shrink-0 items-center gap-1 rounded-lg border border-dashed border-beach-border bg-beach-bg px-1.5 text-composed font-semibold text-beach-ink">
+                  <button type="button" data-testid="free-text" aria-label={T.removeBlock(freeText)} onClick={onClearFreeText} className="inline-flex min-h-tap shrink-0 items-center gap-1 rounded-lg border border-dashed border-beach-border bg-beach-fill px-1.5 text-composed font-semibold text-beach-ink">
                     {freeText}
                     <X aria-hidden className="size-3 text-beach-muted" />
                   </button>
@@ -235,6 +235,10 @@ export function TrickBuilder({
                 aria-label={T.type}
                 value={typed.value}
                 enterKeyHint="done"
+                name="trick"
+                data-lpignore="true"
+                data-1p-ignore
+                data-form-type="other"
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="sentences"
@@ -243,7 +247,7 @@ export function TrickBuilder({
                   if (e.key === "Enter") typed.onRead(); // reads the words into blocks; it never logs (Log is its own button)
                 }}
                 placeholder={T.typePlaceholder}
-                className="min-h-bar w-full min-w-0 rounded-lg border border-beach-border bg-beach-bg py-0 pl-2 pr-10 text-body font-medium text-beach-ink placeholder:text-beach-muted"
+                className="min-h-bar w-full min-w-0 rounded-lg border border-beach-border bg-beach-fill py-0 pl-2 pr-10 text-body font-medium text-beach-ink placeholder:text-beach-muted"
               />
               {typed.value ? (
                 <button
@@ -274,7 +278,7 @@ export function TrickBuilder({
           <div role="alertdialog" aria-label={T.crashConfirm(riderLabelText)} className="flex min-h-bar items-center justify-between gap-2 rounded-lg border border-beach-crash bg-beach-surface px-1.5">
             <p className="min-w-0 text-body font-semibold">{T.crashConfirm(riderLabelText)}</p>
             <span className="flex gap-1">
-              <Chip variant="danger" data-testid="crash-yes" onClick={() => { setConfirmCrash(false); onCrash(); }}>
+              <Chip variant="dangerSolid" data-testid="crash-yes" onClick={() => { setConfirmCrash(false); onCrash(); }}>
                 {T.crashYes}
               </Chip>
               <Chip onClick={() => setConfirmCrash(false)}>{T.crashNo}</Chip>
@@ -282,11 +286,11 @@ export function TrickBuilder({
           </div>
         ) : (
           <div className="grid min-h-bar grid-cols-2 gap-1.5">
-            <button type="button" data-testid="crash-button" disabled={!canCrash} onClick={() => setConfirmCrash(true)} className={cn("inline-flex items-center justify-center gap-1.5 rounded-lg border text-name font-semibold", canCrash ? "border-beach-crash bg-beach-crash text-beach-on-crash" : "border-beach-line bg-beach-surface text-beach-muted")}>
+            <button type="button" data-testid="crash-button" disabled={!canCrash} onClick={() => setConfirmCrash(true)} className={cn("inline-flex items-center justify-center gap-1.5 rounded-full border text-name font-bold", canCrash ? "border-beach-crash bg-beach-crash text-beach-on-crash" : "border-beach-border bg-beach-fill text-beach-ink opacity-50")}>
               <Zap aria-hidden className="size-4" />
               {T.crash}
             </button>
-            <button type="button" data-testid="log-button" disabled={!canLog} onClick={onLog} className={cn("inline-flex items-center justify-center rounded-lg border text-name font-semibold", canLog ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-line bg-beach-surface text-beach-muted")}>
+            <button type="button" data-testid="log-button" disabled={!canLog} onClick={onLog} className={cn("inline-flex items-center justify-center rounded-full border text-name font-bold", canLog ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-fill text-beach-ink opacity-50")}>
               {T.log}
             </button>
           </div>

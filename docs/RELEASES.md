@@ -12,6 +12,35 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.21.0 — 13 Oct 2026 {#release-0-21-0}
+
+PR: #46
+
+### What changed
+- **The whole product has a new look, the same as the Instagram posts:** near-black, white and teal, the font Rubik, pill-shaped buttons and fields, and rows with thin dividers instead of white boxes. It is on every page: organiser steps, admin, the head judge's console, judges, spotters, the flag marshal's Flag view, the big screen, the public pages and the join page. Only looks changed; every button does what it did.
+- **Daylight is still what everything opens in** and still reads in full sun. **Dark** is a true near-black and stays a choice. **Teal** is the one accent again (every button, selected state and focus ring); orange is kept only for "Needs your score" and the logo. Buttons and boxes are white with a thin edge instead of thick outlines.
+- **The product is called Sendbook** in the browser tab, on the home-screen icon, on the join page and in the organiser bar.
+- **Normal text is smaller** on the officials' screens: on an iPhone 14 the judges' and the spotter's Rider sheets show the header, the rider cards and all 7 lines without scrolling. **Large** is the size Normal used to be. Buttons stay at least 44 px, so they are still easy to hit.
+- **Officials' screens:** a slim header with the heat, the seat, the sync state and **one round Settings button** (Daylight / Dark, Normal / Large, Sound) instead of the row at the bottom of every screen; **Flag** is now a small flag-icon button beside **Missed**. The trick name is the main thing on both Rider sheets: on the spotter's line **L** and **R** sit over **Crash** in a small column and the trick box takes the rest; on the judge's line **Missed** sits over **Flag** and the trick name wraps instead of being cut. With the flags on, the flag strip has the first row of every officials' screen to itself. The head judge's buttons sit on an even grid with the right one filled; **Cancel heat** is a quiet red outline until you confirm.
+- **/design** shows the Rider sheets and the head judge's phone in Daylight and Dark, side by side.
+- **Keyboard on the officials' phones:** the screen is fixed to the display and the page behind it can no longer be left scrolled, so opening and closing the keyboard no longer leaves a white band or a cut-off header; the typing line stays in view. The phone's own AutoFill bar (key, card, pin) is the browser's and cannot be removed; the trick and score boxes are marked as plain text so it has less reason to appear.
+- **The spotter's line logs itself after 5 seconds** without typing (it was 2); leaving the box still logs it at once.
+- **Head judge's laptop console:** the flag strip moves up into the top bar (between the heat's status and Sound on) when it fits whole; otherwise it keeps its own row. Phone layouts are unchanged.
+- **Simulator, View as… → Riders** opens the event's public Riders page; the rider drop-down is gone.
+
+### What to test
+- [ ] On the spotter's phone, tap a trick line, type, then leave the box: no white band stays at the bottom, the header's top line is fully visible, and nothing jumps while the keyboard opens and closes. Do the same on a judge's score box and on the head judge's phone. Then type a trick that matches nothing and wait: it logs after about 5 seconds, or at once when you tap outside the box.
+- [ ] On the head judge's laptop (a window 1280 px wide), the flag strip is in the top bar beside the heat's status; make the window narrower and it drops to its own row. Then Simulator → View as… → Riders: it opens the public Riders page; tap a name to open that rider.
+- [ ] On an iPhone, open a judge's phone in Normal (Daylight) in a heat: you see the header, the rider cards and all 7 lines of the Rider sheet without scrolling. Do the same on a spotter's phone.
+- [ ] Tap the round button at the right end of the header: Daylight / Dark, Normal / Large and Sound open in a small sheet; choose Dark, then reload: it is still Dark. Choose Daylight again. There is no settings row at the bottom of the screen.
+- [ ] In the sun, with Daylight: you can read the heat, the timer, the rider names, the scores and "Needs your score" (the only orange left) without squinting. The front door opens in Daylight too, with the same Daylight / Dark switch at the top.
+- [ ] On the judge's Rider sheet: **Missed** and the flag-icon button sit side by side on every line; tap each one with your thumb and it does what it did before (Missed switches on and off, Flag opens the choices).
+- [ ] Open the head judge's console on a laptop and on a phone, the Event steps as the organiser, and Admin: same colours and font everywhere, nothing cut off or overlapping, every button still works. Also the public event page, the live page and the big screen, and /design (Daylight and Dark phones): teal, white, near-black, readable.
+
+### Known issues
+- The manual's pictures still show the old look. They are retaken in the next release.
+- Destructive buttons (Cancel heat, Reset, Delete) keep their red; the front door (/) still follows the device's own light or dark setting, as before.
+
 ## 0.20.1 — 12 Oct 2026 {#release-0-20-1}
 
 PR: #47

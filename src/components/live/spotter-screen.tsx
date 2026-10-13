@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { AttemptLogger, enabledIdsOf, type LoggedAttempt } from "./attempt-logger";
 import { useOnline, useEndAtZero, useFlagHorns, useTimerSound, useWakeLock } from "./live-hooks";
 import { useFlagStrip } from "./use-flag";
-import { LiveShell, ScreenSettings, useLiveSettings } from "./live-shell";
-import { Chip } from "./chip";
+import { LiveShell, useLiveSettings } from "./live-shell";
+import { PillSwitch } from "./chip";
 import { Pill } from "./pill";
 import { SpotterSheetView, type LineEdit } from "./spotter-sheet";
 import { ScreenHeader } from "./screen-header";
@@ -29,7 +29,7 @@ const T = copy.spotter;
 
 export function SpotterRoot({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?: string | null }) {
   return (
-    <LiveShell fitKeyboard>
+    <LiveShell>
       <SpotterScreen ctx={ctx} pinnedHeatId={pinnedHeatId} />
     </LiveShell>
   );
@@ -176,7 +176,7 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
         {notices.map((n) => (
           <p key={n.key} role="alert" className="flex items-center justify-between gap-2 rounded-lg border border-beach-failed bg-beach-surface px-2 py-1 text-small font-semibold">
             <span className="min-w-0">{n.text}</span>
-            <button type="button" className="min-h-tap shrink-0 rounded-lg border border-beach-border bg-beach-bg px-2" onClick={() => setNotices((l) => l.filter((x) => x.key !== n.key))}>
+            <button type="button" className="min-h-tap shrink-0 rounded-lg border border-beach-border bg-beach-fill px-2" onClick={() => setNotices((l) => l.filter((x) => x.key !== n.key))}>
               {T.dismiss}
             </button>
           </p>
@@ -186,14 +186,17 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
 
   const feed = feedLines(live.attempts, pending);
   const switcher = (
-    <div role="group" aria-label={copy.spotterSheet.switchLabel} data-testid="view-switch" className="flex items-center gap-1.5">
-      <Chip data-testid="spot-view-sheet" pressed={view === "sheet"} onClick={() => chooseView("sheet")}>
-        {copy.spotterSheet.sheet}
-      </Chip>
-      <Chip data-testid="spot-view-list" pressed={view === "list"} onClick={() => chooseView("list")}>
-        {copy.spotterSheet.list}
-      </Chip>
-    </div>
+    <PillSwitch
+      compact
+      label={copy.spotterSheet.switchLabel}
+      testId="view-switch"
+      value={view}
+      onChange={chooseView}
+      options={[
+        { key: "sheet", text: copy.spotterSheet.sheet, testId: "spot-view-sheet" },
+        { key: "list", text: copy.spotterSheet.list, testId: "spot-view-list" },
+      ]}
+    />
   );
 
   return (
@@ -204,7 +207,6 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
       {q.memoryOnly ? <p className="px-2 pt-1 text-small font-semibold text-beach-muted">{copy.live.queue.memoryOnly}</p> : null}
       {feedOpen ? (
         <div data-testid="screen-body" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 py-1.5">
-          <ScreenSettings />
           <h2 className="text-heading font-semibold text-beach-muted">{T.attemptsHeading}</h2>
           {feed.length === 0 ? (
             <p data-testid="feed-empty" className="text-body font-medium text-beach-muted">

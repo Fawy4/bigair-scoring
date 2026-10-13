@@ -37,7 +37,7 @@ export default async function ReleasesPage() {
     const p = releaseProgress(r.version, releases ?? [], ticks, signoffs);
     const isCurrent = r.version === PRODUCT_VERSION;
     return (
-      <section key={r.version} id={r.anchor} data-testid={`release-${r.version}`} aria-labelledby={`${r.anchor}-h`} className={`scroll-mt-20 rounded-card border bg-beach-bg ${isCurrent ? "border-beach-accent" : "border-beach-line"}`}>
+      <section key={r.version} id={r.anchor} data-testid={`release-${r.version}`} aria-labelledby={`${r.anchor}-h`} className={`scroll-mt-20 rounded-card border bg-beach-bg ${isCurrent ? "border-beach-selected" : "border-beach-line"}`}>
         <header className="flex flex-wrap items-center justify-between gap-2 border-b border-beach-line px-4 py-3">
           <h2 id={`${r.anchor}-h`} className="text-[18px] font-semibold">
             {r.version} <span className="font-medium text-beach-muted">— {r.date}</span>

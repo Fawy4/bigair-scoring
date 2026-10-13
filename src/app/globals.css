@@ -21,7 +21,7 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-rubik), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-variant-numeric: tabular-nums;
   }
 }
@@ -50,7 +50,7 @@
     line-height: 1.3;
   }
   :where(.org-console) :is(h1, h2, h3, h4, h5, h6, label, th, legend) {
-    font-weight: 600;
+    font-weight: 700;
   }
   :where(.org-console :is(button, [role="button"]):not(.help-btn)) {
     min-height: var(--org-ctl);
@@ -58,8 +58,8 @@
   :where(.org-console :is(select, textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]))) {
     min-height: var(--org-ctl);
     border: 1px solid var(--beach-border);
-    border-radius: 8px;
-    background: var(--beach-bg);
+    border-radius: 12px;
+    background: var(--beach-fill);
     color: var(--beach-ink);
     padding: 0 12px;
     font-weight: 500;
@@ -98,7 +98,23 @@
     width: 20px;
     height: 20px;
     flex: none;
-    accent-color: var(--beach-accent);
+    accent-color: var(--beach-selected);
+  }
+  /* Nothing in an organiser page is wider than the screen: a fieldset never stretches to its widest child (its default is min-content) and a drop-down shrinks to its box and clips its long words
+   instead of pushing the whole page sideways (a phone then zooms out and shifts left; owner, "23 more settings"). */
+  :where(.org-console, .org-ui) fieldset {
+    min-width: 0;
+  }
+  :where(.org-console, .org-ui) select {
+    max-width: 100%;
+    min-width: 0;
+    text-overflow: ellipsis;
+  }
+  /* on a phone a drop-down takes the width of its box (it contributes nothing to the box's minimum width), so a long option never makes its box, and then the page, wider than the screen */
+  @media (max-width: 640px) {
+    :where(.org-console, .org-ui) select {
+      width: 100%;
+    }
   }
   :where(.org-console) :focus-visible {
     outline: 2px solid var(--beach-focus);
@@ -110,13 +126,13 @@
     justify-content: center;
     gap: 8px;
     min-height: var(--org-ctl);
-    padding: 0 12px;
+    padding: 0 16px;
     border: 1px solid var(--beach-border);
-    border-radius: 8px;
-    background: var(--beach-bg);
+    border-radius: 9999px;
+    background: var(--beach-fill);
     color: var(--beach-ink);
     font-size: var(--size-body, 14px);
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
   }
   :where(.org-console) .btn:hover:not(:disabled) {
@@ -135,12 +151,13 @@
     border-color: var(--beach-crash);
     color: var(--beach-crash);
   }
-  /* a disabled control is never faded to light grey: full-strength text, a dashed frame, a flat fill */
+  /* a disabled control keeps its shape with faded words: never a grey block */
   :where(.org-console) .btn:disabled {
-    border-style: dashed;
+    border-style: solid;
     border-color: var(--beach-border);
-    background: var(--beach-surface);
-    color: var(--beach-muted);
+    background: var(--beach-fill);
+    color: var(--beach-ink);
+    opacity: 0.5;
     cursor: not-allowed;
   }
   :where(.org-console) .btn-danger-solid {
@@ -152,11 +169,13 @@
     color: var(--beach-failed);
     font-weight: 600;
   }
+  /* a panel is a section with a thin divider on top, not a box (New look) */
   :where(.org-console) .panel {
-    border: 1px solid var(--beach-line);
-    border-radius: 12px;
-    padding: 16px;
-    background: var(--beach-bg);
+    border: 0;
+    border-top: 1px solid var(--beach-line);
+    border-radius: 0;
+    padding: 12px 0 16px;
+    background: transparent;
   }
   :where(.org-console) table {
     border-collapse: collapse;
@@ -201,14 +220,14 @@
     transform: translate(-50%, -50%);
     border: 1px solid var(--beach-border);
     border-radius: 9999px;
-    background: var(--beach-bg);
+    background: var(--beach-fill);
   }
   :where(.org-console) .help-btn[aria-expanded="true"] {
-    color: var(--beach-on-accent);
+    color: var(--beach-on-selected);
   }
   :where(.org-console) .help-btn[aria-expanded="true"]::before {
-    border-color: var(--beach-accent);
-    background: var(--beach-accent);
+    border-color: var(--beach-selected);
+    background: var(--beach-selected);
   }
   :where(.org-console) .help-note {
     display: block;
@@ -224,7 +243,7 @@
 /* Old utility classes still in the older screens, brought to the approved look until each screen is rewritten.
    Not in a layer, so they win over the Tailwind utilities of the same name. Only inside .org-legacy (the organiser and admin page area). */
 .org-legacy :is(.font-bold, .font-extrabold, .font-black) {
-  font-weight: 600;
+  font-weight: 700;
 }
 /* a paragraph is body text: regular weight, whatever an older screen put on it */
 .org-legacy p:is(.font-semibold, .font-bold, .font-extrabold, .font-black) {
@@ -263,7 +282,7 @@
   border-radius: 12px;
 }
 .org-legacy :is(.rounded, .rounded-md) {
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 /* Printing (start lists, official cards): only the page's own content, no header, footer, rail or buttons. */
@@ -370,7 +389,7 @@ body:has(.print-sheet) {
 /* small labels on seats and heats ("changed by hand", "started"): text, never colour alone */
 .badge-note {
   display: inline-block;
-  border: 1px solid var(--beach-border, #5f6970);
+  border: 1px solid var(--beach-border, #b0b0b0);
   border-radius: 9999px;
   padding: 0 0.5rem;
   font-size: var(--size-small, 12px);
@@ -386,14 +405,24 @@ body:has(.print-sheet) {
 :root,
 .beach-day {
   --beach-bg: #ffffff;
-  --beach-surface: #f4f6f6;
-  --beach-line: #d5dadc;
+  --beach-surface: #f4f4f4;
+  --beach-line: #dcdcdc;
   --beach-ink: #111111;
-  --beach-muted: #3d4246;
-  --beach-border: #5f6970;
+  --beach-muted: #3a3a3a;
+  --beach-border: #b0b0b0;
+  --beach-fill: #ffffff;
+  --beach-key: #f2f2f2;
+  --beach-hint: #b0b0b0;
   --beach-focus: #0b4a46;
   --beach-accent: #0f5c57;
   --beach-on-accent: #ffffff;
+  --beach-accent-text: #0f5c57;
+  --beach-selected: #0f5c57;
+  --beach-on-selected: #ffffff;
+  --beach-attention: #e65f00;
+  --beach-board: #ffffff;
+  --beach-on-board: #111111;
+  --beach-board-muted: #3a3a3a;
   --beach-live: #14532d;
   --beach-pending: #1e3a8a;
   --beach-failed: #9f1239;
@@ -415,24 +444,34 @@ body:has(.print-sheet) {
   color-scheme: light;
 }
 .beach-dark {
-  --beach-bg: #0b0e0f;
-  --beach-surface: #151a1b;
-  --beach-line: #2b3436;
-  --beach-ink: #f2f5f5;
-  --beach-muted: #c9d1d3;
-  --beach-border: #8d999c;
+  --beach-bg: #000000;
+  --beach-surface: #111111;
+  --beach-line: #2a2a2a;
+  --beach-ink: #ffffff;
+  --beach-muted: #b0b0b0;
+  --beach-border: #4d4d4d;
+  --beach-fill: #111111;
+  --beach-key: #1c1c1c;
+  --beach-hint: #6b6b6b;
   --beach-focus: #9ee7de;
   --beach-accent: #5fd3c6;
   --beach-on-accent: #04211e;
+  --beach-accent-text: #5fd3c6;
+  --beach-selected: #5fd3c6;
+  --beach-on-selected: #04211e;
+  --beach-attention: #ff6a00;
+  --beach-board: #111111;
+  --beach-on-board: #ffffff;
+  --beach-board-muted: #b0b0b0;
   --beach-live: #86efac;
   --beach-pending: #9ec5ff;
   --beach-failed: #fda4af;
-  --beach-crash: #fca5a5;
-  --beach-on-crash: #0b0e0f;
+  --beach-crash: #ff6b6b;
+  --beach-on-crash: #000000;
   --beach-outlier: #fcd34d;
   --beach-missing: #c4c4c4;
   --beach-tint-crash: #5a1f1f;
-  --beach-tint-grey: #2a3133;
+  --beach-tint-grey: #1f1f1f;
   --beach-tint-grade0: #5a4a0c;
   --beach-tint-grade1: #4a5410;
   --beach-tint-grade2: #38581a;
@@ -446,44 +485,44 @@ body:has(.print-sheet) {
 }
 :root,
 .beach-text-normal {
-  --size-body: 14px;
+  --size-body: 13px;
   --size-small: 12px;
-  --size-name: 15px;
+  --size-name: 14px;
   --size-digit: 16px;
-  --size-pad-height: 38px;
+  --size-pad-height: 44px;
   --size-pad-gap: 4px;
-  --size-tap: 36px;
+  --size-tap: 44px;
   --size-timer-slim: 18px;
   --size-timer-head: 48px;
-  --size-radius: 10px;
-  --size-readout: 26px;
+  --size-radius: 16px;
+  --size-readout: 24px;
   --size-heading: 12px;
-  --size-row: 38px;
-  --size-composed: 15px;
+  --size-row: 44px;
+  --size-composed: 14px;
   --size-bar: 44px;
 }
 .beach-text-large {
-  --size-body: 15px;
-  --size-small: 13px;
-  --size-name: 17px;
-  --size-digit: 19px;
-  --size-pad-height: 46px;
+  --size-body: 14px;
+  --size-small: 12px;
+  --size-name: 15px;
+  --size-digit: 17px;
+  --size-pad-height: 48px;
   --size-pad-gap: 6px;
-  --size-tap: 44px;
+  --size-tap: 48px;
   --size-timer-slim: 20px;
   --size-timer-head: 48px;
-  --size-radius: 12px;
-  --size-readout: 30px;
-  --size-heading: 14px;
-  --size-row: 44px;
-  --size-composed: 17px;
+  --size-radius: 16px;
+  --size-readout: 26px;
+  --size-heading: 12px;
+  --size-row: 48px;
+  --size-composed: 15px;
   --size-bar: 48px;
 }
 .beach-day,
 .beach-dark {
   background: var(--beach-bg);
   color: var(--beach-ink);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-rubik), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: var(--size-body);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
@@ -528,18 +567,18 @@ html[data-observing] select:disabled {
 /* The big screen (/screen): Dark = white on a dark ground, Day = dark text on a light ground for full sun. Same sizes in both; the grading colours (Lycra chips, wind call)
    are their own solid colours and stay readable on either ground. The screen's frame sets one of these classes (Polish 2b). */
 .bs-dark {
-  --bs-bg: #0b0e0f;
+  --bs-bg: #000000;
   --bs-ink: #ffffff;
   --bs-muted: rgb(255 255 255 / 0.7);
   --bs-line: rgb(255 255 255 / 0.3);
   --bs-ring: #ffffff;
 }
 .bs-day {
-  --bs-bg: #fbfaf5;
-  --bs-ink: #0b0e0f;
-  --bs-muted: rgb(11 14 15 / 0.75);
-  --bs-line: rgb(11 14 15 / 0.35);
-  --bs-ring: #0b0e0f;
+  --bs-bg: #ffffff;
+  --bs-ink: #111111;
+  --bs-muted: rgb(17 17 17 / 0.75);
+  --bs-line: rgb(17 17 17 / 0.35);
+  --bs-ring: #111111;
 }
 
 /* The printable results (/export/<event>/print): colours print, a heat is never cut between pages, the DRAFT watermark is a faint diagonal word behind the rows. */

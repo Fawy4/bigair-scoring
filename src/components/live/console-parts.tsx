@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
 const C = copy.live.console;
 
 export const btn = "inline-flex min-h-tap items-center justify-center gap-1.5 rounded-xl border px-3 text-body font-semibold";
-export const plain = `${btn} border-beach-border bg-beach-bg text-beach-ink`;
+export const plain = `${btn} border-beach-border bg-beach-fill text-beach-ink`;
 export const primary = `${btn} border-beach-accent bg-beach-accent text-beach-on-accent`;
-export const off = `${btn} border-beach-line bg-beach-surface text-beach-muted`;
+export const off = `${btn} border-beach-border bg-beach-fill text-beach-ink opacity-50`;
 
 /** A dialog that sits over the console. Every change asks for a reason (audited). */
 /** `screen`: cover the whole window (the real pages); otherwise cover the console box it sits in (the /design preview). */
@@ -34,7 +34,7 @@ export function Reason({ value, onChange, picks }: { value: string; onChange: (v
       {picks?.length ? (
         <div role="group" aria-label={copy.walkover.reasonLabel} className="flex flex-wrap gap-1.5">
           {picks.map((p) => (
-            <button key={p} type="button" data-testid="reason-pick" aria-pressed={value === p} onClick={() => onChange(p)} className={cn(btn, value === p ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}>
+            <button key={p} type="button" data-testid="reason-pick" aria-pressed={value === p} onClick={() => onChange(p)} className={cn(btn, value === p ? "border-beach-selected bg-beach-selected text-beach-on-selected" : "border-beach-border bg-beach-fill text-beach-ink")}>
               {p}
             </button>
           ))}
@@ -49,7 +49,7 @@ function ReasonBox({ value, onChange }: { value: string; onChange: (v: string) =
   return (
     <label className="flex flex-col gap-0.5 text-small font-medium text-beach-muted">
       {C.reason}
-      <input data-testid="reason-input" value={value} onChange={(e) => onChange(e.target.value)} placeholder={C.reasonPlaceholder} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink placeholder:text-beach-muted" />
+      <input data-testid="reason-input" value={value} onChange={(e) => onChange(e.target.value)} placeholder={C.reasonPlaceholder} className="min-h-tap rounded-xl border border-beach-border bg-beach-fill px-2 text-body font-medium text-beach-ink placeholder:text-beach-muted" />
     </label>
   );
 }
