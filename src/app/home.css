@@ -426,3 +426,103 @@ body:has(.home[data-theme="dark"]) {
   display: flex;
   justify-content: flex-end;
 }
+
+/* ---- The Sendbook background (the home page only: the page adds .home-sky) ----
+   Buttons and links are the brand orange here and nowhere else: fills #FF6A00 with near-black words (7.31:1); orange words and lines #BA4800 in Day (5.2:1 on white),
+   #FF6A00 in Dark. The page fades from a warm tint at the top to the plain page colour halfway down. The drawing is in home-sky.tsx; it sits behind everything, so the cards,
+   the event list and the code box have solid backgrounds, and no text colour or contrast changes. */
+.home.home-sky {
+  --h-accent: #ff6a00;
+  --h-on-accent: #000000;
+  --h-orange: #ba4800;
+  --sky-wave1: rgba(255, 106, 0, 0.11);
+  --sky-wave2: rgba(255, 106, 0, 0.07);
+  --sky-wave3: rgba(255, 106, 0, 0.15);
+  --sky-air: rgba(230, 95, 0, 0.42);
+  --sky-crest: rgba(230, 95, 0, 0.22);
+  --sky-kiter: #f3af80;
+  --sky-kite: #ffac73;
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(180deg, #fff1e6 0%, #ffffff 50%);
+}
+.home.home-sky[data-theme="dark"] {
+  --h-accent: #ff6a00;
+  --h-on-accent: #000000;
+  --h-orange: #ff6a00;
+  --sky-wave1: rgba(255, 106, 0, 0.13);
+  --sky-wave2: rgba(255, 106, 0, 0.08);
+  --sky-wave3: rgba(255, 106, 0, 0.16);
+  --sky-air: rgba(255, 130, 40, 0.48);
+  --sky-crest: rgba(255, 106, 0, 0.25);
+  --sky-kiter: #8c4210;
+  --sky-kite: #b34a00;
+  background: linear-gradient(180deg, #160a03 0%, #111111 50%);
+}
+.home-sky-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.home-sky .home-wrap {
+  position: relative;
+  z-index: 1;
+}
+.home-sky .home-hero {
+  position: relative;
+}
+/* the rider's place: a band under the wordmark on a phone (it scrolls away with the page); to the right of the wordmark on a laptop (no room taken) */
+.home-sky-slot {
+  height: 168px;
+}
+@media (min-width: 860px) {
+  .home-sky-slot {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    bottom: -40px;
+    width: 360px;
+    height: auto;
+  }
+  .home-sky .home-hero > div:first-child {
+    max-width: calc(100% - 340px);
+  }
+}
+.home-sky .home-card,
+.home-sky .home-section,
+.home-sky .home-skeleton,
+.home-sky .home-alert,
+.home-sky .home-empty,
+.home-sky .home-code {
+  background: var(--h-bg);
+}
+.home-sky .home-code {
+  box-shadow: 0 0 0 8px var(--h-bg);
+}
+/* the quiet lines can scroll under the water: a soft halo in the page colour keeps their words reading as before, without a box */
+.home-sky .home-quiet,
+.home-sky .home-footer {
+  text-shadow:
+    0 0 3px var(--h-bg),
+    0 0 6px var(--h-bg),
+    0 0 10px var(--h-bg);
+}
+/* the Daylight / Dark switch sits on the page itself, not on a box of its own */
+.home-sky .home-theme {
+  background: transparent;
+}
+/* room under the footer for the water (8% of the screen height, 40 to 76 px, the same as the drawing), so at rest the footer's words are never on it */
+.home-sky .home-wrap {
+  padding-bottom: calc(24px + clamp(40px, 8dvh, 76px));
+}
+.home-sky a.link,
+.home-sky .home-footer a {
+  color: var(--h-orange);
+}
+.home-sky .home-dot {
+  background: var(--h-orange);
+}

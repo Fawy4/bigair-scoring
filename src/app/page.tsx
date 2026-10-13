@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { HomeEventCode } from "@/components/home/home-event-code";
+import { HomeSky } from "@/components/home/home-sky";
 import { HomeTheme } from "@/components/home/home-theme";
 import { EventsView } from "@/components/home/events-view";
 import type { LandingEvent } from "@/components/landing-event-card";
@@ -63,7 +64,8 @@ export default async function Home() {
   const settings = await getPlatformSettings();
   const hasLegal = Boolean(settings.legalTexts.terms || settings.legalTexts.privacy);
   return (
-    <div className="home" data-testid="landing">
+    <div className="home home-sky" data-testid="landing">
+      <HomeSky />
       <main className="home-wrap">
         <HomeTheme />
         <header className="home-hero">
@@ -75,6 +77,8 @@ export default async function Home() {
             <h1 className="home-wordmark">{settings.productName}</h1>
             <p className="home-tagline">{settings.tagline}</p>
           </div>
+          {/* where the background's rider sits: to the right of the wordmark on a laptop, a band under it on a phone */}
+          <div className="home-sky-slot" data-home-sky-slot aria-hidden />
         </header>
 
         <Suspense fallback={<div className="home-skeleton" aria-hidden />}>
