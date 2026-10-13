@@ -100,6 +100,22 @@
     flex: none;
     accent-color: var(--beach-selected);
   }
+  /* Nothing in an organiser page is wider than the screen: a fieldset never stretches to its widest child (its default is min-content) and a drop-down shrinks to its box and clips its long words
+   instead of pushing the whole page sideways (a phone then zooms out and shifts left; owner, "23 more settings"). */
+  :where(.org-console, .org-ui) fieldset {
+    min-width: 0;
+  }
+  :where(.org-console, .org-ui) select {
+    max-width: 100%;
+    min-width: 0;
+    text-overflow: ellipsis;
+  }
+  /* on a phone a drop-down takes the width of its box (it contributes nothing to the box's minimum width), so a long option never makes its box, and then the page, wider than the screen */
+  @media (max-width: 640px) {
+    :where(.org-console, .org-ui) select {
+      width: 100%;
+    }
+  }
   :where(.org-console) :focus-visible {
     outline: 2px solid var(--beach-focus);
     outline-offset: 2px;
