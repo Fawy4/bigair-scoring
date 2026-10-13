@@ -14,6 +14,7 @@ import { todayIn } from "@/lib/schedule/plans";
 import { createClient } from "@/lib/supabase/server";
 import { copy } from "@/lib/ui-copy";
 import { PRODUCT_VERSION } from "@/lib/product-version";
+import { whatsappLink } from "@/lib/public/contact";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,7 @@ async function Events() {
 /** For riders and spectators. The hero (wordmark, tagline) does not wait for the events: the list streams in under it. */
 export default async function Home() {
   const settings = await getPlatformSettings();
+  const contact = whatsappLink(process.env.NEXT_PUBLIC_CONTACT_WHATSAPP, L.contactMessage);
   const hasLegal = Boolean(settings.legalTexts.terms || settings.legalTexts.privacy);
   return (
     <div className="home home-sky" data-testid="landing">
@@ -70,12 +72,19 @@ export default async function Home() {
         <HomeTheme />
         <header className="home-hero">
           <div>
-            {settings.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={settings.logoUrl} alt={copy.publicSite.logoAlt(settings.productName)} className="home-logo" />
-            ) : null}
+            {/* the orange arc alone: the headline already says the name */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/sendbook-arc.png" alt="" width={58} height={40} className="home-logo" />
             <h1 className="home-wordmark">{settings.productName}</h1>
             <p className="home-tagline">{settings.tagline}</p>
+            {contact ? (
+              <div className="home-contact" data-testid="home-contact">
+                <p>{L.contactLine}</p>
+                <a href={contact} target="_blank" rel="noopener noreferrer" className="home-go">
+                  {L.contactButton}
+                </a>
+              </div>
+            ) : null}
           </div>
           {/* where the background's rider sits: to the right of the wordmark on a laptop, a band under it on a phone */}
           <div className="home-sky-slot" data-home-sky-slot aria-hidden />

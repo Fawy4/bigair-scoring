@@ -10,6 +10,7 @@ Release entry: [0.22.0](/admin/releases#release-0-22-0) (platform owner only)
 
 **What changed for users**
 - **The home page has the Sendbook background:** drawn orange air streams and low water that move, and one still rider upside down in a megaloop (right of the wordmark on a laptop, in a band under it on a phone). Daylight fades from a warm tint, Dark from deep brown. "Reduce motion" shows a still picture. No other page changed.
+- **On the home page:** the Sendbook arc alone above the headline; the Daylight / Dark switch is orange on its selected side; the header, sections and footer are transparent (only event cards and the code box are solid); a **Get in touch on WhatsApp** button under the tagline when the owner has set the number (`NEXT_PUBLIC_CONTACT_WHATSAPP`).
 - **Orange buttons and links on the home page only** (Go, Sign in, Join with your PIN, footer links); every other page stays teal.
 
 **Manual pages updated:** [Public: the home page](screens/public-home.md). The home page pictures were retaken.

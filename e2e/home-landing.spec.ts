@@ -137,7 +137,7 @@ for (const profile of PROFILES) {
           const min = sel === ".home a.link" || sel === ".home-footer a" ? 4.5 : 7;
           expect(ratio, `${sel} on ${scheme}`).toBeGreaterThanOrEqual(min);
         }
-        // orange is this page's accent (buttons, links, live dot): the Go button carries it, and nothing else uses it
+        // orange is this page's accent (buttons, links, live dot, the selected side of the switch): the Go button carries it, and nothing else uses it
         const accent = await page.evaluate((day) => {
           const orange = day ? ["rgb(255, 106, 0)", "rgb(186, 72, 0)"] : ["rgb(255, 106, 0)"];
           const hits: string[] = [];
@@ -148,7 +148,7 @@ for (const profile of PROFILES) {
           return [...new Set(hits)].sort();
         }, scheme === "light");
         expect(accent).toContain("home-go");
-        for (const hit of accent) expect(["home-go", "home-dot", "link", "A", "admin"], `${hit} on ${scheme}`).toContain(hit);
+        for (const hit of accent) expect(["home-go", "home-dot", "link", "A", "admin", "inline-flex"], `${hit} on ${scheme}`).toContain(hit);
       });
     }
   });

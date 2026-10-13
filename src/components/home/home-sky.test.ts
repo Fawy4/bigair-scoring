@@ -38,6 +38,21 @@ describe("orange on this page", () => {
   });
 });
 
+describe("what is solid", () => {
+  it("only the event cards and the code box (and the error box) have solid backgrounds; the header, the sections and the footer are transparent", () => {
+    const solid = /([^{}]+)\{\s*background: var\(--h-bg\);/g;
+    const list = [...sky.matchAll(solid)].flatMap((m) => m[1].split(",").map((x) => x.trim()));
+    expect(list.sort()).toEqual([".home-sky .home-alert", ".home-sky .home-card", ".home-sky .home-code", ".home-sky .home-skeleton"]);
+    expect(sky).toContain(".home-sky .home-theme {\n  background: transparent;");
+  });
+  it("the Daylight / Dark switch's selected side is the brand orange with black words in both themes; the arc alone is the logo", () => {
+    expect(sky).toContain('.home-sky .home-theme button[aria-pressed="true"] {\n  background: #ff6a00;\n  color: #000000;');
+    const page = readFileSync("src/app/page.tsx", "utf8");
+    expect(page).toContain("/brand/sendbook-arc.png");
+    expect(readFileSync("public/brand/sendbook-arc.png").length).toBeLessThan(10_000);
+  });
+});
+
 describe("loading", () => {
   it("the page does not import the drawing: it is fetched after the page has loaded, with its two small pictures", () => {
     expect(readFileSync("src/app/page.tsx", "utf8")).not.toContain("home-sky-engine");

@@ -239,6 +239,9 @@ export const copy = {
     officialLink: "Join with your PIN",
     admin: "Admin",
     homeLink: "Home",
+    contactLine: "Running a kite competition?",
+    contactButton: "Get in touch on WhatsApp",
+    contactMessage: "Hi! I saw Sendbook and I'd like to know more.",
     homeTitle: (product: string) => `${product}: live scores for kitesurfing Big Air`,
   },
 

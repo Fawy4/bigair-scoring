@@ -52,9 +52,9 @@ body:has(.home[data-theme="dark"]) {
   align-items: center;
 }
 .home-logo {
-  height: 48px;
-  max-width: 12rem;
-  object-fit: contain;
+  display: block;
+  height: 40px;
+  width: auto;
   margin-bottom: 8px;
 }
 .home-wordmark {
@@ -494,10 +494,8 @@ body:has(.home[data-theme="dark"]) {
   }
 }
 .home-sky .home-card,
-.home-sky .home-section,
 .home-sky .home-skeleton,
 .home-sky .home-alert,
-.home-sky .home-empty,
 .home-sky .home-code {
   background: var(--h-bg);
 }
@@ -526,4 +524,28 @@ body:has(.home[data-theme="dark"]) {
 }
 .home-sky .home-dot {
   background: var(--h-orange);
+}
+
+/* the Daylight / Dark switch: its selected side is the brand orange like the other buttons, in both themes */
+.home-sky .home-theme button[aria-pressed="true"] {
+  background: #ff6a00;
+  color: #000000;
+}
+/* "Running a kite competition?" and its orange button, under the tagline; the link looks like Go */
+.home-contact {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.home-contact p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.home-contact .home-go {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
 }
