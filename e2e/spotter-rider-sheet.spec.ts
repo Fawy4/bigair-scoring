@@ -919,8 +919,9 @@ test("(i) the clear button empties the trick box in one tap (the attempt keeps i
   expect(l.height).toBeGreaterThanOrEqual(44);
   expect(l.width).toBeLessThanOrEqual(44);
   expect((await strick(spotter, 1).boundingBox())!.width).toBeGreaterThan(130);
-  // the Crash button looks like the Trick list's CRASH button: the same red fill and the same word
-  const crashColour = await sline(spotter, 1).getByTestId("line-crash").evaluate((e) => getComputedStyle(e).backgroundColor);
+  // at rest the Crash button is quiet (a red outline, no fill, the icon and the word) and the red is the Trick list's CRASH red
+  const crashColour = await sline(spotter, 1).getByTestId("line-crash").evaluate((e) => getComputedStyle(e).borderTopColor);
+  expect(await sline(spotter, 1).getByTestId("line-crash").evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
   await spotter.getByTestId("spot-view-list").click();
   expect(await spotter.getByTestId("crash-button").evaluate((e) => getComputedStyle(e).backgroundColor)).toBe(crashColour);
   await expect(spotter.getByTestId("crash-button")).toHaveText("CRASH");

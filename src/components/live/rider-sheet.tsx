@@ -187,8 +187,8 @@ function LineRow({
                 if (e.key === "Enter") (e.target as HTMLInputElement).blur();
               }}
               className={cn(
-                "h-11 w-14 shrink-0 rounded-full border bg-beach-bg px-1 py-0 text-center text-digit font-bold leading-none text-beach-ink",
-                refusal ? "border-beach-failed" : "border-beach-border",
+                "h-11 w-14 shrink-0 rounded-full border bg-beach-fill px-1 py-0 text-center text-digit font-bold leading-none text-beach-ink",
+                refusal ? "border-beach-failed" : "border-beach-line",
                 line.kind === "empty" && line.pending !== null && !isMissed && "border-dashed",
                 pulse && !refusal && "border-2 border-beach-accent shadow-[0_0_0_3px_color-mix(in_srgb,var(--beach-accent)_35%,transparent)]",
               )}

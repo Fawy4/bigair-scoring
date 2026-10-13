@@ -181,7 +181,7 @@ export function JudgeQueueView(p: JudgeQueueViewProps) {
         ) : (
           <>
             {cur ? (
-              <article key={String(cur.id)} data-testid="queue-card" data-attempt={String(cur.id)} className="flex animate-in fade-in flex-col gap-1.5 rounded-3xl bg-beach-surface p-2 duration-150">
+              <article key={String(cur.id)} data-testid="queue-card" data-attempt={String(cur.id)} className="flex animate-in fade-in flex-col gap-1.5 bg-beach-bg px-0.5 py-1 duration-150">
                 <div className="flex items-center justify-between gap-2">
                   <RiderLabel model={cur.label} variant="live" bare />
                   <span className="flex shrink-0 flex-col items-end gap-0.5">

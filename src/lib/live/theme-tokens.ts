@@ -25,7 +25,7 @@ export interface BeachTokens {
   focus: string;
   /** The one accent colour (electric orange #FF6A00, the brand): the main button, selected state, bars and glows. A fill, never text on a light page. */
   accent: string;
-  /** The selected-state colour (teal): selected switch, tab, chip, step, rider card. Orange is "act now" only. */
+  /** The selected-state colour (teal): selected switch, tab, filter, step, rider card. Orange is "act now" only. */
   selected: string;
   /** Text on a `selected` fill. */
   onSelected: string;

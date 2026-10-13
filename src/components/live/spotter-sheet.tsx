@@ -213,8 +213,8 @@ function SheetLineRow({
   const sayState = tapToLog || (logged && !mine) || freeText;
 
   return (
-    <li ref={row} data-testid="spotter-line" data-line={line.n} data-state={line.state} data-crash={crash ? "true" : "false"} className={cn("flex scroll-mt-20 flex-col gap-0 px-2 py-1", dim && "bg-beach-bg text-beach-muted", crash && logged && "bg-beach-bg")}>
-      <div className="flex items-center gap-1.5">
+    <li ref={row} data-testid="spotter-line" data-line={line.n} data-state={line.state} data-crash={crash ? "true" : "false"} className={cn("flex scroll-mt-20 flex-col gap-0 px-1.5 py-1", dim && "bg-beach-bg text-beach-muted", crash && logged && "bg-beach-bg")}>
+      <div className="flex items-center gap-1">
         <span className="flex w-6 shrink-0 flex-col items-center leading-none">
           <span data-testid="line-number" className="text-lg font-bold tabular-nums">
             {line.n}
@@ -272,7 +272,7 @@ function SheetLineRow({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") (e.target as HTMLInputElement).blur(); // closes the keyboard; it never logs
                 }}
-                className="h-11 w-full min-w-0 rounded-full border border-beach-line bg-beach-fill py-0 pl-3 pr-9 text-body font-medium text-ellipsis text-beach-ink placeholder:font-medium placeholder:text-beach-muted disabled:bg-beach-surface"
+                className="h-11 w-full min-w-0 rounded-full border border-beach-line bg-beach-fill py-0 pl-3 pr-8 text-body font-medium text-ellipsis text-beach-ink placeholder:font-medium placeholder:text-beach-muted disabled:bg-beach-surface"
               />
               {!text && canType && speech.supported ? (
                 <button
@@ -310,7 +310,7 @@ function SheetLineRow({
           disabled={!canType}
           onPointerDown={(e) => e.preventDefault()}
           onClick={tapCrash}
-          className={cn("inline-flex h-11 w-[4.5rem] shrink-0 items-center justify-center gap-1 rounded-full border border-beach-crash px-1 text-small font-bold disabled:opacity-50", crash ? "bg-beach-crash text-beach-on-crash ring-[3px] ring-beach-ink ring-offset-1 ring-offset-beach-bg" : "bg-transparent text-beach-crash")}
+          className={cn("inline-flex h-11 w-16 shrink-0 items-center justify-center gap-0.5 rounded-full border border-beach-crash px-1 text-small font-bold disabled:opacity-50", crash ? "bg-beach-crash text-beach-on-crash ring-[3px] ring-beach-ink ring-offset-1 ring-offset-beach-bg" : "bg-transparent text-beach-crash")}
         >
           {crash ? <Check aria-hidden className="size-4" strokeWidth={3} /> : <Zap aria-hidden className="size-4" />}
           {copy.live.builder.crash}
