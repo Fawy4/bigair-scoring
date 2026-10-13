@@ -115,7 +115,7 @@ export function ViewAs({ eventId, sim }: { eventId: string; sim: Sim }) {
             <label className="text-body font-semibold" htmlFor="view-rider-select">
               {T.pickRider}
             </label>
-            <select id="view-rider-select" data-testid="view-rider-select" value={rider} onChange={(e) => setRider(e.target.value)} className="h-[var(--org-ctl)] max-w-full rounded-[8px] border border-beach-border bg-beach-bg px-3 text-body font-semibold text-beach-ink">
+            <select id="view-rider-select" data-testid="view-rider-select" value={rider} onChange={(e) => setRider(e.target.value)} className="h-[var(--org-ctl)] max-w-full rounded-[8px] border border-beach-border bg-beach-fill px-3 text-body font-semibold text-beach-ink">
               {status.riders.map((r) => (
                 <option key={r.entryId} value={r.entryId}>
                   {r.name} · {r.divisionName}

@@ -17,12 +17,22 @@ export interface BeachTokens {
   ink: string;
   /** Secondary text. Never light grey. */
   muted: string;
-  /** The frame of a control (pad button, field, toggle): 4.5:1 so a button is findable in the sun. */
+  /** The thin hairline of a control at rest (a shape, not text): 3:1 on the page so a button is still findable in the sun. */
   border: string;
+  /** The soft fill of a control at rest (button, field, rider card): light grey in Day, dark grey in Dark. */
+  fill: string;
   /** Keyboard focus ring. */
   focus: string;
   /** The one accent colour (electric orange #FF6A00, the brand): the main button, selected state, bars and glows. A fill, never text on a light page. */
   accent: string;
+  /** The selected-state colour (teal): selected switch, tab, chip, step, rider card. Orange is "act now" only. */
+  selected: string;
+  /** Text on a `selected` fill. */
+  onSelected: string;
+  /** The scoreboard bar (the header of the officials' screens): near-black in both themes, with white and grey text. */
+  board: string;
+  onBoard: string;
+  boardMuted: string;
   /** Text on an `accent` fill: black (7.31:1); white on orange is only 2.87:1. */
   onAccent: string;
   /** The accent as text. In Day it is the page ink (orange on white is 2.87:1, so orange is never text there); in Dark it is the orange itself, and only on `bg` (#000000, 7.31:1). */
@@ -65,11 +75,17 @@ export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
     line: "#dcdcdc",
     ink: "#111111",
     muted: "#3a3a3a",
-    border: "#6b6b6b",
+    border: "#8c8c8c",
+    fill: "#f2f2f2",
     focus: "#111111",
     accent: "#ff6a00",
     onAccent: "#000000",
     accentText: "#111111",
+    selected: "#115e59",
+    onSelected: "#ffffff",
+    board: "#111111",
+    onBoard: "#ffffff",
+    boardMuted: "#b0b0b0",
     live: "#14532d",
     pending: "#1e3a8a",
     failed: "#9f1239",
@@ -95,15 +111,21 @@ export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
     line: "#2a2a2a",
     ink: "#ffffff",
     muted: "#b0b0b0",
-    border: "#8c8c8c",
+    border: "#5a5a5a",
+    fill: "#1c1c1c",
     focus: "#ffffff",
     accent: "#ff6a00",
     onAccent: "#000000",
     accentText: "#ff6a00",
+    selected: "#2dd4bf",
+    onSelected: "#000000",
+    board: "#111111",
+    onBoard: "#ffffff",
+    boardMuted: "#b0b0b0",
     live: "#86efac",
     pending: "#9ec5ff",
     failed: "#fda4af",
-    crash: "#fca5a5",
+    crash: "#ff6b6b",
     onCrash: "#000000",
     outlier: "#fcd34d",
     missing: "#c4c4c4",
@@ -135,14 +157,19 @@ export const TEXT_PAIRS: ReadonlyArray<readonly [TokenName, TokenName]> = [
   ["pending", "surface"],
   ["failed", "bg"],
   ["failed", "surface"],
+  // crash words sit on the page itself (Dark #FF6B6B is 8.6:1 on #000000, but only 6.8:1 on #111111), never on a grey surface
   ["crash", "bg"],
-  ["crash", "surface"],
   ["outlier", "bg"],
   ["outlier", "surface"],
   ["missing", "bg"],
   ["missing", "surface"],
   ["onAccent", "accent"],
   ["accentText", "bg"],
+  ["onSelected", "selected"],
+  ["onBoard", "board"],
+  ["boardMuted", "board"],
+  ["ink", "fill"],
+  ["muted", "fill"],
   ["onCrash", "crash"],
   ["ink", "tintCrash"],
   ["ink", "tintGrey"],

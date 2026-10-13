@@ -110,7 +110,7 @@ export function TrickBuilder({
         data-count={n}
         aria-pressed={n > 0}
         onClick={() => onTapBlock(blockId(b))}
-        className={cn("flex min-h-row w-full shrink-0 items-center justify-between gap-1 rounded-lg border px-2 text-left text-small font-semibold leading-tight", n > 0 ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}
+        className={cn("flex min-h-row w-full shrink-0 items-center justify-between gap-1 rounded-lg border px-2 text-left text-small font-semibold leading-tight", n > 0 ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-fill text-beach-ink")}
       >
         <span className="min-w-0">{b.label}</span>
         {n > 1 ? <span className="shrink-0 tabular-nums">×{n}</span> : null}
@@ -139,7 +139,7 @@ export function TrickBuilder({
                     data-direction-button
                     aria-pressed={on}
                     onClick={() => onTapDirection(b.key)}
-                    className={cn("inline-flex min-h-bar w-full items-center justify-center gap-1.5 rounded-full text-name font-bold", on ? "border-4 border-beach-ink bg-beach-surface text-beach-ink" : "border border-beach-border bg-beach-bg text-beach-ink")}
+                    className={cn("inline-flex min-h-bar w-full items-center justify-center gap-1.5 rounded-full text-name font-bold", on ? "border-4 border-beach-ink bg-beach-surface text-beach-ink" : "border border-beach-border bg-beach-fill text-beach-ink")}
                   >
                     {on ? <Check aria-hidden className="size-5" strokeWidth={3} /> : null}
                     {b.label}
@@ -201,7 +201,7 @@ export function TrickBuilder({
                       data-testid="sequence-block"
                       aria-label={T.removeBlock(`${m}${labelOf(item.id)}`)}
                       onClick={() => onRemove(i)}
-                      className="inline-flex min-h-tap shrink-0 items-center gap-1 rounded-lg border border-beach-border bg-beach-bg px-1.5 text-composed font-semibold text-beach-ink"
+                      className="inline-flex min-h-tap shrink-0 items-center gap-1 rounded-lg border border-beach-border bg-beach-fill px-1.5 text-composed font-semibold text-beach-ink"
                     >
                       {m}
                       {labelOf(item.id)}
@@ -210,7 +210,7 @@ export function TrickBuilder({
                   );
                 })}
                 {freeText ? (
-                  <button type="button" data-testid="free-text" aria-label={T.removeBlock(freeText)} onClick={onClearFreeText} className="inline-flex min-h-tap shrink-0 items-center gap-1 rounded-lg border border-dashed border-beach-border bg-beach-bg px-1.5 text-composed font-semibold text-beach-ink">
+                  <button type="button" data-testid="free-text" aria-label={T.removeBlock(freeText)} onClick={onClearFreeText} className="inline-flex min-h-tap shrink-0 items-center gap-1 rounded-lg border border-dashed border-beach-border bg-beach-fill px-1.5 text-composed font-semibold text-beach-ink">
                     {freeText}
                     <X aria-hidden className="size-3 text-beach-muted" />
                   </button>
@@ -243,7 +243,7 @@ export function TrickBuilder({
                   if (e.key === "Enter") typed.onRead(); // reads the words into blocks; it never logs (Log is its own button)
                 }}
                 placeholder={T.typePlaceholder}
-                className="min-h-bar w-full min-w-0 rounded-lg border border-beach-border bg-beach-bg py-0 pl-2 pr-10 text-body font-medium text-beach-ink placeholder:text-beach-muted"
+                className="min-h-bar w-full min-w-0 rounded-lg border border-beach-border bg-beach-fill py-0 pl-2 pr-10 text-body font-medium text-beach-ink placeholder:text-beach-muted"
               />
               {typed.value ? (
                 <button

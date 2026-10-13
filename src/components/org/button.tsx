@@ -25,7 +25,7 @@ export type ButtonProps = Base &
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary: "border-beach-accent bg-beach-accent text-beach-on-accent",
-  secondary: "border-beach-border bg-beach-bg text-beach-ink hover:bg-beach-surface",
+  secondary: "border-beach-border bg-beach-fill text-beach-ink hover:bg-beach-surface",
   quiet: "border-transparent bg-transparent text-beach-ink hover:bg-beach-surface",
   danger: "border-beach-crash bg-beach-bg text-beach-crash hover:bg-beach-surface",
 };

@@ -364,7 +364,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
         {notices.map((n) => (
           <p key={n.key} role="alert" className="flex items-center justify-between gap-2 rounded-lg border border-beach-failed bg-beach-surface px-2 py-1 text-small font-semibold">
             <span className="min-w-0">{n.text}</span>
-            <button type="button" className="min-h-tap shrink-0 rounded-lg border border-beach-border bg-beach-bg px-2" onClick={() => setNotices((l) => l.filter((x) => x.key !== n.key))}>
+            <button type="button" className="min-h-tap shrink-0 rounded-lg border border-beach-border bg-beach-fill px-2" onClick={() => setNotices((l) => l.filter((x) => x.key !== n.key))}>
               {copy.spotter.dismiss}
             </button>
           </p>

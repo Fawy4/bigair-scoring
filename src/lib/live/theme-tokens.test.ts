@@ -23,13 +23,12 @@ describe.each(themes)("%s theme tokens", (_name, t) => {
     expect(failures).toEqual([]);
   });
   it("has every named token", () => {
-    for (const key of ["bg", "surface", "line", "ink", "muted", "border", "focus", "accent", "onAccent", "accentText", "live", "pending", "failed", "crash", "outlier", "missing", "onCrash", "tintCrash", "tintGrey", "tintGrade0", "tintGrade1", "tintGrade2", "tintGrade3", "tintGrade4", "tintDist0", "tintDist1", "tintDist2", "tintDist3"] as const) {
+    for (const key of ["bg", "surface", "line", "ink", "muted", "border", "fill", "focus", "accent", "onAccent", "accentText", "selected", "onSelected", "board", "onBoard", "boardMuted", "live", "pending", "failed", "crash", "outlier", "missing", "onCrash", "tintCrash", "tintGrey", "tintGrade0", "tintGrade1", "tintGrade2", "tintGrade3", "tintGrade4", "tintDist0", "tintDist1", "tintDist2", "tintDist3"] as const) {
       expect(t[key]).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
-  it("the frame of a control (pad button, field) stands out by 4.5:1 and the focus ring by 7:1; the soft card line is decoration only", () => {
-    expect(contrastRatio(t.border, t.bg)).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio(t.border, t.surface)).toBeGreaterThanOrEqual(4.5);
+  it("the hairline of a control (a shape, not text) stands out by 3:1 on the page and the focus ring by 7:1; the soft card line is decoration only", () => {
+    expect(contrastRatio(t.border, t.bg)).toBeGreaterThanOrEqual(3);
     expect(contrastRatio(t.focus, t.bg)).toBeGreaterThanOrEqual(MIN);
     expect(contrastRatio(t.focus, t.surface)).toBeGreaterThanOrEqual(MIN);
   });
@@ -96,9 +95,44 @@ describe("the brand colours and the rules about orange", () => {
       for (const bg of [t.bg, t.surface]) {
         expect(contrastRatio(t.ink, bg)).toBeGreaterThanOrEqual(MIN);
         expect(contrastRatio(t.muted, bg)).toBeGreaterThanOrEqual(MIN);
-        expect(contrastRatio(t.border, bg)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(t.border, t.bg)).toBeGreaterThanOrEqual(3);
       }
     }
+  });
+});
+
+describe("teal = selected, and the soft filled controls", () => {
+  it("Day teal #115E59 carries white at 7.6:1; Dark teal #2DD4BF carries black at 11.3:1", () => {
+    expect(BEACH_THEMES.day.selected).toBe("#115e59");
+    expect(contrastRatio("#ffffff", "#115e59")).toBeCloseTo(7.6, 1);
+    expect(BEACH_THEMES.dark.selected).toBe("#2dd4bf");
+    expect(contrastRatio("#000000", "#2dd4bf")).toBeCloseTo(11.3, 1);
+  });
+  it("a selected shape stands out from the page by 3:1 in both themes, and from the orange (act now) by its own hue", () => {
+    for (const t of Object.values(BEACH_THEMES)) {
+      expect(contrastRatio(t.selected, t.bg)).toBeGreaterThanOrEqual(3);
+      expect(t.selected).not.toBe(t.accent);
+    }
+  });
+  it("hairlines: about #8C8C8C on white (3.4:1) and #5A5A5A on black (3.0:1)", () => {
+    expect(contrastRatio(BEACH_THEMES.day.border, "#ffffff")).toBeCloseTo(3.4, 1);
+    expect(contrastRatio(BEACH_THEMES.dark.border, "#000000")).toBeCloseTo(3.0, 1);
+  });
+  it("Dark crash is a vivid red #FF6B6B that carries black at 7:1 or better (7.6:1)", () => {
+    expect(BEACH_THEMES.dark.crash).toBe("#ff6b6b");
+    expect(contrastRatio(BEACH_THEMES.dark.onCrash, BEACH_THEMES.dark.crash)).toBeGreaterThanOrEqual(7);
+    expect(contrastRatio("#000000", "#ff6b6b")).toBeCloseTo(7.6, 1);
+  });
+  it("the scoreboard bar is the brand near-black with white (and brand grey) text in both themes", () => {
+    for (const t of Object.values(BEACH_THEMES)) {
+      expect(t.board).toBe("#111111");
+      expect(contrastRatio(t.onBoard, t.board)).toBeGreaterThanOrEqual(7);
+      expect(contrastRatio(t.boardMuted, t.board)).toBeCloseTo(8.71, 2);
+    }
+  });
+  it("the resting fill is light grey in Day and dark grey in Dark, and differs from the page", () => {
+    expect(relativeLuminance(BEACH_THEMES.day.fill)).toBeLessThan(relativeLuminance(BEACH_THEMES.day.bg));
+    expect(relativeLuminance(BEACH_THEMES.dark.fill)).toBeGreaterThan(relativeLuminance(BEACH_THEMES.dark.bg));
   });
 });
 

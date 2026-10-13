@@ -31,7 +31,7 @@ export function ReadinessList({ checks, onFix }: { checks: readonly CheckRow[]; 
       testId="dashboard-missing"
       actions={
         left === 0 ? (
-          <span data-testid="dashboard-ready" className="text-small font-semibold text-beach-accent">
+          <span data-testid="dashboard-ready" className="text-small font-semibold text-beach-accent-text">
             {orgCopy.dashboard.ready}
           </span>
         ) : (

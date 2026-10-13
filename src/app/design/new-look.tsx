@@ -8,7 +8,7 @@ import { ThemedPhone } from "@/components/live/phone-frame";
 import { RiderSheetView, ViewSwitch } from "@/components/live/rider-sheet";
 import { ScreenHeader } from "@/components/live/screen-header";
 import { SpotterSheetView } from "@/components/live/spotter-sheet";
-import { Chip } from "@/components/live/chip";
+import { PillSwitch } from "@/components/live/chip";
 import { designSheetLines, designSpotterAttempts } from "@/lib/live/design-sheets";
 import { judgeQueue, KOTA, previewVocab, previewView } from "@/lib/live/design-fixtures";
 import type { SheetLine } from "@/lib/live/rider-sheet";
@@ -70,14 +70,16 @@ function SpotterSheetDemo() {
   const [mode, setMode] = useState<"sheet" | "list">("sheet");
   const riders: LoggerRider[] = q.riders.map((r) => ({ id: r.id, label: r.label, attempts: attempts.filter((a) => a.entryId === r.id).length, max: r.max }));
   const switcher = (
-    <div role="group" aria-label={copy.spotterSheet.switchLabel} data-testid="view-switch" className="flex items-center gap-1.5">
-      <Chip pressed={mode === "sheet"} onClick={() => setMode("sheet")}>
-        {copy.spotterSheet.sheet}
-      </Chip>
-      <Chip pressed={mode === "list"} onClick={() => setMode("list")}>
-        {copy.spotterSheet.list}
-      </Chip>
-    </div>
+    <PillSwitch
+      label={copy.spotterSheet.switchLabel}
+      testId="view-switch"
+      value={mode}
+      onChange={setMode}
+      options={[
+        { key: "sheet", text: copy.spotterSheet.sheet },
+        { key: "list", text: copy.spotterSheet.list },
+      ]}
+    />
   );
   return (
     <>
@@ -99,7 +101,7 @@ function HeadPhoneDemo() {
     <>
       <div role="tablist" aria-label={T.label} className="grid grid-cols-2 border-b border-beach-line bg-beach-bg">
         {(["score", "control"] as const).map((t) => (
-          <button key={t} type="button" role="tab" data-tab={t} aria-selected={tab === t} onClick={() => setTab(t)} className={cn("min-h-tap text-body font-bold", tab === t ? "border-b-4 border-beach-accent text-beach-ink" : "border-b-4 border-transparent text-beach-muted")}>
+          <button key={t} type="button" role="tab" data-tab={t} aria-selected={tab === t} onClick={() => setTab(t)} className={cn("min-h-tap text-body font-bold", tab === t ? "border-b-4 border-beach-selected text-beach-ink" : "border-b-4 border-transparent text-beach-muted")}>
             {t === "score" ? T.score : T.control}
           </button>
         ))}

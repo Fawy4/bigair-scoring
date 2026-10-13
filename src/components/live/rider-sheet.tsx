@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check, Flag, Flame } from "lucide-react";
-import { Chip } from "./chip";
+import { Chip, PillSwitch } from "./chip";
 import type { ConnectionStatus } from "./connection-badge";
 import type { FlagStripModel } from "./flag-strip";
 import type { TimerState } from "./heat-timer";
@@ -24,14 +24,16 @@ const dirWord = (d: "left" | "right" | null) => (d === "left" ? copy.live.summar
 /** The switch "Queue / Rider sheet". Remembered per device by the parent. */
 export function ViewSwitch({ view, onChange }: { view: "queue" | "sheet"; onChange: (v: "queue" | "sheet") => void }) {
   return (
-    <div role="group" aria-label={T.switchLabel} data-testid="view-switch" className="flex items-center gap-1.5">
-      <Chip data-testid="view-queue" pressed={view === "queue"} onClick={() => onChange("queue")}>
-        {T.queue}
-      </Chip>
-      <Chip data-testid="view-sheet" pressed={view === "sheet"} onClick={() => onChange("sheet")}>
-        {T.sheet}
-      </Chip>
-    </div>
+    <PillSwitch
+      label={T.switchLabel}
+      testId="view-switch"
+      value={view}
+      onChange={onChange}
+      options={[
+        { key: "queue", text: T.queue, testId: "view-queue" },
+        { key: "sheet", text: T.sheet, testId: "view-sheet" },
+      ]}
+    />
   );
 }
 

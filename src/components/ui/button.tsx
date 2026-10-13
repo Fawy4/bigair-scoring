@@ -11,8 +11,8 @@ const buttonVariants = cva(
       variant: {
         default: "border-beach-accent bg-primary text-primary-foreground hover:brightness-110",
         destructive: "border-beach-crash bg-background text-beach-crash hover:bg-secondary",
-        outline: "border-input bg-background text-foreground hover:bg-secondary",
-        secondary: "border-input bg-background text-foreground hover:bg-secondary",
+        outline: "border-input bg-beach-fill text-foreground hover:bg-secondary",
+        secondary: "border-input bg-beach-fill text-foreground hover:bg-secondary",
         ghost: "border-transparent bg-transparent text-foreground hover:bg-secondary",
         link: "border-transparent bg-transparent text-foreground underline underline-offset-4",
       },

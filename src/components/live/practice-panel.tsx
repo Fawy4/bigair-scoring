@@ -66,7 +66,7 @@ export function PracticePanel({ ctx, heat, division, attempts, riderIds }: { ctx
       <p className="text-small font-medium">{H.practiceNote}</p>
       <label className="flex items-center justify-between gap-2 text-body font-medium">
         {H.practiceEvery}
-        <input data-testid="practice-seconds" type="number" min={3} max={120} value={every} disabled={running} onChange={(e) => setEvery(Number(e.target.value) || 20)} className="min-h-tap w-20 rounded-xl border border-beach-border bg-beach-bg px-2 text-body text-beach-ink" />
+        <input data-testid="practice-seconds" type="number" min={3} max={120} value={every} disabled={running} onChange={(e) => setEvery(Number(e.target.value) || 20)} className="min-h-tap w-20 rounded-xl border border-beach-border bg-beach-fill px-2 text-body text-beach-ink" />
       </label>
       <div className="flex items-center gap-2">
         {running ? (

@@ -73,13 +73,13 @@ function Row({ row, actions, tolerance, judges }: { row: Row; actions: MatrixAct
       <td className="px-1 py-0.5">
         {actions.onSelect && row.state !== "deleted" ? (
           <label className="flex min-h-tap min-w-tap cursor-pointer items-center justify-center">
-            <input type="checkbox" data-testid="row-select" aria-label={`${copy.live.console.select} ${T.attempt} ${row.seq} (${row.label.primary.text})`} checked={actions.selected?.includes(row.id) ?? false} onChange={() => actions.onSelect!(row)} className="size-5 accent-[var(--beach-accent)]" />
+            <input type="checkbox" data-testid="row-select" aria-label={`${copy.live.console.select} ${T.attempt} ${row.seq} (${row.label.primary.text})`} checked={actions.selected?.includes(row.id) ?? false} onChange={() => actions.onSelect!(row)} className="size-5 accent-[var(--beach-selected)]" />
           </label>
         ) : null}
       </td>
       <th scope="row" className="px-1 py-0.5 text-left">
         {actions.onAttempt && row.state !== "deleted" ? (
-          <button type="button" data-testid="attempt-menu-button" aria-label={`${T.attempt} ${row.seq}: ${copy.live.console.attemptMenu}`} onClick={() => actions.onAttempt!(row)} className="inline-flex min-h-tap min-w-tap items-center justify-center gap-0.5 rounded-lg border border-beach-border bg-beach-bg text-body font-semibold tabular-nums">
+          <button type="button" data-testid="attempt-menu-button" aria-label={`${T.attempt} ${row.seq}: ${copy.live.console.attemptMenu}`} onClick={() => actions.onAttempt!(row)} className="inline-flex min-h-tap min-w-tap items-center justify-center gap-0.5 rounded-lg border border-beach-border bg-beach-fill text-body font-semibold tabular-nums">
             {row.seq}
             <MoreVertical aria-hidden className="size-4" />
           </button>
@@ -171,7 +171,7 @@ function PendingRowView({ row, judges, onClear }: { row: PendingMatrixRow; judge
           <div data-testid="pending-cell" data-judge={c.judgeId} data-has-note={c.value !== null} className={cn("flex min-h-row min-w-[4rem] items-center justify-center rounded-lg border border-dashed px-1 text-body font-semibold tabular-nums", c.value !== null ? "border-beach-muted bg-beach-surface text-beach-ink" : "border-beach-line")}>
             {c.label}
             {onClear && c.noteId ? (
-              <button type="button" data-testid="clear-note" data-judge={c.judgeId} aria-label={T.clearNoteAria(judges?.find((j) => j.id === c.judgeId)?.tag ?? T.aJudge, row.label.primary.text, row.n)} onClick={() => onClear(row, c.judgeId, c.noteId!)} className="ml-1 min-h-tap rounded-lg border border-beach-border bg-beach-bg px-1.5 text-small font-semibold text-beach-ink">
+              <button type="button" data-testid="clear-note" data-judge={c.judgeId} aria-label={T.clearNoteAria(judges?.find((j) => j.id === c.judgeId)?.tag ?? T.aJudge, row.label.primary.text, row.n)} onClick={() => onClear(row, c.judgeId, c.noteId!)} className="ml-1 min-h-tap rounded-lg border border-beach-border bg-beach-fill px-1.5 text-small font-semibold text-beach-ink">
                 {T.clearNote}
               </button>
             ) : null}

@@ -701,7 +701,7 @@ export function RulesPanel({
               <Button variant="secondary" onClick={download} {...gate(!valid ? R.saveInvalid : null)}>
                 {R.export}
               </Button>
-              <label className="inline-flex min-h-[var(--org-ctl)] cursor-pointer items-center rounded-[8px] border border-beach-border bg-beach-bg px-3 text-body font-semibold">
+              <label className="inline-flex min-h-[var(--org-ctl)] cursor-pointer items-center rounded-[8px] border border-beach-border bg-beach-fill px-3 text-body font-semibold">
                 {R.import}
                 <input
                   ref={fileInput}

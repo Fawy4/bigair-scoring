@@ -71,7 +71,7 @@ function SoundButton() {
       data-testid="sound-toggle"
       aria-pressed={s.soundOn}
       onClick={() => s.setSoundOn(!s.soundOn)}
-      className="inline-flex min-h-tap items-center gap-1.5 rounded-full border border-beach-border bg-beach-bg px-4 text-body font-bold text-beach-ink"
+      className="inline-flex min-h-tap items-center gap-1.5 rounded-full border border-beach-border bg-beach-fill px-4 text-body font-bold text-beach-ink"
     >
       {s.soundOn ? <Volume2 aria-hidden className="size-4" /> : <VolumeX aria-hidden className="size-4" />}
       {s.soundOn ? copy.live.timer.soundOn : copy.live.timer.soundOff}
@@ -83,13 +83,13 @@ function SoundButton() {
  * The one round settings button at the end of the slim header (New look): it opens Daylight / Dark, Normal / Large and Sound in a small sheet under the header,
  * instead of the row at the bottom of every officials' screen. Closes on a second tap, on Escape and on a tap anywhere else. Nothing moves while it opens (no animation).
  */
-export function SettingsMenu({ hideSound = false }: { hideSound?: boolean }) {
+export function SettingsMenu({ hideSound = false, onBoard = false }: { hideSound?: boolean; onBoard?: boolean }) {
   const s = useContext(Ctx);
   if (!s) return null;
-  return <SettingsMenuBody s={s} hideSound={hideSound} />;
+  return <SettingsMenuBody s={s} hideSound={hideSound} onBoard={onBoard} />;
 }
 
-function SettingsMenuBody({ s, hideSound }: { s: Settings; hideSound: boolean }) {
+function SettingsMenuBody({ s, hideSound, onBoard }: { s: Settings; hideSound: boolean; onBoard: boolean }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -116,7 +116,7 @@ function SettingsMenuBody({ s, hideSound }: { s: Settings; hideSound: boolean })
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((v) => !v)}
-        className={cn("inline-flex size-11 items-center justify-center rounded-full border", open ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}
+        className={cn("inline-flex size-11 items-center justify-center rounded-full border", onBoard ? (open ? "border-beach-on-board bg-beach-on-board text-beach-board" : "border-beach-board-muted bg-transparent text-beach-on-board") : open ? "border-beach-selected bg-beach-selected text-beach-on-selected" : "border-beach-border bg-beach-fill text-beach-ink")}
       >
         {open ? <X aria-hidden className="size-5" strokeWidth={2.5} /> : <SlidersHorizontal aria-hidden className="size-5" strokeWidth={2.5} />}
       </button>

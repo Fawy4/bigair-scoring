@@ -24,7 +24,7 @@ export function CopyLink({ url, label, doneLabel }: { url: string; label: string
         setDone(true);
         setTimeout(() => setDone(false), 2500);
       }}
-      className="inline-flex min-h-tap items-center gap-1.5 rounded-xl border border-beach-border bg-beach-bg px-3 text-body font-semibold text-beach-ink"
+      className="inline-flex min-h-tap items-center gap-1.5 rounded-xl border border-beach-border bg-beach-fill px-3 text-body font-semibold text-beach-ink"
     >
       {done ? <Check aria-hidden className="size-4" /> : <Copy aria-hidden className="size-4" />}
       {done ? doneLabel : label}

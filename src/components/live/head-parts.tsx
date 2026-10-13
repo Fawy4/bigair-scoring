@@ -41,10 +41,10 @@ export function Btn({ children, onClick, disabled, tone = "plain", testId, reaso
         aria-pressed={pressed}
         onClick={onClick}
         className={cn(
-          "inline-flex items-center justify-center gap-1 rounded-xl border px-3 text-body font-semibold",
-          pressed ? "border-2 border-beach-accent" : "",
+          "inline-flex items-center justify-center gap-1 rounded-full border px-3 text-body font-bold",
+          pressed ? "border-2 border-beach-selected" : "",
           size === "bar" ? "min-h-bar" : "min-h-tap",
-          disabled ? "border-beach-line bg-beach-surface text-beach-muted" : tone === "accent" ? "border-beach-accent bg-beach-accent text-beach-on-accent" : tone === "danger" ? "border-beach-crash bg-beach-bg text-beach-ink" : "border-beach-border bg-beach-bg text-beach-ink",
+          disabled ? "border-beach-line bg-beach-surface text-beach-muted" : tone === "accent" ? "border-beach-accent bg-beach-accent text-beach-on-accent" : tone === "danger" ? "border-beach-crash bg-beach-bg text-beach-crash" : "border-beach-border bg-beach-fill text-beach-ink",
           className,
         )}
       >
@@ -74,7 +74,7 @@ export function DivisionTabs({ divisions, divisionId, liveIds, onPick }: { divis
             data-live={live}
             aria-pressed={divisionId === d.id}
             onClick={() => onPick(d.id)}
-            className={cn("inline-flex min-h-tap items-center gap-1.5 whitespace-normal break-words rounded-xl border px-3 text-left text-body font-semibold", divisionId === d.id ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}
+            className={cn("inline-flex min-h-tap items-center gap-1.5 whitespace-normal break-words rounded-xl border px-3 text-left text-body font-semibold", divisionId === d.id ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-fill text-beach-ink")}
           >
             {d.name}
             {live ? (
@@ -160,7 +160,7 @@ export function WhyLine({ c }: { c: HeadController }) {
 /** "Sound on" / "Sound off": a small button that sits in the top row of the laptop console, or at the end of the timer bar. */
 export function SoundToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
-    <button type="button" data-testid="sound-toggle" aria-pressed={on} onClick={onToggle} className="inline-flex min-h-bar items-center gap-1 rounded-xl border border-beach-border bg-beach-bg px-2 text-small font-semibold text-beach-ink">
+    <button type="button" data-testid="sound-toggle" aria-pressed={on} onClick={onToggle} className="inline-flex min-h-bar items-center gap-1 rounded-xl border border-beach-border bg-beach-fill px-2 text-small font-semibold text-beach-ink">
       {on ? <Volume2 aria-hidden className="size-4" /> : <VolumeX aria-hidden className="size-4" />}
       {on ? copy.live.timer.soundOn : copy.live.timer.soundOff}
     </button>
@@ -192,48 +192,48 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn, bar = false }: 
         {/* the banner has its own full-width line: nothing sits beside it or on top of it, so its words (state, break countdown, next heat) are never cut */}
         {c.flag ? <FlagStrip model={c.flag} size="head" className={bar ? "min-w-[18rem] flex-1 basis-80" : "w-full basis-full"} /> : selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
         {selected && state !== "cancelled" ? (
-          <div className={cn("flex flex-wrap items-center gap-2", bar ? "" : "w-full basis-full")}>
+          <div className={cn(bar ? "flex flex-wrap items-center gap-2" : "grid w-full basis-full grid-cols-2 gap-2")}>
             {c.ctl && c.ctl.id !== selected.id && c.on("start") ? (
-              <span data-testid="start-target" className="text-small font-semibold text-beach-muted">
+              <span data-testid="start-target" className={cn("text-small font-semibold text-beach-muted", !bar && "col-span-2")}>
                 {T.startNext(c.ctlTitle)}
               </span>
             ) : null}
-            {c.flagsOn && !c.armed && c.on("start") ? <PrestartChoice c={c} /> : null}
+            {c.flagsOn && !c.armed && c.on("start") ? <div className={cn(!bar && "col-span-2")}><PrestartChoice c={c} /></div> : null}
             {c.armed ? (
               <>
-                <Btn compact size="bar" testId="start-now" tone="accent" disabled={c.pending} onClick={c.actions.startNowDuringYellow}>
+                <Btn compact size="bar" testId="start-now" tone="accent" className={cn(!bar && "w-full")} disabled={c.pending} onClick={c.actions.startNowDuringYellow}>
                   {T.startNow}
                 </Btn>
-                <Btn compact size="bar" testId="extend-prestart" disabled={c.pending} onClick={c.actions.extend}>
+                <Btn compact size="bar" testId="extend-prestart" className={cn(!bar && "w-full")} disabled={c.pending} onClick={c.actions.extend}>
                   {T.plusOneMin}
                 </Btn>
-                <Btn compact size="bar" testId="abort-start" disabled={c.pending} onClick={c.actions.abort}>
+                <Btn compact size="bar" testId="abort-start" className={cn(!bar && "w-full")} disabled={c.pending} onClick={c.actions.abort}>
                   {T.abort}
                 </Btn>
               </>
             ) : (
-              <Btn compact size="bar" testId="start" tone="accent" className="px-5" reason={c.why("start")} disabled={c.pending || !c.on("start")} onClick={c.requestStart}>
+              <Btn compact size="bar" testId="start" tone="accent" className={cn("px-5", !bar && "w-full")} reason={c.why("start")} disabled={c.pending || !c.on("start")} onClick={c.requestStart}>
                 {c.flagsOn ? T.startSequence : T.start}
               </Btn>
             )}
             {state === "running" && !c.armed ? (
-              <Btn compact size="bar" testId="extend-heat" disabled={c.pending} onClick={c.actions.extendHeat}>
+              <Btn compact size="bar" testId="extend-heat" className={cn(!bar && "w-full")} disabled={c.pending} onClick={c.actions.extendHeat}>
                 {T.plusOneMin}
               </Btn>
             ) : null}
             {state === "paused" || c.armedFrozen ? (
-              <Btn compact size="bar" testId="resume" reason={c.why("resume")} disabled={c.pending || (!c.on("resume") && !c.armedFrozen)} onClick={c.actions.resume}>
+              <Btn compact size="bar" testId="resume" tone={bar ? "plain" : "accent"} className={cn(!bar && "w-full")} reason={c.why("resume")} disabled={c.pending || (!c.on("resume") && !c.armedFrozen)} onClick={c.actions.resume}>
                 {T.resume}
               </Btn>
             ) : (
-              <Btn compact size="bar" testId="pause" reason={c.why("pause")} disabled={c.pending || (!c.on("pause") && !c.armed)} onClick={c.actions.pause}>
+              <Btn compact size="bar" testId="pause" tone={!bar && state === "running" ? "accent" : "plain"} className={cn(!bar && "w-full")} reason={c.why("pause")} disabled={c.pending || (!c.on("pause") && !c.armed)} onClick={c.actions.pause}>
                 {T.pause}
               </Btn>
             )}
-            <Btn compact size="bar" testId="end" reason={c.why("end")} disabled={c.pending || !c.on("end")} onClick={() => { c.setReason(""); c.setConfirmingEnd(true); }}>
+            <Btn compact size="bar" testId="end" className={cn(!bar && "w-full")} reason={c.why("end")} disabled={c.pending || !c.on("end")} onClick={() => { c.setReason(""); c.setConfirmingEnd(true); }}>
               {T.end}
             </Btn>
-            {!bar && !c.armed ? <BreakChoice c={c} /> : null}
+            {!bar && !c.armed ? <div className="col-span-2"><BreakChoice c={c} /></div> : null}
             {bar ? <BreakStrip c={c} inline /> : null}
           </div>
         ) : null}
@@ -244,7 +244,7 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn, bar = false }: 
           <p className="text-body font-semibold">{T.endQuestion}</p>
           <label className="flex flex-col gap-1 text-small font-semibold">
             {T.endReason}
-            <input data-testid="end-reason" value={c.reason} onChange={(e) => c.setReason(e.target.value)} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-3 text-body font-semibold" />
+            <input data-testid="end-reason" value={c.reason} onChange={(e) => c.setReason(e.target.value)} className="min-h-tap rounded-xl border border-beach-border bg-beach-fill px-3 text-body font-semibold" />
           </label>
           <div className="flex gap-1.5">
             <Btn testId="end-confirm" tone="danger" disabled={c.pending} onClick={c.actions.end}>
@@ -296,7 +296,7 @@ export function BreakChoice({ c, compact = false }: { c: HeadController; compact
     <div data-testid="break-choice" role="group" aria-label={V.breakGroup} className={cn("flex flex-col gap-1 rounded-xl border border-beach-line bg-beach-surface px-2 py-1", compact ? "" : "w-full basis-full")}>
       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
         <span className="text-small font-semibold text-beach-muted">{V.breakGroup}</span>
-        <span data-testid="break-length" aria-current="true" className="inline-flex min-h-tap items-center gap-1 rounded-lg border-2 border-beach-accent bg-beach-bg px-2 text-small font-semibold tabular-nums text-beach-ink">
+        <span data-testid="break-length" aria-current="true" className="inline-flex min-h-tap items-center gap-1 rounded-lg border-2 border-beach-selected bg-beach-bg px-2 text-small font-semibold tabular-nums text-beach-ink">
           <Check aria-hidden className="size-3.5" />
           {V.breakPlanned(formatClock(c.breakLengthMs))}
         </span>
@@ -333,7 +333,7 @@ export function BreakChoice({ c, compact = false }: { c: HeadController; compact
                 apply();
               }
             }}
-            className="min-h-tap w-24 rounded-lg border border-beach-border bg-beach-bg px-2 text-small font-semibold tabular-nums"
+            className="min-h-tap w-24 rounded-lg border border-beach-border bg-beach-fill px-2 text-small font-semibold tabular-nums"
           />
           <Btn compact size="bar" testId={`${id}-apply`} disabled={c.pending || !c.planId} onClick={apply}>
             {mode === "add" ? V.breakAddApply : V.breakOtherSet}
@@ -386,7 +386,7 @@ export function PrestartChoice({ c }: { c: HeadController }) {
               c.setPrestart(o.sec as number);
             }
           }}
-          className={cn("inline-flex min-h-tap items-center gap-1 rounded-lg border-2 px-3 text-small font-semibold tabular-nums", o.selected ? "border-beach-accent bg-beach-bg text-beach-ink" : "border-transparent bg-transparent text-beach-muted")}
+          className={cn("inline-flex min-h-tap items-center gap-1 rounded-lg border-2 px-3 text-small font-semibold tabular-nums", o.selected ? "border-beach-selected bg-beach-bg text-beach-ink" : "border-transparent bg-transparent text-beach-muted")}
         >
           {o.selected ? <Check aria-hidden className="size-4" /> : null}
           {o.label}
@@ -416,7 +416,7 @@ export function PrestartChoice({ c }: { c: HeadController }) {
                 apply();
               }
             }}
-            className="min-h-tap w-24 rounded-lg border border-beach-border bg-beach-bg px-2 text-body tabular-nums"
+            className="min-h-tap w-24 rounded-lg border border-beach-border bg-beach-fill px-2 text-body tabular-nums"
           />
           <Btn testId="prestart-other-set" compact onClick={apply}>
             {T.prestartOtherSet}
@@ -461,7 +461,7 @@ function OrderRow({ c, entry, nextId, divisionName }: { c: HeadController; entry
         aria-pressed={selectedHere}
         title={divisionName}
         onClick={() => c.onSelect(heat.id)}
-        className={cn("flex min-h-row w-full flex-wrap items-center gap-x-2 gap-y-0.5 border-l-4 px-2 py-1 text-left text-body", isNext ? "border-beach-accent bg-beach-surface" : "border-transparent", selectedHere ? "font-bold" : "font-semibold")}
+        className={cn("flex min-h-row w-full flex-wrap items-center gap-x-2 gap-y-0.5 border-l-4 px-2 py-1 text-left text-body", isNext ? "border-beach-selected bg-beach-surface" : "border-transparent", selectedHere ? "font-bold" : "font-semibold")}
       >
         <span className="min-w-0 whitespace-normal break-words">{line}</span>
         {isNext ? <Pill tone="accent">{V.nextMark}</Pill> : null}
@@ -550,7 +550,7 @@ export function TimingButtons({ c }: { c: HeadController }) {
           <div className="flex flex-wrap items-end gap-1.5">
             <label className="flex flex-col gap-1 text-small font-semibold">
               {T.restartTime}
-              <input data-testid="restart-time" type="time" value={c.restart} onChange={(e) => c.setRestart(e.target.value)} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body" />
+              <input data-testid="restart-time" type="time" value={c.restart} onChange={(e) => c.setRestart(e.target.value)} className="min-h-tap rounded-xl border border-beach-border bg-beach-fill px-2 text-body" />
             </label>
             <Btn testId="resume-at" tone="accent" disabled={c.pending || !c.restart || !c.planId} onClick={c.actions.resumeAt}>
               {V.resumeAt}
@@ -567,14 +567,14 @@ export function WindButton({ eventId }: { eventId: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="flex flex-col gap-1.5">
-      <button type="button" data-testid="wind-button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="inline-flex min-h-tap items-center justify-center gap-1.5 self-start rounded-xl border border-beach-border bg-beach-bg px-3 text-body font-semibold text-beach-ink">
+      <button type="button" data-testid="wind-button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="inline-flex min-h-tap items-center justify-center gap-1.5 self-start rounded-xl border border-beach-border bg-beach-fill px-3 text-body font-semibold text-beach-ink">
         <Wind aria-hidden className="size-4" />
         {V.windButton}
       </button>
       {open ? (
         <div data-testid="wind-panel" className="flex flex-col gap-1.5">
           <WindCallControl eventId={eventId} />
-          <button type="button" onClick={() => setOpen(false)} className="inline-flex min-h-tap items-center justify-center self-start rounded-xl border border-beach-border bg-beach-bg px-3 text-body font-semibold text-beach-ink">
+          <button type="button" onClick={() => setOpen(false)} className="inline-flex min-h-tap items-center justify-center self-start rounded-xl border border-beach-border bg-beach-fill px-3 text-body font-semibold text-beach-ink">
             {V.windClose}
           </button>
         </div>
@@ -599,7 +599,7 @@ export function VisibilityBox({ c }: { c: HeadController }) {
             aria-pressed={selected.public_live === v}
             disabled={c.pending}
             onClick={() => c.act(HL.saved, async () => (await setHeatPublicLive(selected.id, v)) as ActionResult, review.onChanged)}
-            className={cn("min-h-tap rounded-xl border px-1 text-small font-semibold", selected.public_live === v ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}
+            className={cn("min-h-tap rounded-xl border px-1 text-small font-semibold", selected.public_live === v ? "border-beach-selected bg-beach-selected text-beach-on-selected" : "border-beach-border bg-beach-fill text-beach-ink")}
           >
             {text}
           </button>
@@ -666,7 +666,7 @@ export function ReviewButtons({ c, compact = false, visibility = true }: { c: He
         <div data-testid="cancel-panel" className="flex flex-col gap-1.5 rounded-xl border border-beach-crash bg-beach-bg p-2">
           <label className="flex flex-col gap-1 text-small font-semibold">
             {T.cancelReason}
-            <input data-testid="cancel-reason" value={c.reason} onChange={(e) => c.setReason(e.target.value)} placeholder={T.cancelReasonPlaceholder} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body" />
+            <input data-testid="cancel-reason" value={c.reason} onChange={(e) => c.setReason(e.target.value)} placeholder={T.cancelReasonPlaceholder} className="min-h-tap rounded-xl border border-beach-border bg-beach-fill px-2 text-body" />
           </label>
           <div className="flex gap-1.5">
             <Btn testId="cancel-confirm" tone="danger" disabled={c.pending} onClick={c.actions.cancel}>

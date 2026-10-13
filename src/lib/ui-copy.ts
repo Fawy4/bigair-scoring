@@ -3720,6 +3720,7 @@ export const copy = {
     placeholder: "Type the trick",
     left: "L",
     right: "R",
+    directionAria: (n: number) => `Attempt ${n}: direction`,
     leftAria: (n: number) => `Attempt ${n}: Left`,
     rightAria: (n: number) => `Attempt ${n}: Right`,
     crash: "Crash",

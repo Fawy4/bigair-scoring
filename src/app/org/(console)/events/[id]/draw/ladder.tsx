@@ -85,7 +85,7 @@ function Seat({ draw, scheme, round, heat, index, editable, picked, target, menu
       data-state={isPicked ? "picked" : isTarget ? "target" : drop.isOver ? "over" : "idle"}
       className={cn(
         "flex items-center gap-1.5 rounded-lg border px-1.5 py-0",
-        isPicked ? "border-beach-line bg-beach-tint-grade0" : isTarget ? "border-beach-accent bg-beach-surface" : drop.isOver ? "border-beach-line bg-beach-surface" : "border-beach-line bg-beach-bg",
+        isPicked ? "border-beach-line bg-beach-tint-grade0" : isTarget ? "border-beach-selected bg-beach-surface" : drop.isOver ? "border-beach-line bg-beach-surface" : "border-beach-line bg-beach-bg",
         !slot.entrantId && !slot.from ? "border-dashed" : "",
       )}
     >

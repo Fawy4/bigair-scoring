@@ -31,7 +31,7 @@ export function HeatTimer({ remainingMs, state, size = "slim", soundOn, onToggle
         </Pill>
       </span>
       {onToggleSound ? (
-        <button type="button" aria-pressed={!!soundOn} onClick={onToggleSound} className="inline-flex min-h-tap items-center gap-1 rounded-full border border-beach-border bg-beach-bg px-4 text-small font-bold text-beach-ink">
+        <button type="button" aria-pressed={!!soundOn} onClick={onToggleSound} className="inline-flex min-h-tap items-center gap-1 rounded-full border border-beach-border bg-beach-fill px-4 text-small font-bold text-beach-ink">
           {soundOn ? <Volume2 aria-hidden className="size-4" /> : <VolumeX aria-hidden className="size-4" />}
           {soundOn ? T.soundOn : T.soundOff}
         </button>

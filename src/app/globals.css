@@ -59,7 +59,7 @@
     min-height: var(--org-ctl);
     border: 1px solid var(--beach-border);
     border-radius: 12px;
-    background: var(--beach-bg);
+    background: var(--beach-fill);
     color: var(--beach-ink);
     padding: 0 12px;
     font-weight: 500;
@@ -98,7 +98,7 @@
     width: 20px;
     height: 20px;
     flex: none;
-    accent-color: var(--beach-accent);
+    accent-color: var(--beach-selected);
   }
   :where(.org-console) :focus-visible {
     outline: 2px solid var(--beach-focus);
@@ -113,7 +113,7 @@
     padding: 0 16px;
     border: 1px solid var(--beach-border);
     border-radius: 9999px;
-    background: var(--beach-bg);
+    background: var(--beach-fill);
     color: var(--beach-ink);
     font-size: var(--size-body, 14px);
     font-weight: 700;
@@ -203,14 +203,14 @@
     transform: translate(-50%, -50%);
     border: 1px solid var(--beach-border);
     border-radius: 9999px;
-    background: var(--beach-bg);
+    background: var(--beach-fill);
   }
   :where(.org-console) .help-btn[aria-expanded="true"] {
-    color: var(--beach-on-accent);
+    color: var(--beach-on-selected);
   }
   :where(.org-console) .help-btn[aria-expanded="true"]::before {
-    border-color: var(--beach-accent);
-    background: var(--beach-accent);
+    border-color: var(--beach-selected);
+    background: var(--beach-selected);
   }
   :where(.org-console) .help-note {
     display: block;
@@ -372,7 +372,7 @@ body:has(.print-sheet) {
 /* small labels on seats and heats ("changed by hand", "started"): text, never colour alone */
 .badge-note {
   display: inline-block;
-  border: 1px solid var(--beach-border, #6b6b6b);
+  border: 1px solid var(--beach-border, #8c8c8c);
   border-radius: 9999px;
   padding: 0 0.5rem;
   font-size: var(--size-small, 12px);
@@ -392,11 +392,17 @@ body:has(.print-sheet) {
   --beach-line: #dcdcdc;
   --beach-ink: #111111;
   --beach-muted: #3a3a3a;
-  --beach-border: #6b6b6b;
+  --beach-border: #8c8c8c;
+  --beach-fill: #f2f2f2;
   --beach-focus: #111111;
   --beach-accent: #ff6a00;
   --beach-on-accent: #000000;
   --beach-accent-text: #111111;
+  --beach-selected: #115e59;
+  --beach-on-selected: #ffffff;
+  --beach-board: #111111;
+  --beach-on-board: #ffffff;
+  --beach-board-muted: #b0b0b0;
   --beach-live: #14532d;
   --beach-pending: #1e3a8a;
   --beach-failed: #9f1239;
@@ -423,15 +429,21 @@ body:has(.print-sheet) {
   --beach-line: #2a2a2a;
   --beach-ink: #ffffff;
   --beach-muted: #b0b0b0;
-  --beach-border: #8c8c8c;
+  --beach-border: #5a5a5a;
+  --beach-fill: #1c1c1c;
   --beach-focus: #ffffff;
   --beach-accent: #ff6a00;
   --beach-on-accent: #000000;
   --beach-accent-text: #ff6a00;
+  --beach-selected: #2dd4bf;
+  --beach-on-selected: #000000;
+  --beach-board: #111111;
+  --beach-on-board: #ffffff;
+  --beach-board-muted: #b0b0b0;
   --beach-live: #86efac;
   --beach-pending: #9ec5ff;
   --beach-failed: #fda4af;
-  --beach-crash: #fca5a5;
+  --beach-crash: #ff6b6b;
   --beach-on-crash: #000000;
   --beach-outlier: #fcd34d;
   --beach-missing: #c4c4c4;

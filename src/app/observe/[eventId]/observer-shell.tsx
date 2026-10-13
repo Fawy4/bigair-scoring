@@ -116,7 +116,7 @@ export function ObserverShell({ eventId, eventName, observerName, views, start }
               value={view.key}
               onChange={(e) => setKey(e.target.value)}
               disabled={!still}
-              className="h-12 w-full min-w-0 rounded-full border border-beach-border bg-beach-bg px-4 text-lg font-bold"
+              className="h-12 w-full min-w-0 rounded-full border border-beach-border bg-beach-fill px-4 text-lg font-bold"
             >
               {groups.map(([g, label]) => {
                 const list = views.filter((v) => v.group === g);
@@ -133,7 +133,7 @@ export function ObserverShell({ eventId, eventName, observerName, views, start }
             </select>
           </label>
           {view.frame !== "phone" ? (
-            <button type="button" data-testid="observer-fit" onClick={() => setActual((a) => !a)} className="h-12 rounded-full border border-beach-border bg-beach-bg px-4 text-base font-bold">
+            <button type="button" data-testid="observer-fit" onClick={() => setActual((a) => !a)} className="h-12 rounded-full border border-beach-border bg-beach-fill px-4 text-base font-bold">
               {actual ? T.fit : T.actual}
             </button>
           ) : null}

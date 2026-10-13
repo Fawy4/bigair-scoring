@@ -194,7 +194,7 @@ export function RerunDialog({ heatId, title, riders, onClose, onDone }: { heatId
           <span>
             {r.word} · {r.name}
           </span>
-          <select data-testid="rerun-rider" data-rider={r.entryId} value={out[r.entryId] ?? ""} onChange={(e) => setOut((o) => ({ ...o, [r.entryId]: e.target.value as "" | "DSQ" | "DNS" }))} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink">
+          <select data-testid="rerun-rider" data-rider={r.entryId} value={out[r.entryId] ?? ""} onChange={(e) => setOut((o) => ({ ...o, [r.entryId]: e.target.value as "" | "DSQ" | "DNS" }))} className="min-h-tap rounded-xl border border-beach-border bg-beach-fill px-2 text-body font-medium text-beach-ink">
             <option value="">{H.rerunRidesAgain}</option>
             <option value="DSQ">{H.rerunDsq}</option>
             <option value="DNS">{H.rerunDns}</option>

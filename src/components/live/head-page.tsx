@@ -241,7 +241,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
         <div key={t.text} className="flex flex-col gap-1">
           <p className="text-body font-medium">{t.text}</p>
           {t.unresolved || t.shared ? (
-            <button type="button" data-testid="choose-order" className="min-h-[48px] rounded-xl border border-beach-border bg-beach-bg px-3 text-body font-semibold" onClick={() => setTieFor(t.riderIds)}>
+            <button type="button" data-testid="choose-order" className="min-h-[48px] rounded-xl border border-beach-border bg-beach-fill px-3 text-body font-semibold" onClick={() => setTieFor(t.riderIds)}>
               {H.chooseOrder}
             </button>
           ) : null}
@@ -261,7 +261,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
       {card}
       {!wide ? (
         <>
-          <button type="button" data-testid="details-toggle" aria-expanded={details} onClick={() => setDetails((d) => !d)} className="min-h-[48px] rounded-xl border border-beach-border bg-beach-bg px-3 text-body font-semibold">
+          <button type="button" data-testid="details-toggle" aria-expanded={details} onClick={() => setDetails((d) => !d)} className="min-h-[48px] rounded-xl border border-beach-border bg-beach-fill px-3 text-body font-semibold">
             {details ? H.detailsHide : H.details}
           </button>
           {details ? (
@@ -327,7 +327,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
         <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
         <div role="tablist" aria-label={T.tabsLabel} className="grid grid-cols-2 border-b border-beach-line bg-beach-bg">
           {(["score", "control"] as const).map((t) => (
-            <button key={t} type="button" role="tab" data-tab={t} aria-selected={tab === t} onClick={() => setTab(t)} className={cn("min-h-tap text-body font-semibold", tab === t ? "border-b-2 border-beach-accent text-beach-ink" : "border-b-2 border-transparent text-beach-muted")}>
+            <button key={t} type="button" role="tab" data-tab={t} aria-selected={tab === t} onClick={() => setTab(t)} className={cn("min-h-tap text-body font-semibold", tab === t ? "border-b-2 border-beach-selected text-beach-ink" : "border-b-2 border-transparent text-beach-muted")}>
               {t === "score" ? T.tabScore : T.tabControl}
             </button>
           ))}

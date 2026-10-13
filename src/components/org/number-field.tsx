@@ -67,7 +67,7 @@ export function NumberField({ label, value, onChange, onClear, placeholder, disa
         onBlur={finish}
         style={{ width: numberFieldWidth({ min, max, step, minChars: placeholder?.length }) }}
         className={cn(
-          "org-number h-[var(--org-ctl)] min-w-[var(--org-ctl)] rounded-[8px] border border-beach-border bg-beach-bg px-3 text-digit font-semibold tabular-nums text-beach-ink",
+          "org-number h-[var(--org-ctl)] min-w-[var(--org-ctl)] rounded-[8px] border border-beach-border bg-beach-fill px-3 text-digit font-semibold tabular-nums text-beach-ink",
           align === "end" ? "text-right" : "text-center",
         )}
       />

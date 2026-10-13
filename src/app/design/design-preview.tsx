@@ -32,11 +32,11 @@ export function DesignPreview({ arrow }: { arrow: ArrowScheme | null }) {
           <ThemeSwitch theme={theme} onChange={setTheme} />
           <TextSizeSwitch size={textSize} onChange={setTextSize} />
           <details ref={menu} className="relative" data-testid="design-menu">
-            <summary className="inline-flex min-h-tap cursor-pointer list-none items-center gap-1 whitespace-nowrap rounded-xl border border-beach-border bg-beach-bg px-2.5 text-[13px] font-semibold text-beach-ink [&::-webkit-details-marker]:hidden">
+            <summary className="inline-flex min-h-tap cursor-pointer list-none items-center gap-1 whitespace-nowrap rounded-xl border border-beach-border bg-beach-fill px-2.5 text-[13px] font-semibold text-beach-ink [&::-webkit-details-marker]:hidden">
               {copy.design.menu}
               <ChevronDown aria-hidden className="size-4" />
             </summary>
-            <nav aria-label={copy.design.menuLabel} className="absolute right-0 mt-2 max-h-[70dvh] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto rounded-card border border-beach-border bg-beach-bg p-2">
+            <nav aria-label={copy.design.menuLabel} className="absolute right-0 mt-2 max-h-[70dvh] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto rounded-card border border-beach-border bg-beach-fill p-2">
               <ul className="flex flex-col">
                 {SECTION_IDS.map((id) => (
                   <li key={id}>

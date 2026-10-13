@@ -31,6 +31,8 @@ export function HeadControlTab() {
   const T = copy.live.head;
   const label: Record<ControlId, string> = { start: T.start, pause: T.pause, resume: T.resume, end: T.end, hold: T.hold, resumeAt: T.resumeAt, shift5: T.shift5, shift10: T.shift10, publish: T.publish, cancel: T.cancel, rerun: T.rerun, reopen: T.reopen };
   const controls = controlsFor(state, blockers.length);
+  // the one filled action is the one that fits the moment: Start before the heat, Pause while it runs, Resume when paused, Publish once it can publish
+  const primary: ControlId | null = controls.find((c) => c.id === "publish" && c.enabled) ? "publish" : state === "scheduled" ? "start" : state === "running" ? "pause" : state === "paused" ? "resume" : null;
   const press = (id: ControlId) => {
     if (id === "cancel" || id === "rerun") return setAsking(id);
     if (id === "end") setBlockers(h.blockers);
@@ -88,9 +90,9 @@ export function HeadControlTab() {
             )}
           </div>
           <p className="text-small font-medium text-beach-muted">{T.next(h.next.heat, h.next.time)}</p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-2 gap-2">
             {controls.map((c) => (
-              <Chip key={c.id} data-control={c.id} icon={ICON[c.id]} variant={!c.enabled ? "muted" : c.id === "start" || c.id === "publish" ? "accent" : c.id === "cancel" ? "danger" : "plain"} disabled={!c.enabled} onClick={() => press(c.id)}>
+              <Chip key={c.id} data-control={c.id} icon={ICON[c.id]} variant={!c.enabled ? "muted" : c.id === primary ? "accent" : c.id === "cancel" ? "danger" : "plain"} className="w-full px-2" disabled={!c.enabled} onClick={() => press(c.id)}>
                 {label[c.id]}
               </Chip>
             ))}
@@ -104,7 +106,7 @@ export function HeadControlTab() {
           <label htmlFor="head-reason" className="text-small font-medium text-beach-muted">
             {copy.live.console.reason}
           </label>
-          <input id="head-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={copy.live.console.reasonPlaceholder} className="min-h-tap rounded-lg border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink" />
+          <input id="head-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={copy.live.console.reasonPlaceholder} className="min-h-tap rounded-lg border border-beach-border bg-beach-fill px-2 text-body font-medium text-beach-ink" />
           <div className="flex gap-1.5">
             <Chip
               variant="accent"

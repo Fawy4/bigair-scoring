@@ -23,7 +23,7 @@ export function PublicNav({ items, label }: { items: NavItem[]; label: string })
                 href={i.href}
                 prefetch={false}
                 aria-current={current ? "page" : undefined}
-                className={cn("inline-flex min-h-tap items-center rounded-full border px-3 text-body font-semibold", current ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-line bg-beach-surface text-beach-ink")}
+                className={cn("inline-flex min-h-tap items-center rounded-full border px-3 text-body font-semibold", current ? "border-beach-selected bg-beach-selected text-beach-on-selected" : "border-beach-line bg-beach-surface text-beach-ink")}
               >
                 {i.label}
               </Link>

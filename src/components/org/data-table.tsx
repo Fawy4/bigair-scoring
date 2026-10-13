@@ -96,7 +96,7 @@ export function DataTable<T>({ caption, rows, columns, getId, searchText, search
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             data-testid="table-search"
-            className="h-[var(--org-ctl)] w-full rounded-[8px] border border-beach-border bg-beach-bg pl-9 pr-3 text-body font-medium text-beach-ink placeholder:text-beach-muted"
+            className="h-[var(--org-ctl)] w-full rounded-[8px] border border-beach-border bg-beach-fill pl-9 pr-3 text-body font-medium text-beach-ink placeholder:text-beach-muted"
           />
         </label>
         ) : null}
@@ -112,7 +112,7 @@ export function DataTable<T>({ caption, rows, columns, getId, searchText, search
                   onClick={() => setChips((c) => ({ ...c, [f.id]: o.id }))}
                   className={cn(
                     "inline-flex min-h-[var(--org-ctl)] items-center gap-1 rounded-full border px-3 text-body font-semibold",
-                    on ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink",
+                    on ? "border-beach-selected bg-beach-selected text-beach-on-selected" : "border-beach-border bg-beach-fill text-beach-ink",
                   )}
                 >
                   {on ? <Check aria-hidden className="size-4" /> : null}
@@ -150,7 +150,7 @@ export function DataTable<T>({ caption, rows, columns, getId, searchText, search
               {bulk ? (
                 <th scope="col" className="sticky top-0 z-10 w-[var(--org-row)] bg-beach-surface p-0 [box-shadow:inset_0_-1px_0_var(--beach-line)]">
                   <label className="flex h-[var(--org-row)] w-[var(--org-row)] items-center justify-center">
-                    <input type="checkbox" aria-label={orgCopy.table.selectAll} checked={allVisible} onChange={toggleAll} className="size-5 accent-[var(--beach-accent)]" />
+                    <input type="checkbox" aria-label={orgCopy.table.selectAll} checked={allVisible} onChange={toggleAll} className="size-5 accent-[var(--beach-selected)]" />
                   </label>
                 </th>
               ) : null}
@@ -169,7 +169,7 @@ export function DataTable<T>({ caption, rows, columns, getId, searchText, search
                   {bulk ? (
                     <td className="p-0 [box-shadow:inset_0_-1px_0_var(--beach-line)]">
                       <label className="flex h-[var(--org-row)] w-[var(--org-row)] items-center justify-center">
-                        <input type="checkbox" aria-label={orgCopy.table.selectRow(rowLabel?.(row) ?? id)} checked={selected.has(id)} onChange={() => toggle(id)} className="size-5 accent-[var(--beach-accent)]" />
+                        <input type="checkbox" aria-label={orgCopy.table.selectRow(rowLabel?.(row) ?? id)} checked={selected.has(id)} onChange={() => toggle(id)} className="size-5 accent-[var(--beach-selected)]" />
                       </label>
                     </td>
                   ) : null}
@@ -242,7 +242,7 @@ export function InlineCell({ value, label, onSave, align = "start", numeric, sta
             setEditing(false);
           }
         }}
-        className={cn("h-[var(--org-row)] w-full min-w-[8ch] rounded-[8px] border border-beach-accent bg-beach-bg px-2 text-body font-semibold text-beach-ink", align === "end" && "text-right")}
+        className={cn("h-[var(--org-row)] w-full min-w-[8ch] rounded-[8px] border border-beach-selected bg-beach-bg px-2 text-body font-semibold text-beach-ink", align === "end" && "text-right")}
       />
     );
   }

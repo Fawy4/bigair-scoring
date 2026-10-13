@@ -8,7 +8,9 @@ import "./globals.css";
 const rubik = Rubik({ subsets: ["latin"], display: "swap", variable: "--font-rubik", fallback: ["ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "Arial", "sans-serif"] });
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: await getProductName() };
+  const title = await getProductName();
+  // the title is also the name under the icon when the site is added to an iPhone's home screen
+  return { title, applicationName: title, appleWebApp: { title } };
 }
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 

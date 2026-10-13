@@ -25,7 +25,7 @@ function PadButton({ selected, disabled, onClick, children, label }: { selected:
       className={cn(
         "shrink-0 rounded-xl text-digit",
         // weight 700 is for the selected score only
-        selected ? "border border-beach-accent bg-beach-accent font-bold text-beach-on-accent" : disabled ? "border border-beach-line bg-beach-surface font-bold text-beach-muted" : "border border-beach-border bg-beach-bg font-bold text-beach-ink",
+        selected ? "border border-beach-selected bg-beach-selected font-bold text-beach-on-selected" : disabled ? "border border-beach-line bg-beach-surface font-bold text-beach-muted" : "border border-transparent bg-beach-fill font-bold text-beach-ink",
       )}
     >
       {children}
@@ -117,7 +117,7 @@ export function ScorePad({ scale, value, onChange, label, caption, disabled = fa
               if (e.key === "Enter" && canSave) save();
             }}
             style={{ height: "var(--size-pad-height)" }}
-            className={cn("w-full rounded-lg border bg-beach-bg px-1.5 text-center text-digit font-semibold text-beach-ink placeholder:text-beach-muted", draft.trim() !== "" && !typed.ok ? "border-beach-failed" : "border-beach-border")}
+            className={cn("w-full rounded-xl border bg-beach-fill px-1.5 text-center text-digit font-bold text-beach-ink placeholder:text-beach-muted", draft.trim() !== "" && !typed.ok ? "border-beach-failed" : "border-transparent")}
           />
           <Chip data-testid="pad-save" variant={canSave ? "accent" : "muted"} disabled={!canSave} onClick={save} className="self-end" style={{ height: "var(--size-pad-height)" }}>
             {copy.common.save}

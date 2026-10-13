@@ -111,7 +111,7 @@ export function SettingsForm({ initial, timeZones, canEdit }: { initial: Initial
         footer={
           <div className="org-new flex flex-col gap-3">
             {error ? (
-              <p role="alert" className="rounded-[8px] border border-beach-border bg-beach-surface px-3 py-2 text-body font-semibold text-beach-crash">
+              <p role="alert" className="rounded-[8px] border border-beach-border bg-beach-bg px-3 py-2 text-body font-semibold text-beach-crash">
                 {copy.common.problem(error)}
               </p>
             ) : null}

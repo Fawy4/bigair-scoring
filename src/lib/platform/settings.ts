@@ -1,3 +1,4 @@
+import { productNameOf } from "@/lib/product";
 import { isValidTimeZone } from "@/lib/schemas/org-settings";
 import { copy } from "@/lib/ui-copy";
 
@@ -29,7 +30,7 @@ export function resolvePlatformSettings(rows: readonly SettingRow[], env: { prod
   const legalObject = legal && typeof legal === "object" && !Array.isArray(legal) ? (legal as Record<string, unknown>) : {};
   const logo = text(get("logo_url"));
   return {
-    productName: text(get("product_name")) || env.productName,
+    productName: (text(get("product_name")) ? productNameOf(text(get("product_name"))) : "") || env.productName,
     logoUrl: /^https?:\/\//.test(logo) ? logo : null,
     tagline: text(get("tagline")) || DEFAULT_TAGLINE,
     defaultTimezone: zone && isValidTimeZone(zone) ? zone : env.timezone,

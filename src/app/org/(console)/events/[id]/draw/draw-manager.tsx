@@ -215,7 +215,7 @@ export function DrawManager({ eventId, divisions, selected }: { eventId: string;
     <div className="flex flex-col gap-4">
       <nav aria-label={T.divisionsLabel} className="flex flex-wrap gap-1 border-b border-beach-line">
         {divisions.map((d) => (
-          <Link key={d.id} href={`/org/events/${eventId}/draw?division=${d.id}`} className={cn("-mb-px inline-flex min-h-[var(--org-ctl)] items-center gap-2 border-b-2 px-3 text-body font-semibold", d.id === selected.id ? "border-beach-accent text-beach-ink" : "border-transparent text-beach-muted hover:text-beach-ink")} aria-current={d.id === selected.id ? "page" : undefined}>
+          <Link key={d.id} href={`/org/events/${eventId}/draw?division=${d.id}`} className={cn("-mb-px inline-flex min-h-[var(--org-ctl)] items-center gap-2 border-b-2 px-3 text-body font-semibold", d.id === selected.id ? "border-beach-selected text-beach-ink" : "border-transparent text-beach-muted hover:text-beach-ink")} aria-current={d.id === selected.id ? "page" : undefined}>
             {d.name}
             <span className="text-small font-medium text-beach-muted">{d.locked ? T.tab.locked : d.hasDraw ? T.tab.draft : T.tab.none}</span>
           </Link>

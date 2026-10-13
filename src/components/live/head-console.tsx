@@ -134,7 +134,7 @@ export function HeadConsole() {
       <Modal title={C.mergeTitle} onClose={close}>
         {(["first", "second"] as const).map((o) => (
           <label key={o} className="flex min-h-tap items-center gap-2 rounded-xl border border-beach-line bg-beach-surface px-2 text-body font-medium">
-            <input type="radio" name="keep" checked={keep === o} onChange={() => setKeep(o)} className="size-5 accent-[var(--beach-accent)]" />
+            <input type="radio" name="keep" checked={keep === o} onChange={() => setKeep(o)} className="size-5 accent-[var(--beach-selected)]" />
             <span>
               <span className="font-semibold">{C.mergeKeep}: </span>
               {line(o === "first" ? first : dup)}
@@ -166,7 +166,7 @@ export function HeadConsole() {
       <Modal title={title} onClose={close}>
         <label className="flex flex-col gap-0.5 text-small font-medium text-beach-muted">
           {C.rider}
-          <select data-testid="edit-rider" value={rider} onChange={(e) => setRider(e.target.value)} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink">
+          <select data-testid="edit-rider" value={rider} onChange={(e) => setRider(e.target.value)} className="min-h-tap rounded-xl border border-beach-border bg-beach-fill px-2 text-body font-medium text-beach-ink">
             {riders.map((r) => (
               <option key={r.key} value={r.key}>
                 {r.word}
@@ -176,11 +176,11 @@ export function HeadConsole() {
         </label>
         <label className="flex flex-col gap-0.5 text-small font-medium text-beach-muted">
           {C.trick}
-          <input data-testid="edit-trick" value={trick} onChange={(e) => setTrick(e.target.value)} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink" />
+          <input data-testid="edit-trick" value={trick} onChange={(e) => setTrick(e.target.value)} className="min-h-tap rounded-xl border border-beach-border bg-beach-fill px-2 text-body font-medium text-beach-ink" />
         </label>
         <div role="group" className="grid grid-cols-2 gap-1.5">
           {([false, true] as const).map((c) => (
-            <button key={String(c)} type="button" aria-pressed={crashed === c} onClick={() => setCrashed(c)} className={cn(btn, crashed === c ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}>
+            <button key={String(c)} type="button" aria-pressed={crashed === c} onClick={() => setCrashed(c)} className={cn(btn, crashed === c ? "border-beach-selected bg-beach-selected text-beach-on-selected" : "border-beach-border bg-beach-fill text-beach-ink")}>
               {c ? C.crashed : C.landed}
             </button>
           ))}
@@ -215,7 +215,7 @@ export function HeadConsole() {
         {riders.map((r) => (
           <label key={r.key} className="flex items-center justify-between gap-2 text-body font-medium">
             <span>{r.word}</span>
-            <select value={out[r.key]} onChange={(e) => setOut((o) => ({ ...o, [r.key]: e.target.value as "" | "DSQ" | "DNS" }))} className="min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink">
+            <select value={out[r.key]} onChange={(e) => setOut((o) => ({ ...o, [r.key]: e.target.value as "" | "DSQ" | "DNS" }))} className="min-h-tap rounded-xl border border-beach-border bg-beach-fill px-2 text-body font-medium text-beach-ink">
               <option value="">{C.ridesAgain}</option>
               <option value="DSQ">{C.dsq}</option>
               <option value="DNS">{C.dns}</option>
@@ -292,7 +292,7 @@ export function HeadConsole() {
       )}
 
       {picked.length > 0 ? (
-        <div data-testid="selection-bar" className="flex flex-wrap items-center gap-1.5 rounded-card border border-beach-accent bg-beach-surface p-1.5">
+        <div data-testid="selection-bar" className="flex flex-wrap items-center gap-1.5 rounded-card border border-beach-selected bg-beach-surface p-1.5">
           <span className="text-body font-semibold">{C.selected(picked.length)}</span>
           <Chip data-testid="merge-selected" variant={canMerge(picked) ? "accent" : "muted"} disabled={!canMerge(picked)} onClick={() => setDialog({ kind: "bulkMerge" })}>
             {C.mergeSelected}

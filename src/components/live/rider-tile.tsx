@@ -45,7 +45,7 @@ export function RiderTile({
   // selected = a thick ink frame AND an orange foot (the frame and the counter say it too, never colour alone)
   const frame = cn(
     "relative w-full min-w-0 overflow-hidden rounded-2xl text-left",
-    out ? "border border-dashed border-beach-missing bg-beach-surface" : selected ? "border-2 border-beach-ink bg-beach-bg shadow-[inset_0_-4px_0_var(--beach-accent)]" : "border border-beach-line bg-beach-bg",
+    out ? "border border-dashed border-beach-missing bg-beach-surface" : selected ? "border-2 border-beach-ink bg-beach-bg shadow-[inset_0_-4px_0_var(--beach-selected)]" : "border border-beach-line bg-beach-bg",
   );
   return (
     <button type="button" data-testid="rider-tile" data-selected={selected} data-out={out} aria-pressed={selected} disabled={out && lockWhenOut} onClick={onSelect} className={cn(frame, compact ? "px-1.5 pb-2 pt-1" : "min-h-row px-3 py-1")}>

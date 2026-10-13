@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 const C = copy.live.console;
 const H = copy.headLive;
-const field = "min-h-tap rounded-xl border border-beach-border bg-beach-bg px-2 text-body font-medium text-beach-ink";
+const field = "min-h-tap rounded-xl border border-beach-border bg-beach-fill px-2 text-body font-medium text-beach-ink";
 
 /**
  * Runs a server action; on success the dialog closes and the console shows what the server answered (the heat and its seats) before anything else, otherwise the answer is
@@ -61,7 +61,7 @@ function Choice<T extends string>({ value, options, onChange, label }: { value: 
   return (
     <div role="group" aria-label={label} className="flex flex-wrap gap-1.5">
       {options.map(([v, text]) => (
-        <button key={v} type="button" aria-pressed={value === v} onClick={() => onChange(v)} className={cn(btn, value === v ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-bg text-beach-ink")}>
+        <button key={v} type="button" aria-pressed={value === v} onClick={() => onChange(v)} className={cn(btn, value === v ? "border-beach-selected bg-beach-selected text-beach-on-selected" : "border-beach-border bg-beach-fill text-beach-ink")}>
           {text}
         </button>
       ))}
@@ -240,7 +240,7 @@ export function MergeDialog({ model, rows, attempts, scores, panelSeatIds, judge
       <p className="text-small font-semibold text-beach-muted">{wordFor(picked[0]?.entry_id ?? "")}</p>
       {ordered.map((a, i) => (
         <label key={a.id} className="flex min-h-tap items-center gap-2 rounded-xl border border-beach-line bg-beach-surface px-2 text-body font-medium">
-          <input type="radio" name="keep" data-testid="merge-keep" checked={keep === a.id} onChange={() => { setKeep(a.id); setChoices({}); }} className="size-5 accent-[var(--beach-accent)]" />
+          <input type="radio" name="keep" data-testid="merge-keep" checked={keep === a.id} onChange={() => { setKeep(a.id); setChoices({}); }} className="size-5 accent-[var(--beach-selected)]" />
           <span>
             <span className="font-semibold">{C.mergeKeep}: </span>
             {label(a)} <span className="text-beach-muted">({i === 0 ? H.mergeFirst : H.mergeSecond})</span>
@@ -420,7 +420,7 @@ export function FlagOutDialog({ heatId, riders, preselected, undecided, count, w
         .filter((r) => r.riding)
         .map((r) => (
           <label key={r.entryId} className="flex min-h-tap items-center gap-2 rounded-xl border border-beach-line bg-beach-surface px-2 text-body font-medium">
-            <input type="checkbox" data-testid="flag-out-rider" checked={picked.includes(r.entryId)} onChange={() => toggle(r.entryId)} className="size-5 accent-[var(--beach-accent)]" />
+            <input type="checkbox" data-testid="flag-out-rider" checked={picked.includes(r.entryId)} onChange={() => toggle(r.entryId)} className="size-5 accent-[var(--beach-selected)]" />
             {wordFor(r.entryId)} · {r.name}
           </label>
         ))}
