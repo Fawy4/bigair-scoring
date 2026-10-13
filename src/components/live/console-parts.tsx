@@ -8,7 +8,7 @@ const C = copy.live.console;
 export const btn = "inline-flex min-h-tap items-center justify-center gap-1.5 rounded-xl border px-3 text-body font-semibold";
 export const plain = `${btn} border-beach-border bg-beach-fill text-beach-ink`;
 export const primary = `${btn} border-beach-accent bg-beach-accent text-beach-on-accent`;
-export const off = `${btn} border-beach-line bg-beach-surface text-beach-muted`;
+export const off = `${btn} border-beach-border bg-beach-fill text-beach-ink opacity-50`;
 
 /** A dialog that sits over the console. Every change asks for a reason (audited). */
 /** `screen`: cover the whole window (the real pages); otherwise cover the console box it sits in (the /design preview). */

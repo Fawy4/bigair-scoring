@@ -2569,7 +2569,7 @@ export const copy = {
     textLarge: "Large",
     settingsNote: "Colours and text size are saved on this device only.",
     newLook: {
-      intro: "The New look: near-black, electric orange, Rubik, pill buttons and rows instead of boxes. Each phone below is shown in Daylight and in Dark, and its round settings button changes only that phone.",
+      intro: "The New look: near-black, white and teal, Rubik, pill buttons and rows instead of boxes. Each phone below is shown in Daylight and in Dark, and its round settings button changes only that phone.",
       judgeSheet: "Judge — Rider sheet",
       judgeSheetNote: "Header, rider cards and all 7 lines without scrolling in Normal. Type a score on a line; nothing is saved.",
       spotterSheet: "Spotter — Rider sheet",

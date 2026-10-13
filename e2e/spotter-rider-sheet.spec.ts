@@ -754,14 +754,14 @@ test("(k) the spotter's lines read: number, L, R, the trick box with the mic or 
   expect(clear.x + clear.width).toBeLessThanOrEqual(b2.x + b2.width + 1);
   expect(Math.abs((await strick(spotter, 2).boundingBox())!.width - b2.width), "the box keeps its width").toBeLessThan(1);
 
-  // the judge's score box: wide enough for 10.0, at most 64 px, no taller than Missed, at least 44 px to tap
+  // the judge's score box: wide enough for 10.0, at most 64 px, as tall as the stacked Missed and Flag together, at least 44 px to tap
   await expect(jline(j1, 1)).toContainText("Left Backroll 1", { timeout: 40_000 });
   for (const n of [1, 2]) {
     const sb = (await jbox(j1, n).boundingBox())!;
     const mb = (await jline(j1, n).getByTestId("line-missed").boundingBox())!;
     expect(sb.width, `line ${n}`).toBeLessThanOrEqual(64);
     expect(sb.width, `line ${n}`).toBeGreaterThanOrEqual(44);
-    expect(sb.height, `line ${n}`).toBeLessThanOrEqual(mb.height + 0.5);
+    expect(sb.height, `line ${n}`).toBeGreaterThanOrEqual(mb.height); // taller than Missed (Missed and Flag are stacked beside it)
     expect(sb.height, `line ${n}`).toBeGreaterThanOrEqual(44);
   }
   await jtype(j1, 1, "10.0");
@@ -914,11 +914,11 @@ test("(i) the clear button empties the trick box in one tap (the attempt keeps i
   // a tidy name for a plain word too
   await strick(spotter, 2).fill("zzzflip");
   await expect.poll(async () => (await attempts(H, E)).map((a) => a.trick_name).at(1), { timeout: 30_000 }).toBe("Zzzflip");
-  // narrower L and R, still at least 44 px tall; the box is wide
+  // L | R stacked over Crash in one small column (at least 32 px tall, the owner's choice); the trick box takes all the width that is left: at least 20 characters show
   const l = (await sline(spotter, 1).getByTestId("line-left").boundingBox())!;
-  expect(l.height).toBeGreaterThanOrEqual(44);
+  expect(l.height).toBeGreaterThanOrEqual(32);
   expect(l.width).toBeLessThanOrEqual(44);
-  expect((await strick(spotter, 1).boundingBox())!.width).toBeGreaterThan(130);
+  expect((await strick(spotter, 1).boundingBox())!.width).toBeGreaterThan(200);
   // at rest the Crash button is quiet (a red outline, no fill, the icon and the word) and the red is the Trick list's CRASH red
   const crashColour = await sline(spotter, 1).getByTestId("line-crash").evaluate((e) => getComputedStyle(e).borderTopColor);
   expect(await sline(spotter, 1).getByTestId("line-crash").evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
@@ -928,6 +928,7 @@ test("(i) the clear button empties the trick box in one tap (the attempt keeps i
   await spotter.getByTestId("spot-view-sheet").click();
   await expect(sline(spotter, 1).getByTestId("line-crash")).toContainText("CRASH");
   // the × empties the box; the attempt keeps its trick until a new trick is logged
+  await strick(spotter, 1).focus(); // the × shows only while the box is in use
   await sline(spotter, 1).getByTestId("line-trick-clear").click();
   await expect(strick(spotter, 1)).toHaveValue("");
   await spotter.waitForTimeout(3000);

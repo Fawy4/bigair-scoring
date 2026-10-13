@@ -1,11 +1,11 @@
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ChipVariant = "plain" | "accent" | "danger" | "muted";
+export type ChipVariant = "plain" | "accent" | "danger" | "dangerSolid" | "muted";
 
 /**
  * The pill button of the official screens (New look): fully round, at least 44 px high (the tap size), words in Bold Rubik.
- * At rest a soft filled shape with a thin hairline; `pressed` is the selected state (teal fill); `variant` "accent" is the one orange main action ("act now"), "danger" the red one.
+ * At rest white (Day) or near-black (Dark) with a thin edge; `pressed` is the selected state (teal fill); `variant` "accent" is the one orange main action ("act now"), "danger" a quiet red outline, "dangerSolid" solid red (only in a confirm dialog).
  */
 export function Chip({
   onBoard = false,
@@ -24,13 +24,15 @@ export function Chip({
       ? "border-beach-selected bg-beach-selected text-beach-on-selected"
       : variant === "accent"
         ? "border-beach-accent bg-beach-accent text-beach-on-accent"
-        : variant === "danger"
+        : variant === "dangerSolid"
           ? "border-beach-crash bg-beach-crash text-beach-on-crash"
-          : variant === "muted" || rest.disabled
-            ? "border-transparent bg-beach-surface text-beach-muted"
+          : variant === "danger"
+            ? "border-beach-crash bg-beach-fill text-beach-crash"
             : "border-beach-border bg-beach-fill text-beach-ink";
+  // a button that cannot be pressed keeps its shape with faded words, never a grey block
+  const faded = variant === "muted" || rest.disabled ? "opacity-50" : "";
   return (
-    <button type="button" data-chip aria-pressed={pressed} className={cn("inline-flex min-h-tap min-w-tap items-center justify-center gap-1 rounded-full border px-4 text-body font-bold leading-none", tone, className)} {...rest}>
+    <button type="button" data-chip aria-pressed={pressed} className={cn("inline-flex min-h-tap min-w-tap items-center justify-center gap-1 rounded-full border px-4 text-body font-bold leading-none", tone, faded, className)} {...rest}>
       {Icon ? <Icon aria-hidden className="size-4 shrink-0" /> : null}
       {children}
     </button>

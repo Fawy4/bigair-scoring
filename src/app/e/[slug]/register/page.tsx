@@ -67,12 +67,12 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
       </header>
 
       {!info.open ? (
-        <section className="rounded-lg border-4 border-beach-ink p-4" data-testid="registration-closed">
+        <section className="rounded-lg border border-beach-border p-4" data-testid="registration-closed">
           <p className="text-xl font-extrabold">{copy.registration.closedTitle}</p>
           <p className="mt-2 text-lg font-semibold">{info.closedMessage?.trim() || copy.registration.closedDefault}</p>
         </section>
       ) : divisions.length === 0 ? (
-        <p className="rounded-lg border-4 border-beach-ink p-4 text-lg font-semibold">{copy.registration.noDivisions}</p>
+        <p className="rounded-lg border border-beach-border p-4 text-lg font-semibold">{copy.registration.noDivisions}</p>
       ) : (
         <>
           <p className="text-lg font-semibold">{copy.registration.intro}</p>

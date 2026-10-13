@@ -2,7 +2,7 @@ import { useId, type ComponentProps, type MouseEventHandler, type ReactNode } fr
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Per screen exactly one primary (orange fill), then secondary (1 px frame), quiet (text and icon) and danger (red, only for something that cannot be undone). */
+/** Per screen exactly one primary (teal fill), then secondary (1 px frame), quiet (text and icon) and danger (red, only for something that cannot be undone). */
 export type ButtonVariant = "primary" | "secondary" | "quiet" | "danger";
 
 interface Base {
@@ -29,8 +29,8 @@ const VARIANT: Record<ButtonVariant, string> = {
   quiet: "border-transparent bg-transparent text-beach-ink hover:bg-beach-surface",
   danger: "border-beach-crash bg-beach-bg text-beach-crash hover:bg-beach-surface",
 };
-// A disabled control is never faded to light grey: it keeps full-strength text, a dashed frame and a flat fill, and its reason sits under it.
-const DISABLED = "cursor-not-allowed border-dashed border-beach-border bg-beach-surface text-beach-muted";
+// A disabled control keeps its shape with faded words (never a grey block), and its reason sits under it.
+const DISABLED = "cursor-not-allowed border-beach-border bg-beach-fill text-beach-ink opacity-50";
 
 export function Button({ variant = "secondary", icon: Icon, iconOnly, href, target, className, children, disabled, disabledReason, type = "button", ...rest }: ButtonProps) {
   const reasonId = useId();

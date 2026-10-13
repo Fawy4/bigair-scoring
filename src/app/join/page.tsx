@@ -1,3 +1,4 @@
+import { HomeTheme } from "@/components/home/home-theme";
 import { SiteFooter, Wordmark } from "@/components/home/site-chrome";
 import { getPlatformSettings } from "@/lib/platform/public-settings";
 import { copy } from "@/lib/ui-copy";
@@ -11,6 +12,7 @@ export default async function JoinPage() {
   return (
     <div className="home" data-testid="join-page">
       <main className="home-wrap home-narrow">
+        <HomeTheme />
         <header>
           <Wordmark name={settings.productName} />
           <h1 className="home-title">{copy.join.title}</h1>

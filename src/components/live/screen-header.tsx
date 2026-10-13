@@ -49,24 +49,31 @@ export function ScreenHeader({
   onToggleDetails?: () => void;
 }) {
   return (
-    <header data-testid="screen-header" className={plain ? "flex flex-col border-b border-beach-line bg-beach-bg px-2 pb-1 pt-1" : "flex flex-col border-b border-beach-line bg-beach-board px-2 pb-1 pt-1 text-beach-on-board [&_[data-testid=heat-timer-clock]]:text-[24px]"}>
-      <div className="flex min-h-[44px] items-center justify-between gap-2">
-        <div className={flag ? "flex min-w-0 flex-1 items-center gap-2" : "flex min-w-0 flex-1 items-baseline gap-2"}>
-          {flag ? <FlagStrip model={flag} /> : showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className={plain ? "text-name font-bold" : "text-name font-bold text-beach-on-board"}>{copy.live.header.between}</span>}
-          {clock ? <ClockText timezone={clock.timezone} nowMs={clock.nowMs} className={plain ? undefined : "text-beach-board-muted"} /> : null}
-        </div>
-        {details !== undefined ? (
-          <Chip onBoard={!plain} data-testid="details-toggle" pressed={details} onClick={onToggleDetails}>
-            {details ? (detailsLabels?.on ?? copy.live.header.detailsOn) : (detailsLabels?.off ?? copy.live.header.details)}
-          </Chip>
-        ) : null}
-        <SettingsMenu onBoard={!plain} />
+    <header data-testid="screen-header" className={plain ? "flex flex-col gap-1 border-b border-beach-line bg-beach-bg px-2 pb-1 pt-1" : "flex flex-col gap-1 border-b border-beach-line bg-beach-board px-2 pb-1 pt-1 text-beach-on-board [&_[data-testid=heat-timer-clock]]:text-[24px]"}>
+      {/* the first row is the flag strip (or the timer) alone and full width: nothing sits beside it to squeeze or cut its words */}
+      <div className="flex min-w-0 items-center gap-2">
+        {flag ? <FlagStrip model={flag} /> : showTimer ? <HeatTimer remainingMs={remainingMs} state={timerState} /> : <span className={plain ? "text-name font-bold" : "text-name font-bold text-beach-on-board"}>{copy.live.header.between}</span>}
       </div>
-      <div className="flex items-center justify-between gap-2 pt-0.5">
-        <p className={plain ? "min-w-0 truncate text-small font-medium text-beach-muted" : "min-w-0 truncate text-small font-medium text-beach-board-muted"}>
+      {/* the second row: the heat and seat (they wrap), then Details, the sync state and the one round settings button */}
+      <div className="flex items-center justify-between gap-2">
+        <p className={plain ? "min-w-0 flex-1 text-small font-medium leading-tight text-beach-muted" : "min-w-0 flex-1 text-small font-medium leading-tight text-beach-board-muted"}>
           <span className={plain ? "font-bold text-beach-ink" : "font-bold text-beach-on-board"}>{heatName}</span> · {seat}
+          {clock ? (
+            <>
+              {" · "}
+              <ClockText timezone={clock.timezone} nowMs={clock.nowMs} className="text-small text-inherit" />
+            </>
+          ) : null}
         </p>
-        <ConnectionBadge status={connection} pending={pending} onRetry={onRetry} />
+        <div className="flex shrink-0 items-center gap-1.5">
+          {details !== undefined ? (
+            <Chip onBoard={!plain} data-testid="details-toggle" pressed={details} onClick={onToggleDetails}>
+              {details ? (detailsLabels?.on ?? copy.live.header.detailsOn) : (detailsLabels?.off ?? copy.live.header.details)}
+            </Chip>
+          ) : null}
+          <ConnectionBadge status={connection} pending={pending} onRetry={onRetry} />
+          <SettingsMenu onBoard={!plain} />
+        </div>
       </div>
     </header>
   );

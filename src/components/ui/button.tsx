@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 /** The same buttons as the organiser screens (components/org/button.tsx): the accent fill for the one primary action, a 1 px frame for the rest, text only for the quiet ones. fully round (pill), 40 px high (44 on touch, 48 with Large). */
 const buttonVariants = cva(
-  "inline-flex min-h-[var(--org-ctl)] items-center justify-center gap-2 whitespace-nowrap rounded-full border px-4 text-body font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:border-dashed disabled:border-beach-border disabled:bg-beach-surface disabled:text-beach-muted",
+  "inline-flex min-h-[var(--org-ctl)] items-center justify-center gap-2 whitespace-nowrap rounded-full border px-4 text-body font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       variant: {

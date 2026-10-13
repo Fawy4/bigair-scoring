@@ -47,7 +47,7 @@ export function RiderBar({
       data-fill={bar?.fill}
       aria-pressed={selected}
       onClick={onSelect}
-      className={cn("relative w-full min-w-0 rounded-card text-left", selected ? "border-4 border-beach-ink" : "border border-beach-line", coloured ? "" : "bg-beach-bg", compact ? "p-1" : "min-h-row px-2 py-1")}
+      className={cn("relative w-full min-w-0 rounded-card text-left", selected ? "border-[3px] border-beach-selected" : "border border-beach-line", coloured ? "" : "bg-beach-bg", compact ? "p-1" : "min-h-row px-2 py-1")}
       style={bar ? { backgroundColor: bar.fill } : undefined}
       {...rest}
     >

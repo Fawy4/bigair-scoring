@@ -17,26 +17,34 @@ export interface BeachTokens {
   ink: string;
   /** Secondary text. Never light grey. */
   muted: string;
-  /** The thin hairline of a control at rest (a shape, not text): 3:1 on the page so a button is still findable in the sun. */
+  /** The thin light-grey edge of a control at rest. Decoration: the control's words and icon carry it. */
   border: string;
-  /** The soft fill of a control at rest (button, field, rider card): light grey in Day, dark grey in Dark. */
+  /** A control at rest: white in Day, near-black in Dark, with the thin `border` edge. Never a grey block. */
   fill: string;
+  /** The filled keys of the score pad (the Queue): light grey in Day, dark grey in Dark. */
+  key: string;
+  /** The light-grey hint in an empty box (the "0.0" in an empty score box): clearly lighter than a real score. */
+  hint: string;
   /** Keyboard focus ring. */
   focus: string;
-  /** The one accent colour (electric orange #FF6A00, the brand): the main button, selected state, bars and glows. A fill, never text on a light page. */
+  /** The one accent colour (teal): every button, selected state, focus ring and progress. */
   accent: string;
-  /** The selected-state colour (teal): selected switch, tab, filter, step, rider card. Orange is "act now" only. */
+  /** Text on an `accent` fill. */
+  onAccent: string;
+  /** The accent as text (teal reads at 7:1 on the page in both themes). */
+  accentText: string;
+  /** The selected-state colour: the same teal as the accent. */
   selected: string;
   /** Text on a `selected` fill. */
   onSelected: string;
+  /** Orange #FF6A00 is kept for one thing: "Needs your score" (the bar, the tag border and the glow). A shape, never text; the words stay ink. */
+  attention: string;
+  /** Text on an `attention` fill: black (7.31:1). */
+  onAttention: string;
   /** The scoreboard bar (the header of the officials' screens): near-black in both themes, with white and grey text. */
   board: string;
   onBoard: string;
   boardMuted: string;
-  /** Text on an `accent` fill: black (7.31:1); white on orange is only 2.87:1. */
-  onAccent: string;
-  /** The accent as text. In Day it is the page ink (orange on white is 2.87:1, so orange is never text there); in Dark it is the orange itself, and only on `bg` (#000000, 7.31:1). */
-  accentText: string;
   /** Live / synced. */
   live: string;
   /** Waiting to be sent. */
@@ -75,14 +83,18 @@ export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
     line: "#dcdcdc",
     ink: "#111111",
     muted: "#3a3a3a",
-    border: "#8c8c8c",
-    fill: "#f2f2f2",
-    focus: "#111111",
-    accent: "#ff6a00",
-    onAccent: "#000000",
-    accentText: "#111111",
-    selected: "#115e59",
+    border: "#b0b0b0",
+    fill: "#ffffff",
+    key: "#f2f2f2",
+    hint: "#b0b0b0",
+    focus: "#0b4a46",
+    accent: "#0f5c57",
+    onAccent: "#ffffff",
+    accentText: "#0f5c57",
+    selected: "#0f5c57",
     onSelected: "#ffffff",
+    attention: "#ff6a00",
+    onAttention: "#000000",
     board: "#111111",
     onBoard: "#ffffff",
     boardMuted: "#b0b0b0",
@@ -111,14 +123,18 @@ export const BEACH_THEMES: { day: BeachTokens; dark: BeachTokens } = {
     line: "#2a2a2a",
     ink: "#ffffff",
     muted: "#b0b0b0",
-    border: "#5a5a5a",
-    fill: "#1c1c1c",
-    focus: "#ffffff",
-    accent: "#ff6a00",
-    onAccent: "#000000",
-    accentText: "#ff6a00",
-    selected: "#2dd4bf",
-    onSelected: "#000000",
+    border: "#4d4d4d",
+    fill: "#111111",
+    key: "#1c1c1c",
+    hint: "#6b6b6b",
+    focus: "#9ee7de",
+    accent: "#5fd3c6",
+    onAccent: "#04211e",
+    accentText: "#5fd3c6",
+    selected: "#5fd3c6",
+    onSelected: "#04211e",
+    attention: "#ff6a00",
+    onAttention: "#000000",
     board: "#111111",
     onBoard: "#ffffff",
     boardMuted: "#b0b0b0",
@@ -165,7 +181,9 @@ export const TEXT_PAIRS: ReadonlyArray<readonly [TokenName, TokenName]> = [
   ["missing", "surface"],
   ["onAccent", "accent"],
   ["accentText", "bg"],
+  ["accentText", "surface"],
   ["onSelected", "selected"],
+  ["onAttention", "attention"],
   ["onBoard", "board"],
   ["boardMuted", "board"],
   ["ink", "fill"],

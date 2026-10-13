@@ -41,7 +41,7 @@ export function Choice({ pressed, primary, icon: Icon, className, children, ...r
       className={cn(
         "inline-flex min-h-[var(--org-ctl)] min-w-[var(--org-ctl)] items-center justify-center gap-2 rounded-[8px] border px-3 text-body font-semibold",
         pressed || primary ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-fill text-beach-ink hover:bg-beach-surface",
-        "disabled:cursor-not-allowed disabled:border-dashed disabled:border-beach-border disabled:bg-beach-surface disabled:text-beach-muted",
+        "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...rest}

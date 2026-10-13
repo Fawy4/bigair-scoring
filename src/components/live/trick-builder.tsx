@@ -139,7 +139,7 @@ export function TrickBuilder({
                     data-direction-button
                     aria-pressed={on}
                     onClick={() => onTapDirection(b.key)}
-                    className={cn("inline-flex min-h-bar w-full items-center justify-center gap-1.5 rounded-full text-name font-bold", on ? "border-4 border-beach-ink bg-beach-surface text-beach-ink" : "border border-beach-border bg-beach-fill text-beach-ink")}
+                    className={cn("inline-flex min-h-bar w-full items-center justify-center gap-1.5 rounded-full text-name font-bold", on ? "border border-beach-selected bg-beach-selected text-beach-on-selected" : "border border-beach-border bg-beach-fill text-beach-ink")}
                   >
                     {on ? <Check aria-hidden className="size-5" strokeWidth={3} /> : null}
                     {b.label}
@@ -274,7 +274,7 @@ export function TrickBuilder({
           <div role="alertdialog" aria-label={T.crashConfirm(riderLabelText)} className="flex min-h-bar items-center justify-between gap-2 rounded-lg border border-beach-crash bg-beach-surface px-1.5">
             <p className="min-w-0 text-body font-semibold">{T.crashConfirm(riderLabelText)}</p>
             <span className="flex gap-1">
-              <Chip variant="danger" data-testid="crash-yes" onClick={() => { setConfirmCrash(false); onCrash(); }}>
+              <Chip variant="dangerSolid" data-testid="crash-yes" onClick={() => { setConfirmCrash(false); onCrash(); }}>
                 {T.crashYes}
               </Chip>
               <Chip onClick={() => setConfirmCrash(false)}>{T.crashNo}</Chip>
@@ -282,11 +282,11 @@ export function TrickBuilder({
           </div>
         ) : (
           <div className="grid min-h-bar grid-cols-2 gap-1.5">
-            <button type="button" data-testid="crash-button" disabled={!canCrash} onClick={() => setConfirmCrash(true)} className={cn("inline-flex items-center justify-center gap-1.5 rounded-full border text-name font-bold", canCrash ? "border-beach-crash bg-beach-crash text-beach-on-crash" : "border-beach-line bg-beach-surface text-beach-muted")}>
+            <button type="button" data-testid="crash-button" disabled={!canCrash} onClick={() => setConfirmCrash(true)} className={cn("inline-flex items-center justify-center gap-1.5 rounded-full border text-name font-bold", canCrash ? "border-beach-crash bg-beach-crash text-beach-on-crash" : "border-beach-border bg-beach-fill text-beach-ink opacity-50")}>
               <Zap aria-hidden className="size-4" />
               {T.crash}
             </button>
-            <button type="button" data-testid="log-button" disabled={!canLog} onClick={onLog} className={cn("inline-flex items-center justify-center rounded-full border text-name font-bold", canLog ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-line bg-beach-surface text-beach-muted")}>
+            <button type="button" data-testid="log-button" disabled={!canLog} onClick={onLog} className={cn("inline-flex items-center justify-center rounded-full border text-name font-bold", canLog ? "border-beach-accent bg-beach-accent text-beach-on-accent" : "border-beach-border bg-beach-fill text-beach-ink opacity-50")}>
               {T.log}
             </button>
           </div>

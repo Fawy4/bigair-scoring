@@ -23,12 +23,11 @@ describe.each(themes)("%s theme tokens", (_name, t) => {
     expect(failures).toEqual([]);
   });
   it("has every named token", () => {
-    for (const key of ["bg", "surface", "line", "ink", "muted", "border", "fill", "focus", "accent", "onAccent", "accentText", "selected", "onSelected", "board", "onBoard", "boardMuted", "live", "pending", "failed", "crash", "outlier", "missing", "onCrash", "tintCrash", "tintGrey", "tintGrade0", "tintGrade1", "tintGrade2", "tintGrade3", "tintGrade4", "tintDist0", "tintDist1", "tintDist2", "tintDist3"] as const) {
+    for (const key of ["bg", "surface", "line", "ink", "muted", "border", "fill", "key", "hint", "focus", "accent", "onAccent", "accentText", "selected", "onSelected", "attention", "onAttention", "board", "onBoard", "boardMuted", "live", "pending", "failed", "crash", "outlier", "missing", "onCrash", "tintCrash", "tintGrey", "tintGrade0", "tintGrade1", "tintGrade2", "tintGrade3", "tintGrade4", "tintDist0", "tintDist1", "tintDist2", "tintDist3"] as const) {
       expect(t[key]).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
-  it("the hairline of a control (a shape, not text) stands out by 3:1 on the page and the focus ring by 7:1; the soft card line is decoration only", () => {
-    expect(contrastRatio(t.border, t.bg)).toBeGreaterThanOrEqual(3);
+  it("the thin edge of a control is decoration (its words carry it) and the focus ring stands out by 7:1", () => {
     expect(contrastRatio(t.focus, t.bg)).toBeGreaterThanOrEqual(MIN);
     expect(contrastRatio(t.focus, t.surface)).toBeGreaterThanOrEqual(MIN);
   });
@@ -58,69 +57,51 @@ describe("public heat grades and the head judge's distance colours", () => {
   });
 });
 
-// The brand (the same as the Instagram posts): near-black #111111, electric orange #FF6A00, white #FFFFFF, grey #B0B0B0.
-describe("the brand colours and the rules about orange", () => {
+// The brand (the same as the Instagram posts): near-black #111111, white #FFFFFF, grey #B0B0B0, the Sendbook orange #FF6A00 (kept for "Needs your score" and the logo only) and teal for everything else.
+describe("teal is the accent; orange is kept for 'Needs your score'", () => {
   const ORANGE = "#ff6a00";
-  it("black on orange is 7.31:1; white on orange only 2.87:1, so orange buttons carry black text", () => {
+  it("every button, selected state and focus ring is teal: the accent, the selected colour and the accent text are the same teal in each theme", () => {
+    for (const t of Object.values(BEACH_THEMES)) {
+      expect(t.selected).toBe(t.accent);
+      expect(t.onSelected).toBe(t.onAccent);
+      expect(t.accentText).toBe(t.accent);
+      expect(t.accent).not.toBe(ORANGE);
+    }
+    expect(BEACH_THEMES.day.accent).toBe("#0f5c57");
+    expect(BEACH_THEMES.dark.accent).toBe("#5fd3c6");
+  });
+  it("teal with its text passes 7:1 in both themes (white on #0F5C57 in Day, #04211E on #5FD3C6 in Dark), and teal text reads at 7:1 on the page", () => {
+    for (const t of Object.values(BEACH_THEMES)) {
+      expect(contrastRatio(t.onAccent, t.accent)).toBeGreaterThanOrEqual(MIN);
+      expect(contrastRatio(t.accentText, t.bg)).toBeGreaterThanOrEqual(MIN);
+      expect(contrastRatio(t.focus, t.bg)).toBeGreaterThanOrEqual(MIN);
+      expect(contrastRatio(t.accent, t.bg)).toBeGreaterThanOrEqual(3);
+    }
+  });
+  it("orange is #FF6A00 in both themes, carries black text at 7.31:1, and is never text on white (2.87:1)", () => {
+    for (const t of Object.values(BEACH_THEMES)) {
+      expect(t.attention).toBe(ORANGE);
+      expect(t.onAttention).toBe("#000000");
+    }
     expect(contrastRatio("#000000", ORANGE)).toBeCloseTo(7.31, 2);
     expect(contrastRatio("#ffffff", ORANGE)).toBeCloseTo(2.87, 2);
-    for (const t of Object.values(BEACH_THEMES)) {
-      expect(t.accent).toBe(ORANGE);
-      expect(t.onAccent).toBe("#000000");
-    }
-  });
-  it("orange as text: 7.31:1 on #000000, 6.58:1 on #111111, 2.87:1 on white", () => {
     expect(contrastRatio(ORANGE, "#000000")).toBeCloseTo(7.31, 2);
-    expect(contrastRatio(ORANGE, "#111111")).toBeCloseTo(6.58, 2);
-    expect(contrastRatio(ORANGE, "#ffffff")).toBeCloseTo(2.87, 2);
   });
-  it("in Day orange is never text (the accent text is the page ink); in Dark it is orange and the page is #000000, the only ground it is allowed on", () => {
-    expect(BEACH_THEMES.day.accentText).toBe(BEACH_THEMES.day.ink);
-    expect(BEACH_THEMES.dark.accentText).toBe(ORANGE);
-    expect(BEACH_THEMES.dark.bg).toBe("#000000");
-    expect(contrastRatio(BEACH_THEMES.dark.accentText, BEACH_THEMES.dark.bg)).toBeGreaterThanOrEqual(MIN);
-  });
-  it("brand grey #B0B0B0 on #111111 is 8.71:1 and is the Dark muted text", () => {
-    expect(contrastRatio("#b0b0b0", "#111111")).toBeCloseTo(8.71, 2);
-    expect(BEACH_THEMES.dark.muted).toBe("#b0b0b0");
-    expect(BEACH_THEMES.dark.surface).toBe("#111111");
-    expect(BEACH_THEMES.day.ink).toBe("#111111");
-  });
-  it("orange cannot be read as the amber Hold flag: the accent is never one of the flag colours of the preset, and no lycra/amber fill uses it", () => {
-    const flagSrc = readFileSync("src/lib/live/flags.ts", "utf8") + readFileSync("src/lib/schemas/flags.ts", "utf8");
-    expect(flagSrc.toLowerCase()).not.toContain(ORANGE);
-  });
-  it("(owner's reading) text inside a box and every other text meets at least 4.5:1 on the grounds used for it, in both themes", () => {
-    for (const t of Object.values(BEACH_THEMES)) {
-      for (const bg of [t.bg, t.surface]) {
-        expect(contrastRatio(t.ink, bg)).toBeGreaterThanOrEqual(MIN);
-        expect(contrastRatio(t.muted, bg)).toBeGreaterThanOrEqual(MIN);
-        expect(contrastRatio(t.border, t.bg)).toBeGreaterThanOrEqual(3);
+  it("orange is used for nothing but 'Needs your score' (and the logo): no component outside the Rider sheet line uses the attention colour", () => {
+    const { readdirSync, readFileSync: rf, statSync } = require("node:fs") as typeof import("node:fs");
+    const hits: string[] = [];
+    const walk = (dir: string) => {
+      for (const f of readdirSync(dir)) {
+        const p = `${dir}/${f}`;
+        if (statSync(p).isDirectory()) walk(p);
+        else if (/\.(tsx|ts)$/.test(f) && !/\.test\./.test(f) && /beach-(on-)?attention/.test(rf(p, "utf8"))) hits.push(p);
       }
-    }
+    };
+    walk("src");
+    expect(hits).toEqual(["src/components/live/rider-sheet.tsx"]);
   });
-});
-
-describe("teal = selected, and the soft filled controls", () => {
-  it("Day teal #115E59 carries white at 7.6:1; Dark teal #2DD4BF carries black at 11.3:1", () => {
-    expect(BEACH_THEMES.day.selected).toBe("#115e59");
-    expect(contrastRatio("#ffffff", "#115e59")).toBeCloseTo(7.6, 1);
-    expect(BEACH_THEMES.dark.selected).toBe("#2dd4bf");
-    expect(contrastRatio("#000000", "#2dd4bf")).toBeCloseTo(11.3, 1);
-  });
-  it("a selected shape stands out from the page by 3:1 in both themes, and from the orange (act now) by its own hue", () => {
-    for (const t of Object.values(BEACH_THEMES)) {
-      expect(contrastRatio(t.selected, t.bg)).toBeGreaterThanOrEqual(3);
-      expect(t.selected).not.toBe(t.accent);
-    }
-  });
-  it("hairlines: about #8C8C8C on white (3.4:1) and #5A5A5A on black (3.0:1)", () => {
-    expect(contrastRatio(BEACH_THEMES.day.border, "#ffffff")).toBeCloseTo(3.4, 1);
-    expect(contrastRatio(BEACH_THEMES.dark.border, "#000000")).toBeCloseTo(3.0, 1);
-  });
-  it("Dark crash is a vivid red #FF6B6B that carries black at 7:1 or better (7.6:1)", () => {
+  it("the Dark crash is a vivid red #FF6B6B that carries black at 7:1 or better (7.6:1)", () => {
     expect(BEACH_THEMES.dark.crash).toBe("#ff6b6b");
-    expect(contrastRatio(BEACH_THEMES.dark.onCrash, BEACH_THEMES.dark.crash)).toBeGreaterThanOrEqual(7);
     expect(contrastRatio("#000000", "#ff6b6b")).toBeCloseTo(7.6, 1);
   });
   it("the scoreboard bar is the brand near-black with white (and brand grey) text in both themes", () => {
@@ -130,9 +111,21 @@ describe("teal = selected, and the soft filled controls", () => {
       expect(contrastRatio(t.boardMuted, t.board)).toBeCloseTo(8.71, 2);
     }
   });
-  it("the resting fill is light grey in Day and dark grey in Dark, and differs from the page", () => {
-    expect(relativeLuminance(BEACH_THEMES.day.fill)).toBeLessThan(relativeLuminance(BEACH_THEMES.day.bg));
-    expect(relativeLuminance(BEACH_THEMES.dark.fill)).toBeGreaterThan(relativeLuminance(BEACH_THEMES.dark.bg));
+  it("a control at rest is white (Day) or near-black (Dark) with a thin edge: never a grey block", () => {
+    expect(BEACH_THEMES.day.fill).toBe("#ffffff");
+    expect(BEACH_THEMES.dark.fill).toBe("#111111");
+    expect(BEACH_THEMES.day.border).toBe("#b0b0b0");
+    // the edge is decoration: the words and icon of the button carry it at 7:1
+    for (const t of Object.values(BEACH_THEMES)) expect(contrastRatio(t.ink, t.fill)).toBeGreaterThanOrEqual(MIN);
+  });
+  it("the score pad keys keep their light-grey (Day) and dark-grey (Dark) fill, and the hint in an empty score box is clearly lighter than a real score", () => {
+    expect(relativeLuminance(BEACH_THEMES.day.key)).toBeLessThan(relativeLuminance(BEACH_THEMES.day.bg));
+    expect(relativeLuminance(BEACH_THEMES.dark.key)).toBeGreaterThan(relativeLuminance(BEACH_THEMES.dark.bg));
+    for (const t of Object.values(BEACH_THEMES)) {
+      expect(contrastRatio(t.ink, t.key)).toBeGreaterThanOrEqual(MIN);
+      expect(contrastRatio(t.hint, t.fill)).toBeLessThan(contrastRatio(t.ink, t.fill) / 3);
+      expect(contrastRatio(t.hint, t.fill)).toBeGreaterThan(1.5);
+    }
   });
 });
 

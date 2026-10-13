@@ -123,7 +123,7 @@ function LineRow({
       data-pulse={pulse ? "true" : undefined}
       className={cn("relative flex scroll-mt-20 flex-col gap-0.5 px-2 py-1.5", crash && "bg-beach-surface text-beach-muted", line.kind === "empty" && "bg-beach-bg")}
     >
-      {needs ? <span aria-hidden data-testid="line-needs-bar" className="absolute bottom-1.5 left-0 top-1.5 w-1.5 rounded-r-full bg-beach-accent" /> : null}
+      {needs ? <span aria-hidden data-testid="line-needs-bar" className="absolute bottom-1.5 left-0 top-1.5 w-1.5 rounded-r-full bg-beach-attention" /> : null}
       <div className="flex items-center gap-1.5">
         <span data-testid="line-number" className="w-5 shrink-0 text-center text-name font-bold tabular-nums">
           {line.n}
@@ -134,7 +134,7 @@ function LineRow({
               {orphan ? T.noAttempt : T.waitingTrick}
             </span>
           ) : (
-            <span data-testid="line-trick" className={cn("flex flex-wrap items-baseline gap-x-1.5 text-body font-bold", crash && "line-through")}>
+            <span data-testid="line-trick" className={cn("flex flex-wrap items-baseline gap-x-1.5 text-name font-bold leading-tight", crash && "line-through")}>
               <span>{line.trickName || "—"}</span>
               {line.direction ? <span className="text-small font-medium text-beach-muted">{dirWord(line.direction)}</span> : null}
             </span>
@@ -142,9 +142,9 @@ function LineRow({
           {needs ? (
             <span
               data-testid="line-needs-score"
-              className="mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-beach-accent bg-[color-mix(in_srgb,var(--beach-accent)_9%,transparent)] px-2 py-0.5 text-small font-bold text-beach-ink"
+              className="mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-beach-attention bg-[color-mix(in_srgb,var(--beach-attention)_9%,transparent)] px-2 py-0.5 text-small font-bold text-beach-ink"
             >
-              <span aria-hidden data-testid="line-needs-dot" className={cn("size-2 rounded-full bg-beach-accent", pulse && "motion-safe:animate-pulse")} />
+              <span aria-hidden data-testid="line-needs-dot" className={cn("size-2 rounded-full bg-beach-attention", pulse && "motion-safe:animate-pulse")} />
               {T.needsScore}
             </span>
           ) : null}
@@ -159,23 +159,30 @@ function LineRow({
             <Pill icon={Flame} tone="crash">
               {T.crash}
             </Pill>
-            <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} title={T.flag} icon={Flag} pressed={flagged} disabled={locked} onClick={() => onFlagOpen(line)} className="size-11 px-0" />
+            <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked} onClick={() => onFlagOpen(line)} className="h-8 min-h-0 min-w-0 px-2 text-small">
+              {T.flag}
+            </Chip>
           </span>
         ) : (
           <span className="flex shrink-0 items-center gap-1.5">
             {line.kind === "empty" && line.pending !== null && !isMissed ? <Pill tone="pending">{T.pendingTag}</Pill> : null}
-            <Chip data-testid="line-missed" aria-label={T.missedAria(line.n)} aria-pressed={isMissed} pressed={isMissed} disabled={locked || (waits && !tappable)} onClick={() => (waits ? tap() : onMissed(line))} className="h-11 px-2.5">
-              {isMissed ? <Check aria-hidden className="size-4 shrink-0" strokeWidth={3} /> : null}
-              {T.missed}
-            </Chip>
-            <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} title={T.flag} icon={Flag} pressed={flagged} disabled={locked || line.kind === "empty"} onClick={() => onFlagOpen(line)} className="size-11 px-0" />
+            {/* Missed over Flag in one small column (the owner's choice: these two are the only controls under 44 px), so the trick name keeps the width */}
+            <span className="flex w-[4.75rem] shrink-0 flex-col gap-0.5">
+              <Chip data-testid="line-missed" aria-label={T.missedAria(line.n)} aria-pressed={isMissed} pressed={isMissed} disabled={locked || (waits && !tappable)} onClick={() => (waits ? tap() : onMissed(line))} className="h-8 min-h-0 w-full min-w-0 px-1 text-small">
+                {isMissed ? <Check aria-hidden className="size-3.5 shrink-0" strokeWidth={3} /> : null}
+                {T.missed}
+              </Chip>
+              <Chip data-testid="line-flag" aria-label={T.flagAria(line.n)} icon={Flag} pressed={flagged} disabled={locked || line.kind === "empty"} onClick={() => onFlagOpen(line)} className="h-8 min-h-0 w-full min-w-0 px-1 text-small">
+                {T.flag}
+              </Chip>
+            </span>
             <input
               data-testid="line-score"
               inputMode="decimal"
               enterKeyHint="done"
               autoComplete="off"
               aria-label={waits ? T.waitsAria(line.n) : T.scoreBox(line.n)}
-              placeholder={T.placeholder}
+              placeholder={formatPadValue(0, scale)}
               value={text}
               disabled={locked || (waits && !tappable)}
               readOnly={waits}
@@ -187,10 +194,10 @@ function LineRow({
                 if (e.key === "Enter") (e.target as HTMLInputElement).blur();
               }}
               className={cn(
-                "h-11 w-14 shrink-0 rounded-full border bg-beach-fill px-1 py-0 text-center text-digit font-bold leading-none text-beach-ink",
+                "h-11 w-14 shrink-0 rounded-full border bg-beach-fill px-1 py-0 text-center text-digit font-bold leading-none text-beach-ink placeholder:font-medium placeholder:text-beach-hint",
                 refusal ? "border-beach-failed" : "border-beach-line",
                 line.kind === "empty" && line.pending !== null && !isMissed && "border-dashed",
-                pulse && !refusal && "border-2 border-beach-accent shadow-[0_0_0_3px_color-mix(in_srgb,var(--beach-accent)_35%,transparent)]",
+                pulse && !refusal && "border-2 border-beach-attention shadow-[0_0_0_3px_color-mix(in_srgb,var(--beach-attention)_35%,transparent)]",
               )}
             />
           </span>

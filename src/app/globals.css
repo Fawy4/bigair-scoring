@@ -135,12 +135,13 @@
     border-color: var(--beach-crash);
     color: var(--beach-crash);
   }
-  /* a disabled control is never faded to light grey: full-strength text, a dashed frame, a flat fill */
+  /* a disabled control keeps its shape with faded words: never a grey block */
   :where(.org-console) .btn:disabled {
-    border-style: dashed;
+    border-style: solid;
     border-color: var(--beach-border);
-    background: var(--beach-surface);
-    color: var(--beach-muted);
+    background: var(--beach-fill);
+    color: var(--beach-ink);
+    opacity: 0.5;
     cursor: not-allowed;
   }
   :where(.org-console) .btn-danger-solid {
@@ -372,7 +373,7 @@ body:has(.print-sheet) {
 /* small labels on seats and heats ("changed by hand", "started"): text, never colour alone */
 .badge-note {
   display: inline-block;
-  border: 1px solid var(--beach-border, #8c8c8c);
+  border: 1px solid var(--beach-border, #b0b0b0);
   border-radius: 9999px;
   padding: 0 0.5rem;
   font-size: var(--size-small, 12px);
@@ -392,14 +393,18 @@ body:has(.print-sheet) {
   --beach-line: #dcdcdc;
   --beach-ink: #111111;
   --beach-muted: #3a3a3a;
-  --beach-border: #8c8c8c;
-  --beach-fill: #f2f2f2;
-  --beach-focus: #111111;
-  --beach-accent: #ff6a00;
-  --beach-on-accent: #000000;
-  --beach-accent-text: #111111;
-  --beach-selected: #115e59;
+  --beach-border: #b0b0b0;
+  --beach-fill: #ffffff;
+  --beach-key: #f2f2f2;
+  --beach-hint: #b0b0b0;
+  --beach-focus: #0b4a46;
+  --beach-accent: #0f5c57;
+  --beach-on-accent: #ffffff;
+  --beach-accent-text: #0f5c57;
+  --beach-selected: #0f5c57;
   --beach-on-selected: #ffffff;
+  --beach-attention: #ff6a00;
+  --beach-on-attention: #000000;
   --beach-board: #111111;
   --beach-on-board: #ffffff;
   --beach-board-muted: #b0b0b0;
@@ -429,14 +434,18 @@ body:has(.print-sheet) {
   --beach-line: #2a2a2a;
   --beach-ink: #ffffff;
   --beach-muted: #b0b0b0;
-  --beach-border: #5a5a5a;
-  --beach-fill: #1c1c1c;
-  --beach-focus: #ffffff;
-  --beach-accent: #ff6a00;
-  --beach-on-accent: #000000;
-  --beach-accent-text: #ff6a00;
-  --beach-selected: #2dd4bf;
-  --beach-on-selected: #000000;
+  --beach-border: #4d4d4d;
+  --beach-fill: #111111;
+  --beach-key: #1c1c1c;
+  --beach-hint: #6b6b6b;
+  --beach-focus: #9ee7de;
+  --beach-accent: #5fd3c6;
+  --beach-on-accent: #04211e;
+  --beach-accent-text: #5fd3c6;
+  --beach-selected: #5fd3c6;
+  --beach-on-selected: #04211e;
+  --beach-attention: #ff6a00;
+  --beach-on-attention: #000000;
   --beach-board: #111111;
   --beach-on-board: #ffffff;
   --beach-board-muted: #b0b0b0;

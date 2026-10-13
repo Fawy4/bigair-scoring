@@ -124,9 +124,9 @@ for (const profile of PROFILES) {
     });
 
     for (const scheme of ["light", "dark"] as const) {
-      test(`${scheme} theme follows the device and every essential text is at least 7:1`, async ({ page }) => {
-        await page.emulateMedia({ colorScheme: scheme });
+      test(`${scheme === "light" ? "Daylight (the default)" : "Dark (chosen with the switch)"} and every essential text is at least 7:1`, async ({ page }) => {
         await page.goto("/");
+        if (scheme === "dark") await page.getByTestId("home-theme").getByRole("button", { name: "Dark", exact: true }).click();
         await expect(page.getByTestId("landing-event").first()).toBeVisible();
         const bg = await page.locator(".home").evaluate((el) => getComputedStyle(el).backgroundColor);
         expect(bg).toBe(scheme === "dark" ? "rgb(17, 17, 17)" : "rgb(255, 255, 255)");
@@ -135,9 +135,9 @@ for (const profile of PROFILES) {
           const ratio = await contrastOf(page, sel);
           expect(ratio, `${sel} on ${scheme}`).toBeGreaterThanOrEqual(7);
         }
-        // the accent appears in two places only: the primary action and the live dot
+        // the accent (teal) appears in two places only: the primary action and the live dot
         const accent = await page.evaluate(() => {
-          const orange = "rgb(255, 106, 0)";
+          const orange = scheme === "dark" ? "rgb(95, 211, 198)" : "rgb(15, 92, 87)";
           const hits: string[] = [];
           for (const el of document.querySelectorAll<Element>(".home *")) {
             const cs = getComputedStyle(el);

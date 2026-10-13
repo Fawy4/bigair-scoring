@@ -13,10 +13,10 @@ const mix = (a: string, b: string, share: number): string => {
 describe("the Needs your score tag in both themes", () => {
   for (const [name, t] of Object.entries(BEACH_THEMES)) {
     it(`${name}: the tag's words are at least 7:1 on the tag, the tag's wash and the bar are visible against the page`, () => {
-      const wash = mix(t.accent, t.bg, 0.09);
+      const wash = mix(t.attention, t.bg, 0.09);
       expect(contrastRatio(t.ink, wash)).toBeGreaterThanOrEqual(7);
       expect(contrastRatio(t.ink, t.bg)).toBeGreaterThanOrEqual(7);
-      expect(contrastRatio(t.accent, t.bg)).toBeGreaterThanOrEqual(name === "day" ? 2.8 : 3);
+      expect(contrastRatio(t.attention, t.bg)).toBeGreaterThanOrEqual(name === "day" ? 2.8 : 3);
     });
   }
 });

@@ -30,7 +30,7 @@ const V = copy.headV2;
 const HL = copy.headLive;
 
 /** A heat-control button. `compact` is the laptop's top bar (the reason goes to the line under the bar and to assistive technology); otherwise the reason is written under the button. */
-export function Btn({ children, onClick, disabled, tone = "plain", testId, reason, compact = false, size = "tap", className, pressed }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; tone?: "plain" | "accent" | "danger"; testId: string; reason?: string; compact?: boolean; size?: "tap" | "bar"; className?: string; pressed?: boolean }) {
+export function Btn({ children, onClick, disabled, tone = "plain", testId, reason, compact = false, size = "tap", className, pressed }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; tone?: "plain" | "accent" | "danger" | "dangerSolid"; testId: string; reason?: string; compact?: boolean; size?: "tap" | "bar"; className?: string; pressed?: boolean }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       <button
@@ -44,7 +44,7 @@ export function Btn({ children, onClick, disabled, tone = "plain", testId, reaso
           "inline-flex items-center justify-center gap-1 rounded-full border px-3 text-body font-bold",
           pressed ? "border-2 border-beach-selected" : "",
           size === "bar" ? "min-h-bar" : "min-h-tap",
-          disabled ? "border-beach-line bg-beach-surface text-beach-muted" : tone === "accent" ? "border-beach-accent bg-beach-accent text-beach-on-accent" : tone === "danger" ? "border-beach-crash bg-beach-bg text-beach-crash" : "border-beach-border bg-beach-fill text-beach-ink",
+          disabled ? "border-beach-border bg-beach-fill text-beach-ink opacity-50" : tone === "accent" ? "border-beach-accent bg-beach-accent text-beach-on-accent" : tone === "dangerSolid" ? "border-beach-crash bg-beach-crash text-beach-on-crash" : tone === "danger" ? "border-beach-crash bg-beach-fill text-beach-crash" : "border-beach-border bg-beach-fill text-beach-ink",
           className,
         )}
       >
@@ -190,7 +190,7 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn, bar = false }: 
         <ClockText timezone={c.ctx.event.timezone} nowMs={c.nowServer} />
         <DriftBadge drift={c.drift} />
         {/* the banner has its own full-width line: nothing sits beside it or on top of it, so its words (state, break countdown, next heat) are never cut */}
-        {c.flag ? <FlagStrip model={c.flag} size="head" className={bar ? "min-w-[18rem] flex-1 basis-80" : "w-full basis-full"} /> : selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
+        {c.flag ? <FlagStrip model={c.flag} size="head" className="w-full basis-full" /> : selected ? <HeatTimer remainingMs={c.remaining} state={c.timerState} size="head" /> : null}
         {selected && state !== "cancelled" ? (
           <div className={cn(bar ? "flex flex-wrap items-center gap-2" : "grid w-full basis-full grid-cols-2 gap-2")}>
             {c.ctl && c.ctl.id !== selected.id && c.on("start") ? (
@@ -247,7 +247,7 @@ export function TimerBar({ c, withSound, onSoundToggle, soundOn, bar = false }: 
             <input data-testid="end-reason" value={c.reason} onChange={(e) => c.setReason(e.target.value)} className="min-h-tap rounded-xl border border-beach-border bg-beach-fill px-3 text-body font-semibold" />
           </label>
           <div className="flex gap-1.5">
-            <Btn testId="end-confirm" tone="danger" disabled={c.pending} onClick={c.actions.end}>
+            <Btn testId="end-confirm" tone="dangerSolid" disabled={c.pending} onClick={c.actions.end}>
               {T.endConfirm}
             </Btn>
             <Btn testId="end-cancel" onClick={() => c.setConfirmingEnd(false)}>
@@ -669,7 +669,7 @@ export function ReviewButtons({ c, compact = false, visibility = true }: { c: He
             <input data-testid="cancel-reason" value={c.reason} onChange={(e) => c.setReason(e.target.value)} placeholder={T.cancelReasonPlaceholder} className="min-h-tap rounded-xl border border-beach-border bg-beach-fill px-2 text-body" />
           </label>
           <div className="flex gap-1.5">
-            <Btn testId="cancel-confirm" tone="danger" disabled={c.pending} onClick={c.actions.cancel}>
+            <Btn testId="cancel-confirm" tone="dangerSolid" disabled={c.pending} onClick={c.actions.cancel}>
               {T.cancelConfirm}
             </Btn>
             <Btn testId="cancel-back" onClick={() => c.setCancelling(false)}>

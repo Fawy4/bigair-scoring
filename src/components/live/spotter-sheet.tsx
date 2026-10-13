@@ -208,6 +208,8 @@ function SheetLineRow({
   const stateWord = line.state === "saving" ? T.states.saving : line.state === "logged" ? T.states.logged : tapToLog ? T.states.tapToLog : T.states.empty;
   const keptTrick = crash ? (readTrick(vocab, enabledIds, text, dir).trickName ?? line.trickName ?? "") : "";
   const dim = line.state === "waiting";
+  // the mic shows while the box is empty and the × only while it is in use, so the trick box gets all the width that is left
+  const adorned = canType && (text ? focused : speech.supported);
   const freeText = logged && mine && read(line, text, vocab, enabledIds);
   // one row per line: the state is a small tick by the number; the words are kept for a screen reader and show only when something needs saying (a typed trick waiting for a tap, another seat's line, free text)
   const sayState = tapToLog || (logged && !mine) || freeText;
@@ -221,23 +223,40 @@ function SheetLineRow({
           </span>
           {line.state === "logged" ? <Check aria-hidden data-testid="line-tick" className="mt-1 size-3.5 text-beach-selected" strokeWidth={4} /> : null}
         </span>
-        <div role="group" aria-label={T.directionAria(line.n)} className="inline-flex shrink-0 overflow-hidden rounded-full border border-beach-border bg-beach-fill">
-          {(["left", "right"] as const).map((d) => (
-            <button
-              key={d}
-              type="button"
-              data-testid={d === "left" ? "line-left" : "line-right"}
-              aria-label={d === "left" ? T.leftAria(line.n) : T.rightAria(line.n)}
-              aria-pressed={dir === d}
-              disabled={!canType}
-              onPointerDown={(e) => e.preventDefault()}
-              onClick={() => tapDirection(d)}
-              className={cn("inline-flex h-11 w-11 items-center justify-center gap-0.5 text-name font-bold disabled:opacity-50", d === "right" && "border-l border-beach-border", dir === d ? "bg-beach-selected text-beach-on-selected" : "bg-transparent text-beach-ink")}
-            >
-              {dir === d ? <Check aria-hidden className="size-3.5" strokeWidth={3} /> : null}
-              {d === "left" ? T.left : T.right}
-            </button>
-          ))}
+        {/* L | R over Crash in one small column (the owner's choice: the only controls under 44 px), so the trick box gets all the width that is left */}
+        <div className="flex w-16 shrink-0 flex-col gap-0.5">
+          <div role="group" aria-label={T.directionAria(line.n)} className="grid w-full grid-cols-2 overflow-hidden rounded-full border border-beach-border bg-beach-fill">
+            {(["left", "right"] as const).map((d) => (
+              <button
+                key={d}
+                type="button"
+                data-testid={d === "left" ? "line-left" : "line-right"}
+                aria-label={d === "left" ? T.leftAria(line.n) : T.rightAria(line.n)}
+                aria-pressed={dir === d}
+                disabled={!canType}
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => tapDirection(d)}
+                className={cn("inline-flex h-8 items-center justify-center gap-0 text-small font-bold disabled:opacity-50", d === "right" && "border-l border-beach-border", dir === d ? "bg-beach-selected text-beach-on-selected" : "bg-transparent text-beach-ink")}
+              >
+                {dir === d ? <Check aria-hidden className="size-3" strokeWidth={3} /> : null}
+                {d === "left" ? T.left : T.right}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            data-testid="line-crash"
+            aria-label={T.crashAria(line.n)}
+            aria-pressed={crash}
+            disabled={!canType}
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={tapCrash}
+            className={cn("inline-flex h-8 w-full shrink-0 items-center justify-center gap-0.5 rounded-full border border-beach-crash px-1 text-small font-bold disabled:opacity-50", crash ? "bg-beach-crash text-beach-on-crash ring-[3px] ring-beach-ink ring-offset-1 ring-offset-beach-bg" : "bg-transparent text-beach-crash")}
+          >
+            {crash ? <Check aria-hidden className="size-4" strokeWidth={3} /> : <Zap aria-hidden className="size-4" />}
+            {copy.live.builder.crash}
+          </button>
+
         </div>
         <div className="flex min-w-0 flex-1 flex-col">
           {crash && logged ? (
@@ -272,7 +291,7 @@ function SheetLineRow({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") (e.target as HTMLInputElement).blur(); // closes the keyboard; it never logs
                 }}
-                className="h-11 w-full min-w-0 rounded-full border border-beach-line bg-beach-fill py-0 pl-3 pr-8 text-body font-medium text-ellipsis text-beach-ink placeholder:font-medium placeholder:text-beach-muted disabled:bg-beach-surface"
+                className={cn("h-11 w-full min-w-0 rounded-full border border-beach-border bg-beach-fill py-0 pl-3 text-body font-medium text-ellipsis text-beach-ink placeholder:font-medium placeholder:text-beach-muted disabled:bg-beach-surface", adorned ? "pr-11" : "pr-3")}
               />
               {!text && canType && speech.supported ? (
                 <button
@@ -287,7 +306,7 @@ function SheetLineRow({
                   <Mic aria-hidden className="size-5" strokeWidth={2.5} />
                 </button>
               ) : null}
-              {text && canType ? (
+              {text && canType && focused ? (
                 <button
                   type="button"
                   data-testid="line-trick-clear"
@@ -302,19 +321,6 @@ function SheetLineRow({
             </div>
           )}
         </div>
-        <button
-          type="button"
-          data-testid="line-crash"
-          aria-label={T.crashAria(line.n)}
-          aria-pressed={crash}
-          disabled={!canType}
-          onPointerDown={(e) => e.preventDefault()}
-          onClick={tapCrash}
-          className={cn("inline-flex h-11 w-16 shrink-0 items-center justify-center gap-0.5 rounded-full border border-beach-crash px-1 text-small font-bold disabled:opacity-50", crash ? "bg-beach-crash text-beach-on-crash ring-[3px] ring-beach-ink ring-offset-1 ring-offset-beach-bg" : "bg-transparent text-beach-crash")}
-        >
-          {crash ? <Check aria-hidden className="size-4" strokeWidth={3} /> : <Zap aria-hidden className="size-4" />}
-          {copy.live.builder.crash}
-        </button>
       </div>
       <div className={cn("flex items-center justify-between gap-2 pl-[30px] text-small font-medium", !sayState && "sr-only")}>
         <span data-testid="line-state" data-tap-to-log={tapToLog ? "true" : undefined} className={cn(line.state === "logged" || tapToLog ? "font-bold text-beach-ink" : "text-beach-muted")}>

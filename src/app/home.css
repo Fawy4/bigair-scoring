@@ -1,12 +1,12 @@
-/* The front door (Polish 4). Its own small set of tokens, scoped to .home: near-black #111111, one accent (electric orange #FF6A00) used for the primary action and the live dot only, 1 px frames, 16 px cards, no shadows, no gradients. Dark and light follow the device. Text pairs are at least 7:1 (the beach standard):
-   ink on bg 17:1 / 17:1, muted on bg 8.4:1 / 10:1, black on the accent 7.4:1. The only movement on the page is the live dot (see .home-dot). */
+/* The front door (Polish 4). Its own small set of tokens, scoped to .home: near-black #111111, one accent (teal, the same as the rest of the product) used for the primary action and the live dot only, 1 px frames, 16 px cards, no shadows, no gradients. Daylight is the default; Dark is a choice (the same Daylight / Dark switch as every other page, kept on this device). Text pairs are at least 7:1 (the beach standard):
+   ink on bg 17:1 / 17:1, muted on bg 8.4:1 / 10:1, white on the accent 8.1:1. The only movement on the page is the live dot (see .home-dot). */
 .home {
   --h-bg: #ffffff;
   --h-ink: #111111;
   --h-muted: #4d4d4d;
   --h-line: #d6d6d6;
-  --h-accent: #ff6a00;
-  --h-on-accent: #000000;
+  --h-accent: #0f5c57;
+  --h-on-accent: #ffffff;
   min-height: 100dvh;
   background: var(--h-bg);
   color: var(--h-ink);
@@ -15,16 +15,16 @@
   font-size: 16px;
   line-height: 1.5;
 }
-@media (prefers-color-scheme: dark) {
-  .home {
-    --h-bg: #111111;
-    --h-ink: #f5f5f5;
-    --h-muted: #bdbdbd;
-    --h-line: #3a3a3a;
-  }
-  body:has(.home) {
-    background: #111111;
-  }
+.home[data-theme="dark"] {
+  --h-bg: #111111;
+  --h-ink: #f5f5f5;
+  --h-muted: #bdbdbd;
+  --h-line: #3a3a3a;
+  --h-accent: #5fd3c6;
+  --h-on-accent: #04211e;
+}
+body:has(.home[data-theme="dark"]) {
+  background: #111111;
 }
 .home * {
   box-sizing: border-box;
@@ -419,4 +419,10 @@
   margin: 0;
   font-size: 15px;
   color: var(--h-muted);
+}
+
+/* the Daylight / Dark switch, top right of the front door */
+.home-theme {
+  display: flex;
+  justify-content: flex-end;
 }
