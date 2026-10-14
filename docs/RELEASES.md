@@ -14,7 +14,7 @@ How to write an entry (copy the newest one):
 
 ## 0.23.0 — 14 Oct 2026 {#release-0-23-0}
 
-PR: #51
+PR: #53
 
 ### What changed
 - **The "What spectators see per attempt" setting now changes only when you change it.** The Live screens panel used to save its whole picture, so a page opened earlier could bring an older value of that setting back when you changed another one. It now saves only the setting you touched.
