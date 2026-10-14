@@ -19,6 +19,7 @@ import { activePlanFor, heatTitle, livesFor, timetableOptions } from "@/lib/live
 import { nextHeat } from "@/lib/live/next-heat";
 import { attemptCounts, feedLines, ridersForHeat, trickKit } from "@/lib/live/screen-model";
 import { spotterViewPreference, type SpotterView } from "@/lib/live/spotter-sheet";
+import { spotterViewFor, testPathOpen } from "@/lib/live/official-views";
 import { remainingMs } from "@/lib/live/timer";
 import type { LiveContext } from "@/lib/live/types";
 import { createClient } from "@/lib/supabase/browser";
@@ -51,9 +52,23 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
   const viewer = ctx.viewer.kind === "seat" ? ctx.viewer : null;
   const seatId = viewer?.seatId ?? "organiser";
   const q = useSendQueue(supabase, clock.now, `spot-${ctx.event.id}-${seatId}`, online && live.connected, (kind, row) => (kind === "attempt" || kind === "attempt_edit") && live.apply("attempts", row as never));
-  // the view this phone logs in: the Rider sheet (the default) or the Trick list; read after the page is up, so the server and the browser draw the same first screen
+  // the view this phone logs in: always the Rider sheet (0.24.0). The Trick list is hidden code, behind lib/live/official-views.ts: only a test server (or the one switch turned
+  // back on) reads the phone's own choice and draws the switch. Read after the page is up, so the server and the browser draw the same first screen.
   const [view, setView] = useState<SpotterView>("sheet");
-  useEffect(() => setView(spotterViewPreference.read(typeof window === "undefined" ? null : window.localStorage)), []);
+  const [switchShown, setSwitchShown] = useState(false);
+  useEffect(() => {
+    let storage: Storage | null = null;
+    let stored: string | null = null;
+    try {
+      storage = window.localStorage;
+      stored = storage.getItem(spotterViewPreference.key);
+    } catch {
+      /* no storage on this page */
+    }
+    const opening = spotterViewFor({ stored, testPath: testPathOpen(ctx.hiddenViewsTest, storage) });
+    setView(opening.view);
+    setSwitchShown(opening.switchShown);
+  }, [ctx.hiddenViewsTest]);
   const chooseView = (v: SpotterView) => {
     setView(v);
     spotterViewPreference.write(v, typeof window === "undefined" ? null : window.localStorage);
@@ -74,7 +89,7 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
   const loggerRiders = riders.map((r) => ({ id: r.entryId, label: r.label, attempts: counts.get(r.entryId) ?? 0, max }));
 
   const sheetAttempts = useMemo(
-    () => live.attempts.map((a) => ({ entryId: a.entry_id, id: a.id, seq: a.seq, clientKey: a.client_key, status: a.status, trickName: a.trick_name, direction: a.direction, rawText: a.raw_text, mine: viewer !== null && a.created_by_seat === viewer.seatId, deleted: Boolean(a.deleted_at) })),
+    () => live.attempts.map((a) => ({ entryId: a.entry_id, id: a.id, seq: a.seq, clientKey: a.client_key, status: a.status, trickName: a.trick_name, direction: a.direction, rawText: a.raw_text, mine: viewer !== null && a.created_by_seat === viewer.seatId, deleted: Boolean(a.deleted_at), createdAtMs: Date.parse(a.created_at) })),
     [live.attempts, viewer],
   );
   const sheetQueued = useMemo(() => pending.map((p) => ({ entryId: p.entryId, clientKey: p.clientKey, status: p.status, trickName: p.trickName, direction: p.direction, rawText: p.rawText })), [pending]);
@@ -185,7 +200,7 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
     ) : null;
 
   const feed = feedLines(live.attempts, pending);
-  const switcher = (
+  const switcher = !switchShown ? null : (
     <PillSwitch
       compact
       label={copy.spotterSheet.switchLabel}
@@ -245,6 +260,8 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
           disabledNote={live.phase === "paused" ? T.paused : T.notRunning}
           onLog={log}
           onEdit={edit}
+          onUndo={(k) => void undo(k)}
+          nowMs={nowServer}
           topSlot={switcher}
         />
       ) : heat && kit && division ? (

@@ -6,11 +6,23 @@ import { EVENT_FOLD_IDS, foldKey } from "../src/lib/org/fold-state";
  * certificate. There, calls to Supabase are forwarded from Playwright's Node side (which trusts the proxy CA).
  * On a normal machine (no HTTPS_PROXY) this does nothing.
  */
-export async function installSupabaseProxy(context: BrowserContext, opts: { newViews?: boolean } = {}): Promise<void> {
-  // Rider sheets (0.20.0): a phone that never chose a view now opens a judge on the Rider sheet and a spotter on the Rider sheet. The browser tests written before
+export async function installSupabaseProxy(context: BrowserContext, opts: { newViews?: boolean; officialsOnly?: boolean } = {}): Promise<void> {
+  // 0.24.0: officials see the Rider sheet only. The Queue and the Trick list are hidden code that only a TEST server opens (SHOW_HIDDEN_OFFICIAL_VIEWS=1, set by
+  // playwright.config.ts, never on Vercel) and only for a phone carrying the marker below, so every phone of the browser tests written before has it. A phone of the
+  // tests of the new rule (`officialsOnly: true`) has no marker: it is exactly what an official's phone is on the live site.
+  if (!opts.officialsOnly) {
+    await context.addInitScript(() => {
+      try {
+        window.localStorage.setItem("bigair.testViews", "1");
+      } catch {
+        /* no storage on this page */
+      }
+    });
+  }
+  // Rider sheets (0.20.0): a phone that never chose a view opens a judge on the Rider sheet and a spotter on the Rider sheet. The browser tests written before
   // that drive the Queue and the Trick list, so their phones start with those two chosen (the way a person picks them with the switch); the tests of the new
   // defaults pass `newViews: true` and get a phone that never chose anything.
-  if (!opts.newViews) {
+  if (!opts.newViews && !opts.officialsOnly) {
     await context.addInitScript(() => {
       try {
         if (window.localStorage.getItem("bigair.judgeView") === null) window.localStorage.setItem("bigair.judgeView", "queue");

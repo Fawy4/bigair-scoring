@@ -1573,6 +1573,7 @@ export type Database = {
           client_key: string
           client_rev: number
           created_at: string
+          criteria: Json
           entry_id: string
           event_id: string
           heat_id: string
@@ -1587,6 +1588,7 @@ export type Database = {
           client_key: string
           client_rev?: number
           created_at?: string
+          criteria?: Json
           entry_id: string
           event_id: string
           heat_id: string
@@ -1601,6 +1603,7 @@ export type Database = {
           client_key?: string
           client_rev?: number
           created_at?: string
+          criteria?: Json
           entry_id?: string
           event_id?: string
           heat_id?: string
@@ -4065,6 +4068,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_line_criteria: {
+        Args: {
+          p_client_key: string
+          p_client_rev: number
+          p_criteria: Json
+          p_entry: string
+          p_heat: string
+          p_line: number
+          p_score: number
+        }
+        Returns: Json
       }
       set_line_missed: {
         Args: {

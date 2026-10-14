@@ -17,6 +17,7 @@ import {
   spotterLines,
   suggestionsFor,
   toggleDirection,
+  undoOffered,
   type Direction,
   type LoggedAttemptRow,
   type QueuedAttempt,
@@ -58,7 +59,11 @@ export interface SpotterSheetProps {
   /** Returns the key of the queued attempt. */
   onLog: (riderId: string, a: LoggedAttempt) => string;
   onEdit: (e: LineEdit) => void;
-  /** The switch, drawn above the rider cards. */
+  /** Undo of the attempt this seat has just logged (the Trick list's Undo, here on the line itself): the parent cancels the send or deletes the attempt. */
+  onUndo?: (clientKey: string) => void;
+  /** Server time in ms: Undo is offered for 10 seconds after an attempt is saved. */
+  nowMs?: number;
+  /** The switch, drawn above the rider cards (hidden code: spotters see the Rider sheet only). */
   topSlot?: React.ReactNode;
 }
 
@@ -76,6 +81,8 @@ function SheetLineRow({
   canLog,
   onLog,
   onEdit,
+  onUndo,
+  nowMs,
 }: {
   line: SpotterLine;
   riderId: string;
@@ -84,6 +91,8 @@ function SheetLineRow({
   canLog: boolean;
   onLog: (riderId: string, a: LoggedAttempt) => string;
   onEdit: (e: LineEdit) => void;
+  onUndo?: (clientKey: string) => void;
+  nowMs?: number;
 }) {
   const [text, setText] = useState(() => initialText(line));
   const [dir, setDir] = useState<Direction | null>(line.direction);
@@ -108,9 +117,19 @@ function SheetLineRow({
   const key = line.clientKey ?? ownKey.current;
 
   // a different attempt on this line (one before it was taken back, or another seat changed it): show what the database has
+  const was = useRef(line.state);
   useEffect(() => {
+    const before = was.current;
+    was.current = line.state;
     if (line.state === "active") {
       ownKey.current = null;
+      // the attempt on this line was taken back (Undo, or the head judge deleted it): the line is empty again, with nothing left of what it held
+      if (before !== "active" && !dirty.current) {
+        setText("");
+        setDir(null);
+        setCrash(false);
+        cleared.current = false;
+      }
       return;
     }
     if (line.state === "saving") return;
@@ -362,6 +381,13 @@ function SheetLineRow({
         {logged && !mine ? <span className="text-beach-muted">{T.othersLine}</span> : null}
         {freeText ? <span className="text-beach-muted">{T.freeTag}</span> : null}
       </div>
+      {onUndo && nowMs !== undefined && line.clientKey && undoOffered(line, nowMs) ? (
+        <div className="flex justify-end pl-[30px]">
+          <Chip data-testid="line-undo" aria-label={T.undoAria(line.n)} onClick={() => onUndo(line.clientKey as string)}>
+            {copy.spotter.undo}
+          </Chip>
+        </div>
+      ) : null}
       {speech.listening || speech.note ? (
         <div className="pl-[30px]">
           <MicStatus listening={speech.listening} note={speech.note} />
@@ -429,7 +455,7 @@ export function SpotterSheetView(p: SpotterSheetProps) {
           </h2>
           <ol data-testid="sheet-lines" aria-label={T.sheetFor(rider.label.primary.text)} className="flex flex-col divide-y divide-beach-line border-y border-beach-line">
             {lines.map((l) => (
-              <SheetLineRow key={`${rider.id}:${l.n}`} line={l} riderId={rider.id} vocab={p.vocab} enabledIds={p.enabledIds} canLog={p.canLog && !out} onLog={p.onLog} onEdit={p.onEdit} />
+              <SheetLineRow key={`${rider.id}:${l.n}`} line={l} riderId={rider.id} vocab={p.vocab} enabledIds={p.enabledIds} canLog={p.canLog && !out} onLog={p.onLog} onEdit={p.onEdit} onUndo={p.onUndo} nowMs={p.nowMs} />
             ))}
           </ol>
           {p.cap === null ? (

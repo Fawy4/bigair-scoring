@@ -2,7 +2,7 @@
 
 The head judge's /head/‹event› page on a phone: the same controls as the laptop console in one column, and a Score tab when the head judge also scores.
 
-Last checked: 13 Oct 2026 · Product version 0.21.0
+Last checked: 14 Oct 2026 · Product version 0.24.0
 
 ## What it is for {#cp-purpose}
 
@@ -15,7 +15,7 @@ Running heats from the beach without a laptop. The score table needs a wider scr
 
 | Control | What it does |
 |---|---|
-| **Score** / **Control** tabs | Only when the head judge also scores (“Head judge also scores” in Officials): **Score** is exactly a judge's queue ([Judge](judge.md)); **Control** holds the controls. Otherwise the page is just the controls. |
+| **Score** / **Control** tabs | Only when the head judge also scores (“Head judge also scores” in Officials): **Score** is exactly a judge's Rider sheet ([Judge](judge.md)), with no view switch; **Control** holds the controls. Otherwise the page is just the controls. |
 | Division selector | The same divisions as the laptop's tabs, remembered on the device. |
 | **Review bar** | At the top of the **Control** tab, under the heat's header, from **End heat** until **Publish**: amber “Waiting for 2 of 4 judges: …” (tap a name to open that judge's sheet: **Save and submit** or **Absent**), red “Blocked: …” with **Fix** and **Absent**, green “All 4 judges submitted — ready to publish”; a quiet “3 of 4 judges scoring” while the heat is on. |
 | **Impression** card (named by the Event step's **Name of the impression score**) | A block under the heat buttons, headed by that name, open by default once the heat has ended (not for a division without an Impression / Variety scale): one column per judge and a **Panel** column, one row per rider, outlier colours like the trick scores; tap a cell to correct it. |

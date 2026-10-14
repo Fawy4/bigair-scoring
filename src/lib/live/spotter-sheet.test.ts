@@ -3,6 +3,7 @@ import { buildTrickVocab, type VocabularyInput } from "@/lib/engine/tricks";
 import vocabularyJson from "../../../presets/tricks/big-air-vocabulary.json";
 import {
   OPEN_LINES,
+  UNDO_WINDOW_MS,
   applySuggestion,
   commitDecision,
   lineTotal,
@@ -11,6 +12,7 @@ import {
   spotterViewPreference,
   suggestionsFor,
   toggleDirection,
+  undoOffered,
   type LoggedAttemptRow,
 } from "./spotter-sheet";
 import { capitaliseName, splitCount } from "./trick-text";
@@ -266,5 +268,33 @@ describe("the spotter's view choice", () => {
     expect(spotterViewPreference.read(null)).toBe("sheet");
     expect(spotterViewPreference.read({ getItem: () => { throw new Error("blocked"); } })).toBe("sheet");
     expect(spotterViewPreference.key).not.toBe("bigair.judgeView");
+  });
+});
+
+describe("Undo on the Rider sheet (the Trick list's Undo, kept on the one view)", () => {
+  const row = (extra: Partial<Parameters<typeof spotterLines>[0]["attempts"][number]> = {}) => ({ id: "a1", seq: 1, clientKey: "k1", status: "landed" as const, trickName: "Backroll", direction: null, mine: true, deleted: false, createdAtMs: 100_000, ...extra });
+  const lineOf = (i: Partial<Parameters<typeof spotterLines>[0]> = {}) => spotterLines({ attempts: [row()], queued: [], cap: 7, added: 0, ...i })[0];
+
+  it("is offered on the attempt this seat logged, for the first 10 seconds by server time", () => {
+    expect(UNDO_WINDOW_MS).toBe(10_000);
+    expect(undoOffered(lineOf(), 100_000)).toBe(true);
+    expect(undoOffered(lineOf(), 109_999)).toBe(true);
+    expect(undoOffered(lineOf(), 110_000)).toBe(false);
+  });
+
+  it("is never offered on another seat's attempt, on an empty line, or when the time of logging is unknown", () => {
+    expect(undoOffered(lineOf({ attempts: [row({ mine: false })] }), 100_500)).toBe(false);
+    expect(undoOffered(spotterLines({ attempts: [], queued: [], cap: 7, added: 0 })[0], 100_500)).toBe(false);
+    expect(undoOffered(lineOf({ attempts: [row({ createdAtMs: undefined })] }), 100_500)).toBe(false);
+  });
+
+  it("is offered while the attempt is still waiting on the phone (the send is taken back), and while a change to it is on its way", () => {
+    const waiting = spotterLines({ attempts: [], queued: [{ clientKey: "q1", status: "landed", trickName: "Backroll", direction: null }], cap: 7, added: 0 })[0];
+    expect(waiting.state).toBe("saving");
+    expect(undoOffered(waiting, 500_000)).toBe(true);
+    const changing = lineOf({ changing: new Set(["k1"]) });
+    expect(changing.state).toBe("saving");
+    expect(undoOffered(changing, 100_500)).toBe(true);
+    expect(undoOffered(changing, 120_000)).toBe(false);
   });
 });

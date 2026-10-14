@@ -12,6 +12,30 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.24.0 — 14 Oct 2026 {#release-0-24-0}
+
+PR: #54
+
+### What changed
+- **Every official now has one screen: the Rider sheet.** Judges, the head judge's **Score** tab and spotters no longer have a switch. A phone that had chosen the judges' **Queue** or the spotter's **Trick list** opens on the Rider sheet too, also after a reload. The observer watching a judge sees the Rider sheet. The Queue and the Trick list are still in the product's code, hidden behind one line (`SHOW_HIDDEN_OFFICIAL_VIEWS` in `src/lib/live/official-views.ts`), so they can come back later; nothing on the live site opens them.
+- **A division scored by criteria (Height, Extremity…) has the Rider sheet too.** The line is the same (attempt number, trick, **Missed** over **Flag**) with one score box per criterion under the trick, each name above its box, in the division's order; on a phone they wrap onto a second row when they do not fit (five criteria) and nothing is off the screen. A line is done when every criterion has a score, or it is Missed or a crash; only the first line that is not done takes typing; the boxes of a line can be filled in any order. A typed score is checked on that criterion's own range and step. Scores typed before the spotter logs wait on the line and settle onto the attempt. The trick score and the criteria are exactly what the Queue wrote, so the console, the panel score, the Impression card, Publish and the public pages are unchanged.
+- **Nothing an official needs during a heat is lost.** The Queue and the Trick list could do two things the Rider sheet could not, and both are now on the Rider sheet: the spotter's **Undo** (a small button under the line just logged, for 10 seconds, same rule and same audit line), and the judge's **Log an attempt** (when the Event step lets judges log attempts). The full list of what was checked is in the pull request.
+- **Database (additive only):** `pending_scores.criteria`, the function `set_line_criteria`, and `set_line_missed` also accepts a criteria division. Nothing was dropped or renamed.
+
+### What to test
+- [ ] On a phone, join a throwaway event as a judge and start a heat: you see the rider cards and numbered lines; there is no **Queue / Rider sheet** switch. Reload the page: the same.
+- [ ] On a phone that used the **Queue** before, open the same event as a judge: it opens on the Rider sheet with no switch. Do the same with a phone that used the spotter's **Trick list**: the Rider sheet, no switch.
+- [ ] As a spotter, type a trick on line 1 and let it log: a small **Undo** appears under the line for about 10 seconds; tap it and the line is empty again. After 10 seconds there is no Undo.
+- [ ] In a division scored by criteria (three criteria), open the judge phone: each line has a box per criterion with its name above; type them in any order; line 2 only takes typing after line 1 has every criterion; **Missed** on a line opens the next one.
+- [ ] In the same division type a whole line before the spotter logs it: when the spotter logs the attempt, the boxes keep your numbers and the console shows your column; a crash greys the line.
+- [ ] On the head judge's phone (head judge also scores) open **Score**: the Rider sheet, no switch. In an Observer seat watch a judge: the Rider sheet.
+- [ ] In the Event step tick "Judges may log attempts", then open a judge phone: **Log an attempt** is under the rider's name and logs a trick.
+
+### Known issues
+- A line of a division scored by criteria that is only partly filled is kept on the judge's own phone, not on the server: after a reload the typed boxes are still there, but another device would not show them. A complete line is on the server at once.
+- The test `live-head.spec.ts` "the head page and a judge phone agree within a second…" fails now and then on its limit of 55 seconds (it also does on version 0.23.0); it is not touched here.
+- The manual's pictures `judge-390.png`, `spotter-390.png` and `spotter-keyboard-390.png` show the hidden Queue and Trick list and are no longer used in the manual.
+
 ## 0.23.0 — 14 Oct 2026 {#release-0-23-0}
 
 PR: #53

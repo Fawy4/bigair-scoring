@@ -151,7 +151,7 @@ test("an Observer joins with its PIN, flips through every official's screen on a
     const token = await accessTokenOf(phone);
     // the heat the simulator played (at ×10 it may have ended by now: the role is refused before the heat's state is looked at)
     const live = (await w.db.from("heats").select("id").eq("event_id", simId).not("started_at", "is", null).order("started_at", { ascending: false }).limit(1).single()).data!.id as string;
-    const attempt = (await w.db.from("trick_attempts").select("id").eq("heat_id", live).limit(1).single()).data!.id as string;
+    const attempt = (await w.db.from("trick_attempts").select("id").eq("heat_id", live).eq("status", "landed").limit(1).single()).data!.id as string; // a landed one: on a crash the answer is NOT_SCORABLE, which the role check comes after
     const call = (fn: string, body: object) =>
       fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/${fn}`, { method: "POST", headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
     for (const [fn, body] of [

@@ -140,10 +140,12 @@ export interface PendingRow {
   score: number;
   /** The judge did not see the attempt that will take this line (the score is then not read). */
   missed: boolean;
+  /** A division scored by criteria: the value of every criterion (the score is then the trick score worked out from them). */
+  criteria?: Record<string, number> | null;
   client_rev: number;
   updated_at: string;
 }
-export const PENDING_COLUMNS = "id, heat_id, entry_id, judge_seat_id, slot, score, missed, client_rev, updated_at";
+export const PENDING_COLUMNS = "id, heat_id, entry_id, judge_seat_id, slot, score, missed, criteria, client_rev, updated_at";
 
 export type SeatRole = "judge" | "head" | "spotter" | "announcer" | "observer";
 
@@ -170,6 +172,8 @@ export interface LiveRiderInfo extends LabelRider {
 }
 
 export interface LiveContext {
+  /** True only on a test server that may open the hidden Queue and Trick list (SHOW_HIDDEN_OFFICIAL_VIEWS=1, never set on the live site); see lib/live/official-views.ts. */
+  hiddenViewsTest?: boolean;
   event: { id: string; name: string; slug: string; timezone: string; judgesMayLogAttempts: boolean; maxRunningHeats: number; isSimulation: boolean; readyCallMin: number; publicLiveScores: string; flags: FlagSettings };
   /** Who is looking: a seat, or an organiser of the event (the head page only). */
   viewer:

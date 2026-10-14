@@ -5,6 +5,8 @@ export interface PendingScore {
   attemptId: string;
   score: number | null;
   missed: boolean;
+  /** A division scored by criteria: the criteria values waiting to be sent with the score. */
+  criteria?: Record<string, number>;
   clientKey: string;
 }
 
@@ -12,8 +14,8 @@ export function pendingScores(items: QueueEntry[]): Map<string, PendingScore> {
   const out = new Map<string, PendingScore>();
   for (const i of items) {
     if (i.kind !== "trick_score" || i.state === "refused") continue;
-    const p = i.payload as { attemptId: string; score: number | null; missed: boolean };
-    out.set(p.attemptId, { attemptId: p.attemptId, score: p.missed ? null : p.score, missed: Boolean(p.missed), clientKey: i.clientKey });
+    const p = i.payload as { attemptId: string; score: number | null; missed: boolean; criteria?: Record<string, number> };
+    out.set(p.attemptId, { attemptId: p.attemptId, score: p.missed ? null : p.score, missed: Boolean(p.missed), ...(!p.missed && p.criteria && Object.keys(p.criteria).length ? { criteria: p.criteria } : {}), clientKey: i.clientKey });
   }
   return out;
 }
