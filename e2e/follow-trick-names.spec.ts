@@ -147,7 +147,7 @@ for (const n of [7, 10]) {
     test.setTimeout(240_000);
     const heat = await liveHeat(n);
     await page.goto(followUrl());
-    await expect(page.getByTestId("follow-screen")).toHaveAttribute("data-phase", /^(live|armed|running)$|.+/);
+    await expect(page.getByTestId("follow-screen")).toHaveAttribute("data-phase", "live", { timeout: 30_000 });
     await expect(page.getByTestId("follow-live-page")).toHaveAttribute("data-heat", heat, { timeout: 30_000 });
     await expect(page.getByTestId("score-box").first()).toContainText(/^\d+ · .+ · \d+\.\d$|CRASH/);
     const pages = await watch(page, "follow-live-page", heat, 3 * n);
