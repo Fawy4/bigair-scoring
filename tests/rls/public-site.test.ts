@@ -182,8 +182,9 @@ describe.skipIf(!ENV_OK)("Public site functions (hosted development project)", (
     const row = heatOf(res, ladder.heats["R1-H1"]).results[0];
     const text = JSON.stringify(row);
     for (const bad of ["judgeScores", "judgeId", "missedBy", "missing", "outlier", "J1", "J2", "outliers"]) expect(text).not.toContain(bad);
-    expect(row.breakdown.allAttempts[0]).toMatchObject({ seq: 1, trickName: "Backroll", panelScore: 15, counted: true });
-    expect(row.breakdown.allAttempts[1]).toMatchObject({ status: "crashed", counted: false, score: null });
+    // this division is on the default (attempt number + score): the panel's facts come, the trick does not (tests/rls/public-trick-names.test.ts has the other settings)
+    expect(row.breakdown.allAttempts[0]).toMatchObject({ seq: 1, trickName: null, panelScore: 15, counted: true });
+    expect(row.breakdown.allAttempts[1]).toMatchObject({ status: "crashed", counted: false, score: null, trickName: null });
     expect(row.breakdown.impression.score).toBe(5);
     expect(row.percent).toBeNull();
     await f.s.from("divisions").update({ live_settings: { showPercentOfMax: true } }).eq("id", ladder.div);

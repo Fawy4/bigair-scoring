@@ -35,17 +35,25 @@ describe.skipIf(!ENV_OK)("Public trick names: what the public functions send per
   const heatOf = (res: J, id: string): J => res.divisions.flatMap((d: J) => d.rounds.flatMap((r: J) => r.heats)).find((h: J) => h.id === id);
   const attemptsOf = (res: J, l: Ladder, uid = "R1-H1"): J[][] => heatOf(res, l.heats[uid]).results.map((r: J) => r.breakdown.allAttempts);
 
+  /** Results are append-only: the rich breakdown goes in as the heat's second version, which is the one a visitor reads. */
+  async function richerResult(heat: string) {
+    const rows = (await f.s.from("heat_results").select("event_id, entry_id, place, total, percent").eq("heat_id", heat).eq("version", 1)).data ?? [];
+    expect(rows.length).toBeGreaterThan(0);
+    const { error } = await f.s.from("heat_results").insert(rows.map((r) => ({ ...r, heat_id: heat, breakdown: richBreakdown(Number(r.total)) as never, version: 2 })));
+    if (error) throw new Error(`second version: ${error.message}`);
+  }
+
   beforeAll(async () => {
     f = await buildFixture();
     for (const mode of MODES) {
       ladders[mode] = await mkLadder(f, { name: `Trick ${mode}`, live: { spectatorAttemptDisplay: mode } });
       await publishLadderHeat(f, ladders[mode], "R1-H1");
-      await f.s.from("heat_results").update({ breakdown: richBreakdown(20) as never }).eq("heat_id", ladders[mode].heats["R1-H1"]);
+      await richerResult(ladders[mode].heats["R1-H1"]);
     }
     // a division on "trick name + score" whose result is held back: nothing of it is readable
     held = await mkLadder(f, { name: "Trick held", live: { spectatorAttemptDisplay: "trick_score" } });
     await publishLadderHeat(f, held, "R1-H1", { hold: true });
-    await f.s.from("heat_results").update({ breakdown: richBreakdown(20) as never }).eq("heat_id", held.heats["R1-H1"]);
+    await richerResult(held.heats["R1-H1"]);
   });
   afterAll(async () => {
     await f?.cleanup();
@@ -105,7 +113,9 @@ describe.skipIf(!ENV_OK)("Public trick names: what the public functions send per
   });
 
   it("the rules answer carries the event's trick base (words only), so a block added later gets its letters; it is the same single call every public page already makes", async () => {
-    await f.s.from("trick_vocabularies").upsert({ event_id: f.ids.evA1, key: "event-additions", json: { blocks: [{ family: "base", key: "sushi_roll", label: "Sushi roll", category: "rotation" }] }, content_hash: key() }, { onConflict: "organisation_id,event_id,key,version", ignoreDuplicates: false });
+    await f.s.from("trick_vocabularies").delete().eq("event_id", f.ids.evA1).eq("key", "event-additions");
+    const added = await f.s.from("trick_vocabularies").insert({ organisation_id: f.ids.orgA, event_id: f.ids.evA1, key: "event-additions", json: { blocks: [{ family: "base", key: "sushi_roll", label: "Sushi roll", category: "rotation" }] }, content_hash: key() });
+    expect(added.error?.message ?? null).toBeNull();
     const { data, error } = await anon().rpc("get_public_rules", { p_event: f.ids.evA1 });
     expect(error).toBeNull();
     const rules = data as J;
@@ -119,7 +129,7 @@ describe.skipIf(!ENV_OK)("Public trick names: what the public functions send per
     expect(Object.keys(base.vocabulary).sort()).toEqual(["baseTricks", "directions", "modifiers", "multipliers"]);
     const blocks = [...base.vocabulary.baseTricks, ...base.vocabulary.modifiers, ...base.vocabulary.directions, ...base.vocabulary.multipliers, ...base.local];
     for (const b of blocks) expect(Object.keys(b).filter((k) => !["key", "label", "family", "aliases", "takesMultiplier"].includes(k)), b.label).toEqual([]);
-    expect(JSON.stringify(base)).not.toMatch(/categor|namingTemplate|_comment|speech|examples|variants|rotation"/i);
+    expect(JSON.stringify(base)).not.toMatch(/categor|namingTemplate|_comment|speech|examples|variants/i);
     // an event that is not public says nothing
     expect(((await anon().rpc("get_public_rules", { p_event: f.ids.evA2 })).data as J).allowed).toBe(false);
   });

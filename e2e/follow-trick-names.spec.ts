@@ -77,9 +77,12 @@ async function publishedHeat(n: number, publishedSecAgo: number): Promise<string
  * Watches the screen until every attempt of the heat has been on it (the pages rotate when the riders do not fit), checking each page as it goes: nothing reaches past
  * the page body, no box is shortened, no two pages show the same rider. Returns how many pages the heat took.
  */
-async function watch(page: Page, kind: "follow-live-page" | "follow-results-page", heat: string, expected: number): Promise<number> {
+async function watch(page: Page, kind: "follow-live-page" | "follow-results-page", heat: string, expected: number, tricks: boolean): Promise<{ pages: number; slack: number; bodyHeight: number; sizes: number[] }> {
   const riders = new Map<string, number>();
   const parts = new Set<string>();
+  const sizes: number[] = [];
+  let bodyHeight = 0;
+  let slack = Infinity; // the least room left under the last row of any page, in px
   const t0 = Date.now();
   while (Date.now() - t0 < 100_000) {
     const snap = await page.evaluate(
@@ -91,6 +94,8 @@ async function watch(page: Page, kind: "follow-live-page" | "follow-results-page
         const rows = [...root.querySelectorAll('[data-testid="follow-rider"]')] as HTMLElement[];
         return {
           bodyBottom: b.bottom,
+          bodyHeight: b.height,
+          nextTop: (document.querySelector('[data-testid="follow-next"]') as HTMLElement | null)?.getBoundingClientRect().top ?? 9999,
           overflow: body.scrollHeight - body.clientHeight,
           rows: rows.map((r) => {
             const rect = r.getBoundingClientRect();
@@ -99,6 +104,7 @@ async function watch(page: Page, kind: "follow-live-page" | "follow-results-page
             return {
               key: r.getAttribute("data-place") ?? r.textContent!.slice(0, 12),
               bottom: rect.bottom,
+              height: rect.height,
               boxes: boxes.length,
               lowestBox: Math.max(0, ...boxes.map((x) => x.getBoundingClientRect().bottom)),
               shortened: tricks.filter((t) => t.scrollWidth > t.clientWidth).length,
@@ -113,9 +119,14 @@ async function watch(page: Page, kind: "follow-live-page" | "follow-results-page
       expect(snap.overflow, "the page body has content past its bottom").toBeLessThanOrEqual(1);
       for (const r of snap.rows) {
         expect(r.bottom, `rider ${r.key}: the row reaches past the page`).toBeLessThanOrEqual(snap.bodyBottom + 1);
+        expect(r.lowestBox, `rider ${r.key}: the Next line is over a row`).toBeLessThanOrEqual(snap.nextTop + 1);
         expect(r.lowestBox, `rider ${r.key}: a row of attempts is cut off`).toBeLessThanOrEqual(snap.bodyBottom + 1);
         expect(r.shortened, `rider ${r.key}: a box is shortened on the TV`).toBe(0);
-        for (const t of r.texts) expect(t, "a box without its score").toMatch(/^\d+ · (CRASH|(.+ · )?\d+\.\d|…)$/);
+        // every box keeps what the setting shows on every look (the screen asks again twice a second): with trick name + score a scored landing carries its letters, otherwise never a trick
+        for (const t of r.texts) expect(t, "a box without its score, or with the wrong parts").toMatch(tricks ? /^\d+ · ([A-Z×0-9+ ]+ · \d+\.\d|CRASH|…)$/ : /^(\d+ · )?(CRASH|\d+\.\d|…)$/);
+        slack = Math.min(slack, snap.bodyBottom - r.lowestBox);
+        bodyHeight = snap.bodyHeight;
+        if (!riders.has(r.key)) sizes.push(Math.round(r.height));
         if (!riders.has(r.key)) riders.set(r.key, r.boxes);
         else expect(riders.get(r.key), `rider ${r.key} is on two pages`).toBe(r.boxes);
       }
@@ -126,7 +137,7 @@ async function watch(page: Page, kind: "follow-live-page" | "follow-results-page
   }
   expect(riders.size).toBe(3);
   expect([...riders.values()].reduce((a, b) => a + b, 0)).toBe(expected);
-  return parts.size;
+  return { pages: parts.size, slack, bodyHeight, sizes };
 }
 
 test.beforeAll(async () => {
@@ -142,27 +153,75 @@ test.afterAll(async () => {
   await w?.cleanup();
 });
 
-for (const n of [7, 10]) {
-  test(`the live heat: three riders with ${n} attempts each, every attempt with its trick on screen and nothing cut off`, async ({ page }) => {
-    test.setTimeout(240_000);
-    const heat = await liveHeat(n);
-    await page.goto(followUrl());
-    await expect(page.getByTestId("follow-screen")).toHaveAttribute("data-phase", "live", { timeout: 30_000 });
-    await expect(page.getByTestId("follow-live-page")).toHaveAttribute("data-heat", heat, { timeout: 30_000 });
-    await expect(page.getByTestId("score-box").first()).toContainText(/^\d+ · .+ · \d+\.\d$|CRASH/);
-    const pages = await watch(page, "follow-live-page", heat, 3 * n);
-    expect(pages).toBeGreaterThanOrEqual(1);
-    // this heat is over for the screen: the next test needs the rotation or another heat
-    await w.db.from("heats").update({ status: "scheduled", started_at: null }).eq("id", heat);
-  });
+const MODES = ["trick_score", "number_score", "score_only"] as const;
+const setMode = (mode: string) => w.db.from("divisions").update({ live_settings: { spectatorAttemptDisplay: mode } as never }).eq("id", w.divisionId);
+
+for (const mode of MODES) {
+  for (const n of [7, 10]) {
+    test(`the live heat in ${mode}: three riders with ${n} attempts each, every attempt on screen and nothing cut off`, async ({ page }) => {
+      test.setTimeout(240_000);
+      await setMode(mode);
+      const heat = await liveHeat(n);
+      await page.goto(followUrl());
+      await expect(page.getByTestId("follow-screen")).toHaveAttribute("data-phase", "live", { timeout: 30_000 });
+      await expect(page.getByTestId("follow-live-page")).toHaveAttribute("data-heat", heat, { timeout: 30_000 });
+      const r = await watch(page, "follow-live-page", heat, 3 * n, mode === "trick_score");
+      test.info().annotations.push({ type: "pages", description: `${r.pages} page(s), least room under a row ${Math.round(r.slack)} px; body ${Math.round(r.bodyHeight)} px; rows ${r.sizes.join("/")} px` });
+      expect(r.slack).toBeGreaterThanOrEqual(0);
+      // this heat is over for the screen: the next test needs the rotation or another heat
+      await w.db.from("heats").update({ status: "scheduled", started_at: null }).eq("id", heat);
+    });
+  }
 }
 
-for (const n of [7, 10]) {
-  test(`a Results page: three riders with ${n} attempts each, every attempt with its trick on screen and nothing cut off`, async ({ page }) => {
-    test.setTimeout(240_000);
-    const heat = await publishedHeat(n, n === 7 ? 200 : 100);
-    await page.goto(followUrl());
-    await expect(page.getByTestId("follow-screen")).toHaveAttribute("data-phase", "rotation", { timeout: 30_000 });
-    await watch(page, "follow-results-page", heat, 3 * n);
-  });
+for (const mode of MODES) {
+  for (const n of [7, 10]) {
+    test(`a Results page in ${mode}: three riders with ${n} attempts each, every attempt on screen and nothing cut off`, async ({ page }) => {
+      test.setTimeout(240_000);
+      await setMode(mode);
+      const heat = await publishedHeat(n, 100);
+      await page.goto(followUrl());
+      await expect(page.getByTestId("follow-screen")).toHaveAttribute("data-phase", "rotation", { timeout: 30_000 });
+      const r = await watch(page, "follow-results-page", heat, 3 * n, mode === "trick_score");
+      test.info().annotations.push({ type: "pages", description: `${r.pages} page(s), least room under a row ${Math.round(r.slack)} px; body ${Math.round(r.bodyHeight)} px; rows ${r.sizes.join("/")} px` });
+      expect(r.slack).toBeGreaterThanOrEqual(0);
+    });
+  }
 }
+
+// A real event is not a tidy test: the wind call sits at the very top, names are long, the heat's title wraps. The room for the riders is what is left.
+test.describe("with a wind call, long names and a long heat title (the room left for the riders is smaller)", () => {
+  test.beforeAll(async () => {
+    await w.db.from("wind_calls").insert({ event_id: w.eventId, status: "amber", message: "Gusty and shifting: heats may be held at any moment while the wind settles" });
+    const { data: entries } = await w.db.from("entries").select("rider_id").in("id", w.entries.slice(0, 3));
+    const names = ["Alexandrina Montgomery", "Bartholomew Featherstonehaugh", "Cassandra Vandenberghe-Okonkwo"];
+    for (const [i, e] of (entries ?? []).entries()) await w.db.from("riders").update({ first_name: names[i].split(" ")[0], last_name: names[i].split(" ")[1] }).eq("id", e.rider_id);
+    await w.db.from("divisions").update({ name: "Pro Men Open Championship Division with a rather long name" }).eq("id", w.divisionId);
+  });
+
+  for (const mode of ["trick_score", "number_score"] as const) {
+    for (const n of [7, 10]) {
+      test(`live, ${mode}, ${n} attempts each: nothing cut off`, async ({ page }) => {
+        test.setTimeout(240_000);
+        await setMode(mode);
+        const heat = await liveHeat(n);
+        await page.goto(followUrl());
+        await expect(page.getByTestId("follow-live-page")).toHaveAttribute("data-heat", heat, { timeout: 30_000 });
+        const r = await watch(page, "follow-live-page", heat, 3 * n, mode === "trick_score");
+        test.info().annotations.push({ type: "pages", description: `${r.pages} page(s), least room ${Math.round(r.slack)} px; body ${Math.round(r.bodyHeight)} px; rows ${r.sizes.join("/")} px` });
+        expect(r.slack).toBeGreaterThanOrEqual(0);
+        await w.db.from("heats").update({ status: "scheduled", started_at: null }).eq("id", heat);
+      });
+      test(`results, ${mode}, ${n} attempts each: nothing cut off`, async ({ page }) => {
+        test.setTimeout(240_000);
+        await setMode(mode);
+        const heat = await publishedHeat(n, 100);
+        await page.goto(followUrl());
+        await expect(page.getByTestId("follow-screen")).toHaveAttribute("data-phase", "rotation", { timeout: 30_000 });
+        const r = await watch(page, "follow-results-page", heat, 3 * n, mode === "trick_score");
+        test.info().annotations.push({ type: "pages", description: `${r.pages} page(s), least room ${Math.round(r.slack)} px; body ${Math.round(r.bodyHeight)} px; rows ${r.sizes.join("/")} px` });
+        expect(r.slack).toBeGreaterThanOrEqual(0);
+      });
+    }
+  }
+});

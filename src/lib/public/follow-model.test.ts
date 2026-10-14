@@ -4,7 +4,7 @@ import type { LadderHeatVM, LadderRoundVM } from "./ladder-model";
 import type { BoxVM, HeatVM, RiderRowVM } from "./results-model";
 import type { PublicRow } from "./timetable";
 import type { TimetableHeat } from "./types";
-import { boxLineCount, buildFollowPages, followPhase, riderCost, RESULTS_BUDGET_VW, nextLine, paginateLadder, livePages, paginateResults, walkKeyOf, type FollowPage } from "./follow-model";
+import { boxLineCount, chunkByHeight, riderSignature, splitBySizes, buildFollowPages, followPhase, riderCost, RESULTS_BUDGET_VW, nextLine, paginateLadder, livePages, paginateResults, walkKeyOf, type FollowPage } from "./follow-model";
 
 const NOW = Date.parse("2026-10-10T12:00:00Z"); // 14:00 in Cairo (UTC+2 in October? the model only needs a fixed zone)
 const TZ = "Africa/Cairo";
@@ -274,4 +274,35 @@ describe("longer attempt boxes take more room, and no page is ever packed past w
       });
     }
   }
+});
+
+describe("the screen splits a page by what it measures, so a row is never cut off (event-day chrome takes room the estimate cannot know)", () => {
+  // three rows of 100 px each, stacked from 0
+  const tops = [0, 100, 200];
+  const bottoms = [100, 200, 300];
+  it("everything that fits is one page", () => expect(chunkByHeight(tops, bottoms, 300)).toEqual([3]));
+  it("a row that would reach past the room starts the next page; none is ever half on a page", () => {
+    expect(chunkByHeight(tops, bottoms, 299)).toEqual([2, 1]);
+    expect(chunkByHeight(tops, bottoms, 199)).toEqual([1, 1, 1]);
+    expect(chunkByHeight(tops, bottoms, 250)).toEqual([2, 1]);
+  });
+  it("every page has at least one row, even when a row is taller than the room", () => {
+    expect(chunkByHeight(tops, bottoms, 50)).toEqual([1, 1, 1]);
+    expect(chunkByHeight([0], [500], 10)).toEqual([1]);
+  });
+  it("rows of different heights", () => {
+    expect(chunkByHeight([0, 180, 430], [180, 430, 610], 450)).toEqual([2, 1]);
+  });
+  it("no rows, no pages", () => expect(chunkByHeight([], [], 100)).toEqual([]));
+  it("sizes cut the rows in order and lose none; sizes that no longer fit the rows give one page", () => {
+    expect(splitBySizes(["a", "b", "c"], [2, 1])).toEqual([["a", "b"], ["c"]]);
+    expect(splitBySizes(["a", "b", "c"], undefined)).toEqual([["a", "b", "c"]]);
+    expect(splitBySizes(["a", "b", "c", "d"], [2, 1])).toEqual([["a", "b", "c", "d"]]);
+  });
+  it("a measurement is made again when the page's riders or their attempts change", () => {
+    const a = riderSignature("live:h1:0", [rider(1, 3), rider(2, 3)]);
+    expect(riderSignature("live:h1:0", [rider(1, 3), rider(2, 3)])).toBe(a);
+    expect(riderSignature("live:h1:0", [rider(1, 4), rider(2, 3)])).not.toBe(a);
+    expect(riderSignature("live:h1:1", [rider(1, 3), rider(2, 3)])).not.toBe(a);
+  });
 });

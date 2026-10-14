@@ -125,6 +125,40 @@ export function paginateResults(riders: RiderRowVM[], mode: AttemptDisplay, budg
   return out;
 }
 
+/**
+ * How many whole rows go on each page, from the rows' real positions on the screen (px from the top of the rows' box) and the room under the top of that box. A row
+ * never ends up half on a page: when the next row would reach past the room it starts the next page. Every page has at least one row (a row taller than the room gets a
+ * page of its own). The estimate above only decides the first split; this is what the screen measures, so a wind banner, a flag, a long name or a long title that take
+ * room cannot push a row off the bottom.
+ */
+export function chunkByHeight(tops: number[], bottoms: number[], room: number): number[] {
+  const sizes: number[] = [];
+  let start = 0;
+  for (let i = 0; i < tops.length; i++) {
+    if (i > start && bottoms[i] - tops[start] > room) {
+      sizes.push(i - start);
+      start = i;
+    }
+  }
+  if (tops.length > start) sizes.push(tops.length - start);
+  return sizes;
+}
+
+/** Splits rows by the sizes `chunkByHeight` gave; sizes that do not add up to the rows give one page (the rows changed since they were measured). */
+export function splitBySizes<T>(rows: T[], sizes: number[] | undefined): T[][] {
+  if (!rows.length || !sizes || sizes.reduce((a, b) => a + b, 0) !== rows.length || sizes.some((n) => n < 1)) return [rows];
+  const out: T[][] = [];
+  let at = 0;
+  for (const n of sizes) {
+    out.push(rows.slice(at, at + n));
+    at += n;
+  }
+  return out;
+}
+
+/** What a measurement belongs to: the page and its riders with their attempt counts, so it is made again whenever the page's content changes. */
+export const riderSignature = (key: string, riders: RiderRowVM[]): string => `${key}:${riders.map((r) => `${r.entryId ?? "seat"}/${r.boxes.length}/${r.totalLabel ?? ""}`).join("|")}`;
+
 /** The "Judges reviewing" banner takes this much of the page body, in vw. */
 export const REVIEW_BANNER_VW = 9;
 

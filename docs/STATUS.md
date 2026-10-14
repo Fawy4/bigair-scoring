@@ -1425,3 +1425,20 @@ Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 
 ### How to test on a phone
 - Release entry 0.22.0 in `docs/RELEASES.md`.
+
+## Public scores: short trick names (0.23.0)
+
+### Done
+- One shortening function with its table in one place (`src/lib/engine/tricks/short-form.ts`): capital letters only, the first letter of each part of a trick's name; the owner's special cases (Double/Triple loop ×2 KL / ×3 KL, + Kiteloop KL, every grab G, Blind landing B, Late joins the next trick, Late rotations and Downloop left out); a block added to the trick base later gets its letters by itself; unknown text is the first letter of each word, never a single letter, never only L or R.
+- The attempt boxes follow the division's own setting everywhere it appears in public (Live tab, Results, rider page, Follow the heat, Highest jump line). A box carries a trick only for a landed attempt whose score is shown, in a division on "trick name + score".
+- Database (additive migration `20261109100000`): the public results answer sends a trick only under those rules (the event's own organiser keeps full names for the files), the visitor live function sends none, `get_public_rules` carries the event's trick base as words only.
+- Follow the heat measures the real rows in the browser and splits a page wherever a row would not fit (wind banner, long names, long title); it no longer relies on a fixed height estimate.
+- The Live screens panel saves only the setting that was changed (a page opened earlier can no longer bring an old value of another setting back).
+- Tests: unit (short-form, models, follow-model, division-live), database (`tests/rls/public-trick-names.test.ts`), browser (`public-trick-names`, `follow-trick-names`, `live-settings-patch`).
+
+### Not done
+- The manual's pictures of the public pages and Follow the heat are not retaken (list in the release entry).
+- `big-screen-follow.spec.ts` "readable from 10 m" fails on main too (Ladder page 7 px over its room); not touched here.
+
+### How to test on a phone
+- Release entry 0.23.0 in `docs/RELEASES.md`.

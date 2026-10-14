@@ -12,8 +12,8 @@ import { createPublicWorld, type PublicWorld } from "./public-world";
 test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 test.describe.configure({ mode: "serial" });
 
-const LONG = "Left ×2 Backroll Board-off Handle pass Late rotations Tic-tac Toeside Stalefish";
-const LONG_SHORT = "L ×2 BR BO HP LR TT TS SF"; // letters only: no word in a box
+const LONG = "Left ×2 Backroll Board-off Handle pass Tic-tac Toeside Grab Frontroll Kiteloop Megaloop Contra loop Doobie loop Boogie loop Heart attack Straight jump One-foot Board spin";
+const LONG_SHORT = "L ×2 BR BO HP TT TS G FR KL ML CL DL BL HA SJ OF BS"; // letters only, and long enough that a phone card cannot hold it
 
 let w: PublicWorld;
 const url = (path = "") => `/e/${w.slug}${path}`;
@@ -42,12 +42,13 @@ test.beforeAll(async () => {
   // Green has one landing whose trick the spotter has not logged yet
   const bare = (await db.from("trick_attempts").insert({ heat_id: w.running, entry_id: w.entries[3], seq: 1, status: "landed", client_key: randomUUID() }).select("id").single()).data!.id;
   await scoreAttempt(w.running, bare, 2.5);
-  // the published heat: Red's result carries the same kinds of attempt
-  const result = (await db.from("heat_results").select("id, breakdown").eq("heat_id", w.published).eq("entry_id", w.entries[0]).single()).data!;
+  // the published heat: Red's result carries the same kinds of attempt. Results are append-only, so the new breakdown goes in as the heat's second version.
+  const result = (await db.from("heat_results").select("event_id, heat_id, entry_id, place, total, percent, breakdown").eq("heat_id", w.published).eq("entry_id", w.entries[0]).eq("version", 1).single()).data!;
   const bd = result.breakdown as { allAttempts: Array<Record<string, unknown>> };
   bd.allAttempts[0].trickName = "Left ×2 Backroll";
   bd.allAttempts.push({ seq: 5, status: "landed", trickName: LONG, categoryKey: null, score: 3.5, counted: false, repeatIndex: 0, priorCrashesSameTrick: 0, panel: { score: 3.5, judgeScores: [{ judgeId: "J1", score: 3.5 }] } });
-  await db.from("heat_results").update({ breakdown: bd as never }).eq("id", result.id);
+  const second = await db.from("heat_results").insert({ ...result, breakdown: bd as never, version: 2 });
+  if (second.error) throw new Error(`second version: ${second.error.message}`);
 });
 test.afterAll(async () => {
   await w?.cleanup();
@@ -63,6 +64,10 @@ test("Live tab: number, side and short trick, then the score; a crash is only CR
   await expect(rider(page, "BLUE").getByTestId("score-box").first()).toHaveText("1 · R FR · 4.5");
   await expect(rider(page, "YELLOW").getByTestId("score-box").first()).toHaveText("1 · KL · 3.0"); // no side set: nothing before the trick
   await expect(rider(page, "GREEN").getByTestId("score-box").first()).toHaveText("1 · 2.5");
+  // the page asks again by itself (every 3 s here): after two refreshes the boxes still carry their tricks
+  const before = await page.getByTestId("score-box").allTextContents();
+  await page.waitForTimeout(7_500);
+  expect(await page.getByTestId("score-box").allTextContents()).toEqual(before);
 });
 
 test("Live tab: a trick logged later fills in by itself, and a corrected trick updates the same way (no reload)", async ({ page }) => {
@@ -99,7 +104,7 @@ test("phone: the longest box keeps its number and score fully inside the card; o
     expect(b.inside, `"${b.text}" leaves the card`).toBe(true);
     expect(b.partsInside, `"${b.text}": a part leaves the card`).toBe(true);
   }
-  const longest = m.out.find((b) => b.text?.includes("Stalefish"))!;
+  const longest = m.out.find((b) => b.text?.includes("OF BS"))!;
   expect(longest.shortened).toBe(true); // only the trick part gave way
   // the score is still read: the number and the score parts keep their own width
   const parts = await box.evaluate((b) => [...b.querySelector('[data-testid="score-box-trick"]')!.parentElement!.children].map((c) => ({ w: (c as HTMLElement).getBoundingClientRect().width, h: (c as HTMLElement).getBoundingClientRect().height })));
@@ -137,7 +142,7 @@ test("the page is sent no trick that it does not show: not the crash's, and noth
     await setMode(mode);
     for (const path of ["/live", `/results?heat=${w.published}`, `/riders/${w.entries[0]}`]) {
       const html = await rawHtml(page, path);
-      for (const trick of ["Megaloop", "Kiteloop", "Frontroll", "Stalefish", "Handle pass"]) expect(html, `${mode} ${path}: "${trick}" was sent`).not.toContain(trick);
+      for (const trick of ["Megaloop", "Kiteloop", "Frontroll", "Tic-tac", "Handle pass"]) expect(html, `${mode} ${path}: "${trick}" was sent`).not.toContain(trick);
     }
   }
   await setMode("trick_score");
@@ -185,7 +190,7 @@ test("with live scores off a trick shows only after Publish, together with the s
     await page.goto(url("/live"));
     await expect(page.getByTestId("scores-after")).toBeVisible();
     await expect(page.getByTestId("score-box")).toHaveCount(0);
-    expect(await rawHtml(page, "/live")).not.toContain("Stalefish");
+    expect(await rawHtml(page, "/live")).not.toContain("Tic-tac");
     await page.goto(url(`/results?heat=${w.published}`));
     await expect(rider(page, "RED").getByTestId("score-box").nth(0)).toHaveText("1 · L ×2 BR · 7.0");
   } finally {
