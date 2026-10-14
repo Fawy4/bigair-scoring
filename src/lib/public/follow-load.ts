@@ -69,7 +69,7 @@ export async function loadFollowPayload(slug: string): Promise<FollowPayload | n
       const live = results ? await loadLive(tab.id) : null;
       if (live && results) {
         const model = modelOf(rules, tab.divisionId);
-        const rows = liveRows(live, model, new Map(results.entries.map((e) => [e.id, e])), schemeFor(site, tab.divisionId), model?.heat.impression?.label ?? null);
+        const rows = liveRows(live, model, new Map(results.entries.map((e) => [e.id, e])), schemeFor(site, tab.divisionId), model?.heat.impression?.label ?? null, tab.mode);
         if (rows) {
           riders = rows;
           scoresShown = true;

@@ -285,3 +285,71 @@ describe("sharing", () => {
     expect(whatsappLink("Test Cup: live scores", "https://x.test/e/test-cup")).toBe("https://wa.me/?text=Test%20Cup%3A%20live%20scores%20https%3A%2F%2Fx.test%2Fe%2Ftest-cup");
   });
 });
+
+describe("the trick in an attempt box (a division setting)", () => {
+  const tricks: Array<[string, number | null, boolean]> = [["Left ×2 Backroll", 7, true], ["Right Frontroll", null, false], ["Kiteloop", 5, false]];
+  const heats = [heatRow("h1", "R1-H1", 1, "published", ["e1"], { results: [breakdown(12, tricks)], publishedAt: "2026-10-10T07:00:00Z" })];
+  const tabsFor = (attempt_display: string, opts?: { fullTricks?: boolean }) => buildHeatTabs(results(heats, { attempt_display }), site(), rules(), opts)[0];
+
+  it("trick name + score: a landed, scored attempt carries its short trick; a crash never does", () => {
+    const boxes = tabsFor("trick_score").riders[0].boxes;
+    expect(boxes.map((b) => b.short)).toEqual(["L ×2 BR", "", "KL"]);
+  });
+
+  it("attempt number + score and scores only carry no trick at all, short or full", () => {
+    for (const mode of ["number_score", "score_only", undefined as unknown as string]) {
+      const boxes = tabsFor(mode).riders[0].boxes;
+      expect(boxes.every((b) => b.short === "" && b.trick === "")).toBe(true);
+    }
+  });
+
+  it("the full trick is carried only when the organiser's own files ask for it", () => {
+    expect(tabsFor("number_score", { fullTricks: true }).riders[0].boxes.map((b) => b.trick)).toEqual(["Left ×2 Backroll", "Right Frontroll", "Kiteloop"]);
+    expect(tabsFor("trick_score").riders[0].boxes.every((b) => b.trick === "")).toBe(true);
+  });
+
+  it("an attempt with no trick logged yet has no short trick", () => {
+    const bare = [heatRow("h1", "R1-H1", 1, "published", ["e1"], { results: [breakdown(7, [["", 7, true]])], publishedAt: "2026-10-10T07:00:00Z" })];
+    expect(buildHeatTabs(results(bare, { attempt_display: "trick_score" }), site(), rules())[0].riders[0].boxes[0].short).toBe("");
+  });
+
+  describe("on the live page", () => {
+    const model = parseScoringModel(legacy);
+    const map = new Map(entries.map((e) => [e.id, e]));
+    const live: PublicLiveHeat = {
+      allowed: true,
+      slots: [{ position: 1, entry_id: "e1", vest_colour: "red", modifier: null, flagged_out: false }],
+      attempts: [
+        { id: "a1", entry_id: "e1", seq: 1, direction: "left", category_key: null, trick_name: "×2 Backroll", status: "landed", height_m: null, possible_duplicate_of: null, created_at: "2026-10-10T07:01:00Z" },
+        { id: "a2", entry_id: "e1", seq: 2, direction: "right", category_key: null, trick_name: "Kiteloop", status: "crashed", height_m: null, possible_duplicate_of: null, created_at: "2026-10-10T07:02:00Z" },
+        { id: "a3", entry_id: "e1", seq: 3, direction: "left", category_key: null, trick_name: "Frontroll", status: "landed", height_m: null, possible_duplicate_of: null, created_at: "2026-10-10T07:03:00Z" },
+        { id: "a4", entry_id: "e1", seq: 4, direction: null, category_key: null, trick_name: null, status: "landed", height_m: null, possible_duplicate_of: null, created_at: "2026-10-10T07:04:00Z" },
+      ],
+      // attempts 1 and 4 are scored by the panel; attempt 3 is not scored yet
+      scores: [1, 2, 3].flatMap((n) => [{ attempt_id: "a1", seat_no: n, criteria: null, score: 7, missed: false }, { attempt_id: "a4", seat_no: n, criteria: null, score: 6, missed: false }]),
+      impressions: [],
+      penalties: [],
+    };
+    const shorts = (mode: "number_score" | "trick_score" | "scores_only") => liveRows(live, model, map, lycraScheme(), "Variety", mode)![0].boxes.map((b) => b.short);
+
+    it("trick name + score: the side from the spotter's L / R, only for a scored landed attempt", () => {
+      expect(shorts("trick_score")).toEqual(["L ×2 BR", "", "", ""]);
+    });
+    it("a trick appears by itself once its score is in, and an attempt with no trick logged stays number and score", () => {
+      const scored = { ...live, scores: [...live.scores!, ...[1, 2, 3].map((n) => ({ attempt_id: "a3", seat_no: n, criteria: null, score: 5, missed: false }))] };
+      expect(liveRows(scored, model, map, lycraScheme(), "Variety", "trick_score")![0].boxes.map((b) => b.short)).toEqual(["L ×2 BR", "", "L FR", ""]);
+    });
+    it("a corrected trick updates the same way", () => {
+      const fixed = { ...live, attempts: live.attempts!.map((a) => (a.id === "a1" ? { ...a, trick_name: "Backroll", direction: "right" } : a)) };
+      expect(liveRows(fixed, model, map, lycraScheme(), "Variety", "trick_score")![0].boxes[0].short).toBe("R BR");
+    });
+    it("the other settings, and a call that names no setting, carry no trick", () => {
+      expect(shorts("number_score")).toEqual(["", "", "", ""]);
+      expect(shorts("scores_only")).toEqual(["", "", "", ""]);
+      expect(liveRows(live, model, map, lycraScheme(), "Variety")![0].boxes.map((b) => b.short)).toEqual(["", "", "", ""]);
+    });
+    it("no box carries the full trick name", () => {
+      expect(liveRows(live, model, map, lycraScheme(), "Variety", "trick_score")![0].boxes.every((b) => b.trick === "")).toBe(true);
+    });
+  });
+});

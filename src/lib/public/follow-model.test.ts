@@ -4,7 +4,7 @@ import type { LadderHeatVM, LadderRoundVM } from "./ladder-model";
 import type { BoxVM, HeatVM, RiderRowVM } from "./results-model";
 import type { PublicRow } from "./timetable";
 import type { TimetableHeat } from "./types";
-import { buildFollowPages, followPhase, nextLine, paginateLadder, livePages, paginateResults, walkKeyOf, type FollowPage } from "./follow-model";
+import { boxLineCount, buildFollowPages, followPhase, riderCost, RESULTS_BUDGET_VW, nextLine, paginateLadder, livePages, paginateResults, walkKeyOf, type FollowPage } from "./follow-model";
 
 const NOW = Date.parse("2026-10-10T12:00:00Z"); // 14:00 in Cairo (UTC+2 in October? the model only needs a fixed zone)
 const TZ = "Africa/Cairo";
@@ -54,7 +54,7 @@ describe("which page the Follow screen is on (the page-choosing rule)", () => {
   });
 });
 
-const box = (seq: number, patch: Partial<BoxVM> = {}): BoxVM => ({ seq, trick: "Backroll", status: "landed", counted: true, score: 7.5, scoreLabel: "7.50", ...patch });
+const box = (seq: number, patch: Partial<BoxVM> = {}): BoxVM => ({ seq, trick: "", short: "", status: "landed", counted: true, score: 7.5, scoreLabel: "7.50", ...patch });
 const rider = (n: number, boxes = 7, patch: Partial<RiderRowVM> = {}): RiderRowVM => ({
   entryId: `e${n}`, place: n, label: null, placeholder: null, totalLabel: "18.20", formula: "18.20 = tricks 13.50 + Impression 4.70", percentLabel: null, state: "ok",
   boxes: Array.from({ length: boxes }, (_, i) => box(i + 1)), ...patch,
@@ -233,4 +233,45 @@ describe("the live heat is drawn like the public Live tab: every rider with the 
   it("seats with no scores yet (the live-scores switch is off) are one page", () => {
     expect(livePages([1, 2, 3, 4, 5].map((n) => rider(n, 0, { formula: null, totalLabel: null, boxes: [] })), "number_score", false).length).toBe(1);
   });
+});
+
+describe("longer attempt boxes take more room, and no page is ever packed past what fits (Follow the heat)", () => {
+  const withTricks = (n: number, boxes: number): RiderRowVM => rider(n, boxes, { boxes: Array.from({ length: boxes }, (_, i) => box(i + 1, { short: "L ×2 BR" })) });
+  const wide = (n: number, boxes: number): RiderRowVM => rider(n, boxes, { boxes: Array.from({ length: boxes }, (_, i) => box(i + 1, { short: "R ×3 BR BO HP Late rotations" })) });
+
+  it("a box that carries a trick is wider, so fewer fit on a line than with attempt number + score", () => {
+    const seven = withTricks(1, 7).boxes;
+    expect(boxLineCount(seven, "number_score")).toBe(1);
+    expect(boxLineCount(seven, "scores_only")).toBe(1);
+    expect(boxLineCount(seven, "trick_score")).toBeGreaterThan(1);
+    expect(riderCost(withTricks(1, 7), "trick_score")).toBeGreaterThan(riderCost(withTricks(1, 7), "number_score"));
+  });
+
+  it("a box with no trick yet is as narrow as in attempt number + score", () => {
+    expect(boxLineCount(rider(1, 7).boxes, "trick_score")).toBe(boxLineCount(rider(1, 7).boxes, "number_score"));
+  });
+
+  it("the other two settings are costed exactly as before (7 and 10 attempts are one line)", () => {
+    expect(boxLineCount(rider(1, 7).boxes, "number_score")).toBe(1);
+    expect(boxLineCount(rider(1, 8).boxes, "number_score")).toBe(2);
+    expect(boxLineCount(rider(1, 10).boxes, "scores_only")).toBe(1);
+    expect(boxLineCount(rider(1, 11).boxes, "scores_only")).toBe(2);
+  });
+
+  it("a box too wide for the line still counts as one line, not more (it shortens its trick instead)", () => {
+    expect(boxLineCount(wide(1, 1).boxes, "trick_score")).toBe(1);
+  });
+
+  for (const mode of ["number_score", "trick_score", "scores_only"] as const) {
+    for (const attempts of [7, 10]) {
+      it(`a 3-rider heat with ${attempts} attempts each in ${mode}: every rider is on exactly one page, in order, and every page fits`, () => {
+        const riders = [1, 2, 3].map((n) => withTricks(n, attempts));
+        for (const budget of [RESULTS_BUDGET_VW, RESULTS_BUDGET_VW - 9]) {
+          const pages = paginateResults(riders, mode, budget);
+          expect(pages.flat().map((r) => r.entryId)).toEqual(riders.map((r) => r.entryId));
+          for (const page of pages) if (page.length > 1) expect(page.reduce((n, r) => n + riderCost(r, mode), 0)).toBeLessThanOrEqual(budget);
+        }
+      });
+    }
+  }
 });

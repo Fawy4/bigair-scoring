@@ -4,6 +4,7 @@ import { parseScoringModel, type ScoringModel } from "@/lib/schemas/scoring-mode
 import { withImpressionName } from "@/lib/schemas/impression-name";
 import { copy } from "@/lib/ui-copy";
 import { toAttemptDisplay, type AttemptDisplay } from "@/lib/live/result-shading";
+import { attemptTrickText } from "@/lib/engine/tricks/short-form";
 import { labelFor, schemeFor } from "./schemes";
 import type { PublicBreakdown, PublicEntry, PublicResults, PublicRules, PublicSite, ResultsHeat, SlotRowPublic } from "./types";
 
@@ -11,7 +12,10 @@ const R = copy.pub.results;
 
 export interface BoxVM {
   seq: number;
+  /** The trick as logged, in full. Empty on every public page: only the organiser's own files ask for it (`buildHeatTabs` with `fullTricks`). */
   trick: string;
+  /** The trick in short form ("L ×2 BR") for the attempt box: only for a division on "trick name + score", only for a landed attempt whose score is shown. Empty otherwise. */
+  short: string;
   status: "landed" | "crashed";
   counted: boolean;
   score: number | null;
@@ -77,17 +81,32 @@ export function formulaLine(totalLabel: string, components: { tricks: number; im
 
 export const heatNumberLabel = (h: Pick<ResultsHeat, "name" | "number" | "suffix">): string => h.name ?? `Heat ${h.number}${h.suffix ?? ""}`;
 
-function boxesOf(b: PublicBreakdown | null, decimals: number): BoxVM[] {
+/**
+ * One attempt box. The trick reaches the box only through `attemptTrickText` (landed, score shown) and only when the division is on "trick name + score": a trick
+ * the setting does not show is not carried on the box at all, so it cannot reach a page by accident.
+ */
+export function boxOf(
+  a: { seq: number; status: "landed" | "crashed"; trickName: string | null; direction?: string | null; counted: boolean; score: number | null },
+  decimals: number,
+  mode: AttemptDisplay,
+  fullTricks = false,
+): BoxVM {
+  const scoreLabel = a.score === null ? null : fmt(a.score, decimals);
+  return {
+    seq: a.seq,
+    trick: fullTricks ? (a.trickName ?? "") : "",
+    short: mode === "trick_score" ? attemptTrickText({ status: a.status, trickName: a.trickName, direction: a.direction, scored: scoreLabel !== null }) : "",
+    status: a.status,
+    counted: a.counted,
+    score: a.score,
+    scoreLabel,
+  };
+}
+
+function boxesOf(b: PublicBreakdown | null, decimals: number, mode: AttemptDisplay, fullTricks: boolean): BoxVM[] {
   return (b?.allAttempts ?? [])
     .filter((a) => !a.ignored || a.ignored !== "over_cap")
-    .map((a) => ({
-      seq: a.seq,
-      trick: a.trickName ?? "",
-      status: a.status,
-      counted: Boolean(a.counted),
-      score: a.panelScore ?? null,
-      scoreLabel: a.panelScore === null || a.panelScore === undefined ? null : fmt(a.panelScore, decimals),
-    }));
+    .map((a) => boxOf({ seq: a.seq, status: a.status, trickName: a.trickName, direction: a.direction, counted: Boolean(a.counted), score: a.panelScore ?? null }, decimals, mode, fullTricks));
 }
 
 function stateOf(h: ResultsHeat): HeatState {
@@ -120,7 +139,7 @@ function seatRows(slots: SlotRowPublic[], entries: Map<string, PublicEntry>, sch
  * order; for a heat that is live, held or still to come the seats only (live totals come from the live function, when the division allows them). Cancelled heats
  * are left out: their re-run takes the place. Heats come in division, round, number order.
  */
-export function buildHeatTabs(results: PublicResults | null, site: PublicSite | null, rules: PublicRules | null): HeatVM[] {
+export function buildHeatTabs(results: PublicResults | null, site: PublicSite | null, rules: PublicRules | null, opts: { fullTricks?: boolean } = {}): HeatVM[] {
   if (!results || !site) return [];
   const entries = entryMap(results);
   const out: HeatVM[] = [];
@@ -153,7 +172,7 @@ export function buildHeatTabs(results: PublicResults | null, site: PublicSite | 
                 formula: bd && !none ? formulaLine(bd.totalLabel, bd.components, impressionLabel, decimals) : null,
                 percentLabel: d.show_percent && x.percent !== null && !none ? R.percent(fmt(Number(x.percent), 0)) : null,
                 state: status,
-                boxes: boxesOf(bd, decimals),
+                boxes: boxesOf(bd, decimals, mode, Boolean(opts.fullTricks)),
               };
             });
         } else riders = seatRows(h.slots, entries, scheme);

@@ -38,7 +38,7 @@ export interface ExportedHeat {
  * public cannot read (nothing released, held, cancelled, not started) is never here unless it was laid in as a draft.
  */
 export function exportedHeats(input: Pick<ResultsExportInput, "site" | "results" | "rules" | "draftHeatIds" | "includeDraft">): ExportedHeat[] {
-  const tabs = new Map(buildHeatTabs(input.results, input.site, input.rules).map((t) => [t.id, t]));
+  const tabs = new Map(buildHeatTabs(input.results, input.site, input.rules, { fullTricks: true }).map((t) => [t.id, t]));
   const out: ExportedHeat[] = [];
   for (const division of input.results.divisions) {
     for (const round of division.rounds) {

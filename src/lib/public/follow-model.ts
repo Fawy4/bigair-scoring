@@ -9,10 +9,10 @@
 import { overlayArmedRow, isArmedNow } from "@/lib/live/flags";
 import { utcToLocalHHMM } from "@/lib/engine/schedule";
 import { todayIn } from "@/lib/schedule/plans";
-import type { AttemptDisplay } from "@/lib/live/result-shading";
+import { boxLabel, type AttemptDisplay } from "@/lib/live/result-shading";
 import { copy } from "@/lib/ui-copy";
 import type { LadderHeatVM, LadderRoundVM } from "./ladder-model";
-import type { HeatVM, RiderRowVM } from "./results-model";
+import type { BoxVM, HeatVM, RiderRowVM } from "./results-model";
 import type { PublicRow } from "./timetable";
 import type { TimetableHeat } from "./types";
 
@@ -52,16 +52,35 @@ export type FollowPage =
 
 /** The height of the page body in vw (the screen is 16:9, so 1920 × 1080 is 100 × 56.25): what the header, title and Next line leave. Rows below are costed in the same unit. */
 export const RESULTS_BUDGET_VW = 30.5;
-const ROW = { head: 3.5, boxLine: 3.2, formula: 2.0, pad: 0.6, wrapped: 2.8 };
-/** How many attempt boxes one line holds at the TV size: a score alone is narrow, "3 · 7.50" wider, a trick name wide. */
-const BOXES_PER_LINE: Record<AttemptDisplay, number> = { scores_only: 10, number_score: 7, trick_score: 4 };
+const ROW = { head: 3.8, boxLine: 3.5, formula: 2.1, pad: 0.6, wrapped: 2.8 };
+/**
+ * How wide one attempt box is at the TV size, in vw, and how wide the line they wrap in is (the page's content width less the indent under the place number). A box is
+ * its icon, padding and border plus its text; the text is costed a little wider than it draws, so a row is never costed shorter than it is.
+ */
+const BOX = { overhead: 3.7, char: 1.05, gap: 0.5, line: 89.5 };
 
 const labelLength = (r: RiderRowVM): number => (r.label ? r.label.primary.text.length + (r.label.secondary.find((x) => x.key === "name")?.text.length ?? 0) : (r.placeholder ?? "").length);
 
+/** How many lines a rider's attempt boxes take at the TV size: the boxes wrap as they are drawn, so "1 · L ×2 BR · 7.33" fits fewer to a line than "1 · 7.33". */
+export function boxLineCount(boxes: BoxVM[], mode: AttemptDisplay): number {
+  let lines = 0;
+  let used = 0;
+  for (const b of boxes) {
+    const w = Math.min(BOX.overhead + boxLabel(b, mode).length * BOX.char, BOX.line);
+    if (lines === 0) {
+      lines = 1;
+      used = w;
+    } else if (used + BOX.gap + w > BOX.line) {
+      lines++;
+      used = w;
+    } else used += BOX.gap + w;
+  }
+  return lines;
+}
+
 /** The room one rider's row takes on a Results page, in vw. */
 export function riderCost(r: RiderRowVM, mode: AttemptDisplay): number {
-  const lines = r.boxes.length ? Math.ceil(r.boxes.length / BOXES_PER_LINE[mode]) : 0;
-  return ROW.head + (labelLength(r) > 26 ? ROW.wrapped : 0) + lines * ROW.boxLine + (r.formula ? ROW.formula : 0) + ROW.pad;
+  return ROW.head + (labelLength(r) > 26 ? ROW.wrapped : 0) + boxLineCount(r.boxes, mode) * ROW.boxLine + (r.formula ? ROW.formula : 0) + ROW.pad;
 }
 
 /** A heat's riders in the fewest pages that fit at the TV size, balanced (5 riders that need two pages are 3 + 2, not 4 + 1). Never empty: a heat without riders is one empty page. */

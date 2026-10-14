@@ -30,20 +30,27 @@ describe("tone of a box", () => {
 });
 
 describe("what a box shows (a division setting)", () => {
-  const a = { seq: 2, trick: "Double loop", scoreLabel: "8.25", status: "landed" as const };
-  const crash = { seq: 4, trick: "Board-off", scoreLabel: null, status: "crashed" as const };
+  const a = { seq: 2, short: "L ×2 BR", scoreLabel: "8.25", status: "landed" as const };
+  const noTrick = { ...a, short: "" };
+  const crash = { seq: 4, short: "", scoreLabel: null, status: "crashed" as const };
   it("Arrow's default is attempt number + score", () => {
     expect(DEFAULT_ATTEMPT_DISPLAY).toBe("number_score");
     expect(ATTEMPT_DISPLAYS[0]).toBe("number_score");
   });
   const t = (m: AttemptDisplay, x: Parameters<typeof boxText>[0] = a) => boxText(x, m);
   it("attempt number + score", () => expect(t("number_score")).toBe("2 · 8.25"));
-  it("trick name + score", () => expect(t("trick_score")).toBe("Double loop · 8.25"));
+  it("trick name + score: the number, the short trick, then the score", () => expect(t("trick_score")).toBe("2 · L ×2 BR · 8.25"));
+  it("trick name + score with no trick logged yet reads like attempt number + score", () => expect(t("trick_score", noTrick)).toBe("2 · 8.25"));
+  it("the other two settings never show a trick, even if the box carries one", () => {
+    expect(t("number_score")).toBe("2 · 8.25");
+    expect(t("scores_only")).toBe("8.25");
+  });
   it("scores only", () => expect(t("scores_only")).toBe("8.25"));
   it("a crash says CRASH and never shows a score", () => {
     expect(t("scores_only", crash)).toBe("CRASH");
     expect(t("number_score", crash)).toBe("4 · CRASH");
-    expect(t("trick_score", crash)).toBe("Board-off · CRASH");
+    expect(t("trick_score", crash)).toBe("4 · CRASH");
+    expect(t("trick_score", { ...crash, short: "L KL" })).toBe("4 · CRASH");
   });
 
   it("the stored 'score_only' setting is read as scores only; anything unknown is attempt number + score", () => {

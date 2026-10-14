@@ -88,7 +88,10 @@ export interface PublicTimetable {
 export interface PublicBreakdownAttempt {
   seq: number;
   status: "landed" | "crashed";
+  /** Only for a landed attempt whose score is shown, in a division on "trick name + score" (the database leaves it null otherwise). */
   trickName: string | null;
+  /** The spotter's L / R, sent under the same rules as the trick (null for a published result: the side is written in the name). */
+  direction?: string | null;
   categoryKey: string | null;
   score: number | null;
   counted: boolean;

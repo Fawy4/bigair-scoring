@@ -15,7 +15,7 @@ import { ScoringModelSchema } from "@/lib/schemas/scoring-model";
 import { FORMAT_NULLABLE, mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { issuesToMap } from "@/lib/form/path";
 import { copy } from "@/lib/ui-copy";
-import { DivisionLiveSchema, type DivisionLive } from "@/lib/schemas/division-live";
+import { DivisionLiveSchema, NEW_DIVISION_LIVE_SETTINGS, type DivisionLive } from "@/lib/schemas/division-live";
 import { isDefaultLayout, parseLayout } from "@/lib/trick-base/layout";
 
 const E = copy.divisions.errors;
@@ -61,7 +61,7 @@ export async function addDivision(eventId: string, name: string): Promise<Ok<{ i
   const { data: last } = await supabase.from("divisions").select("sort_order").eq("event_id", eventId).order("sort_order", { ascending: false }).limit(1);
   const sortOrder = (last?.[0]?.sort_order ?? 0) + 1;
   const scoringModelId = await defaultScoringModelId(supabase);
-  const { data, error } = await supabase.from("divisions").insert({ event_id: eventId, name: parsed.data, sort_order: sortOrder, scoring_model_id: scoringModelId }).select("id").single();
+  const { data, error } = await supabase.from("divisions").insert({ event_id: eventId, name: parsed.data, sort_order: sortOrder, scoring_model_id: scoringModelId, live_settings: { ...NEW_DIVISION_LIVE_SETTINGS } }).select("id").single();
   if (error) return { ok: false, error: explain(error.message) };
   await supabase.rpc("ensure_division_panel", { p_division: data.id }); // the scoring head judge is on every panel
   return { ok: true, id: data.id, sortOrder, scoringModelId };

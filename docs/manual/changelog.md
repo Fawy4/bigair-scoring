@@ -2,7 +2,19 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 13 Oct 2026 · Product version 0.22.0
+Last checked: 14 Oct 2026 · Product version 0.23.0
+
+## 0.23.0 — 14 Oct 2026 {#cl-0-23-0}
+
+Release entry: [0.23.0](/admin/releases#release-0-23-0) (platform owner only)
+
+**What changed for users**
+- **Short trick names in the attempt boxes:** with the division setting **What spectators see per attempt** on **Trick name and score**, the Live tab, Results, a rider's page and Follow the heat show boxes like "1 · L ×2 BR · 7.33" (a crash stays "2 · CRASH"; no trick yet reads "1 · 7.33"; a trick shows only where its score does). The other two choices look as before. On a phone only the trick part shortens with "…".
+- **Follow the heat never cuts a rider off at the bottom:** rows are counted from the real box widths, so a heat that does not fit is split across rotating pages.
+- **A new division starts on Trick name and score;** existing divisions keep their choice.
+- **The public is sent a trick only where it is shown** (trick-name divisions, scored landings, never a crash).
+
+**Manual pages updated:** [Public: results and placings](screens/public-results.md) (the attempt boxes and the new *Short trick names* table), [Public: the Live tab](screens/public-live.md), [Public: the rider page](screens/public-rider.md), [Big screen](screens/big-screen.md), [Organiser: Divisions](screens/organiser-divisions.md), [Settings](settings.md).
 
 ## 0.22.0 — 13 Oct 2026 {#cl-0-22-0}
 
