@@ -25,11 +25,6 @@ export const DivisionLiveSchema = z.looseObject({
 });
 export type DivisionLive = z.infer<typeof DivisionLiveSchema>;
 
-/**
- * What a division created from now on starts with, whatever preset it starts from: its attempt boxes show the trick and the score. A division that already exists keeps
- * what it has, and one that never stored the choice still reads as attempt number + score (the schema's default above does not change).
- */
-export const NEW_DIVISION_LIVE_SETTINGS = { spectatorAttemptDisplay: "trick_score" } as const;
 
 export function parseDivisionLive(json: unknown): DivisionLive {
   const r = DivisionLiveSchema.safeParse(json && typeof json === "object" ? json : {});

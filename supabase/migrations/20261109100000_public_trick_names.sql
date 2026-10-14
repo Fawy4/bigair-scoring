@@ -12,6 +12,8 @@
 -- A crash never carries a trick. The attempt category is no longer sent at all (the pages do not use it). Nothing else from the spotter's lines is or was sent:
 -- not the seat that logged it, its edits, flags or notes.
 --
+-- The Highest jump line (placings) follows the same rule: its trick name is sent only for a division on "trick name + score".
+--
 -- The organiser of the event (signed in) still reads the full names through get_public_results: the results CSV and the printable results are theirs and need them.
 -- Every visitor and every other signed-in person reads the restricted answer; the public pages call this function as a visitor only.
 
@@ -44,7 +46,8 @@ declare ev public.events; v_full boolean;
 begin
   select * into ev from public.events where id = p_event;
   if not found or not private.event_is_public(p_event) then return jsonb_build_object('allowed', false); end if;
-  v_full := coalesce(private.is_event_organiser(p_event), false);
+  -- nobody is signed in for a visitor: no lookup at all (the public pages call this as a visitor, cached for a few seconds)
+  v_full := auth.uid() is not null and coalesce(private.is_event_organiser(p_event), false);
   return jsonb_build_object(
     'allowed', true,
     'event', jsonb_build_object('id', ev.id, 'name', ev.name, 'slug', ev.slug, 'timezone', ev.timezone),
@@ -53,7 +56,8 @@ begin
         'id', d.id, 'name', d.name, 'sort_order', d.sort_order,
         'attempt_display', coalesce(d.live_settings ->> 'spectatorAttemptDisplay', 'number_score'),
         'show_percent', coalesce((d.live_settings ->> 'showPercentOfMax')::boolean, false),
-        'highest_jump', (select jsonb_build_object('height_m', a.height_m, 'entry_id', a.entry_id, 'heat_id', a.heat_id, 'trick_name', a.trick_name)
+        'highest_jump', (select jsonb_build_object('height_m', a.height_m, 'entry_id', a.entry_id, 'heat_id', a.heat_id,
+                                'trick_name', case when coalesce(d.live_settings ->> 'spectatorAttemptDisplay', 'number_score') = 'trick_score' then a.trick_name else null end)
                            from public.trick_attempts a join public.heats hh on hh.id = a.heat_id
                           where hh.division_id = d.id and hh.status = 'published' and not hh.publish_hold
                             and a.deleted_at is null and a.status = 'landed' and a.height_m is not null

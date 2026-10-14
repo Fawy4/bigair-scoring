@@ -1,3 +1,5 @@
+import { shortTrickName } from "@/lib/engine/tricks/short-form";
+import { toAttemptDisplay } from "@/lib/live/result-shading";
 import { divisionPlacings, placeholderText, provisionalSeat, type DivisionDraw, type DrawHeat, type DrawRound } from "@/lib/engine/ladder";
 import { bestInk } from "@/lib/identification/label-style";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
@@ -108,10 +110,14 @@ export function buildPlacings(draw: DivisionDraw | null, entries: PublicEntry[])
   }));
 }
 
-/** "Highest jump: 14.2 m — Sam Rivera (Backroll)", or null when no released attempt has a height. */
-export function highestJumpLine(d: Pick<ResultsDivision, "highest_jump"> | undefined, entries: PublicEntry[]): string | null {
+/**
+ * "Highest jump: 14.2 m — Sam Rivera (L BR)", or null when no released attempt has a height. The trick is named, in short form, only for a division on "trick name +
+ * score" (the division's own setting decides, as for the attempt boxes); every other division reads "Highest jump: 14.2 m — Sam Rivera".
+ */
+export function highestJumpLine(d: Pick<ResultsDivision, "highest_jump" | "attempt_display"> | undefined, entries: PublicEntry[]): string | null {
   const j = d?.highest_jump;
   if (!j) return null;
   const who = entryName(entries.find((e) => e.id === j.entry_id));
-  return copy.pub.placings.highestJump(String(Math.round(Number(j.height_m) * 100) / 100), who, j.trick_name ?? "");
+  const trick = toAttemptDisplay(d?.attempt_display) === "trick_score" ? shortTrickName(j.trick_name) : "";
+  return copy.pub.placings.highestJump(String(Math.round(Number(j.height_m) * 100) / 100), who, trick);
 }

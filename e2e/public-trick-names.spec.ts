@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./base";
+import { breakdownOf } from "../tests/rls/public-helpers";
 import { createPublicWorld, type PublicWorld } from "./public-world";
 
 /**
@@ -12,7 +13,7 @@ test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile
 test.describe.configure({ mode: "serial" });
 
 const LONG = "Left ×2 Backroll Board-off Handle pass Late rotations Tic-tac Toeside Stalefish";
-const LONG_SHORT = "L ×2 BR BO HP Late rotations Tic-tac Toeside Stalefish";
+const LONG_SHORT = "L ×2 BR BO HP LR TT TS SF"; // letters only: no word in a box
 
 let w: PublicWorld;
 const url = (path = "") => `/e/${w.slug}${path}`;
@@ -139,6 +140,20 @@ test("the page is sent no trick that it does not show: not the crash's, and noth
   await setMode("trick_score");
 });
 
+test("Placings: the Highest jump line names the trick, in short form, only in a division on trick name + score", async ({ page }) => {
+  await w.db.from("trick_attempts").insert({ heat_id: w.published, entry_id: w.entries[0], seq: 1, status: "landed", trick_name: "Left ×2 Backroll", direction: "left", client_key: randomUUID(), height_m: 12.3 });
+  await page.goto(url(`/placings?division=${w.divisionId}`));
+  await expect(page.getByTestId("highest-jump")).toHaveText("Highest jump: 12.3 m — Sam Rivera (L ×2 BR)");
+  await setMode("number_score");
+  try {
+    await page.goto(url(`/placings?division=${w.divisionId}`));
+    await expect(page.getByTestId("highest-jump")).toHaveText("Highest jump: 12.3 m — Sam Rivera");
+    expect(await rawHtml(page, `/placings?division=${w.divisionId}`)).not.toContain("Backroll");
+  } finally {
+    await setMode("trick_score");
+  }
+});
+
 test("a division on attempt number + score looks as it always did", async ({ page }) => {
   await setMode("number_score");
   try {
@@ -173,4 +188,27 @@ test("with live scores off a trick shows only after Publish, together with the s
   } finally {
     await w.db.from("events").update({ settings: settings as never }).eq("id", w.eventId);
   }
+});
+
+test("the same attempt reads exactly the same on the Live tab before Publish and on Results after it (the default naming carries the side)", async ({ page }) => {
+  const db = w.db;
+  await db.from("trick_attempts").update({ trick_name: "Left ×2 Backroll", direction: "left" }).eq("heat_id", w.running).eq("entry_id", w.entries[0]).eq("seq", 1);
+  await page.goto(url(`/live?heat=${w.running}`));
+  const boxes = rider(page, "RED").getByTestId("score-box");
+  await expect(boxes).toHaveCount(3);
+  await expect(boxes.first()).toHaveText("1 · L ×2 BR · 6.0");
+  const before = await boxes.allTextContents();
+  // Publish: the result the head judge's button stores, made from the same three attempts
+  const panel = (score: number) => ({ score, judgeScores: [{ judgeId: "J1", score }] });
+  const bd = breakdownOf(11.5) as Record<string, unknown>;
+  bd.allAttempts = [
+    { seq: 1, status: "landed", trickName: "Left ×2 Backroll", categoryKey: null, score: 6, counted: true, repeatIndex: 0, priorCrashesSameTrick: 0, panel: panel(6) },
+    { seq: 2, status: "crashed", trickName: "Megaloop", categoryKey: null, score: null, counted: false, repeatIndex: 0, priorCrashesSameTrick: 0, panel: null },
+    { seq: 3, status: "landed", trickName: LONG, categoryKey: null, score: 5.5, counted: true, repeatIndex: 0, priorCrashesSameTrick: 0, panel: panel(5.5) },
+  ];
+  await db.from("heat_results").insert({ event_id: w.eventId, heat_id: w.running, entry_id: w.entries[0], place: 1, total: 11.5, percent: 50, breakdown: bd as never, version: 1 });
+  await db.from("heats").update({ status: "published", ended_at: new Date().toISOString(), published_at: new Date().toISOString(), publish_hold: false }).eq("id", w.running);
+  await page.goto(url(`/results?heat=${w.running}`));
+  const after = await rider(page, "RED").getByTestId("score-box").allTextContents();
+  expect(after).toEqual(before);
 });

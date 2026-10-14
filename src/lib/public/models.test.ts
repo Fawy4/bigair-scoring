@@ -169,8 +169,12 @@ describe("placings", () => {
     const p = buildPlacings(draw, entries);
     expect(p.map((x) => x.label)).toEqual(["1", "2", "3=", "3=", "3=", "3="]);
     expect(p[0].name).toBe("Ana Ladder");
-    expect(highestJumpLine({ highest_jump: { height_m: 14.237, entry_id: "e1", heat_id: "h1", trick_name: "Backroll" } }, entries)).toBe("Highest jump: 14.24 m — Ana Ladder (Backroll)");
-    expect(highestJumpLine({ highest_jump: null }, entries)).toBeNull();
+    const jump = { height_m: 14.237, entry_id: "e1", heat_id: "h1", trick_name: "Left ×2 Backroll" };
+    expect(highestJumpLine({ attempt_display: "trick_score", highest_jump: jump }, entries)).toBe("Highest jump: 14.24 m — Ana Ladder (L ×2 BR)");
+    // only a division on "trick name + score" names the trick, even if the trick were sent
+    for (const mode of ["number_score", "score_only", "scores_only", undefined as unknown as string]) expect(highestJumpLine({ attempt_display: mode, highest_jump: jump }, entries)).toBe("Highest jump: 14.24 m — Ana Ladder");
+    expect(highestJumpLine({ attempt_display: "trick_score", highest_jump: { ...jump, trick_name: null } }, entries)).toBe("Highest jump: 14.24 m — Ana Ladder");
+    expect(highestJumpLine({ attempt_display: "trick_score", highest_jump: null }, entries)).toBeNull();
     expect(buildPlacings(null, entries)).toEqual([]);
   });
 });

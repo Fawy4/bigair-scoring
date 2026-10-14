@@ -1,68 +1,88 @@
 /**
- * The trick the way riders say it: "Left ×2 Backroll" with the spotter's L is "L ×2 BR". Pure: no I/O. One table, used by every public place that shows a trick
- * (the attempt boxes on the public pages and on Follow the heat; the rider reports will use it later).
+ * The trick in a few capital letters, the way it sits in an attempt box: "Left ×2 Backroll Board-off" with the spotter's L is "L ×2 BR BO". Pure: no I/O. One table, used
+ * by every public place that shows a trick (the attempt boxes on the public pages and on Follow the heat, the Highest jump line; the rider reports will use it later).
  *
- * Matching ignores capitals, spaces and hyphens ("back roll", "Back-roll" and "BACKROLL" are the same word). A word the table does not know stays as typed, so a
- * trick a spotter typed freely is never lost. Counts in front of a trick ("6x") stay as they are.
+ * The rule has no words in it: every trick is the first letter of each part of its name, in capitals. A compound word is read as its parts (Backroll is Back + roll, so BR).
+ * The side stays first (L or R). A rotation count stays a number (×2, ×3, ×4; a typed double, triple or quad becomes the same); a single rotation shows nothing.
+ * Text that matches nothing in the Trick list follows the same rule: the first letter of each word. Matching ignores capitals, spaces and hyphens ("back roll",
+ * "Back-roll" and "BACKROLL" are one word). A count in front ("6x") stays as typed.
+ *
+ * Where two tricks end up with the same letters, or letters look like the side, the rule's letters are kept: `shortFormCases()` lists those cases for the owner.
  */
 
 export interface TrickShortForm {
   /** Every spelling that gets this short form (the Trick list's own word first). Capitals, spaces and hyphens do not matter. */
   words: string[];
+  /** The parts of the name the letters come from (empty for a rotation count). */
+  parts: string[];
   short: string;
 }
 
-/** The table: the Trick list (presets/tricks/big-air-vocabulary.json) word by word. A word riders already say short is kept. */
+const firstLetter = (part: string): string => /\p{L}/u.exec(part)?.[0].toUpperCase() ?? "";
+/** The first letter of each part, in capitals. */
+export const initials = (parts: string[]): string => parts.map(firstLetter).join("");
+
+const trick = (label: string, parts: string[]): TrickShortForm => ({ words: [label], parts, short: initials(parts) });
+const count = (short: string, ...words: string[]): TrickShortForm => ({ words, parts: [], short });
+
+/** The table: the Trick list (presets/tricks/big-air-vocabulary.json) word by word, with the parts each name is read in. */
 export const TRICK_SHORT_FORMS: readonly TrickShortForm[] = [
   // base tricks
-  { words: ["Straight jump", "Jump"], short: "Jump" },
-  { words: ["Backroll", "BR"], short: "BR" },
-  { words: ["Frontroll", "FR"], short: "FR" },
-  { words: ["Kiteloop", "KL"], short: "KL" },
-  { words: ["Megaloop", "Mega"], short: "Mega" },
-  { words: ["Double loop", "Double kiteloop", "DL"], short: "DL" },
-  { words: ["Triple loop", "Triple kiteloop", "TL"], short: "TL" },
-  { words: ["S-loop"], short: "S-loop" },
-  { words: ["Contra loop", "Contra"], short: "Contra" },
-  { words: ["Doobie loop", "Doobie"], short: "Doobie" },
-  { words: ["Boogie loop", "Boogie"], short: "Boogie" },
-  { words: ["Late backroll"], short: "Late BR" },
-  { words: ["Late frontroll"], short: "Late FR" },
-  { words: ["Heart attack"], short: "Heart attack" },
+  trick("Straight jump", ["Straight", "jump"]),
+  trick("Backroll", ["Back", "roll"]),
+  trick("Frontroll", ["Front", "roll"]),
+  trick("Kiteloop", ["Kite", "loop"]),
+  trick("Megaloop", ["Mega", "loop"]),
+  trick("Double loop", ["Double", "loop"]),
+  trick("Triple loop", ["Triple", "loop"]),
+  trick("S-loop", ["S", "loop"]),
+  trick("Contra loop", ["Contra", "loop"]),
+  trick("Doobie loop", ["Doobie", "loop"]),
+  trick("Boogie loop", ["Boogie", "loop"]),
+  trick("Late backroll", ["Late", "back", "roll"]),
+  trick("Late frontroll", ["Late", "front", "roll"]),
+  trick("Heart attack", ["Heart", "attack"]),
   // add-ons
-  { words: ["Board-off", "BO"], short: "BO" },
-  { words: ["One-foot", "1ft"], short: "1ft" },
-  { words: ["Board spin"], short: "Board spin" },
-  { words: ["Handle pass", "HP"], short: "HP" },
-  { words: ["+ Kiteloop", "+KL"], short: "+KL" },
-  { words: ["Late"], short: "Late" },
-  { words: ["Late rotations"], short: "Late rotations" },
-  { words: ["Tic-tac"], short: "Tic-tac" },
+  trick("Board-off", ["Board", "off"]),
+  trick("One-foot", ["One", "foot"]),
+  trick("Board spin", ["Board", "spin"]),
+  trick("Handle pass", ["Handle", "pass"]),
+  trick("+ Kiteloop", ["Kite", "loop"]),
+  trick("Late", ["Late"]),
+  trick("Late rotations", ["Late", "rotations"]),
+  trick("Tic-tac", ["Tic", "tac"]),
   // grabs and landings
-  { words: ["Grab"], short: "Grab" },
-  { words: ["Indy"], short: "Indy" },
-  { words: ["Tail"], short: "Tail" },
-  { words: ["Nose"], short: "Nose" },
-  { words: ["Melon"], short: "Melon" },
-  { words: ["Mute"], short: "Mute" },
-  { words: ["Stalefish"], short: "Stalefish" },
-  { words: ["Method"], short: "Method" },
-  { words: ["Blind landing", "Blind"], short: "Blind" },
-  { words: ["Toeside"], short: "Toeside" },
-  { words: ["Downloop landing", "Downloop"], short: "Downloop" },
-  // multipliers: ×2 and ×3 stay as they are; a typed word becomes the sign
-  { words: ["×1", "x1"], short: "×1" },
-  { words: ["×2", "x2", "Double"], short: "×2" },
-  { words: ["×3", "x3", "Triple"], short: "×3" },
-  { words: ["×4", "x4", "Quad"], short: "×4" },
+  trick("Grab", ["Grab"]),
+  trick("Indy", ["Indy"]),
+  trick("Tail", ["Tail"]),
+  trick("Nose", ["Nose"]),
+  trick("Melon", ["Melon"]),
+  trick("Mute", ["Mute"]),
+  trick("Stalefish", ["Stale", "fish"]),
+  trick("Method", ["Method"]),
+  trick("Blind landing", ["Blind", "landing"]),
+  trick("Toeside", ["Toe", "side"]),
+  // rotation counts: a number, never letters; a single rotation shows nothing
+  count("", "×1", "x1", "Single"),
+  count("×2", "×2", "x2", "Double"),
+  count("×3", "×3", "x3", "Triple"),
+  count("×4", "×4", "x4", "Quad"),
 ];
+
+/** Words that are in the spotter's Trick list but are not tricks: they are left out of every box (not shortened, not shown). */
+export const LEFT_OUT_OF_BOXES: readonly string[] = ["Downloop landing", "Downloop"];
 
 /** A word for matching: lower case, with spaces, hyphens and the like taken out. */
 export const normaliseTrickWord = (s: string): string => s.toLowerCase().replace(/[\s\-–—_.]+/g, "");
 
-const LOOKUP: ReadonlyMap<string, string> = new Map(TRICK_SHORT_FORMS.flatMap((e) => e.words.map((w) => [normaliseTrickWord(w), e.short] as const)));
-/** The longest phrase of the table, in words as typed ("Downloop landing" is 2, "Double kiteloop" is 2). */
+const LOOKUP: ReadonlyMap<string, string> = new Map([
+  ...TRICK_SHORT_FORMS.flatMap((e) => e.words.map((w) => [normaliseTrickWord(w), e.short] as const)),
+  ...LEFT_OUT_OF_BOXES.map((w) => [normaliseTrickWord(w), ""] as const),
+]);
+/** The longest phrase of the table, in words as typed. */
 const LONGEST_PHRASE = 3;
+/** A count in front of a trick, or a bare number: kept as typed ("6x", "720"). */
+const KEPT_AS_TYPED = /^\d+[x×]?$/i;
 
 const SIDE_WORD: Record<string, "L" | "R"> = { left: "L", right: "R", l: "L", r: "R" };
 
@@ -72,14 +92,20 @@ function sideOf(value: string | null | undefined): "L" | "R" | null {
 }
 
 /**
- * "L ×2 BR": the side first (the spotter's L / R, else the side written in the name; nothing when there is none), then the trick shortened word by word.
- * Empty when no trick was logged, even if a side was set.
+ * "L ×2 BR": the side first (the spotter's L / R, else the side written in the name; nothing when there is none), then the rotation count, then the initials of
+ * each part of the trick. Empty when no trick was logged, even if a side was set.
  */
 export function shortTrickName(name: string | null | undefined, side?: string | null): string {
   const tokens = (name ?? "").split(/\s+/).filter(Boolean);
   if (!tokens.length) return "";
   let named: "L" | "R" | null = null;
   const words: string[] = [];
+  // words the Trick list does not know are read together as one piece of text: "Mystery Spin" is MS
+  let free: string[] = [];
+  const flush = () => {
+    if (free.length) words.push(initials(free.flatMap((t) => t.split(/[-–—]+/))));
+    free = [];
+  };
   for (let i = 0; i < tokens.length; ) {
     const written = tokens[i].toLowerCase() === "left" ? "L" : tokens[i].toLowerCase() === "right" ? "R" : null;
     if (written && !named) {
@@ -93,13 +119,19 @@ export function shortTrickName(name: string | null | undefined, side?: string | 
       if (short !== undefined) hit = { short, used: n };
     }
     if (hit) {
+      flush();
       words.push(hit.short);
       i += hit.used;
-    } else {
+    } else if (KEPT_AS_TYPED.test(tokens[i])) {
+      flush();
       words.push(tokens[i]);
+      i += 1;
+    } else {
+      free.push(tokens[i]);
       i += 1;
     }
   }
+  flush();
   return [sideOf(side) ?? named, ...words].filter(Boolean).join(" ");
 }
 
@@ -109,4 +141,20 @@ export function shortTrickName(name: string | null | undefined, side?: string | 
 export function attemptTrickText(a: { status: "landed" | "crashed"; trickName: string | null | undefined; direction?: string | null; scored: boolean }): string {
   if (a.status !== "landed" || !a.scored) return "";
   return shortTrickName(a.trickName, a.direction);
+}
+
+/**
+ * The cases where the rule's letters are not unambiguous, for the owner to decide (the letters are kept as the rule gives them):
+ * `same` — tricks that end up with the same letters; `side` — letters that read as the side (exactly L or R, or beginning with L or R after the side).
+ */
+export function shortFormCases(): { same: Array<{ short: string; words: string[] }>; sideExact: Array<{ short: string; words: string[] }>; sideStart: Array<{ short: string; words: string[] }> } {
+  const tricks = TRICK_SHORT_FORMS.filter((e) => e.parts.length > 0);
+  const byShort = new Map<string, string[]>();
+  for (const e of tricks) byShort.set(e.short, [...(byShort.get(e.short) ?? []), e.words[0]]);
+  const rows = [...byShort].map(([short, words]) => ({ short, words }));
+  return {
+    same: rows.filter((r) => r.words.length > 1),
+    sideExact: rows.filter((r) => r.short === "L" || r.short === "R"),
+    sideStart: rows.filter((r) => r.short.length > 1 && /^[LR]/.test(r.short)),
+  };
 }

@@ -23,7 +23,7 @@ The published result of every heat, readable on a phone in the sun, and the divi
 |---|---|
 | **Divisions** and **Heats** tabs | Pick the heat; it opens on the live heat, otherwise the last published (“Showing the live heat, otherwise the last published.”). |
 | Rider rows | Place, Rider label, total and the formula in words (“20.5 = tricks 15.5 + Variety 5.0”; “ + bonus”, “ − penalty” when they apply; a percentage only when the division's “Show scores as % of maximum” is on); DNS, DNF, DSQ. |
-| Attempt boxes | In attempt order: crash red with CRASH, not counted grey, counted graded yellow (lowest in the heat) to green (highest), each with an icon or a word. What a box shows is the division setting “What spectators see per attempt” (Divisions → Scoring → ‹n› more settings → Live screens): attempt number + score, trick name + score (what a new division starts with), or scores only. With **trick name + score** a box reads the number, the trick in the short form riders say, then the score: “1 · L ×2 BR · 7.33” (L or R is the side the spotter set; BR is Backroll, FR Frontroll, KL Kiteloop, ×2 and ×3 stay; the whole short-form list is under *Short trick names* below). A crash reads “2 · CRASH” with no trick; an attempt whose trick the spotter has not logged yet reads “1 · 7.33” and fills in by itself. A trick shows only where its score does: with live scores off, tricks appear once the heat is published, together with the scores. On a narrow phone the boxes wrap onto new lines as before; when one box is still too wide for the card only its trick part ends in “…” — the number and the score are never cut — and the full text is in the box’s accessible label. The other two settings look exactly as they always did. The same boxes are on the Live tab, a rider’s page and Follow the heat. |
+| Attempt boxes | In attempt order: crash red with CRASH, not counted grey, counted graded yellow (lowest in the heat) to green (highest), each with an icon or a word. What a box shows is the division setting “What spectators see per attempt” (Divisions → Scoring → ‹n› more settings → Live screens): attempt number + score, trick name + score, or scores only. A division shows trick names only when its organiser picks “trick name + score” — then everywhere that division appears in public. With **trick name + score** a box reads the number, the trick in the short form riders say, then the score: “1 · L ×2 BR · 7.33” (L or R is the side the spotter set; BR is Backroll, KL Kiteloop, ×2 and ×3 stay; the letters of every trick are under *Short trick names* below). A crash reads “2 · CRASH” with no trick; an attempt whose trick the spotter has not logged yet reads “1 · 7.33” and fills in by itself. A trick shows only where its score does: with live scores off, tricks appear once the heat is published, together with the scores. On a narrow phone the boxes wrap onto new lines as before; when one box is still too wide for the card only its trick part ends in “…” — the number and the score are never cut — and the full text is in the box’s accessible label. The other two settings look exactly as they always did. The same boxes are on the Live tab, a rider’s page and Follow the heat. |
 | “How to tell the riders apart” | The Lycra colours and how riders are recognised. |
 | **Placings** | Final places (riders knocked out in the same round share a place, “13=”), and “Highest jump: ‹h› m — ‹rider› (‹trick›)” when heights are measured. |
 
@@ -31,26 +31,26 @@ The published result of every heat, readable on a phone in the sun, and the divi
 
 ## Short trick names {#pr-short-tricks}
 
-With “trick name + score” the trick is written the way riders say it. The side comes first (**L** or **R**, from the spotter’s L / R; nothing when no side was set), then each word of the trick. Capitals, spaces and hyphens do not matter (“back roll”, “Back-roll” and “BACKROLL” are the same word). A typed “double” or “triple” becomes ×2 or ×3. A word that is not in the list stays as the spotter typed it.
+With “trick name + score” a trick is written in capital letters only, so it fits a small box on a phone and is readable on the beach TV. The rule: **the first letter of each part of the trick’s name**, so Backroll (back + roll) is **BR**, Kiteloop **KL**, Doobie loop **DL**, Handle pass **HP**, Heart attack **HA**. The **side** comes first (**L** or **R**, from the spotter’s L / R; nothing when no side was set). A **rotation count** stays a number: **×2**, **×3**, **×4** (a typed “double”, “triple” or “quad” becomes the number); a single rotation shows nothing. Capitals, spaces and hyphens do not matter (“back roll”, “Back-roll” and “BACKROLL” are one word). Text the Trick list does not know follows the same rule, the first letter of each word (“Mystery spin” is MS); a count in front (“6x”) stays as typed. **Downloop** is not a trick and never appears in a box.
 
-| Spotter’s word | Shown as | Spotter’s word | Shown as |
+| Trick list word | Letters | Trick list word | Letters |
 |---|---|---|---|
-| Straight jump | Jump | Board-off | BO |
-| Backroll | BR | One-foot | 1ft |
-| Frontroll | FR | Board spin | Board spin |
+| Straight jump | SJ | Board-off | BO |
+| Backroll | BR | One-foot | OF |
+| Frontroll | FR | Board spin | BS |
 | Kiteloop | KL | Handle pass | HP |
-| Megaloop | Mega | + Kiteloop | +KL |
-| Double loop | DL | Late | Late |
-| Triple loop | TL | Late rotations | Late rotations |
-| S-loop | S-loop | Tic-tac | Tic-tac |
-| Contra loop | Contra | Grab (Indy, Tail, Nose, Melon, Mute, Stalefish, Method) | as typed |
-| Doobie loop | Doobie | Blind landing | Blind |
-| Boogie loop | Boogie | Toeside | Toeside |
-| Late backroll | Late BR | Downloop landing | Downloop |
-| Late frontroll | Late FR | ×2 / double, ×3 / triple, ×4 / quad | ×2, ×3, ×4 |
-| Heart attack | Heart attack | | |
+| Megaloop | ML | + Kiteloop | KL |
+| Double loop | DL | Late | L |
+| Triple loop | TL | Late rotations | LR |
+| S-loop | SL | Tic-tac | TT |
+| Contra loop | CL | Grab | G |
+| Doobie loop | DL | Indy, Tail, Nose | I, T, N |
+| Boogie loop | BL | Melon, Mute, Method | M, M, M |
+| Late backroll | LBR | Stalefish | SF |
+| Late frontroll | LFR | Blind landing | BL |
+| Heart attack | HA | Toeside | TS |
 
-Example: Left, ×2, Backroll, Board-off, Handle pass is shown as “L ×2 BR BO HP”.
+Example: Left, ×2, Backroll, Board-off, Handle pass is shown as “L ×2 BR BO HP”. The letters are kept exactly as the rule gives them, so some tricks share letters (DL is Double loop and Doobie loop; KL, BL and M are shared too) and **L** alone is Late, which also looks like the side: the organiser decides whether that matters for the event. The Placings line “Highest jump” names its trick, in these letters, only for a division on “trick name + score”.
 
 ## What it depends on {#pr-depends}
 

@@ -88,6 +88,22 @@ describe.skipIf(!ENV_OK)("Public trick names: what the public functions send per
     expect(JSON.stringify(res)).not.toMatch(/judgeScores|missedBy|outlier|created_by_seat|raw_text|edit_reason/);
   });
 
+  it("the Highest jump line names the trick only for a division on trick name + score", async () => {
+    // one released landing with a height in each division
+    for (const mode of MODES) {
+      const l = ladders[mode];
+      const { error } = await f.s.from("trick_attempts").insert({ heat_id: l.heats["R1-H1"], entry_id: l.entries[0], seq: 1, status: "landed", trick_name: "Left ×2 Backroll", direction: "left", height_m: 12.3, client_key: key() });
+      if (error) throw new Error(error.message);
+    }
+    const res = await results();
+    const jump = (l: Ladder) => res.divisions.find((d: J) => d.id === l.div).highest_jump;
+    expect(jump(ladders.trick_score)).toMatchObject({ height_m: 12.3, trick_name: "Left ×2 Backroll" });
+    for (const mode of ["number_score", "score_only"] as const) {
+      expect(jump(ladders[mode]).height_m).toBe(12.3);
+      expect(jump(ladders[mode]).trick_name, mode).toBeNull();
+    }
+  });
+
   it("a result that is held back sends nothing, trick or not", async () => {
     const res = await results();
     expect(heatOf(res, held.heats["R1-H1"]).results).toEqual([]);
