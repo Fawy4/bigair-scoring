@@ -3,6 +3,7 @@ import { heatInputFromRows } from "@/lib/live/heat-input";
 import type { AttemptRow, ImpressionRow, ScoreRow, SlotRow } from "@/lib/live/types";
 import type { ScoringModel } from "@/lib/schemas/scoring-model";
 import { labelFor } from "./schemes";
+import { shortTrickName, type Shortener } from "@/lib/engine/tricks/short-form";
 import type { AttemptDisplay } from "@/lib/live/result-shading";
 import { boxOf, formulaLine, type BoxVM, type RiderRowVM, type RiderState } from "./results-model";
 import type { PublicEntry, PublicLiveHeat } from "./types";
@@ -16,7 +17,7 @@ const seatId = (n: number) => `J${n}`;
  * cannot be scored; the page then falls back to the seats. `mode` is the division's "What spectators see per attempt": a trick reaches a box only on "trick name +
  * score", only for a landed attempt whose panel score is in (a trick never shows where its score does not), and never for a crash.
  */
-export function liveRows(live: PublicLiveHeat, model: ScoringModel | null, entries: Map<string, PublicEntry>, scheme: IdentificationScheme, impressionLabel: string | null, mode: AttemptDisplay = "number_score"): RiderRowVM[] | null {
+export function liveRows(live: PublicLiveHeat, model: ScoringModel | null, entries: Map<string, PublicEntry>, scheme: IdentificationScheme, impressionLabel: string | null, mode: AttemptDisplay = "number_score", shorten: Shortener = shortTrickName): RiderRowVM[] | null {
   if (!live.allowed || !model || !live.slots) return null;
   const decimals = model.panel.decimals;
   const seatNos = [...new Set([...(live.scores ?? []).map((s) => s.seat_no), ...(live.impressions ?? []).map((i) => i.seat_no)])].sort((a, b) => a - b);
@@ -35,7 +36,7 @@ export function liveRows(live: PublicLiveHeat, model: ScoringModel | null, entri
       .map((r): RiderRowVM => {
         const slot = bySeat.get(r.riderId);
         const counted = new Set(r.counted.map((c) => c.attemptSeq));
-        const boxes: BoxVM[] = r.allAttempts.map((a) => boxOf({ seq: a.seq, status: a.status, trickName: a.trickName, direction: sides.get(`${r.riderId}:${a.seq}`), counted: counted.has(a.seq), score: a.panel?.score ?? null }, decimals, mode));
+        const boxes: BoxVM[] = r.allAttempts.map((a) => boxOf({ seq: a.seq, status: a.status, trickName: a.trickName, direction: sides.get(`${r.riderId}:${a.seq}`), counted: counted.has(a.seq), score: a.panel?.score ?? null }, decimals, mode, false, shorten));
         const none = r.status === "DNS" || r.status === "DSQ";
         const hasAny = boxes.some((b) => b.score !== null) || r.components.impression > 0;
         return {

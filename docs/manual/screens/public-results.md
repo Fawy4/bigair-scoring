@@ -31,26 +31,25 @@ The published result of every heat, readable on a phone in the sun, and the divi
 
 ## Short trick names {#pr-short-tricks}
 
-With “trick name + score” a trick is written in capital letters only, so it fits a small box on a phone and is readable on the beach TV. The rule: **the first letter of each part of the trick’s name**, so Backroll (back + roll) is **BR**, Kiteloop **KL**, Doobie loop **DL**, Handle pass **HP**, Heart attack **HA**. The **side** comes first (**L** or **R**, from the spotter’s L / R; nothing when no side was set). A **rotation count** stays a number: **×2**, **×3**, **×4** (a typed “double”, “triple” or “quad” becomes the number); a single rotation shows nothing. Capitals, spaces and hyphens do not matter (“back roll”, “Back-roll” and “BACKROLL” are one word). Text the Trick list does not know follows the same rule, the first letter of each word (“Mystery spin” is MS); a count in front (“6x”) stays as typed. **Downloop** is not a trick and never appears in a box.
+With “trick name + score” a trick is written in capital letters only, so it fits a small box on a phone and is readable on the beach TV. The rule: **the first letter of each part of the trick’s name**, so Backroll (back + roll) is **BR**, Kiteloop **KL**, Doobie loop **DL**, Handle pass **HP**, Heart attack **HA**. The **side** comes first (**L** or **R**, from the spotter’s L / R; nothing when no side was set). A **rotation count** stays a number: **×2**, **×3**, **×4** (a typed “double”, “triple” or “quad” becomes the number); a single rotation shows nothing. A count in front (“6x”) stays as typed. Capitals, spaces and hyphens do not matter (“back roll”, “Back-roll” and “BACKROLL” are one word), and a small slip of the pen is read the way the spotter’s suggestions read it.
 
-| Trick list word | Letters | Trick list word | Letters |
-|---|---|---|---|
-| Straight jump | SJ | Board-off | BO |
-| Backroll | BR | One-foot | OF |
-| Frontroll | FR | Board spin | BS |
-| Kiteloop | KL | Handle pass | HP |
-| Megaloop | ML | + Kiteloop | KL |
-| Double loop | DL | Late | L |
-| Triple loop | TL | Late rotations | LR |
-| S-loop | SL | Tic-tac | TT |
-| Contra loop | CL | Grab | G |
-| Doobie loop | DL | Indy, Tail, Nose | I, T, N |
-| Boogie loop | BL | Melon, Mute, Method | M, M, M |
-| Late backroll | LBR | Stalefish | SF |
-| Late frontroll | LFR | Blind landing | BL |
-| Heart attack | HA | Toeside | TS |
+The special cases the owner decided, and the only ones:
 
-Example: Left, ×2, Backroll, Board-off, Handle pass is shown as “L ×2 BR BO HP”. The letters are kept exactly as the rule gives them, so some tricks share letters (DL is Double loop and Doobie loop; KL, BL and M are shared too) and **L** alone is Late, which also looks like the side: the organiser decides whether that matters for the event. The Placings line “Highest jump” names its trick, in these letters, only for a division on “trick name + score”.
+| Trick list word | Box shows |
+|---|---|
+| Double loop, Triple loop (they are kiteloops) | ×2 KL, ×3 KL |
+| + Kiteloop | KL, the same as Kiteloop |
+| Blind landing | B |
+| Every grab: Grab, Indy, Tail, Nose, Melon, Mute, Method, Stalefish | G |
+| Late | joins the trick right after it, no space: Late backroll **LBR**, Late frontroll **LFR**, Late + Kiteloop **LKL**; it never stands alone |
+| Late rotations, Downloop landing | left out of the box |
+
+Everything else in the Trick list is the plain rule: Straight jump SJ, Backroll BR, Frontroll FR, Kiteloop KL, Megaloop ML, S-loop SL, Contra loop CL, Doobie loop DL, Boogie loop BL, Board-off BO, One-foot OF, Board spin BS, Handle pass HP, Tic-tac TT, Toeside TS, Heart attack HA.
+
+**A trick added to the trick base later** (Admin → Trick base, or a block the event added) needs nothing from us: it is found by its name and aliases, and its letters are the first letter of each word of its name, a word ending in “roll” or “loop” counting as two parts (“Sushi roll” SR, “Wakeloop” WL). A one-word block gives one letter (“Rodeo” is R): check such names against L and R.
+**Text that matches nothing in the trick base** is the first letter of each word, never a single letter: “Shark attack” is SA, a one-word unknown trick shows its first two letters (“Rodeo” is RO). Unknown words come after the known ones.
+
+Example: Left, ×2, Backroll, Board-off, Handle pass is shown as “L ×2 BR BO HP”. The letters are kept exactly as the rule gives them, so two different tricks can share letters (all grabs are G; Kiteloop and + Kiteloop are KL). When the spotter or the head judge corrects a trick, the box changes by itself within the page’s usual refresh. The Placings line “Highest jump” names its trick, in these letters, only for a division on “trick name + score”.
 
 ## What it depends on {#pr-depends}
 

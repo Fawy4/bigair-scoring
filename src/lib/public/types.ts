@@ -197,6 +197,8 @@ export interface PublicRules {
   allowed: true;
   /** The Event step's "Name of the impression score"; null = each division's own name. */
   impression_name?: string | null;
+  /** The event's trick base (the master vocabulary it uses and the blocks it added), read by the short trick letters; absent from an older database. */
+  trick_base?: { vocabulary: unknown; local?: unknown[] } | null;
   divisions: PublicRulesDivision[];
 }
 

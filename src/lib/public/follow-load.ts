@@ -1,3 +1,4 @@
+import { shortenerFor, type PublicTrickBase } from "@/lib/engine/tricks/short-form";
 import { isArmedNow, overlayArmedRow } from "@/lib/live/flags";
 import { requestOrigin } from "@/lib/platform/origin";
 import type { AttemptDisplay } from "@/lib/live/result-shading";
@@ -69,7 +70,7 @@ export async function loadFollowPayload(slug: string): Promise<FollowPayload | n
       const live = results ? await loadLive(tab.id) : null;
       if (live && results) {
         const model = modelOf(rules, tab.divisionId);
-        const rows = liveRows(live, model, new Map(results.entries.map((e) => [e.id, e])), schemeFor(site, tab.divisionId), model?.heat.impression?.label ?? null, tab.mode);
+        const rows = liveRows(live, model, new Map(results.entries.map((e) => [e.id, e])), schemeFor(site, tab.divisionId), model?.heat.impression?.label ?? null, tab.mode, shortenerFor(rules?.trick_base as PublicTrickBase | null | undefined));
         if (rows) {
           riders = rows;
           scoresShown = true;

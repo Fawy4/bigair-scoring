@@ -104,6 +104,23 @@ describe.skipIf(!ENV_OK)("Public trick names: what the public functions send per
     }
   });
 
+  it("the rules answer carries the event's trick base (words only), so a block added later gets its letters; it is the same single call every public page already makes", async () => {
+    await f.s.from("trick_vocabularies").upsert({ event_id: f.ids.evA1, key: "event-additions", json: { blocks: [{ family: "base", key: "sushi_roll", label: "Sushi roll", category: "rotation" }] }, content_hash: key() }, { onConflict: "organisation_id,event_id,key,version", ignoreDuplicates: false });
+    const { data, error } = await anon().rpc("get_public_rules", { p_event: f.ids.evA1 });
+    expect(error).toBeNull();
+    const rules = data as J;
+    expect(rules.allowed).toBe(true);
+    const base = rules.trick_base;
+    expect(base).not.toBeNull();
+    expect(base.vocabulary.baseTricks.map((b: J) => b.label)).toContain("Backroll");
+    expect(base.vocabulary.modifiers.map((b: J) => b.label)).toContain("Board-off");
+    expect(base.local.map((b: J) => b.label)).toContain("Sushi roll");
+    expect(Object.keys(base.vocabulary).sort()).toEqual(["baseTricks", "categoryPrecedence", "directions", "hideMultiplierWhen", "modifiers", "multipliers", "namingTemplate"]);
+    expect(JSON.stringify(base)).not.toMatch(/_comment|speech|examples/);
+    // an event that is not public says nothing
+    expect(((await anon().rpc("get_public_rules", { p_event: f.ids.evA2 })).data as J).allowed).toBe(false);
+  });
+
   it("a result that is held back sends nothing, trick or not", async () => {
     const res = await results();
     expect(heatOf(res, held.heats["R1-H1"]).results).toEqual([]);

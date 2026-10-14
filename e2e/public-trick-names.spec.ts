@@ -73,6 +73,9 @@ test("Live tab: a trick logged later fills in by itself, and a corrected trick u
   await expect(green.first()).toHaveText("1 · R BR · 2.5", { timeout: 45_000 });
   await w.db.from("trick_attempts").update({ trick_name: "Frontroll", direction: "left" }).eq("heat_id", w.running).eq("entry_id", w.entries[3]).eq("seq", 1);
   await expect(green.first()).toHaveText("1 · L FR · 2.5", { timeout: 45_000 });
+  // a trick the trick base does not know: the first two letters of its one word, never a single letter that could be the side
+  await w.db.from("trick_attempts").update({ trick_name: "Rodeo", direction: null }).eq("heat_id", w.running).eq("entry_id", w.entries[3]).eq("seq", 1);
+  await expect(green.first()).toHaveText("1 · RO · 2.5", { timeout: 45_000 });
 });
 
 test("phone: the longest box keeps its number and score fully inside the card; only its trick part shortens with …; the full short form is its label", async ({ page }) => {

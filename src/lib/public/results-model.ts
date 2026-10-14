@@ -4,7 +4,7 @@ import { parseScoringModel, type ScoringModel } from "@/lib/schemas/scoring-mode
 import { withImpressionName } from "@/lib/schemas/impression-name";
 import { copy } from "@/lib/ui-copy";
 import { toAttemptDisplay, type AttemptDisplay } from "@/lib/live/result-shading";
-import { attemptTrickText } from "@/lib/engine/tricks/short-form";
+import { attemptTrickText, shortenerFor, shortTrickName, type PublicTrickBase, type Shortener } from "@/lib/engine/tricks/short-form";
 import { labelFor, schemeFor } from "./schemes";
 import type { PublicBreakdown, PublicEntry, PublicResults, PublicRules, PublicSite, ResultsHeat, SlotRowPublic } from "./types";
 
@@ -90,12 +90,13 @@ export function boxOf(
   decimals: number,
   mode: AttemptDisplay,
   fullTricks = false,
+  shorten: Shortener = shortTrickName,
 ): BoxVM {
   const scoreLabel = a.score === null ? null : fmt(a.score, decimals);
   return {
     seq: a.seq,
     trick: fullTricks ? (a.trickName ?? "") : "",
-    short: mode === "trick_score" ? attemptTrickText({ status: a.status, trickName: a.trickName, direction: a.direction, scored: scoreLabel !== null }) : "",
+    short: mode === "trick_score" ? attemptTrickText({ status: a.status, trickName: a.trickName, direction: a.direction, scored: scoreLabel !== null }, shorten) : "",
     status: a.status,
     counted: a.counted,
     score: a.score,
@@ -103,10 +104,10 @@ export function boxOf(
   };
 }
 
-function boxesOf(b: PublicBreakdown | null, decimals: number, mode: AttemptDisplay, fullTricks: boolean): BoxVM[] {
+function boxesOf(b: PublicBreakdown | null, decimals: number, mode: AttemptDisplay, fullTricks: boolean, shorten: Shortener): BoxVM[] {
   return (b?.allAttempts ?? [])
     .filter((a) => !a.ignored || a.ignored !== "over_cap")
-    .map((a) => boxOf({ seq: a.seq, status: a.status, trickName: a.trickName, direction: a.direction, counted: Boolean(a.counted), score: a.panelScore ?? null }, decimals, mode, fullTricks));
+    .map((a) => boxOf({ seq: a.seq, status: a.status, trickName: a.trickName, direction: a.direction, counted: Boolean(a.counted), score: a.panelScore ?? null }, decimals, mode, fullTricks, shorten));
 }
 
 function stateOf(h: ResultsHeat): HeatState {
@@ -142,6 +143,7 @@ function seatRows(slots: SlotRowPublic[], entries: Map<string, PublicEntry>, sch
 export function buildHeatTabs(results: PublicResults | null, site: PublicSite | null, rules: PublicRules | null, opts: { fullTricks?: boolean } = {}): HeatVM[] {
   if (!results || !site) return [];
   const entries = entryMap(results);
+  const shorten = shortenerFor(rules?.trick_base as PublicTrickBase | null | undefined);
   const out: HeatVM[] = [];
   for (const d of results.divisions) {
     const scheme = schemeFor(site, d.id);
@@ -172,7 +174,7 @@ export function buildHeatTabs(results: PublicResults | null, site: PublicSite | 
                 formula: bd && !none ? formulaLine(bd.totalLabel, bd.components, impressionLabel, decimals) : null,
                 percentLabel: d.show_percent && x.percent !== null && !none ? R.percent(fmt(Number(x.percent), 0)) : null,
                 state: status,
-                boxes: boxesOf(bd, decimals, mode, Boolean(opts.fullTricks)),
+                boxes: boxesOf(bd, decimals, mode, Boolean(opts.fullTricks), shorten),
               };
             });
         } else riders = seatRows(h.slots, entries, scheme);
