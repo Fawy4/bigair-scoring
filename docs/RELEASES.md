@@ -14,7 +14,7 @@ How to write an entry (copy the newest one):
 
 ## 0.24.0 — 14 Oct 2026 {#release-0-24-0}
 
-PR: #54
+PR: #55
 
 ### What changed
 - **Every official now has one screen: the Rider sheet.** Judges, the head judge's **Score** tab and spotters no longer have a switch. A phone that had chosen the judges' **Queue** or the spotter's **Trick list** opens on the Rider sheet too, also after a reload. The observer watching a judge sees the Rider sheet. The Queue and the Trick list are still in the product's code, hidden behind one line (`SHOW_HIDDEN_OFFICIAL_VIEWS` in `src/lib/live/official-views.ts`), so they can come back later; nothing on the live site opens them.
