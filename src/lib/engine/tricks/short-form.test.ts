@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import vocabulary from "../../../../presets/tricks/big-air-vocabulary.json";
-import { attemptTrickText, derivedLetters, initials, LEFT_OUT_OF_BOXES, makeShortener, normaliseTrickWord, shortFormCases, shortTrickName, TRICK_SHORT_FORMS, type PublicTrickBase } from "./short-form";
+import { attemptTrickText, derivedLetters, initials, LEFT_OUT_OF_BOXES, makeShortener, normaliseTrickWord, notTheSide, shortFormCases, shortTrickName, TRICK_SHORT_FORMS, type PublicTrickBase } from "./short-form";
 import type { VocabularyInput } from "./types";
 
 const PRESET = vocabulary as unknown as VocabularyInput;
@@ -171,9 +171,21 @@ describe("the event's trick base: a block added later needs no code change", () 
     expect(s("Late backroll", null)).toBe("LBR");
   });
 
-  it("a one-word block named like a side letter keeps the rule's letter (flagged for the owner)", () => {
-    const s = makeShortener(base({ baseTricks: [{ key: "rodeo", label: "Rodeo", category: "other", aliases: [] }] }));
-    expect(s("Rodeo", null)).toBe("R");
+  it("letters that would be only L or R become the first two letters, a one-word trick-base block included", () => {
+    const s = makeShortener(base({ baseTricks: [{ key: "rodeo", label: "Rodeo", category: "other", aliases: ["rod"] }, { key: "lasso", label: "Lasso", category: "other", aliases: [] }], modifiers: [{ key: "roost", family: "addon", label: "Roost", category: null, aliases: [] }] }, [{ family: "base", key: "reef", label: "Reef", category: "other" }]));
+    expect(s("Rodeo", null)).toBe("RO");
+    expect(s("Left Lasso", null)).toBe("L LA");
+    expect(s("rod", null)).toBe("RO"); // found through its alias
+    expect(s("Roost", "right")).toBe("R RO");
+    expect(s("Reef", null)).toBe("RE");
+    // everything with more letters is untouched, and so is a block of one letter that is neither
+    expect(derivedLetters("Rodeo")).toBe("R");
+    expect(notTheSide("BR", "Backroll")).toBe("BR");
+    expect(notTheSide("G", "Grab")).toBe("G");
+    expect(notTheSide("R", "R")).toBe("R"); // nothing longer to take
+  });
+  it("no trick, built-in or added, is ever shown as only L or R", () => {
+    for (const w of ["Rodeo", "Lasso", "Rail", "Lurch", "Late", "Roll", "Loop"]) expect(shortTrickName(w, null), w).not.toMatch(/^[LR]$/);
   });
 
   it("without a trick base the built-in Trick list is used", () => {

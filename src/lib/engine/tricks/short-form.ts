@@ -142,12 +142,19 @@ export interface PublicTrickBase {
 
 const PRESET = vocabularyJson as unknown as VocabularyInput;
 
+/** A trick's letters are never just L or R (they would read as the side): then its first two letters instead ("Rodeo" is RO, not R). */
+export function notTheSide(letters: string, name: string): string {
+  if (letters !== "L" && letters !== "R") return letters;
+  const two = [...name].filter((c) => /\p{L}/u.test(c)).slice(0, 2).join("").toUpperCase();
+  return two.length === 2 ? two : letters;
+}
+
 function lettersOfBlock(label: string): { short: string; joins: boolean } | null {
   const k = normaliseTrickWord(label);
   if (LEFT_OUT.has(k)) return null;
   const hit = TABLE.get(k);
-  if (hit) return { short: hit.short, joins: Boolean(hit.joins) };
-  return { short: derivedLetters(label), joins: false };
+  if (hit) return { short: hit.joins ? hit.short : notTheSide(hit.short, label), joins: Boolean(hit.joins) };
+  return { short: notTheSide(derivedLetters(label), label), joins: false };
 }
 
 /**
@@ -157,7 +164,7 @@ function lettersOfBlock(label: string): { short: string; joins: boolean } | null
 export function makeShortener(base?: PublicTrickBase | null): Shortener {
   let vocab: TrickVocab;
   try {
-    vocab = buildTrickVocab(base?.vocabulary ?? PRESET, base?.local ?? []);
+    vocab = buildTrickVocab({ ...(base?.vocabulary ?? PRESET), categoryPrecedence: base?.vocabulary?.categoryPrecedence ?? [] }, base?.local ?? []); // the public answer holds words only: no scoring categories
   } catch {
     vocab = buildTrickVocab(PRESET);
   }

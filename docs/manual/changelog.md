@@ -14,6 +14,8 @@ Release entry: [0.23.0](/admin/releases#release-0-23-0) (platform owner only)
 - **The division's own setting is the only rule** (no new default); the Placings "Highest jump" line names its trick, in letters, only for a division on Trick name and score.
 - **The public is sent a trick only where it is shown** (trick-name divisions, scored landings, never a crash).
 
+- **The Live screens panel saves only what you change**, so "What spectators see per attempt" cannot be changed by saving another setting from a page opened earlier.
+
 **Manual pages updated:** [Public: results and placings](screens/public-results.md) (the attempt boxes and the new *Short trick names* table), [Public: the Live tab](screens/public-live.md), [Public: the rider page](screens/public-rider.md), [Big screen](screens/big-screen.md), [Organiser: Divisions](screens/organiser-divisions.md), [Settings](settings.md).
 
 ## 0.22.0 — 13 Oct 2026 {#cl-0-22-0}

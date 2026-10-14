@@ -109,10 +109,20 @@ $$;
 revoke all on function public.get_public_live_heat(uuid) from public;
 grant execute on function public.get_public_live_heat(uuid) to anon, authenticated, service_role;
 
--- 4. get_public_rules also carries the event's trick base (the master vocabulary the event uses, pinned version or the newest published, and the blocks the event added
---    itself) so the pages can read a trick's name and aliases the way the spotter's suggestions do, and a block added to the trick base later gets its letters with no
---    code change. It rides on the rules answer every public page already loads (and shares for a few seconds): no extra call for anybody. Only the words are sent, not
---    the editor's comments or examples.
+-- 4. get_public_rules also carries the event's trick base so the pages can read a trick's name and aliases the way the spotter's suggestions do, and a block added to the
+--    trick base later gets its letters with no code change. It rides on the rules answer every public page already loads (and shares for a few seconds): no extra call for
+--    anybody. WORDS ONLY: for each block its key, name, aliases, the family it sits in and whether it can carry a rotation count (the reading of "×2 Late rotations" needs
+--    that yes/no). No scoring category (not a block's category, not the category order), no naming template, no editor comments or examples.
+create or replace function private.trick_words(p jsonb) returns jsonb
+language sql immutable set search_path = '' as $$
+  select coalesce(jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
+      'key', x ->> 'key', 'label', x ->> 'label', 'family', x ->> 'family',
+      'aliases', case when jsonb_typeof(x -> 'aliases') = 'array' then x -> 'aliases' else '[]'::jsonb end,
+      'takesMultiplier', case when jsonb_typeof(x -> 'takesMultiplier') = 'boolean' then x -> 'takesMultiplier' else null end))), '[]'::jsonb)
+  from jsonb_array_elements(case when jsonb_typeof(p) = 'array' then p else '[]'::jsonb end) x
+  where x ->> 'label' is not null;
+$$;
+
 create or replace function public.get_public_rules(p_event uuid) returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
 declare v_name text; v_pin int; v_vocab jsonb; v_local jsonb;
@@ -125,9 +135,9 @@ begin
   select v.json -> 'blocks' into v_local from public.trick_vocabularies v where v.event_id = p_event and v.key = 'event-additions' order by v.version desc limit 1;
   return jsonb_build_object('allowed', true, 'impression_name', v_name,
     'trick_base', case when v_vocab is null then null else jsonb_build_object(
-        'vocabulary', jsonb_build_object('directions', v_vocab -> 'directions', 'multipliers', v_vocab -> 'multipliers', 'baseTricks', v_vocab -> 'baseTricks', 'modifiers', v_vocab -> 'modifiers',
-                                         'categoryPrecedence', v_vocab -> 'categoryPrecedence', 'hideMultiplierWhen', v_vocab -> 'hideMultiplierWhen', 'namingTemplate', v_vocab -> 'namingTemplate'),
-        'local', case when jsonb_typeof(v_local) = 'array' then v_local else '[]'::jsonb end) end,
+        'vocabulary', jsonb_build_object('directions', private.trick_words(v_vocab -> 'directions'), 'multipliers', private.trick_words(v_vocab -> 'multipliers'),
+                                         'baseTricks', private.trick_words(v_vocab -> 'baseTricks'), 'modifiers', private.trick_words(v_vocab -> 'modifiers')),
+        'local', private.trick_words(v_local)) end,
     'divisions', coalesce((select jsonb_agg(jsonb_build_object(
         'id', d.id, 'name', d.name, 'description', d.description, 'identification', d.identification,
         'scoring_model', sm.json, 'scoring_overrides', d.scoring_overrides,

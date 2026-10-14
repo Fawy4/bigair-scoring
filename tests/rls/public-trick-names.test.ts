@@ -115,8 +115,11 @@ describe.skipIf(!ENV_OK)("Public trick names: what the public functions send per
     expect(base.vocabulary.baseTricks.map((b: J) => b.label)).toContain("Backroll");
     expect(base.vocabulary.modifiers.map((b: J) => b.label)).toContain("Board-off");
     expect(base.local.map((b: J) => b.label)).toContain("Sushi roll");
-    expect(Object.keys(base.vocabulary).sort()).toEqual(["baseTricks", "categoryPrecedence", "directions", "hideMultiplierWhen", "modifiers", "multipliers", "namingTemplate"]);
-    expect(JSON.stringify(base)).not.toMatch(/_comment|speech|examples/);
+    // words only: no scoring category, no category order, no naming template, no editor comments
+    expect(Object.keys(base.vocabulary).sort()).toEqual(["baseTricks", "directions", "modifiers", "multipliers"]);
+    const blocks = [...base.vocabulary.baseTricks, ...base.vocabulary.modifiers, ...base.vocabulary.directions, ...base.vocabulary.multipliers, ...base.local];
+    for (const b of blocks) expect(Object.keys(b).filter((k) => !["key", "label", "family", "aliases", "takesMultiplier"].includes(k)), b.label).toEqual([]);
+    expect(JSON.stringify(base)).not.toMatch(/categor|namingTemplate|_comment|speech|examples|variants|rotation"/i);
     // an event that is not public says nothing
     expect(((await anon().rpc("get_public_rules", { p_event: f.ids.evA2 })).data as J).allowed).toBe(false);
   });
