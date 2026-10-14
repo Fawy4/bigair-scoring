@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ClockText } from "@/components/clock-text";
 import { Logo } from "@/components/public/logo";
 import { RiderLabel } from "@/components/rider-label";
@@ -10,7 +10,7 @@ import { ScoreBox } from "@/components/public/heat-summary";
 import { ScreenFrame } from "@/components/public/screen-frame";
 import type { AttemptDisplay } from "@/lib/live/result-shading";
 import type { FollowHeat, FollowPayload } from "@/lib/public/follow-load";
-import type { FollowPage } from "@/lib/public/follow-model";
+import { chunkByHeight, riderSignature, splitBySizes, type FollowPage } from "@/lib/public/follow-model";
 import type { LadderHeatVM } from "@/lib/public/ladder-model";
 import type { RiderRowVM } from "@/lib/public/results-model";
 import { copy } from "@/lib/ui-copy";
@@ -24,6 +24,33 @@ export const FOLLOW_POLL_MS = 500;
 const LOST_AFTER_MS = 5000;
 
 const nameOf = (r: RiderRowVM): string => r.placeholder ?? "";
+
+/** Some of a page's riders, and whether the page has been measured yet (until it has, all its riders are drawn so their real heights can be read). */
+interface Slide {
+  sig: string;
+  riders: RiderRowVM[];
+  measured: boolean;
+}
+type OnChunks = (sig: string, sizes: number[]) => void;
+
+/**
+ * Reads the real height of every rider's row before the page is painted and tells the screen how many whole rows fit under the title and banners that are actually
+ * there (a wind call, a wrapped title, a long name all take room the server's estimate cannot know). A row that would reach past the bottom goes to the next page.
+ */
+function useFit(slide: Slide, onChunks: OnChunks) {
+  const rowsRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (slide.measured) return;
+    const box = rowsRef.current;
+    const body = box?.closest('[data-testid="follow-body"]');
+    if (!box || !body || !box.children.length) return;
+    const rows = [...box.children] as HTMLElement[];
+    const top = box.getBoundingClientRect().top;
+    const room = body.getBoundingClientRect().bottom - top - 2;
+    onChunks(slide.sig, chunkByHeight(rows.map((r) => r.getBoundingClientRect().top - top), rows.map((r) => r.getBoundingClientRect().bottom - top), room));
+  });
+  return rowsRef;
+}
 
 /**
  * One rider as the public Live and Results pages draw them (place, Rider label, total, the formula line, each attempt as a chip), drawn in vw for a TV. The live heat
@@ -58,11 +85,12 @@ function FollowRider({ rider, counted, mode, totalSize }: { rider: RiderRowVM; c
 }
 
 /** The heat on the water or waiting for the judges: one clock only, the flag pill in the header (Polish 3, item 6). The riders rotate in pages when they do not fit (item 8: no page counter). */
-function LiveHeat({ heat, reviewing, page }: { heat: FollowHeat; reviewing: boolean; page: number }) {
+function LiveHeat({ heat, reviewing, slide, onChunks }: { heat: FollowHeat; reviewing: boolean; slide: Slide; onChunks: OnChunks }) {
   const all = heat.pages.flat();
   // as the public Live page does: the counted scores of the whole heat shade every chip, not just this page's
   const counted = all.flatMap((r) => r.boxes.filter((b) => b.counted && b.score !== null).map((b) => b.score as number));
-  const riders = heat.pages[Math.min(page, heat.pages.length - 1)] ?? [];
+  const riders = slide.riders;
+  const rowsRef = useFit(slide, onChunks);
   return (
     <div data-testid={reviewing ? "follow-reviewing-page" : "follow-live-page"} data-heat={heat.id} className="flex h-full flex-col gap-[0.8vw]">
       <h2 data-testid="follow-title" className="min-w-0 break-words text-[3vw] font-semibold leading-tight">
@@ -74,7 +102,7 @@ function LiveHeat({ heat, reviewing, page }: { heat: FollowHeat; reviewing: bool
         </p>
       ) : null}
       {!heat.scoresShown && !reviewing ? <p className="text-[2.4vw] font-semibold">{copy.pub.live.scoresAfter}</p> : null}
-      <div data-testid="follow-live-riders" className="flex flex-col">
+      <div ref={rowsRef} data-testid="follow-live-riders" className="flex flex-col">
         {riders.map((r, i) => (
           <FollowRider key={r.entryId ?? `seat-${i}`} rider={r} counted={counted} mode={heat.mode} totalSize="text-[3.2vw]" />
         ))}
@@ -93,13 +121,16 @@ function PageHead({ title, aside, testId }: { title: string; aside?: string; tes
 }
 
 /** One heat's result as the public results page shows it (the same rows, boxes and formula line, the same attempt-box mode), drawn large for a TV. */
-function ResultsPage({ page }: { page: Extract<FollowPage, { kind: "results" }> }) {
+function ResultsPage({ page, slide, onChunks }: { page: Extract<FollowPage, { kind: "results" }>; slide: Slide; onChunks: OnChunks }) {
+  const rowsRef = useFit(slide, onChunks);
   return (
     <div data-testid="follow-results-page" data-heat={page.heatId} className="flex h-full flex-col">
       <PageHead testId="follow-title" title={page.title} aside={F.publishedAt(page.publishedAt)} />
-      {page.riders.map((r, i) => (
-        <FollowRider key={r.entryId ?? `seat-${i}`} rider={r} counted={page.countedScores} mode={page.mode} totalSize="text-[3.2vw]" />
-      ))}
+      <div ref={rowsRef} data-testid="follow-results-riders" className="flex flex-col">
+        {slide.riders.map((r, i) => (
+          <FollowRider key={r.entryId ?? `seat-${i}`} rider={r} counted={page.countedScores} mode={page.mode} totalSize="text-[3.2vw]" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -168,7 +199,38 @@ export function FollowScreen({ slug, initial, qr, pollMs = FOLLOW_POLL_MS }: { s
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const { phase, pages, rotateSec, walkKey } = payload;
-  const count = pages.length;
+  // how many whole rows of each page fit, as measured on this screen (see useFit); measured again when the window or the room above the riders changes
+  const [chunks, setChunks] = useState<Map<string, number[]>>(() => new Map());
+  const bodyRef = useRef<HTMLElement>(null);
+  const onChunks = useCallback<OnChunks>((sig, sizes) => {
+    setChunks((prev) => {
+      const had = prev.get(sig);
+      if (had && had.length === sizes.length && had.every((n, i) => n === sizes[i])) return prev;
+      const next = new Map(prev);
+      next.set(sig, sizes);
+      if (next.size > 200) next.delete(next.keys().next().value as string);
+      return next;
+    });
+  }, []);
+  useEffect(() => {
+    const body = bodyRef.current;
+    const forget = () => setChunks(new Map());
+    const watch = typeof ResizeObserver === "undefined" || !body ? null : new ResizeObserver(forget);
+    watch?.observe(body as Element);
+    void document.fonts?.ready.then(forget);
+    window.addEventListener("resize", forget);
+    return () => {
+      watch?.disconnect();
+      window.removeEventListener("resize", forget);
+    };
+  }, []);
+  const slideOf = (sig: string, riders: RiderRowVM[]): Slide[] => splitBySizes(riders, chunks.get(sig)).map((rows) => ({ sig, riders: rows, measured: chunks.has(sig) }));
+  // the live heat's pages and the rotation's pages, each cut into the pieces that fit
+  const liveSlides: Slide[] = payload.heat && phase.kind !== "rotation" ? payload.heat.pages.flatMap((riders, i) => slideOf(riderSignature(`live:${payload.heat!.id}:${i}`, riders), riders)) : [];
+  const rotation: Array<{ page: FollowPage; slide: Slide | null }> = pages.flatMap((p): Array<{ page: FollowPage; slide: Slide | null }> =>
+    p.kind === "results" ? slideOf(riderSignature(`results:${p.heatId}:${p.part}`, p.riders), p.riders).map((slide) => ({ page: p, slide })) : [{ page: p, slide: null }],
+  );
+  const count = rotation.length;
 
   useEffect(() => {
     let stopped = false;
@@ -218,7 +280,7 @@ export function FollowScreen({ slug, initial, qr, pollMs = FOLLOW_POLL_MS }: { s
   // a new heat published, or the screen has just come back to the rotation: the walk starts again from the newest heat
   useEffect(() => setIndex(0), [walkKey, phase.kind, payload.heat?.id]);
   // the pages simply rotate: the Results and Ladder pages of the rotation, or the pages of a live heat whose riders do not fit on one
-  const liveParts = phase.kind !== "rotation" ? (payload.heat?.pages.length ?? 0) : 0;
+  const liveParts = phase.kind !== "rotation" ? liveSlides.length : 0;
   const cycle = phase.kind === "rotation" ? count : liveParts;
   useEffect(() => {
     if (paused || cycle < 2) return;
@@ -246,7 +308,7 @@ export function FollowScreen({ slug, initial, qr, pollMs = FOLLOW_POLL_MS }: { s
     return () => window.removeEventListener("keydown", onKey);
   }, [toggleFullscreen]);
 
-  const page = pages.length ? pages[Math.min(index, pages.length - 1)] : null;
+  const current = rotation.length ? rotation[Math.min(index, rotation.length - 1)] : null;
   const inRotation = phase.kind === "rotation";
 
   return (
@@ -270,11 +332,11 @@ export function FollowScreen({ slug, initial, qr, pollMs = FOLLOW_POLL_MS }: { s
             </span>
           ) : null}
         </header>
-        <main data-testid="follow-body" className="min-h-0 flex-1 overflow-hidden">
+        <main ref={bodyRef} data-testid="follow-body" className="min-h-0 flex-1 overflow-hidden">
           {phase.kind !== "rotation" && payload.heat ? (
-            <LiveHeat heat={payload.heat} reviewing={phase.kind === "reviewing"} page={index} />
-          ) : page ? (
-            page.kind === "results" ? <ResultsPage page={page} /> : <LadderPage page={page} />
+            <LiveHeat heat={payload.heat} reviewing={phase.kind === "reviewing"} slide={liveSlides[Math.min(index, liveSlides.length - 1)] ?? { sig: "none", riders: [], measured: true }} onChunks={onChunks} />
+          ) : current ? (
+            current.page.kind === "results" && current.slide ? <ResultsPage page={current.page} slide={current.slide} onChunks={onChunks} /> : current.page.kind === "ladder" ? <LadderPage page={current.page} /> : null
           ) : (
             <p data-testid="follow-waiting" className="text-[4vw] font-semibold">
               {F.waiting}

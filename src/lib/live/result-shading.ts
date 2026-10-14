@@ -32,9 +32,22 @@ export function boxTone(box: { status: "landed" | "crashed"; counted: boolean; s
   return { kind: "counted", grade: gradeIndex(box.score, Math.min(...heatCounted), Math.max(...heatCounted)) };
 }
 
-/** The words in one score box for a display setting. A crash says CRASH and never shows a score. */
-export function boxText(a: { seq: number; trick: string; scoreLabel: string | null; status: "landed" | "crashed" }, mode: AttemptDisplay): string {
+/**
+ * The words in one score box for a display setting. A crash says CRASH and never shows a score or a trick. With "trick name + score" the short trick sits between
+ * the number and the score ("1 · L ×2 BR · 7.33"); an attempt with no trick (not logged yet, or its score not shown yet) reads "1 · 7.33".
+ */
+export function boxText(a: { seq: number; short: string; scoreLabel: string | null; status: "landed" | "crashed" }, mode: AttemptDisplay): string {
+  return boxParts(a, mode).join(" · ");
+}
+
+/** What the box says as one line, as every place draws it: an attempt whose score is not in yet reads "3 · …" (just "…" on scores only). */
+export function boxLabel(a: { seq: number; short: string; scoreLabel: string | null; status: "landed" | "crashed" }, mode: AttemptDisplay): string {
+  return a.status === "landed" && a.scoreLabel === null ? `${mode === "scores_only" ? "" : `${a.seq} · `}…` : boxText(a, mode);
+}
+
+/** The pieces of a box in order: [number, trick, score] with whatever the setting shows; the trick is the only piece that may be shortened on a narrow card. */
+export function boxParts(a: { seq: number; short: string; scoreLabel: string | null; status: "landed" | "crashed" }, mode: AttemptDisplay): string[] {
   const value = a.status === "crashed" ? copy.live.result.crash : (a.scoreLabel ?? "");
-  if (mode === "scores_only") return value;
-  return `${mode === "number_score" ? a.seq : a.trick} · ${value}`;
+  if (mode === "scores_only") return [value];
+  return mode === "trick_score" && a.status === "landed" && a.short ? [String(a.seq), a.short, value] : [String(a.seq), value];
 }

@@ -4,7 +4,7 @@ import type { LadderHeatVM, LadderRoundVM } from "./ladder-model";
 import type { BoxVM, HeatVM, RiderRowVM } from "./results-model";
 import type { PublicRow } from "./timetable";
 import type { TimetableHeat } from "./types";
-import { buildFollowPages, followPhase, nextLine, paginateLadder, livePages, paginateResults, walkKeyOf, type FollowPage } from "./follow-model";
+import { boxLineCount, chunkByHeight, riderSignature, splitBySizes, buildFollowPages, followPhase, riderCost, RESULTS_BUDGET_VW, nextLine, paginateLadder, livePages, paginateResults, walkKeyOf, type FollowPage } from "./follow-model";
 
 const NOW = Date.parse("2026-10-10T12:00:00Z"); // 14:00 in Cairo (UTC+2 in October? the model only needs a fixed zone)
 const TZ = "Africa/Cairo";
@@ -54,7 +54,7 @@ describe("which page the Follow screen is on (the page-choosing rule)", () => {
   });
 });
 
-const box = (seq: number, patch: Partial<BoxVM> = {}): BoxVM => ({ seq, trick: "Backroll", status: "landed", counted: true, score: 7.5, scoreLabel: "7.50", ...patch });
+const box = (seq: number, patch: Partial<BoxVM> = {}): BoxVM => ({ seq, trick: "", short: "", status: "landed", counted: true, score: 7.5, scoreLabel: "7.50", ...patch });
 const rider = (n: number, boxes = 7, patch: Partial<RiderRowVM> = {}): RiderRowVM => ({
   entryId: `e${n}`, place: n, label: null, placeholder: null, totalLabel: "18.20", formula: "18.20 = tricks 13.50 + Impression 4.70", percentLabel: null, state: "ok",
   boxes: Array.from({ length: boxes }, (_, i) => box(i + 1)), ...patch,
@@ -232,5 +232,77 @@ describe("the live heat is drawn like the public Live tab: every rider with the 
   });
   it("seats with no scores yet (the live-scores switch is off) are one page", () => {
     expect(livePages([1, 2, 3, 4, 5].map((n) => rider(n, 0, { formula: null, totalLabel: null, boxes: [] })), "number_score", false).length).toBe(1);
+  });
+});
+
+describe("longer attempt boxes take more room, and no page is ever packed past what fits (Follow the heat)", () => {
+  const withTricks = (n: number, boxes: number): RiderRowVM => rider(n, boxes, { boxes: Array.from({ length: boxes }, (_, i) => box(i + 1, { short: "L ×2 BR" })) });
+  const wide = (n: number, boxes: number): RiderRowVM => rider(n, boxes, { boxes: Array.from({ length: boxes }, (_, i) => box(i + 1, { short: "R ×3 BR BO HP Late rotations" })) });
+
+  it("a box that carries a trick is wider, so fewer fit on a line than with attempt number + score", () => {
+    const seven = withTricks(1, 7).boxes;
+    expect(boxLineCount(seven, "number_score")).toBe(1);
+    expect(boxLineCount(seven, "scores_only")).toBe(1);
+    expect(boxLineCount(seven, "trick_score")).toBeGreaterThan(1);
+    expect(riderCost(withTricks(1, 7), "trick_score")).toBeGreaterThan(riderCost(withTricks(1, 7), "number_score"));
+  });
+
+  it("a box with no trick yet is as narrow as in attempt number + score", () => {
+    expect(boxLineCount(rider(1, 7).boxes, "trick_score")).toBe(boxLineCount(rider(1, 7).boxes, "number_score"));
+  });
+
+  it("the other two settings are costed exactly as before (7 and 10 attempts are one line)", () => {
+    expect(boxLineCount(rider(1, 7).boxes, "number_score")).toBe(1);
+    expect(boxLineCount(rider(1, 8).boxes, "number_score")).toBe(2);
+    expect(boxLineCount(rider(1, 10).boxes, "scores_only")).toBe(1);
+    expect(boxLineCount(rider(1, 11).boxes, "scores_only")).toBe(2);
+  });
+
+  it("a box too wide for the line still counts as one line, not more (it shortens its trick instead)", () => {
+    expect(boxLineCount(wide(1, 1).boxes, "trick_score")).toBe(1);
+  });
+
+  for (const mode of ["number_score", "trick_score", "scores_only"] as const) {
+    for (const attempts of [7, 10]) {
+      it(`a 3-rider heat with ${attempts} attempts each in ${mode}: every rider is on exactly one page, in order, and every page fits`, () => {
+        const riders = [1, 2, 3].map((n) => withTricks(n, attempts));
+        for (const budget of [RESULTS_BUDGET_VW, RESULTS_BUDGET_VW - 9]) {
+          const pages = paginateResults(riders, mode, budget);
+          expect(pages.flat().map((r) => r.entryId)).toEqual(riders.map((r) => r.entryId));
+          for (const page of pages) if (page.length > 1) expect(page.reduce((n, r) => n + riderCost(r, mode), 0)).toBeLessThanOrEqual(budget);
+        }
+      });
+    }
+  }
+});
+
+describe("the screen splits a page by what it measures, so a row is never cut off (event-day chrome takes room the estimate cannot know)", () => {
+  // three rows of 100 px each, stacked from 0
+  const tops = [0, 100, 200];
+  const bottoms = [100, 200, 300];
+  it("everything that fits is one page", () => expect(chunkByHeight(tops, bottoms, 300)).toEqual([3]));
+  it("a row that would reach past the room starts the next page; none is ever half on a page", () => {
+    expect(chunkByHeight(tops, bottoms, 299)).toEqual([2, 1]);
+    expect(chunkByHeight(tops, bottoms, 199)).toEqual([1, 1, 1]);
+    expect(chunkByHeight(tops, bottoms, 250)).toEqual([2, 1]);
+  });
+  it("every page has at least one row, even when a row is taller than the room", () => {
+    expect(chunkByHeight(tops, bottoms, 50)).toEqual([1, 1, 1]);
+    expect(chunkByHeight([0], [500], 10)).toEqual([1]);
+  });
+  it("rows of different heights", () => {
+    expect(chunkByHeight([0, 180, 430], [180, 430, 610], 450)).toEqual([2, 1]);
+  });
+  it("no rows, no pages", () => expect(chunkByHeight([], [], 100)).toEqual([]));
+  it("sizes cut the rows in order and lose none; sizes that no longer fit the rows give one page", () => {
+    expect(splitBySizes(["a", "b", "c"], [2, 1])).toEqual([["a", "b"], ["c"]]);
+    expect(splitBySizes(["a", "b", "c"], undefined)).toEqual([["a", "b", "c"]]);
+    expect(splitBySizes(["a", "b", "c", "d"], [2, 1])).toEqual([["a", "b", "c", "d"]]);
+  });
+  it("a measurement is made again when the page's riders or their attempts change", () => {
+    const a = riderSignature("live:h1:0", [rider(1, 3), rider(2, 3)]);
+    expect(riderSignature("live:h1:0", [rider(1, 3), rider(2, 3)])).toBe(a);
+    expect(riderSignature("live:h1:0", [rider(1, 4), rider(2, 3)])).not.toBe(a);
+    expect(riderSignature("live:h1:1", [rider(1, 3), rider(2, 3)])).not.toBe(a);
   });
 });

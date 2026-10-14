@@ -25,6 +25,28 @@ export const DivisionLiveSchema = z.looseObject({
 });
 export type DivisionLive = z.infer<typeof DivisionLiveSchema>;
 
+
+/** What one change of the Live screens panel carries: only the setting the organiser touched (a part of the summary card as `{ impressionSummary: { variety: false } }`). */
+export type DivisionLivePatch = Partial<Omit<DivisionLive, "impressionSummary">> & { impressionSummary?: Partial<DivisionLive["impressionSummary"]> };
+const PATCHABLE = ["showPercentOfMax", "publicLiveScores", "publicResultsOnPublish", "holdFinalResult", "spectatorAttemptDisplay", "impressionSummary"] as const;
+
+/**
+ * The stored settings after the organiser changed some of them: the stored object as it is, with only the touched settings replaced. Everything else stays exactly as
+ * stored, including a setting that was never stored (it is not written down as its default), a stale page cannot bring an old value of another setting back, and keys
+ * this code does not know are kept. A patch key that is not a setting is ignored.
+ */
+export function mergeLiveSettings(stored: unknown, patch: DivisionLivePatch): Record<string, unknown> {
+  const base: Record<string, unknown> = stored && typeof stored === "object" && !Array.isArray(stored) ? { ...(stored as Record<string, unknown>) } : {};
+  for (const key of PATCHABLE) {
+    if (!(key in patch) || patch[key] === undefined) continue;
+    if (key === "impressionSummary") {
+      const before = base.impressionSummary && typeof base.impressionSummary === "object" ? (base.impressionSummary as Record<string, unknown>) : {};
+      base.impressionSummary = { ...before, ...patch.impressionSummary };
+    } else base[key] = patch[key];
+  }
+  return base;
+}
+
 export function parseDivisionLive(json: unknown): DivisionLive {
   const r = DivisionLiveSchema.safeParse(json && typeof json === "object" ? json : {});
   return r.success ? r.data : DivisionLiveSchema.parse({});

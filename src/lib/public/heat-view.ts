@@ -1,3 +1,4 @@
+import { shortenerFor, type PublicTrickBase } from "@/lib/engine/tricks/short-form";
 import { liveRows } from "./live-model";
 import { loadLive } from "./load";
 import type { loadCore } from "./page-data";
@@ -15,6 +16,6 @@ export async function ridersForView(core: Core, tab: HeatVM): Promise<{ riders: 
   const live = await loadLive(tab.id);
   if (!live) return { riders: tab.riders, live: false };
   const model = modelOf(core.rules, tab.divisionId);
-  const rows = liveRows(live, model, new Map(core.results.entries.map((e) => [e.id, e])), schemeFor(core.site, tab.divisionId), model?.heat.impression?.label ?? null);
+  const rows = liveRows(live, model, new Map(core.results.entries.map((e) => [e.id, e])), schemeFor(core.site, tab.divisionId), model?.heat.impression?.label ?? null, tab.mode, shortenerFor(core.rules?.trick_base as PublicTrickBase | null | undefined));
   return rows ? { riders: rows, live: true } : { riders: tab.riders, live: false };
 }

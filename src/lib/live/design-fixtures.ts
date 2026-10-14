@@ -1,3 +1,4 @@
+import { attemptTrickText } from "@/lib/engine/tricks/short-form";
 import vocabularyJson from "../../../presets/tricks/big-air-vocabulary.json";
 import kotaJson from "../../../presets/scoring/kota-best3-impression.json";
 import { computeHeat, heatSummary, judgeTrickScore, roundHalfUp, type SummaryAttempt } from "@/lib/engine/scoring";
@@ -467,6 +468,8 @@ export function headConsole() {
 export interface PublicBox {
   seq: number;
   trick: string;
+  /** The short form the box shows with "trick name + score". */
+  short: string;
   status: "landed" | "crashed";
   counted: boolean;
   score: number | null;
@@ -520,7 +523,7 @@ function madeUpHeat(id: string, name: string, status: PublicHeat["status"], cap:
       totalLabel: r.totalLabel,
       formula: copy.live.result.formula(r.totalLabel, two(r.components.tricks), KOTA.heat.impression?.label ?? "", two(r.components.impression)),
       status: "ok",
-      boxes: r.allAttempts.map((a) => ({ seq: a.seq, trick: a.trickName ?? "", status: a.status, counted: countedSeqs.has(a.seq), score: a.panel?.score ?? null, scoreLabel: a.panel?.score == null ? null : two(a.panel.score) })),
+      boxes: r.allAttempts.map((a) => ({ seq: a.seq, trick: a.trickName ?? "", short: attemptTrickText({ status: a.status, trickName: a.trickName ?? null, scored: a.panel?.score != null }), status: a.status, counted: countedSeqs.has(a.seq), score: a.panel?.score ?? null, scoreLabel: a.panel?.score == null ? null : two(a.panel.score) })),
     };
   });
   return { id, name, status, attemptsPerRider: cap, trickCount: out.reduce((n, r) => n + r.boxes.length, 0), riders: out, countedScores: out.flatMap((r) => r.boxes.filter((b) => b.counted && b.score !== null).map((b) => b.score as number)) };
@@ -544,7 +547,7 @@ export function publicHeats(): PublicHeat[] {
       totalLabel: r.totalLabel,
       formula: r.formula,
       status: r.status,
-      boxes: r.attempts.map((a) => ({ seq: a.seq, trick: a.trick, status: a.status, counted: a.counted, score: a.scoreLabel === null ? null : Number(a.scoreLabel), scoreLabel: a.scoreLabel })),
+      boxes: r.attempts.map((a) => ({ seq: a.seq, trick: a.trick, short: attemptTrickText({ status: a.status, trickName: a.trick, scored: a.scoreLabel !== null }), status: a.status, counted: a.counted, score: a.scoreLabel === null ? null : Number(a.scoreLabel), scoreLabel: a.scoreLabel })),
     })),
     countedScores: h3rows.flatMap((r) => r.attempts.filter((a) => a.counted && a.scoreLabel !== null).map((a) => Number(a.scoreLabel))),
   };

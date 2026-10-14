@@ -15,7 +15,7 @@ import { ScoringModelSchema } from "@/lib/schemas/scoring-model";
 import { FORMAT_NULLABLE, mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { issuesToMap } from "@/lib/form/path";
 import { copy } from "@/lib/ui-copy";
-import { DivisionLiveSchema, type DivisionLive } from "@/lib/schemas/division-live";
+import { DivisionLiveSchema, mergeLiveSettings, type DivisionLive, type DivisionLivePatch } from "@/lib/schemas/division-live";
 import { isDefaultLayout, parseLayout } from "@/lib/trick-base/layout";
 
 const E = copy.divisions.errors;
@@ -282,15 +282,22 @@ export async function saveTrickBase(divisionId: string, disabled: string[], layo
   return { ok: true };
 }
 
-/** What a division's live screens show: percentages of the maximum (off unless asked for) and the parts of the heat-end summary card. */
-export async function saveLiveSettings(divisionId: string, settings: unknown): Promise<Ok<{ settings: DivisionLive }> | Fail> {
-  if (!uuid.safeParse(divisionId).success) return { ok: false, error: E.notFound };
-  const parsed = DivisionLiveSchema.safeParse(settings);
-  if (!parsed.success) return { ok: false, error: E.failed };
+/**
+ * One change to what a division's live screens show. The panel sends only the setting the organiser touched; the server puts it into what is stored and leaves every
+ * other setting exactly as it is stored. (It used to save the panel's whole picture, so a page opened earlier could bring an older value of another setting back, and a
+ * setting that was never stored was written down as its default.)
+ */
+export async function saveLiveSettings(divisionId: string, patch: DivisionLivePatch): Promise<Ok<{ settings: DivisionLive }> | Fail> {
+  if (!uuid.safeParse(divisionId).success || !patch || typeof patch !== "object") return { ok: false, error: E.notFound };
   const { supabase } = await getDb();
   const d = await eventOf(supabase, divisionId);
   if (!d) return { ok: false, error: E.notFound };
-  const { data, error } = await supabase.from("divisions").update({ live_settings: parsed.data as never }).eq("id", divisionId).select("id");
+  const { data: row } = await supabase.from("divisions").select("live_settings").eq("id", divisionId).maybeSingle();
+  if (!row) return { ok: false, error: E.notFound };
+  const merged = mergeLiveSettings(row.live_settings, patch);
+  const parsed = DivisionLiveSchema.safeParse(merged);
+  if (!parsed.success) return { ok: false, error: E.failed };
+  const { data, error } = await supabase.from("divisions").update({ live_settings: merged as never }).eq("id", divisionId).select("id");
   if (error || !data?.length) return { ok: false, error: E.failed };
   return { ok: true, settings: parsed.data };
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Check, Minus, TriangleAlert } from "lucide-react";
 import { RiderLabel } from "@/components/rider-label";
-import { boxText, boxTone, type AttemptDisplay } from "@/lib/live/result-shading";
+import { boxLabel, boxParts, boxTone, type AttemptDisplay } from "@/lib/live/result-shading";
 import type { BoxVM, HeatVM, RiderRowVM } from "@/lib/public/results-model";
 import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
@@ -10,18 +10,28 @@ const R = copy.pub.results;
 // literal class names so Tailwind finds them: grade 0 is the yellowest (the lowest counted score in the heat), grade 4 the greenest (the highest)
 const GRADE = ["bg-beach-tint-grade0", "bg-beach-tint-grade1", "bg-beach-tint-grade2", "bg-beach-tint-grade3", "bg-beach-tint-grade4"];
 
-/** One attempt as a small box: crash red with CRASH, not counted grey, counted graded yellow to green across the heat. Always an icon or a word too. */
+/**
+ * One attempt as a small box: crash red with CRASH, not counted grey, counted graded yellow to green across the heat. Always an icon or a word too.
+ * With "trick name + score" the short trick sits between the number and the score ("1 · L ×2 BR · 7.33"). On a narrow card only the trick part gives way
+ * (it ends in "…"); the number and the score never shrink, wrap or leave the card. The whole text is the box's accessible label.
+ */
 export function ScoreBox({ box, counted, mode, big = false, screen = false }: { box: BoxVM; counted: number[]; mode: AttemptDisplay; big?: boolean; screen?: boolean }) {
   const tone = boxTone(box, counted);
   const Icon = tone.kind === "crash" ? TriangleAlert : tone.kind === "counted" ? Check : Minus;
-  const text = box.status === "landed" && box.scoreLabel === null ? `${mode === "scores_only" ? "" : `${box.seq} · `}…` : boxText(box, mode);
+  const waiting = box.status === "landed" && box.scoreLabel === null;
+  const parts = waiting ? null : boxParts(box, mode);
+  const withTrick = parts !== null && parts.length === 3;
+  const text = boxLabel(box, mode);
   return (
     <span
       data-testid="score-box"
       data-tone={tone.kind}
       data-grade={tone.kind === "counted" ? tone.grade : undefined}
+      data-trick={withTrick ? box.short : undefined}
+      role={withTrick ? "img" : undefined}
+      aria-label={withTrick ? text : undefined}
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-md border px-1 font-semibold tabular-nums",
+        "inline-flex max-w-full items-center gap-0.5 rounded-md border px-1 font-semibold tabular-nums",
         screen ? "min-h-[3.2vw] gap-[0.3vw] rounded-[0.5vw] border-[0.15vw] px-[0.6vw] text-[2vw] leading-none" : big ? "min-h-[40px] gap-1 px-2 text-2xl" : "min-h-[24px] text-small",
         tone.kind === "crash" && "border-beach-crash bg-beach-tint-crash text-beach-ink",
         tone.kind === "notCounted" && "border-beach-line bg-beach-tint-grey text-beach-muted",
@@ -29,7 +39,17 @@ export function ScoreBox({ box, counted, mode, big = false, screen = false }: { 
       )}
     >
       <Icon aria-hidden className={screen ? "size-[1.8vw] shrink-0" : big ? "size-5 shrink-0" : "size-3 shrink-0"} />
-      {text}
+      {withTrick ? (
+        <span className="flex min-w-0 items-baseline">
+          <span className="shrink-0 whitespace-pre">{`${parts[0]} · `}</span>
+          <span data-testid="score-box-trick" className="min-w-0 truncate">
+            {parts[1]}
+          </span>
+          <span className="shrink-0 whitespace-pre">{` · ${parts[2]}`}</span>
+        </span>
+      ) : (
+        text
+      )}
     </span>
   );
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChipLinks } from "@/components/public/chips";
+import { shortenerFor, type PublicTrickBase } from "@/lib/engine/tricks/short-form";
 import { highestJumpLine, buildPlacings } from "@/lib/public/ladder-model";
 import { loadDraw } from "@/lib/public/load";
 import { publicMetadata } from "@/lib/public/meta";
@@ -34,7 +35,7 @@ export default async function PlacingsPage({ params, searchParams }: { params: P
   const current = divisions.find((d) => d.id === wanted) ?? divisions[0];
   const entries = results?.entries ?? [];
   const placings = buildPlacings(current.draw, entries);
-  const jump = highestJumpLine(results?.divisions.find((d) => d.id === current.id), entries);
+  const jump = highestJumpLine(results?.divisions.find((d) => d.id === current.id), entries, shortenerFor(core.rules?.trick_base as PublicTrickBase | null | undefined));
   const base = `/e/${site.event.slug}/placings`;
   return (
     <>

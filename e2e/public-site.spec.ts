@@ -94,7 +94,7 @@ test("results of a published heat: compact rows in rank order, the formula in wo
 
 test("the division's setting decides what a box says: attempt number + score, trick name + score, scores only", async ({ page }) => {
   const box = () => page.getByTestId("public-rider").first().getByTestId("score-box").first();
-  for (const [mode, text] of [["number_score", "1 · 7.0"], ["trick_score", "Backroll · 7.0"], ["score_only", "7.0"]] as const) {
+  for (const [mode, text] of [["number_score", "1 · 7.0"], ["trick_score", "1 · BR · 7.0"], ["score_only", "7.0"]] as const) {
     await w.db.from("divisions").update({ live_settings: { spectatorAttemptDisplay: mode } as never }).eq("id", w.divisionId);
     await page.goto(url(`/results?heat=${w.published}`));
     await expect(box()).toHaveText(text);

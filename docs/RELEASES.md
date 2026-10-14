@@ -12,6 +12,34 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.23.0 — 14 Oct 2026 {#release-0-23-0}
+
+PR: #53
+
+### What changed
+- **The "What spectators see per attempt" setting now changes only when you change it.** The Live screens panel used to save its whole picture, so a page opened earlier could bring an older value of that setting back when you changed another one. It now saves only the setting you touched.
+- **Public scores show a short trick name next to each attempt.** In a division on **Trick name and score** (the setting "What spectators see per attempt"), every attempt box reads the number, the trick in capital letters, then the score: **1 · L ×2 BR · 7.33**. L or R is the side the spotter set; every trick is the first letter of each part of its name (Backroll BR, Kiteloop KL, Handle pass HP, Heart attack HA); Double loop and Triple loop are ×2 KL and ×3 KL; every grab is G; Late joins the trick after it (LBR); Late rotations and Downloop are left out; ×2, ×3 and ×4 stay numbers (a typed double, triple or quad becomes one). A trick added to the trick base later gets its letters by itself; letters are never only L or R (a one-word trick shows its first two letters, "Rodeo" is RO), and an unknown trick shows the first letter of each word. The full list is in the manual (Public: results and placings → Short trick names). A crash stays **2 · CRASH** with no trick. An attempt whose trick has not been logged yet reads **1 · 7.33** and fills in by itself. A trick never shows where its score does not: with live scores off, tricks appear when the heat is published, together with the scores.
+- **It reaches every public place:** the Live tab, Results, a rider's page and Big screen — Follow the heat. The other two choices (attempt number + score, scores only) look exactly as before.
+- **On a phone** the boxes still wrap onto new lines. If one box is still too wide for the card, only its trick part shortens with "…"; the number and the score are never cut. The full text is in the box's accessible label.
+- **Follow the heat on a TV never cuts a rider off at the bottom.** The screen now measures the real rows on the TV (with a wind call, long names or a long title the room is smaller) and splits a page wherever the next rider would not fit completely, so pages rotate, no page ends in a half row, and the Next line is never over a row.
+- **Only the division's own setting decides.** A division shows trick names only when its organiser picks Trick name and score in that division's scoring settings, and then everywhere that division appears in public (new divisions keep today's default). The Placings line "Highest jump" names the trick, in letters, only for such a division.
+- **Less is sent to the public.** Before, the public pages were *sent* the full trick name of every attempt in every division (the setting only hid it on screen). Now the database sends a trick only for a division on Trick name and score, only for a landed attempt whose score is already public, and never for a crash; the attempt category is no longer sent at all. The event's own organiser still gets the full names in the results CSV and the printable results.
+
+### What to test
+- [ ] In a throwaway event, set a division's **What spectators see per attempt** to **Attempt number and score**, keep the page open, change it to another value from a second tab, then tick **Show scores as % of maximum** on the first page: the attempt setting stays as the second tab left it.
+- [ ] In a throwaway event, set a division's **What spectators see per attempt** (Divisions → Scoring → more settings → Live screens) to **Trick name and score**.
+- [ ] Run a heat with live scores on: on a phone, the Live tab shows boxes like **1 · L ×2 BR · 7.33** once the judges' scores are in, a crash shows only **2 · CRASH**, and an attempt with no trick yet shows **1 · 7.33**.
+- [ ] Log a long trick (for example Left, ×2, Backroll, Board-off, Handle pass) and look at the box on a phone: the score is always fully inside the card; if the box is too wide only the trick ends in "…".
+- [ ] Publish the heat: Results and the rider's page show the same boxes.
+- [ ] Check the Placings page: the Highest jump line shows the trick in letters. Switch the division to **Attempt number and score**: the boxes read **1 · 7.33** again and the Highest jump line has no trick.
+- [ ] Set live scores to "Only after the head judge publishes": while the heat runs there are no boxes and no tricks; after Publish they appear together.
+- [ ] Open **Big screen — Follow the heat** on a laptop at full screen with a heat of three riders and 7, then 10 attempts each: every rider's attempts show with their tricks, nothing is cut off at the bottom (if they do not all fit, two pages take turns), on the live heat and on the Results page.
+
+### Known issues
+- On the Big screen — Follow the heat, the Ladder page can run about 7 px over its room in the automatic readability test; it does the same on version 0.22.0 and is not changed here.
+- The manual's pictures of the public pages and of Follow the heat still show the old boxes and will be retaken after the test tidy-up: public-live-390, public-results-390, public-results-1280, public-rider-390, follow-live-1280, follow-results-1280, follow-day-1280 and follow-dark-1280.
+- Different tricks can share letters (all grabs are G; Kiteloop and + Kiteloop are KL).
+
 ## 0.22.0 — 13 Oct 2026 {#release-0-22-0}
 
 PR: #50

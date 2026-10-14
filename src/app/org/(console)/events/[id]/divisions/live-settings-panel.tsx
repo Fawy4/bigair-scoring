@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { SettingRow } from "@/components/org/setting-row";
 import { toast } from "@/hooks/use-toast";
-import { parseDivisionLive, type DivisionLive } from "@/lib/schemas/division-live";
+import { parseDivisionLive, type DivisionLive, type DivisionLivePatch } from "@/lib/schemas/division-live";
 import { copy, help } from "@/lib/ui-copy";
 import { saveLiveSettings } from "./actions";
 
@@ -18,16 +18,20 @@ export function LiveSettingsPanel({ divisionId, initial, readOnly }: { divisionI
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  function save(next: DivisionLive) {
+  /** Saves only what the organiser changed; the page shows the saved picture the server gives back. */
+  function save(patch: DivisionLivePatch) {
     const before = settings;
-    setSettings(next);
+    setSettings({ ...settings, ...patch, impressionSummary: { ...settings.impressionSummary, ...patch.impressionSummary } });
     setError(null);
     start(async () => {
-      const r = await saveLiveSettings(divisionId, next);
+      const r = await saveLiveSettings(divisionId, patch);
       if (!r.ok) {
         setSettings(before);
         setError(r.error);
-      } else toast({ title: T.saved });
+      } else {
+        setSettings(r.settings);
+        toast({ title: T.saved });
+      }
     });
   }
   const h = (key: string) => ({ explanation: help[key].line ?? help[key].text, example: help[key].example ?? "", detail: help[key].line ? help[key].text : undefined });
@@ -39,7 +43,7 @@ export function LiveSettingsPanel({ divisionId, initial, readOnly }: { divisionI
   );
   const part = (key: keyof DivisionLive["impressionSummary"], text: string) => (
     <SettingRow id={`summary-${key}`} label={text} {...h(`division.summary.${key}`)}>
-      {box(`summary-${key}`, text, settings.impressionSummary[key], (v) => save({ ...settings, impressionSummary: { ...settings.impressionSummary, [key]: v } }))}
+      {box(`summary-${key}`, text, settings.impressionSummary[key], (v) => save({ impressionSummary: { [key]: v } }))}
     </SettingRow>
   );
   const choice = (testId: string, label: string, value: string, options: Array<[string, string]>, onChange: (v: string) => void) => (
@@ -60,25 +64,25 @@ export function LiveSettingsPanel({ divisionId, initial, readOnly }: { divisionI
         </p>
       ) : null}
       <SettingRow id="show-percent" label={T.showPercent} {...h("division.showPercent")}>
-        {box("show-percent", T.showPercent, settings.showPercentOfMax, (v) => save({ ...settings, showPercentOfMax: v }))}
+        {box("show-percent", T.showPercent, settings.showPercentOfMax, (v) => save({ showPercentOfMax: v }))}
       </SettingRow>
       <p className="pb-1 text-small font-medium text-beach-muted">{T.showPercentNote}</p>
       <div data-testid="spectator-settings" className="flex flex-col">
         <h4 className="pt-2">{T.spectatorsHeading}</h4>
         <p className="text-small font-medium text-beach-muted">{T.spectatorsNote}</p>
         <SettingRow id="live-scores" label={T.liveScores} {...h("division.liveScores")}>
-          {choice("division-live-scores", T.liveScores, settings.publicLiveScores ?? "", [["", T.useEvent], ["live", T.liveLive], ["after_publish", T.liveAfter], ["off", T.liveOff]], (v) => save({ ...settings, publicLiveScores: v === "" ? null : (v as "live" | "after_publish" | "off") }))}
+          {choice("division-live-scores", T.liveScores, settings.publicLiveScores ?? "", [["", T.useEvent], ["live", T.liveLive], ["after_publish", T.liveAfter], ["off", T.liveOff]], (v) => save({ publicLiveScores: v === "" ? null : (v as "live" | "after_publish" | "off") }))}
         </SettingRow>
         {([
           ["publicResultsOnPublish", T.resultsOnPublish, "division.resultsOnPublish"],
           ["holdFinalResult", T.holdFinal, "division.holdFinal"],
         ] as const).map(([key, label, helpKey]) => (
           <SettingRow key={key} id={key} label={label} {...h(helpKey)}>
-            {choice(`division-${key}`, label, settings[key] === null ? "" : settings[key] ? "yes" : "no", [["", T.useEvent], ["yes", T.yes], ["no", T.no]], (v) => save({ ...settings, [key]: v === "" ? null : v === "yes" }))}
+            {choice(`division-${key}`, label, settings[key] === null ? "" : settings[key] ? "yes" : "no", [["", T.useEvent], ["yes", T.yes], ["no", T.no]], (v) => save({ [key]: v === "" ? null : v === "yes" }))}
           </SettingRow>
         ))}
         <SettingRow id="attempt-display" label={T.attemptDisplay} {...h("division.attemptDisplay")}>
-          {choice("attempt-display", T.attemptDisplay, settings.spectatorAttemptDisplay, [["number_score", T.displayNumberScore], ["trick_score", T.displayTrickScore], ["score_only", T.displayScoreOnly]], (v) => save({ ...settings, spectatorAttemptDisplay: v as DivisionLive["spectatorAttemptDisplay"] }))}
+          {choice("attempt-display", T.attemptDisplay, settings.spectatorAttemptDisplay, [["number_score", T.displayNumberScore], ["trick_score", T.displayTrickScore], ["score_only", T.displayScoreOnly]], (v) => save({ spectatorAttemptDisplay: v as DivisionLive["spectatorAttemptDisplay"] }))}
         </SettingRow>
       </div>
       <h4 className="pt-2">{T.summaryHeading}</h4>

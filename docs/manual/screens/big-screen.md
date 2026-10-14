@@ -2,7 +2,7 @@
 
 /screen/‹event›: the beach screen — Dark (white on dark) or Day (dark on light), large digits, pages that rotate by themselves.
 
-Last checked: 4 Oct 2026 · Product version 0.15.0
+Last checked: 14 Oct 2026 · Product version 0.23.0
 
 ## What it is for {#bs-purpose}
 
@@ -56,6 +56,8 @@ It always shows one of three things, chosen by what the head judge does:
 
 ![Follow the heat: a Results page](../img/follow-results-1280.png)
 *follow-results-1280.png — a Results page: every attempt of every rider.*
+
+**The attempt boxes on Follow the heat** (the live heat and a Results page) follow the division’s setting “What spectators see per attempt” like the public pages. In a division on “trick name + score” a box reads the number, the trick in short form and the score — “1 · L ×2 BR · 7.33” — while the heat runs (a trick appears as soon as its score is in) and on the Results page; a crash is “2 · CRASH” with no trick. The other two settings look as before. Longer boxes take more room, and so do a wind call at the top, a long name or a heat title that wraps, so the screen **measures the real rows on the TV and splits a page wherever the next rider would not fit completely**: riders who do not fit on one page are split across pages that rotate, a page never ends in a half row, and the “Next” line is never over a row. Nothing is shrunk to fit.
 
 **A Ladder page** is the division's ladder with the winners already moved into their next seats, drawn large. A ladder that does not fit at that size is shown in pages, round by round, as part of the rotation, never shrunk. Each Results page is followed by the ladder of its heat's division; a division without a ladder has Results only. With nothing published today the screen shows the ladders alone.
 
