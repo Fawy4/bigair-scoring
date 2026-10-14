@@ -509,7 +509,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “This division has no heats yet, so there is nothing to reset.” | Follow the sentence. | [Resets](errors.md#err-resetparts-division-noheats) |
 | “This division has no usable scoring rules, so it cannot be published.” | Divisions → the division → Scoring tab → choose a preset → Save. | [Head console](errors.md#err-publish-nomodel) |
 | “This division is full. Ask the organiser if you would like to be on a waiting list.” | Organiser: raise the number in the Event step, or add the rider by hand in Riders. | [Rider registration](errors.md#err-registration-fullline) |
-| “This division is scored by criteria. Use the Queue.” | Use the Queue view for this division. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-line-score-not-available) |
+| “This division is scored differently from this box. Reload the page.” | Reload the page; the Rider sheet then shows the right boxes for the division. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-line-score-not-available) |
 | “This division's rules have no Impression / Variety score.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-no-impression) |
 | “This event has already been run, so it is not a clean starting point. Copy it before its first heat starts, or reset it first.” | Copy the event before its first heat, or reset it first. | [Simulator](errors.md#err-simulator-errors-source-already-run) |
 | “This event has no divisions to register for yet.” | Follow the sentence. | [Rider registration](errors.md#err-registration-nodivisions) |

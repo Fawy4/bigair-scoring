@@ -13,6 +13,7 @@ import { defaultScheme } from "@/lib/schemas/identification";
 import { mergeOverrides, SCORING_NULLABLE } from "@/lib/scoring-ui/overrides";
 import { createClient } from "@/lib/supabase/server";
 import { blocksFromVocabulary, effectiveDisabled, parseTrickBase } from "@/lib/trick-base";
+import { hiddenViewsTestServer } from "./official-views";
 import { HEAT_COLUMNS, type HeatRow, type LiveContext, type LiveDivisionContext, type LiveRiderInfo, type SeatRole } from "./types";
 
 type Db = Awaited<ReturnType<typeof createClient>>;
@@ -138,6 +139,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
   for (const r of nameRows ?? []) seatNames[r.id] = r.name;
 
   return {
+    hiddenViewsTest: hiddenViewsTestServer(),
     event: { id: event.id, name: event.name, slug: event.slug, timezone: event.timezone, judgesMayLogAttempts: settings.judgesMayLogAttempts, maxRunningHeats: settings.maxRunningHeats, isSimulation: Boolean(event.is_simulation), readyCallMin: settings.readyCallMin, publicLiveScores: settings.publicLiveScores, flags: settings.flags },
     viewer,
     divisions,

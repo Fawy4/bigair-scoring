@@ -32,6 +32,8 @@ export interface LoggedAttemptRow {
   /** Logged by this spotter's seat (only those can be changed from here). */
   mine: boolean;
   deleted: boolean;
+  /** When the server saved the attempt (server time, in ms): Undo is offered for a few seconds after. */
+  createdAtMs?: number;
 }
 
 /** An attempt still waiting on the phone to be sent. */
@@ -56,6 +58,22 @@ export interface SpotterLine {
   direction: "left" | "right" | null;
   rawText: string | null;
   crash: boolean;
+  /** When the server saved the attempt (server time, in ms). */
+  createdAtMs?: number;
+}
+
+/** How long after logging an attempt its own spotter can still take it back with Undo (the server's rule, `undo_attempt`: 10 seconds). */
+export const UNDO_WINDOW_MS = 10_000;
+
+/**
+ * Is Undo offered on this line right now? Only on a line this seat logged: while it is still on the phone (the send can be cancelled) or has been saved for less than
+ * the window (the same rule and the same audit line as the Trick list's Undo). Server time decides.
+ */
+export function undoOffered(line: SpotterLine, nowMs: number, windowMs: number = UNDO_WINDOW_MS): boolean {
+  if (!line.editable || !line.clientKey) return false;
+  if (line.state === "saving" && !line.attemptId) return true;
+  if (line.state !== "logged" && line.state !== "saving") return false;
+  return line.createdAtMs !== undefined && nowMs - line.createdAtMs < windowMs;
 }
 
 /**
@@ -72,7 +90,7 @@ export function spotterLines(i: { attempts: LoggedAttemptRow[]; queued: QueuedAt
     const a = logged[n - 1];
     const q = queued[n - 1 - logged.length];
     if (a) {
-      out.push({ n, state: i.changing?.has(a.clientKey) ? "saving" : "logged", editable: a.mine, attemptId: a.id, clientKey: a.clientKey, trickName: a.trickName, direction: a.direction, rawText: a.rawText ?? null, crash: a.status === "crashed" });
+      out.push({ n, state: i.changing?.has(a.clientKey) ? "saving" : "logged", editable: a.mine, attemptId: a.id, clientKey: a.clientKey, trickName: a.trickName, direction: a.direction, rawText: a.rawText ?? null, crash: a.status === "crashed", ...(a.createdAtMs !== undefined ? { createdAtMs: a.createdAtMs } : {}) });
     } else if (q) {
       out.push({ n, state: "saving", editable: true, clientKey: q.clientKey, trickName: q.trickName, direction: q.direction, rawText: q.rawText ?? null, crash: q.status === "crashed" });
     } else {

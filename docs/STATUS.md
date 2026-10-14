@@ -1442,3 +1442,18 @@ Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 
 ### How to test on a phone
 - Release entry 0.23.0 in `docs/RELEASES.md`.
+
+## Officials: the Rider sheet only (0.24.0)
+
+### Done
+- One view for every official: the judges' Queue and the spotter's Trick list are hidden behind one line (`SHOW_HIDDEN_OFFICIAL_VIEWS` in `src/lib/live/official-views.ts`); the switches are gone, a stored choice is ignored. Test-only path: a TEST server (`SHOW_HIDDEN_OFFICIAL_VIEWS=1` in `playwright.config.ts`, never on Vercel) plus the marker `bigair.testViews` in a phone's storage.
+- Criteria divisions on the judges' Rider sheet: one box per criterion on each line, line-by-line rule unchanged (pure logic in `src/lib/live/rider-sheet.ts`, tests in `rider-sheet-criteria.test.ts`). Database (additive migration `20261110100000`): `pending_scores.criteria`, `set_line_criteria`, `set_line_missed` also for criteria divisions.
+- Added to the Rider sheet what only the hidden views could do: the spotter's Undo (10 seconds), the judge's Log an attempt.
+- Tests: unit (`official-views`, `rider-sheet-criteria`, `spotter-sheet`), database (`tests/rls/rider-sheet-criteria.test.ts`, the observer's refused list), browser (`e2e/officials-rider-sheet-only.spec.ts`).
+
+### Not done
+- A partly filled criteria line is kept on the phone only (not on the server) until its last box is typed.
+- The pictures `judge-390`, `spotter-390`, `spotter-keyboard-390` are no longer used by the manual.
+
+### How to test on a phone
+- Release entry 0.24.0 in `docs/RELEASES.md`.

@@ -59,6 +59,9 @@ async function send(supabase: SupabaseClient, item: QueueEntry, onSaved?: (kind:
     case "line_score":
       // a score typed on a Rider sheet line: the server keeps it as a pending note, or (when the attempt has been logged meanwhile) gives it to that attempt
       return done(await supabase.rpc("set_line_score", { p_heat: p.heatId, p_entry: p.entryId, p_line: p.line, p_score: p.score, p_client_key: item.clientKey, p_client_rev: item.clientRev }));
+    case "line_criteria":
+      // a whole line of a division scored by criteria (every criterion has a value): kept as a pending note, or (the attempt has been logged meanwhile) given to that attempt
+      return done(await supabase.rpc("set_line_criteria", { p_heat: p.heatId, p_entry: p.entryId, p_line: p.line, p_criteria: p.criteria as never, p_score: p.score, p_client_key: item.clientKey, p_client_rev: item.clientRev }));
     case "line_missed":
       // "I did not see this attempt" on a Rider sheet line: a Missed note, or (the attempt has been logged meanwhile) Missed on that attempt
       return done(await supabase.rpc("set_line_missed", { p_heat: p.heatId, p_entry: p.entryId, p_line: p.line, p_client_key: item.clientKey, p_client_rev: item.clientRev }));

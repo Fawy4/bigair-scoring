@@ -4,7 +4,7 @@ import { createLiveWorld } from "./live-world";
 
 /**
  * The manual's pictures of the Rider sheet (retaken with `npm run manual:shots`): a judge's phone with a rider's sheet (two attempts logged, the second a crash, notes typed
- * on the next lines) and the head console's table with its pending rows. Throwaway organisation; Arrow, EKL and Demo are never touched. Runs only when MANUAL_SHOTS=1.
+ * on the next lines), a judge's sheet in a division scored by criteria, the spotter's Rider sheet and the head console's table with its pending rows. Throwaway organisation; Arrow, EKL and Demo are never touched. Runs only when MANUAL_SHOTS=1.
  */
 test.skip(process.env.MANUAL_SHOTS !== "1", "set MANUAL_SHOTS=1 (npm run manual:shots) to retake the manual's pictures");
 const OUT = path.join(process.cwd(), "docs", "manual", "img");
@@ -32,11 +32,11 @@ test("the Rider sheet on a judge's phone, and the console's pending rows", async
     await note("j3", 6, 6.5);
 
     const phone = await browser.newContext({ viewport: { width: 390, height: 844 } });
-    await installSupabaseProxy(phone);
+    await installSupabaseProxy(phone, { officialsOnly: true }); // an official's phone as it is on the live site: the Rider sheet, no switch
     const j1 = await phone.newPage();
     await w.signInAs(j1, "j1", `/judge/${w.eventId}`);
-    await expect(j1.getByTestId("view-switch")).toBeVisible({ timeout: 60_000 });
-    await j1.getByTestId("view-sheet").click();
+    await expect(j1.getByTestId("rider-sheet")).toBeVisible({ timeout: 60_000 });
+    await expect(j1.getByTestId("view-switch")).toHaveCount(0);
     await expect(j1.locator('[data-testid="sheet-line"][data-line="3"][data-needs-score="true"]')).toBeVisible({ timeout: 30_000 });
     await hideDevOverlay(j1);
     await j1.waitForTimeout(500);
@@ -50,7 +50,9 @@ test("the Rider sheet on a judge's phone, and the console's pending rows", async
     await j1.screenshot({ path: path.join(OUT, "judge-rider-sheet-skip-390.png") });
     // the same sheet in Dark (Daylight and Dark are both looked at before anything is pushed)
     await j1.getByTestId("skip-cancel").click();
+    await j1.getByTestId("settings-button").click(); // Dark is behind the round Settings button (since 0.21.0)
     await j1.getByRole("button", { name: "Dark", exact: true }).click();
+    await j1.keyboard.press("Escape");
     await j1.evaluate(() => document.querySelector('[data-testid="screen-body"]')?.scrollTo(0, 0));
     await expect(j1.getByTestId("live-root")).toHaveAttribute("data-theme", "dark");
     await hideDevOverlay(j1);
@@ -74,7 +76,7 @@ test("the Rider sheet on a judge's phone, and the console's pending rows", async
   }
 });
 
-test("the spotter's Rider sheet, and the Trick list cut to the height a keyboard leaves", async ({ browser }) => {
+test("the spotter's Rider sheet", async ({ browser }) => {
   test.setTimeout(300_000);
   const w = await createLiveWorld();
   try {
@@ -88,7 +90,7 @@ test("the spotter's Rider sheet, and the Trick list cut to the height a keyboard
 
     // a spotter's phone that never chose a view opens on the Rider sheet; line 4 is being typed
     const phone = await browser.newContext({ viewport: { width: 390, height: 600 } });
-    await installSupabaseProxy(phone, { newViews: true });
+    await installSupabaseProxy(phone, { officialsOnly: true });
     const sp = await phone.newPage();
     await w.signInAs(sp, "spotter", `/spot/${w.eventId}`);
     await expect(sp.getByTestId("spotter-sheet")).toBeVisible({ timeout: 60_000 });
@@ -101,19 +103,47 @@ test("the spotter's Rider sheet, and the Trick list cut to the height a keyboard
     await sp.waitForTimeout(500);
     await sp.screenshot({ path: path.join(OUT, "spotter-rider-sheet-390.png") });
 
-    // the Trick list at 390 x 508: the height left above a phone keyboard; the text box, Log and CRASH stay in view
-    await sp.getByTestId("spot-view-list").click();
-    // the Trick list at full phone height (the picture of the Spotter page)
-    await sp.setViewportSize({ width: 390, height: 844 });
-    await expect(sp.getByTestId("trick-builder")).toBeVisible();
-    await hideDevOverlay(sp);
-    await sp.waitForTimeout(500);
-    await sp.screenshot({ path: path.join(OUT, "spotter-390.png") });
-    await sp.setViewportSize({ width: 390, height: 508 });
-    await sp.locator("#trick-text").fill("left back");
-    await hideDevOverlay(sp);
-    await sp.waitForTimeout(500);
-    await sp.screenshot({ path: path.join(OUT, "spotter-keyboard-390.png") });
+    await phone.close();
+  } finally {
+    await w.cleanup();
+  }
+});
+
+test("the judge's Rider sheet in a division scored by criteria (three criteria)", async ({ browser }) => {
+  test.setTimeout(300_000);
+  const w = await createLiveWorld({ model: "kota-best3-impression" });
+  try {
+    const H = w.heats[0];
+    const { data: base } = await w.db.from("scoring_models").select("json").is("organisation_id", null).eq("key", "kota-best3-impression").order("version", { ascending: false }).limit(1).single();
+    const useCriteria = async (list: Array<{ key: string; label: string }>) => {
+      const json = structuredClone(base!.json) as { trick: { criteria: unknown[]; scale: unknown } };
+      const scale = { min: 0, max: 10, step: 0.5 };
+      json.trick.criteria = list.map((c) => ({ key: c.key, label: c.label, weight: 1, scale }));
+      json.trick.scale = scale;
+      const { data: model } = await w.db.from("scoring_models").insert({ organisation_id: w.orgId, key: `shot-${list.length}-${w.org.run}`, name: "Criteria shot", version: 1, json: json as never, content_hash: "shot" }).select("id").single();
+      await w.db.from("divisions").update({ scoring_model_id: model!.id }).eq("id", w.divisionId);
+    };
+    const three = [{ key: "height", label: "Height" }, { key: "extremity", label: "Extremity" }, { key: "technicality", label: "Technicality" }];
+    await useCriteria(three);
+    await w.db.from("heat_slots").update({ modifier: "DNS" }).eq("heat_id", H).neq("entry_id", w.entries[0]);
+    await w.startHeat(H);
+    const att = (seq: number, trick: string, direction: "left" | "right") => w.db.from("trick_attempts").insert({ heat_id: H, entry_id: w.entries[0], seq, status: "landed", trick_name: trick, direction, client_key: crypto.randomUUID() }).select("id").single();
+    const a1 = (await att(1, "Left Backroll", "left")).data!.id;
+    await att(2, "Right Frontroll", "right");
+    await att(3, "Left Kiteloop", "left");
+    await w.db.from("trick_scores").insert({ attempt_id: a1, judge_seat_id: w.seats.j1.id, criteria: { height: 6.5, extremity: 8, technicality: 7 }, score: 7.17, client_key: crypto.randomUUID(), client_rev: 1 });
+    const phone = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    await installSupabaseProxy(phone, { officialsOnly: true });
+    const j1 = await phone.newPage();
+    await w.signInAs(j1, "j1", `/judge/${w.eventId}`);
+    await expect(j1.getByTestId("rider-sheet")).toBeVisible({ timeout: 60_000 });
+    const box = (n: number, key: string) => j1.locator(`[data-testid="sheet-line"][data-line="${n}"] [data-testid="line-criterion"][data-criterion="${key}"]`);
+    await expect(box(1, "height")).toHaveValue("6.5", { timeout: 30_000 });
+    await box(2, "technicality").fill("7"); // line 2 half typed: the other boxes wait for you
+    await box(2, "technicality").blur();
+    await hideDevOverlay(j1);
+    await j1.waitForTimeout(500);
+    await j1.screenshot({ path: path.join(OUT, "judge-rider-sheet-criteria-390.png") });
     await phone.close();
   } finally {
     await w.cleanup();

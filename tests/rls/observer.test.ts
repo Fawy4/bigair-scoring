@@ -235,6 +235,7 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
       set_heat_public_live: { p_heat: running, p_value: false },
       set_line_missed: { p_heat: running, p_entry: p[0], p_line: 3, p_client_key: ck(), p_client_rev: 900 }, // Rider sheets: Missed on a line
       set_line_score: { p_heat: running, p_entry: p[0], p_line: 3, p_score: 6, p_client_key: ck(), p_client_rev: 900 },
+      set_line_criteria: { p_heat: running, p_entry: p[0], p_line: 3, p_criteria: { height: 6 }, p_score: 6, p_client_key: ck(), p_client_rev: 900 }, // Rider sheet, criteria divisions (0.24.0)
       set_plan_anchors: { p_plan: planId, p_anchors: { a: "10:00" } },
       set_plan_break: { p_plan: planId, p_item: "i1", p_break_min: 3, p_anchors: {} },
       set_plan_hold: { p_plan: planId, p_hold: { since: new Date().toISOString(), reason: "wind dropped" } },

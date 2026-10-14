@@ -16,6 +16,7 @@ import { Chip } from "./chip";
 import { RiderSheetView, ViewSwitch } from "./rider-sheet";
 import { heatSummary } from "@/lib/engine/scoring";
 import { criteriaRows, criteriaScore } from "@/lib/live/criteria";
+import { judgeViewFor, testPathOpen } from "@/lib/live/official-views";
 import type { ImpressionRider } from "@/lib/live/design-fixtures";
 import { errorSentence } from "@/lib/live/errors";
 import { buildJudgeItems, type LiveAttemptRow, type MyScoreRow } from "@/lib/live/judge-items";
@@ -24,7 +25,7 @@ import { formatCell } from "@/lib/live/matrix-model";
 import { myCountedSeqs, type MyScoreEntry } from "@/lib/live/my-sheet";
 import { nextHeat } from "@/lib/live/next-heat";
 import { pendingFlags, pendingImpressions, pendingScores } from "@/lib/live/pending";
-import { buildLines, missedSwitch, slotForLine, submitBlockLines, viewPreference, type JudgeView, type SheetAttempt, type SheetLine, type SheetNote } from "@/lib/live/rider-sheet";
+import { buildLines, criteriaComplete, mergeCriterion, missedSwitch, slotForLine, submitBlockLines, viewPreference, type JudgeView, type SheetAttempt, type SheetLine, type SheetNote } from "@/lib/live/rider-sheet";
 import { activePlanFor, heatTitle, livesFor, timetableOptions } from "@/lib/live/run-order";
 import { attemptCounts, ridersForHeat, trickKit } from "@/lib/live/screen-model";
 import { formatPadValue } from "@/lib/live/score-pad";
@@ -36,6 +37,14 @@ import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
 const T = copy.judge;
+
+const safeGet = (storage: Storage, k: string): string | null => {
+  try {
+    return storage.getItem(k);
+  } catch {
+    return null;
+  }
+};
 
 export function JudgeRoot({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?: string | null }) {
   return (
@@ -71,7 +80,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const viewer = ctx.viewer.kind === "seat" ? ctx.viewer : null;
   const seatId = viewer?.seatId ?? "";
   const q = useSendQueue(supabase, clock.now, `judge-${ctx.event.id}-${seatId}`, online && live.connected, (kind, row) => {
-    if (kind === "line_score" || kind === "line_missed") {
+    if (kind === "line_score" || kind === "line_missed" || kind === "line_criteria") {
       // the answer to a score (or a Missed) typed on a Rider sheet line: a pending note, or (the attempt had been logged meanwhile) the score on that attempt
       const got = row as unknown as { kind: "pending" | "score"; row: { id: string } };
       live.apply(got.kind === "pending" ? "pending" : "scores", got.row as never);
@@ -80,9 +89,21 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
     const key = kind === "attempt" ? "attempts" : kind === "trick_score" ? "scores" : kind === "impression" ? "impressions" : "flags";
     live.apply(key, row as never);
   });
-  // the view this device scores in: the Rider sheet (the default) or the Queue (one choice for the whole phone; read after the page is up, so the server and the browser draw the same first screen)
+  // the view this device scores in: always the Rider sheet (0.24.0). The Queue is hidden code, behind lib/live/official-views.ts: only a test server (or the one switch turned
+  // back on) reads the phone's own choice and draws the switch. Read after the page is up, so the server and the browser draw the same first screen.
   const [view, setView] = useState<JudgeView>("sheet");
-  useEffect(() => setView(viewPreference.read(typeof window === "undefined" ? null : window.localStorage)), []);
+  const [switchShown, setSwitchShown] = useState(false);
+  useEffect(() => {
+    let storage: Storage | null = null;
+    try {
+      storage = window.localStorage;
+    } catch {
+      /* no storage on this page */
+    }
+    const opening = judgeViewFor({ stored: storage ? safeGet(storage, viewPreference.key) : null, testPath: testPathOpen(ctx.hiddenViewsTest, storage) });
+    setView(opening.view);
+    setSwitchShown(opening.switchShown);
+  }, [ctx.hiddenViewsTest]);
   const chooseView = (v: JudgeView) => {
     setView(v);
     viewPreference.write(v, typeof window === "undefined" ? null : window.localStorage);
@@ -134,6 +155,42 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
     return [...merged.values()];
   }, [live.scores, seatId, pendScores, unMissed]);
   const criteriaOf = useMemo(() => new Map(live.scores.filter((s) => s.judge_seat_id === seatId).map((s) => [s.attempt_id, (s.criteria ?? null) as Record<string, number> | null])), [live.scores, seatId]);
+  // a division scored by criteria: the criteria in the division's order (one box each on a Rider sheet line)
+  const critRows = useMemo(() => (model ? criteriaRows(model) : null), [model]);
+  const critKeys = useMemo(() => (critRows ?? []).map((c) => c.key), [critRows]);
+  // boxes typed on a line that is not complete yet wait on this phone (kept across a reload), by heat, rider and attempt number
+  const draftStore = `bigair.critDraft.${ctx.event.id}.${seatId}`;
+  const [drafts, setDrafts] = useState<Record<string, Record<string, number>>>({});
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(draftStore);
+      if (raw) setDrafts(JSON.parse(raw) as Record<string, Record<string, number>>);
+    } catch {
+      /* no storage, or nothing kept */
+    }
+  }, [draftStore]);
+  const setDraft = (heatId: string, entryId: string, slot: number, values: Record<string, number> | null) => {
+    setDrafts((d) => {
+      const k = `${heatId}:${entryId}:${slot}`;
+      const next = { ...d };
+      if (values && Object.keys(values).length) next[k] = values;
+      else delete next[k];
+      try {
+        window.localStorage.setItem(draftStore, JSON.stringify(next));
+      } catch {
+        /* the boxes still work until the page closes */
+      }
+      return next;
+    });
+  };
+  // what is typed ahead of the spotter keeps its criteria too, so the boxes stay filled when the attempt arrives and the note turns into the score
+  const aheadCritRef = useRef(new Map<string, Record<string, number>>());
+  const sheetCriteriaOf = useMemo(() => {
+    const m = new Map<string, Record<string, number>>();
+    for (const [id, c] of criteriaOf) if (c && Object.keys(c).length) m.set(id, c);
+    for (const [id, p] of pendScores) if (p.criteria) m.set(id, p.criteria);
+    return m;
+  }, [criteriaOf, pendScores]);
 
   const attemptRows = useMemo<LiveAttemptRow[]>(
     () => live.attempts.map((a) => ({ id: a.id, entryId: a.entry_id, seq: a.seq, status: a.status, trickName: a.trick_name, direction: a.direction, createdAt: a.created_at, deletedAt: a.deleted_at })),
@@ -214,19 +271,23 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const liveRiders = riding.map((r) => ({ id: r.entryId, label: r.label, attempts: counts.get(r.entryId) ?? 0, max }));
 
   // ---- the Rider sheet: this judge's lines for every rider (the attempts logged, and the notes typed on the empty lines)
-  const sheetAvailable = entry === "single";
   const myNotes = useMemo<Array<SheetNote & { entryId: string }>>(() => {
     const byKey = new Map<string, SheetNote & { entryId: string }>();
-    for (const n of live.pending) if (n.judge_seat_id === seatId) byKey.set(`${n.entry_id}:${n.slot}`, { entryId: n.entry_id, seatId, slot: n.slot, score: Number(n.score), ...(n.missed ? { missed: true } : {}) });
+    for (const n of live.pending) if (n.judge_seat_id === seatId) byKey.set(`${n.entry_id}:${n.slot}`, { entryId: n.entry_id, seatId, slot: n.slot, score: Number(n.score), ...(n.missed ? { missed: true } : n.criteria && Object.keys(n.criteria).length ? { criteria: n.criteria } : {}) });
     // what is still waiting on the phone shows at once (and a Clear shows at once)
     for (const i of q.items) {
       if (i.state === "refused") continue;
-      const pl = i.payload as { entryId: string; slot: number; score?: number };
+      const pl = i.payload as { entryId: string; slot: number; score?: number; criteria?: Record<string, number> };
       if (i.kind === "line_score") byKey.set(`${pl.entryId}:${pl.slot}`, { entryId: pl.entryId, seatId, slot: pl.slot, score: Number(pl.score) });
+      else if (i.kind === "line_criteria") byKey.set(`${pl.entryId}:${pl.slot}`, { entryId: pl.entryId, seatId, slot: pl.slot, score: Number(pl.score), ...(pl.criteria ? { criteria: pl.criteria } : {}) });
       else if (i.kind === "line_missed") byKey.set(`${pl.entryId}:${pl.slot}`, { entryId: pl.entryId, seatId, slot: pl.slot, score: 0, missed: true });
       else if (i.kind === "line_clear") byKey.delete(`${pl.entryId}:${pl.slot}`);
     }
-    for (const n of byKey.values()) aheadRef.current.set(`${n.entryId}:${n.slot}`, n.missed ? "missed" : n.score);
+    for (const n of byKey.values()) {
+      aheadRef.current.set(`${n.entryId}:${n.slot}`, n.missed ? "missed" : n.score);
+      if (n.criteria) aheadCritRef.current.set(`${n.entryId}:${n.slot}`, n.criteria);
+      else aheadCritRef.current.delete(`${n.entryId}:${n.slot}`);
+    }
     return [...byKey.values()];
   }, [live.pending, q.items, seatId]);
   const attemptsOf = useCallback(
@@ -243,7 +304,10 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
       const [entryId, slot] = key.split(":");
       const stillThere = myNotes.some((n) => n.entryId === entryId && String(n.slot) === slot);
       const taken = attemptsOf(entryId).some((a) => String(a.seq) === slot);
-      if (!stillThere && !taken) aheadRef.current.delete(key);
+      if (!stillThere && !taken) {
+        aheadRef.current.delete(key);
+        aheadCritRef.current.delete(key);
+      }
     }
     for (const r of riding) {
       const ahead = new Map<number, number | "missed">();
@@ -251,10 +315,27 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
         const [entryId, slot] = key.split(":");
         if (entryId === r.entryId) ahead.set(Number(slot), v);
       }
-      out[r.entryId] = buildLines({ attempts: attemptsOf(r.entryId), notes: myNotes.filter((n) => n.entryId === r.entryId), cap: max, mine, ahead });
+      // a division scored by criteria: the boxes typed on a line that is not complete (kept on the phone), and the criteria of what was typed ahead
+      const boxes = new Map<number, Record<string, number>>();
+      if (critKeys.length && heat) {
+        const prefix = `${heat.id}:${r.entryId}:`;
+        for (const [k, v] of Object.entries(drafts)) if (k.startsWith(prefix)) boxes.set(Number(k.slice(prefix.length)), v);
+        for (const [k, v] of aheadCritRef.current) {
+          const [entryId, slot] = k.split(":");
+          if (entryId === r.entryId) boxes.set(Number(slot), v);
+        }
+      }
+      out[r.entryId] = buildLines({
+        attempts: attemptsOf(r.entryId),
+        notes: myNotes.filter((n) => n.entryId === r.entryId),
+        cap: max,
+        mine,
+        ahead,
+        ...(critKeys.length ? { criteriaKeys: critKeys, criteriaOf: sheetCriteriaOf, drafts: boxes } : {}),
+      });
     }
     return out;
-  }, [riding, attemptsOf, myNotes, max, mineRows]);
+  }, [riding, attemptsOf, myNotes, max, mineRows, critKeys, sheetCriteriaOf, drafts, heat]);
   const onLineScore = (riderId: string, line: SheetLine, value: number) => {
     if (!heat) return;
     if (line.kind === "attempt" && line.attemptId) {
@@ -266,6 +347,41 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
     if (slot === null) return;
     q.enqueue("line_score", `line:${riderId}:${slot}`, { heatId: heat.id, entryId: riderId, line: line.n, slot, score: value });
     setSaved(copy.live.saved.line(formatPadValue(value, scale), labelOf(riderId)?.primary.text ?? "", line.n));
+  };
+  /**
+   * A value typed in one criterion's box of a line (a division scored by criteria). The boxes can be filled in any order; until every criterion has a value they wait on the
+   * phone. The last one sends the whole line: on a line that has its attempt exactly as the Queue's Save does (the same score, the same criteria); on an empty line as the
+   * judge's private note, which settles onto the attempt when the spotter logs it.
+   */
+  const onCriterion = (riderId: string, line: SheetLine, key: string, value: number) => {
+    if (!heat || !model || !critRows) return;
+    const slot = line.kind === "attempt" ? (line.seq ?? null) : (line.slot ?? slotForLine(attemptsOf(riderId), line.n));
+    if (slot === null) return;
+    const next = mergeCriterion(line.criteria, key, value);
+    const score = criteriaComplete(critKeys, next) ? criteriaScore(model, next) : null;
+    if (score === null) {
+      setDraft(heat.id, riderId, slot, next);
+      return;
+    }
+    setDraft(heat.id, riderId, slot, null);
+    if (line.kind === "attempt" && line.attemptId) {
+      onScore(line.attemptId, score, next);
+      return;
+    }
+    if (line.kind !== "empty") return;
+    q.enqueue("line_criteria", `line:${riderId}:${slot}`, { heatId: heat.id, entryId: riderId, line: line.n, slot, criteria: next, score });
+    setSaved(copy.live.saved.line(formatPadValue(score, scale), labelOf(riderId)?.primary.text ?? "", line.n));
+  };
+  /** A criterion's box was emptied: on a finished line still waiting for its attempt the note is taken back (the other boxes stay as typed); on a line that is not complete the box is just emptied. */
+  const onCriterionEmpty = (riderId: string, line: SheetLine, key: string) => {
+    if (!heat) return;
+    const slot = line.kind === "attempt" ? (line.seq ?? null) : (line.slot ?? slotForLine(attemptsOf(riderId), line.n));
+    if (slot === null) return;
+    if (line.kind === "attempt" && line.mine !== null) return; // a score cannot be taken away: the box shows it again
+    const rest = { ...(line.criteria ?? {}) };
+    delete rest[key];
+    setDraft(heat.id, riderId, slot, rest);
+    if (line.kind === "empty" && typeof line.pending === "number") onLineClear(riderId, line);
   };
   /**
    * A tap on a line's Missed. Missed is a switch: on a line that is not Missed it turns Missed on (the attempt's Missed, or a Missed note on a line the spotter has not
@@ -307,8 +423,9 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
     q.enqueue("line_clear", `line:${riderId}:${slot}`, { heatId: heat.id, entryId: riderId, line: line.n, slot });
   };
   const heldLines = useMemo(() => submitBlockLines(myNotes, (id) => ({ attempts: attemptsOf(id) })), [myNotes, attemptsOf]);
-  const effectiveView: JudgeView = sheetAvailable ? view : "queue";
-  const switcher = sheetAvailable ? <ViewSwitch view={effectiveView} onChange={chooseView} /> : <p className="text-small font-medium text-beach-muted">{copy.riderSheet.criteriaOnly}</p>;
+  // the Rider sheet in every division (one box per criterion where the division scores by criteria); the switch and the Queue are hidden code (lib/live/official-views.ts)
+  const effectiveView: JudgeView = view;
+  const switcher = switchShown ? <ViewSwitch view={effectiveView} onChange={chooseView} /> : null;
   const heldSentence = heldLines.length ? copy.riderSheet.submitHeld(heldLines.map((h) => copy.riderSheet.submitHeldPart(labelOf(h.entryId)?.primary.text ?? "", h.lines)).join("; ")) : null;
 
   // ---- the Impression / Variety step
@@ -403,7 +520,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
         <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
         <ScreenHeader heatName={title} {...common} remainingMs={0} timerState="ended" details={tab === "review"} detailsLabels={{ off: T.reviewTab, on: T.impressionTab }} onToggleDetails={onlyImpression ? undefined : () => setTab((t) => (t === "review" ? "impression" : "review"))} />
         {noticeList}
-        {tab === "review" && !onlyImpression && effectiveView !== "sheet" ? <div className="px-2 pt-1.5">{switcher}</div> : null}
+        {tab === "review" && !onlyImpression && effectiveView !== "sheet" && switcher ? <div className="px-2 pt-1.5">{switcher}</div> : null}
         {tab === "review" && !onlyImpression && effectiveView === "sheet" ? (
           <RiderSheetView
             bare
@@ -415,9 +532,12 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
             riders={liveRiders}
             lines={sheetLines}
             scale={scale}
+            criteria={critRows}
             lockedMessage={lockedMessage}
             notice={heldSentence ? <p role="alert" data-testid="held-notes" className="rounded-card border border-beach-outlier bg-beach-bg px-2 py-1 text-body font-semibold">{heldSentence}</p> : null}
             onScore={onLineScore}
+            onCriterion={onCriterion}
+            onCriterionEmpty={onCriterionEmpty}
             flaggedIds={flaggedIds}
             onFlag={(id, kind) => onFlag(id, kind as FlagKind)}
             onMissed={onLineMissed}
@@ -529,8 +649,18 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
           riders={liveRiders}
           lines={sheetLines}
           scale={scale}
+          criteria={critRows}
           lockedMessage={lockedMessage}
+          extra={(riderId) =>
+            canJudgeLog && live.phase === "running" ? (
+              <Chip data-testid="log-for-rider" onClick={() => setLogFor(riderId)} className="self-start">
+                {T.logAttempt(riding.find((r) => r.entryId === riderId)?.label.primary.text ?? "")}
+              </Chip>
+            ) : null
+          }
           onScore={onLineScore}
+          onCriterion={onCriterion}
+          onCriterionEmpty={onCriterionEmpty}
           flaggedIds={flaggedIds}
           onFlag={(id, kind) => onFlag(id, kind as FlagKind)}
           onMissed={onLineMissed}

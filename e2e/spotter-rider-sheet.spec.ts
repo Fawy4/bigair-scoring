@@ -8,7 +8,7 @@ import type { Browser, BrowserContext, Page } from "@playwright/test";
 //   - the judges' Rider sheet: line by line, Missed opens the next line and leaves no score from that judge on that attempt, a filled line can be changed;
 //   - the Trick list: the text box sits directly above Log and CRASH, Left and Right fill their row, the text box and Log stay visible when the height is cut the way a keyboard
 //     cuts it (a browser cannot open a real phone keyboard: the owner checks that part on his iPhone);
-//   - the defaults: a phone that never chose opens on the Rider sheet (judge and spotter), a chosen view is kept after a reload, a criteria division stays on the Queue.
+//   - the defaults: a phone that never chose opens on the Rider sheet (judge and spotter), a chosen view is kept after a reload, a division scored by criteria has its own boxes on the Rider sheet (officials-rider-sheet-only.spec.ts).
 // In this sandbox the browser cannot open the Realtime socket, so the other phones and the console follow through the 5-second fallback.
 let w: LiveWorld;
 const contexts: BrowserContext[] = [];
@@ -335,7 +335,7 @@ test("the Trick list: the text box sits directly above Log and CRASH, Left and R
   await expect(sline(spotter, 1).getByTestId("suggestion").first()).toBeInViewport({ timeout: 5000 });
 });
 
-test("the defaults: a phone that never chose opens on the Rider sheet; a chosen view is kept after a reload; a criteria division stays on the Queue", async ({ browser }) => {
+test("the defaults on a test server: a phone that never chose opens on the Rider sheet; a view chosen with the hidden switch is kept after a reload (the live-site rule is in officials-rider-sheet-only.spec.ts)", async ({ browser }) => {
   test.setTimeout(600_000);
   await w.startHeat(w.heats[0]);
   // a judge's phone that never chose
@@ -361,21 +361,6 @@ test("the defaults: a phone that never chose opens on the Rider sheet; a chosen 
   await expect(s1.getByTestId("trick-builder")).toBeVisible();
   const s2 = await phone(browser, "spotter2", `/spot/${w.eventId}`, { newViews: true });
   await expect(s2.getByTestId("spotter-sheet")).toBeVisible({ timeout: 30_000 });
-
-  // a division scored by criteria has no Rider sheet: the judge stays on the Queue
-  const cw = await createLiveWorld({ model: "kota-best3-impression" });
-  const old = w;
-  w = cw;
-  try {
-    await cw.startHeat(cw.heats[0]);
-    const jc = await phone(browser, "j1", `/judge/${cw.eventId}`, { newViews: true });
-    await expect(jc.getByTestId("all-scored")).toBeVisible({ timeout: 40_000 });
-    await expect(jc.getByTestId("rider-sheet")).toHaveCount(0);
-    await expect(jc.getByTestId("view-switch")).toHaveCount(0);
-  } finally {
-    w = old;
-    await cw.cleanup();
-  }
 });
 
 test("a Missed note left at the end of the heat blocks Publish and says it is a Missed note (no score is lost by clearing it); the head judge's Clear removes it", async ({ browser }) => {

@@ -26,6 +26,8 @@ export interface SheetNote {
   score: number;
   /** The judge did not see the attempt that will take this line: the note is "Missed" (the score field is then not read). */
   missed?: boolean;
+  /** A division scored by criteria: the value of every criterion; `score` is then the trick score worked out from them. */
+  criteria?: Record<string, number>;
 }
 
 const live = (attempts: SheetAttempt[]) => attempts.filter((a) => !a.deleted).sort((a, b) => a.seq - b.seq);
@@ -79,6 +81,8 @@ export interface SheetLine {
   pending: number | "missed" | null;
   /** Where a note on this empty line is kept (null on a line with an attempt). */
   slot: number | null;
+  /** A division scored by criteria: what is typed in the criterion boxes of this line so far (all of them once the line has its score). Absent in a one-score division. */
+  criteria?: Record<string, number>;
   /**
    * The server can keep a score here. Always true with an attempt limit (every line up to the limit) and on a line that has its attempt; with no limit the server keeps
    * a note up to 10 lines past the attempts logged (`allowedLine`), so a line further down is shown but closed until the spotter has logged more.
@@ -97,6 +101,12 @@ export function buildLines(i: {
    * the note on the server turns into the score a moment later, and until then the line shows what the judge typed and nothing lights up.
    */
   ahead?: Map<number, number | "missed">;
+  /** A division scored by criteria: the criterion keys in the division's order. Without it every line has one score box. */
+  criteriaKeys?: string[];
+  /** The criteria on this judge's scores on the server, by attempt id. */
+  criteriaOf?: Map<string, Record<string, number>>;
+  /** Boxes typed on a line that is not complete yet (kept on the phone), by attempt number. */
+  drafts?: Map<number, Record<string, number>>;
 }): SheetLine[] {
   const logged = live(i.attempts);
   const total = lineCount(i.attempts, i.cap);
@@ -107,11 +117,13 @@ export function buildLines(i: {
       const held = i.notes.find((x) => x.slot === a.seq);
       const typedAhead = held ? (held.missed ? ("missed" as const) : held.score) : (i.ahead?.get(a.seq) ?? null);
       const mine = a.status === "crashed" ? null : (i.mine?.get(a.id) ?? typedAhead);
-      return { n, kind: a.status === "crashed" ? "crash" : "attempt", attemptId: a.id, seq: a.seq, trickName: a.trickName, direction: a.direction, mine, pending: null, slot: null, open: true };
+      const criteria = i.criteriaKeys && a.status !== "crashed" ? (i.criteriaOf?.get(a.id) ?? held?.criteria ?? i.drafts?.get(a.seq)) : undefined;
+      return { n, kind: a.status === "crashed" ? "crash" : "attempt", attemptId: a.id, seq: a.seq, trickName: a.trickName, direction: a.direction, mine, pending: null, slot: null, open: true, ...(criteria ? { criteria } : {}) };
     }
     const slot = slotForLine(i.attempts, n);
     const held = i.notes.find((x) => x.slot === slot);
-    return { n, kind: "empty", trickName: null, direction: null, mine: null, pending: held ? (held.missed ? "missed" : held.score) : null, slot, open: allowedLine(i.attempts, i.cap, n) };
+    const criteria = i.criteriaKeys ? (held?.criteria ?? (slot === null ? undefined : i.drafts?.get(slot))) : undefined;
+    return { n, kind: "empty", trickName: null, direction: null, mine: null, pending: held ? (held.missed ? "missed" : held.score) : null, slot, open: allowedLine(i.attempts, i.cap, n), ...(criteria ? { criteria } : {}) };
   };
   for (let n = 1; n <= total; n++) out.push(make(n));
   if (i.cap === null) while (out.length > 0 && lineDone(out[out.length - 1])) out.push(make(out.length + 1));
@@ -120,7 +132,7 @@ export function buildLines(i: {
 
 export interface Settled {
   /** Notes that became a judge's score on a landed attempt. */
-  scores: Array<{ attemptId: string; seatId: string; score: number | null; missed?: true }>;
+  scores: Array<{ attemptId: string; seatId: string; score: number | null; missed?: true; criteria?: Record<string, number> }>;
   /** Notes discarded because the attempt on their line was a crash (judges never score crashes), or their line is gone. */
   discarded: SheetNote[];
   /** Notes still waiting for their attempt. */
@@ -141,7 +153,7 @@ export function settleNotes(attempts: SheetAttempt[], notes: SheetNote[]): Settl
     if (n.slot > top) out.remaining.push(n);
     else {
       const a = bySeq.get(n.slot);
-      if (a && a.status === "landed") out.scores.push(n.missed ? { attemptId: a.id, seatId: n.seatId, score: null, missed: true } : { attemptId: a.id, seatId: n.seatId, score: n.score });
+      if (a && a.status === "landed") out.scores.push(n.missed ? { attemptId: a.id, seatId: n.seatId, score: null, missed: true } : { attemptId: a.id, seatId: n.seatId, score: n.score, ...(n.criteria ? { criteria: n.criteria } : {}) });
       else out.discarded.push(n); // a crash, or an attempt number that no longer exists
     }
   }
@@ -204,6 +216,22 @@ export function submitBlockLines(notes: Array<SheetNote & { entryId: string }>, 
     out.set(n.entryId, [...(out.get(n.entryId) ?? []), line]);
   }
   return [...out.entries()].map(([entryId, lines]) => ({ entryId, lines: lines.sort((a, b) => a - b) })).sort((a, b) => a.entryId.localeCompare(b.entryId));
+}
+
+// ---- a division scored by criteria: one box per criterion on the same line
+/** Every criterion has a value (a line with no criteria at all is not a criteria line). */
+export function criteriaComplete(keys: string[], values: Record<string, number | undefined> | undefined): boolean {
+  return keys.length > 0 && keys.every((k) => typeof values?.[k] === "number" && Number.isFinite(values[k]));
+}
+
+/** How many of the criteria have a value. */
+export function criteriaFilled(keys: string[], values: Record<string, number | undefined> | undefined): number {
+  return keys.filter((k) => typeof values?.[k] === "number" && Number.isFinite(values[k])).length;
+}
+
+/** The boxes after one of them was typed: the others stay as they were, so they can be filled in any order. */
+export function mergeCriterion(values: Record<string, number> | undefined, key: string, value: number): Record<string, number> {
+  return { ...(values ?? {}), [key]: value };
 }
 
 // ---- line by line: a score can only land on the first line of the rider that has no score yet

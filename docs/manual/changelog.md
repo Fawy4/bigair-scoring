@@ -2,7 +2,18 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 14 Oct 2026 · Product version 0.23.0
+Last checked: 14 Oct 2026 · Product version 0.24.0
+
+## 0.24.0 — 14 Oct 2026 {#cl-0-24-0}
+
+Release entry: [0.24.0](/admin/releases#release-0-24-0) (platform owner only)
+
+**What changed for users**
+- **One screen for every official:** judges, the head judge's Score tab and spotters see the Rider sheet only; the Queue / Rider sheet and Rider sheet / Trick list switches are gone. A phone that had chosen the Queue or the Trick list opens on the Rider sheet too. The observer watching a judge sees the Rider sheet.
+- **A division scored by criteria has the Rider sheet:** one score box per criterion on each line, the name above the box, wrapping on a phone; a line is done when every criterion has a score (or Missed or a crash); each box is checked on its own range and step.
+- **Nothing lost from the hidden views:** the spotter's **Undo** (10 seconds) and the judge's **Log an attempt** (when the Event step allows it) are on the Rider sheet.
+
+**Manual pages updated:** [Judge screen](screens/judge.md) (the Rider sheet only, a new section on criteria divisions), [Spotter screen](screens/spotter.md) (the Rider sheet only, Undo), [Observer view](screens/observer.md), [Head console on a phone](screens/console-phone.md), [Glossary](glossary.md), [Errors and refusals](errors.md) and [Troubleshooting](troubleshooting.md) (one sentence).
 
 ## 0.23.0 — 14 Oct 2026 {#cl-0-23-0}
 

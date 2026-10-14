@@ -534,7 +534,7 @@ test("manual screenshots: observer", async ({ page, browser }) => {
   let simId: string | null = null;
   const watcher = await browser.newContext();
   try {
-    await installSupabaseProxy(watcher);
+    await installSupabaseProxy(watcher, { officialsOnly: true }); // the observer's phone as on the live site: officials' screens are the Rider sheet
     await w.org.signIn(page, `/org/events/${w.eventId}/simulate`);
     await page.getByTestId("run-as-simulation-button").click();
     await expect(page.getByTestId("clone-done")).toBeVisible({ timeout: 60_000 });
@@ -575,7 +575,7 @@ test("manual screenshots: observer", async ({ page, browser }) => {
     await shot(o, "observer-head", LAPTOP, 500);
     await o.setViewportSize(PHONE);
     await o.getByTestId("observer-switcher").selectOption(`judge:${j1}`);
-    await frame.getByTestId("history-row").first().waitFor({ timeout: 90_000 });
+    await frame.getByTestId("sheet-line").first().waitFor({ timeout: 90_000 });
     await o.waitForTimeout(1500);
     await hideBadge();
     await shot(o, "observer-judge", PHONE, 500);

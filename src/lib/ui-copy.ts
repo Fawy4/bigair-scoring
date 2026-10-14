@@ -3625,7 +3625,7 @@ export const copy = {
       NOT_SCORABLE: () => "A crash is not scored.",
       /** Detail: the most lines this rider can have right now. */
       LINE_PAST_CAP: (n?: string) => (n ? `You can score up to attempt ${n} for this rider for now.` : "There is no such attempt to score."),
-      LINE_SCORE_NOT_AVAILABLE: () => "This division is scored by criteria. Use the Queue.",
+      LINE_SCORE_NOT_AVAILABLE: () => "This division is scored differently from this box. Reload the page.",
       /** Detail: "‹rider id›:‹lines›;…" (the phone words it with the rider's name). */
       PENDING_NOTES: () => "You still have scores with no attempt. Clear them first, then submit.",
       NOTE_NOT_FOUND: () => "That pending score is already gone.",
@@ -3689,7 +3689,9 @@ export const copy = {
     clear: "Clear",
     clearAria: (n: number) => `Clear the score on attempt ${n}`,
     noRider: "No rider to score yet.",
-    criteriaOnly: "This division is scored by criteria, so the Rider sheet is not available here. Use the Queue.",
+    /** A division scored by criteria: one box per criterion on each line; the name of the box for a screen reader (the name shown above it may be shortened with “…”). */
+    criterionBox: (n: number, criterion: string) => `${criterion} for attempt ${n}`,
+    criterionWaitsAria: (n: number, criterion: string) => `${criterion} for attempt ${n}: score the lines above first`,
     submitHeld: (what: string) => `You still have scores with no attempt: ${what}. Clear them, then submit.`,
     submitHeldPart: (rider: string, lines: number[]) => `${rider}, attempt ${lines.join(", ")}`,
     lockedNote: "Your sheet is locked: scores cannot be changed.",
@@ -3741,6 +3743,8 @@ export const copy = {
     freeTag: "Free text: the head judge will check it",
     outOfAttempts: (label: string, n: number, max: number) => `${label} is out of attempts · ${n} / ${max}`,
     clearedBox: "The trick was left empty: the attempt keeps its trick. Use Undo or the head judge to remove an attempt.",
+    /** Undo of the attempt just logged, on its own line, for the first 10 seconds. */
+    undoAria: (n: number) => `Undo attempt ${n}: take it back`,
     changeFailed: (why: string) => `The change was not saved: ${why}`,
   },
   /** The spotter's phone (docs/PLAN-phase-5 step 2). */

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Flag, Flame } from "lucide-react";
 import { Chip, PillSwitch } from "./chip";
 import type { ConnectionStatus } from "./connection-badge";
+import type { CriterionRow } from "./criteria-rows";
 import type { FlagStripModel } from "./flag-strip";
 import type { TimerState } from "./heat-timer";
 import { Pill } from "./pill";
@@ -45,6 +46,88 @@ const flagKindsFor = (line: SheetLine): Array<"crash" | "landed" | "wrong_rider"
   line.kind === "crash" ? ["landed", "wrong_rider", "duplicate", "other"] : ["crash", "wrong_rider", "duplicate", "other"];
 
 /**
+ * One criterion's score box on a line of a division scored by criteria: the criterion's name above (shortened with “…” when it is long; the whole name is in the box's
+ * accessible label) and a box of the same size as the single score box. A valid value is sent the moment it is typed, on that criterion's own range and step; a value
+ * between two steps is refused with the pad's own sentence and not kept. Emptying the box of a finished waiting line takes the line back (the other boxes stay).
+ */
+function CriterionBox({
+  criterion,
+  line,
+  value,
+  disabled,
+  waits,
+  tappable,
+  glow,
+  onTap,
+  onValue,
+  onEmpty,
+  onRefusal,
+}: {
+  criterion: CriterionRow;
+  line: SheetLine;
+  value: number | undefined;
+  disabled: boolean;
+  waits: boolean;
+  tappable: boolean;
+  glow: boolean;
+  onTap: () => void;
+  onValue: (key: string, value: number) => void;
+  onEmpty: (key: string) => void;
+  onRefusal: (key: string, refusal: ReturnType<typeof padRefusal>) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const stored = value === undefined ? "" : formatPadValue(value, criterion.scale);
+  const text = draft ?? stored;
+  const refusal = draft !== null ? padRefusal(draft, criterion.scale) : null;
+  const change = (v: string) => {
+    setDraft(v);
+    const parsed = parsePadInput(v, criterion.scale);
+    onRefusal(criterion.key, padRefusal(v, criterion.scale));
+    if (parsed.ok) onValue(criterion.key, parsed.value);
+    else if (parsed.reason === "empty") onEmpty(criterion.key);
+  };
+  return (
+    <label data-testid="criterion" data-criterion={criterion.key} className="flex w-[4.5rem] shrink-0 flex-col gap-0.5">
+      <span data-testid="criterion-name" className="truncate text-center text-small font-semibold leading-tight text-beach-ink">
+        {criterion.label}
+      </span>
+      <input
+        data-testid="line-criterion"
+        data-criterion={criterion.key}
+        name={`criterion-${criterion.key}`}
+        type="text"
+        inputMode="decimal"
+        enterKeyHint="done"
+        autoComplete="off"
+        data-lpignore="true"
+        data-1p-ignore
+        data-form-type="other"
+        aria-label={waits ? T.criterionWaitsAria(line.n, criterion.label) : T.criterionBox(line.n, criterion.label)}
+        placeholder={formatPadValue(0, criterion.scale)}
+        value={text}
+        disabled={disabled}
+        readOnly={waits}
+        onPointerDown={tappable ? (e) => { e.preventDefault(); onTap(); } : undefined}
+        onChange={(e) => change(e.target.value)}
+        onFocus={tappable ? onTap : undefined}
+        onBlur={() => {
+          setDraft(null);
+          onRefusal(criterion.key, null);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+        className={cn(
+          "h-11 w-full rounded-full border bg-beach-fill px-1 py-0 text-center text-digit font-bold leading-none text-beach-ink placeholder:font-medium placeholder:text-beach-hint",
+          refusal ? "border-beach-failed" : "border-beach-line",
+          glow && !refusal && value === undefined && "border-2 border-beach-attention shadow-[0_0_0_3px_color-mix(in_srgb,var(--beach-attention)_35%,transparent)]",
+        )}
+      />
+    </label>
+  );
+}
+
+/**
  * One numbered line of a rider's sheet: the attempt number, the trick (empty until the spotter logs it), a crash word when it was a crash, a Missed switch with a
  * Flag under it, and a typed score box. A valid score is saved the moment it is typed (nothing to press); a score the scale does not allow is refused with the
  * pad's own sentence and is not saved. On an empty line the score is the judge's private note ("pending"); a crash line is greyed and takes none. The box stays
@@ -65,10 +148,13 @@ function LineRow({
   note,
   ask,
   flagSheet,
+  criteria,
   onAsk,
   onClosed,
   onFlagOpen,
   onScore,
+  onCriterion,
+  onCriterionEmpty,
   onMissed,
   onClear,
 }: {
@@ -90,14 +176,19 @@ function LineRow({
   ask: { text: string; onConfirm: () => void; onCancel: () => void } | null;
   /** The Flag choices, when they are open on this line. */
   flagSheet: { onPick: (kind: string) => void; onClose: () => void } | null;
+  /** A division scored by criteria: the criteria in the division's order (one box each, under the trick). Null: one score box. */
+  criteria: CriterionRow[] | null;
   onAsk: (line: SheetLine) => void;
   onClosed: (line: SheetLine) => void;
   onFlagOpen: (line: SheetLine) => void;
   onScore: (line: SheetLine, value: number) => void;
+  onCriterion: (line: SheetLine, key: string, value: number) => void;
+  onCriterionEmpty: (line: SheetLine, key: string) => void;
   onMissed: (line: SheetLine) => void;
   onClear: (line: SheetLine) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
+  const [critRefused, setCritRefused] = useState<Record<string, ReturnType<typeof padRefusal>>>({});
   // the trick name wraps to two lines; one that still does not fit shrinks (down to 12 px) rather than being cut
   const trickBox = useRef<HTMLSpanElement>(null);
   useShrinkToLines(trickBox, `${line.trickName ?? ""}|${line.direction ?? ""}`);
@@ -119,6 +210,8 @@ function LineRow({
     else if (parsed.reason === "empty" && line.kind === "empty" && line.pending !== null && !isMissed) onClear(line);
   };
   const tap = () => (closed ? onClosed(line) : onAsk(line));
+  const shownCriteria = criteria && !crash ? criteria : null;
+  const critRefusal = Object.values(critRefused).find(Boolean) ?? null;
   return (
     <li
       data-testid="sheet-line"
@@ -182,6 +275,7 @@ function LineRow({
                 {T.flag}
               </Chip>
             </span>
+            {shownCriteria ? null : (
             <input
               data-testid="line-score"
               name="score"
@@ -211,9 +305,30 @@ function LineRow({
                 pulse && !refusal && "border-2 border-beach-attention shadow-[0_0_0_3px_color-mix(in_srgb,var(--beach-attention)_35%,transparent)]",
               )}
             />
+            )}
           </span>
         )}
       </div>
+      {shownCriteria ? (
+        <div data-testid="line-criteria" className="flex flex-wrap gap-x-1.5 gap-y-1.5 pl-[26px]">
+          {shownCriteria.map((c) => (
+            <CriterionBox
+              key={c.key}
+              criterion={c}
+              line={line}
+              value={line.criteria?.[c.key]}
+              disabled={locked || (waits && !tappable)}
+              waits={waits}
+              tappable={tappable}
+              glow={pulse}
+              onTap={tap}
+              onValue={(k, v) => onCriterion(line, k, v)}
+              onEmpty={(k) => onCriterionEmpty(line, k)}
+              onRefusal={(k, r) => setCritRefused((m) => ((m[k] ?? null) === r || (!m[k] && !r) ? m : { ...m, [k]: r }))}
+            />
+          ))}
+        </div>
+      ) : null}
       {line.kind === "empty" && line.pending !== null && !isMissed ? (
         <div className="flex justify-end">
           <Chip data-testid="line-clear" aria-label={T.clearAria(line.n)} onClick={() => onClear(line)}>
@@ -257,9 +372,9 @@ function LineRow({
           {T.crashNote}
         </p>
       ) : null}
-      {refusal ? (
+      {refusal || critRefusal ? (
         <p role="alert" data-testid="line-refusal" data-no-learn-more className="text-small font-semibold text-beach-ink">
-          {errorSentence(refusal.detail ? `${refusal.code}: ${refusal.detail}` : refusal.code)}
+          {errorSentence(((r) => (r.detail ? `${r.code}: ${r.detail}` : r.code))((refusal ?? critRefusal)!))}
           <LearnMore href={copy.manual.href("ju-pad-step")} />
         </p>
       ) : null}
@@ -277,8 +392,12 @@ export interface RiderSheetViewProps {
   onRetry?: () => void;
   clock?: { timezone: string; nowMs: number };
   flag?: FlagStripModel | null;
-  /** The switch, drawn at the top of the body. */
-  switcher: React.ReactNode;
+  /** The switch, drawn at the top of the body (hidden code: officials see the Rider sheet only). */
+  switcher?: React.ReactNode;
+  /** A division scored by criteria: the criteria in order (one box each on every line). Absent: one score box per line. */
+  criteria?: CriterionRow[] | null;
+  /** Something drawn under the heading of the rider's sheet (the judge's "Log an attempt" when the event allows it). */
+  extra?: (riderId: string) => React.ReactNode;
   riders: LiveRider[];
   /** Each rider's lines for this judge (by rider id). */
   lines: Record<string, SheetLine[]>;
@@ -296,6 +415,10 @@ export interface RiderSheetViewProps {
   /** Attempts this judge has flagged (the Flag button on their lines reads as pressed). */
   flaggedIds?: ReadonlySet<string | number>;
   onScore: (riderId: string, line: SheetLine, value: number) => void;
+  /** A value typed in one criterion's box of a line (a division scored by criteria). */
+  onCriterion?: (riderId: string, line: SheetLine, key: string, value: number) => void;
+  /** A criterion's box was emptied on a finished line that is still waiting for its attempt: the parent takes the note back and keeps the other boxes. */
+  onCriterionEmpty?: (riderId: string, line: SheetLine, key: string) => void;
   /** A tap on a line's Missed: the parent turns it on, or off when the line is already Missed (`missedSwitch`). */
   onMissed: (riderId: string, line: SheetLine) => void;
   onClear: (riderId: string, line: SheetLine) => void;
@@ -359,7 +482,7 @@ export function RiderSheetView(p: RiderSheetViewProps) {
       {p.bare ? null : <ScreenHeader heatName={p.heatName} seat={p.seat} remainingMs={p.remainingMs} timerState={p.timerState} connection={p.connection} pending={p.pendingCount} onRetry={p.onRetry} clock={p.clock} flag={p.flag} />}
       <div data-testid="screen-body" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-1.5">
         <div className="flex flex-col gap-1.5 pt-1.5">
-          {p.switcher}
+          {p.switcher ?? null}
           {p.notice}
           {p.lockedMessage ? (
             <p role="status" data-testid="sheet-locked" className="rounded-card border border-beach-border bg-beach-surface px-2 py-1 text-body font-semibold">
@@ -378,6 +501,7 @@ export function RiderSheetView(p: RiderSheetViewProps) {
               <h2 data-testid="sheet-heading" className="text-heading font-bold uppercase tracking-wide text-beach-muted">
                 {T.sheetFor(rider.label.primary.text)}
               </h2>
+              {p.extra?.(rider.id)}
               <ol data-testid="sheet-lines" data-active-line={active ?? undefined} aria-label={T.sheetFor(rider.label.primary.text)} className="flex flex-col divide-y divide-beach-line border-y border-beach-line">
                 {shown.map((line) => {
                   const asked = here(asking);
@@ -395,6 +519,9 @@ export function RiderSheetView(p: RiderSheetViewProps) {
                       flagged={Boolean(line.attemptId && p.flaggedIds?.has(line.attemptId))}
                       note={mine(here(closedAt)) ? T.closedLine(line.n) : null}
                       ask={mine(asked) && skip.length > 0 ? { text: T.skipAsk(rangesOf(skip), skip.length, line.n), onConfirm: () => { for (const n of skip) { const l = all.find((x) => x.n === n); if (l) p.onMissed(rider.id, l); } closeAll(); setFocusN(line.n); }, onCancel: closeAll } : null}
+                      criteria={p.criteria && p.criteria.length ? p.criteria : null}
+                      onCriterion={(l, k, v) => p.onCriterion?.(rider.id, l, k, v)}
+                      onCriterionEmpty={(l, k) => p.onCriterionEmpty?.(rider.id, l, k)}
                       flagSheet={mine(here(flagAt)) && line.attemptId ? { onPick: (kind) => { p.onFlag(line.attemptId as string, kind); closeAll(); }, onClose: closeAll } : null}
                       onAsk={(l) => { closeAll(); setAsking({ riderId: rider.id, n: l.n }); }}
                       onClosed={(l) => { closeAll(); setClosedAt({ riderId: rider.id, n: l.n }); }}
