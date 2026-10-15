@@ -68,7 +68,6 @@ async function main() {
 
   try {
     const orgs = (await service.from("organisations").select("id, name, slug").is("archived_at", null)).data ?? [];
-    const before = await fingerprint(service, orgId ? [orgId] : []);
     if (!throwaway) {
       const { pickOrganisation } = await import("../src/lib/event-setup/settings");
       const org = pickOrganisation(orgs, desc.organisation.nameContains);
@@ -80,6 +79,8 @@ async function main() {
       session = await signInAs(org.id, owner.user_id, user.data.user.email);
       console.log(`Building in the existing organisation “${org.name}” (nothing about the organisation itself is changed).`);
     }
+    // the other organisations are fingerprinted only now that we know which one is being built in (it is left out of the comparison)
+    const before = await fingerprint(service, orgId ? [orgId] : []);
     const gateway = await makeGateway(session!, service);
 
     const run = async (label: string, who: People) => {
