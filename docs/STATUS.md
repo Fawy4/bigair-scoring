@@ -1457,3 +1457,18 @@ Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 
 ### How to test on a phone
 - Release entry 0.24.0 in `docs/RELEASES.md`.
+
+## RB1 – Red Bull Winds of Sinai 2026 set up from its rulebook (0.24.1)
+
+### Done
+- A setup script, `npm run setup:event`, builds an event from one description file (`presets/events/red-bull-winds-of-sinai-2026.json`, no personal details) through the app's own save functions, signed in as a member of the organisation. Names (riders, officials) come from a file given at run time, never from the repository. It looks before it creates, so a second run builds nothing, and a later run with the other names renames the same riders in place.
+- The event description, the ladder (22 heats seat for seat, placings 1–3 / 4= / 7= / 13=), the flags, the Lycra list, the scoring and the run order are covered by unit tests (`src/lib/event-setup/*.test.ts`).
+- Rehearsal in a throwaway "e2e-" organisation: built, read back, built again (nothing changed), renamed, and all 22 heats simulated with the app's simulator (three judges scoring, the head judge not scoring; reserve on before Heat 7, off before Heat 13). The throwaway was deleted.
+
+### Not done
+- Seat colours per round, a Before-start label of 28 characters and a flag that turns yellow at 1:00 cannot be set with what the app has; nothing was built for them (see the release entry).
+- The reserve judge's switch also changes a heat that is already on the water; no guard was built (event week).
+
+### How to test on a phone
+- Release entry 0.24.1 in `docs/RELEASES.md`.
+

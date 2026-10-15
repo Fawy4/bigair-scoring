@@ -12,6 +12,31 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.24.1 — 15 Oct 2026 {#release-0-24-1}
+
+PR: #0
+
+### What changed
+- **The Red Bull Winds of Sinai 2026 event is built, from its rulebook, in the existing Red Bull organisation.** Nothing in how the app works changed. A small setup script (`npm run setup:event`) read one event description file and created the event through the same save functions the organiser's setup steps use: the event as a draft (not public) on Sunday 18 – Monday 19 October 2026 at Blue Lagoon, Dahab; one division of 18 riders on the KOTA scoring (best 3 tricks + Impression, no attempt limit, ties to the head judge); the ladder of the printed sheet, heats H1–H22 seat for seat; Lycra colours Blue, Yellow, White; the flags; the officials; and the run order H1 → H22 with a 3-minute start sequence before every heat and no other breaks (4 h 18 min in all).
+- **Names stay out of the repository.** Six riders are named; seeds 7–18 are “Rider 7” … “Rider 18” until tonight's draw. The script can be run again with the names: the same riders are renamed in place, so seats, seeds and the locked draw do not move.
+- **Three things the app cannot do the way the rulebook words them** (see the pull request): seat colours cannot differ from round to round (one list Blue, Yellow, White for every heat), the Before-start flag label is limited to 24 characters, and the flag has one colour for the whole 3-minute start (no yellow at 1:00).
+- **Switching the reserve judge on takes effect at once, also for a heat already on the water.** Press the switch between heats (after Publish, before the next start sequence). Published heats never change.
+- No screen, setting, sentence or database structure changed.
+
+### What to test
+- [ ] Sign in at the live address, open the **Red Bull** organisation: **Red Bull Winds of Sinai 2026** is in the list as a draft, Sunday 18 – Monday 19 October 2026, Blue Lagoon, Dahab. Open the public home page signed out: the event is not listed.
+- [ ] **Event** step: the Flags card shows a 3:00 start sequence with red before the start, blue while running, a light colour for the last minute and red when stopped; the Lycra colours are Blue, Yellow, White.
+- [ ] **Divisions** step: one division, KOTA scoring (best 3 + Impression, “No limit on attempts per rider”); open the ladder: five rounds, 22 heats, the same pairings as the printed Red Bull sheet.
+- [ ] **Riders** step: 18 riders, seeds 1–18 (six names, then Rider 7 … Rider 18). **Draw** step: locked, and each Round 1 heat has the seeds of the printed sheet.
+- [ ] **Officials** step: the head judge (does not score), three judges, the reserve judge, a spotter and the “Event manager” observer, each with a PIN under **Show PIN**; in “Panels: who scores which division” the three judges are ticked and the reserve judge is not.
+- [ ] **Run order** step: Sunday has H1 → H22 in order and no start time. Type a start time into the first row without saving: the day ends 4 h 15 min later (4 h 18 min counted from the first start sequence).
+- [ ] Arrow, EKL and the Demo organisation look exactly as before.
+
+### Known issues
+- Seat colours are one list for every heat: Round 1 matches the sheet; in Rounds 2, 3, the Semi-finals and the Final the colours follow the seat (Blue, Yellow, White) and not the sheet.
+- The Before-start label is “Red — 3 min, yellow 1:00” (24 characters) instead of “Red — 3 min (yellow at 1:00)”.
+- The first simulation attempt of the day stopped at Heat 18 without saying why and did not happen again on the next two runs; the script now reports what the simulator said if it happens again.
+
 ## 0.24.0 — 14 Oct 2026 {#release-0-24-0}
 
 PR: #55
