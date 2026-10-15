@@ -14,7 +14,7 @@ How to write an entry (copy the newest one):
 
 ## 0.24.1 — 15 Oct 2026 {#release-0-24-1}
 
-PR: #0
+PR: #56
 
 ### What changed
 - **The Red Bull Winds of Sinai 2026 event is built, from its rulebook, in the existing Red Bull organisation.** Nothing in how the app works changed. A small setup script (`npm run setup:event`) read one event description file and created the event through the same save functions the organiser's setup steps use: the event as a draft (not public) on Sunday 18 – Monday 19 October 2026 at Blue Lagoon, Dahab; one division of 18 riders on the KOTA scoring (best 3 tricks + Impression, no attempt limit, ties to the head judge); the ladder of the printed sheet, heats H1–H22 seat for seat; Lycra colours Blue, Yellow, White; the flags; the officials; and the run order H1 → H22 with a 3-minute start sequence before every heat and no other breaks (4 h 18 min in all).
