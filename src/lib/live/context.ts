@@ -1,3 +1,4 @@
+import { readPlatformSession, impersonatesOrg } from "@/lib/platform/session";
 import { parseScoringModel, type ScoringModel } from "@/lib/schemas/scoring-model";
 import { withImpressionName } from "@/lib/schemas/impression-name";
 import { divisionScheme } from "@/lib/identification/division-scheme";
@@ -58,7 +59,8 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
   } else {
     // an organiser of the event's organisation (row security: a person reads only their own membership)
     const { data: member } = await db.from("memberships").select("id").eq("organisation_id", event.organisation_id).eq("user_id", user.id).limit(1);
-    if (!member?.length) return null;
+    // a platform admin inside "Open as this organiser" for exactly this organisation has the organiser's rights (the database already says so); nothing wider than that session
+    if (!member?.length && !impersonatesOrg((await readPlatformSession(db)).impersonating, event.organisation_id)) return null;
     viewer = { kind: "organiser", name: user.email ?? "Organiser" };
   }
 

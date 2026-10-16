@@ -2,7 +2,16 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 15 Oct 2026 · Product version 0.24.1
+Last checked: 15 Oct 2026 · Product version 0.24.2
+
+## 0.24.2 — 16 Oct 2026 {#cl-0-24-2}
+
+Release entry: [0.24.2](/admin/releases#release-0-24-2) (platform owner only)
+
+**What changed for users**
+- **A platform admin inside "Open as this organiser" can open the head judge console** (and the other live screens) of that organisation; before, they were sent to the join page.
+
+**Manual pages updated:** [Head console on a phone](screens/console-phone.md).
 
 ## 0.24.1 — 15 Oct 2026 {#cl-0-24-1}
 
