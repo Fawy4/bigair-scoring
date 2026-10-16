@@ -14,7 +14,7 @@ How to write an entry (copy the newest one):
 
 ## 0.24.2 — 16 Oct 2026 {#release-0-24-2}
 
-PR: #0
+PR: #57
 
 ### What changed
 - **A platform admin can open the head judge console (and every live screen) of an organisation after pressing "Open as this organiser" for it.** Before, the console sent the admin to the join page because it only looked for an organisation membership. Nothing wider: without an open session for that very organisation, or after it runs out, the admin is still sent to the join page.
