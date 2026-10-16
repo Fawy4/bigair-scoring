@@ -2,7 +2,7 @@
 
 The seven setup steps in the order the Go live checklist asks for them — Event, Divisions, Riders, Officials, Draw, Run order, Go live — with one screenshot per step.
 
-Last checked: 3 Oct 2026 · Product version 0.9.2
+Last checked: 15 Oct 2026 · Product version 0.24.1
 
 **Before you start.** You need an organiser login: the platform owner invites you, you click the e-mailed link (it works once, for 24 hours) and land in your organisation, then choose a password with **Set a password**. From then on sign in at **/org/login** with your e-mail and password ([Organiser access](screens/organiser-access.md)). A laptop is easiest for setup; every step also works on a phone (the step list becomes a drop-down).
 
@@ -97,3 +97,7 @@ Then: share the **Officials' join page** and the **Public event page** (copy or 
 | “‹n› seats have no PIN” | Officials → that seat → Regenerate PIN. |
 
 The [dependency map](dependencies.md) lists everything else that must be true before a button works.
+
+## Setting up an event from a rulebook {#qs-rulebook}
+
+When the organisers' rulebook already says everything (the ladder heat for heat, the timing, the flags, the officials), the whole event can be built for you instead of by hand: ask your developer to run the setup script (`npm run setup:event`) with the rulebook's event description and a short file of names that is kept off the repository. It does what the seven steps above do, through the same save functions: the event as a **draft** (not public), the division with its scoring and ladder, the riders (a seed with no name yet is called “Rider 7” and is renamed later, in place, on the **Riders** step or by running the script again with the names), the locked draw, the officials with their PINs, and the run order without a start time. Run twice, it builds nothing twice. Then open each step and check it against the rulebook; **Go live** will still say what is missing.

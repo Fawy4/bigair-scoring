@@ -1,0 +1,325 @@
+{
+  "id": "red-bull-winds-of-sinai-2026",
+  "notes": [
+    "Built from the organisers' printed sheet (heats H1-H22). Contains no personal details: rider and official names are given to the setup script when it runs.",
+    "The Before-start label the rulebook wants is 28 characters long; the flag label box holds 24, so the shortest faithful wording is used."
+  ],
+  "organisation": {
+    "nameContains": "red bull"
+  },
+  "event": {
+    "name": "Red Bull Winds of Sinai 2026",
+    "slug": "red-bull-winds-of-sinai-2026",
+    "location": "Blue Lagoon, Dahab",
+    "timezone": "Africa/Cairo",
+    "startDate": "2026-10-18",
+    "endDate": "2026-10-19",
+    "status": "draft",
+    "impressionName": "Impression"
+  },
+  "division": {
+    "name": "Open",
+    "riders": 18,
+    "riderPlaceholder": "Rider {n}",
+    "scoring": {
+      "preset": "kota-best3-impression",
+      "overrides": {
+        "tieBreakers": [
+          "head_judge"
+        ]
+      }
+    }
+  },
+  "lycra": [
+    "blue",
+    "yellow",
+    "white"
+  ],
+  "flags": {
+    "prestartSec": 180,
+    "lastMinuteSec": 60,
+    "states": {
+      "before_start": {
+        "label": "Red — 3 min, yellow 1:00",
+        "colour": "#DC2626"
+      },
+      "running": {
+        "label": "Blue — heat on",
+        "colour": "#1D4ED8"
+      },
+      "last_minute": {
+        "label": "No flag — last minute",
+        "colour": "#E5E7EB"
+      },
+      "stopped": {
+        "label": "Red — heat over",
+        "colour": "#DC2626"
+      }
+    }
+  },
+  "ladder": {
+    "heatSize": {
+      "target": 3,
+      "min": 2,
+      "max": 3
+    },
+    "breakAfterHeatMin": 0,
+    "breakAfterRoundMin": 0,
+    "rounds": [
+      {
+        "id": "R1",
+        "name": "Round 1",
+        "shortName": "R1",
+        "heatLengthMin": 10,
+        "startSequenceMin": 3,
+        "advance": 3,
+        "heats": [
+          {
+            "number": 1,
+            "seats": [
+              "seed 5",
+              "seed 12",
+              "seed 16"
+            ]
+          },
+          {
+            "number": 2,
+            "seats": [
+              "seed 3",
+              "seed 9",
+              "seed 15"
+            ]
+          },
+          {
+            "number": 3,
+            "seats": [
+              "seed 2",
+              "seed 7",
+              "seed 13"
+            ]
+          },
+          {
+            "number": 4,
+            "seats": [
+              "seed 6",
+              "seed 11",
+              "seed 18"
+            ]
+          },
+          {
+            "number": 5,
+            "seats": [
+              "seed 4",
+              "seed 8",
+              "seed 14"
+            ]
+          },
+          {
+            "number": 6,
+            "seats": [
+              "seed 1",
+              "seed 10",
+              "seed 17"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "R2",
+        "name": "Second chance",
+        "shortName": "R2",
+        "heatLengthMin": 8,
+        "startSequenceMin": 3,
+        "advance": 1,
+        "heats": [
+          {
+            "number": 7,
+            "seats": [
+              "3rd H5",
+              "2nd H4"
+            ]
+          },
+          {
+            "number": 8,
+            "seats": [
+              "3rd H1",
+              "2nd H2"
+            ]
+          },
+          {
+            "number": 9,
+            "seats": [
+              "3rd H6",
+              "2nd H5"
+            ]
+          },
+          {
+            "number": 10,
+            "seats": [
+              "3rd H2",
+              "2nd H6"
+            ]
+          },
+          {
+            "number": 11,
+            "seats": [
+              "3rd H3",
+              "2nd H1"
+            ]
+          },
+          {
+            "number": 12,
+            "seats": [
+              "3rd H4",
+              "2nd H3"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "R3",
+        "name": "Round 3",
+        "shortName": "R3",
+        "heatLengthMin": 8,
+        "startSequenceMin": 3,
+        "advance": 1,
+        "heats": [
+          {
+            "number": 13,
+            "seats": [
+              "1st H1",
+              "1st H10"
+            ]
+          },
+          {
+            "number": 14,
+            "seats": [
+              "1st H6",
+              "1st H12"
+            ]
+          },
+          {
+            "number": 15,
+            "seats": [
+              "1st H3",
+              "1st H7"
+            ]
+          },
+          {
+            "number": 16,
+            "seats": [
+              "1st H4",
+              "1st H9"
+            ]
+          },
+          {
+            "number": 17,
+            "seats": [
+              "1st H5",
+              "1st H8"
+            ]
+          },
+          {
+            "number": 18,
+            "seats": [
+              "1st H2",
+              "1st H11"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "R4",
+        "name": "Semi-final",
+        "shortName": "SF",
+        "heatLengthMin": 8,
+        "startSequenceMin": 3,
+        "advance": 1,
+        "heats": [
+          {
+            "number": 19,
+            "seats": [
+              "1st H14",
+              "1st H17"
+            ]
+          },
+          {
+            "number": 20,
+            "seats": [
+              "1st H15",
+              "1st H13"
+            ]
+          },
+          {
+            "number": 21,
+            "seats": [
+              "1st H18",
+              "1st H16"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "R5",
+        "name": "Final",
+        "shortName": "F",
+        "heatLengthMin": 12,
+        "startSequenceMin": 3,
+        "advance": 0,
+        "heats": [
+          {
+            "number": 22,
+            "seats": [
+              "1st H19",
+              "1st H20",
+              "1st H21"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "officials": [
+    {
+      "role": "head",
+      "key": "head",
+      "scores": false
+    },
+    {
+      "role": "judge",
+      "key": "judge1",
+      "panel": true
+    },
+    {
+      "role": "judge",
+      "key": "judge2",
+      "panel": true
+    },
+    {
+      "role": "judge",
+      "key": "judge3",
+      "panel": true
+    },
+    {
+      "role": "judge",
+      "key": "judge4",
+      "panel": false,
+      "nameSuffix": " (reserve)"
+    },
+    {
+      "role": "spotter",
+      "name": "Spotter"
+    },
+    {
+      "role": "observer",
+      "name": "Event manager"
+    }
+  ],
+  "runOrder": {
+    "day": "2026-10-18",
+    "name": "Sunday",
+    "breakAfterHeatMin": 0,
+    "breakAfterRoundMin": 0,
+    "expectedMinutes": 258
+  }
+}

@@ -2,7 +2,16 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 14 Oct 2026 · Product version 0.24.0
+Last checked: 15 Oct 2026 · Product version 0.24.1
+
+## 0.24.1 — 15 Oct 2026 {#cl-0-24-1}
+
+Release entry: [0.24.1](/admin/releases#release-0-24-1) (platform owner only)
+
+**What changed for users**
+- **An event can be built from its rulebook.** A setup script builds the whole event (draft, division, scoring, ladder heat for heat, riders, locked draw, officials, run order) through the same save functions as the setup steps; run twice it builds nothing twice. First use: Red Bull Winds of Sinai 2026. No screen, setting or sentence changed.
+
+**Manual pages updated:** [Quick start](quick-start.md) (new section *Setting up an event from a rulebook*).
 
 ## 0.24.0 — 14 Oct 2026 {#cl-0-24-0}
 
