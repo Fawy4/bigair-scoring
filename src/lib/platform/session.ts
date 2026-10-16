@@ -42,3 +42,8 @@ export const requireAdmin = cache(async () => {
   if (!session.role) notFound();
   return { supabase, user, role: session.role, impersonating: session.impersonating };
 });
+
+/** True while the open "Open as this organiser" session is for exactly this organisation and has not run out. */
+export function impersonatesOrg(i: Impersonation | null, organisationId: string, nowMs = Date.now()): boolean {
+  return i !== null && i.organisationId === organisationId && Date.parse(i.expiresAt) > nowMs;
+}

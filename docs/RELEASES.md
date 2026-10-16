@@ -12,6 +12,22 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.24.2 — 16 Oct 2026 {#release-0-24-2}
+
+PR: #0
+
+### What changed
+- **A platform admin can open the head judge console (and every live screen) of an organisation after pressing "Open as this organiser" for it.** Before, the console sent the admin to the join page because it only looked for an organisation membership. Nothing wider: without an open session for that very organisation, or after it runs out, the admin is still sent to the join page.
+- No screen, setting, sentence or database structure changed.
+
+### What to test
+- [ ] As the platform owner, open Admin → the Redbull organisation → **Open as this organiser**, then the event's Go live → **Open head judge console**: the console opens, not the join page.
+- [ ] Stop the impersonation and open the same console address: you are sent to the join page again.
+- [ ] As the Arrow organiser, open an Arrow event's head judge console: it opens as before.
+
+### Known issues
+- None known.
+
 ## 0.24.1 — 15 Oct 2026 {#release-0-24-1}
 
 PR: #56

@@ -2,7 +2,7 @@
 
 The head judge's /head/‹event› page on a phone: the same controls as the laptop console in one column, and a Score tab when the head judge also scores.
 
-Last checked: 14 Oct 2026 · Product version 0.24.0
+Last checked: 16 Oct 2026 · Product version 0.24.2
 
 ## What it is for {#cp-purpose}
 
@@ -30,4 +30,4 @@ Running heats from the beach without a laptop. The score table needs a wider scr
 
 ## What it depends on {#cp-depends}
 
-As the [laptop console](console-laptop.md#cl-depends). The head judge joins with their PIN on the join page; an organiser opens it from Go live → **Open head judge console**.
+As the [laptop console](console-laptop.md#cl-depends). The head judge joins with their PIN on the join page; an organiser opens it from Go live → **Open head judge console**; a platform admin first presses **Open as this organiser** for that organisation.
