@@ -12,6 +12,31 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.25.0 — 17 Oct 2026 {#release-0-25-0}
+
+PR: #58
+
+### What changed
+- **The judge's Rider sheet shows a reference score beside a logged trick**, a small teal tag such as **Ref 7.0**. It is the value of an average version of that trick on the judges' list (the sheet WoS_tricks_judges2026), plus what each variation adds. It is a hint only: it is never counted, never saved and never shown to the public, and the judge still types their own score. Tap the tag to see how it is made (“Reference 7.0 = Boogie loop 4.0 + Board spin 2.5 + Blind landing 0.5”); tap **Hide** to close it.
+- **The rules of the list.** Board-off +2, Board flip (called Board spin in the app) +2.5 and Osmosis +2.7 do not stack: only the highest of them counts. Unhook +1.5, a blind landing +0.5 (any trick) and a grab +0.5 stack with it. A multiplier (×2, ×3) is left to the judge: the hint is the same as for ×1, and the breakdown says so. A crash gets no hint. A trick that is not on the list (Innovation, Frontroll alone…) or that has a block the list has no value for (a Tic-tac) gets no hint rather than a wrong one.
+- **New tricks in the trick base:** Snakeloop, KGB, Loop back rotation invert, Straight dangle pass, Double dangle pass, 36 Kung-Fu HP, 36 Kung-Fu 2 HP and KL3 (base tricks), Osmosis and Unhook (add-ons). Their short forms in the attempt boxes are the judges' codes (SnL, KGB, DP, DDP, 36HP, 362HP, KL3; Loop back rotation invert is BRI; Osmosis O; Unhook U), so Snakeloop does not clash with S-loop (SL).
+- **Admin → Trick base has a new card, Reference scores**, with every value editable and a button **Add the judges' list** that adds the missing tricks and all the values to your draft without changing anything you already have. Nothing reaches the judges until you save the draft and publish it, and an event takes it when its organiser presses **Update to latest** (not while a heat is running).
+
+### What to test
+- [ ] As the platform owner, open Admin → Master presets → Trick base → **Reference scores**, press **Add the judges' list**, then **Save as a new draft**, then **Publish to all customers**: you see “Added 10 tricks and variations, and 22 values” after the first press and the version number rises after publishing.
+- [ ] On the organiser's Divisions → Trick base, press **Update to latest** (no heat running) for a test event.
+- [ ] As a spotter, log “Boogie loop”, “Board spin”, “Blind landing” for a rider; on that rider's judge sheet the line shows **Ref 7.0**.
+- [ ] Tap **Ref 7.0**: the sentence reads “Reference 7.0 = Boogie loop 4.0 + Board spin 2.5 + Blind landing 0.5.” and **Hide** closes it.
+- [ ] Log Boogie loop with both **Board-off** and **Board spin**: the hint is 6.5 (the highest board variation), and the sentence says Board-off was not added.
+- [ ] Log a trick that is not on the list (a Frontroll): no tag. Log a crash: no tag.
+- [ ] Type a score on a line with a hint: it is saved as you typed it, whatever the hint says.
+- [ ] Change a value in Reference scores (Boogie loop 4.0 → 4.5), save and publish, update the event: the hint on a new Boogie loop is 0.5 higher.
+
+### Known issues
+- A multiplied trick (×2, ×3) shows the hint for one; the judge accounts for the rest (the owner confirms whether that is the final rule).
+- Which scoring category the five unhook tricks and Osmosis belong to is a first guess (“Other” for the unhook tricks, “Board-off” for Osmosis): it only matters for scoring models that count the best trick per category. Check it with the head judge before the event.
+- The manual screenshots of the judge sheet and the trick base editor were not retaken in this change (they need the hosted project); the pictures show the sheet without the tag.
+
 ## 0.24.2 — 16 Oct 2026 {#release-0-24-2}
 
 PR: #57

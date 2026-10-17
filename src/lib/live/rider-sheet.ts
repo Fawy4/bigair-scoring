@@ -10,6 +10,9 @@
  * ever logged + 1), so when an attempt is deleted the line of every note behind it falls by one by itself: "the lines renumber and the pending notes behind it shift
  * up to the next real attempt" needs no moving of rows.
  */
+import { referenceScore, type ReferenceScore, type TrickParts, type TrickVocab } from "@/lib/engine/tricks";
+import type { ReferenceTable } from "@/lib/schemas/reference-scores";
+
 export interface SheetAttempt {
   id: string;
   seq: number;
@@ -88,6 +91,22 @@ export interface SheetLine {
    * a note up to 10 lines past the attempts logged (`allowedLine`), so a line further down is shown but closed until the spotter has logged more.
    */
   open: boolean;
+  /** The reference score of the logged trick, shown to the judge as a hint (never a score); absent when the trick has none. Added by the screen, not by `buildLines`. */
+  reference?: ReferenceScore | null;
+}
+
+/**
+ * Puts the reference score (the hint) on the lines that have a landed trick: worked out from the trick as the spotter logged it. A crash, an empty line and a trick
+ * that is not on the judges' list get none, and with no list at all every line is returned as it was.
+ */
+export function withReferences(lines: SheetLine[], partsOf: (attemptId: string) => unknown, vocab: TrickVocab, table: ReferenceTable | null): SheetLine[] {
+  if (!table) return lines;
+  return lines.map((line) => {
+    if (line.kind !== "attempt" || !line.attemptId) return line;
+    const parts = partsOf(line.attemptId) as TrickParts | null | undefined;
+    const reference = parts && Array.isArray(parts.items) ? referenceScore(vocab, table, parts) : null;
+    return reference ? { ...line, reference } : line;
+  });
 }
 
 /** The lines of one rider's sheet for one judge. With no cap, a new empty line follows as soon as the last line is done, so the judge never runs out of lines. */

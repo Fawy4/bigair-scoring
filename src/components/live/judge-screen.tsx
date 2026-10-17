@@ -25,7 +25,7 @@ import { formatCell } from "@/lib/live/matrix-model";
 import { myCountedSeqs, type MyScoreEntry } from "@/lib/live/my-sheet";
 import { nextHeat } from "@/lib/live/next-heat";
 import { pendingFlags, pendingImpressions, pendingScores } from "@/lib/live/pending";
-import { buildLines, criteriaComplete, mergeCriterion, missedSwitch, slotForLine, submitBlockLines, viewPreference, type JudgeView, type SheetAttempt, type SheetLine, type SheetNote } from "@/lib/live/rider-sheet";
+import { buildLines, criteriaComplete, mergeCriterion, missedSwitch, slotForLine, submitBlockLines, viewPreference, withReferences, type JudgeView, type SheetAttempt, type SheetLine, type SheetNote } from "@/lib/live/rider-sheet";
 import { activePlanFor, heatTitle, livesFor, timetableOptions } from "@/lib/live/run-order";
 import { attemptCounts, ridersForHeat, trickKit } from "@/lib/live/screen-model";
 import { formatPadValue } from "@/lib/live/score-pad";
@@ -325,7 +325,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
           if (entryId === r.entryId) boxes.set(Number(slot), v);
         }
       }
-      out[r.entryId] = buildLines({
+      const built = buildLines({
         attempts: attemptsOf(r.entryId),
         notes: myNotes.filter((n) => n.entryId === r.entryId),
         cap: max,
@@ -333,9 +333,11 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
         ahead,
         ...(critKeys.length ? { criteriaKeys: critKeys, criteriaOf: sheetCriteriaOf, drafts: boxes } : {}),
       });
+      // the reference score of a landed trick: a hint on its line (never a score, and a crash shows none)
+      out[r.entryId] = kit ? withReferences(built, (id) => live.attempts.find((a) => a.id === id)?.trick_parts, kit.vocab, kit.reference) : built;
     }
     return out;
-  }, [riding, attemptsOf, myNotes, max, mineRows, critKeys, sheetCriteriaOf, drafts, heat]);
+  }, [riding, attemptsOf, myNotes, max, mineRows, critKeys, sheetCriteriaOf, drafts, heat, kit, live.attempts]);
   const onLineScore = (riderId: string, line: SheetLine, value: number) => {
     if (!heat) return;
     if (line.kind === "attempt" && line.attemptId) {

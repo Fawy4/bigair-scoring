@@ -185,6 +185,12 @@ Two spotters who tap the same blocks in a different order log two different tric
 
 **1I-5 Visibility and retiring** (`trick-base/index.ts`). A block with `defaultOn: false` is unticked in a division that never touched it; ticking it stores it in the division's `enabled` list. A retired block is never on the spotter and is read as an unticked word in typed text, while an attempt already stored with it still composes its name.
 
+### 1J — Reference scores, the judge's hint (authoritative before the code: `src/lib/engine/tricks/reference.test.ts`, `src/lib/live/rider-sheet-reference.test.ts`, the last describe of `src/lib/trick-base/master.test.ts`)
+
+**1J-1 What the hint is.** The judges' list (WoS_tricks_judges2026) gives an average trick a value and each variation an addition; the judge sees the sum as a hint beside the trick. Never a score, never counted, never stored. Boogie loop 4 + Board flip 2.5 + Blind landing 0.5 = **7.0**; Late backroll 4.2 + Osmosis 2.7 = **6.9**; Kiteloop 2 + grab 0.5 = **2.5**.
+**1J-2 Board variations do not stack:** Board-off 2, Board flip 2.5, Osmosis 2.7: only the highest counts (Kiteloop + Board-off + Board flip = 4.5; with Osmosis 4.7), in any tap order. **Unhook +1.5 stacks** with them (Kiteloop + Unhook + Board flip = 6.0). A board-off on an unhook trick adds the board value (Straight dangle pass 5 + Board-off = 7). **To Blind +0.5 on any trick.**
+**1J-3 No hint when it would be a guess:** a trick not on the list, a block with no value (Tic-tac), a repeated block, words nobody recognised, no list at all, a crash. A multiplier does not change the hint (the judge accounts for it); the breakdown says so.
+
 ## 2. Ladder engine (`presets/formats/*.json`)
 
 ### 2A — Snake seeding, heat size 4, `uneven = smaller_heats_for_top_seeds` (seed numbers)

@@ -1,4 +1,5 @@
 import { buildTrickVocab, type TrickVocab, type VocabularyInput } from "@/lib/engine/tricks";
+import { parseReferenceTable, type ReferenceTable } from "@/lib/schemas/reference-scores";
 import { riderLabelModel, type LabelModel } from "@/lib/identification/rider-label";
 import { blocksFromVocabulary, familiesOf, type VocabularyJson } from "@/lib/trick-base";
 import { parseLayout, resolveLayout, type FamilyView } from "@/lib/trick-base/layout";
@@ -76,6 +77,8 @@ export function feedLines(attempts: AttemptRow[], pending: PendingAttempt[]): Fe
 
 export interface TrickKit {
   vocab: TrickVocab;
+  /** What the judges' sheet says each trick and variation is worth (the hint on the judge's lines); null when the trick base has none. */
+  reference: ReferenceTable | null;
   /** The blocks of one division in its spotter layout (unticked blocks left out). */
   viewFor: (division: LiveDivisionContext | undefined) => FamilyView[];
 }
@@ -90,6 +93,7 @@ export function trickKit(ctx: Pick<LiveContext, "vocabulary" | "localBlocks">): 
   const keys = families.map((f) => f.key);
   return {
     vocab,
+    reference: parseReferenceTable((ctx.vocabulary as { reference?: unknown }).reference),
     viewFor: (division) => resolveLayout(blocks, division?.trickBase.disabled ?? [], parseLayout(division?.trickBase.layout, keys), false, families),
   };
 }

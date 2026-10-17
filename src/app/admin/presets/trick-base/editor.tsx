@@ -9,6 +9,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ArrowDown, ArrowUp, GripVertical, Lock, X } from "lucide-react";
 import { Button, disabledWhen } from "@/components/org/button";
 import { HelpTip } from "@/components/org/help-tip";
+import { NumberField } from "@/components/org/number-field";
 import { OrgCard } from "@/components/org/org-card";
 import { StatusPill } from "@/components/org/status-pill";
 import { toast } from "@/hooks/use-toast";
@@ -17,6 +18,7 @@ import {
   addAlias,
   addBlock,
   addFamily,
+  addReferenceStarter,
   diffModels,
   familyOfBlock,
   liveExample,
@@ -24,6 +26,7 @@ import {
   nudgeBlock,
   nudgeCategory,
   nudgeFamily,
+  referenceOf,
   removeAlias,
   removeBlock,
   removeFamily,
@@ -32,6 +35,7 @@ import {
   renameFamily,
   setBlockField,
   setKey,
+  setReferenceValue,
   toModel,
   toVocabulary,
   validateModel,
@@ -462,6 +466,7 @@ export function TrickBaseEditor({
   const liveModel = useMemo(() => (live ? toModel(live.json) : null), [live]);
   const publishDiff = useMemo(() => (liveModel ? diffModels(liveModel, base) : null), [liveModel, base]);
   const canPublish = isOwner && !viewing && !working.published && !dirty && (!live || working.version > live.version);
+  const reference = useMemo(() => referenceOf(model), [model]);
   const multipliers = model.families.find((f) => f.key === "multiplier")?.blocks.map((id) => model.blocks[id]).filter(Boolean) ?? [];
 
   const change = (next: MasterModel) => {
@@ -683,6 +688,58 @@ export function TrickBaseEditor({
           <p className="font-semibold">
             {C.exampleLabel} <span data-testid="live-example" className="rounded-[8px] border border-beach-line bg-beach-surface px-2 py-1">{example || C.exampleEmpty}</span>
           </p>
+        </div>
+      </OrgCard>
+
+      <OrgCard title={C.reference.heading} testId="reference-scores">
+        <div className="flex flex-col gap-3">
+          <p className="flex items-center gap-1 font-medium">
+            {C.reference.intro}
+            <HelpTip what={C.reference.heading} text={C.reference.help} example={C.reference.example} />
+          </p>
+          {reference.tricks.length === 0 && reference.adders.length === 0 ? (
+            <p className="font-semibold" data-testid="reference-none">
+              {C.reference.none}
+            </p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(["tricks", "adders"] as const).map((list) => (
+                <div key={list} className="flex flex-col gap-1">
+                  <h3 className="font-bold">{list === "tricks" ? C.reference.tricksHeading : C.reference.addersHeading}</h3>
+                  <ul className="flex flex-col gap-1">
+                    {reference[list].map((row, i) => {
+                      const label = "label" in row ? row.label : (model.blocks[row.block]?.label ?? row.block);
+                      return (
+                        <li key={`${label}-${i}`} className="flex flex-wrap items-center gap-2" data-testid={`reference-${list}-${i}`}>
+                          <span className="min-w-40 font-semibold">{label}</span>
+                          <span data-testid={`reference-value-${list}-${i}`}>
+                            <NumberField label={C.reference.valueAria(label)} value={row.value} min={0} max={50} step={0.1} commit="blur" disabled={readOnly} onChange={(v) => change(setReferenceValue(model, list, i, v))} />
+                          </span>
+                          {"group" in row && row.group ? <span className="text-small text-beach-muted">{C.reference.group(row.group)}</span> : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-small font-medium text-beach-muted">{C.reference.multiplierNote}</p>
+          {readOnly ? null : (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                data-testid="reference-add"
+                onClick={() => {
+                  const r = addReferenceStarter(model);
+                  change(r.model);
+                  toast({ title: C.reference.added(r.blocksAdded, r.valuesAdded) });
+                }}
+              >
+                {C.reference.add}
+              </Button>
+              <HelpTip what={C.reference.add} text={C.reference.addHelp} example={C.reference.addExample} />
+            </div>
+          )}
         </div>
       </OrgCard>
 

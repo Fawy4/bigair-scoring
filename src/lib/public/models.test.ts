@@ -360,15 +360,15 @@ describe("the trick in an attempt box (a division setting)", () => {
 
 describe("a block added to the trick base later reaches the boxes with no code change", () => {
   const preset = JSON.parse(readFileSync("presets/tricks/big-air-vocabulary.json", "utf8"));
-  const trick_base = { vocabulary: { ...preset, baseTricks: [...preset.baseTricks, { key: "sushi_roll", label: "Sushi roll", category: "rotation", aliases: ["sushi"] }] }, local: [{ family: "addon", key: "wake", label: "Wakeloop", category: null }] };
-  const tricks: Array<[string, number | null, boolean]> = [["Left Sushi roll", 7, true], ["Right Wakeloop", 5, true], ["Rodeo", 4, false]];
+  const trick_base = { vocabulary: { ...preset, baseTricks: [...preset.baseTricks, { key: "sushi_roll", label: "Sushi roll", category: "rotation", aliases: ["sushi"] }] }, local: [{ family: "addon", key: "zipper", label: "Zipperloop", category: null }] };
+  const tricks: Array<[string, number | null, boolean]> = [["Left Sushi roll", 7, true], ["Right Zipperloop", 5, true], ["Rodeo", 4, false]];
   const heats = [heatRow("h1", "R1-H1", 1, "published", ["e1"], { results: [breakdown(16, tricks)], publishedAt: "2026-10-10T07:00:00Z" })];
   const boxes = (withBase: boolean) => buildHeatTabs(results(heats, { attempt_display: "trick_score" }), site(), withBase ? ({ ...rules(), trick_base } as never) : rules())[0].riders[0].boxes.map((b) => b.short);
 
   it("results: the event's trick base is read, names and local blocks included", () => {
-    expect(boxes(true)).toEqual(["L SR", "R WL", "RO"]);
+    expect(boxes(true)).toEqual(["L SR", "R ZL", "RO"]);
   });
   it("an older database that sends no trick base falls back to the built-in Trick list and the first-letters rule (one unknown word: two letters)", () => {
-    expect(boxes(false)).toEqual(["L SR", "R WA", "RO"]);
+    expect(boxes(false)).toEqual(["L SR", "R ZI", "RO"]);
   });
 });
