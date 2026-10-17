@@ -45,7 +45,8 @@ export function referenceScore(vocab: TrickVocab, table: ReferenceTable | null, 
   };
 
   const lines: ReferencePart[] = [
-    { label: trick.label, value: trick.value, kind: "trick" },
+    // a trick of one block is named as the spotter's list names it now (the owner may have renamed it); a combination keeps the list's own name
+    { label: trick.blocks.length === 1 ? label(trick.blocks[0]) : trick.label, value: trick.value, kind: "trick" },
     ...added.filter((a) => counts(a.id)).map((a) => ({ label: label(a.id), value: a.adder.value, kind: "add" as const })),
     ...added.filter((a) => !counts(a.id)).map((a) => ({ label: label(a.id), value: 0, kind: "not-added" as const })),
   ];
