@@ -68,6 +68,14 @@ describe("the breakdown explains the number", () => {
   });
 });
 
+describe("the breakdown uses the names of the trick base", () => {
+  it("a renamed trick (Doobie loop → Doobie) is written the way the spotter's list writes it", () => {
+    const renamed = { ...vocab, blocks: vocab.blocks.map((x) => (x.key === "doobie_loop" ? { ...x, label: "Doobie" } : x)) };
+    expect(referenceScore(renamed, table, parts(b("doobie_loop")))?.parts[0].label).toBe("Doobie");
+    expect(referenceScore(renamed, table, parts(b("kiteloop"), b("grab")))?.parts[0].label).toBe("Grabbed kiteloop");
+  });
+});
+
 describe("when there is no hint", () => {
   it("a multiplier plays no part (left out for now): the hint is the same", () => expect(value(b("boogie_loop", "x2"))).toBe(4));
   it("Innovation / a trick that is not on the sheet: nothing", () => {
