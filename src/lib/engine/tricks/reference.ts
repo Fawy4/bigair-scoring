@@ -14,6 +14,21 @@ export interface ReferenceScore {
 }
 
 const round = (n: number) => Math.round(n * 100) / 100;
+const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+
+/**
+ * The block of the judges' list a logged block stands for. A block the list names stands for itself. A block it does not name (an event's own copy of a trick, kept
+ * after the master list got the same trick, or a retired one) stands for the listed block of the same family whose name or one of whose words is its name, when
+ * exactly one has: a Doobie the event added itself is the master Doobie, so its tricks keep their hint.
+ */
+function listed(vocab: TrickVocab, known: Set<string>, id: string): string {
+  if (known.has(id)) return id;
+  const block = vocab.blocks.find((b) => b.id === id);
+  if (!block) return id;
+  const name = norm(block.label);
+  const same = vocab.blocks.filter((b) => known.has(b.id) && b.family === block.family && [b.label, ...b.aliases].some((w) => norm(w) === name));
+  return same.length === 1 ? same[0].id : id;
+}
 
 /**
  * The reference score of a logged trick: a HINT for the judge, never a score and never counted. It is the value of the trick as the judges' sheet lists it,
@@ -23,7 +38,8 @@ const round = (n: number) => Math.round(n * 100) / 100;
  */
 export function referenceScore(vocab: TrickVocab, table: ReferenceTable | null, parts: TrickParts): ReferenceScore | null {
   if (!table || parts.freeText?.trim() || parts.items.length === 0) return null;
-  const ids = parts.items.map((i) => i.id);
+  const known = new Set([...table.tricks.flatMap((t) => t.blocks), ...table.adders.map((a) => a.block)]);
+  const ids = parts.items.map((i) => listed(vocab, known, i.id));
   if (new Set(ids).size !== ids.length) return null;
   const label = (id: string) => vocab.blocks.find((b) => b.id === id)?.label ?? id;
 

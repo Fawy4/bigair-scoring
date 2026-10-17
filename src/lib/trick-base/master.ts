@@ -481,9 +481,13 @@ export function addReferenceStarter(m: MasterModel): { model: MasterModel; block
   const blocks = { ...m.blocks };
   const families = m.families.map((f) => ({ ...f, blocks: [...f.blocks] }));
   let blocksAdded = 0;
+  // the owner's words are never taken from them: a word of a new block that an existing block already answers to is left off the new block
+  const taken = new Set(Object.values(blocks).flatMap((b) => [norm(b.label), ...b.aliases.map(norm)]));
   for (const [id, b] of Object.entries(starter.blocks)) {
     if (blocks[id]) continue;
-    blocks[id] = b;
+    const aliases = b.aliases.filter((a) => !taken.has(norm(a)));
+    blocks[id] = { ...b, aliases };
+    for (const w of [norm(b.label), ...aliases.map(norm)]) taken.add(w);
     families.find((f) => f.key === b.home)?.blocks.push(id);
     blocksAdded++;
   }

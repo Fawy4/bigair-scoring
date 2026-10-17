@@ -147,6 +147,11 @@ export function parseTyped(vocab: TrickVocab, enabledIds: ReadonlySet<string>, t
     const singular = parseTrickText(vocab, rest.replace(/\b([A-Za-z]{3,})s\b/g, "$1"), enabledIds);
     if (!singular.parts.freeText?.trim() && singular.parts.items.length > 0) parsed = singular;
   }
+  // a number that is part of a trick's own name ("36 Kung-Fu HP") is not a count: when taking it off leaves words nobody knows but the words as typed are all recognised, they are read as typed
+  if (count && parsed.parts.freeText?.trim()) {
+    const whole = parseTrickText(vocab, text.trim(), enabledIds);
+    if (!whole.parts.freeText?.trim() && !whole.needsReview && whole.parts.items.length > 0) return { count: null, parsed: whole };
+  }
   return { count, parsed };
 }
 

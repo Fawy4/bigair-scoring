@@ -18,13 +18,22 @@ PR: #59
 
 ### What changed
 - **The reference score (“Ref 7.5”) now also shows on a trick the head judge typed or corrected.** Before, a trick added or edited by the head judge as plain words (“Board-off doobie”) had no blocks stored, so the hint stayed empty. The judge's sheet now reads such a name again with the trick base and shows the hint when every word is recognised. A name with a word nobody recognises, or a block the list has no value for, still shows no hint.
-- Nothing else changed: no setting, sentence or database structure.
+- **A copy of a trick that an event made for itself keeps the hint.** If an event added its own “Doobie” and the master list later got the same trick, attempts logged with the event's copy now count as the master trick (same family, same name or one of its words, only when exactly one block fits). The owner's names and words are not changed.
+- **The same trick tapped another way gets the same number:** Backroll + the base Kiteloop (3.0, as the “+ Kiteloop” add-on), and Late + Backroll or Late + Frontroll (4.2 and 4.5, as the Late backroll and Late frontroll).
+- **“36 Kung-Fu HP” and “36 Kung-Fu 2 HP” typed in the spotter's box are recognised.** The box used to read the 36 as a count of 36 and lose the trick; now, when taking the number off leaves words nobody knows but the words as typed are all recognised, they are read as typed.
+- **The breakdown names a single trick the way the trick base names it now** (“Doobie 5.5” after the owner's rename).
+- **“Add the judges' list” leaves the owner's words alone:** a word of a new trick that another block already answers to is left off the new trick, so the draft still saves.
+- A test now checks every trick of the judges' list (all 17) with all 64 combinations of variations, in any order of taps and in any of its names and aliases (about 24 000 cases).
+- No setting, sentence or database structure changed.
 
 ### What to test
 - [ ] As the head judge, add an attempt for a rider by typing “Board-off doobie” (Add attempt): on the judge's sheet that line shows **Ref 7.5**.
 - [ ] Correct an attempt's trick to “Doobie loop Board spin” (Edit): the judge's line shows **Ref 7.7**.
 - [ ] Type “banana jump” as an added attempt: no tag.
 - [ ] A trick the spotter taps (Boogie loop + Board flip + Blind landing) still shows **Ref 7.0**.
+- [ ] In the spotter's box type “36 Kung-Fu HP”: it is read as that trick (not “36 × …”), and the judge's line shows **Ref 6.0**.
+- [ ] Tap the same trick in a different order (Blind landing, then Board flip, then Boogie loop): still **Ref 7.0**.
+- [ ] Tap Backroll then Kiteloop: **Ref 3.0**. Tap Late then Backroll: **Ref 4.2**.
 
 ### Known issues
 - None known.
