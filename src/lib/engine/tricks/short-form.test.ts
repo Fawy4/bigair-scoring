@@ -38,14 +38,14 @@ describe("shortTrickName: capitals only, the first letter of each part of the na
     expect(of("Backroll + Kiteloop")).toBe("BR KL");
   });
 
-  it("Boogie loop is BL and Blind landing is B", () => {
+  it("Boogie loop is BL and Blind landing is BD (not BL)", () => {
     expect(of("Boogie loop")).toBe("BL");
-    expect(of("Blind landing")).toBe("B");
+    expect(of("Blind landing")).toBe("BD");
   });
 
-  it("every grab is G, however it is written; a grab with its kind is one G", () => {
-    for (const grab of ["Grab", "Indy", "Tail", "Nose", "Melon", "Mute", "Method", "Stalefish", "tail grab", "indy grab"]) expect(of(grab), grab).toBe("G");
-    expect(of("Left Backroll Grab Indy")).toBe("L BR G");
+  it("every grab is GR, however it is written; a grab with its kind is one GR", () => {
+    for (const grab of ["Grab", "Indy", "Tail", "Nose", "Melon", "Mute", "Method", "Stalefish", "tail grab", "indy grab"]) expect(of(grab), grab).toBe("GR");
+    expect(of("Left Backroll Grab Indy")).toBe("L BR GR");
   });
 
   it("Late never stands alone: it joins the trick right after it, with no space", () => {
@@ -94,7 +94,7 @@ describe("shortTrickName: capitals only, the first letter of each part of the na
   it("shortens every block of a longer trick, in the order tapped", () => {
     expect(of("Left ×2 Backroll Board-off Handle pass", "left")).toBe("L ×2 BR BO HP");
     expect(of("Right Kiteloop Late backroll", "right")).toBe("R KL LBR");
-    expect(of("Left ×2 Backroll Board-off Handle pass Late rotations Tic-tac Toeside Stalefish", "left")).toBe("L ×2 BR BO HP TT TS G");
+    expect(of("Left ×2 Backroll Board-off Handle pass Late rotations Tic-tac Toeside Stalefish", "left")).toBe("L ×2 BR BO HP TT TS GR");
   });
 
   it("a count in front, or a bare number, stays as typed", () => {
@@ -240,16 +240,16 @@ describe("the table", () => {
     "+ Kiteloop": "KL",
     Late: "", // joins the trick after it; alone it shows nothing
     "Tic-tac": "TT",
-    Grab: "G",
-    "Blind landing": "B",
+    Grab: "GR",
+    "Blind landing": "BD",
     Toeside: "TS",
-    Indy: "G",
-    Tail: "G",
-    Nose: "G",
-    Melon: "G",
-    Mute: "G",
-    Stalefish: "G",
-    Method: "G",
+    Indy: "GR",
+    Tail: "GR",
+    Nose: "GR",
+    Melon: "GR",
+    Mute: "GR",
+    Stalefish: "GR",
+    Method: "GR",
   };
 
   const words = [
@@ -295,7 +295,7 @@ describe("the table", () => {
     const c = shortFormCases();
     const bySort = <T extends { short: string }>(rows: T[]) => [...rows].sort((a, b) => a.short.localeCompare(b.short));
     expect(bySort(c.same)).toEqual([
-      { short: "G", words: ["Grab", "Indy", "Tail", "Nose", "Melon", "Mute", "Method", "Stalefish"] },
+      { short: "GR", words: ["Grab", "Indy", "Tail", "Nose", "Melon", "Mute", "Method", "Stalefish"] },
       { short: "KL", words: ["Kiteloop", "+ Kiteloop"] },
     ]);
     expect(c.sideExact).toEqual([]);

@@ -1484,7 +1484,7 @@ Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 ### Not done
 - Manual screenshots were not retaken (`npm run manual:shots` needs the hosted project's keys); the judge and trick base pictures do not show the tag or the card yet.
 - The live trick base (in the database) does not have the list until the owner presses **Add the judges' list**, saves and publishes, and each event presses Update to latest.
-- Multipliers are left out for now (a ×2 trick shows the hint of the single one). Board spin has no value on the list.
+- Multipliers are left out for now (a ×2 trick shows the hint of the single one).
 - Osmosis is in the “Board-off” category and the short form BRI is a first guess; a scoring model that counts the best trick per category has no setting for “Unhooked” yet.
 
 ### How to test on a phone

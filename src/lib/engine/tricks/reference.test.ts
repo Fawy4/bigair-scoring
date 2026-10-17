@@ -30,9 +30,11 @@ describe("what a variation adds", () => {
     expect(value(b("boogie_loop"), b("grab"))).toBeNull();
     expect(value(b("kgb"), b("grab"))).toBeNull();
   });
-  it("Board spin is another trick than Board flip and the sheet has no value for it: no hint", () => {
-    expect(value(b("kiteloop"), b("board_spin"))).toBeNull();
+  it("Board spin is another trick than Board flip: +2.2, and in the same group", () => {
+    expect(value(b("kiteloop"), b("board_spin"))).toBe(4.2);
     expect(value(b("kiteloop"), b("board_flip"))).toBe(4.5);
+    expect(value(b("kiteloop"), b("board_off"), b("board_spin"))).toBe(4.2);
+    expect(value(b("kiteloop"), b("board_spin"), b("board_flip"))).toBe(4.5);
   });
   it("to Blind +0.5, on any trick", () => {
     expect(value(b("kiteloop"), b("blind_landing"))).toBe(2.5);

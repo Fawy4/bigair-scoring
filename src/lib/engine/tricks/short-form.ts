@@ -6,7 +6,7 @@
  * A rotation count stays a number: ×2, ×3, ×4 (a typed double, triple or quad becomes the number; a single rotation shows nothing). A count in front ("6x") stays as typed.
  *
  * The table below holds the special cases the owner decided; nothing else is special:
- *  - Double loop and Triple loop are kiteloops: ×2 KL and ×3 KL. "+ Kiteloop" is KL like Kiteloop. Every grab is G. Blind landing is B.
+ *  - Double loop and Triple loop are kiteloops: ×2 KL and ×3 KL. "+ Kiteloop" is KL like Kiteloop. Every grab is GR (two letters at least). Blind landing is BD (BL is Boogie loop).
  *  - Late never stands alone: it joins the trick right after it with no space (Late backroll LBR, Late + Kiteloop LKL). Late rotations is left out, like Downloop.
  * A block of the event's trick base that is not in the table gets the first letter of each word of its name, a word ending in "roll" or "loop" counting as two parts.
  * Text that matches nothing in the trick base is the first letter of each word, never a single letter: a one-word unknown trick shows its first two letters.
@@ -33,6 +33,8 @@ const firstLetter = (part: string): string => /\p{L}/u.exec(part)?.[0].toUpperCa
 export const initials = (parts: string[]): string => parts.map(firstLetter).join("");
 
 const trick = (label: string, parts: string[]): TrickShortForm => ({ words: [label], parts, short: initials(parts) });
+/** Every grab, however it is written (two letters at least, like every short form but the side). */
+const GRAB = "GR";
 const GRABS = ["Grab", "Indy", "Tail", "Nose", "Melon", "Mute", "Method", "Stalefish"];
 
 /** The table: the Trick list (presets/tricks/big-air-vocabulary.json) word by word. */
@@ -74,8 +76,8 @@ export const TRICK_SHORT_FORMS: readonly TrickShortForm[] = [
   { words: ["Late"], short: "L", joins: true },
   trick("Tic-tac", ["Tic", "tac"]),
   // grabs and landings
-  { words: GRABS, short: "G" },
-  trick("Blind landing", ["Blind"]),
+  { words: GRABS, short: GRAB },
+  { words: ["Blind landing"], short: "BD" }, // not BL: that is Boogie loop
   trick("Toeside", ["Toe", "side"]),
 ];
 
@@ -132,7 +134,7 @@ function freeLetters(run: string): string[] {
     const orphan = /^[x×](\d)$/i.exec(w); // a rotation count that found no trick to belong to
     if (GRAB_WORDS.has(normaliseTrickWord(w))) {
       flush();
-      out.push("G");
+      out.push(GRAB);
     } else if (orphan) {
       flush();
       if (orphan[1] !== "1") out.push(`×${orphan[1]}`);
@@ -213,10 +215,10 @@ export function makeShortener(base?: PublicTrickBase | null): Shortener {
     }
     for (const run of parsed.unmatched) {
       for (const t of freeLetters(run)) {
-        if (!(t === "G" && tokens.at(-1) === "G")) tokens.push(t);
+        if (!(t === GRAB && tokens.at(-1) === GRAB)) tokens.push(t);
       }
     }
-    const letters = tokens.filter((t, i) => !(t === "G" && tokens[i - 1] === "G")); // Grab Indy is one grab
+    const letters = tokens.filter((t, i) => !(t === GRAB && tokens[i - 1] === GRAB)); // Grab Indy is one grab
     return [side, count, ...letters].filter(Boolean).join(" ");
   };
 

@@ -252,7 +252,7 @@ describe("reference scores in the trick base (the judges' sheet)", () => {
     const m = toModel(vocabularyJson as unknown as VocabularyJson);
     const ref = referenceOf(m);
     expect(ref.tricks.length).toBe(17);
-    expect(ref.adders.length).toBe(5);
+    expect(ref.adders.length).toBe(6);
     for (const id of [...ref.tricks.flatMap((t) => t.blocks), ...ref.adders.map((a) => a.block)]) expect(m.blocks[id], id).toBeDefined();
   });
 
@@ -267,7 +267,7 @@ describe("reference scores in the trick base (the judges' sheet)", () => {
     expect(referenceOf(before).tricks).toEqual([]);
     const { model, blocksAdded, valuesAdded } = addReferenceStarter(before);
     expect(blocksAdded).toBe(11);
-    expect(valuesAdded).toBe(22);
+    expect(valuesAdded).toBe(23);
     for (const [id, b] of Object.entries(before.blocks)) expect(model.blocks[id]).toEqual(b);
     expect(model.families.find((f) => f.key === "base")!.blocks).toContain("base:snakeloop");
     // the new category of the unhook tricks comes with them, at the top of the order, so the draft still saves

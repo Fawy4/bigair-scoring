@@ -74,6 +74,7 @@
     ],
     "adders": [
       { "block": "addon:board_off", "value": 2, "group": "board" },
+      { "block": "addon:board_spin", "value": 2.2, "group": "board" },
       { "block": "addon:board_flip", "value": 2.5, "group": "board" },
       { "block": "addon:osmosis", "value": 2.7, "group": "board" },
       { "block": "addon:unhook", "value": 1.5 },
