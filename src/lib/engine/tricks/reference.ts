@@ -11,16 +11,14 @@ export interface ReferencePart {
 export interface ReferenceScore {
   value: number;
   parts: ReferencePart[];
-  /** The trick has a multiplier (×2…) or a count: the hint is for one, and the judge accounts for the rest. */
-  multiplied: boolean;
 }
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
 /**
  * The reference score of a logged trick: a HINT for the judge, never a score and never counted. It is the value of the trick as the judges' sheet lists it,
- * plus what each variation adds; the board variations of one group (Board Off, Board Flip, Osmosis) do not stack, the highest counts. Multipliers are not
- * included (the judge accounts for them). Null whenever the number would be a guess: no table, no trick of the sheet in it, a block the sheet has no value
+ * plus what each variation adds; the board variations of one group (Board Off, Board Flip, Osmosis) do not stack, the highest counts. Multipliers play no part
+ * (left out for now: a ×2 trick shows the same hint as the single). Null whenever the number would be a guess: no table, no trick of the sheet in it, a block the sheet has no value
  * for (so a Tic-tac gives no hint rather than a wrong one), a repeated block, or words nobody recognised.
  */
 export function referenceScore(vocab: TrickVocab, table: ReferenceTable | null, parts: TrickParts): ReferenceScore | null {
@@ -51,7 +49,5 @@ export function referenceScore(vocab: TrickVocab, table: ReferenceTable | null, 
     ...added.filter((a) => counts(a.id)).map((a) => ({ label: label(a.id), value: a.adder.value, kind: "add" as const })),
     ...added.filter((a) => !counts(a.id)).map((a) => ({ label: label(a.id), value: 0, kind: "not-added" as const })),
   ];
-  const hidden = vocab.hideMultiplierWhen;
-  const multiplied = parts.items.some((i) => Boolean(i.multiplier) && i.multiplier !== hidden) || (parts.count ?? 1) > 1;
-  return { value: round(lines.reduce((s, l) => s + l.value, 0)), parts: lines, multiplied };
+  return { value: round(lines.reduce((s, l) => s + l.value, 0)), parts: lines };
 }

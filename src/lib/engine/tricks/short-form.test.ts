@@ -233,8 +233,9 @@ describe("the table", () => {
     "Board-off": "BO",
     "One-foot": "OF",
     "Board spin": "BS",
-    Osmosis: "O",
-    Unhook: "U",
+    "Board flip": "BF",
+    Osmosis: "OS",
+    Unhook: "UH",
     "Handle pass": "HP",
     "+ Kiteloop": "KL",
     Late: "", // joins the trick after it; alone it shows nothing

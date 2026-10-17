@@ -17,40 +17,49 @@ describe("the base tricks of the sheet", () => {
   ];
   for (const [key, v] of cases) it(`${key} is ${v}`, () => expect(value(b(key))).toBe(v));
   it("Back rotation(s) is a backroll with a kiteloop", () => expect(value(b("backroll"), b("kiteloop_mod"))).toBe(3));
-  it("a grabbed kiteloop is the kiteloop plus the grab (2.5)", () => expect(value(b("kiteloop"), b("grab"))).toBe(2.5));
+  it("a grabbed kiteloop is 2.5", () => expect(value(b("kiteloop"), b("grab"))).toBe(2.5));
 });
 
 describe("what a variation adds", () => {
   it("Board Off +2", () => expect(value(b("boogie_loop"), b("board_off"))).toBe(6));
-  it("Board Flip +2.5", () => expect(value(b("boogie_loop"), b("board_spin"))).toBe(6.5));
+  it("Board flip +2.5", () => expect(value(b("boogie_loop"), b("board_flip"))).toBe(6.5));
   it("Osmosis +2.7", () => expect(value(b("kiteloop"), b("osmosis"))).toBe(4.7));
   it("Unhook +1.5", () => expect(value(b("kiteloop"), b("unhook"))).toBe(3.5));
+  it("a grabbed kiteloop takes the variations too (2.5 + 2 = 4.5)", () => expect(value(b("kiteloop"), b("grab"), b("board_off"))).toBe(4.5));
+  it("the grab is worth something on the kiteloop only: on any other trick there is no hint", () => {
+    expect(value(b("boogie_loop"), b("grab"))).toBeNull();
+    expect(value(b("kgb"), b("grab"))).toBeNull();
+  });
+  it("Board spin is another trick than Board flip and the sheet has no value for it: no hint", () => {
+    expect(value(b("kiteloop"), b("board_spin"))).toBeNull();
+    expect(value(b("kiteloop"), b("board_flip"))).toBe(4.5);
+  });
   it("to Blind +0.5, on any trick", () => {
     expect(value(b("kiteloop"), b("blind_landing"))).toBe(2.5);
     expect(value(b("kgb"), b("blind_landing"))).toBe(8);
     expect(value(b("straight_dangle_pass"), b("blind_landing"))).toBe(5.5);
   });
   it("the board variations do not stack: the highest counts", () => {
-    expect(value(b("kiteloop"), b("board_off"), b("board_spin"))).toBe(4.5);
+    expect(value(b("kiteloop"), b("board_off"), b("board_flip"))).toBe(4.5);
     expect(value(b("kiteloop"), b("board_off"), b("osmosis"))).toBe(4.7);
-    expect(value(b("kiteloop"), b("board_spin"), b("board_off"))).toBe(4.5);
+    expect(value(b("kiteloop"), b("board_flip"), b("board_off"))).toBe(4.5);
   });
-  it("Unhook stacks with a board variation", () => expect(value(b("kiteloop"), b("unhook"), b("board_spin"))).toBe(6));
+  it("Unhook stacks with a board variation", () => expect(value(b("kiteloop"), b("unhook"), b("board_flip"))).toBe(6));
   it("a board-off on an unhook trick adds the board variation score", () => {
     expect(value(b("straight_dangle_pass"), b("board_off"))).toBe(7);
-    expect(value(b("straight_dangle_pass"), b("board_spin"))).toBe(7.5);
+    expect(value(b("straight_dangle_pass"), b("board_flip"))).toBe(7.5);
   });
-  it("everything together", () => expect(value(b("boogie_loop"), b("unhook"), b("board_spin"), b("blind_landing"))).toBe(8.5));
-  it("the order of the taps does not matter", () => expect(value(b("blind_landing"), b("board_spin"), b("boogie_loop"))).toBe(7));
+  it("everything together", () => expect(value(b("boogie_loop"), b("unhook"), b("board_flip"), b("blind_landing"))).toBe(8.5));
+  it("the order of the taps does not matter", () => expect(value(b("blind_landing"), b("board_flip"), b("boogie_loop"))).toBe(7));
 });
 
 describe("the breakdown explains the number", () => {
   it("lists every part and says which board variation was not added", () => {
-    const r = referenceScore(vocab, table, parts(b("boogie_loop"), b("board_off"), b("board_spin"), b("blind_landing")))!;
+    const r = referenceScore(vocab, table, parts(b("boogie_loop"), b("board_off"), b("board_flip"), b("blind_landing")))!;
     expect(r.value).toBe(7);
     expect(r.parts).toEqual([
       { label: "Boogie loop", value: 4, kind: "trick" },
-      { label: "Board spin", value: 2.5, kind: "add" },
+      { label: "Board flip", value: 2.5, kind: "add" },
       { label: "Blind landing", value: 0.5, kind: "add" },
       { label: "Board-off", value: 0, kind: "not-added" },
     ]);
@@ -58,11 +67,7 @@ describe("the breakdown explains the number", () => {
 });
 
 describe("when there is no hint", () => {
-  it("a multiplier is left to the judge: the hint is the same as without it", () => {
-    expect(value(b("boogie_loop", "x2"))).toBe(4);
-    expect(referenceScore(vocab, table, parts(b("boogie_loop", "x2")))?.multiplied).toBe(true);
-    expect(referenceScore(vocab, table, parts(b("boogie_loop")))?.multiplied).toBe(false);
-  });
+  it("a multiplier plays no part (left out for now): the hint is the same", () => expect(value(b("boogie_loop", "x2"))).toBe(4));
   it("Innovation / a trick that is not on the sheet: nothing", () => {
     expect(value(b("frontroll"))).toBeNull();
     expect(value(b("heart_attack"))).toBeNull();

@@ -65,8 +65,10 @@ export const TRICK_SHORT_FORMS: readonly TrickShortForm[] = [
   trick("Board-off", ["Board", "off"]),
   trick("One-foot", ["One", "foot"]),
   trick("Board spin", ["Board", "spin"]),
-  trick("Osmosis", ["Osmosis"]),
-  trick("Unhook", ["Unhook"]),
+  // two letters at least: a single letter reads as a side or a grab
+  { words: ["Board flip"], short: "BF" },
+  { words: ["Osmosis"], short: "OS" },
+  { words: ["Unhook"], short: "UH" },
   trick("Handle pass", ["Handle", "pass"]),
   trick("+ Kiteloop", ["Kite", "loop"]),
   { words: ["Late"], short: "L", joins: true },

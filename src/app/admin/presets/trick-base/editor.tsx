@@ -724,7 +724,6 @@ export function TrickBaseEditor({
               ))}
             </div>
           )}
-          <p className="text-small font-medium text-beach-muted">{C.reference.multiplierNote}</p>
           {readOnly ? null : (
             <div className="flex flex-wrap items-center gap-2">
               <Button

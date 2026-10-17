@@ -10,7 +10,7 @@ Release entry: [0.25.0](/admin/releases#release-0-25-0) (platform owner only)
 
 **What changed for users**
 - **The judge's Rider sheet shows a reference score** (“Ref 7.0”) beside a logged trick, from the judges' list: a hint, never a score. Tap it to see how it is worked out.
-- **Ten new blocks in the trick base** (Snakeloop, KGB, Loop back rotation invert, the dangle passes, the 36 Kung-Fu passes, KL3, Osmosis, Unhook) and a **Reference scores** card in Admin → Trick base.
+- **Eleven new blocks in the trick base** (Snakeloop, KGB, Loop back rotation invert, the dangle passes, the 36 Kung-Fu passes, KL3, Board flip, Osmosis, Unhook; the unhook tricks have their own category, Unhooked) and a **Reference scores** card in Admin → Trick base.
 
 **Manual pages updated:** [Judge screen](screens/judge.md), [Admin: trick base](screens/admin-trick-base.md).
 

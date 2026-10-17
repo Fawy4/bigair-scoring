@@ -28,16 +28,17 @@
     { "key": "loop_back_rot_invert", "label": "Loop back rotation invert", "category": "kiteloop", "aliases": ["LBI", "loop back rot invert"] },
     { "key": "snakeloop", "label": "Snakeloop", "category": "kiteloop", "aliases": ["SnL", "snake loop", "snake"] },
     { "key": "kgb", "label": "KGB", "category": "kiteloop", "aliases": ["LKG"] },
-    { "key": "straight_dangle_pass", "label": "Straight dangle pass", "category": "other", "aliases": ["dangle pass", "DP"] },
-    { "key": "double_dangle_pass", "label": "Double dangle pass", "category": "other", "aliases": ["DDP"] },
-    { "key": "kung_fu_36_hp", "label": "36 Kung-Fu HP", "category": "other", "aliases": ["36HP", "36 kung fu"] },
-    { "key": "kung_fu_36_2_hp", "label": "36 Kung-Fu 2 HP", "category": "other", "aliases": ["362HP", "36 kung fu 2"] },
-    { "key": "kl3", "label": "KL3", "category": "other", "aliases": [] }
+    { "key": "straight_dangle_pass", "label": "Straight dangle pass", "category": "unhooked", "aliases": ["dangle pass", "DP"] },
+    { "key": "double_dangle_pass", "label": "Double dangle pass", "category": "unhooked", "aliases": ["DDP"] },
+    { "key": "kung_fu_36_hp", "label": "36 Kung-Fu HP", "category": "unhooked", "aliases": ["36HP", "36 kung fu"] },
+    { "key": "kung_fu_36_2_hp", "label": "36 Kung-Fu 2 HP", "category": "unhooked", "aliases": ["362HP", "36 kung fu 2"] },
+    { "key": "kl3", "label": "KL3", "category": "unhooked", "aliases": [] }
   ],
   "modifiers": [
     { "key": "board_off", "family": "addon", "label": "Board-off", "category": "board_off", "aliases": ["BO", "board off", "boardoff"] },
     { "key": "one_foot", "family": "addon", "label": "One-foot", "category": "board_off", "aliases": ["1 foot", "one foot"] },
-    { "key": "board_spin", "family": "addon", "label": "Board spin", "category": "board_off", "aliases": ["spin the board", "board flip", "B.flip"] },
+    { "key": "board_spin", "family": "addon", "label": "Board spin", "category": "board_off", "aliases": ["spin the board"] },
+    { "key": "board_flip", "family": "addon", "label": "Board flip", "category": "board_off", "aliases": ["B.flip"] },
     { "key": "osmosis", "family": "addon", "label": "Osmosis", "category": "board_off", "aliases": [] },
     { "key": "unhook", "family": "addon", "label": "Unhook", "category": null, "aliases": ["unhooked"] },
     { "key": "handle_pass", "family": "addon", "label": "Handle pass", "category": "handle_pass", "aliases": ["handle", "HP", "pass"] },
@@ -51,9 +52,10 @@
     { "key": "downloop", "family": "grab_landing", "label": "Downloop landing", "category": null, "aliases": ["down loop", "downloop"] }
   ],
   "reference": {
-    "_comment": "Reference scores for the judges (a HINT shown on the judge's line, never a score): the judges' sheet WoS_tricks_judges2026. A trick is worth its value for an average version; each variation adds its value; variations of one group (the board ones) do not stack, the highest counts. Blocks are named family:key. A multiplier is left to the judge. A trick that is not listed here gets no hint.",
+    "_comment": "Reference scores for the judges (a HINT shown on the judge's line, never a score): the judges' sheet WoS_tricks_judges2026. A trick is worth its value for an average version; each variation adds its value; variations of one group (the board ones) do not stack, the highest counts. Blocks are named family:key. A trick that is not listed here gets no hint.",
     "tricks": [
       { "label": "Kiteloop", "blocks": ["base:kiteloop"], "value": 2 },
+      { "label": "Grabbed kiteloop", "blocks": ["base:kiteloop", "grab_landing:grab"], "value": 2.5 },
       { "label": "Back rotation(s)", "blocks": ["base:backroll", "addon:kiteloop_mod"], "value": 3 },
       { "label": "Loop back rotation invert", "blocks": ["base:loop_back_rot_invert"], "value": 3.5 },
       { "label": "Boogie loop", "blocks": ["base:boogie_loop"], "value": 4 },
@@ -72,14 +74,13 @@
     ],
     "adders": [
       { "block": "addon:board_off", "value": 2, "group": "board" },
-      { "block": "addon:board_spin", "value": 2.5, "group": "board" },
+      { "block": "addon:board_flip", "value": 2.5, "group": "board" },
       { "block": "addon:osmosis", "value": 2.7, "group": "board" },
       { "block": "addon:unhook", "value": 1.5 },
-      { "block": "grab_landing:blind_landing", "value": 0.5 },
-      { "block": "grab_landing:grab", "value": 0.5 }
+      { "block": "grab_landing:blind_landing", "value": 0.5 }
     ]
   },
-  "categoryPrecedence": ["handle_pass", "board_off", "kiteloop", "rotation", "other"],
+  "categoryPrecedence": ["unhooked", "handle_pass", "board_off", "kiteloop", "rotation", "other"],
   "namingTemplate": "{direction} then each block in tap order, written with its multiplier before it",
   "hideMultiplierWhen": "x1",
   "examples": [

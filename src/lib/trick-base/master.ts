@@ -487,11 +487,18 @@ export function addReferenceStarter(m: MasterModel): { model: MasterModel; block
     families.find((f) => f.key === b.home)?.blocks.push(id);
     blocksAdded++;
   }
+  // a category the new blocks use that the draft does not know yet (Unhooked) goes in at the place the starter gives it
+  const categoryPrecedence = [...m.categoryPrecedence];
+  starter.categoryPrecedence.forEach((c, at) => {
+    if (categoryPrecedence.includes(c) || !Object.values(blocks).some((b) => b.category === c)) return;
+    const next = starter.categoryPrecedence.slice(at + 1).find((x) => categoryPrecedence.includes(x));
+    categoryPrecedence.splice(next ? categoryPrecedence.indexOf(next) : categoryPrecedence.length, 0, c);
+  });
   const have = referenceOf(m);
   const same = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
   const from = parseReferenceTable(starter.rest.reference) ?? { tricks: [], adders: [] };
   const tricks = from.tricks.filter((t) => !have.tricks.some((h) => same(h.blocks, t.blocks)));
   const adders = from.adders.filter((a) => !have.adders.some((h) => h.block === a.block));
-  const model = withReference({ ...m, blocks, families }, { tricks: [...have.tricks, ...tricks], adders: [...have.adders, ...adders] });
+  const model = withReference({ ...m, blocks, families, categoryPrecedence }, { tricks: [...have.tricks, ...tricks], adders: [...have.adders, ...adders] });
   return { model, blocksAdded, valuesAdded: tricks.length + adders.length };
 }

@@ -139,7 +139,7 @@ function ReferenceBreakdown({ reference, onClose }: { reference: ReferenceScore;
       <p className="min-w-0 flex-1">
         <span className="font-bold">{R.sum(refNumber(reference.value), added.map((p) => `${p.label} ${refNumber(p.value)}`))}</span>
         {left.length ? ` ${R.notAdded(left)}` : ""}
-        {reference.multiplied ? ` ${R.multiplied}` : ""} {R.hint}
+        {` ${R.hint}`}
       </p>
       <Chip compact onClick={onClose} className="shrink-0 text-small">
         {R.close}

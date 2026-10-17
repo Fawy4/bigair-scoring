@@ -57,10 +57,10 @@ describe("selection", () => {
 describe("categories are derived from the ticked blocks by the vocabulary's precedence", () => {
   const all = blocksFromVocabulary(vocab, []);
   it("precedence is handle pass > board-off > kiteloop > rotation > other", () => {
-    expect(vocab.categoryPrecedence).toEqual(["handle_pass", "board_off", "kiteloop", "rotation", "other"]);
+    expect(vocab.categoryPrecedence).toEqual(["unhooked", "handle_pass", "board_off", "kiteloop", "rotation", "other"]);
   });
   it("all blocks on: the categories used, in precedence order", () => {
-    expect(deriveCategories(all, [], vocab.categoryPrecedence, []).map((c) => c.key)).toEqual(["handle_pass", "board_off", "kiteloop", "rotation", "other"]);
+    expect(deriveCategories(all, [], vocab.categoryPrecedence, []).map((c) => c.key)).toEqual(["unhooked", "handle_pass", "board_off", "kiteloop", "rotation", "other"]);
   });
   it("unticking every kiteloop block removes the kiteloop category", () => {
     const off = all.filter((b) => b.category === "kiteloop").map(blockId);

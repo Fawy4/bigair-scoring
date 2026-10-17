@@ -150,7 +150,7 @@ describe("editing", () => {
 
   it("category precedence can be reordered, not extended", () => {
     const m = nudgeCategory(clean(), "kiteloop", -1);
-    expect(m.categoryPrecedence).toEqual(["handle_pass", "kiteloop", "board_off", "rotation", "other"]);
+    expect(m.categoryPrecedence).toEqual(["unhooked", "handle_pass", "kiteloop", "board_off", "rotation", "other"]);
   });
 
   it("the live example follows the names, the hide rule and the template", () => {
@@ -241,7 +241,8 @@ describe("reference scores in the trick base (the judges' sheet)", () => {
     // the live trick base before the judges' list: no reference part, and none of the new tricks
     const v = JSON.parse(JSON.stringify(vocabularyJson)) as VocabularyJson & { reference?: unknown };
     delete v.reference;
-    const gone = new Set(["loop_back_rot_invert", "snakeloop", "kgb", "straight_dangle_pass", "double_dangle_pass", "kung_fu_36_hp", "kung_fu_36_2_hp", "kl3", "osmosis", "unhook"]);
+    v.categoryPrecedence = v.categoryPrecedence.filter((c) => c !== "unhooked");
+    const gone = new Set(["loop_back_rot_invert", "snakeloop", "kgb", "straight_dangle_pass", "double_dangle_pass", "kung_fu_36_hp", "kung_fu_36_2_hp", "kl3", "osmosis", "unhook", "board_flip"]);
     v.baseTricks = v.baseTricks.filter((b) => !gone.has(b.key));
     v.modifiers = v.modifiers.filter((b) => !gone.has(b.key));
     return toModel(v);
@@ -250,25 +251,29 @@ describe("reference scores in the trick base (the judges' sheet)", () => {
   it("the starter file's list reads, and every block it names exists in the file", () => {
     const m = toModel(vocabularyJson as unknown as VocabularyJson);
     const ref = referenceOf(m);
-    expect(ref.tricks.length).toBe(16);
-    expect(ref.adders.length).toBe(6);
+    expect(ref.tricks.length).toBe(17);
+    expect(ref.adders.length).toBe(5);
     for (const id of [...ref.tricks.flatMap((t) => t.blocks), ...ref.adders.map((a) => a.block)]) expect(m.blocks[id], id).toBeDefined();
   });
 
   it("the starter file keeps every word (label and alias) to one block, so the spotter's typing is not ambiguous", () => {
     const m = toModel(vocabularyJson as unknown as VocabularyJson);
     // "kl" is shared by Kiteloop and + Kiteloop already (a warning, the owner knows); nothing new may clash
-    expect(checkModel(m, new Set(), toModel({ ...(vocabularyJson as unknown as VocabularyJson), baseTricks: (vocabularyJson as unknown as VocabularyJson).baseTricks.filter((b) => !["snakeloop", "kgb", "kl3", "loop_back_rot_invert", "straight_dangle_pass", "double_dangle_pass", "kung_fu_36_hp", "kung_fu_36_2_hp"].includes(b.key)), modifiers: (vocabularyJson as unknown as VocabularyJson).modifiers.filter((b) => !["osmosis", "unhook"].includes(b.key)) })).errors).toEqual([]);
+    expect(checkModel(m, new Set(), toModel({ ...(vocabularyJson as unknown as VocabularyJson), baseTricks: (vocabularyJson as unknown as VocabularyJson).baseTricks.filter((b) => !["snakeloop", "kgb", "kl3", "loop_back_rot_invert", "straight_dangle_pass", "double_dangle_pass", "kung_fu_36_hp", "kung_fu_36_2_hp"].includes(b.key)), modifiers: (vocabularyJson as unknown as VocabularyJson).modifiers.filter((b) => !["osmosis", "unhook", "board_flip"].includes(b.key)) })).errors).toEqual([]);
   });
 
   it("'Add the judges' list' adds the missing tricks and all the values, and changes nothing that was there", () => {
     const before = older();
     expect(referenceOf(before).tricks).toEqual([]);
     const { model, blocksAdded, valuesAdded } = addReferenceStarter(before);
-    expect(blocksAdded).toBe(10);
+    expect(blocksAdded).toBe(11);
     expect(valuesAdded).toBe(22);
     for (const [id, b] of Object.entries(before.blocks)) expect(model.blocks[id]).toEqual(b);
     expect(model.families.find((f) => f.key === "base")!.blocks).toContain("base:snakeloop");
+    // the new category of the unhook tricks comes with them, at the top of the order, so the draft still saves
+    expect(before.categoryPrecedence).not.toContain("unhooked");
+    expect(model.categoryPrecedence[0]).toBe("unhooked");
+    expect(model.categoryPrecedence.slice(1)).toEqual(before.categoryPrecedence);
     expect(validateModel(model, publishedIds([toVocabulary(before)]), before)).toEqual([]);
   });
 
