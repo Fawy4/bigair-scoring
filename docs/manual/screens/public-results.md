@@ -2,7 +2,7 @@
 
 /e/‹event›/results (one tab per heat) and /e/‹event›/placings (final places and the highest jump).
 
-Last checked: 17 Oct 2026 · Product version 0.25.0
+Last checked: 17 Oct 2026 · Product version 0.24.3
 
 ## What it is for {#pr-purpose}
 
@@ -42,7 +42,7 @@ The special cases the owner decided, and the only ones:
 | Blind landing | BD (not BL: that is Boogie loop) |
 | Every grab: Grab, Indy, Tail, Nose, Melon, Mute, Method, Stalefish | GR |
 | Late | joins the trick right after it, no space: Late backroll **LBR**, Late frontroll **LFR**, Late + Kiteloop **LKL**; it never stands alone |
-| The judges' codes (0.25.0) | Snakeloop SnL, KGB, Loop back rotation invert BRI, Straight dangle pass DP, Double dangle pass DDP, 36 Kung-Fu HP 36HP, 36 Kung-Fu 2 HP 362HP, KL3, Board flip BF, Osmosis OS, Unhook UH |
+| The judges' codes (0.24.3) | Snakeloop SnL, KGB, Loop back rotation invert BRI, Straight dangle pass DP, Double dangle pass DDP, 36 Kung-Fu HP 36HP, 36 Kung-Fu 2 HP 362HP, KL3, Board flip BF, Osmosis OS, Unhook UH |
 | Late rotations, Downloop landing | left out of the box |
 
 Everything else in the Trick list is the plain rule: Straight jump SJ, Backroll BR, Frontroll FR, Kiteloop KL, Megaloop ML, S-loop SL, Contra loop CL, Doobie loop DL, Boogie loop BL, Board-off BO, One-foot OF, Board spin BS, Handle pass HP, Tic-tac TT, Toeside TS, Heart attack HA.

@@ -1473,7 +1473,7 @@ Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 - Release entry 0.24.1 in `docs/RELEASES.md`.
 
 
-## Reference scores on the judge's Rider sheet (0.25.0)
+## Reference scores on the judge's Rider sheet (0.24.3)
 
 ### Done
 - The judges' sheet (WoS_tricks_judges2026) is in the trick base as a `reference` part of the vocabulary file (`presets/tricks/big-air-vocabulary.json`): 16 trick values, 6 variation values, checked by Zod (`src/lib/schemas/reference-scores.ts`). Eleven new blocks were added (Snakeloop, KGB, Loop back rotation invert, two dangle passes, two 36 Kung-Fu passes, KL3, Board flip, Osmosis, Unhook); the unhook tricks are in a new category, Unhooked.
@@ -1488,4 +1488,4 @@ Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 - Osmosis is in the “Board-off” category and the short form BRI is a first guess; a scoring model that counts the best trick per category has no setting for “Unhooked” yet.
 
 ### How to test on a phone
-- Release entry 0.25.0 in `docs/RELEASES.md`.
+- Release entry 0.24.3 in `docs/RELEASES.md`.

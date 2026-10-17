@@ -2,7 +2,7 @@
 
 The judge's phone at /judge/‹event›: the Rider sheet during the heat, then the Impression / Variety score for every rider and Submit.
 
-Last checked: 17 Oct 2026 · Product version 0.25.0
+Last checked: 17 Oct 2026 · Product version 0.24.3
 
 ## What it is for {#ju-purpose}
 

@@ -12,7 +12,7 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
-## 0.25.0 — 17 Oct 2026 {#release-0-25-0}
+## 0.24.3 — 17 Oct 2026 {#release-0-24-3}
 
 PR: #58
 

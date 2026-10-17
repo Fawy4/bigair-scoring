@@ -2,7 +2,7 @@
 
 /admin/presets/trick-base (Admin → **Master presets** → **Open the trick base**): the master trick base every event starts from, edited as a form, with its versions and the blocks events propose. The older addresses /admin/tricks and /admin/presets/trick-vocabulary/big-air-vocabulary lead here.
 
-Last checked: 17 Oct 2026 · Product version 0.25.0
+Last checked: 17 Oct 2026 · Product version 0.24.3
 
 ## What it is for {#at-purpose}
 

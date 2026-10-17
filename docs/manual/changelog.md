@@ -2,11 +2,11 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 17 Oct 2026 · Product version 0.25.0
+Last checked: 17 Oct 2026 · Product version 0.24.3
 
-## 0.25.0 — 17 Oct 2026 {#cl-0-25-0}
+## 0.24.3 — 17 Oct 2026 {#cl-0-24-3}
 
-Release entry: [0.25.0](/admin/releases#release-0-25-0) (platform owner only)
+Release entry: [0.24.3](/admin/releases#release-0-24-3) (platform owner only)
 
 **What changed for users**
 - **The judge's Rider sheet shows a reference score** (“Ref 7.0”) beside a logged trick, from the judges' list: a hint, never a score. Tap it to see how it is worked out.
