@@ -2051,7 +2051,7 @@ export const copy = {
     heading: "Trick base",
     intro: "Tick the building blocks the spotter may use in this division. Everything is on to begin with, so you never type trick names. The scoring categories follow from what is ticked.",
     families: { direction: "Direction", multiplier: "Multiplier", base: "Base trick", addon: "Add-ons", grab_landing: "Grabs & landings" },
-    categoryLabels: { handle_pass: "Handle pass", board_off: "Board-off", kiteloop: "Kiteloop", rotation: "Rotation", other: "Other" } as Record<string, string>,
+    categoryLabels: { unhooked: "Unhooked", handle_pass: "Handle pass", board_off: "Board-off", kiteloop: "Kiteloop", rotation: "Rotation", other: "Other" } as Record<string, string>,
     categoriesHeading: "Scoring categories from these blocks",
     categoriesNone: "No categories yet: tick at least one base trick.",
     categoriesNote: "Shown from the highest precedence to the lowest: handle pass, board-off, kiteloop, rotation, other. Per-category counting rules are under Scoring → More settings → Trick categories.",
@@ -2177,6 +2177,22 @@ export const copy = {
     precedenceHeading: "Category precedence",
     precedenceExplain: "When a trick has blocks of several categories, it counts in the highest one on this list.",
     precedenceExample: "“Left Backroll Board-off Handle pass” counts as Handle pass, because Handle pass is above Board-off and Rotation.",
+    /** Reference scores: the hint a judge sees beside a logged trick (never a score). */
+    reference: {
+      heading: "Reference scores",
+      intro: "What an average version of each trick is worth, and what each variation adds. Judges see it as a small “Ref” hint beside the trick they are scoring; they still give their own score.",
+      help: "The hint on a judge's line is the trick's value plus what each variation adds. A trick that is not on this list gets no hint.",
+      example: "Example: Boogie loop 4.0 + Board spin 2.5 + Blind landing 0.5 shows “Ref 7.0”.",
+      none: "No reference scores yet: judges see no hint.",
+      add: "Add the judges' list",
+      addHelp: "Adds the tricks and variations of the judges' sheet that are missing here, with their values. Nothing you already have is changed.",
+      addExample: "Example: Snakeloop, KGB and the dangle passes appear, and Boogie loop gets 4.0.",
+      added: (blocks: number, values: number) => (blocks === 0 && values === 0 ? "Nothing to add: everything on the judges' list is already here." : `Added ${blocks} trick${blocks === 1 ? "" : "s"} and variation${blocks === 1 ? "" : "s"}, and ${values} value${values === 1 ? "" : "s"}. Save as a new draft to keep them.`),
+      tricksHeading: "Tricks",
+      addersHeading: "Variations (added to the trick)",
+      valueAria: (label: string) => `Reference value of ${label}`,
+      group: (group: string) => `Group “${group}”: only the highest of its variations counts.`,
+    },
     namingHeading: "Trick names",
     namingTemplate: "Naming template",
     namingHelp: "Where the direction and the blocks go in a trick's name: {direction} and {blocks}, in any order.",
@@ -3713,6 +3729,16 @@ export const copy = {
     skipCancel: "Not now",
     lineByLineHelp: "You can only type on the first line that has no score yet. If you did not see an attempt, tap Missed on its line: that counts as done and opens the next line.",
     lineByLineExample: "Example: line 2 is empty, so line 3 waits. Tap Missed on line 2 and line 3 opens.",
+    /** The reference score: a hint beside the trick (what an average one is worth from the judges' sheet), never a score and never counted. */
+    reference: {
+      tag: (value: string) => `Ref ${value}`,
+      tagAria: (n: number, value: string) => `Reference score ${value} for attempt ${n}. Tap to see how it is worked out.`,
+      /** "Reference 7.0 = Boogie loop 4.0 + Board spin 2.5 + Blind landing 0.5." */
+      sum: (total: string, parts: string[]) => `Reference ${total} = ${parts.join(" + ")}.`,
+      notAdded: (labels: string[]) => `${labels.join(", ")} not added: only the highest board variation counts.`,
+      hint: "A hint, not a score: an average trick of this kind. You decide the score.",
+      close: "Hide",
+    },
   },
   /** The spotter's Rider sheet: one line per attempt, and a line logs itself. */
   spotterSheet: {

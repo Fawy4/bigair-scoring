@@ -1,5 +1,7 @@
 import { buildTrickVocab, checkNamingTemplate, composeTrick, effectiveNamingTemplate, type VocabularyInput } from "@/lib/engine/tricks";
 import { copy } from "@/lib/ui-copy";
+import { parseReferenceTable, type ReferenceTable } from "@/lib/schemas/reference-scores";
+import starterJson from "../../../presets/tricks/big-air-vocabulary.json";
 import { FAMILIES, type BuiltInFamily, type VocabularyJson } from ".";
 
 /**
@@ -453,4 +455,50 @@ export function planSave(versions: Array<{ version: number; hash: string }>, has
   if (versions.length === 0) return { action: "insert", version: 1 };
   const newest = versions.reduce((x, y) => (y.version > x.version ? y : x));
   return newest.hash === hash ? { action: "unchanged" } : { action: "insert", version: newest.version + 1 };
+}
+
+// ------------------------------------------------------------------------------------------------------------------------- reference scores
+
+/** The reference scores of a draft (what the judges' sheet says a trick and each variation are worth); empty when it has none. */
+export const referenceOf = (m: MasterModel): ReferenceTable => parseReferenceTable(m.rest.reference) ?? { tricks: [], adders: [] };
+
+const withReference = (m: MasterModel, table: ReferenceTable): MasterModel => ({ ...m, rest: { ...m.rest, reference: table } });
+
+/** A value typed in the editor (row `index` of the tricks or of the variations). A negative or unreadable value is refused (the draft stays as it was). */
+export function setReferenceValue(m: MasterModel, list: "tricks" | "adders", index: number, value: number): MasterModel {
+  const table = referenceOf(m);
+  if (!Number.isFinite(value) || value < 0 || value > 50 || !table[list][index]) return m;
+  const rows = table[list].map((row, i) => (i === index ? { ...row, value: Math.round(value * 100) / 100 } : row));
+  return withReference(m, { ...table, [list]: rows });
+}
+
+/**
+ * "Add the judges' list": the tricks and variations of the judges' sheet (the starter file) that the draft does not have yet, and their reference values.
+ * Nothing the draft already has is changed (a trick, a name, a word, a value): only what is missing is added, so it can be pressed again.
+ */
+export function addReferenceStarter(m: MasterModel): { model: MasterModel; blocksAdded: number; valuesAdded: number } {
+  const starter = toModel(starterJson as unknown as VocabularyJson);
+  const blocks = { ...m.blocks };
+  const families = m.families.map((f) => ({ ...f, blocks: [...f.blocks] }));
+  let blocksAdded = 0;
+  for (const [id, b] of Object.entries(starter.blocks)) {
+    if (blocks[id]) continue;
+    blocks[id] = b;
+    families.find((f) => f.key === b.home)?.blocks.push(id);
+    blocksAdded++;
+  }
+  // a category the new blocks use that the draft does not know yet (Unhooked) goes in at the place the starter gives it
+  const categoryPrecedence = [...m.categoryPrecedence];
+  starter.categoryPrecedence.forEach((c, at) => {
+    if (categoryPrecedence.includes(c) || !Object.values(blocks).some((b) => b.category === c)) return;
+    const next = starter.categoryPrecedence.slice(at + 1).find((x) => categoryPrecedence.includes(x));
+    categoryPrecedence.splice(next ? categoryPrecedence.indexOf(next) : categoryPrecedence.length, 0, c);
+  });
+  const have = referenceOf(m);
+  const same = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
+  const from = parseReferenceTable(starter.rest.reference) ?? { tricks: [], adders: [] };
+  const tricks = from.tricks.filter((t) => !have.tricks.some((h) => same(h.blocks, t.blocks)));
+  const adders = from.adders.filter((a) => !have.adders.some((h) => h.block === a.block));
+  const model = withReference({ ...m, blocks, families, categoryPrecedence }, { tricks: [...have.tricks, ...tricks], adders: [...have.adders, ...adders] });
+  return { model, blocksAdded, valuesAdded: tricks.length + adders.length };
 }

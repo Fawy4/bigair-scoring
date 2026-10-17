@@ -2,7 +2,7 @@
 
 The judge's phone at /judge/‹event›: the Rider sheet during the heat, then the Impression / Variety score for every rider and Submit.
 
-Last checked: 14 Oct 2026 · Product version 0.24.0
+Last checked: 17 Oct 2026 · Product version 0.24.3
 
 ## What it is for {#ju-purpose}
 
@@ -39,6 +39,7 @@ The judge's one view (since 0.24.0; it was the default since 0.20.0), for scorin
 
 ![The question when a line below an empty one is tapped](../img/judge-rider-sheet-skip-390.png)
 *judge-rider-sheet-skip-390.png — line 7 tapped while lines 3 to 6 have no score from you: the question and its one tap.*
+- **The reference score (“Ref 7.0”).** Beside a trick the spotter has logged, a small teal tag shows what an average version of that trick is worth on the judges' list, plus what its variations add. It is **a hint, never a score**: nothing is saved or counted because of it, it is not shown to the public, and you type your own score as always. **Tap the tag** to see how it is made (“Reference 7.0 = Boogie loop 4.0 + Board flip 2.5 + Blind landing 0.5.”); **Hide** closes it. Board-off, Board flip and Osmosis do not add up: only the highest counts, and the sentence says which was left out. Board spin (+2.2) is another trick than Board flip (+2.5), in the same group. A multiplier (×2, ×3) plays no part for now: a ×2 trick shows the hint of the single one. There is no tag on a crash, on a trick that is not on the list (Innovation, say), or when the trick has a block the list has no value for (a Tic-tac, a grab on any trick but the kiteloop). The values are the platform owner's, in [Admin: trick base](admin-trick-base.md#at-reference).
 - **Missed is a switch.** If you did not see an attempt, tap **Missed** on its line: the button shows it is on (a tick) and the score box stays empty. Tap it again to turn it off; typing a score on a Missed line turns Missed off by itself, so you never clear anything first. It counts as done and opens the next line, and means “I did not see it. No score from me; the panel average uses the others.”, also on a line the spotter has not logged yet: the attempt that takes the line then has no score from you, and the console shows “Missed” in your column. Turning it off puts the line back to “no score from you”; the audit log says “‹judge› took back Missed on ‹attempt›”.
 - **Flag.** Under **Missed** on every line with an attempt (also a crash line) is **Flag**, a small pill with a flag icon and the word (a screen reader says “Flag attempt ‹n›”): it alerts the head judge (“That was a crash” / “That was a landing” on a crash line / Wrong rider / Duplicate / Other) and you still score or set Missed. On a line with no attempt yet it is greyed.
 - **Each line** shows the attempt number, the trick (empty — “waiting for the spotter” — until the spotter logs it; then the trick as the spotter named it, with its direction), a **Crash** word when the spotter logged a crash, and a **Missed** button and a score box you type into with the phone keyboard. The box uses the division's scale and step; a score off the step is refused with the same sentence as the pad (“That score is not on the 0.5 step. Use 7 or 7.5.” with a **Learn more** link to [this page](#ju-pad-step)). There is no Save button: a score that is on the step is saved the moment you type it.

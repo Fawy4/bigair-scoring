@@ -1472,3 +1472,20 @@ Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 ### How to test on a phone
 - Release entry 0.24.1 in `docs/RELEASES.md`.
 
+
+## Reference scores on the judge's Rider sheet (0.24.3)
+
+### Done
+- The judges' sheet (WoS_tricks_judges2026) is in the trick base as a `reference` part of the vocabulary file (`presets/tricks/big-air-vocabulary.json`): 16 trick values, 6 variation values, checked by Zod (`src/lib/schemas/reference-scores.ts`). Eleven new blocks were added (Snakeloop, KGB, Loop back rotation invert, two dangle passes, two 36 Kung-Fu passes, KL3, Board flip, Osmosis, Unhook); the unhook tricks are in a new category, Unhooked.
+- Pure engine function `referenceScore` (`src/lib/engine/tricks/reference.ts`), written test-first from the owner's rules (docs/08 §1J): board variations do not stack (highest counts), Unhook / Blind / Grab stack, multipliers left to the judge, no hint when it would be a guess.
+- The judge's Rider sheet shows a teal tag “Ref 7.0” beside a logged trick; tapping it shows the sum in words. A hint only: nothing is saved or counted.
+- Admin → Trick base has a Reference scores card (editable values, **Add the judges' list** adds what is missing without changing anything).
+
+### Not done
+- Manual screenshots were not retaken (`npm run manual:shots` needs the hosted project's keys); the judge and trick base pictures do not show the tag or the card yet.
+- The live trick base (in the database) does not have the list until the owner presses **Add the judges' list**, saves and publishes, and each event presses Update to latest.
+- Multipliers are left out for now (a ×2 trick shows the hint of the single one).
+- Osmosis is in the “Board-off” category and the short form BRI is a first guess; a scoring model that counts the best trick per category has no setting for “Unhooked” yet.
+
+### How to test on a phone
+- Release entry 0.24.3 in `docs/RELEASES.md`.

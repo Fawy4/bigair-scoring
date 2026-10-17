@@ -12,6 +12,7 @@ import { useShrinkToLines } from "./use-fit-text";
 import { RiderTile } from "./rider-tile";
 import { ScreenHeader } from "./screen-header";
 import { LearnMore } from "@/components/manual/learn-more";
+import type { ReferenceScore } from "@/lib/engine/tricks";
 import { errorSentence } from "@/lib/live/errors";
 import { activeLine, lineTypable, missedSwitch, needsScore, pulseLine, rangesOf, skipLines, type SheetLine } from "@/lib/live/rider-sheet";
 import { keepInView } from "./use-keyboard-fit";
@@ -22,6 +23,7 @@ import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
 const T = copy.riderSheet;
+const refNumber = (v: number) => (Number.isInteger(v) ? v.toFixed(1) : String(v));
 const dirWord = (d: "left" | "right" | null) => (d === "left" ? copy.live.summary.left : d === "right" ? copy.live.summary.right : "");
 
 /** The switch "Queue / Rider sheet". Remembered per device by the parent. */
@@ -127,6 +129,25 @@ function CriterionBox({
   );
 }
 
+/** How a reference score is worked out, in words: opens under the line when the tag is tapped. */
+function ReferenceBreakdown({ reference, onClose }: { reference: ReferenceScore; onClose: () => void }) {
+  const R = T.reference;
+  const added = reference.parts.filter((p) => p.kind !== "not-added");
+  const left = reference.parts.filter((p) => p.kind === "not-added").map((p) => p.label);
+  return (
+    <div data-testid="reference-breakdown" role="status" className="flex items-start gap-2 rounded-2xl bg-beach-surface px-3 py-1.5 text-body font-medium">
+      <p className="min-w-0 flex-1">
+        <span className="font-bold">{R.sum(refNumber(reference.value), added.map((p) => `${p.label} ${refNumber(p.value)}`))}</span>
+        {left.length ? ` ${R.notAdded(left)}` : ""}
+        {` ${R.hint}`}
+      </p>
+      <Chip compact onClick={onClose} className="shrink-0 text-small">
+        {R.close}
+      </Chip>
+    </div>
+  );
+}
+
 /**
  * One numbered line of a rider's sheet: the attempt number, the trick (empty until the spotter logs it), a crash word when it was a crash, a Missed switch with a
  * Flag under it, and a typed score box. A valid score is saved the moment it is typed (nothing to press); a score the scale does not allow is refused with the
@@ -188,6 +209,7 @@ function LineRow({
   onClear: (line: SheetLine) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
+  const [refOpen, setRefOpen] = useState(false);
   const [critRefused, setCritRefused] = useState<Record<string, ReturnType<typeof padRefusal>>>({});
   // the trick name wraps to two lines; one that still does not fit shrinks (down to 12 px) rather than being cut
   const trickBox = useRef<HTMLSpanElement>(null);
@@ -233,9 +255,23 @@ function LineRow({
               {orphan ? T.noAttempt : T.waitingTrick}
             </span>
           ) : (
-            <span ref={trickBox} data-testid="line-trick" className={cn("flex flex-wrap items-baseline gap-x-1.5 text-name font-bold leading-tight", crash && "line-through")}>
-              <span>{line.trickName || "—"}</span>
-              {line.direction ? <span className="text-small font-medium text-beach-muted">{dirWord(line.direction)}</span> : null}
+            <span className="flex flex-wrap items-baseline gap-x-1.5">
+              <span ref={trickBox} data-testid="line-trick" className={cn("flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-name font-bold leading-tight", crash && "line-through")}>
+                <span>{line.trickName || "—"}</span>
+                {line.direction ? <span className="text-small font-medium text-beach-muted">{dirWord(line.direction)}</span> : null}
+              </span>
+              {line.reference ? (
+                <button
+                  type="button"
+                  data-testid="line-reference"
+                  aria-expanded={refOpen}
+                  aria-label={T.reference.tagAria(line.n, refNumber(line.reference.value))}
+                  onClick={() => setRefOpen((o) => !o)}
+                  className="relative rounded-full border-[1.5px] border-beach-accent px-2 text-small font-bold leading-snug text-beach-accent-text before:absolute before:-inset-x-1 before:-inset-y-3.5 before:content-['']"
+                >
+                  {T.reference.tag(refNumber(line.reference.value))}
+                </button>
+              ) : null}
             </span>
           )}
           {needs ? (
@@ -336,6 +372,7 @@ function LineRow({
           </Chip>
         </div>
       ) : null}
+      {line.reference && refOpen ? <ReferenceBreakdown reference={line.reference} onClose={() => setRefOpen(false)} /> : null}
       {note ? (
         <p role="status" data-testid="line-closed-note" className="rounded-2xl bg-beach-surface px-3 py-1.5 text-body font-bold">
           {note}

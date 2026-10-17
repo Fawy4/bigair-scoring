@@ -2,7 +2,7 @@
 
 /admin/presets/trick-base (Admin → **Master presets** → **Open the trick base**): the master trick base every event starts from, edited as a form, with its versions and the blocks events propose. The older addresses /admin/tricks and /admin/presets/trick-vocabulary/big-air-vocabulary lead here.
 
-Last checked: 2 Oct 2026 · Product version 0.9.0
+Last checked: 17 Oct 2026 · Product version 0.24.3
 
 ## What it is for {#at-purpose}
 
@@ -55,6 +55,16 @@ Under each family: **+ Add block** (type the name, then add aliases on its row).
 
 ![Trick names](../img/admin-trick-base-naming-1280.png)
 *admin-trick-base-naming-1280.png — the naming template, the hidden multiplier and the live example.*
+
+## Reference scores {#at-reference}
+
+The card **Reference scores** holds what the judges' list (the sheet WoS_tricks_judges2026) says each trick is worth, and what each variation adds. A judge sees the result as a small hint (**Ref 7.0**) beside a logged trick on the Rider sheet; it is never a score and is never counted ([Judge screen](judge.md#ju-rider-sheet)). Two lists, each value an editable box (0 to 50, steps of 0.1):
+
+- **Tricks**: a trick is worth its value as an average version (Kiteloop 2.0, Grabbed kiteloop 2.5, Boogie loop 4.0, KGB 7.5…). The trick has to be exactly the blocks of the row; a trick that is not on the list, or that has a block the list has no value for, gets no hint.
+- **Variations (added to the trick)**: Board-off +2.0, Board spin +2.2, Board flip +2.5 (a different trick from Board spin), Osmosis +2.7, Unhook +1.5, Blind landing +0.5. Variations in one **group** (the board ones) do not stack: only the highest counts. A grab is worth something on the kiteloop only (the row “Grabbed kiteloop”).
+- Multipliers (×2, ×3) play no part for now.
+
+The button **Add the judges' list** adds the tricks and variations of the judges' sheet that your draft does not have yet (Snakeloop, KGB, Loop back rotation invert, the dangle passes, the 36 Kung-Fu passes, KL3, Board flip, Osmosis, Unhook) and their values. The five unhook tricks come in a new category, **Unhooked**, which is added to the category list at the top. It changes nothing you already have, so pressing it again adds nothing. It is a draft like any other change: **Save as a new draft**, **Publish to all customers**, and each event takes it when its organiser presses **Update to latest**.
 
 ## Saving: checked in words {#at-save}
 
