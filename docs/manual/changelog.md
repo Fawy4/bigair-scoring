@@ -2,7 +2,16 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 17 Oct 2026 · Product version 0.24.3
+Last checked: 17 Oct 2026 · Product version 0.24.4
+
+## 0.24.4 — 17 Oct 2026 {#cl-0-24-4}
+
+Release entry: [0.24.4](/admin/releases#release-0-24-4) (platform owner only)
+
+**What changed for users**
+- **The reference score also shows on a trick the head judge typed or corrected** as plain words, when every word is recognised.
+
+**Manual pages updated:** [Judge screen](screens/judge.md).
 
 ## 0.24.3 — 17 Oct 2026 {#cl-0-24-3}
 

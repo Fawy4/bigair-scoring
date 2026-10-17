@@ -12,6 +12,23 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.24.4 — 17 Oct 2026 {#release-0-24-4}
+
+PR: #59
+
+### What changed
+- **The reference score (“Ref 7.5”) now also shows on a trick the head judge typed or corrected.** Before, a trick added or edited by the head judge as plain words (“Board-off doobie”) had no blocks stored, so the hint stayed empty. The judge's sheet now reads such a name again with the trick base and shows the hint when every word is recognised. A name with a word nobody recognises, or a block the list has no value for, still shows no hint.
+- Nothing else changed: no setting, sentence or database structure.
+
+### What to test
+- [ ] As the head judge, add an attempt for a rider by typing “Board-off doobie” (Add attempt): on the judge's sheet that line shows **Ref 7.5**.
+- [ ] Correct an attempt's trick to “Doobie loop Board spin” (Edit): the judge's line shows **Ref 7.7**.
+- [ ] Type “banana jump” as an added attempt: no tag.
+- [ ] A trick the spotter taps (Boogie loop + Board flip + Blind landing) still shows **Ref 7.0**.
+
+### Known issues
+- None known.
+
 ## 0.24.3 — 17 Oct 2026 {#release-0-24-3}
 
 PR: #58
