@@ -10,7 +10,7 @@
  * ever logged + 1), so when an attempt is deleted the line of every note behind it falls by one by itself: "the lines renumber and the pending notes behind it shift
  * up to the next real attempt" needs no moving of rows.
  */
-import { referenceScore, type ReferenceScore, type TrickParts, type TrickVocab } from "@/lib/engine/tricks";
+import { parseTrickText, referenceScore, type ReferenceScore, type TrickParts, type TrickVocab } from "@/lib/engine/tricks";
 import type { ReferenceTable } from "@/lib/schemas/reference-scores";
 
 export interface SheetAttempt {
@@ -96,15 +96,21 @@ export interface SheetLine {
 }
 
 /**
- * Puts the reference score (the hint) on the lines that have a landed trick: worked out from the trick as the spotter logged it. A crash, an empty line and a trick
- * that is not on the judges' list get none, and with no list at all every line is returned as it was.
+ * Puts the reference score (the hint) on the lines that have a landed trick: worked out from the trick as the spotter logged it. A trick the head judge typed or
+ * corrected as plain words (it has no blocks stored, or a word nobody recognised) is read again from its name with the whole trick base, and gets a hint only when
+ * every word is recognised. A crash, an empty line and a trick that is not on the judges' list get none, and with no list at all every line is returned as it was.
  */
 export function withReferences(lines: SheetLine[], partsOf: (attemptId: string) => unknown, vocab: TrickVocab, table: ReferenceTable | null): SheetLine[] {
   if (!table) return lines;
+  const everyBlock = vocab.blocks.map((b) => b.id);
   return lines.map((line) => {
     if (line.kind !== "attempt" || !line.attemptId) return line;
     const parts = partsOf(line.attemptId) as TrickParts | null | undefined;
-    const reference = parts && Array.isArray(parts.items) ? referenceScore(vocab, table, parts) : null;
+    let reference = parts && Array.isArray(parts.items) ? referenceScore(vocab, table, parts) : null;
+    if (!reference && line.trickName) {
+      const read = parseTrickText(vocab, line.trickName, everyBlock);
+      if (!read.needsReview && !read.parts.freeText?.trim()) reference = referenceScore(vocab, table, read.parts);
+    }
     return reference ? { ...line, reference } : line;
   });
 }

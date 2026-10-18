@@ -251,7 +251,7 @@ describe("reference scores in the trick base (the judges' sheet)", () => {
   it("the starter file's list reads, and every block it names exists in the file", () => {
     const m = toModel(vocabularyJson as unknown as VocabularyJson);
     const ref = referenceOf(m);
-    expect(ref.tricks.length).toBe(17);
+    expect(ref.tricks.length).toBe(20);
     expect(ref.adders.length).toBe(6);
     for (const id of [...ref.tricks.flatMap((t) => t.blocks), ...ref.adders.map((a) => a.block)]) expect(m.blocks[id], id).toBeDefined();
   });
@@ -267,7 +267,7 @@ describe("reference scores in the trick base (the judges' sheet)", () => {
     expect(referenceOf(before).tricks).toEqual([]);
     const { model, blocksAdded, valuesAdded } = addReferenceStarter(before);
     expect(blocksAdded).toBe(11);
-    expect(valuesAdded).toBe(23);
+    expect(valuesAdded).toBe(26);
     for (const [id, b] of Object.entries(before.blocks)) expect(model.blocks[id]).toEqual(b);
     expect(model.families.find((f) => f.key === "base")!.blocks).toContain("base:snakeloop");
     // the new category of the unhook tricks comes with them, at the top of the order, so the draft still saves
@@ -275,6 +275,17 @@ describe("reference scores in the trick base (the judges' sheet)", () => {
     expect(model.categoryPrecedence[0]).toBe("unhooked");
     expect(model.categoryPrecedence.slice(1)).toEqual(before.categoryPrecedence);
     expect(validateModel(model, publishedIds([toVocabulary(before)]), before)).toEqual([]);
+  });
+
+  it("the owner's words are never taken: a word of a new trick that another block already has is left off the new one, and the draft still saves", () => {
+    const before = older();
+    const owners = addAlias(addAlias(before, "base:doobie_loop", "dp"), "base:kiteloop", "snl");
+    const { model } = addReferenceStarter(owners);
+    expect(model.blocks["base:doobie_loop"].aliases).toEqual(owners.blocks["base:doobie_loop"].aliases);
+    expect(model.blocks["base:straight_dangle_pass"].aliases).not.toContain("DP");
+    expect(model.blocks["base:snakeloop"].aliases).not.toContain("SnL");
+    expect(model.blocks["base:snakeloop"].aliases).toContain("snake");
+    expect(validateModel(model, publishedIds([toVocabulary(owners)]), owners)).toEqual([]);
   });
 
   it("pressing it twice adds nothing the second time", () => {
