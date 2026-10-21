@@ -2,7 +2,7 @@
 
 The spotter's phone at /spot/‹event›: log every attempt — which rider, which trick, landed or CRASH — the moment it happens.
 
-Last checked: 17 Oct 2026 · Product version 0.24.4
+Last checked: 21 Oct 2026 · Product version 0.25.0
 
 ## What it is for {#sp-purpose}
 
@@ -38,6 +38,15 @@ Like the judges' Rider sheet, but the spotter fills in the lines and **nothing n
 
 Since 0.21.0 the spotter's screens wear the product's new look (see [The New look](judge.md#ju-new-look) on the judge page): rows with thin dividers, pill buttons, Rubik, Daylight by default. On an iPhone 14 in **Normal** the header, the rider cards and all **7 lines** fit without scrolling. The row of settings that used to sit at the bottom is now the one round **Settings** button at the end of the header (Daylight / Dark, Normal / Large, Sound). The trick box takes all the width that is left (at least 20 characters of a trick name show); the microphone shows while the box is empty and the × only while it is in use. Each line is one row: a small teal tick by its number says it is logged (the words **Empty**, **Saving…** and **Logged ✓** are kept for a screen reader and show only when something needs saying, such as a typed trick waiting for a tap); the typed trick is in Medium weight so it stays readable.
 
+## When the heat ends {#sp-heat-end}
+
+The clock reaching 0:00, or the head judge pressing **End heat**, **does not take you off your sheet and does not lock it**. Before 0.25.0 the screen turned into “Between heats” and the last jumps could no longer be logged.
+
+- **The strip.** A “Heat ended” row under the header: “Heat ended — you can still log and correct until the head judge publishes.” The Rider sheet under it is the one you were on.
+- **Log, correct and undo as before**, for as long as the head judge has not published: a late jump goes on its line, a line can be changed (trick, Left / Right, Crash), and **Undo** works for 10 seconds. The database accepts your writes for an ended heat that is not published.
+- **A late line reaches the judges.** If a judge had already submitted, that judge's sheet opens again for your line (“New attempt to score”) and the head judge's review bar says “Spotter still logging” while you are at work.
+- **When the head judge publishes**, the heat is closed: your screen moves on to the next heat, and a line still waiting to be sent is refused with “This heat is already published.” (“Not logged for Red: This heat is already published.”). After a **Re-open** the sheet takes lines again.
+
 ## Controls {#sp-controls}
 
 | Control | What it does |
@@ -53,4 +62,4 @@ Since 0.21.0 the spotter's screens wear the product's new look (see [The New loo
 
 ## What it depends on {#sp-depends}
 
-The heat must be running (“The heat is not running, so nothing can be logged.”; paused: “Paused — logging is off until the head judge resumes.”). The rider must have attempts left (the division's cap; past the cap only the head judge adds one, with a reason). The trick names come from the division's Trick base. Judges can log too when the Event step allows it.
+The heat must be running **or have ended and not yet be published** (“The heat is not running, so nothing can be logged.” for a heat that has not started; paused: “Paused — logging is off until the head judge resumes.”; published: “This heat is already published.”). The rider must have attempts left (the division's cap; past the cap only the head judge adds one, with a reason). The trick names come from the division's Trick base. Judges can log too when the Event step allows it.

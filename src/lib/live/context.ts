@@ -142,7 +142,7 @@ export async function loadLiveContext(eventId: string, supabase?: Db): Promise<L
 
   return {
     hiddenViewsTest: hiddenViewsTestServer(),
-    event: { id: event.id, name: event.name, slug: event.slug, timezone: event.timezone, judgesMayLogAttempts: settings.judgesMayLogAttempts, maxRunningHeats: settings.maxRunningHeats, isSimulation: Boolean(event.is_simulation), readyCallMin: settings.readyCallMin, publicLiveScores: settings.publicLiveScores, flags: settings.flags },
+    event: { id: event.id, name: event.name, slug: event.slug, timezone: event.timezone, judgesMayLogAttempts: settings.judgesMayLogAttempts, maxRunningHeats: settings.maxRunningHeats, isSimulation: Boolean(event.is_simulation), readyCallMin: settings.readyCallMin, publicLiveScores: settings.publicLiveScores, flags: settings.flags, startNextHeat: settings.startNextHeat, autoStartOff: settings.autoStartOff },
     viewer,
     divisions,
     rounds: roundRows ?? [],

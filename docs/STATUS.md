@@ -1489,3 +1489,22 @@ Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 
 ### How to test on a phone
 - Release entry 0.24.3 in `docs/RELEASES.md`.
+
+## HE1 – Heat end, auto start, next heat (0.25.0)
+
+### Why
+Twice (Gouna 8–9 Oct, Red Bull 19 Oct) a heat's clock reached 0 and the spotter could no longer log or correct tricks, so the late jumps were lost; the judges were moved to the Impression step by themselves.
+
+### Step 1 – what 0.24.4 did (reproduced on throwaway events, before any change)
+- **Spotter** (his phone, not pinned): at 0:00 the Rider sheet was replaced by “Between heats — No heat is running. Next: …”; only “Feed” was left. (Pinned to the heat with `?heat=`: the sheet stayed but “The heat is not running, so nothing can be logged.” and every empty line was disabled.)
+- **Judge**: at 0:00 / End heat the phone moved by itself to the Variety (Impression) step; one small button, “Review”, went back to the Rider sheet. No strip.
+- **Head judge**: the console stayed on the ended heat (“Ended”, “0:00 Time up”, review bar “Blocked: Judge 1: Variety score for Red missing”); End heat disabled; no strip.
+- **Database**: a spotter's new line after the end → `HEAT_NOT_RUNNING` (clock at 0, End heat and under review alike; the head judge's line was accepted); a spotter's correction and undo were accepted (the screen, not the database, took them away); a judge's score or Impression before Submit accepted, after Submit `SHEET_LOCKED`; a line logged after a judge had submitted left his sheet “submitted” (`SHEET_LOCKED` for that line, the console counted him as finished); under review every judge write → `SHEET_LOCKED`; published → everything refused.
+
+### Done
+- Migration `20261111100000_he1_heat_end_auto_start.sql` (additive, applied to the hosted development project): `add_attempt` accepts an ended / under-review heat for everyone allowed to log, refuses a published one (`HEAT_PUBLISHED`); a trigger reopens the sheet of a judge who had submitted when a landed line appears; a trigger resolves flags when their attempt is fixed; `heats.auto_start_at/auto_start_mode`; `plan_auto_start`, `stop_auto_start`, `set_auto_start`, `auto_start_if_due`; `arm_heat` now calls `private.arm_heat_core` (same behaviour).
+- Screens: the “Heat ended” strip (spotter, judge, head, laptop and phone), the spotter stays until Publish, the judge stays on the sheet with **Done — ‹name›**, “New attempt to score”, the review bar's “Still working” row and “Still open” state, the flag look / count / bar rows / box above the table on a narrow console, Publish asks once (“Publish anyway”), the next heat is selected after Publish, the Start-the-next-heat notice with Stop, the switch, the Event step setting.
+- Tests: see the PR description.
+
+### Decisions taken (please confirm or change)
+See the release report in the pull request.

@@ -26,11 +26,13 @@ export function heatEnd(h: HeatRow): number {
 
 /**
  * Which heat an official's phone shows by itself: the running one (else the paused one); for a judge, a heat of their own panel. When none is
- * running a judge stays on the heat that has just ended (the Impression / Variety step, then read-only once submitted) until another heat starts; everybody else sees
+ * running a judge stays on the heat that has just ended (the Rider sheet, then the Impression / Variety step, then read-only once submitted) until another heat starts, and so
+ * does the spotter (HE1: the clock reaching 0 or End heat never takes an official off his screen; the spotter stays until the head judge publishes). Everybody else sees
  * "Next: …". A heat pinned with `?heat=` wins.
  */
 export function pickCurrentHeat(i: PickInput): { heat: HeatRow | null; phase: HeatPhase } {
   const scores = i.viewer.role === "judge" || i.viewer.role === "head";
+  const spotter = i.viewer.role === "spotter";
   const mine = i.heats.filter((h) => {
     if (h.status === "cancelled") return false;
     if (i.viewer.role !== "judge") return true;
@@ -49,9 +51,10 @@ export function pickCurrentHeat(i: PickInput): { heat: HeatRow | null; phase: He
   if (running[0]) return { heat: running[0], phase: "running" };
   const paused = mine.filter((h) => phaseOf(h) === "paused").sort((a, b) => startedMs(a) - startedMs(b));
   if (paused[0]) return { heat: paused[0], phase: "paused" };
-  if (scores) {
+  if (scores || spotter) {
+    // the spotter also keeps a heat that is under review (a re-opened heat takes late lines again): he stays until the head judge publishes
     const waiting = mine
-      .filter((h) => phaseOf(h) === "ended" && (h.status === "ended" || h.status === "running") && i.nowServer - heatEnd(h) < ENDED_WINDOW_MS)
+      .filter((h) => phaseOf(h) === "ended" && (h.status === "ended" || h.status === "running" || (spotter && h.status === "under_review")) && i.nowServer - heatEnd(h) < ENDED_WINDOW_MS)
       .sort((a, b) => heatEnd(b) - heatEnd(a));
     if (waiting[0]) return { heat: waiting[0], phase: "ended" };
   }

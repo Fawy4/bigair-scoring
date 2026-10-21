@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnnouncerView } from "./announcer-view";
 import { AnnouncerFlags } from "./flag-cues";
+import { AutoStartBar } from "./auto-start-bar";
 import { PhoneReview } from "./phone-review";
 import { HeadLiveConsole } from "./head-live-console";
 import { LearnMore } from "@/components/manual/learn-more";
@@ -22,6 +23,10 @@ import { useServerClock, useTick } from "./use-server-clock";
 import { SeatHeartbeat } from "@/app/seat/heartbeat";
 import { RiderLabel } from "@/components/rider-label";
 import { nextHeatInOrder } from "@/lib/engine/schedule";
+import { autoStartNotice, planAfterPublish, planAtRunOrderTime, RETRY_AFTER_REFUSAL_MS } from "@/lib/live/auto-start";
+import { nextAfterPublish } from "@/lib/live/next-after-publish";
+import { parseEventSettings } from "@/lib/schemas/event-settings";
+import { planAutoStart, setAutoStart, stopAutoStart } from "@/lib/live/heat-actions";
 import { chooseDivision, heatToShow, isLiveHeat, liveDivisionIds, rememberedDivision } from "@/lib/live/division-pick";
 import { buildHeadModel } from "@/lib/live/head-model";
 import { judgeWordFor } from "@/lib/live/judge-names";
@@ -80,6 +85,12 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   const [refreshKey, setRefreshKey] = useState(0);
   const [tieFor, setTieFor] = useState<string[] | null>(null);
   const [fixRequest, setFixRequest] = useState<{ target: FixTarget; n: number } | null>(null);
+  // HE1: what is still open when Publish is pressed (reported by the console under the table / the phone's review column)
+  const [openParts, setOpenParts] = useState<string[]>([]);
+  // HE1: Start the next heat. The head judge's switch (the database holds the truth; this follows it), what the last refusal said, and a press in flight.
+  const [autoOff, setAutoOff] = useState(ctx.event.autoStartOff);
+  const [autoNote, setAutoNote] = useState<string | null>(null);
+  const [autoBusy, setAutoBusy] = useState(false);
   const live = useLiveHeat(supabase, ctx, nowServer, streamId);
   const viewer = ctx.viewer;
   const seatId = viewer.kind === "seat" ? viewer.seatId : null;
@@ -183,9 +194,92 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
     setRefreshKey((k) => k + 1);
   }, [live]);
   const nobodyRode = Boolean(shown) && !live.attempts.some((a) => a.heat_id === shown!.id && !a.deleted_at);
-  const review: ReviewProps | undefined = head ? { items: blockerItems, canOverride: head.checklist.canOverride, nobodyRode, riders: riders.map((r) => ({ entryId: r.entryId, word: wordFor(r.entryId), name: r.name })), onChooseOrder: setTieFor, onChanged, ...(wide ? { onFix: (target: FixTarget) => setFixRequest({ target, n: Date.now() }) } : {}) } : undefined;
+  /**
+   * HE1: a heat was published. The console selects the next heat of the run order (in another division, it switches to it; after the last heat it says so) and, when the
+   * event starts the next heat after Publish, raises the ten-second notice. Returns the sentence that goes after "Published".
+   */
+  const onPublished = (heatId: string): string => {
+    const heatsNow = live.heats.map((h) => (h.id === heatId ? { ...h, status: "published" } : h));
+    const next = nextAfterPublish({ plan: plan?.plan ?? null, lives: livesFor(ctx, heatsNow, ctx.heatMeta), heats: heatsNow, divisionOrder: ctx.divisionTabs.map((d) => d.id), publishedId: heatId });
+    if (!next) return copy.heatEnd.lastHeat;
+    selectHeat(next.heatId);
+    const nextRow = heatsNow.find((h) => h.id === next.heatId);
+    const planned = planAfterPublish({ setting: ctx.event.startNextHeat, off: autoOff, nextHeatId: next.heatId, heats: heatsNow, nowServer, hold: Boolean(plan?.plan.hold), publishedId: heatId });
+    if (planned) void askAutoStart(planned.heatId, "after_publish");
+    return copy.heatEnd.nextSelected(nextRow ? heatTitle(ctx, nextRow) : "");
+  };
+  const review: ReviewProps | undefined = head ? { items: blockerItems, canOverride: head.checklist.canOverride, nobodyRode, riders: riders.map((r) => ({ entryId: r.entryId, word: wordFor(r.entryId), name: r.name })), onChooseOrder: setTieFor, onChanged, openParts, onPublished, ...(wide ? { onFix: (target: FixTarget) => setFixRequest({ target, n: Date.now() }) } : {}) } : undefined;
 
   const c = useHeadController({ ctx, heats: live.heats, plans: live.plans, nowServer, selectedId: shownId, nextHeatId, onSelect: selectHeat, onPlanChanged: live.applyPlan, onPatchHeat: live.patchHeat, onApplyState: live.applyState, review, divisionId });
+
+  /** Raises the ten-second notice (the database checks every rule and says which one stops it). */
+  const lastAsk = useRef(0);
+  async function askAutoStart(heatId: string, mode: "after_publish" | "run_order", heatStartAt?: string) {
+    lastAsk.current = Date.now();
+    const r = await planAutoStart(heatId, mode, heatStartAt);
+    if (r.ok) {
+      setAutoNote(null);
+      if (r.heat) live.patchHeat(heatId, r.heat);
+    } else setAutoNote(r.message);
+  }
+  // at the run order time: once the sequence is due within ten seconds, the console raises the notice (once; a refusal waits a few seconds before it is asked again)
+  const nextRowStart = useMemo(() => {
+    const row = c.table?.rows.find((r) => r.kind === "heat" && r.heatId === nextHeatId);
+    return { startMs: row?.startUtc ? Date.parse(row.startUtc) : null, held: row?.status === "held" };
+  }, [c.table, nextHeatId]);
+  const second = Math.floor(nowServer / 1000);
+  useEffect(() => {
+    if (announcer || ctx.event.startNextHeat !== "run_order" || Date.now() - lastAsk.current < RETRY_AFTER_REFUSAL_MS) return;
+    const p = planAtRunOrderTime({ setting: ctx.event.startNextHeat, off: autoOff, nextHeatId, heats: live.heats, nowServer, hold: Boolean(plan?.plan.hold), startMs: nextRowStart.startMs, held: nextRowStart.held, flagsOn: ctx.event.flags.enabled, prestartSec: ctx.event.flags.prestartSec });
+    if (p) void askAutoStart(p.heatId, "run_order", p.heatStartAt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [second, announcer, autoOff, nextHeatId, nextRowStart, live.heats, plan?.plan.hold]);
+  // the head judge's switch may have been changed on another console: follow the database every few seconds
+  useEffect(() => {
+    if (announcer || ctx.event.startNextHeat === "manual") return;
+    let alive = true;
+    const read = async () => {
+      const { data } = await supabase.from("events").select("settings").eq("id", ctx.event.id).maybeSingle();
+      if (alive && data) setAutoOff(parseEventSettings(data.settings).autoStartOff);
+    };
+    const t = setInterval(() => void read(), 8000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [supabase, ctx.event.id, ctx.event.startNextHeat, announcer]);
+  const notice = autoStartNotice(live.heats, nowServer);
+  const autoBar = announcer ? null : (
+    <AutoStartBar
+      notice={notice}
+      setting={ctx.event.startNextHeat}
+      off={autoOff}
+      note={autoNote}
+      busy={autoBusy}
+      onStop={() => {
+        if (!notice) return;
+        setAutoBusy(true);
+        void stopAutoStart(notice.heatId).then((r) => {
+          setAutoBusy(false);
+          if (r.ok) {
+            live.patchHeat(notice.heatId, { auto_start_at: null, auto_start_mode: null, ...(r.heat ?? {}) });
+            setAutoNote(copy.heatEnd.autoStartStopped);
+          } else setAutoNote(r.message);
+        });
+      }}
+      onSwitch={(on) => {
+        setAutoBusy(true);
+        void setAutoStart(ctx.event.id, on).then((r) => {
+          setAutoBusy(false);
+          if (r.ok) {
+            setAutoOff(!r.on);
+            setAutoNote(r.on ? copy.heatEnd.autoStartSwitchedOn : copy.heatEnd.autoStartSwitchedOff);
+            if (!r.on && notice) live.patchHeat(notice.heatId, { auto_start_at: null, auto_start_mode: null });
+          } else setAutoNote(r.message);
+        });
+      }}
+    />
+  );
 
   // laptop console only: the flag strip moves up into the top bar when it fits there whole
   const flagFit = useFlagFitsTopBar(wide && !announcer && Boolean(c.flag), c.flag ? `${c.flag.words}|${c.flag.nextPart ?? ""}|${c.flag.heatName}` : "");
@@ -259,6 +353,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
 
   const column = (bar: React.ReactNode, card: React.ReactNode) => (
     <div className="flex flex-col gap-3">
+      {autoBar}
       {bar}
       <PartBoundary what={copy.crash.parts.timetable}>
         <HeatControl c={c} divisions={ctx.divisionTabs} divisionId={divisionId} liveIds={liveIds} onPickDivision={pickDivision} announcer={announcer} />
@@ -284,7 +379,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
   // the review bar and the Impression card on a phone (a laptop's console draws its own)
   const controlColumn =
     !wide && shown && heatDivision && head ? (
-      <PhoneReview ctx={ctx} heat={shown} division={heatDivision} head={head} live={live} riders={riders} wordFor={wordFor} supabase={supabase} nowServer={nowServer} refreshKey={refreshKey} closing={closing} onChanged={onChanged} onChooseOrder={setTieFor}>
+      <PhoneReview ctx={ctx} heat={shown} division={heatDivision} head={head} live={live} riders={riders} wordFor={wordFor} supabase={supabase} nowServer={nowServer} refreshKey={refreshKey} closing={closing} onChanged={onChanged} onChooseOrder={setTieFor} onOpenWork={setOpenParts}>
         {({ bar, card }) => column(bar, card)}
       </PhoneReview>
     ) : (
@@ -396,6 +491,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
         ) : null}
         <TimerBar c={c} bar flagInTopBar={flagInTop} />
         <StartWarning c={c} />
+        {autoBar}
       </header>
       <div className="grid gap-3 px-3 py-2 min-[900px]:grid-cols-[15rem_minmax(0,1fr)]">
         <div data-testid="left-column" className="flex min-w-0 flex-col gap-2">
@@ -425,6 +521,7 @@ function HeadPage({ ctx, announcer }: { ctx: LiveContext; announcer: boolean }) 
               c={c}
               extras={practice}
               fixRequest={fixRequest}
+              onOpenWork={setOpenParts}
             />
           ) : (
             <p className="text-body font-medium text-beach-muted">{H.noHeat}</p>

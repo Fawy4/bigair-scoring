@@ -2,7 +2,21 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 17 Oct 2026 · Product version 0.24.4
+Last checked: 21 Oct 2026 · Product version 0.25.0
+
+## 0.25.0 — 21 Oct 2026 {#cl-0-25-0}
+
+Release entry: [0.25.0](/admin/releases#release-0-25-0) (platform owner only)
+
+**What changed for users**
+- **The end of a heat takes nobody off their screen.** At 0:00, or at End heat, the spotter, the judges and the head judge see a “Heat ended” strip and keep their screen; nothing is locked. The spotter logs, corrects and undoes until the head judge publishes (the database refuses only after Publish; Re-open gives it back).
+- **Judges keep scoring after the end** and press **Done — Variety / Impression** themselves, then Submit. A line logged after a judge submitted opens that judge's sheet again (“New attempt to score”); the console counts the judge as not finished again. Criteria divisions too.
+- **The review bar says who is still working** (“Spotter still logging”, “Judge 2: 1 line to score”, “1 open flag”); Publish asks once while anything is open and never blocks.
+- **Judges' flags cannot be missed:** a flag look of its own, “1 open flag” beside the heat's name, the flags in the review bar with the judge's note and **Go to attempt**, the box above the table on a narrow screen, Publish asking once, and fixing the attempt resolves its flag. A judge can add a note.
+- **After Publish the console selects the next heat** (another division: it switches; after the last heat it says so).
+- **New Event step setting “Start the next heat”:** by hand (default), automatically after Publish, or at the run order time, with a ten-second notice and **Stop**, and a switch on the console. It never starts past an unpublished heat, a Hold, a Stop or Hold wind call or an empty seat.
+
+**Manual pages updated:** [Judge](screens/judge.md#ju-heat-end), [Spotter](screens/spotter.md#sp-heat-end), [Head judge console on a laptop](screens/console-laptop.md#cl-auto-start), [on a phone](screens/console-phone.md), [Event step](screens/organiser-event.md), [Event day](event-day.md), [Settings](settings.md), [Errors and refusals](errors.md).
 
 ## 0.24.4 — 17 Oct 2026 {#cl-0-24-4}
 

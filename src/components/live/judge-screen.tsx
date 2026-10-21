@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AttemptLogger, enabledIdsOf, type LoggedAttempt } from "./attempt-logger";
+import { HeatEndedStrip } from "./heat-ended-strip";
 import { ImpressionCard } from "./impression-card";
 import { JudgeQueueView, type FlagKind, type JudgeCard } from "./judge-queue";
 import { useEndAtZero, useFlagHorns, useOnline, useTimerSound, useWakeLock } from "./live-hooks";
@@ -21,6 +22,7 @@ import type { ImpressionRider } from "@/lib/live/design-fixtures";
 import { errorSentence } from "@/lib/live/errors";
 import { buildJudgeItems, type LiveAttemptRow, type MyScoreRow } from "@/lib/live/judge-items";
 import { impressionNameOf } from "@/lib/schemas/impression-name";
+import { newAttemptIds, sheetReopenedByNewAttempt } from "@/lib/live/heat-end";
 import { formatCell } from "@/lib/live/matrix-model";
 import { myCountedSeqs, type MyScoreEntry } from "@/lib/live/my-sheet";
 import { nextHeat } from "@/lib/live/next-heat";
@@ -110,7 +112,8 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   };
   const [saved, setSaved] = useState<string | null>(null);
   const [flagged, setFlagged] = useState<Set<string | number>>(new Set());
-  const [tab, setTab] = useState<"impression" | "review">("impression");
+  // HE1: after the horn the judge stays on his Rider sheet; he moves to Impression himself ("Done"), and a new line sends him back to it
+  const [tab, setTab] = useState<"impression" | "review">("review");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submittedLocal, setSubmittedLocal] = useState<Set<string>>(new Set());
   const [notices, setNotices] = useState<Array<{ key: string; text: string }>>([]);
@@ -216,6 +219,21 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const submitted = serverSubmitted || (heat ? submittedLocal.has(heat.id) && !reopened : false);
   const inReview = heat?.status === "under_review" || heat?.status === "published";
   const lockedMessage = submitted ? T.locked : inReview && !reopened ? T.reviewLocked : null;
+  // HE1: a line logged after this judge submitted reopens his sheet for it ("New attempt to score"); he goes back to his lines to score it
+  const reopenedByLine = !submitted && sheetReopenedByNewAttempt(sheetRow);
+  const freshIds = useMemo(
+    () => (reopenedByLine ? newAttemptIds({ attempts: live.attempts, submittedAtMs: sheetRow?.submitted_at ? Date.parse(sheetRow.submitted_at) : null, scoredIds: new Set(live.scores.filter((x) => x.judge_seat_id === seatId).map((x) => x.attempt_id)) }) : new Set<string>()),
+    [reopenedByLine, live.attempts, live.scores, sheetRow?.submitted_at, seatId],
+  );
+  useEffect(() => {
+    if (freshIds.size > 0) setTab("review");
+  }, [freshIds.size]);
+  // lines of riders who ride that have no score from this judge: on the Impression step they are told once, in the strip, with a way back to the sheet
+  const owedLines = useMemo(() => {
+    const scored = new Set(mineRows.map((r) => r.attemptId));
+    const ridingIds = new Set(riding.map((r) => r.entryId));
+    return live.attempts.filter((a) => a.status === "landed" && !a.deleted_at && ridingIds.has(a.entry_id) && !scored.has(a.id)).length;
+  }, [live.attempts, mineRows, riding]);
 
   // refusals the server made for good (a locked sheet, a heat that is not open): say it once
   useEffect(() => {
@@ -231,8 +249,8 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
     q.enqueue("trick_score", `score:${id}`, { attemptId: id, score: score === "missed" ? null : score, missed: score === "missed", criteria: criteria ?? {} });
     if (card) setSaved(score === "missed" ? copy.live.saved.missed(card.label.primary.text, card.seq) : copy.live.saved.line(formatPadValue(score, scale), card.label.primary.text, card.seq));
   };
-  const onFlag = (id: string | number, kind: FlagKind) => {
-    q.enqueue("flag", `flag:${id}:${kind}`, { attemptId: id, kind });
+  const onFlag = (id: string | number, kind: FlagKind, note?: string) => {
+    q.enqueue("flag", `flag:${id}:${kind}`, { attemptId: id, kind, ...(note ? { note } : {}) });
     setFlagged((f) => new Set(f).add(id));
   };
 
@@ -334,10 +352,11 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
         ...(critKeys.length ? { criteriaKeys: critKeys, criteriaOf: sheetCriteriaOf, drafts: boxes } : {}),
       });
       // the reference score of a landed trick: a hint on its line (never a score, and a crash shows none)
-      out[r.entryId] = kit ? withReferences(built, (id) => live.attempts.find((a) => a.id === id)?.trick_parts, kit.vocab, kit.reference) : built;
+      const marked = freshIds.size ? built.map((l) => (l.kind === "attempt" && l.attemptId && freshIds.has(l.attemptId) ? { ...l, fresh: true } : l)) : built;
+      out[r.entryId] = kit ? withReferences(marked, (id) => live.attempts.find((a) => a.id === id)?.trick_parts, kit.vocab, kit.reference) : marked;
     }
     return out;
-  }, [riding, attemptsOf, myNotes, max, mineRows, critKeys, sheetCriteriaOf, drafts, heat, kit, live.attempts]);
+  }, [riding, attemptsOf, myNotes, max, mineRows, critKeys, sheetCriteriaOf, drafts, heat, kit, live.attempts, freshIds]);
   const onLineScore = (riderId: string, line: SheetLine, value: number) => {
     if (!heat) return;
     if (line.kind === "attempt" && line.attemptId) {
@@ -517,10 +536,31 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   // ---- the heat has ended: Impression / Variety, then Submit
   if (ended) {
     const onlyImpression = entry === "none";
+    const scoreName = impression ? impressionNameOf(model) : null;
+    const onSheet = tab === "review" && !onlyImpression;
+    const E = copy.heatEnd;
+    // the strip says what this judge can still do; the screen under it is the one he was on (HE1: the horn takes nothing away and locks nothing)
+    const owedOnImpression = !onSheet && !onlyImpression && !submitted && owedLines > 0;
+    const stripText = submitted ? E.judgeSubmitted : reopenedByLine && freshIds.size > 0 ? `${E.newAttempts(freshIds.size)} — ${E.judgeReopened}` : owedOnImpression ? E.linesOwed(owedLines) : onSheet ? E.judgeLines : E.judgeScores(scoreName);
+    const done =
+      onSheet && !submitted ? (
+        <Chip variant="accent" data-testid="done-impression" aria-label={E.doneAria(scoreName)} onClick={() => setTab("impression")}>
+          {E.done(scoreName)}
+        </Chip>
+      ) : owedOnImpression ? (
+        <Chip variant="accent" data-testid="back-to-lines" onClick={() => setTab("review")}>
+          {E.backToLines}
+        </Chip>
+      ) : null;
     return (
       <>
         <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
-        <ScreenHeader heatName={title} {...common} remainingMs={0} timerState="ended" details={tab === "review"} detailsLabels={{ off: T.reviewTab, on: T.impressionTab }} onToggleDetails={onlyImpression ? undefined : () => setTab((t) => (t === "review" ? "impression" : "review"))} />
+        {onlyImpression || onSheet ? (
+          <ScreenHeader heatName={title} {...common} remainingMs={0} timerState="ended" />
+        ) : (
+          <ScreenHeader heatName={title} {...common} remainingMs={0} timerState="ended" details={false} detailsLabels={{ off: E.backToLines, on: E.backToLines }} onToggleDetails={() => setTab("review")} />
+        )}
+        <HeatEndedStrip action={done}>{stripText}</HeatEndedStrip>
         {noticeList}
         {tab === "review" && !onlyImpression && effectiveView !== "sheet" && switcher ? <div className="px-2 pt-1.5">{switcher}</div> : null}
         {tab === "review" && !onlyImpression && effectiveView === "sheet" ? (
@@ -541,7 +581,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
             onCriterion={onCriterion}
             onCriterionEmpty={onCriterionEmpty}
             flaggedIds={flaggedIds}
-            onFlag={(id, kind) => onFlag(id, kind as FlagKind)}
+            onFlag={(id, kind, note) => onFlag(id, kind as FlagKind, note)}
             onMissed={onLineMissed}
             onClear={onLineClear}
           />
@@ -664,7 +704,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
           onCriterion={onCriterion}
           onCriterionEmpty={onCriterionEmpty}
           flaggedIds={flaggedIds}
-          onFlag={(id, kind) => onFlag(id, kind as FlagKind)}
+          onFlag={(id, kind, note) => onFlag(id, kind as FlagKind, note)}
           onMissed={onLineMissed}
           onClear={onLineClear}
         />

@@ -272,6 +272,11 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
       submit_sheet: { p_heat: ended },
       submit_trick_score: { p_attempt: attR, p_criteria: {}, p_score: 1, p_missed: false, p_flag: null, p_client_key: ck(), p_client_rev: 900 },
       undo_attempt: { p_attempt: attR },
+      // HE1: Start the next heat (the head judge's notice, Stop, the switch; every official's "is it due?")
+      auto_start_if_due: { p_event: f.ids.evA1 },
+      plan_auto_start: { p_heat: running, p_mode: "after_publish", p_heat_start_at: null },
+      set_auto_start: { p_event: f.ids.evA1, p_on: false },
+      stop_auto_start: { p_heat: running },
       unlock_division_draw: { p_division: d.div, p_reason: "let me in please" },
       unlock_division_rules: { p_division: d.div, p_reason: "please let me" },
       update_event_trick_base: { p_event: f.ids.evA1 },

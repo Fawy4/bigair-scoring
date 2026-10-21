@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { CheckCircle2, CircleAlert, Hourglass, Table2, Users } from "lucide-react";
+import { CheckCircle2, CircleAlert, Flag, Hourglass, Table2, Users } from "lucide-react";
+import { FLAG_LOOK } from "./flag-look";
+import type { OpenWork } from "@/lib/live/heat-end";
 import { RiderLabel } from "@/components/rider-label";
 import { cardMinWidth, cardWantedWidth, fitCard, impressionGrid, LEVELS, TITLE_H, type CardLevel } from "@/lib/live/impression-card";
 import type { JudgeImpressions } from "@/lib/live/impression-status";
@@ -13,10 +15,58 @@ import { copy } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 
 const R = copy.headLive.reviewBar;
+const E = copy.heatEnd;
 const I = copy.headLive.impressionCard;
 const small = "min-h-tap rounded-lg border border-beach-border bg-beach-fill px-2 text-small font-semibold text-beach-ink";
 // the same distance bands as the trick scores in the table: within tolerance green, then yellow, orange, red (literal class names for Tailwind)
 const DIST = ["bg-beach-tint-dist0", "bg-beach-tint-dist1", "bg-beach-tint-dist2", "bg-beach-tint-dist3"];
+
+const fallbackWords: WorkWords = { judge: (id) => id, attempt: () => "" };
+/** Words for the people and the attempts the work rows name. */
+export interface WorkWords {
+  judge: (seatId: string) => string;
+  attempt: (attemptId: string) => string;
+}
+
+/**
+ * HE1: who is still working ("Spotter still logging", "Judge 2: 1 line to score") and the judges' open flags, each with the judge's note and a jump to the attempt. The flags
+ * have a look of their own (the brand's ink, filled, with a flag icon): never the amber of an outlier.
+ */
+function WorkRows({ work, words, onJump, label }: { work: OpenWork | undefined; words: WorkWords; onJump?: (attemptId: string) => void; label: boolean }) {
+  if (!work) return null;
+  const people = work.spotter || work.judges.length > 0;
+  return (
+    <>
+      {people ? (
+        <p data-testid="review-work" className="flex w-full flex-wrap items-center gap-x-2 gap-y-1 text-body font-semibold">
+          {label ? <span>{E.stillWorking}</span> : null}
+          {work.spotter ? <span data-testid="review-work-spotter">{E.spotterLogging}</span> : null}
+          {work.judges.map((j) => (
+            <span key={j.seatId} data-testid="review-work-judge" data-seat={j.seatId}>
+              {E.judgeLinesToScore(words.judge(j.seatId), j.lines)}
+            </span>
+          ))}
+        </p>
+      ) : null}
+      {work.flags.map((f) => (
+        <div key={f.id} data-testid="review-flag" data-flag={f.id} className={cn("flex w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-lg px-2 py-1 text-body font-semibold", FLAG_LOOK)}>
+          <Flag aria-hidden className="size-4 shrink-0" />
+          <span className="min-w-0">{E.flagLine(words.judge(f.judgeId), copy.headLive.flagKinds[f.kind] ?? f.kind, words.attempt(f.attemptId))}</span>
+          {f.note ? (
+            <span data-testid="review-flag-note" className="min-w-0 flex-1 basis-40 font-medium">
+              {E.flagNote(f.note)}
+            </span>
+          ) : null}
+          {onJump ? (
+            <button type="button" data-testid="review-flag-jump" onClick={() => onJump(f.attemptId)} className="ml-auto min-h-tap rounded-lg border-2 border-beach-bg bg-beach-bg px-2 text-small font-semibold text-beach-ink">
+              {E.goToAttempt}
+            </button>
+          ) : null}
+        </div>
+      ))}
+    </>
+  );
+}
 
 /**
  * The review bar: one full-width line directly under the heat's header, from End heat until Publish. Amber while judges have not submitted (each name opens that
@@ -31,8 +81,14 @@ export function ReviewBar({
   onChooseOrder,
   pending,
   error,
+  words,
+  onJump,
 }: {
   state: ReviewBarState;
+  /** The words for the judges and attempts the open work names (HE1). */
+  words?: WorkWords;
+  /** "Go to attempt" on an open flag (the laptop console scrolls to the row; a phone has no table, so none). */
+  onJump?: (attemptId: string) => void;
   onSheet: (seatId: string) => void;
   onFix: (target: FixTarget) => void;
   onAbsent: (item: ChecklistItem) => void;
@@ -62,6 +118,7 @@ export function ReviewBar({
             </button>
           ))}
         </span>
+        <WorkRows work={state.work} words={words ?? fallbackWords} onJump={onJump} label />
       </div>
     );
   }
@@ -95,6 +152,16 @@ export function ReviewBar({
             {error}
           </span>
         ) : null}
+        <WorkRows work={state.work} words={words ?? fallbackWords} onJump={onJump} label />
+      </div>
+    );
+  }
+  if (state.kind === "open") {
+    return (
+      <div data-testid="review-bar" data-state="open" role="status" aria-label={R.label} className={cn(base, "border-beach-outlier bg-beach-tint-dist1 text-beach-ink")}>
+        <Hourglass aria-hidden className="size-4 shrink-0" />
+        <span>{E.stillOpen}</span>
+        <WorkRows work={state.work} words={words ?? fallbackWords} onJump={onJump} label={false} />
       </div>
     );
   }

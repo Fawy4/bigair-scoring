@@ -144,6 +144,7 @@ const EVENT_FIELDS: Array<[string, string, string]> = [
   ["event.flagStates", copy.event.flagsHeading, "settings.flags.states"],
   ["event.prestartSec", copy.event.prestartSec, "settings.flags.prestartSec"],
   ["event.lastMinuteSec", copy.event.lastMinuteSec, "settings.flags.lastMinuteSec"],
+  ["event.startNextHeat", copy.event.startNextHeat, "settings.startNextHeat (the head judge's switch: settings.autoStartOff)"],
   ["event.leaderboards", copy.event.leaderboards, "settings.externalLeaderboards"],
   ["event.publicTabs", copy.event.publicPage, "settings.publicTabsOff"],
   ["event.maxRunning", copy.event.maxRunning, "settings.maxRunningHeats"],

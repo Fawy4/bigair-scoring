@@ -102,6 +102,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “At least one tab must stay on.” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-onetabon) |
 | “at most 20 sponsors” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-sponsorsmax) |
 | “at most 6 extra leaderboards” | Fix the highlighted field and press Save event again. | [Organiser: event list and Event step](errors.md#err-event-validation-leaderboardsmax) |
+| “Auto start is off, so nothing starts by itself. Press Start heat sequence when you are ready.” | Press Start heat sequence yourself, or switch auto start on again on the console (and, if the event says By hand, choose when it should start in the Event step). | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-auto-start-off) |
 | “Available once the heat has ended.” | Press End heat (or wait for the clock). | [Grey buttons on the head console](errors.md#err-controlwhy-publish) |
 | “Available while a heat is running or paused.” | Do what the sentence says, or pick another heat in the run order. | [Grey buttons on the head console](errors.md#err-controlwhy-live) |
 | “Available while a heat is running, paused or waiting to be published.” | Follow the sentence. | [Simulator](errors.md#err-simulator-endpublish-why) |
@@ -182,6 +183,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “‹heat› is waiting for the head judge, who is a real person. Review and publish it on the head console.” | Publish on the head console, or set the head judge to Virtual. | [Simulator](errors.md#err-simulator-play-lines-waithead) |
 | ““Hide this multiplier” must be one of the multipliers, or empty.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-hidenotmultiplier) |
 | “Invalid identification scheme: ‹detail›” | Fix the colour or field the sentence names, then save. | [Organiser: Rider label](errors.md#err-ident-validation-invalid) |
+| “It is too early to start the next heat sequence.” | Nothing to do: the console asks again by itself when it is time. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-auto-start-too-early) |
 | “Keep the message to 140 letters.” | Follow the sentence. | [Organiser: Go live](errors.md#err-windcall-errors-message-too-long) |
 | “Kite size “‹v›” is not a number such as 9 or 12.5.” | Follow the sentence. | [Organiser: Riders](errors.md#err-riders-csv-badkitesize) |
 | ““‹l›” already exists in that family.” | Follow the sentence. | [Organiser: Divisions](errors.md#err-trickbase-errors-exists) |
@@ -307,6 +309,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “That account is not an organiser. Ask the owner to add you.” | The platform owner adds it to an organisation. | [Organiser sign-in](errors.md#err-login-notanorganiser) |
 | “That address does not look right.” | Follow the sentence. Most admin changes need the platform owner role. | [Platform owner (/admin)](errors.md#err-admin-errors-invalid-url) |
 | “That attempt no longer exists.” | Follow the sentence; the dependency map names what must be true first. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-attempt-not-found) |
+| “That automatic start could not be set up.” | Reload the console and try again; if it keeps happening, tell the owner. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-bad-auto-start) |
 | “That check is not in the releases file any more. Reload the page.” | Reload the page and tick the check as it reads now. | [Platform owner (/admin)](errors.md#err-admin-releases-codes-invalid-check) |
 | “That copy is older than 30 days and can no longer be restored.” | Follow the sentence. | [Resets](errors.md#err-reset-restore-errors-snapshot-expired) |
 | “That copy no longer exists.” | Follow the sentence. | [Resets](errors.md#err-reset-restore-errors-snapshot-not-found) |
@@ -439,6 +442,7 @@ Every refusal or error sentence the product can show, with its fix; **Details** 
 | “the minimum per heat cannot be more than the target” | Change the highlighted number; the preview comes back when the format can run. | [Organiser: Divisions](errors.md#err-formatsimple-minabovetarget) |
 | “The naming template has an unknown part: ‹part›. Use {direction} and {blocks}.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-namingunknown) |
 | “The naming template must contain {blocks}.” | Follow the sentence: fix the block it names, then press Save as a new draft again. | [Admin: trick base](errors.md#err-trickeditor-errors-namingmissingblocks) |
+| “The next heat does not start by itself: a rule of the start does not hold yet.” | Fix the one it names (publish the earlier heat, resume the run order, clear the wind call, fill the seat, give the walkover) and press Start heat sequence yourself. | [Head console, judge and spotter (database answers)](errors.md#err-liveerrors-codes-auto-start-blocked) |
 | “The next heat is not the final.” | Follow the sentence. | [Simulator](errors.md#err-simulator-log-nofinal) |
 | “The note could not be saved. Try again.” | Follow the sentence. | [Feedback notes](errors.md#err-feedback-failed) |
 | “The organisation was created, but its logo could not be uploaded. Add it on this page.” | Upload the logo again on the organisation's page. | [Platform owner (/admin)](errors.md#err-admin-org-logofailed) |

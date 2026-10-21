@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CellDialog, ImpressionDialog } from "./head-console-dialogs";
-import { useSideData } from "./head-side-panel";
+import { OpenFlagCount } from "./flag-look";
+import { HeatEndedStrip } from "./heat-ended-strip";
+import { OpenFlags, useSideData } from "./head-side-panel";
 import { ImpressionCardBlock, ReviewBar } from "./review-kit";
 import { useReview } from "./use-review";
 import type { LiveHeatState } from "./use-live-heat";
 import type { HeadModel } from "@/lib/live/head-model";
 import { impressionNameOf } from "@/lib/schemas/impression-name";
+import { openWorkParts } from "@/lib/live/heat-end";
 import { impressionStatus } from "@/lib/live/impression-status";
 import { judgeWordOf } from "@/lib/live/judge-names";
 import type { FixTarget } from "@/lib/live/publish-checklist";
@@ -37,6 +40,7 @@ export function PhoneReview({
   closing,
   onChanged,
   onChooseOrder,
+  onOpenWork,
   children,
 }: {
   ctx: LiveContext;
@@ -52,6 +56,8 @@ export function PhoneReview({
   closing: boolean;
   onChanged: () => void;
   onChooseOrder: (riders: string[]) => void;
+  /** HE1: what is still open, in words, for the Publish dialog to ask about once. */
+  onOpenWork?: (parts: string[]) => void;
   /** The page draws its column with the two parts where they belong: the bar under the heat's header, the card under the heat's controls. */
   children: (parts: { bar: ReactNode; card: ReactNode }) => ReactNode;
 }) {
@@ -78,12 +84,38 @@ export function PhoneReview({
     },
     openSheetDialog: (seatId, entryId) => setOpen({ kind: "sheet", seatId, entryId }),
   });
+  const openParts = closing ? openWorkParts(r.work, { spotter: copy.heatEnd.spotterLogging, judge: (id, n) => copy.heatEnd.judgeLinesToScore(judgeWord(id), n), flags: copy.heatEnd.openFlags }) : [];
+  const openKey = openParts.join("|");
+  useEffect(() => {
+    onOpenWork?.(openParts);
+    return () => onOpenWork?.([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openKey]);
   const done = () => {
     setOpen(null);
     onChanged();
   };
   const row = open?.kind === "cell" ? head.matrix.rows.find((x) => x.attemptId === open.attemptId) : null;
-  const bar = r.bar ? <ReviewBar state={r.bar} pending={r.barPending} error={r.barError} onSheet={r.openSheet} onFix={(t) => (t.kind === "sheet" ? r.openSheet(t.seatId) : undefined)} onAbsent={(i) => void r.markAbsent(i)} onChooseOrder={onChooseOrder} /> : null;
+  const words = {
+    judge: judgeWord,
+    attempt: (attemptId: string) => {
+      const row = head.matrix.rows.find((x) => x.attemptId === attemptId);
+      return row ? copy.headLive.attemptWord(wordFor(row.riderKey), row.seq) : "";
+    },
+  };
+  // under the heat's header: "1 open flag", the Heat ended strip, the review bar (it lists the flags with the judge's note) and the flags box. A phone has no table, so no jump.
+  const bar = r.bar ? (
+    <>
+      {r.work.flags.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <OpenFlagCount n={r.work.flags.length} />
+        </div>
+      ) : null}
+      {closing ? <HeatEndedStrip>{copy.heatEnd.head}</HeatEndedStrip> : null}
+      <ReviewBar state={r.bar} words={words} pending={r.barPending} error={r.barError} onSheet={r.openSheet} onFix={(t) => (t.kind === "sheet" ? r.openSheet(t.seatId) : undefined)} onAbsent={(i) => void r.markAbsent(i)} onChooseOrder={onChooseOrder} />
+      {r.work.flags.length > 0 ? <OpenFlags side={side} live={live} head={head} heat={heat} wordFor={wordFor} onChanged={onChanged} /> : null}
+    </>
+  ) : null;
   const card = r.showImpressionCard ? (
         <ImpressionCardBlock name={impressionNameOf(model)} judges={side.judges} impressions={impressions} riders={riders} tolerance={r.impressionTolerance} onCell={closing ? (seatId, entryId) => setOpen({ kind: "sheet", seatId, entryId }) : undefined} defaultOpen />
       ) : null;

@@ -93,6 +93,8 @@ export interface SheetLine {
   open: boolean;
   /** The reference score of the logged trick, shown to the judge as a hint (never a score); absent when the trick has none. Added by the screen, not by `buildLines`. */
   reference?: ReferenceScore | null;
+  /** HE1: a line logged after this judge submitted ("New attempt to score"). Added by the screen, not by `buildLines`. */
+  fresh?: boolean;
 }
 
 /**

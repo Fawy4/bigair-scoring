@@ -5,6 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MoreHorizontal, MoreVertical } from "lucide-react";
 import { Chip } from "./chip";
+import { OpenFlagCount } from "./flag-look";
+import { openWorkParts } from "@/lib/live/heat-end";
+import { HeatEndedStrip } from "./heat-ended-strip";
 import { plain } from "./console-parts";
 import { AddAttemptDialog, CellDialog, ClearNoteDialog, DeleteDialog, EditAttemptDialog, FlagOutDialog, ImpressionDialog, MergeDialog, StatusDialog, WalkoverDialog } from "./head-console-dialogs";
 import { TieDialog } from "./head-dialogs";
@@ -59,6 +62,19 @@ type Dialog =
   | { kind: "clearNote"; noteId: string; judgeId: string; entryId: string; line: number }
   | null;
 
+/** The console has its right column beside the table from 1280 px; narrower, that column drops below the table and the flags box moves up above it. */
+function useSideBySide(): boolean {
+  const [wide, setWide] = useState(true);
+  useEffect(() => {
+    const m = window.matchMedia("(min-width: 1280px)");
+    const set = () => setWide(m.matches);
+    set();
+    m.addEventListener("change", set);
+    return () => m.removeEventListener("change", set);
+  }, []);
+  return wide;
+}
+
 const editable = (status: string) => ["running", "paused", "ended", "under_review"].includes(status);
 /** The rider menu is there in every state a rider can still be marked: not started, running, ended, under review (a published heat is final until it is re-opened). */
 const riderMenuOpen = (status: string) => status === "scheduled" || editable(status);
@@ -85,6 +101,7 @@ export function HeadLiveConsole({
   c,
   extras,
   fixRequest,
+  onOpenWork,
 }: {
   ctx: LiveContext;
   heat: HeatRow;
@@ -105,6 +122,8 @@ export function HeadLiveConsole({
   extras?: React.ReactNode;
   /** A blocker's "Fix" pressed elsewhere (the Publish dialog): open that cell, that Impression / Variety score, or show that judge. `n` makes a repeat press count. */
   fixRequest?: { target: FixTarget; n: number } | null;
+  /** HE1: what is still open (the spotter, a judge's lines, a flag), in words, for the Publish dialog to ask about once. */
+  onOpenWork?: (parts: string[]) => void;
 }) {
   const [menu, setMenu] = useState<Menu>(null);
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -115,6 +134,18 @@ export function HeadLiveConsole({
   // riders taken out of the event on this screen (the rider list is read when the page loads; the next load has them from the database)
   const [justOut, setJustOut] = useState<Set<string>>(new Set());
   const [flash, setFlash] = useState<string | null>(null);
+  const sideBySide = useSideBySide();
+  // the attempt a flag's "Go to attempt" pointed at: its row is outlined for a few seconds
+  const [jumpedTo, setJumpedTo] = useState<string | null>(null);
+  useEffect(() => {
+    if (!jumpedTo) return;
+    const t = setTimeout(() => setJumpedTo(null), 5000);
+    return () => clearTimeout(t);
+  }, [jumpedTo]);
+  const jumpTo = (attemptId: string) => {
+    setJumpedTo(attemptId);
+    if (typeof document !== "undefined") document.querySelector(`[data-testid="matrix-row"][data-row-id="${attemptId}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
   useEffect(() => setFlash(null), [heat.id]);
   useEffect(() => setOrder(readTableOrder(typeof window === "undefined" ? null : window.localStorage)), []);
   const side = useSideData(supabase, ctx.event.id, heat, head.matrix.judgeIds, ctx.seatNames, refreshKey, { audit: more });
@@ -174,7 +205,21 @@ export function HeadLiveConsole({
     openFix,
     openSheetDialog: (seatId, entryId) => setDialog({ kind: "impression", seatId, entryId }),
   });
-  const { bar, barPending, barError, openSheet, markAbsent, showImpressionCard, impressionTolerance } = review;
+  const { bar, work, barPending, barError, openSheet, markAbsent, showImpressionCard, impressionTolerance } = review;
+  const openParts = closing ? openWorkParts(work, { spotter: copy.heatEnd.spotterLogging, judge: (id, n) => copy.heatEnd.judgeLinesToScore(judgeWord(id), n), flags: copy.heatEnd.openFlags }) : [];
+  const openKey = openParts.join("|");
+  useEffect(() => {
+    onOpenWork?.(openParts);
+    return () => onOpenWork?.([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openKey]);
+  const workWords = {
+    judge: (seatId: string) => judgeWord(seatId),
+    attempt: (attemptId: string) => {
+      const row = rowById(attemptId);
+      return row ? H.attemptWord(wordFor(row.riderKey), row.seq) : "";
+    },
+  };
   const done = (r?: HeadResult) => {
     // what the server answered goes on the screen first (the heat and its seats); the normal refresh follows as a backup
     if (r && r.ok && r.state) live.applyState(r.state);
@@ -242,6 +287,8 @@ export function HeadLiveConsole({
     return { r, total, slot };
   });
 
+  const flagsBox = <OpenFlags side={side} live={live} head={head} heat={heat} wordFor={wordFor} onChanged={onChanged} onJump={jumpTo} />;
+
   return (
     <div data-testid="head-live-console" data-heat={heat.id} className="grid items-start gap-3 min-[1280px]:grid-cols-[minmax(0,1fr)_17rem]">
       <div className="flex min-w-0 flex-col gap-2 min-[1280px]:col-span-2">
@@ -249,8 +296,10 @@ export function HeadLiveConsole({
           <p className="whitespace-normal break-words text-name font-semibold">{title}</p>
           <Pill tone={heat.status === "published" ? "live" : "outlier"}>{copy.heatControl.status[heat.status] ?? heat.status}</Pill>
           {heat.reopened_at && heat.status === "under_review" ? <Pill tone="outlier">{H.underCorrection}</Pill> : null}
+          <OpenFlagCount n={work.flags.length} />
         </div>
-        {bar ? <ReviewBar state={bar} pending={barPending} error={barError} onSheet={openSheet} onFix={openFix} onAbsent={(i) => void markAbsent(i)} onChooseOrder={(riders) => setDialog({ kind: "tie", riders })} /> : null}
+        {closing ? <HeatEndedStrip>{copy.heatEnd.head}</HeatEndedStrip> : null}
+        {bar ? <ReviewBar state={bar} words={workWords} onJump={jumpTo} pending={barPending} error={barError} onSheet={openSheet} onFix={openFix} onAbsent={(i) => void markAbsent(i)} onChooseOrder={(riders) => setDialog({ kind: "tie", riders })} /> : null}
       </div>
       <div className="flex min-w-0 flex-col gap-2">
         {!open ? <p className="text-small font-medium text-beach-muted">{heat.status === "published" ? C.published : ""}</p> : null}
@@ -352,6 +401,8 @@ export function HeadLiveConsole({
           </div>
         ) : null}
 
+        {!sideBySide ? flagsBox : null}
+
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="min-w-0 text-small font-medium text-beach-muted">{open && !menu ? `${C.tap} ` : ""}{C.toleranceNote(String(outlierTolerance(model)))}</p>
           <div role="group" aria-label={V.orderToggle} className="flex gap-1.5">
@@ -370,6 +421,7 @@ export function HeadLiveConsole({
           model={{ judgeIds: head.matrix.judgeIds, rows: tableRows }}
           pending={head.matrix.pending}
           pendingAfterRider={order === "rider"}
+          highlightId={jumpedTo}
           onClearNote={open ? (row, judgeId, noteId) => setDialog({ kind: "clearNote", noteId, judgeId, entryId: row.riderKey, line: row.n }) : undefined}
           actions={
             open
@@ -411,7 +463,7 @@ export function HeadLiveConsole({
           ))}
         </section>
 
-        <OpenFlags side={side} live={live} head={head} heat={heat} wordFor={wordFor} onChanged={onChanged} />
+        {sideBySide ? flagsBox : null}
 
         <section className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={C.totals}>
           <h3 className="text-heading font-semibold text-beach-muted">{C.totals}</h3>

@@ -724,6 +724,7 @@ export function HeatDialogs({ c }: { c: HeadController }) {
           items={review.items}
           canOverride={review.canOverride}
           nobodyRode={review.nobodyRode ?? false}
+          openParts={review.openParts ?? []}
           onChooseOrder={(riders) => {
             close();
             review.onChooseOrder(riders);
@@ -739,8 +740,10 @@ export function HeatDialogs({ c }: { c: HeadController }) {
           onClose={close}
           onDone={(text) => {
             close();
-            c.setMessage({ ok: true, text });
             c.patchHeat?.(selected.id, { status: "published" });
+            // HE1: the console selects the next heat of the run order (or says it was the last) and, with auto start after Publish, raises the ten-second notice
+            const next = review.onPublished?.(selected.id);
+            c.setMessage({ ok: true, text: next ? `${text} ${next}` : text });
             review.onChanged();
           }}
         />

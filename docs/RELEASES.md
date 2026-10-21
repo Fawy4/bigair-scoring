@@ -12,6 +12,35 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.25.0 — 21 Oct 2026 {#release-0-25-0}
+
+PR: #60
+
+### What changed
+- **The horn no longer takes anybody off their screen.** When the clock reaches 0:00, or the head judge presses End heat, the spotter, every judge and the head judge each see a **“Heat ended” strip** at the top and keep the screen they were on. Nothing is locked.
+- **The spotter keeps logging, correcting and undoing until the head judge publishes.** The database accepts the spotter's lines for an ended heat that is not published, and refuses them once it is published (Re-open gives them back). The last jumps logged after the horn are no longer lost.
+- **Judges keep scoring their lines after the end** and go to the Impression step themselves with **Done — Variety** (or Impression, as the event names it), then Submit. A line the spotter logs after a judge has submitted **opens that judge's sheet again** for that line (“New attempt to score”) and the console counts the judge as not finished again. Divisions scored by criteria work the same.
+- **The head judge's review bar says who is still working:** “Spotter still logging”, “Judge 2: 1 line to score”, “1 open flag”. When nothing blocks Publish but somebody is still working the bar is amber (“Still open”), not green. **Publish asks once** while anything is open (“Publish anyway”) and never blocks.
+- **Judges' flags cannot be missed.** A flag has a look of its own (the brand's near-black, filled, with a flag icon), “1 open flag” sits beside the heat's name on the laptop and the phone, the review bar lists each open flag with the judge's **note** and **Go to attempt**, on a narrow screen the flags box sits above the table, and fixing the attempt (switching it to a crash or a landing, moving it to another rider, deleting or merging it) resolves its flag by itself. A judge can add a short note when flagging.
+- **After Publish the console selects the next heat of the run order** (in another division it switches to it; after the last heat it says “That was the last heat of the run order.”).
+- **New Event step setting “Start the next heat”:** **By hand** (the default for every event, old and new: nothing starts), **Automatically after Publish** (the console shows “Next heat sequence starts in 10 s — Stop” and then starts the heat's normal start sequence) or **At its run order time** (the sequence starts so that the heat itself begins at its time, with the same ten-second notice). It never starts while the heat before is not published, while the run order is on Hold or a Stop or Hold wind call is on, or while the next heat has an empty seat or fewer than two riders. The head judge can switch it off and on from the console; every automatic start is in the audit log.
+- Nothing about a published result changed: a published heat takes no new line and no new score.
+
+### What to test
+- [ ] Event step → the **Flags** card has **Start the next heat** with three choices; on an event you already have it shows **By hand**. (Leave it on By hand for now.)
+- [ ] Run a practice or throwaway heat. At 0:00 the **spotter's phone stays on the Rider sheet** with a “Heat ended” strip, and a line logged after 0:00 is accepted and appears on the judge's phone and the console. The judge's phone also stays on the Rider sheet (not on the Impression card) with the strip and a **Done** button.
+- [ ] On the judge's phone press **Done — Variety**, give every rider a score and **Submit**. Then log one more landed jump on the spotter's phone: the judge's phone goes back to the Rider sheet, the new line says **New attempt to score**, and the console's review bar says “Judge 1: 1 line to score”. Score it and submit again.
+- [ ] On a judge's phone press **Flag** on a line, type a note and choose a kind. The console shows **1 open flag** beside the heat's name, the flag in the review bar with your note and **Go to attempt** (it outlines the row), and Publish says “Still open: 1 open flag … Publish anyway”. Fix the attempt (for example switch it to a crash): the flag goes by itself.
+- [ ] Press **Publish**: the console selects the next heat (and in the last heat of the run order says so).
+- [ ] Set **Start the next heat** to **Automatically after Publish**, publish a heat: **Next heat sequence starts in 10 s — Stop** appears. Press Stop once (nothing starts), publish another and let it run: the yellow flag of the next heat goes up by itself. Put the run order on **Hold** during the countdown: nothing starts.
+- [ ] On the console under the notice press **Switch off** (“Auto start is off”) and **Switch on** again. Check the heat's audit log for the automatic start.
+
+### Known issues
+- The heat the judge sees after Re-open: a judge's phone does not go back to a heat that was re-opened after Publish (the head judge scores a missing line for the judge, or reopens the sheet).
+- “Spotter still logging” is a guess from what the spotter logged in the last 45 seconds (or the first 45 seconds after the horn with a spotter's phone connected); it is not something the phone reports.
+- If a late line is taken out again (Undo) the judge's sheet stays open until he presses Submit once more.
+- The manual's pictures of the judge, spotter and console screens are not retaken yet.
+
 ## 0.24.4 — 17 Oct 2026 {#release-0-24-4}
 
 PR: #59

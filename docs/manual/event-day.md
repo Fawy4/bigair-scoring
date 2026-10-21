@@ -2,7 +2,7 @@
 
 The event-day runbook (docs/09, corrected to the built product): the day before, the morning minute by minute, each heat, wind holds, failures and the end of the day, with what the organiser and the head judge do side by side.
 
-Last checked: 4 Oct 2026 · Product version 0.15.0
+Last checked: 21 Oct 2026 · Product version 0.25.0
 
 Times below assume a first heat at 10:00 and a ready call of 15 minutes; move them with your own run order. “HJ” is the head judge. Every button named here exists in version 0.9.0; the end of the page lists what docs/09 expected but the product does not have.
 
@@ -40,10 +40,10 @@ Times below assume a first heat at 10:00 and a ready call of 15 minutes; move th
 | 0 | — | **Start heat** (if it is not the next heat: **Start anyway** or **Don’t start**). The timer starts for everybody from the server's clock. | Spotter: tap rider → trick → **Log** (or **CRASH**). Judges: each card → score → Save (Missed / Flag when needed). |
 | During | Watch Go live: Now and next, drift badge. | Watch the score table: grey “missing” = nudge that judge; amber “outlier” = ask “sure?”; open flags → **Resolve**. Pause only for safety (Pause / Resume). | Phones show Pending when offline; they send when the signal is back. |
 | Flag-out minute | — | Formats with flag-out: **Flag out…** (the lowest riders are ticked). | — |
-| 0:00 | — | The heat ends itself at 0:00 (or **End heat**). | Judges: Impression / Variety for every rider → **Submit**. |
+| 0:00 | — | The heat ends itself at 0:00 (or **End heat**). **Nobody is taken off their screen**: everyone sees a “Heat ended” strip. Watch the review bar: “Spotter still logging”, “Judge 2: 1 line to score”, “1 open flag”. | **Spotter: keep logging and correcting the last jumps until the head judge publishes.** Judges: finish scoring your lines (a late jump arrives on its line; a judge who had submitted gets his sheet back with “New attempt to score”), then press **Done — Variety** (or Impression) → give every rider a score → **Submit**. |
 | +1–3 | — | Read **Before you publish**: each line names the judge and the missing score (“Fawy: score for Omar, attempt 3 missing”, “Fawy: sheet not submitted — 3 attempts unscored”), ties (**Choose order**). **Fix** opens the score; type it from paper or set the judge to **Absent**. Fix them, or **Publish with a reason** (not for a tie). **Publish**. | — |
 | +3 | Results appear on the public pages if “results on publish” is on; otherwise **Release result** on the console. The next round's seats fill. | Hold the final's result for the podium if wanted; **Release result** after the prize-giving. | Announcer reads totals and counted tricks from the announcer view. |
-| Break | — | The countdown: **+1 min**, **Pause break**, **Resume**. Nothing starts by itself. | — |
+| Break | — | The countdown: **+1 min**, **Pause break**, **Resume**. After **Publish** the console has already selected the next heat. **By hand (the default): nothing starts by itself** — press **Start heat sequence**. With **Start the next heat** on *Automatically after Publish* or *At its run order time* (Event step) the console shows **“Next heat sequence starts in 10 s — Stop”** and then starts the sequence by itself; press **Stop** to start it by hand instead, or **Switch off** under the notice to turn it off for the rest of the event. It never starts while the heat before is unpublished, on Hold, with a Stop or Hold wind call, or with an empty seat. | — |
 
 ## Wind hold and delays {#ed-wind}
 
