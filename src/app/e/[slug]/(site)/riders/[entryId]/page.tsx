@@ -9,6 +9,7 @@ import { publicMetadata } from "@/lib/public/meta";
 import { loadCore } from "@/lib/public/page-data";
 import { loadRiderReportData } from "@/lib/public/load";
 import { reportAvailable } from "@/lib/public/rider-report";
+import { reportHref } from "@/lib/public/report-links";
 import { buildRiderPage } from "@/lib/public/rider-model";
 import { eventUrl, whatsappLink } from "@/lib/public/share";
 import { requestOrigin } from "@/lib/platform/origin";
@@ -65,7 +66,7 @@ export default async function RiderPage({ params }: { params: Promise<{ slug: st
       </section>
 
       {hasReport ? (
-        <Link prefetch={false} data-testid="open-report" href={`/e/${core.site.event.slug}/riders/${entryId}/report`} className="flex flex-col gap-0.5 rounded-card border border-beach-accent bg-beach-surface p-3">
+        <Link prefetch={false} data-testid="open-report" href={reportHref(core.site.event.slug, entryId)} className="flex flex-col gap-0.5 rounded-card border border-beach-accent bg-beach-surface p-3">
           <span className="text-name font-semibold">{copy.report.openReport}</span>
           <span className="text-small font-medium text-beach-muted">{copy.report.openReportLine}</span>
         </Link>

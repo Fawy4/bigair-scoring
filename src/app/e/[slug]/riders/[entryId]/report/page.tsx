@@ -4,6 +4,7 @@ import { Updating } from "@/components/public/updating";
 import { buildRiderReport } from "@/lib/engine/report";
 import { admitPublicRequest, loadDraw, loadRiderReportData, loadRiderReportPreview, loadRules, loadSite } from "@/lib/public/load";
 import { reportContextFrom } from "@/lib/public/rider-report";
+import { riderPageHref } from "@/lib/public/report-links";
 import { copy } from "@/lib/ui-copy";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +43,7 @@ export default async function RiderReportPage({ params, searchParams }: { params
   if (!(await admitPublicRequest())) return <Updating />;
   const got = await load(slug, entryId, preview);
   if (!got || got.report.status === "not_found" || got.report.status === "withheld") notFound();
-  const back = `/e/${got.site.event.slug}/riders/${entryId}`;
+  const back = riderPageHref(got.site.event.slug, entryId);
   const r = got.report;
   if (r.status === "no_heats") {
     return (

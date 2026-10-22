@@ -25,6 +25,7 @@ import { impressionPlaceholder } from "@/lib/org/impression-names";
 import { EventFormSchema, slugify, type EventForm as EventFormValues } from "@/lib/schemas/event-settings";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
 import { copy, help, orgCopy } from "@/lib/ui-copy";
+import { previewHref } from "@/lib/public/report-links";
 import { saveEvent } from "./actions";
 import { IdentificationEditor, LycraQuestion } from "./identification-editor";
 
@@ -123,6 +124,8 @@ export function EventForm({ initial, timeZones, schemes, impressionNames = [], p
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-registered on every change so the guard sees the current form
   }, [form, published, understood, dirty, initial.id]);
 
+  // the preview address comes only from the list of this event's riders, never from the text of the screen
+  const previewLink = previewHref(savedSlug, previewEntry, previewRiders);
   const group = "flex flex-col gap-3 border-t border-beach-line py-4";
   const groupTitle = "text-[14px] font-semibold";
   const inputCls = "h-[var(--org-ctl)] w-full rounded-[8px] border border-beach-border bg-transparent px-3 text-body font-semibold";
@@ -466,8 +469,8 @@ export function EventForm({ initial, timeZones, schemes, impressionNames = [], p
                     ))}
                   </select>
                 </label>
-                {previewEntry ? (
-                  <a data-testid="rider-reports-open" href={`/e/${savedSlug}/riders/${previewEntry}/report?preview=1`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[var(--org-ctl)] items-center rounded-[8px] border border-beach-accent bg-beach-accent px-3 text-body font-semibold text-beach-on-accent">
+                {previewLink ? (
+                  <a data-testid="rider-reports-open" href={previewLink} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[var(--org-ctl)] items-center rounded-[8px] border border-beach-accent bg-beach-accent px-3 text-body font-semibold text-beach-on-accent">
                     {T.riderReportsPreviewOpen}
                   </a>
                 ) : null}
