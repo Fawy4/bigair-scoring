@@ -84,12 +84,81 @@ test("After each heat: the rider page offers the report, which shows the tiles, 
   for (const bad of ["J1", "J2", "Judge", "Missed", "outlier"]) expect(body).not.toContain(bad);
   // the stored judge scores of the sample (9.9, 1.1 and 9.8) stand alone as numbers nowhere on the page
   expect(body).not.toMatch(/(?<![\d.])(9\.9|1\.1|9\.8)(?![\d])/);
-  // the report is the owner's: no typing box, nothing to save, and no promise of one
-  await expect(page.locator(".report textarea, .report input")).toHaveCount(0);
+  // My notes: three boxes, and only the true line about them
+  await expect(page.locator(".report textarea")).toHaveCount(3);
+  expect(body).toContain("Saved on this phone only. Come back to this report on the same phone and your notes are still here.");
   expect(body).not.toContain("Private to you");
+  expect(body).not.toContain("Next time, your report opens");
   expect(body).not.toContain("draft");
   // no sideways scroll at 390 px
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+});
+
+test("My notes are kept on this phone: type in a box, reload, the words are still there; another rider's report has its own", async ({ page }) => {
+  test.setTimeout(180_000);
+  await w.setting("after_heat");
+  const seen: string[] = [];
+  page.on("request", (r) => {
+    if (r.method() !== "GET") seen.push(`${r.method()} ${r.url()}`);
+  });
+  await page.goto(reportUrl(w.entry("Ana")));
+  const well = page.getByTestId("notes-well");
+  await expect(well).toBeVisible({ timeout: 60_000 });
+  await expect(well).toHaveAttribute("placeholder", "Write a few words…");
+  await well.fill("Two clean loops, good wind");
+  await page.getByTestId("notes-goal").fill("Land a handle pass");
+  await page.reload();
+  await expect(page.getByTestId("notes-well")).toHaveValue("Two clean loops, good wind", { timeout: 60_000 });
+  await expect(page.getByTestId("notes-goal")).toHaveValue("Land a handle pass");
+  await expect(page.getByTestId("notes-work")).toHaveValue("");
+  // never sent anywhere: typing made no request that carries them
+  expect(seen.filter((x) => x.includes("Two clean loops") || x.includes("handle pass"))).toEqual([]);
+  // the stored text is in this browser only, under the report's own key
+  const keys = await page.evaluate(() => Object.keys(window.localStorage).filter((k) => k.startsWith("sendbook.report-notes.")));
+  expect(keys).toEqual([`sendbook.report-notes.${w.slug}.${w.entry("Ana")}`]);
+  // another rider's report starts empty
+  await page.goto(reportUrl(w.entry("Ben")));
+  await expect(page.getByTestId("notes-well")).toHaveValue("", { timeout: 60_000 });
+});
+
+test("when the browser blocks storage the boxes still work, they are just not kept", async ({ browser }) => {
+  test.setTimeout(180_000);
+  await w.setting("after_heat");
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(() => {
+    const deny = () => {
+      throw new DOMException("blocked", "SecurityError");
+    };
+    Object.defineProperty(window, "localStorage", { get: deny });
+  });
+  const page = await ctx.newPage();
+  await page.goto(reportUrl(w.entry("Ana")));
+  const box = page.getByTestId("notes-work");
+  await expect(box).toBeVisible({ timeout: 60_000 });
+  await box.fill("kept only while this page is open");
+  await expect(box).toHaveValue("kept only while this page is open");
+  await ctx.close();
+});
+
+test("'so far' shows only while a heat of the division is not published; once all are published it is gone, in the top card, the highlights and the field figures", async ({ page }) => {
+  test.setTimeout(240_000);
+  await w.setting("after_heat", "live");
+  const other = w.ladder.heats["R1-H2"];
+  await w.db.from("heats").update({ status: "ended" }).eq("id", other);
+  try {
+    await page.goto(reportUrl(w.entry("Ana")));
+    await expect(page.getByTestId("report-so-far")).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId("so-far-field")).toBeVisible();
+    if (await page.getByTestId("report-highlights").count()) await expect(page.getByTestId("so-far-highlights")).toBeVisible();
+  } finally {
+    await w.db.from("heats").update({ status: "published" }).eq("id", other);
+  }
+  await page.goto(reportUrl(w.entry("Ana")));
+  await expect(page.getByTestId("rider-report")).toBeVisible({ timeout: 60_000 });
+  // every heat is published now, the event is still "live" (not marked complete)
+  await expect(page.getByTestId("report-so-far")).toHaveCount(0);
+  await expect(page.getByTestId("so-far-field")).toHaveCount(0);
+  await expect(page.getByTestId("so-far-highlights")).toHaveCount(0);
 });
 
 test("the totals on the report are the published totals of the heats", async ({ page }) => {

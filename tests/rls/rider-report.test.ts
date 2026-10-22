@@ -176,6 +176,15 @@ describe.skipIf(!ENV_OK)("RA1: the rider report's read (hosted development proje
     expect(Object.keys(res.entries[0]).sort()).toEqual(["division_id", "first_name", "id", "last_name", "nationality", "report_withheld", "withdrawn"]);
   });
 
+  it("each division says how many of its heats are not published yet (the number only), so the report knows whether it is still 'so far'", async () => {
+    await setting("after_heat");
+    const res = await read();
+    const mine = res.divisions.find((d: J) => d.rounds.some((r: J) => r.heats.some((h: J) => h.id === shown.heats["R1-H1"])));
+    // the ladder has more heats than the one published
+    expect(mine.open_heats).toBeGreaterThan(0);
+    expect(Object.keys(mine).sort()).toEqual(["id", "name", "open_heats", "rounds", "sort_order"]);
+  });
+
   it("the organiser's preview works while the setting is Off; a visitor, a seat and another organisation's organiser are refused", async () => {
     await setting("off");
     const mine = await preview(f.clients.orgA);

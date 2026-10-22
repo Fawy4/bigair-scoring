@@ -3271,6 +3271,8 @@ export const copy = {
     notesHeading: "My notes",
     suggestedHeading: "Suggested goals from this report",
     notesPrompts: ["What went well?", "What will I work on?", "My goal for the next event"],
+    notesPlaceholder: "Write a few words…",
+    notesSaved: "Saved on this phone only. Come back to this report on the same phone and your notes are still here.",
     foot: (event: string) => `Sendbook · rider report · ${event}`,
   },
   pub: {

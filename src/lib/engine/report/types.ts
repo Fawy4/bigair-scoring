@@ -82,6 +82,8 @@ export interface ReportDivision {
   id: string;
   name: string;
   sort_order: number;
+  /** How many heats of the division are not published yet (or held back). Missing in an older answer. */
+  open_heats?: number;
   rounds: ReportRound[];
 }
 

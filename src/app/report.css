@@ -106,21 +106,10 @@ body:has(.report[data-theme="dark"]) {
   font-weight: 600;
   margin-block-end: 10px;
 }
-.report .hl-list li::marker {
-  color: var(--teal);
-}
-.report .notes .prompt {
-  /* a written prompt, not a box to type in: nothing on this page can be saved */
-  border-block-end: 1px dashed var(--edge);
-  margin-block: 0;
-  min-block-size: 30px;
-}
-.report .notes .prompt-l {
-  display: block;
-  font-size: 13.5px;
-  font-weight: 700;
-  margin-block: 10px 0;
-}
+.report .notes textarea::placeholder { color: var(--muted); opacity: 1; }
+/* Tailwind's reset removes the bullets of a list: the highlights bring theirs back, in the accent colour, as in the reference */
+.report .hl, .report .sugg ul { list-style: disc; }
+.report .sofar { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-inline-start: 8px; }
 @media print {
   .report .top { margin-block-end: 10px; }
 }

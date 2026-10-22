@@ -48,6 +48,15 @@ export function headlineOf(ctx: ReportContext, entryId: string, rounds: ReportRo
  * The report of one rider (RA1). Pure: the same data and context give the same report. Only published heats are in the data, so nothing here can show an unpublished
  * heat; a rider whose record says under 18 gets no report at all.
  */
+/**
+ * "so far" is said only while the report can still change: the division has a heat that is not published yet, and the event is not marked complete. Once every heat of the division is
+ * published, or the event is complete, the report is final. An answer that does not say how many heats are open (an older one) counts as still open.
+ */
+export function isSoFar(eventStatus: string, openHeats: number | undefined): boolean {
+  if (eventStatus === "complete") return false;
+  return openHeats === undefined ? true : openHeats > 0;
+}
+
 export function buildRiderReport(ctx: ReportContext, entryId: string): ReportResultOrNone {
   const entry = ctx.data.entries.find((e) => e.id === entryId);
   if (!entry) return { status: "not_found" };
@@ -96,7 +105,7 @@ export function buildRiderReport(ctx: ReportContext, entryId: string): ReportRes
     sideWords: ctx.sideWords,
     familyLabels: ctx.familyLabels ?? {},
     decimals: rules?.decimals ?? 2,
-    soFar: ctx.data.event.status !== "complete",
+    soFar: isSoFar(ctx.data.event.status, division?.open_heats),
     headline: headlineOf(ctx, entryId, rounds, rhs),
     highlights: highlightsOf(me, riders),
     tiles: tilesOf(me, riders, finalists, rules),

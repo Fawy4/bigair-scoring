@@ -1,5 +1,5 @@
 import type { Agg } from "./collect";
-import { avgImpression, bestHeat, crashRate } from "./figures";
+import { avgImpression, bestHeat, crashRate, landingsByScore } from "./figures";
 import type { Highlight, HighlightKind } from "./types";
 
 /** Fewest crashes only counts from this many jumps. */
@@ -76,19 +76,19 @@ export function highlightsOf(me: Agg, riders: Agg[], max: number = MAX_HIGHLIGHT
   return out.slice(0, max);
 }
 
-/** "The only rider to land X", only when X is one of his three best scoring tricks. */
+/**
+ * "The only rider to land X", only when X is one of his three best scoring jumps. A jump that scored as much as his third best counts as one of the three (a tie is not cut),
+ * and the first of them that nobody else landed is the one named.
+ */
 export function onlyRiderToLand(me: Agg, riders: Agg[]): { label: string; score: number } | null {
-  const best = new Map<string, { label: string; score: number }>();
-  for (const rh of me.heats)
-    for (const t of rh.attempts) {
-      if (t.status !== "landed" || t.score === null || !t.key) continue;
-      const p = best.get(t.key);
-      if (!p || t.score > p.score) best.set(t.key, { label: t.label, score: t.score });
-    }
-  const top3 = [...best.entries()].sort((a, b) => b[1].score - a[1].score || a[0].localeCompare(b[0])).slice(0, 3);
-  for (const [key, v] of top3) {
-    const others = riders.filter((r) => r.entryId !== me.entryId);
-    if (others.length && !others.some((o) => o.different.has(key))) return v;
+  const landings = landingsByScore(me);
+  if (!landings.length) return null;
+  const floor = landings[Math.min(2, landings.length - 1)].score;
+  const others = riders.filter((r) => r.entryId !== me.entryId);
+  if (!others.length) return null;
+  for (const l of landings) {
+    if (l.score < floor) break;
+    if (l.key && !others.some((o) => o.different.has(l.key as string))) return { label: l.label, score: l.score };
   }
   return null;
 }

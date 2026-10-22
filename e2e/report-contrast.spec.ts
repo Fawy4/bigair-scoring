@@ -38,13 +38,15 @@ function collect(): Item[] {
   const out: Item[] = [];
   for (const el of document.querySelectorAll<HTMLElement | SVGElement>(".report *")) {
     const own = [...el.childNodes].filter((n) => n.nodeType === 3 && (n.textContent ?? "").trim()).map((n) => n.textContent!.trim()).join(" ");
-    const text = el.tagName === "SELECT" ? ((el as HTMLSelectElement).selectedOptions[0]?.textContent ?? "") : own;
+    const isBox = el.tagName === "TEXTAREA";
+    const text = el.tagName === "SELECT" ? ((el as HTMLSelectElement).selectedOptions[0]?.textContent ?? "") : isBox ? (el as HTMLTextAreaElement).placeholder : own;
     if (!text) continue;
     const cs = getComputedStyle(el);
     if (cs.display === "none" || cs.visibility === "hidden") continue;
     // the box of the words themselves, not of the element around them (a swatch or a pill beside the words is not their backdrop)
     let r = el.getBoundingClientRect();
-    if (el.tagName !== "SELECT" && !(el instanceof SVGElement)) {
+    if (isBox) r = new DOMRect(r.left + 10, r.top + 10, Math.min(r.width - 20, 140), 18); // the first line of grey words in the box
+    else if (el.tagName !== "SELECT" && !(el instanceof SVGElement)) {
       const rg = document.createRange();
       const t = [...el.childNodes].find((n) => n.nodeType === 3 && (n.textContent ?? "").trim());
       if (t) {
@@ -54,7 +56,7 @@ function collect(): Item[] {
       }
     }
     if (r.width < 1 || r.height < 1 || r.top < 0 || r.bottom > innerHeight || r.left < 0 || r.right > innerWidth) continue;
-    const c = parse(el instanceof SVGElement ? cs.fill : cs.color);
+    const c = parse(el instanceof SVGElement ? cs.fill : isBox ? getComputedStyle(el, "::placeholder").color : cs.color);
     if (!c) continue;
     let opacity = 1;
     for (let n: Element | null = el; n && n !== document.documentElement; n = n.parentElement) opacity *= Number(getComputedStyle(n).opacity);
@@ -116,13 +118,15 @@ test("every text on the report reads at 4.5:1 or better, Daylight and Dark, 390 
         await page.evaluate((top) => window.scrollTo(0, top), y);
         await page.waitForTimeout(300);
         const items = await page.evaluate(collect);
-        const hide = await page.addStyleTag({ content: "*{color:transparent!important;-webkit-text-fill-color:transparent!important;text-shadow:none!important}svg text{fill:transparent!important}select{color:transparent!important}" });
+        const hide = await page.addStyleTag({ content: "*{color:transparent!important;-webkit-text-fill-color:transparent!important;text-shadow:none!important}svg text{fill:transparent!important}textarea::placeholder{color:transparent!important}select{color:transparent!important}" });
         const b64 = (await page.screenshot()).toString("base64");
         await hide.evaluate((el) => (el as Element).remove());
         for (const r of await page.evaluate(measure, { b64, items })) all.set(`${r.tag}|${r.cls}|${r.text}|${Math.round(r.rgba[0])}`, r);
       }
       const rows = [...all.values()];
       expect(rows.length).toBeGreaterThan(40);
+      // the grey words of the notes boxes are measured too
+      expect(rows.some((r) => r.tag === "textarea")).toBe(true);
       const lowest = [...rows].sort((a, b) => a.ratio - b.ratio).slice(0, 6).map((r) => `${r.ratio} ${r.tag}.${r.cls.split(" ")[0]} "${r.text.slice(0, 24)}"`);
       console.log(`  lowest: ${lowest.join(" | ")}`);
       const fails = rows.filter((r) => r.ratio < 4.5).sort((a, b) => a.ratio - b.ratio);

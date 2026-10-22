@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRiderReport } from "./build";
+import { buildRiderReport, isSoFar } from "./build";
 import { pickerOf } from "./picker";
 import { att, BLOCKS, ctxOf, ENTRIES, FINAL_ADVANCE, heat, P, R1_ADVANCE, res, round } from "./fixture";
 import { scenario } from "./scenario";
@@ -57,9 +57,35 @@ describe("report: highlights, the rider's own best against the event", () => {
 });
 
 describe("report: best tricks, trick mix and the comparison", () => {
-  it("three best tricks, each trick once, with the round", () => {
-    expect(rep("a").bestTricks.map((b) => [b.trick, b.score, b.roundName])).toEqual([["Kiteloop", 6.5, "Final"], ["×2 Backroll Board-off", 5.5, "Final"], ["Megaloop", 4, "Round 1"]]);
+  it("the three best jumps, as the reference lists them: a trick that scored twice is listed twice", () => {
+    expect(rep("a").bestTricks.map((b) => [b.trick, b.score, b.roundName])).toEqual([["Kiteloop", 6.5, "Final"], ["Kiteloop", 6, "Round 1"], ["×2 Backroll Board-off", 5.5, "Final"]]);
   });
+  it("equal scores are listed in the order they were landed", () => {
+    const a = [att(1, { kind: "backroll", score: 5, at: 100, counted: true }), att(2, { kind: "frontroll", score: 5, at: 50, counted: true }), att(3, { kind: "jump", score: 5, at: 200, counted: true }), att(4, { kind: "jump", score: 5, at: 300 })];
+    const ctx = ctxOf([round("R1", "Round 1", 1, [heat(1, [res("a", 1, a), res("b", 2, [att(1, { kind: "megaloop", score: 1, counted: true })])])], R1_ADVANCE)]);
+    expect(rep("a", ctx).bestTricks.map((x) => x.trick)).toEqual(["Frontroll", "Backroll", "Straight jump"]);
+  });
+});
+
+describe("report: the only rider to land a trick", () => {
+  const two = (mine: ReturnType<typeof att>[], theirs: ReturnType<typeof att>[]) => rep("a", ctxOf([round("R1", "Round 1", 1, [heat(1, [res("a", 1, mine), res("b", 2, theirs)])], R1_ADVANCE)])).highlights.find((h) => h.kind === "only_rider_to_land");
+  it("a trick nobody else landed, among his three best", () => {
+    expect(two([att(1, { kind: "megaloop", score: 6, at: 50 }), att(2, { kind: "backroll", score: 4, at: 90 })], [att(1, { kind: "backroll", score: 3 })])).toMatchObject({ trick: "Megaloop", value: 6 });
+  });
+  it("a jump that scored as much as his third best counts as one of the three, so a tie is not cut", () => {
+    const mine = [att(1, { kind: "backroll", score: 6, at: 40 }), att(2, { kind: "frontroll", score: 5, at: 80 }), att(3, { kind: "backroll", score: 4, at: 120 }), att(4, { kind: "megaloop", score: 4, at: 160 })];
+    const theirs = [att(1, { kind: "backroll", score: 2 }), att(2, { kind: "frontroll", score: 2, at: 90 })];
+    expect(two(mine, theirs)).toMatchObject({ trick: "Megaloop", value: 4 });
+  });
+  it("not when the trick only scored less than his third best, and not when the best three are all shared or unnamed", () => {
+    const mine = [att(1, { kind: "backroll", score: 6, at: 40 }), att(2, { kind: "backroll", score: 5.5, at: 80 }), att(3, { kind: "frontroll", score: 5, at: 120 }), att(4, { kind: "megaloop", score: 3, at: 160 })];
+    expect(two(mine, [att(1, { kind: "backroll", score: 2 }), att(2, { kind: "frontroll", score: 2, at: 90 })])).toBeUndefined();
+    const unnamed = [att(1, { kind: null, score: 6, at: 40 }), att(2, { kind: null, score: 5, at: 80 }), att(3, { kind: null, score: 4, at: 120 }), att(4, { kind: "megaloop", score: 3, at: 160 })];
+    expect(two(unnamed, [att(1, { kind: "backroll", score: 2 })])).toBeUndefined();
+  });
+});
+
+describe("report: best tricks, trick mix and the comparison (continued)", () => {
   it("the trick mix lists the families, what landed and what is still to land", () => {
     const m = rep("a").mix;
     expect(m.families.map((f) => [f.key, f.tried, f.landed])).toEqual([["kiteloop", 5, 4], ["board_off", 3, 3], ["rotation", 1, 0]]);
@@ -142,5 +168,33 @@ describe("report: names come from the event, never written out", () => {
   it("the report holds no judge, hint, pending row or contact", () => {
     const text = JSON.stringify(rep("a")).toLowerCase();
     for (const w of ["judge", "pending", "email", "phone", "dob", "outlier"]) expect(text).not.toContain(w);
+  });
+});
+
+describe('report: "so far" shows only while the division can still change', () => {
+  const withOpen = (open: number | undefined, status = "live") => {
+    const c = scenario();
+    c.data.event.status = status;
+    c.data.divisions[0].open_heats = open;
+    return rep("a", c).soFar;
+  };
+  it("a heat of the division is not published yet: so far", () => {
+    expect(withOpen(1)).toBe(true);
+    expect(withOpen(4, "published")).toBe(true);
+  });
+  it("every heat of the division is published: no so far, although the event is not marked complete", () => {
+    expect(withOpen(0)).toBe(false);
+    expect(withOpen(0, "published")).toBe(false);
+  });
+  it("the event is marked complete: no so far, whatever is left open", () => {
+    expect(withOpen(3, "complete")).toBe(false);
+    expect(withOpen(0, "complete")).toBe(false);
+  });
+  it("an answer that does not say how many heats are open keeps the old rule (so far until complete)", () => {
+    expect(withOpen(undefined)).toBe(true);
+    expect(withOpen(undefined, "complete")).toBe(false);
+  });
+  it("the rule on its own", () => {
+    expect([isSoFar("live", 2), isSoFar("live", 0), isSoFar("complete", 2), isSoFar("complete", 0)]).toEqual([true, false, false, false]);
   });
 });

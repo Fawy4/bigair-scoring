@@ -16,7 +16,7 @@ A rider opens **Open the report** on their own page (from the **Riders** tab, fr
 The Event step → **Public page** → **Rider reports** has three choices:
 
 - **Off** — the default for every event, old and new. The rider page has no link and the report address answers “not available”.
-- **After each heat** — a rider's report opens as soon as their first heat is published and grows with every published heat. The report says it is **so far**, and so do the parts that compare riders (the place, the highlights, the field's figures).
+- **After each heat** — a rider's report opens as soon as their first heat is published and grows with every published heat. The report says **so far** (in the top card, the highlights and the field figures) only while the rider's division still has a heat that is not published; once every heat of the division is published, or the event is set to complete, **so far** disappears.
 - **When the event is complete** — reports open only once the event is set to complete.
 
 While it is Off, or before the report opens, the organiser (and the platform owner through **Open as this organiser**) can read any rider's report with **Preview a rider's report**, in the same card: pick the rider and press **Open the preview**. The preview says it is for the organiser; the public cannot read it.
@@ -32,23 +32,29 @@ While it is Off, or before the report opens, the organiser (and the platform own
 |---|---|
 | **Rider** list | Every rider whose report is open, with the place (“Ana Sample — 1st”) or the round reached (“Ben Sample — reached Round 3”). Choosing one opens that rider's report. In the organiser's preview it lists only the riders of that event. |
 | Note | One line under the list: the event, the place, and that every score is the judges' average, as on the public results page. |
-| Top card | The event, the rider's name, the day(s) and country, and the final place (**Joint 5th** for a shared place) or the round reached (**Out in Round 3**). **so far** while the event is not complete. Under it, the path: one pill per round with the place or **Walkover** / **Did not ride** / **Out of the event**. |
+| Top card | The event, the rider's name, the day(s) and country, and the final place (**Joint 5th** for a shared place) or the round reached (**Out in Round 3**). **so far** only while the division still has a heat that is not published, and the event is not set to complete. Under it, the path: one pill per round with the place or **Walkover** / **Did not ride** / **Out of the event**. |
 | **Your highlights** | Up to three lines, where the rider was first in the division: highest scoring trick, best heat total, longest winning run, the only rider to land a trick, most tricks, most different tricks, most loops, fewest crashes, best score of the event's name for the separate score. No highlight, no card. |
 | **Tiles** | Thirteen, in a fixed order, each with the field's figure beside it: jumps, landed, crashes, different tricks, loops, the two sides, best trick, average trick, the separate score, heats won, average heat total, best heat total, steadiness (**lower = steadier**; it needs two heats with a total). The last seven are tinted. |
 | **Your takeaways** | One strength (▲), one thing to train (◎) and one heat strategy point (⏱), chosen by fixed rules ([the rules](#prr-rules)). The strategy point may be the gap line: “In the Final you were 2.0 points from 1st place. One more trick scoring above 6.5, in place of your third-best (4.5), would have moved you up.” |
-| **Your best tricks** | Three numbered, each trick once with its best published score and where it was landed. |
+| **Your best tricks** | The three highest published scores of the rider's landed jumps, numbered, with the round and the time in the heat. A trick that scored twice is listed twice; a jump with no trick name reads **Trick not logged**. |
 | **Heat by heat** | A header with the lycra colour, the round, the heat number and the result (**1st – on to the Final**, **1st – Winner**). Then attempts used, crashes, first landed trick, pace, the total written as best tricks + the separate score, the gap, a **timeline** (a dot for every landed trick at its time and score, a cross for every crash, a dashed line at the field's average, the counting tricks larger with their score), and every jump: time, trick (**Trick not logged** when it has no name), side letter, the published score or **Crash**, and **Counts** under the counting tricks. |
 | **Trick mix** | A bar by family of the trick base, with the grey **Not logged** part, landed out of tried and the average; **Landed** and **Still to land**; and “N crashes had no trick name logged.” |
 | **You and the field** | Landing rate, attempts used, jumps with a loop, different tricks a heat, average landed trick and the separate score: **You**, **Field** and **Finalists**, with the value on the right. Field figures are averages; no other rider is named there. |
-| **My notes** | **Suggested goals from this report** (the first two things to train) and three prompts to think about: What went well? What will I work on? My goal for the next event. There is nowhere to type and nothing is saved. |
+| **My notes** | A line saying what is true (“Saved on this phone only. Come back to this report on the same phone and your notes are still here.”), then, whenever the report has suggestions, **Suggested goals from this report** (the first two things to train), then three boxes: **What went well?**, **What will I work on?**, **My goal for the next event**, with “Write a few words…” in grey. What a rider types is kept in this phone's browser only, one set for each report; it is never sent to Sendbook and nobody else can see it. If the browser blocks storage the boxes still work but the words are not kept. A rider with nothing to train gets no suggestions box. |
 
 ![A heat of the report](../img/public-report-heat-390.png)
 *public-report-heat-390.png — the total, the timeline and every jump of one heat.*
+
+![The highlights](../img/public-report-highlights-390.png)
+*public-report-highlights-390.png — the highlights, with their orange bullets.*
 
 ![The three takeaways](../img/public-report-takeaways-390.png)
 *public-report-takeaways-390.png — a strength, something to train and a heat strategy point.*
 
 Names come from the event: the separate score is called what the event calls it (**Impression**, **Variety**…), and the two sides are the words the event shows (**Left / Right** or **In / Out**). All scores are the published panel scores, exactly as the Results page shows them. Two spellings of one trick (“Double backroll board off”, “×2 Backroll Board-off”) count as one trick; words the trick base did not recognise stay as typed and count as their own trick.
+
+![My notes](../img/public-report-notes-390.png)
+*public-report-notes-390.png — My notes: the suggested goals and the three boxes (one is filled in here).*
 
 ## Day and Dark {#prr-theme}
 
@@ -62,6 +68,7 @@ The report follows the page's Day / Dark choice and has its own **Daylight / Dar
 
 ## The rules for the takeaways {#prr-rules}
 
+- **The only rider to land** a trick counts only for one of the rider's three best jumps; a jump that scored as much as the third best counts as one of the three, and the first of them that nobody else landed is named.
 - **Strength** (the first that applies): a best trick among the event's five highest scores; two or more loops landed; growth through the day (landing rate up by 25 points or more from the first heat to the last); landing rate at least 8 points above the field; every attempt used in every heat (when the division has a limit); the separate score a quarter above the field's; more different tricks a heat than the field; a trick landed on both sides; growth from the first heat's total to the last.
 - **To train** (the first that applies): no loops while the finalists' jumps include loops; one side on at least 75% of the jumps with a side (only with 8 such jumps, and at least half the rider's jumps); landed tricks averaging below three quarters of the finalists' average; a heat with half or more of the jumps crashed; loops landed less than half the time; a trick tried at least twice and never landed; the same trick landed twice on the same side in one heat; the separate score a quarter below the field's. The first two that apply are the suggested goals.
 - **Heat strategy** (the heats lost first, then the heats won): the gap line first, for the latest heat that was not won; then, in a heat not won — attempts left unused, the winner landing fewer tricks, a first landed trick after half the heat, the winner landing more loops or more tricks, or as many tricks as the winner; in a heat won — a counting trick banked in the first third, or the best trick in the second half.

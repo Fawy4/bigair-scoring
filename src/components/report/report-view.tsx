@@ -3,6 +3,7 @@
 import "@/app/home.css";
 import "@/app/report.css";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { HomeSky } from "@/components/home/home-sky";
 import { ThemeSwitch, useBeachTheme } from "@/components/live/theme-switch";
 import type { CompareRow, HeatRow, PickerItem, RiderReport } from "@/lib/engine/report";
@@ -260,7 +261,10 @@ const key1 = (x: number, d: number): string => (Math.round(x * 10 ** d) / 10 ** 
 function Compare({ report }: { report: RiderReport }) {
   return (
     <div className="card" data-testid="report-compare">
-      <h3>{R.compareHeading}</h3>
+      <h3>
+        {R.compareHeading}
+        {report.soFar ? <span className="sofar" data-testid="so-far-field">{R.soFar}</span> : null}
+      </h3>
       <p className="note">{R.compareNote(report.fieldSize.riders, report.fieldSize.finalists)}</p>
       {report.compare.map((c) => {
         const bar = (cls: string, who: string, v: number | null) => (
@@ -285,10 +289,44 @@ function Compare({ report }: { report: RiderReport }) {
   );
 }
 
-function Notes({ report }: { report: RiderReport }) {
+const NOTE_KEYS = ["well", "work", "goal"] as const;
+type NoteKey = (typeof NOTE_KEYS)[number];
+type NoteValues = Record<NoteKey, string>;
+const EMPTY_NOTES: NoteValues = { well: "", work: "", goal: "" };
+
+/** Where a rider's notes are kept: this phone's browser storage, one entry for each report. Never sent anywhere. */
+const notesKey = (slug: string, entryId: string): string => `sendbook.report-notes.${slug}.${entryId}`;
+
+function readNotes(key: string): NoteValues {
+  try {
+    const raw = window.localStorage.getItem(key);
+    const v = raw ? (JSON.parse(raw) as Partial<NoteValues>) : {};
+    return { well: String(v.well ?? ""), work: String(v.work ?? ""), goal: String(v.goal ?? "") };
+  } catch {
+    return EMPTY_NOTES; // storage blocked or unreadable: the boxes still work, they are just not kept
+  }
+}
+
+function Notes({ report, slug }: { report: RiderReport; slug: string }) {
+  const key = notesKey(slug, report.entryId);
+  const [values, setValues] = useState<NoteValues>(EMPTY_NOTES);
+  // read after the page is on screen, so the server's page and the phone's first page are the same
+  useEffect(() => setValues(readNotes(key)), [key]);
+  const change = (k: NoteKey, text: string) => {
+    const next = { ...values, [k]: text };
+    setValues(next);
+    try {
+      window.localStorage.setItem(key, JSON.stringify(next));
+    } catch {
+      // blocked: typing still works, the words are just not kept
+    }
+  };
   return (
     <div className="card notes" data-testid="report-notes">
       <h3>{R.notesHeading}</h3>
+      <p className="note" data-testid="notes-saved-line">
+        {R.notesSaved}
+      </p>
       {report.suggested.length ? (
         <div className="sugg" data-testid="report-suggested">
           <div className="tk-l">{R.suggestedHeading}</div>
@@ -301,11 +339,11 @@ function Notes({ report }: { report: RiderReport }) {
           </ul>
         </div>
       ) : null}
-      {R.notesPrompts.map((q) => (
-        <div key={q} data-testid="reflect">
-          <span className="prompt-l">{q}</span>
-          <div className="prompt" aria-hidden="true" />
-        </div>
+      {NOTE_KEYS.map((k, i) => (
+        <label key={k} data-testid="reflect">
+          {R.notesPrompts[i]}
+          <textarea rows={2} placeholder={R.notesPlaceholder} value={values[k]} onChange={(e) => change(k, e.target.value)} data-testid={`notes-${k}`} />
+        </label>
       ))}
     </div>
   );
@@ -342,8 +380,11 @@ export function RiderReportView({ report, picker, slug, preview }: { report: Rid
           <Hero report={report} />
           {report.highlights.length ? (
             <div className="card" data-testid="report-highlights">
-              <h3>{R.highlightsHeading}</h3>
-              <ul className="hl hl-list">
+              <h3>
+                {R.highlightsHeading}
+                {report.soFar ? <span className="sofar" data-testid="so-far-highlights">{R.soFar}</span> : null}
+              </h3>
+              <ul className="hl">
                 {report.highlights.map((h) => (
                   <li key={h.kind} data-testid="highlight">
                     {highlightText(h, report)}
@@ -362,7 +403,7 @@ export function RiderReportView({ report, picker, slug, preview }: { report: Rid
                 {report.bestTricks.map((b, i) => (
                   <li key={`${b.trick}-${i}`} data-testid="best-trick">
                     <span className="rk">{i + 1}</span>
-                    <span className="bn">{b.trick}</span>
+                    <span className="bn">{b.trick || R.heat.notLogged}</span>
                     <span className="bs">{score(report, b.score)}</span>
                     <span className="bh">{R.bestWhere(b.roundName, clock(b.at_sec))}</span>
                   </li>
@@ -381,7 +422,7 @@ export function RiderReportView({ report, picker, slug, preview }: { report: Rid
           ) : null}
           <Mix report={report} />
           <Compare report={report} />
-          <Notes report={report} />
+          <Notes report={report} slug={slug} />
         </section>
         <p className="foot">{R.foot(report.eventName)}</p>
       </main>

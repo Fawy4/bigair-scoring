@@ -50,21 +50,19 @@ export function tilesOf(me: Agg, riders: Agg[], finalists: Set<string> | null, r
   };
 }
 
-/** His three best scoring tricks (a trick counts once, with its best score), with where in the event he landed it. */
+/** Every landed jump with a score, best first; equal scores in the order they were landed (heat by heat, then the clock of the heat). */
+export function landingsByScore(me: Agg): Array<{ label: string; key: string | null; score: number; roundName: string; at_sec: number | null }> {
+  const all = me.heats.flatMap((rh, h) =>
+    rh.attempts.filter((t) => t.status === "landed" && t.score !== null).map((t) => ({ label: t.label, key: t.key, score: t.score as number, roundName: rh.round.name, at_sec: t.at_sec, order: [h, t.at_sec ?? 1e9, t.seq] })),
+  );
+  return all.sort((a, b) => b.score - a.score || a.order[0] - b.order[0] || a.order[1] - b.order[1] || a.order[2] - b.order[2]).map((x) => ({ label: x.label, key: x.key, score: x.score, roundName: x.roundName, at_sec: x.at_sec }));
+}
+
+/** His three best scoring jumps, as the reference lists them: the three highest landed scores, the same trick twice when it scored twice. */
 export function bestTricks(me: Agg): BestTrick[] {
-  const best = new Map<string, BestTrick & { sort: string }>();
-  for (const rh of me.heats) {
-    for (const t of rh.attempts) {
-      if (t.status !== "landed" || t.score === null) continue;
-      const k = t.key ?? `#${rh.heat.id}-${t.seq}`;
-      const prev = best.get(k);
-      if (!prev || t.score > prev.score) best.set(k, { trick: t.label, score: t.score, roundName: rh.round.name, at_sec: t.at_sec, sort: k });
-    }
-  }
-  return [...best.values()]
-    .sort((a, b) => b.score - a.score || a.sort.localeCompare(b.sort))
+  return landingsByScore(me)
     .slice(0, 3)
-    .map((b) => ({ trick: b.trick, score: b.score, roundName: b.roundName, at_sec: b.at_sec }));
+    .map((b) => ({ trick: b.label, score: b.score, roundName: b.roundName, at_sec: b.at_sec }));
 }
 
 /** The trick mix: tried and landed by family in the order the scoring lists its categories (then the rest, then the jumps with no trick name), what landed, what is still to land. */

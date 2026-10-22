@@ -31,6 +31,9 @@ test("the rider report in Day and in Dark, a heat card, and the Event step's set
         await p.getByTestId("rider-picker").scrollIntoViewIfNeeded();
         await p.getByTestId("rider-picker").locator("xpath=ancestor::header").screenshot({ path: path.join(OUT, "public-report-picker-390.png") });
         await p.getByTestId("report-takeaways").screenshot({ path: path.join(OUT, "public-report-takeaways-390.png") });
+        await p.getByTestId("notes-well").fill("Two clean loops, good wind");
+        await p.getByTestId("report-highlights").screenshot({ path: path.join(OUT, "public-report-highlights-390.png") });
+        await p.getByTestId("report-notes").screenshot({ path: path.join(OUT, "public-report-notes-390.png") });
       }
       await ctx.close();
     }

@@ -86,6 +86,8 @@ begin
     'blocks', private.rider_report_blocks(p_event),
     'divisions', coalesce((select jsonb_agg(jsonb_build_object(
         'id', d.id, 'name', d.name, 'sort_order', d.sort_order,
+        -- how many heats of the division are not published yet (or are held back): while there is one, the report says "so far". Only the number, never which heat.
+        'open_heats', (select count(*) from public.heats oh where oh.division_id = d.id and not (oh.status = 'published' and not oh.publish_hold)),
         'rounds', coalesce((select jsonb_agg(jsonb_build_object(
             'id', r.id, 'name', r.name, 'short_name', r.short_name, 'sort_order', r.sort_order, 'draw_round', r.spec ->> 'id', 'advance', r.spec -> 'advance',
             'heats', coalesce((select jsonb_agg(private.rider_report_heat(h) order by h.number, coalesce(h.number_suffix, ''))
