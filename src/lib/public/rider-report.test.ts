@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { buildRiderReport, type ReportData } from "@/lib/engine/report";
 import { scenario } from "@/lib/engine/report/scenario";
-import { gapText, goalText, highlightText, points, strategyText, strengthText, trainText, clock, ordinal } from "./report-text";
+import { clock, factText, highlightText, ordinal, percent, score, strategyText, strengthText, trainText } from "./report-text";
 import { reportAvailable, reportContextFrom } from "./rider-report";
 import { copy } from "@/lib/ui-copy";
 import { parseEventSettings } from "@/lib/schemas/event-settings";
 import type { PublicRules } from "./types";
 
 const data = (): ReportData => scenario().data;
-const rep = (ctx = scenario()) => {
-  const r = buildRiderReport(ctx, "a");
+const rep = (ctx = scenario(), id = "a") => {
+  const r = buildRiderReport(ctx, id);
   if (r.status !== "ok") throw new Error("no report");
   return r;
 };
@@ -65,19 +65,20 @@ describe("rider reports: the context comes from the event, not from the code", (
   });
 });
 
-describe("rider reports: the words follow the event (item 3)", () => {
-  it("an event using Impression and In / Out: Impression and In / Out are what the page says, and Variety, Left and Right never appear", () => {
-    const r = rep();
-    const text = [
+describe("rider reports: the words follow the event", () => {
+  const words = (r: ReturnType<typeof rep>): string =>
+    [
       ...r.highlights.map((h) => highlightText(h, r)),
-      r.takeaways.strength ? strengthText(r.takeaways.strength) : "",
+      r.takeaways.strength ? strengthText(r.takeaways.strength, r) : "",
       r.takeaways.train ? trainText(r.takeaways.train, r) : "",
-      r.takeaways.strategy ? strategyText(r.takeaways.strategy) : "",
-      ...r.goals.map((g) => goalText(g, r)),
-      ...r.compare.map((c) => (typeof copy.report.compare[c.key] === "function" ? (copy.report.compare[c.key] as (n: string) => string)(r.scoreName) : String(copy.report.compare[c.key]))),
+      r.takeaways.strategy ? strategyText(r.takeaways.strategy, r) : "",
+      ...r.suggested.map((g) => factText(g, r)),
     ].join(" | ");
-    expect(text).toContain("Impression score");
-    expect(text).toContain("twice In");
+  it("an event using Impression and In / Out says those, and Variety, Left and Right never appear", () => {
+    const r = rep();
+    const text = words(r) + " | " + (copy.report.compare.impression as (n: string) => string)(r.scoreName);
+    expect(text).toContain("Impression");
+    expect(text).toContain("on the in side");
     for (const word of ["Variety", "Left", "Right"]) expect(text).not.toContain(word);
   });
   it("an event using Variety and Left / Right says those instead", () => {
@@ -85,28 +86,32 @@ describe("rider reports: the words follow the event (item 3)", () => {
     c.impressionName = "Variety";
     c.sideWords = { left: "Left", right: "Right" };
     const r = rep(c);
-    expect((copy.report.compare.impression as (n: string) => string)(r.scoreName)).toBe("Variety score");
-    expect(trainText(r.takeaways.train!, r)).toContain("both times Left");
-    expect(trainText(r.takeaways.train!, r)).not.toContain("IN");
+    expect((copy.report.compare.impression as (n: string) => string)(r.scoreName)).toBe("Variety");
+    expect(words(r)).toContain("left side");
+    expect(words(r)).not.toMatch(/\bin side\b|\bout side\b/);
+  });
+  it("a sentence is never empty and never shows a missing number", () => {
+    for (const id of ["a", "b", "d"]) {
+      const text = words(rep(scenario(), id));
+      expect(text).not.toMatch(/NaN|undefined|null/);
+    }
   });
 });
 
 describe("rider reports: small formatters", () => {
-  it("places, clock times and distances", () => {
+  it("places, clock times and scores", () => {
     expect([1, 2, 3, 4, 11, 12, 13, 21, 22].map(ordinal)).toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd"]);
     expect(clock(67)).toBe("1:07");
     expect(clock(0)).toBe("0:00");
-    expect(clock(null)).toBe("–");
-    expect([0.4, 2, 1.6, 0.43].map(points)).toEqual(["0.4", "2.0", "1.6", "0.43"]);
+    expect(score({ decimals: 1 }, 5.25)).toBe("5.3");
+    expect(score({ decimals: 2 }, 5.25)).toBe("5.25");
+  });
+  it("percentages round half to even, as the reference does", () => {
+    expect([0.425, 0.435, 0.5, 0.667].map(percent)).toEqual(["42%", "44%", "50%", "67%"]);
   });
   it("joint places read 'Joint 5th'", () => {
     expect(copy.report.place("5th", true)).toBe("Joint 5th");
     expect(copy.report.place("5th", false)).toBe("5th");
     expect(copy.report.outIn("Round 3")).toBe("Out in Round 3");
-  });
-  it("the gap line reads as the owner wrote it", () => {
-    expect(gapText({ heatId: "h", heatLabel: "x", miss: 0.4, toRound: "Final", needAbove: 2, replaces: 1.6, rank: 3 })).toBe(
-      "You missed the Final by 0.4 points. One more trick scoring above 2.0, in place of your third best (1.6), would have taken you through.",
-    );
   });
 });

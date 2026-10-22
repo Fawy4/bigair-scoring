@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 /**
  * The home page's Sendbook background (drawn on a canvas behind the page, never photos): thin orange air streams, low water along the bottom and one still rider.
@@ -8,7 +8,17 @@ import { useEffect, useRef } from "react";
  * keeps to Daylight / Dark (read from the page's own colour variables), shows one still picture with "reduce motion", pauses in a hidden tab and draws at most at 2× sharpness.
  * The rider sits in the page's `[data-home-sky-slot]` box: to the right of the wordmark on a laptop, in a band under it on a phone, and scrolls away with the page.
  */
-export function HomeSky() {
+export interface SkyBeside {
+  /** The report's column (a CSS selector): on a wide screen the rider sits in the free space to its right. */
+  column: string;
+  /** The header above it (a CSS selector): on a phone the rider is small, at the top right under it, and scrolls away with the page. */
+  header: string;
+}
+
+export function HomeSky({ beside: besideProp }: { beside?: SkyBeside } = {}) {
+  const column = besideProp?.column;
+  const header = besideProp?.header;
+  const beside = useMemo(() => (column && header ? { column, header } : undefined), [column, header]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const cv = canvasRef.current;
@@ -20,7 +30,7 @@ export function HomeSky() {
     const boot = async () => {
       const [engine, rider, kite] = await Promise.all([import("./home-sky-engine"), loadImage("/home-sky/rider.png"), loadImage("/home-sky/kite.png")]);
       if (stopped) return;
-      teardown = run(cv, home, ctx, engine, rider, kite);
+      teardown = run(cv, home, ctx, engine, rider, kite, beside);
     };
     // after the page is visible: wait for the page to finish loading, then for an idle moment
     const go = () => {
@@ -34,7 +44,7 @@ export function HomeSky() {
       window.removeEventListener("load", later);
       teardown();
     };
-  }, []);
+  }, [beside]);
   return <canvas ref={canvasRef} className="home-sky-canvas" aria-hidden />;
 }
 
@@ -64,7 +74,7 @@ function tinted(img: HTMLImageElement, colour: string) {
   return c;
 }
 
-function run(cv: HTMLCanvasElement, home: HTMLElement, ctx: CanvasRenderingContext2D, E: Engine, riderImg: HTMLImageElement, kiteImg: HTMLImageElement) {
+function run(cv: HTMLCanvasElement, home: HTMLElement, ctx: CanvasRenderingContext2D, E: Engine, riderImg: HTMLImageElement, kiteImg: HTMLImageElement, beside?: SkyBeside) {
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
   let sky: ReturnType<typeof E.createSky> | null = null;
   let sprites: { rider: { image: CanvasImageSource; width: number; height: number }; kite: { image: CanvasImageSource; width: number; height: number } };
@@ -102,6 +112,7 @@ function run(cv: HTMLCanvasElement, home: HTMLElement, ctx: CanvasRenderingConte
   };
   /** The rider is centred in his box at the biggest size that fits it; a box with no room (hidden) means no rider. */
   const place = () => {
+    if (beside) return placeBeside(beside);
     const slot = document.querySelector<HTMLElement>("[data-home-sky-slot]");
     const box = slot?.getBoundingClientRect();
     if (!sky || !box || box.width < 40 || box.height < 40) {
@@ -114,6 +125,21 @@ function run(cv: HTMLCanvasElement, home: HTMLElement, ctx: CanvasRenderingConte
     const cx = ((b.minX + b.maxX) / 2) * k;
     const cy = ((b.minY + b.maxY) / 2) * k;
     sky.setScene({ ...probe, k, x: box.left + box.width / 2 - cx, y: box.top + box.height / 2 - cy });
+  };
+  /** The report's way: beside the column when the screen has room for him there (still, fixed), else small at the top right under the header, scrolling away with the page. */
+  const placeBeside = (o: SkyBeside) => {
+    if (!sky) return;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const column = document.querySelector<HTMLElement>(o.column);
+    const header = document.querySelector<HTMLElement>(o.header);
+    const right = column ? Math.min(w, column.getBoundingClientRect().right - 14) : w;
+    const margin = w - right;
+    const probe = { ...E.POSE, x: 0, y: 0, k: 1 };
+    const b = E.figureBounds(probe, sprites);
+    const at = (k: number, px: number, py: number) => sky!.setScene({ ...probe, k, x: px - ((b.minX + b.maxX) / 2) * k, y: py - ((b.minY + b.maxY) / 2) * k });
+    if (margin >= 240) at(Math.max(0.8, Math.min(1.3, margin / 360)), right + margin * 0.62, h * 0.3);
+    else at(0.74, w - 52, (header ? header.getBoundingClientRect().bottom : 70) + 46);
   };
 
   const still = () => {

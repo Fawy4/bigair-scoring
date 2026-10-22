@@ -28,6 +28,8 @@ test("the rider report in Day and in Dark, a heat card, and the Event step's set
         const heat = p.getByTestId("report-heat").first();
         await heat.scrollIntoViewIfNeeded();
         await heat.screenshot({ path: path.join(OUT, "public-report-heat-390.png") });
+        await p.getByTestId("rider-picker").scrollIntoViewIfNeeded();
+        await p.getByTestId("rider-picker").locator("xpath=ancestor::header").screenshot({ path: path.join(OUT, "public-report-picker-390.png") });
         await p.getByTestId("report-takeaways").screenshot({ path: path.join(OUT, "public-report-takeaways-390.png") });
       }
       await ctx.close();

@@ -173,7 +173,7 @@ describe.skipIf(!ENV_OK)("RA1: the rider report's read (hosted development proje
     expect(flag(minor)).toBe(true);
     expect(flag(adult)).toBe(false);
     expect(flag(noDob)).toBe(false);
-    expect(Object.keys(res.entries[0]).sort()).toEqual(["division_id", "first_name", "id", "last_name", "report_withheld", "withdrawn"]);
+    expect(Object.keys(res.entries[0]).sort()).toEqual(["division_id", "first_name", "id", "last_name", "nationality", "report_withheld", "withdrawn"]);
   });
 
   it("the organiser's preview works while the setting is Off; a visitor, a seat and another organisation's organiser are refused", async () => {

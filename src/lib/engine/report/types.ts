@@ -35,6 +35,8 @@ export interface ReportResult {
   total: number | null;
   /** "ok" | "DNS" | "DSQ" | "DNF" | "WO" | "OUT" */
   status?: string | null;
+  /** Most attempts this rider could log in this heat when it was published, or null. */
+  cap?: number | null;
   tricks_total: number | null;
   impression: number | null;
   counted: Array<{ seq: number; score: number }>;
@@ -45,6 +47,8 @@ export interface ReportSlot {
   position: number;
   entry_id: string | null;
   modifier: string | null;
+  /** The Lycra colour key of the seat in this heat, or null. */
+  vest_colour?: string | null;
 }
 
 export interface ReportHeat {
@@ -87,6 +91,7 @@ export interface ReportEntry {
   first_name: string | null;
   last_name: string | null;
   withdrawn: boolean;
+  nationality?: string | null;
   /** The rider's record says under 18: no report is shown. */
   report_withheld: boolean;
 }
@@ -103,7 +108,7 @@ export interface ReportBlock {
 export interface ReportData {
   allowed: true;
   how: string;
-  event: { id: string; name: string; slug: string; timezone: string; status: string; start_date: string | null; end_date: string | null };
+  event: { id: string; name: string; slug: string; location?: string | null; timezone: string; status: string; start_date: string | null; end_date: string | null };
   impression_name: string | null;
   blocks: ReportBlock[];
   divisions: ReportDivision[];
@@ -117,6 +122,8 @@ export interface DivisionRules {
   countedN: number | null;
   /** The division's own name for the separate score ("Impression", "Variety"); null = the division has none. */
   impressionName: string | null;
+  /** Decimals the division shows scores with (the scoring model's). */
+  decimals?: number;
   /** The heat total is not a plain sum of the counted tricks (weights, per-category limits): the "missed it by" line is left out. */
   weighted?: boolean;
 }
@@ -141,6 +148,8 @@ export interface ReportContext {
   loopCategories?: string[];
   /** The names of the trick base's categories, as the event's scoring gives them (key → label); a key without a name is shown from its key. */
   familyLabels?: Record<string, string>;
+  /** The colour of a seat's Lycra in a division as a hex, for the heat headers; null when the division has no Lycra colours. */
+  lycraHex?: (divisionId: string, colour: string | null) => string | null;
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -162,118 +171,82 @@ export interface Headline {
   /** The rider's place from the Placings, or null while undecided. */
   place: number | null;
   shared: boolean;
+  /** "winner": first in the last round; "final": rode the last round; "out": knocked out before it; "in": no place yet. */
+  caption: "winner" | "final" | "out" | "in";
   /** The name of the round the rider was knocked out in, when he did not reach the end ("Round 3"); null otherwise. */
   outInRound: string | null;
   /** The name of the last round the rider rode in. */
   lastRound: string | null;
-  /** Still in the event (a heat may still be ahead). */
-  stillIn: boolean;
   steps: PathStep[];
 }
 
-export interface FieldFigure {
-  /** Average over every rider of the division with a published heat; null when nobody has one. */
-  all: number | null;
-  /** Average over the riders of the division's last round; null when it has no published heat. */
-  finalists: number | null;
-}
-
-export interface Tile {
-  /** The rider's figure; null when it cannot be worked out (for steadiness: fewer than two heats). */
-  value: number | null;
-  field: FieldFigure;
-}
-
+/** The thirteen tiles of the report, in the order they are shown. Rates are 0..1; scores are as published. */
 export interface Tiles {
-  jumps: { value: number; allowed: number | null; field: FieldFigure };
-  landed: Tile;
-  crashes: { value: number; rate: number | null; field: FieldFigure };
-  differentTricks: Tile;
-  loops: { landed: number; tried: number; field: FieldFigure };
-  directions: { left: number; right: number; withDirection: number; jumps: number };
-  heatsWon: { value: number; heats: number };
-  averageTotal: Tile;
-  bestTotal: { value: number | null; heatLabel: string | null; field: FieldFigure };
-  /** Spread (standard deviation) of his heat totals; lower = steadier. */
-  steadiness: Tile;
+  jumps: { value: number; heats: number; allowed: number | null };
+  landed: { value: number; rate: number | null; fieldRate: number | null };
+  crashes: { value: number; rate: number | null; fieldRate: number | null };
+  different: { value: number; field: number | null };
+  loops: { landed: number; tried: number };
+  sides: { left: number; right: number; withDirection: number; jumps: number };
+  bestTrick: { value: number | null; eventBest: number | null };
+  averageTrick: { value: number | null; field: number | null };
+  impression: { value: number | null; field: number | null };
+  heatsWon: { won: number; heats: number; share: number | null; fieldShare: number | null };
+  averageTotal: { value: number | null; field: number | null; finalists: number | null };
+  bestTotal: { value: number | null; round: string | null; eventBest: number | null };
+  steadiness: { value: number | null; min: number | null; max: number | null; field: number | null };
 }
 
 export type HighlightKind =
   | "highest_trick"
   | "best_heat_total"
   | "longest_winning_run"
+  | "only_rider_to_land"
   | "most_tricks"
   | "most_different_tricks"
   | "most_loops"
   | "fewest_crashes"
-  | "best_impression"
-  | "only_rider_to_land";
+  | "best_impression";
 
 export interface Highlight {
   kind: HighlightKind;
   value: number | null;
   /** The trick, for "highest_trick" and "only_rider_to_land". */
   trick: string | null;
-  /** The score name for "best_impression". */
-  scoreName: string | null;
+  /** The round of "best_heat_total". */
+  round: string | null;
+  /** The number of jumps, for "fewest_crashes". */
+  jumps: number | null;
 }
 
-export type StrengthCode = "landing_rate" | "loops" | "variety_per_heat" | "both_sides" | "growth" | "every_attempt";
-export type TrainCode = "never_landed" | "loops_half" | "no_loops" | "one_side" | "crashed_half" | "repeat_same_side";
-export type StrategyCode = "unused_attempts" | "late_first_trick" | "winner_more_loops" | "winner_more_tricks" | "same_tricks_as_winner" | "early_banker" | "best_late";
-
-export interface Strength {
-  code: StrengthCode;
-  /** The numbers the sentence needs. */
-  n: number;
-  m: number | null;
+/** One point of the three takeaways (and of the suggested goals): a code and the numbers its sentence needs, in the order the sentence uses them. */
+export interface Point {
+  code: string;
+  nums: number[];
   trick?: string | null;
-}
-export interface Train {
-  code: TrainCode;
-  n: number;
-  m: number | null;
-  trick?: string | null;
-  /** "left" | "right" for one_side. */
+  /** The round the point is about ("Round 1"). */
+  round?: string | null;
+  /** "left" | "right" */
   side?: "left" | "right" | null;
-  heatLabel?: string | null;
-}
-export interface Strategy {
-  code: StrategyCode;
-  heatId: string;
-  heatLabel: string;
-  n: number;
-  m: number | null;
+  /** What is aimed at: the round a rider missed ("Final"), or "1st place". */
+  target?: string | null;
 }
 
-export interface GapLine {
-  heatId: string;
-  heatLabel: string;
-  /** How far he missed it by, in points. */
-  miss: number;
-  /** The round he missed ("Final"). */
-  toRound: string | null;
-  /** A trick scoring above this would have taken him through. */
-  needAbove: number;
-  /** The counted trick it would replace (his lowest), or null when he had a free counting place. */
-  replaces: number | null;
-  /** Which of his counting tricks it replaces: 3 = the third best. */
-  rank: number | null;
-}
+export type StrengthCode = "top_trick" | "loops" | "growth" | "landing_rate" | "every_attempt" | "impression_above" | "variety_per_heat" | "both_sides" | "totals_growth";
+export type TrainCode = "never_landed" | "loops_half" | "no_loops" | "one_side" | "landed_average_low" | "crashed_half" | "repeat_same_side" | "impression_below";
+export type StrategyCode = "gap_out" | "gap_direct" | "gap_place" | "unused_attempts" | "winner_fewer" | "late_first_trick" | "winner_more_loops" | "winner_more_tricks" | "same_tricks_as_winner" | "early_banker" | "best_late";
 
 export interface Takeaways {
-  strength: Strength | null;
-  train: Train | null;
-  strategy: Strategy | null;
-  gap: GapLine | null;
+  strength: Point | null;
+  train: Point | null;
+  strategy: Point | null;
 }
 
 export interface BestTrick {
   trick: string;
   score: number;
-  /** The side it was landed on, as a key. */
-  side: string | null;
-  heatLabel: string;
+  roundName: string;
+  at_sec: number | null;
 }
 
 export interface TimelinePoint {
@@ -283,13 +256,14 @@ export interface TimelinePoint {
   score: number | null;
   landed: boolean;
   counted: boolean;
+  trick: string | null;
 }
 
 export interface JumpLine {
   seq: number;
   at_sec: number | null;
   trick: string | null;
-  side: string | null;
+  side: "left" | "right" | null;
   landed: boolean;
   score: number | null;
   counted: boolean;
@@ -298,21 +272,27 @@ export interface JumpLine {
 export interface HeatRow {
   heatId: string;
   roundName: string;
-  heatLabel: string;
+  /** "Heat 12" */
+  heatNo: string;
   outcome: Outcome;
   place: number | null;
+  /** The name of the round the rider's place leads to, when it leads to one. */
+  toRound: string | null;
+  /** The heat decides the final places (the last round). */
+  isFinal: boolean;
+  /** The colour of the rider's Lycra in this heat, a hex, or null. */
+  lycra: string | null;
   total: number | null;
   tricksTotal: number | null;
   impression: number | null;
-  /** The gap in points: to the winner (lost) or to the place that went through; for a win, the lead over the next rider (negative never). */
-  gapToWinner: number | null;
-  gapToThrough: number | null;
-  leadOverNext: number | null;
+  /** How far behind: to the winner (any heat), or in the final to the place above ("winner", or the place number). */
+  behind: { gap: number; to: "winner" | number } | null;
   jumps: number;
+  cap: number | null;
   crashes: number;
   crashRate: number | null;
   firstLandedAt: number | null;
-  /** Seconds between jumps on average; null with fewer than two jumps. */
+  /** Seconds between jumps on average; null without a jump. */
   paceSec: number | null;
   lengthSec: number;
   fieldAverage: number | null;
@@ -321,53 +301,75 @@ export interface HeatRow {
 }
 
 export interface FamilyRow {
+  /** The category key, "other", or "not_logged" for jumps with no trick name. */
   key: string;
   tried: number;
   landed: number;
-  landedTricks: string[];
+  /** Average published score of the landed ones, or null. */
+  average: number | null;
+}
+
+export interface Mix {
+  families: FamilyRow[];
+  landedTricks: Array<{ trick: string; count: number }>;
   stillToLand: string[];
+  /** Crashes with no trick name logged. */
+  crashesNoName: number;
 }
 
 export interface CompareRow {
   key: "landing_rate" | "attempts_used" | "loop_share" | "tricks_per_heat" | "average_trick" | "impression";
+  /** "percent": 0..1 shown as a percentage; "number": shown as it is. */
+  kind: "percent" | "number";
   me: number | null;
   all: number | null;
   finalists: number | null;
-}
-
-export type GoalCode = StrengthCode | TrainCode | StrategyCode;
-export interface Goal {
-  /** The takeaway the goal comes from. */
-  from: "train" | "strategy" | "strength" | "gap";
-  code: string;
-  n: number;
-  m: number | null;
-  trick?: string | null;
-  side?: "left" | "right" | null;
+  /** What a full bar means: 1 for a percentage, the best rider's figure otherwise. */
+  scale: number;
 }
 
 export interface RiderReport {
   status: "ok";
   entryId: string;
   name: string;
+  nationality: string | null;
   divisionId: string;
   divisionName: string;
   eventName: string;
+  eventLocation: string | null;
+  /** The days (YYYY-MM-DD, in the event's time zone) the rider's published heats were ridden on. */
+  days: string[];
   /** Names come from the event. */
   scoreName: string;
   sideWords: { left: string; right: string };
   familyLabels: Record<string, string>;
+  decimals: number;
   /** The report counts only the heats published so far: show "so far". */
   soFar: boolean;
   headline: Headline;
-  tiles: Tiles;
   highlights: Highlight[];
+  tiles: Tiles;
   takeaways: Takeaways;
   bestTricks: BestTrick[];
   heats: HeatRow[];
-  mix: FamilyRow[];
+  mix: Mix;
   compare: CompareRow[];
-  goals: Goal[];
+  /** How many riders and finalists the field figures average over. */
+  fieldSize: { riders: number; finalists: number };
+  /** Suggested goals: the facts behind the first two things to train. */
+  suggested: Point[];
+}
+
+/** One line of the rider picker: who, and where they got to. */
+export interface PickerItem {
+  entryId: string;
+  name: string;
+  divisionName: string;
+  /** The final place when the rider rode the last round; null otherwise. */
+  place: number | null;
+  shared: boolean;
+  /** The last round the rider rode in. */
+  lastRound: string | null;
 }
 
 export type ReportResultOrNone =

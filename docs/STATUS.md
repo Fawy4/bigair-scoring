@@ -1539,10 +1539,12 @@ Twice (Gouna 8–9 Oct, Red Bull 19 Oct) a heat's clock reached 0 and the spotte
 - Page `/e/<event>/riders/<id>/report` (`?preview=1` for the organiser), the link on the rider page, the report view (`src/components/report`, `src/app/report.css`) with the owner's palette in Day and Dark and its own switch.
 - Manual: new page `screens/public-rider-report.md`, pictures retaken from a throwaway event, changelog, release entry 0.26.0.
 
+- **Add-on 2 (looks exactly like the owner's reference):** thirteen tiles in the reference's order, the **Rider** list at the top (only riders whose report is open; in the preview only that event's riders), the reference's note, lycra square and result pill on every heat header, numbered best tricks, trick mix with a grey Not logged part, You / Field / Finalists bars, **My notes** as written prompts (no typing box, nothing saved), and the Sendbook background (kiter beside the column on a wide screen, small at the top right on a phone). New takeaway rules: top-five trick, growth through the day, landed tricks well below the finalists, impression above / below the field, gap to the next place. Each has its own unit test.
+
 ### Decisions taken
 1. Reports show trick names, sides and times of published heats even where a division's results page shows numbers only (Arrow's and Red Bull's main divisions do): the report cannot work without them. The setting's help text and the manual say so.
 2. A trick is the SET of its blocks (same matcher as the reference scores): the order they were tapped in does not matter; the side is not part of the trick; typed words the trick base did not recognise stay as typed.
-3. Loops = a block of the trick base's `kiteloop` category; the family of a trick on the trick mix = the category the spotter's line carries.
+3. Loops = a trick whose category (the highest of its blocks') is a loop category, the same as the Loops family of the trick mix.
 4. Tricks "tried at least twice and never landed" need the trick name of a crash; crashes seldom carry one (Red Bull: 7 of 156), so that rule rarely fires.
 5. "Tricks landed in both directions" = the same trick landed on both sides; "growth" = the last heat's total higher than the first's; "early banker" = a counting trick in the first third of the heat.
 6. The gap line is left out when the heat total is not a plain sum of the best N tricks (weights, per-category limits).

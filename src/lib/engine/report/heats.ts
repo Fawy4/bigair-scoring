@@ -1,5 +1,5 @@
-import { heatLength, mean, type Attempt, type RiderHeat } from "./collect";
-import type { HeatRow, JumpLine, TimelinePoint } from "./types";
+import { heatLength, heatNumber, mean, roundName, type Attempt, type RiderHeat } from "./collect";
+import type { HeatRow, JumpLine, ReportContext, ReportRound, TimelinePoint } from "./types";
 
 const r2 = (x: number): number => Math.round(x * 100) / 100;
 
@@ -10,6 +10,7 @@ function timeline(attempts: Attempt[], length: number): TimelinePoint[] {
     score: t.status === "landed" ? t.score : null,
     landed: t.status === "landed",
     counted: t.counted,
+    trick: t.key ? t.label : null,
   }));
 }
 
@@ -19,40 +20,62 @@ export function fieldAverage(rh: RiderHeat): number | null {
   return mean(scores);
 }
 
-/** The heat-by-heat card of one heat the rider rode (or did not ride). */
-export function heatRow(rh: RiderHeat): HeatRow {
+const targetOf = (round: ReportRound, place: number | null, rounds: ReportRound[]): { to: string | null; final: boolean } => {
+  if (place === null) return { to: null, final: false };
+  const rule = (round.advance ?? []).find((a) => Array.isArray(a.places) && a.places.includes(place)) ?? (round.advance ?? []).find((a) => a.places === "rest");
+  if (!rule || rule.to === "eliminated") return { to: null, final: false };
+  if (rule.to === "final_placing") return { to: null, final: true };
+  return { to: (() => {
+      const r = rounds.find((x) => x.draw_round === rule.to);
+      return r ? roundName(r) : null;
+    })(), final: false };
+};
+
+/** The heat card of one heat the rider rode. */
+export function heatRow(rh: RiderHeat, ctx: ReportContext, rounds: ReportRound[], cap: number | null): HeatRow {
   const res = rh.result;
   const total = res?.total ?? null;
+  const place = res?.place ?? null;
   const ok = rh.heat.results.filter((r) => (!r.status || r.status === "ok") && r.total !== null);
-  const winner = ok.find((r) => r.place === 1);
-  const gapToWinner = rh.outcome !== "won" && winner && winner.entry_id !== rh.entryId && total !== null ? r2(Number(winner.total) - Number(total)) : null;
-  // the place that went through: the lowest total of the riders who advanced from this heat (when the rider did not)
-  const rules = rh.round.advance ?? [];
-  const advanced = ok.filter((r) => {
-    const rule = rules.find((a) => Array.isArray(a.places) && a.places.includes(r.place as number));
-    return rule && rule.to !== "eliminated" && rule.to !== "final_placing";
-  });
-  const gapToThrough = rh.outcome === "out" && total !== null && advanced.length ? r2(Math.min(...advanced.map((r) => Number(r.total))) - Number(total)) : null;
-  const next = ok.filter((r) => r.entry_id !== rh.entryId).sort((a, b) => Number(b.total) - Number(a.total))[0];
-  const leadOverNext = rh.outcome === "won" && total !== null && next ? r2(Number(total) - Number(next.total)) : null;
+  const target = targetOf(rh.round, place, rounds);
+  const isFinal = rh.roundIndex === rounds.length - 1 || target.final;
+  // behind: in the final the place above him, in every other heat the winner
+  let behind: HeatRow["behind"] = null;
+  if (total !== null && place !== null && place > 1) {
+    const above = isFinal ? ok.find((r) => r.place === place - 1) : ok.find((r) => r.place === 1);
+    if (above && above.entry_id !== rh.entryId) {
+      const gap = r2(Number(above.total) - Number(total));
+      if (gap > 0) behind = { gap, to: isFinal && place - 1 > 1 ? place - 1 : "winner" };
+    }
+  }
   const jumps = rh.attempts.length;
   const crashes = rh.attempts.filter((t) => t.status === "crashed").length;
   const firsts = rh.attempts.filter((t) => t.status === "landed" && t.at_sec !== null).map((t) => t.at_sec as number);
   const length = rh.lengthSec || heatLength(rh.heat);
-  const jumpLines: JumpLine[] = rh.attempts.map((t) => ({ seq: t.seq, at_sec: t.at_sec, trick: t.key ? t.label : t.label || null, side: t.direction, landed: t.status === "landed", score: t.status === "landed" ? t.score : null, counted: t.counted }));
+  const jumpLines: JumpLine[] = rh.attempts.map((t) => ({
+    seq: t.seq,
+    at_sec: t.at_sec,
+    trick: t.key ? t.label : null,
+    side: t.direction === "left" || t.direction === "right" ? t.direction : null,
+    landed: t.status === "landed",
+    score: t.status === "landed" ? t.score : null,
+    counted: t.counted,
+  }));
   return {
     heatId: rh.heat.id,
-    roundName: rh.round.name,
-    heatLabel: rh.title,
+    roundName: roundName(rh.round),
+    heatNo: `Heat ${heatNumber(rh.heat)}`,
     outcome: rh.outcome,
-    place: res?.place ?? null,
+    place,
+    toRound: target.to,
+    isFinal,
+    lycra: ctx.lycraHex ? ctx.lycraHex(rh.divisionId, rh.vest) : null,
     total,
     tricksTotal: res?.tricks_total ?? null,
     impression: res?.impression ?? null,
-    gapToWinner,
-    gapToThrough,
-    leadOverNext,
+    behind,
     jumps,
+    cap: rh.cap ?? cap,
     crashes,
     crashRate: jumps ? crashes / jumps : null,
     firstLandedAt: firsts.length ? Math.min(...firsts) : null,

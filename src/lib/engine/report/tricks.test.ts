@@ -46,8 +46,9 @@ describe("report: trick names are grouped by meaning (item 5)", () => {
   it("the label writes the blocks in the order they were logged, ×2 in front of its block, without the side", () => {
     expect(trickLabel(idx, att(1, { kind: "backroll2BoardOff" }))).toBe("×2 Backroll Board-off");
   });
-  it("a trick has a loop when one of its blocks is in a loop category, even when the trick as a whole is counted in another family", () => {
-    expect(hasLoop(idx, { parts: { items: [{ id: "base:backroll" }, { id: "base:kiteloop" }, { id: "addon:board_off" }] }, category: "board_off" })).toBe(true);
+  it("a trick is a loop when the category the trick base gave it (the highest of its blocks') is a loop category: the same as the Loops family of the trick mix", () => {
+    expect(hasLoop(idx, { parts: { items: [{ id: "base:backroll" }, { id: "base:kiteloop" }] }, category: "kiteloop" })).toBe(true);
+    expect(hasLoop(idx, { parts: { items: [{ id: "base:backroll" }, { id: "base:kiteloop" }, { id: "addon:board_off" }] }, category: "board_off" })).toBe(false);
     expect(hasLoop(idx, att(1, { kind: "backroll" }))).toBe(false);
     expect(hasLoop(idx, att(1, { kind: "megaloop" }))).toBe(true);
   });

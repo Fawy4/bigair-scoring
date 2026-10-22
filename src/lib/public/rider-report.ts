@@ -1,13 +1,14 @@
 import { buildPlacings } from "@/lib/public/ladder-model";
 import { modelOf } from "@/lib/public/results-model";
 import type { DivisionRules, Placing, ReportContext, ReportData } from "@/lib/engine/report";
-import type { PublicDrawPayload, PublicEntry, PublicRules } from "@/lib/public/types";
+import type { PublicDrawPayload, PublicEntry, PublicRules, PublicSite } from "@/lib/public/types";
+import { schemeFor } from "@/lib/public/schemes";
 
 /**
  * What the database function `get_rider_report` answers, with the few things the page already knows from the rules and the draw (the way the public pages read them):
  * the sides as the event words them, each division's attempt limit and counting, the event's name for the separate score, and the final places the Placings page shows.
  */
-export function reportContextFrom(data: ReportData, rules: PublicRules | null, draw: PublicDrawPayload | null): ReportContext {
+export function reportContextFrom(data: ReportData, rules: PublicRules | null, draw: PublicDrawPayload | null, site: Pick<PublicSite, "settings" | "divisions"> | null = null): ReportContext {
   const dir = (key: string, fallback: string) => data.blocks.find((b) => b.family === "direction" && b.key === key)?.label.trim() || fallback;
   const divisionRules: Record<string, DivisionRules> = {};
   const familyLabels: Record<string, string> = {};
@@ -17,6 +18,7 @@ export function reportContextFrom(data: ReportData, rules: PublicRules | null, d
     const plain = counting?.type === "best_n" || counting?.type === "single_best";
     divisionRules[d.id] = {
       attemptCap: m?.heat.maxAttemptsPerRider ?? null,
+      decimals: m?.panel.decimals ?? 2,
       countedN: counting?.type === "best_n" ? counting.n : counting?.type === "single_best" ? 1 : null,
       impressionName: m?.heat.impression?.label ?? null,
       weighted: !plain || Boolean(m?.heat.countedWeights?.length) || (counting?.type === "best_n" && counting.distinctTrickNames),
@@ -34,6 +36,13 @@ export function reportContextFrom(data: ReportData, rules: PublicRules | null, d
     placings,
     familyLabels,
     loopCategories: ["kiteloop"],
+    // the colour of a seat's Lycra: only where the division's Rider label scheme is a Lycra colour per heat
+    lycraHex: (divisionId, colour) => {
+      if (!site || !colour) return null;
+      const scheme = schemeFor(site, divisionId);
+      if (scheme.primary !== "vest_colour" && scheme.fallbackPrimary !== "vest_colour") return null;
+      return scheme.palette.find((c) => c.key === colour)?.hex ?? null;
+    },
   };
 }
 

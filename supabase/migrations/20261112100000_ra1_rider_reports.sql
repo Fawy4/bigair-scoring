@@ -29,11 +29,11 @@ language sql stable security definer set search_path = '' as $$
     'id', h.id, 'number', h.number, 'suffix', h.number_suffix, 'name', h.name, 'draw_uid', h.draw_uid,
     'published_at', h.published_at, 'started_at', h.started_at, 'ended_at', h.ended_at,
     'duration_sec', h.duration_sec, 'paused_total_sec', h.paused_total_sec,
-    'slots', coalesce((select jsonb_agg(jsonb_build_object('position', s.position, 'entry_id', s.entry_id, 'modifier', s.modifier, 'source', s.source) order by s.position)
+    'slots', coalesce((select jsonb_agg(jsonb_build_object('position', s.position, 'entry_id', s.entry_id, 'modifier', s.modifier, 'source', s.source, 'vest_colour', s.vest_colour) order by s.position)
                          from public.heat_slots s where s.heat_id = h.id), '[]'::jsonb),
     'results', coalesce((
       select jsonb_agg(jsonb_build_object(
-        'entry_id', x.entry_id, 'place', x.place, 'total', x.total, 'status', x.breakdown -> 'status',
+        'entry_id', x.entry_id, 'place', x.place, 'total', x.total, 'status', x.breakdown -> 'status', 'cap', x.breakdown -> 'attemptCap',
         'tricks_total', x.breakdown #> '{components,tricks}', 'impression', case when jsonb_typeof(x.breakdown -> 'impression') = 'object' then x.breakdown #> '{impression,score}' else null end,
         'counted', coalesce((select jsonb_agg(jsonb_build_object('seq', c -> 'attemptSeq', 'score', c -> 'score')) from jsonb_array_elements(coalesce(x.breakdown -> 'counted', '[]'::jsonb)) c), '[]'::jsonb),
         'modifiers', coalesce(x.breakdown -> 'modifiers', '[]'::jsonb),
@@ -81,7 +81,7 @@ begin
   select * into ev from public.events where id = p_event;
   return jsonb_build_object(
     'allowed', true, 'how', p_how,
-    'event', jsonb_build_object('id', ev.id, 'name', ev.name, 'slug', ev.slug, 'timezone', ev.timezone, 'status', ev.status, 'start_date', ev.start_date, 'end_date', ev.end_date),
+    'event', jsonb_build_object('id', ev.id, 'name', ev.name, 'slug', ev.slug, 'location', ev.location, 'timezone', ev.timezone, 'status', ev.status, 'start_date', ev.start_date, 'end_date', ev.end_date),
     'impression_name', nullif(btrim(coalesce(ev.settings ->> 'impressionName', '')), ''),
     'blocks', private.rider_report_blocks(p_event),
     'divisions', coalesce((select jsonb_agg(jsonb_build_object(
@@ -93,7 +93,7 @@ begin
           ) order by r.sort_order) from public.rounds r where r.division_id = d.id), '[]'::jsonb)
       ) order by d.sort_order, d.created_at) from public.divisions d where d.event_id = p_event and d.draw_locked_at is not null), '[]'::jsonb),
     'entries', coalesce((select jsonb_agg(jsonb_build_object(
-        'id', e.id, 'division_id', e.division_id, 'first_name', r.first_name, 'last_name', r.last_name,
+        'id', e.id, 'division_id', e.division_id, 'first_name', r.first_name, 'last_name', r.last_name, 'nationality', r.nationality,
         'withdrawn', e.status = 'withdrawn',
         'report_withheld', (r.dob is not null and r.dob > (ev.start_date - interval '18 years')::date)))
         from public.entries e join public.riders r on r.id = e.rider_id join public.divisions d on d.id = e.division_id

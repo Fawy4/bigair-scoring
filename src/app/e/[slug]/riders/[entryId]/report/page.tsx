@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
 import { RiderReportView } from "@/components/report/report-view";
 import { Updating } from "@/components/public/updating";
-import { buildRiderReport } from "@/lib/engine/report";
+import { buildRiderReport, pickerOf } from "@/lib/engine/report";
 import { admitPublicRequest, loadDraw, loadRiderReportData, loadRiderReportPreview, loadRules, loadSite } from "@/lib/public/load";
 import { reportContextFrom } from "@/lib/public/rider-report";
-import { riderPageHref } from "@/lib/public/report-links";
 import { copy } from "@/lib/ui-copy";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +18,11 @@ async function load(slug: string, entryId: string, preview: boolean) {
   const data = preview ? await loadRiderReportPreview(site.event.id) : await loadRiderReportData(site.event.id);
   if (!data) return null;
   const [rules, draw] = await Promise.all([loadRules(site.event.id), loadDraw(site.event.id)]);
-  const report = buildRiderReport(reportContextFrom(data, rules, draw), entryId);
-  return { site, report };
+  const ctx = reportContextFrom(data, rules, draw, site);
+  const report = buildRiderReport(ctx, entryId);
+  const picker = pickerOf(ctx);
+  const several = new Set(ctx.data.entries.filter((e) => picker.some((p) => p.entryId === e.id)).map((e) => e.division_id)).size > 1;
+  return { site, report, picker: several ? picker : picker.map((p) => ({ ...p, divisionName: "" })) };
 }
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string; entryId: string }>; searchParams: Promise<{ preview?: string }> }) {
@@ -43,18 +45,14 @@ export default async function RiderReportPage({ params, searchParams }: { params
   if (!(await admitPublicRequest())) return <Updating />;
   const got = await load(slug, entryId, preview);
   if (!got || got.report.status === "not_found" || got.report.status === "withheld") notFound();
-  const back = riderPageHref(got.site.event.slug, entryId);
   const r = got.report;
   if (r.status === "no_heats") {
     return (
       <main className="mx-auto flex max-w-xl flex-col gap-3 px-4 py-8" data-testid="report-no-heats">
         <h1 className="text-heading font-semibold">{r.name}</h1>
         <p className="text-body font-medium">{R.noHeats}</p>
-        <a href={back} className="text-body font-semibold underline">
-          {R.back}
-        </a>
       </main>
     );
   }
-  return <RiderReportView report={r} backHref={back} preview={preview} />;
+  return <RiderReportView report={r} picker={got.picker} slug={got.site.event.slug} preview={preview} />;
 }

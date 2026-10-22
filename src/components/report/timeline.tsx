@@ -1,120 +1,73 @@
 import type { HeatRow } from "@/lib/engine/report";
-import { clock, score2 } from "@/lib/public/report-text";
+import { clock, score } from "@/lib/public/report-text";
 import { copy } from "@/lib/ui-copy";
 
-const W = 320;
-const H = 116;
-const PAD_X = 12;
-const TOP = 22;
-const BASE = 92;
+const R = copy.report.heat;
+const X0 = 14;
+const X1 = 312;
+const BASE = 66;
+const HEIGHT = 50;
 
 /**
- * One heat from start to end: a dot for every landed trick placed by its time and its published score, a cross at the bottom for every crash, a dashed line at the
- * average landed trick of the heat, and the tricks that counted drawn larger with their score. Words as well as shapes (a list of every jump sits under it).
+ * One heat from start to end, drawn the way the owner's reference draws it: a tick every minute with a time every 2 (or 5) minutes, a dot on a stem for every landed trick
+ * placed by its time and its score, a cross on the baseline for every crash, a dashed line at the field's average, and the counting tricks as big dots with their score.
+ * `top` is the highest score the scale reaches (at least 6): the same for every heat of the report, so heats compare.
  */
-export function HeatTimeline({ heat }: { heat: HeatRow }) {
-  const best = Math.max(
-    1,
-    ...heat.timeline.map((p) => p.score ?? 0),
-    heat.fieldAverage ?? 0,
-  );
-  const x = (f: number) => PAD_X + f * (W - 2 * PAD_X);
-  const y = (s: number) => BASE - (s / best) * (BASE - TOP);
-  const landed = heat.timeline.filter((p) => p.landed).length;
-  const label = `${copy.report.heat.timelineLabel}. ${landed} ${copy.report.heat.landed.toLowerCase()}, ${heat.timeline.length - landed} ${copy.report.heat.crash.toLowerCase()}`;
+export function HeatStrip({ heat, top, decimals }: { heat: HeatRow; top: number; decimals: number }) {
+  const px = HEIGHT / top;
+  const len = Math.max(60, heat.lengthSec);
+  const x = (f: number) => X0 + f * (X1 - X0);
+  const labelStep = len <= 12 * 60 ? 120 : len <= 40 * 60 ? 300 : 600;
+  const ticks: number[] = [];
+  for (let t = 0; t <= len; t += 60) ticks.push(t);
+  const fmt = { decimals };
   return (
-    <div>
-      <svg
-        className="r-timeline"
-        viewBox={`0 0 ${W} ${H}`}
-        role="img"
-        aria-label={label}
-        data-testid="heat-timeline"
-      >
-        <line
-          className="r-axis"
-          x1={PAD_X}
-          x2={W - PAD_X}
-          y1={BASE}
-          y2={BASE}
-        />
-        {heat.fieldAverage !== null ? (
-          <line
-            className="r-avg"
-            x1={PAD_X}
-            x2={W - PAD_X}
-            y1={y(heat.fieldAverage)}
-            y2={y(heat.fieldAverage)}
-            data-testid="field-average-line"
-          />
-        ) : null}
-        {heat.timeline.map((p, i) =>
-          p.landed ? (
-            p.counted ? (
-              <g key={i} data-testid="timeline-counted">
-                <circle
-                  className="r-dot"
-                  cx={x(p.x)}
-                  cy={y(p.score ?? 0)}
-                  r={6}
-                />
-                <text
-                  className="r-score"
-                  x={x(p.x)}
-                  y={y(p.score ?? 0) - 9}
-                  textAnchor="middle"
-                >
-                  {score2(p.score)}
-                </text>
-              </g>
-            ) : (
-              <circle
-                key={i}
-                className="r-dot-small"
-                cx={x(p.x)}
-                cy={y(p.score ?? 0)}
-                r={3.5}
-                data-testid="timeline-landed"
-              />
-            )
-          ) : (
-            <g key={i} data-testid="timeline-crash">
-              <line
-                className="r-cross"
-                x1={x(p.x) - 4}
-                x2={x(p.x) + 4}
-                y1={BASE - 8}
-                y2={BASE}
-              />
-              <line
-                className="r-cross"
-                x1={x(p.x) - 4}
-                x2={x(p.x) + 4}
-                y1={BASE}
-                y2={BASE - 8}
-              />
-            </g>
-          ),
-        )}
-        <text x={PAD_X} y={H - 6}>
-          {clock(0)}
-        </text>
-        <text x={W / 2} y={H - 6} textAnchor="middle">
-          {clock(Math.round(heat.lengthSec / 2))}
-        </text>
-        <text x={W - PAD_X} y={H - 6} textAnchor="end">
-          {clock(heat.lengthSec)}
-        </text>
-      </svg>
+    <svg className="strip" viewBox="0 0 320 82" role="img" aria-label={R.timelineLabel} data-testid="heat-timeline">
+      <line className="base" x1={X0} x2={X1} y1={BASE} y2={BASE} />
       {heat.fieldAverage !== null ? (
-        <p
-          className="r-foot"
-          style={{ margin: 0 }}
-          data-testid="field-average-legend"
-        >
-          - - - {copy.report.heat.fieldAverage}: {score2(heat.fieldAverage)}
-        </p>
+        <>
+          <line className="avg" x1={X0} x2={X1} y1={BASE - heat.fieldAverage * px} y2={BASE - heat.fieldAverage * px} data-testid="field-average-line" />
+          <text className="avgl" x={X1} y={BASE - heat.fieldAverage * px - 3}>
+            {R.fieldAverage} {score(fmt, heat.fieldAverage)}
+          </text>
+        </>
       ) : null}
-    </div>
+      {ticks.map((t) => (
+        <g key={t}>
+          <line className="tick" x1={x(t / len)} x2={x(t / len)} y1={63} y2={69} />
+          {t % labelStep === 0 ? (
+            <text className="tlab" x={x(t / len)} y={80}>
+              {clock(t)}
+            </text>
+          ) : null}
+        </g>
+      ))}
+      {heat.timeline.map((p, i) => {
+        const cx = x(p.x);
+        if (!p.landed) {
+          return (
+            <g key={i} className="x" data-testid="timeline-crash">
+              <title>{`${clock(p.seconds)} · ${p.trick ?? R.notLogged} · ${R.crash.toLowerCase()}`}</title>
+              <line x1={cx - 4} x2={cx + 4} y1={62} y2={70} />
+              <line x1={cx - 4} x2={cx + 4} y1={70} y2={62} />
+            </g>
+          );
+        }
+        const cy = BASE - (p.score ?? 0) * px;
+        return (
+          <g key={i}>
+            <line className="stem" x1={cx} x2={cx} y1={BASE} y2={cy} />
+            <circle className={p.counted ? "dot best" : "dot"} cx={cx} cy={cy} r={p.counted ? 5.5 : 4} data-testid={p.counted ? "timeline-counted" : "timeline-landed"}>
+              <title>{`${clock(p.seconds)} · ${p.trick ?? R.notLogged} · ${score(fmt, p.score)}${p.counted ? ` · ${R.counts.toLowerCase()}` : ""}`}</title>
+            </circle>
+            {p.counted ? (
+              <text className="blab" x={cx} y={cy - 8}>
+                {score(fmt, p.score)}
+              </text>
+            ) : null}
+          </g>
+        );
+      })}
+    </svg>
   );
 }

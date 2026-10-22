@@ -67,7 +67,7 @@ test("After each heat: the rider page offers the report, which shows the tiles, 
   await expect(page.getByTestId("report-name")).toContainText("Ana");
   await expect(page.getByTestId("report-place")).toBeVisible();
   await expect(page.getByTestId("path-step").first()).toBeVisible();
-  await expect(page.getByTestId("report-tiles").locator("li")).toHaveCount(10);
+  await expect(page.getByTestId("report-tiles").locator(".tile")).toHaveCount(13);
   await expect(page.getByTestId("report-heat").first()).toBeVisible();
   const heats = await page.getByTestId("report-heat").count();
   expect(heats).toBeGreaterThanOrEqual(2);
@@ -84,8 +84,10 @@ test("After each heat: the rider page offers the report, which shows the tiles, 
   for (const bad of ["J1", "J2", "Judge", "Missed", "outlier"]) expect(body).not.toContain(bad);
   // the stored judge scores of the sample (9.9, 1.1 and 9.8) stand alone as numbers nowhere on the page
   expect(body).not.toMatch(/(?<![\d.])(9\.9|1\.1|9\.8)(?![\d])/);
-  // no other rider is named
-  for (const other of ["Ben", "Cy ", "Di ", "Eli", "Flo"]) expect(body).not.toContain(`${other}Ladder`);
+  // the report is the owner's: no typing box, nothing to save, and no promise of one
+  await expect(page.locator(".report textarea, .report input")).toHaveCount(0);
+  expect(body).not.toContain("Private to you");
+  expect(body).not.toContain("draft");
   // no sideways scroll at 390 px
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 });
@@ -99,7 +101,7 @@ test("the totals on the report are the published totals of the heats", async ({ 
   await page.goto(reportUrl(ana));
   await expect(page.getByTestId("rider-report")).toBeVisible({ timeout: 60_000 });
   const totals = await page.getByTestId("heat-total").allInnerTexts();
-  for (const r of rows ?? []) expect(totals.some((t) => t.startsWith(Number(r.total).toFixed(2)))).toBe(true);
+  for (const r of rows ?? []) expect(totals.some((t) => t.includes(`${Number(r.total).toFixed(2)} `))).toBe(true);
 });
 
 test("its own Day / Dark switch, at the top of the report, changes the report", async ({ page }) => {
@@ -108,16 +110,31 @@ test("its own Day / Dark switch, at the top of the report, changes the report", 
   await page.goto(reportUrl(w.entry("Ana")));
   const root = page.getByTestId("rider-report");
   await expect(root).toBeVisible({ timeout: 60_000 });
-  const bg = () => root.evaluate((el) => getComputedStyle(el).backgroundColor);
   await expect(root).not.toHaveAttribute("data-theme", "dark");
-  expect(await bg()).toBe("rgb(255, 255, 255)");
+  const ink = () => root.evaluate((el) => getComputedStyle(el).color);
+  const day = await ink();
   await page.getByTestId("report-theme").getByRole("button", { name: "Dark" }).click();
   await expect(root).toHaveAttribute("data-theme", "dark");
-  expect(await bg()).toBe("rgb(0, 0, 0)");
-  const text = await root.evaluate((el) => getComputedStyle(el).color);
-  expect(text).toBe("rgb(255, 255, 255)");
+  expect(await ink()).not.toBe(day);
   await page.getByTestId("report-theme").getByRole("button", { name: "Daylight" }).click();
   await expect(root).not.toHaveAttribute("data-theme", "dark");
+});
+
+test("the rider picker lists the riders whose report is open, with their place, and opens the one chosen", async ({ page }) => {
+  test.setTimeout(180_000);
+  await w.setting("after_heat");
+  await page.goto(reportUrl(w.entry("Ana")));
+  const picker = page.getByTestId("rider-picker");
+  await expect(picker).toBeVisible({ timeout: 60_000 });
+  const options = await picker.locator("option").allInnerTexts();
+  expect(options.length).toBeGreaterThanOrEqual(2);
+  expect(options.some((o) => /Ana/.test(o) && /(1st|2nd|3rd|\dth|reached)/.test(o))).toBe(true);
+  // a rider under 18 is not in the list
+  const minorFirst = w.ladder.names[w.ladder.entries.indexOf(w.minor)].split(" ")[0];
+  expect(options.some((o) => o.startsWith(minorFirst))).toBe(false);
+  await picker.selectOption(w.entry("Ben"));
+  await expect(page).toHaveURL(new RegExp(`${w.entry("Ben")}/report`), { timeout: 30_000 });
+  await expect(page.getByTestId("report-name")).toContainText("Ben");
 });
 
 test("a rider under 18 has no report and no link; nothing says why", async ({ page, request }) => {

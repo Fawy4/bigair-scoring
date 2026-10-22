@@ -1,8 +1,8 @@
 import type { Agg } from "./collect";
-import { bestHeat, crashRate } from "./figures";
+import { avgImpression, bestHeat, crashRate } from "./figures";
 import type { Highlight, HighlightKind } from "./types";
 
-/** Fewest crashes only counts from this many jumps (item 4c). */
+/** Fewest crashes only counts from this many jumps. */
 export const FEWEST_CRASHES_MIN_JUMPS = 8;
 export const MAX_HIGHLIGHTS = 3;
 
@@ -17,8 +17,6 @@ export function winningRun(a: Agg): number {
   return best;
 }
 
-const maxImpression = (a: Agg): number | null => (a.impressions.length ? Math.max(...a.impressions) : null);
-
 interface Measure {
   kind: HighlightKind;
   /** Higher is better unless `lowerIsBetter`. */
@@ -28,39 +26,53 @@ interface Measure {
   min?: number;
 }
 
-const MEASURES: Measure[] = [
+/** The measures that need no trick, in the owner's order; "the only rider to land" sits after the first three of them (see `highlightsOf`). */
+const FIRST: Measure[] = [
   { kind: "highest_trick", value: (a) => a.bestTrick?.score ?? null, min: 0 },
   { kind: "best_heat_total", value: (a) => bestHeat(a)?.total ?? null, min: 0 },
   { kind: "longest_winning_run", value: winningRun, min: 1 },
+];
+const LAST: Measure[] = [
   { kind: "most_tricks", value: (a) => a.landed, min: 0 },
   { kind: "most_different_tricks", value: (a) => a.different.size, min: 0 },
   { kind: "most_loops", value: (a) => a.loopsLanded, min: 0 },
   { kind: "fewest_crashes", value: (a) => (a.jumps >= FEWEST_CRASHES_MIN_JUMPS ? crashRate(a) : null), lowerIsBetter: true },
-  { kind: "best_impression", value: maxImpression, min: 0 },
+  { kind: "best_impression", value: avgImpression, min: 0 },
 ];
 
+function firstIn(m: Measure, me: Agg, riders: Agg[]): number | null {
+  const mine = m.value(me);
+  if (mine === null) return null;
+  if (m.min !== undefined && mine <= m.min) return null;
+  const theirs = riders.map(m.value).filter((x): x is number => x !== null);
+  const top = m.lowerIsBetter ? Math.min(...theirs) : Math.max(...theirs);
+  return Math.abs(mine - top) > 1e-9 ? null : mine;
+}
+
 /**
- * Up to three one-liners, only where the rider is first or joint first among the riders of his division (item 4c); in this fixed order. No highlight: an empty list
- * (and the page shows no card). `riders` holds everyone with a ridden heat, the rider himself included.
+ * Up to three one-liners, only where the rider is first or joint first among the riders of his division, in this order: highest scoring trick, best heat total, longest winning
+ * run, the only rider to land one of his best tricks, most tricks, most different tricks, most loops, fewest crashes, highest impression average. No highlight: an empty list.
+ * `riders` holds everyone with a ridden heat, the rider himself included.
  */
-export function highlightsOf(me: Agg, riders: Agg[], scoreName: string | null, max: number = MAX_HIGHLIGHTS): Highlight[] {
+export function highlightsOf(me: Agg, riders: Agg[], max: number = MAX_HIGHLIGHTS): Highlight[] {
   const out: Highlight[] = [];
-  for (const m of MEASURES) {
-    const mine = m.value(me);
-    if (mine === null) continue;
-    if (m.min !== undefined && mine <= m.min) continue;
-    const theirs = riders.map(m.value).filter((x): x is number => x !== null);
-    const top = m.lowerIsBetter ? Math.min(...theirs) : Math.max(...theirs);
-    if (Math.abs(mine - top) > 1e-9) continue;
-    out.push({
-      kind: m.kind,
-      value: mine,
-      trick: m.kind === "highest_trick" ? (me.bestTrick?.label ?? null) : null,
-      scoreName: m.kind === "best_impression" ? scoreName : null,
-    });
+  const make = (m: Measure, value: number): Highlight => ({
+    kind: m.kind,
+    value,
+    trick: m.kind === "highest_trick" ? (me.bestTrick?.label ?? null) : null,
+    round: m.kind === "best_heat_total" ? (bestHeat(me)?.round ?? null) : null,
+    jumps: m.kind === "fewest_crashes" ? me.jumps : null,
+  });
+  for (const m of FIRST) {
+    const v = firstIn(m, me, riders);
+    if (v !== null) out.push(make(m, v));
   }
   const only = onlyRiderToLand(me, riders);
-  if (only) out.push({ kind: "only_rider_to_land", value: only.score, trick: only.label, scoreName: null });
+  if (only) out.push({ kind: "only_rider_to_land", value: only.score, trick: only.label, round: null, jumps: null });
+  for (const m of LAST) {
+    const v = firstIn(m, me, riders);
+    if (v !== null) out.push(make(m, v));
+  }
   return out.slice(0, max);
 }
 

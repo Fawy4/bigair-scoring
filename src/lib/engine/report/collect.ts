@@ -1,4 +1,4 @@
-import { buildTrickIndex, familyOf, hasLoop, trickKey, trickLabel, type TrickIndex } from "./tricks";
+import { buildTrickIndex, familyOf, hasLoop, resolveAttempt, trickKey, trickLabel, type TrickIndex } from "./tricks";
 import type { Outcome, ReportAttempt, ReportContext, ReportHeat, ReportResult, ReportRound } from "./types";
 
 /** Everything one rider did in one published heat, with the context the rules need. */
@@ -11,12 +11,16 @@ export interface RiderHeat {
   /** "Round 3 · Heat 14" */
   title: string;
   entryId: string;
+  /** The rider's Lycra colour key in this heat. */
+  vest: string | null;
   result: ReportResult | null;
   outcome: Outcome;
   /** The attempts the result counts (an attempt over the cap is not one). */
   attempts: Attempt[];
   riders: number;
   lengthSec: number;
+  /** Most attempts he could log in this heat (as published), or null. */
+  cap: number | null;
 }
 
 export interface Attempt extends ReportAttempt {
@@ -27,7 +31,8 @@ export interface Attempt extends ReportAttempt {
 }
 
 export const heatNumber = (h: ReportHeat): string => `${h.number}${h.suffix ?? ""}`;
-export const roundName = (r: ReportRound): string => r.name;
+/** The name of a round on a report: its short name when that is a real word ("Second chance"), otherwise its name ("Round 1", "Final"). */
+export const roundName = (r: ReportRound): string => (r.short_name && r.short_name.trim().length >= 4 ? r.short_name.trim() : r.name);
 
 /** Length of the heat on the clock without the pauses; the planned length when the heat has no start or end. */
 export function heatLength(h: ReportHeat): number {
@@ -45,6 +50,11 @@ function outcomeOf(round: ReportRound, h: ReportHeat, r: ReportResult | null, sl
   if (st === "DNS" || (!r && slotModifier === "DNS")) return withdrawn ? "out_of_event" : "did_not_start";
   if (st === "DNF") return "did_not_finish";
   if (st === "DSQ") return "disqualified";
+  // a result with no jump: a rider who was placed first on a heat with nobody to ride against went through without riding (a walkover); with no total at all he did not ride
+  if (r && r.attempts.length === 0) {
+    if (r.place === 1 && (r.total ?? 0) > 0) return "walkover";
+    if ((r.total ?? 0) <= 0) return withdrawn ? "out_of_event" : "did_not_start";
+  }
   const place = r?.place ?? null;
   if (place === null) return "done";
   const rule = (round.advance ?? []).find((a) => a.places === "rest" || (Array.isArray(a.places) && a.places.includes(place)));
@@ -75,7 +85,12 @@ export function riderHeats(ctx: ReportContext, entryId: string, idx: TrickIndex)
         const outcome = outcomeOf(round, heat, result, slot?.modifier ?? null, Boolean(entry?.withdrawn));
         const attempts: Attempt[] = (result?.attempts ?? [])
           .filter((a) => a.ignored !== "over_cap")
-          .map((a) => ({ ...a, key: trickKey(idx, a), label: trickLabel(idx, a), loop: hasLoop(idx, a), family: familyOf(a) }));
+          .map((a) => {
+            const r = resolveAttempt(idx, a);
+            const read = { parts: r.parts, trick: r.parts ? a.trick : null, category: r.category };
+            const key = trickKey(idx, read);
+            return { ...a, key, label: key ? trickLabel(idx, read) : "", loop: hasLoop(idx, read), family: key && r.logged ? familyOf(read) : "not_logged" };
+          });
         out.push({
           divisionId: d.id,
           round,
@@ -84,11 +99,13 @@ export function riderHeats(ctx: ReportContext, entryId: string, idx: TrickIndex)
           heatLabel: `Heat ${heatNumber(heat)}`,
           title: `${roundName(round)} · Heat ${heatNumber(heat)}`,
           entryId,
+          vest: slot?.vest_colour ?? null,
           result,
           outcome,
           attempts: ridden(outcome) ? attempts : [],
           riders: heat.results.filter((r) => !r.status || r.status === "ok").length,
           lengthSec: heatLength(heat),
+          cap: result?.cap ?? ctx.divisionRules[d.id]?.attemptCap ?? null,
         });
       }
     });
@@ -117,7 +134,9 @@ export interface Agg {
   totals: number[];
   impressions: number[];
   landedScores: number[];
-  bestTrick: { score: number; label: string; key: string | null } | null;
+  bestTrick: { score: number; label: string; key: string | null; round: string } | null;
+  /** Attempts he could have logged over the heats he rode (the heats' own limits added up), or null when a heat has no limit. */
+  allowed: number | null;
 }
 
 export const mean = (xs: number[]): number | null => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : null);
@@ -129,7 +148,7 @@ export function spread(xs: number[]): number | null {
 
 export function aggregate(entryId: string, all: RiderHeat[]): Agg {
   const heats = all.filter(didRide);
-  const a: Agg = { entryId, heats, jumps: 0, landed: 0, crashed: 0, different: new Set(), differentPerHeat: null, loopsTried: 0, loopsLanded: 0, loopJumps: 0, left: 0, right: 0, withDirection: 0, heatsWon: 0, totals: [], impressions: [], landedScores: [], bestTrick: null };
+  const a: Agg = { entryId, heats, jumps: 0, landed: 0, crashed: 0, different: new Set(), differentPerHeat: null, loopsTried: 0, loopsLanded: 0, loopJumps: 0, left: 0, right: 0, withDirection: 0, heatsWon: 0, totals: [], impressions: [], landedScores: [], bestTrick: null, allowed: heats.length && heats.every((rh) => rh.cap !== null) ? heats.reduce((n, rh) => n + (rh.cap as number), 0) : null };
   const perHeat: number[] = [];
   for (const rh of heats) {
     const keys = new Set<string>();
@@ -143,7 +162,7 @@ export function aggregate(entryId: string, all: RiderHeat[]): Agg {
         }
         if (t.score !== null) {
           a.landedScores.push(t.score);
-          if (!a.bestTrick || t.score > a.bestTrick.score) a.bestTrick = { score: t.score, label: t.label, key: t.key };
+          if (!a.bestTrick || t.score > a.bestTrick.score) a.bestTrick = { score: t.score, label: t.label, key: t.key, round: roundName(rh.round) };
         }
       } else a.crashed++;
       if (t.loop) {
