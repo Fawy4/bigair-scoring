@@ -1507,7 +1507,7 @@ Twice (Gouna 8–9 Oct, Red Bull 19 Oct) a heat's clock reached 0 and the spotte
 - Tests: see the PR description.
 
 ### Decisions taken (please confirm or change)
-1. **"Done — Impression"** reads with the name the event gives the separate score: **Done — Variety** on Arrow's scoring, **Done — Submit** for a division that has no separate score.
+1. **"Done — Impression"** reads with the name the event gives the separate score: **Done — Impression** or **Done — Variety** or whatever the event calls it, **Done — Submit** for a division that has no separate score.
 2. **A late line reopens the judge's whole sheet**, not only the new line (the same state as when the head judge reopens a sheet): until he submits again he can also change his earlier scores; every change is in the audit log as always. Only a landed line reopens (a crash opens nothing; correcting a crash to a landing does). A published or cancelled heat never reopens anything.
 3. **"Spotter still logging"** = a spotter logged a line in the last 45 seconds, or the heat ended less than 45 seconds ago and a spotter's phone was seen lately. A correction does not count. It is a guess: the phone does not report "I am still typing".
 4. **The spotter may write on an ended or under-review heat; a paused heat is still the head judge's** (as before). A published heat refuses everyone, the head judge included, with "This heat is already published."
@@ -1527,3 +1527,5 @@ Twice (Gouna 8–9 Oct, Red Bull 19 Oct) a heat's clock reached 0 and the spotte
 - A judge's phone does not go back to a heat re-opened after Publish (the head judge scores the missing line for him or reopens his sheet).
 - If a late line is taken out again (Undo), the judge's sheet stays open until he submits once more.
 - The manual's pictures of the judge, spotter and console screens are not retaken (see the release entry).
+- **Left for later (owner's call, before merge of PR #60):** (1) the manual's pictures (`npm run manual:shots`) are not retaken; (2) the whole database suite (`npm run test:rls`, about 90 minutes) was not run in one go: the HE1 files, `rls.test.ts`, the observer, flags, live-heat, live-publish, live-spotter, publish-blockers, spotter-sheet, walkover and extend-heat files were run and pass.
+- **Names (follow-up):** the Done button, its strip, the Impression step and the review bar take the name of the separate score from the event (Event step, "Name of the impression score"; without it the division's own scoring gives it: the old Arrow-style model says Variety, the KOTA model Impression). A unit test (`heat-end-names.test.ts`) fails if a fixed sentence of the heat end names the score, and a browser test (`heat-end-names.spec.ts`) runs events named "Impression" and "Flow". Judges are named by the event's own seat names. The two "start by hand" sentences no longer name a button ("Start heat sequence" exists only when Flags are on).
