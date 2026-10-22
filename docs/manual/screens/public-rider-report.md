@@ -64,7 +64,7 @@ The report follows the page's Day / Dark choice and has its own **Daylight / Dar
 
 ## Who has no report {#prr-none}
 
-A rider whose record says under 18 has no report and no link; the address answers the same “not available” as for a closed report, so nothing says why. A rider with no published heat yet is told the report opens with the first one. A report is kept out of search engines.
+A rider whose date of birth says under 18 has no report and no link; the address answers the same “not available” as for a closed report, so nothing says why. A rider with no published heat yet is told the report opens with the first one. A report is kept out of search engines.
 
 ## What it depends on {#prr-depends}
 

@@ -12,6 +12,33 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.26.0 — 22 Oct 2026 {#release-0-26-0}
+
+PR: #61
+
+### What changed
+- **Rider reports.** A new setting on the Event step, in the **Public page** card: **Rider reports** with **Off** (the default for every event, old and new), **After each heat** and **When the event is complete**. Nothing changes on any event until you choose.
+- When it is on, a rider's page has **Open the report**, and anyone can read any rider's report: the place (or the round reached) and the path through the rounds; ten numbers with the field's and the finalists' beside them; highlights (only where the rider was first); three takeaways (a strength, something to train, a heat strategy point) and, for the heat that knocked the rider out, “You missed the Final by 0.4 points…”; the best three tricks; every heat with a timeline and every jump; the trick mix; the rider against the field; goals for next time.
+- **After each heat** opens a rider's report when their first heat is published and says **so far**; **When the event is complete** opens it after the event is set to complete.
+- **Preview a rider's report** (same card) lets the organiser, and the platform owner through Open as this organiser, read any report while the setting is Off.
+- A report shows **trick names, sides and times** of published heats, also where the results page shows numbers only. It **never** shows any single judge's score, the judges' reference hints, a score still being entered, anything of an unpublished heat, or contact details. A rider whose record says **under 18** has no report and no link.
+- The score is called what your event calls it (Impression, Variety…) and the sides are your event's words (Left / Right or In / Out). The report has its own **Daylight / Dark** switch.
+
+### What to test
+- [ ] Event step → More settings → **Public page**: **Rider reports** is **Off** on every event you open (an old one too), with **Off**, **After each heat**, **When the event is complete**, and **Preview a rider's report**. Do **not** change a real event.
+- [ ] On a real event with **Rider reports Off**: open a rider's page (/e/‹event›/riders/‹id›). There is no **Open the report**, and /e/‹event›/riders/‹id›/report says it is not available.
+- [ ] On a real event: **Preview a rider's report** → pick a rider → **Open the preview**. The report opens with the banner “Preview for the organiser…”; check the place and each heat's total against the Results page (they are the same numbers), and that no single judge's score appears anywhere.
+- [ ] On the phone (390 px wide): the report has no sideways scroll, the tiles are three across (two on a very narrow phone), the timeline of a heat shows dots, crosses and a dashed line, and **Dark** changes the whole page.
+- [ ] On a rehearsal or throwaway event, set **After each heat**, publish a heat: the riders of that heat get **Open the report** on their page, with **so far**; riders who have not ridden yet do not.
+- [ ] On the same throwaway event set **When the event is complete**: no report until you set the event to complete.
+- [ ] A rider whose date of birth says under 18 has no link and the report address says it is not available.
+
+### Known issues
+- The preview was proven on the pull request's data and on the real Arrow and Red Bull events through the same read as an organiser would use; the browser preview of those two events (signed in as their organiser) is yours to open once it is live.
+- A rider who appears in two divisions (for example the reserve qualifier and the main draw) has one report per division.
+- “Doobie” and other words the trick base did not recognise stay as typed and count as their own trick.
+- Final places come from the public Placings; a rider's “Joint” place follows the same rule.
+
 ## 0.25.0 — 21 Oct 2026 {#release-0-25-0}
 
 PR: #60
