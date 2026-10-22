@@ -9,13 +9,6 @@ import type { Page } from "@playwright/test";
  *   item 7 — "Skip to end of heat" ends the heat now and the virtual head judge publishes it; "Run the whole event" plays both days' run orders until the
  *            final is published.
  */
-async function removeSimulatorUsers(w: LiveWorld, eventIds: string[]) {
-  for (const id of eventIds) {
-    const { data } = await w.db.from("sim_seats").select("virtual_user").eq("event_id", id);
-    for (const r of data ?? []) if (r.virtual_user) await w.db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
-  }
-}
-
 /** Copies the throwaway event into a simulation from the panel and opens its panel. */
 async function makeSimulation(page: Page, w: LiveWorld): Promise<string> {
   await w.org.signIn(page, `/org/events/${w.eventId}/simulate`);
@@ -79,7 +72,6 @@ test("item 2: View as Judge 1 takes the seat; closing the tab gives it back and 
     await again.close();
     await page.getByTestId("sim-stop").click();
   } finally {
-    await removeSimulatorUsers(w, simIds);
     await w.cleanup();
   }
 });
@@ -125,7 +117,6 @@ test("item 3: simulator Pause pauses the heat clock on the console; Resume resum
     await expect(head.getByTestId("paused-by")).toHaveText("Paused by the simulator");
     await head.close();
   } finally {
-    await removeSimulatorUsers(w, simIds);
     await w.cleanup();
   }
 });
@@ -178,7 +169,6 @@ for (const speed of [1, 10] as const) test(`Polish 3 item 1 at ×${speed}: Skip 
     expect((await w.db.from("audit_log").select("id").eq("row_id", heatId).eq("action", "publish_override")).data ?? []).toHaveLength(0);
     await page.getByTestId("sim-stop").click();
   } finally {
-    await removeSimulatorUsers(w, simIds);
     await w.cleanup();
   }
 });
@@ -211,7 +201,6 @@ test("item 7: Run the whole event plays Saturday's and Sunday's run orders, ever
     const final = (await w.db.from("heats").select("id, status").eq("event_id", simId).eq("division_id", (await w.db.from("divisions").select("id").eq("event_id", simId).eq("name", "Ladder").single()).data!.id).order("created_at")).data ?? [];
     expect(final.every((h) => h.status === "published")).toBe(true);
   } finally {
-    await removeSimulatorUsers(w, simIds);
     await w.cleanup();
   }
 });

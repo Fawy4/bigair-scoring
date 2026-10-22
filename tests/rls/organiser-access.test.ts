@@ -35,8 +35,8 @@ describe.skipIf(!ENV_OK)("Organiser access (hosted development project)", () => 
   beforeAll(async () => {
     for (const k of ["owner", "staff", "orgA", "orgB", "invitee"]) await makeUser(k);
     await s.from("platform_admins").insert([{ user_id: id.owner, role: "owner" }, { user_id: id.staff, role: "staff" }]);
-    id.A = await ins("organisations", { name: `Acc A ${run}`, slug: `plat-acc-a-${run}` });
-    id.B = await ins("organisations", { name: `Acc B ${run}`, slug: `plat-acc-b-${run}` });
+    id.A = await ins("organisations", { name: `Acc A ${run}`, slug: `plat-acc-a-${run}`, is_test: true });
+    id.B = await ins("organisations", { name: `Acc B ${run}`, slug: `plat-acc-b-${run}`, is_test: true });
     orgs.push(id.A, id.B);
     await s.from("memberships").insert([
       { organisation_id: id.A, user_id: id.orgA, role: "owner" },
@@ -54,8 +54,6 @@ describe.skipIf(!ENV_OK)("Organiser access (hosted development project)", () => 
   });
 
   afterAll(async () => {
-    for (const o of orgs) await s.rpc("purge_organisation", { p_org: o });
-    for (const u of users) await s.auth.admin.deleteUser(u);
   });
 
   describe("an organiser sees only their own organisation", () => {

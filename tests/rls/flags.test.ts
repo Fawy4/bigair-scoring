@@ -40,7 +40,6 @@ describe.skipIf(!ENV_OK)("Flags: arm, start now, abort (hosted development proje
     await f.s.from("heats").update({ status: "ended", ended_at: ago(1) }).eq("event_id", f.ids.evA1).in("status", ["running", "paused"]);
   });
   afterAll(async () => {
-    for (const u of users) await f?.s.auth.admin.deleteUser(u);
     await f?.cleanup();
   });
 

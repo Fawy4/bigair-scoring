@@ -49,9 +49,9 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
     await ins("platform_admins", { user_id: owner.id, role: "owner" });
     await ins("platform_admins", { user_id: staff.id, role: "staff" });
 
-    w.ids.orgA = (await ins("organisations", { name: `Plat A ${run}`, slug: `plat-a-${run}` })).id;
-    w.ids.orgB = (await ins("organisations", { name: `Plat B ${run}`, slug: `plat-b-${run}` })).id;
-    w.ids.orgC = (await ins("organisations", { name: `Plat C ${run}`, slug: `plat-c-${run}` })).id;
+    w.ids.orgA = (await ins("organisations", { name: `Plat A ${run}`, slug: `plat-a-${run}`, is_test: true })).id;
+    w.ids.orgB = (await ins("organisations", { name: `Plat B ${run}`, slug: `plat-b-${run}`, is_test: true })).id;
+    w.ids.orgC = (await ins("organisations", { name: `Plat C ${run}`, slug: `plat-c-${run}`, is_test: true })).id;
     orgs.push(w.ids.orgA, w.ids.orgB, w.ids.orgC);
     await ins("memberships", { organisation_id: w.ids.orgA, user_id: oa.id, role: "owner" });
     await ins("memberships", { organisation_id: w.ids.orgB, user_id: ob.id, role: "owner" });
@@ -84,9 +84,7 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
     if (!w.s) return;
     for (const [k, v] of Object.entries(original)) await w.s.from("platform_settings").upsert({ key: k, value: v as never });
     await w.s.from("platform_settings").delete().not("key", "in", `(${Object.keys(original).map((k) => `"${k}"`).join(",")})`);
-    for (const o of orgs) await w.s.rpc("purge_organisation", { p_org: o }); // first: a division of these organisations points at the test preset
     await w.s.from("scoring_models").delete().eq("key", `plat-${run}`);
-    for (const id of users) await w.s.auth.admin.deleteUser(id);
   });
 
   // ------------------------------------------------------------------ who is a platform admin
@@ -227,7 +225,7 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
       const anon = anonClient();
       const visible = async () => ({
         events: ((await anon.from("events").select("id").eq("id", w.ids.evC1)).data ?? []).length,
-        org: (await anon.rpc("get_public_organisation", { p_slug: `plat-c-${run}` })).data ? 1 : 0,
+        org: (await anon.rpc("get_public_organisation", { p_slug: `plat-c-${run}`, is_test: true })).data ? 1 : 0,
       });
       expect(await visible()).toEqual({ events: 1, org: 1 });
       expect((await w.staff.rpc("admin_set_organisation_archived", { p_org: w.ids.orgC, p_archived: true })).error).toBeNull();
@@ -242,8 +240,8 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
     });
     it("a visitor gets an organisation's public page data only while it is active and has a published event, and never its private columns", async () => {
       const anon = anonClient();
-      expect((await anon.rpc("get_public_organisation", { p_slug: `plat-b-${run}` })).data).toBeNull(); // only a draft event
-      const a = (await anon.rpc("get_public_organisation", { p_slug: `plat-a-${run}` })).data as { name: string; events: Array<{ slug: string }> };
+      expect((await anon.rpc("get_public_organisation", { p_slug: `plat-b-${run}`, is_test: true })).data).toBeNull(); // only a draft event
+      const a = (await anon.rpc("get_public_organisation", { p_slug: `plat-a-${run}`, is_test: true })).data as { name: string; events: Array<{ slug: string }> };
       expect(a.name).toBe(`Plat A ${run}`);
       expect(a.events.map((e) => e.slug)).toEqual([`plat-a1-${run}`]); // the draft event is not listed
       expect(Object.keys(a).sort()).toEqual(["events", "logo_url", "name", "slug", "timezone"]);
@@ -255,14 +253,14 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
       expect(error).toBeNull();
       const rows = data as Array<{ slug: string; organisation_name: string; organisation_slug: string }>;
       const a1 = rows.find((r) => r.slug === `plat-a1-${run}`);
-      expect(a1).toMatchObject({ organisation_name: `Plat A ${run}`, organisation_slug: `plat-a-${run}` });
+      expect(a1).toMatchObject({ organisation_name: `Plat A ${run}`, organisation_slug: `plat-a-${run}`, is_test: true });
       expect(rows.some((r) => r.slug === `plat-a2-${run}`)).toBe(false); // draft
     });
     it("one event's public page data names its organisation; drafts and archived organisations return nothing", async () => {
       const anon = anonClient();
       const ok = await anon.rpc("get_public_event", { p_slug: `plat-a1-${run}` });
       expect(ok.error).toBeNull();
-      expect(ok.data).toEqual([expect.objectContaining({ name: "A1 published", organisation_name: `Plat A ${run}`, organisation_slug: `plat-a-${run}` })]);
+      expect(ok.data).toEqual([expect.objectContaining({ name: "A1 published", organisation_name: `Plat A ${run}`, organisation_slug: `plat-a-${run}`, is_test: true })]);
       expect((await anon.rpc("get_public_event", { p_slug: `plat-a2-${run}` })).data).toEqual([]);
       expect((await anon.rpc("get_public_event", { p_slug: "no-such-event" })).data).toEqual([]);
     });
@@ -315,7 +313,7 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
       expect(log![0]).toMatchObject({ actor_user_id: w.userIds.staff, reason: "support call" });
       const cur = await w.staff.rpc("platform_session");
       expect(cur.error).toBeNull();
-      expect(cur.data).toMatchObject({ role: "staff", impersonating: { organisation_id: w.ids.orgA, slug: `plat-a-${run}` } });
+      expect(cur.data).toMatchObject({ role: "staff", impersonating: { organisation_id: w.ids.orgA, slug: `plat-a-${run}`, is_test: true } });
       expect(await w.orgA.rpc("platform_session")).toMatchObject({ data: { role: null, impersonating: null } });
     });
     it("while it lasts the admin can change that organisation's data as the organiser would", async () => {
@@ -462,6 +460,7 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
       expect(r.error).toBeNull();
       const id = r.data as string;
       orgs.push(id);
+      await w.s.from("organisations").update({ is_test: true }).eq("id", id); // only reached on a project with no demo: a test run's demo is a test organisation
       expect(((await w.s.from("organisations").select("slug").eq("id", id).single()).data as { slug: string }).slug).toBe("demo-org");
       const count = async (t: string, col: string, v: string) => ((await w.s.from(t).select("id").eq(col, v)).data ?? []).length;
       const { data: ev } = await w.s.from("events").select("id").eq("organisation_id", id);
@@ -580,7 +579,7 @@ describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", ()
       expect((await orgCClient.from("events").update({ location: "New home" }).eq("id", mv.ev).select("id")).data).toHaveLength(1);
       const { data } = await w.s.from("audit_log").select("actor_user_id, before, after, row_id, organisation_id").eq("action", "event_moved").eq("row_id", mv.ev);
       expect(data).toHaveLength(1);
-      expect(data![0]).toMatchObject({ actor_user_id: w.userIds.owner, organisation_id: w.ids.orgC, before: { organisation_slug: `plat-a-${run}` }, after: { organisation_slug: `plat-c-${run}`, event: "Moving event" } });
+      expect(data![0]).toMatchObject({ actor_user_id: w.userIds.owner, organisation_id: w.ids.orgC, before: { organisation_slug: `plat-a-${run}`, is_test: true }, after: { organisation_slug: `plat-c-${run}`, event: "Moving event" } });
     });
   });
 

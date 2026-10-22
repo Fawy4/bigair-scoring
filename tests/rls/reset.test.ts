@@ -101,8 +101,8 @@ describe.skipIf(!ENV_OK)("Reset event and Restore (hosted development project)",
 
   let main: World;
   beforeAll(async () => {
-    ids.orgX = (await ins("organisations", { name: `Reset X ${run}`, slug: `reset-x-${run}` })).id;
-    ids.orgY = (await ins("organisations", { name: `Reset Y ${run}`, slug: `reset-y-${run}` })).id;
+    ids.orgX = (await ins("organisations", { name: `Reset X ${run}`, slug: `reset-x-${run}`, is_test: true })).id;
+    ids.orgY = (await ins("organisations", { name: `Reset Y ${run}`, slug: `reset-y-${run}`, is_test: true })).id;
     orgs.push(ids.orgX, ids.orgY);
     const ux = await user("x");
     const uy = await user("y");
@@ -122,8 +122,6 @@ describe.skipIf(!ENV_OK)("Reset event and Restore (hosted development project)",
     expect(codeOf(locked)).toBe("");
   });
   afterAll(async () => {
-    for (const o of orgs) await s.rpc("purge_organisation", { p_org: o });
-    for (const id of users) await s.auth.admin.deleteUser(id);
   });
 
   describe("the copy of the draw", () => {

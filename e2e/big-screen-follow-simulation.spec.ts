@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./base";
-import { addLadder, createLiveWorld, type LiveWorld } from "./live-world";
+import { addLadder, createLiveWorld } from "./live-world";
 
 /**
  * "Big screen — Follow the heat" watching a real simulation at ×20, as its own organiser (the preview of a simulation is for its organiser only). The organiser also holds
@@ -9,13 +9,6 @@ import { addLadder, createLiveWorld, type LiveWorld } from "./live-world";
  * A visitor gets "not found" for the simulation's address. Throwaway organisation; Arrow, EKL and Demo are never touched.
  */
 test.use({ viewport: { width: 1920, height: 1080 } });
-
-async function removeSimulatorUsers(w: LiveWorld, eventIds: string[]) {
-  for (const id of eventIds) {
-    const { data } = await w.db.from("sim_seats").select("virtual_user").eq("event_id", id);
-    for (const r of data ?? []) if (r.virtual_user) await w.db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
-  }
-}
 
 async function record(page: Page) {
   await page.addInitScript(() => {
@@ -115,7 +108,6 @@ test("simulation at ×20: live from the yellow, 'Judges reviewing' until Publish
     await expect(tv.getByTestId("follow-title")).toContainText("published");
     await page.getByTestId("sim-stop").click();
   } finally {
-    await removeSimulatorUsers(w, simIds);
     await w.cleanup();
   }
 });

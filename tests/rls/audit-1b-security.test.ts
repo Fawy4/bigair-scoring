@@ -21,7 +21,6 @@ describe.skipIf(!ENV_OK)("Audit 1b — security (hosted development project)", (
     f = await buildFixture();
   }, 300_000);
   afterAll(async () => {
-    for (const id of phones) await f?.s.auth.admin.deleteUser(id);
     await f?.cleanup();
   });
 

@@ -11,7 +11,6 @@ const COLUMNS = ["division_id", "event_id", "first_name", "id", "identifiers", "
 describe.skipIf(!ENV_OK)("Rider list function visible_entries (hosted development project)", () => {
   let f: Fixture;
   let stranger: SupabaseClient;
-  let strangerId: string;
   let hidden: string; // a registered (not yet confirmed) rider of the public event A1
   let draftEntry: string; // a confirmed rider of the draft event A2
   const ids = async (c: SupabaseClient, p: { p_event?: string; p_entry?: string } = {}) => {
@@ -26,7 +25,6 @@ describe.skipIf(!ENV_OK)("Rider list function visible_entries (hosted developmen
     stranger = anonClient();
     const { data, error } = await stranger.auth.signInAnonymously();
     if (error || !data.user) throw new Error(`Anonymous sign-ins must be switched on: ${error?.message}`);
-    strangerId = data.user.id;
     const mk = async (division: string, first: string, status: string) => {
       const r = await f.s.from("riders").insert({ organisation_id: f.ids.orgA, first_name: first, last_name: "Listed", email: `${first.toLowerCase()}-list@private.example.com`, phone: "+201000000001" }).select("id").single();
       if (r.error) throw new Error(r.error.message);
@@ -38,7 +36,6 @@ describe.skipIf(!ENV_OK)("Rider list function visible_entries (hosted developmen
     draftEntry = await mk(f.ids.divA2, "Draftee", "confirmed");
   }, 120_000);
   afterAll(async () => {
-    if (strangerId) await f.s.auth.admin.deleteUser(strangerId);
     await f.cleanup();
   }, 120_000);
 

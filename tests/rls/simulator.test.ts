@@ -55,7 +55,6 @@ describe.skipIf(!ENV_OK)("Simulator (hosted development project)", () => {
 
   afterAll(async () => {
     if (!f) return;
-    for (const u of virtualUsers) await f.s.auth.admin.deleteUser(u).catch(() => undefined);
     await f.cleanup();
   });
 

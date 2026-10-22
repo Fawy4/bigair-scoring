@@ -2,6 +2,8 @@
 //   npm run preview:public -- create          makes "Public preview" with its own organisation and prints its address
 //   npm run preview:public -- remove <code>   deletes it again (the code is the last part of the address)
 // The event is a normal public event (it appears on the home page list), so remove it when you are done.
+// Its organisation is made by the test helpers, so it starts out marked as test (hidden from the public site). A phone can only look at a public event, so "create" switches
+// that label OFF on purpose, and "remove" switches it back on first (purge_organisation only ever removes organisations marked as test). Nothing here runs unless you run it.
 import { createClient } from "@supabase/supabase-js";
 import { createPublicWorld } from "../e2e/public-world";
 import { loadEnv, need } from "./env.mjs";
@@ -16,7 +18,7 @@ async function main() {
     const w = await createPublicWorld({ settings: { livePollSec: 5, screenRotateSec: 20 }, branding: { sponsors: [{ name: "WOO Events" }, { name: "Arrow" }] } });
     const run = w.org.run;
     // not "e2e-": the browser tests' clean-up sweeps those, and this one is for a person to look at
-    await db.from("organisations").update({ name: "Public preview (delete me)", slug: `preview-${run}` }).eq("id", w.orgId);
+    await db.from("organisations").update({ name: "Public preview (delete me)", slug: `preview-${run}`, is_test: false }).eq("id", w.orgId);
     await db.from("events").update({ name: "Public preview", slug: `preview-${run}` }).eq("id", w.eventId);
     await db.from("heats").update({ duration_sec: 7200 }).eq("id", w.running); // stays on the water for two hours
     console.log(`Public page:  /e/preview-${run}`);
@@ -25,6 +27,7 @@ async function main() {
     console.log(`Remove with:  npm run preview:public -- remove ${run}`);
   } else if (cmd === "remove" && /^[0-9a-f]{8}$/.test(code ?? "")) {
     const { data: org } = await db.from("organisations").select("id").eq("slug", `preview-${code}`).maybeSingle();
+    if (org) await db.from("organisations").update({ is_test: true }).eq("id", org.id);
     if (org) console.log((await db.rpc("purge_organisation", { p_org: org.id })).error?.message ?? "Removed the preview event and its organisation.");
     const { data: users } = await db.auth.admin.listUsers({ perPage: 1000 });
     for (const u of users.users.filter((x) => x.email?.startsWith(`e2e-${code}`))) await db.auth.admin.deleteUser(u.id);

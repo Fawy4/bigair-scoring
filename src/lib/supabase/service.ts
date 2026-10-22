@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { testOrganisationHeaders } from "@/lib/public/test-events";
 import type { Database } from "./database.types";
 
 // Service-role client: SERVER CODE ONLY (server actions, route handlers). Bypasses RLS.
@@ -8,5 +9,6 @@ export function createServiceClient() {
   }
   return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     auth: { persistSession: false },
+    global: { headers: testOrganisationHeaders() },
   });
 }

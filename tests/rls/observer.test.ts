@@ -135,7 +135,6 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
   afterAll(async () => {
     if (!f) return;
     await f.cleanup();
-    for (const id of users) await f.s.auth.admin.deleteUser(id).catch(() => undefined);
   });
 
   // ---------------------------------------------------------------- what an observer reads
@@ -422,7 +421,6 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
       ok(await s.from("judge_seats").update({ auth_user_id: u.id }).eq("id", simObserver).select("id"), "bind");
     });
     afterAll(async () => {
-      await f.s.from("events").delete().in("id", [sim, real].filter(Boolean));
     });
 
     it("the copy keeps the observer seat, and the simulator never plays it", async () => {

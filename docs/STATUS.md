@@ -1557,3 +1557,23 @@ Twice (Gouna 8–9 Oct, Red Bull 19 Oct) a heat's clock reached 0 and the spotte
 ### Not done / not proven
 - The Vercel preview with the real Arrow and Red Bull events opened as their organiser: not done from this session (no sign-in as their organisers); the same data was run through the module and compared line by line with the published results (see the PR).
 - `npm run test:rls` in one go (about 90 minutes) was not run; the new file and the public ones were.
+
+## CL1 – Hide test organisations from the live site, delete nothing (0.26.1)
+
+### Done
+- **Label.** Migration `20261113100000_cl1_test_label.sql` (applied to the hosted project): `organisations.is_test` (default false), a trigger that labels `e2e-`, `rls-`, `plat-`, `evdel-`, `p4-`, `reset-` addresses at creation, organisers cannot write the column, and `purge_organisation` refuses any organisation not labelled as test (`NOT_A_TEST_ORGANISATION`). `purge_refusal_probe(org)` asks it and always rolls back, so the test can prove the refusal on Arrow, Redbull and EKL without risk.
+- **Hidden from visitors.** Migration `20261113100100_cl1_hide_test_organisations.sql` (applied): `get_public_events`, `get_public_organisation`, `get_public_event`, `get_public_site` (every event page and the event code box) and `public_registration_info` skip a test organisation unless the request carries `x-sendbook-test-organisations: show` (sent by the test servers and the test helpers only; `src/lib/public/test-events.ts`). The old "E2E Big Air" name rule on the home page stays as a second net.
+- **Organisations list (/admin).** Default view leaves test organisations out; **Show test organisations** (`?test=1`) shows them with a **Test organisation** tag. The Create-demo button is decided from the full list, so a hidden Demo never makes it come back.
+- **Labelled as test on the hosted project (22 Oct, after a backup of Arrow, Redbull and EKL):** the 8 "RLS test" organisations and Demo organisation. Counts of events, riders, heats, attempts, results, scores and entries of Arrow, Redbull and EKL are identical before and after.
+- **Tests stop deleting.** The shared fixture, every database test's teardown, the browser tests' ledger (`e2e/cleanup.ts`, `e2e/organiser.ts`) and the simulator-login clean-ups no longer remove organisations, logins or files; every test insert of an organisation says `is_test: true`. `src/lib/platform/test-hygiene.test.ts` holds the list of deletes that remain, each with its reason, and fails if one is added or an organisation insert lacks the label.
+- Script `npm run orgs:test -- list | mark | unmark` (refuses arrow, redbull, ekl).
+- Manual: Admin → Organisations page (switch, tag, new section, picture retaken), errors page (two codes), changelog, release entry 0.26.1.
+
+### Not done / left for the owner
+- The tests that delete on purpose (Delete event, Delete organisation, preset delete, simulation delete, refusals) were not changed and were **not run** in this session; see the list in `test-hygiene.test.ts`.
+- `npm run manual:shots` was not run in full; only the one picture this change touches was retaken.
+- The browser tests other than the new `e2e/test-organisations.spec.ts` were not run.
+
+### How to test
+- See the 0.26.1 release entry (/admin/releases): home page shows only real events; Organisations shows Arrow, Redbull, EKL by default; the switch shows the rest; Red Bull and Arrow open with full results.
+

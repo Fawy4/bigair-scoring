@@ -49,8 +49,8 @@ describe.skipIf(!ENV_OK)("Delete and archive an event (hosted development projec
   };
 
   beforeAll(async () => {
-    ids.orgX = (await ins("organisations", { name: `EvDel X ${run}`, slug: `evdel-x-${run}` })).id;
-    ids.orgY = (await ins("organisations", { name: `EvDel Y ${run}`, slug: `evdel-y-${run}` })).id;
+    ids.orgX = (await ins("organisations", { name: `EvDel X ${run}`, slug: `evdel-x-${run}`, is_test: true })).id;
+    ids.orgY = (await ins("organisations", { name: `EvDel Y ${run}`, slug: `evdel-y-${run}`, is_test: true })).id;
     orgs.push(ids.orgX, ids.orgY);
     const ux = await user("x");
     const uy = await user("y");
@@ -73,8 +73,6 @@ describe.skipIf(!ENV_OK)("Delete and archive an event (hosted development projec
     staff = await signedIn(us.email, password);
   });
   afterAll(async () => {
-    for (const o of orgs) await s.rpc("purge_organisation", { p_org: o });
-    for (const id of users) await s.auth.admin.deleteUser(id);
   });
 
   it("is refused for an organiser of another organisation, for platform staff who are not inside the organisation, and for visitors", async () => {
@@ -106,7 +104,7 @@ describe.skipIf(!ENV_OK)("Delete and archive an event (hosted development projec
       table: ((await anon.from("events").select("id").eq("id", ids.pub)).data ?? []).length,
       list: ((await anon.rpc("get_public_events", { p_limit: 100 })).data as Array<{ slug: string }>).some((e) => e.slug === `evdel-pub-${run}`),
       page: ((await anon.rpc("get_public_event", { p_slug: `evdel-pub-${run}` })).data as unknown[]).length,
-      orgPage: ((await anon.rpc("get_public_organisation", { p_slug: `evdel-x-${run}` })).data as { events: Array<{ slug: string }> } | null)?.events.some((e) => e.slug === `evdel-pub-${run}`) ?? false,
+      orgPage: ((await anon.rpc("get_public_organisation", { p_slug: `evdel-x-${run}`, is_test: true })).data as { events: Array<{ slug: string }> } | null)?.events.some((e) => e.slug === `evdel-pub-${run}`) ?? false,
       live: ((await anon.rpc("get_public_live_heat", { p_heat: ids.heat_pub })).data as { allowed: boolean }).allowed,
       divisions: ((await anon.from("divisions").select("id").eq("event_id", ids.pub)).data ?? []).length,
     });

@@ -1,18 +1,11 @@
 import { expect, test } from "./base";
-import { addLadder, createLiveWorld, type LiveWorld } from "./live-world";
+import { addLadder, createLiveWorld } from "./live-world";
 
 /**
  * The simulator (owner brief, 1 Oct 2026): copy a real event into a simulation, play it at ×20 with every role virtual until two heats publish, look at the results as
  * a spectator in another tab, fire scenario buttons and see their ticks, then reset and see the draw back. Everything hangs off one throwaway organisation; the Demo,
  * Arrow and EKL are never touched.
  */
-async function removeSimulatorUsers(w: LiveWorld, eventIds: string[]) {
-  for (const id of eventIds) {
-    const { data } = await w.db.from("sim_seats").select("virtual_user").eq("event_id", id);
-    for (const r of data ?? []) if (r.virtual_user) await w.db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
-  }
-}
-
 test("copy an event, play it at ×20 until two heats publish, look as a spectator, press scenarios, reset", async ({ page, context }) => {
   test.setTimeout(600_000);
   const w = await createLiveWorld();
@@ -82,7 +75,6 @@ test("copy an event, play it at ×20 until two heats publish, look as a spectato
     await page.goto(`/org/events/${simId}/draw`);
     await expect(page.getByText(/Ladder/).first()).toBeVisible();
   } finally {
-    await removeSimulatorUsers(w, simIds);
     await w.cleanup();
   }
 });
@@ -113,7 +105,6 @@ test("View as… → Riders opens the event's public Riders page (no rider drop-
     await expect(riders).toHaveURL(/\/riders\/[0-9a-f-]{36}$/, { timeout: 30_000 });
     await riders.close();
   } finally {
-    await removeSimulatorUsers(w, simIds);
     await w.cleanup();
   }
 });

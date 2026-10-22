@@ -37,8 +37,6 @@ describe.skipIf(!ENV_OK)("Master trick base editor (hosted development project)"
   afterAll(async () => {
     await f?.cleanup(); // the throwaway events first: none may point at a version removed below
     if (madeVersions.length) await f?.s.from("trick_vocabularies").delete().in("id", madeVersions);
-    await f?.s.from("platform_admins").delete().in("user_id", extraUsers);
-    for (const id of extraUsers) await f?.s.auth.admin.deleteUser(id);
   });
 
   it("a new event starts on the newest published version; organisers and visitors read that version", async () => {

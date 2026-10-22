@@ -30,10 +30,6 @@ describe.skipIf(!ENV_OK)("Release tracker (hosted development project)", () => {
     staff = await signedIn(s.email, password);
   });
   afterAll(async () => {
-    await f?.s.from("release_check_ticks").delete().eq("version", V);
-    await f?.s.from("release_signoffs").delete().eq("version", V);
-    await f?.s.from("platform_admins").delete().in("user_id", users);
-    for (const id of users) await f?.s.auth.admin.deleteUser(id);
     await f?.cleanup();
   });
 

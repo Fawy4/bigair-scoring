@@ -7,12 +7,6 @@ import { createLiveWorld, type LiveWorld } from "./live-world";
  * The pre-start, the heat clock, the last minute and the virtual officials' pace are all divided by the speed (×10: 6 s of pre-start, a 60 s heat, a 6 s last minute).
  * Throwaway organisation and a throwaway simulation of its event (removed by the ledger); Arrow, EKL and Demo are never touched.
  */
-async function removeSimulatorUsers(w: LiveWorld, eventIds: string[]) {
-  for (const id of eventIds) {
-    const { data } = await w.db.from("sim_seats").select("virtual_user").eq("event_id", id);
-    for (const r of data ?? []) if (r.virtual_user) await w.db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
-  }
-}
 async function makeSimulation(page: Page, w: LiveWorld): Promise<string> {
   await w.org.signIn(page, `/org/events/${w.eventId}/simulate`);
   await page.getByTestId("run-as-simulation-button").click();
@@ -80,7 +74,6 @@ for (const speed of [5, 10, 20] as const) {
       expect(scores.count ?? 0).toBeGreaterThan(0);
       await page.getByTestId("sim-stop").click();
     } finally {
-      await removeSimulatorUsers(w, simIds);
       await w.cleanup();
     }
   });

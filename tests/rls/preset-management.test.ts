@@ -42,8 +42,8 @@ describe.skipIf(!ENV_OK)("Preset management (hosted development project)", () =>
     const [oa, ob, ow, st] = [await user("a"), await user("b"), await user("owner"), await user("staff")];
     await ins("platform_admins", { user_id: ow.id, role: "owner" });
     await ins("platform_admins", { user_id: st.id, role: "staff" });
-    ids.orgA = (await ins("organisations", { name: `P4 A ${run}`, slug: `p4-a-${run}` })).id;
-    ids.orgB = (await ins("organisations", { name: `P4 B ${run}`, slug: `p4-b-${run}` })).id;
+    ids.orgA = (await ins("organisations", { name: `P4 A ${run}`, slug: `p4-a-${run}`, is_test: true })).id;
+    ids.orgB = (await ins("organisations", { name: `P4 B ${run}`, slug: `p4-b-${run}`, is_test: true })).id;
     orgs.push(ids.orgA, ids.orgB);
     await ins("memberships", { organisation_id: ids.orgA, user_id: oa.id, role: "owner" });
     await ins("memberships", { organisation_id: ids.orgB, user_id: ob.id, role: "owner" });
@@ -67,9 +67,7 @@ describe.skipIf(!ENV_OK)("Preset management (hosted development project)", () =>
 
   afterAll(async () => {
     if (originalDefault) await s.from("platform_default_presets").upsert({ kind: "scoring_model", key: originalDefault });
-    for (const o of orgs) await s.rpc("purge_organisation", { p_org: o });
     await s.from("scoring_models").delete().eq("key", builtIn);
-    for (const id of users) await s.auth.admin.deleteUser(id);
   });
 
   describe("an organiser and their own presets", () => {

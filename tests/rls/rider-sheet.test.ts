@@ -53,7 +53,6 @@ describe.skipIf(!ENV_OK)("Rider sheet: pending notes (hosted development project
   afterAll(async () => {
     if (!f) return;
     await f.cleanup();
-    for (const id of users) await f.s.auth.admin.deleteUser(id).catch(() => undefined);
   });
 
   // ---------------------------------------------------------------- who may write, who may read

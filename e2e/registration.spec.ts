@@ -128,7 +128,6 @@ test("public registration: branding, division levels, gear for the scheme, a pho
     }, b64);
     expect(Math.max(dims.w, dims.h)).toBeLessThanOrEqual(1200); // shrunk on the phone from 3000 × 2000
     expect(Math.abs(dims.w / dims.h - 1.5)).toBeLessThan(0.02); // and the shape is kept
-    await org.db.storage.from("rider-photos").remove([rider!.photo_url!]);
 
     // the organiser sees it waiting and approves it
     await org.signIn(page, `/org/events/${eventId}/riders?division=${divisionId}`);

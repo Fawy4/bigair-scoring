@@ -42,7 +42,7 @@ test("invite, sign in with the link, set a password, sign in with it; remove, lo
   const slug = `e2e-acc-${owner.run}`;
   const orgName = `E2E Access ${owner.run}`;
   const invitee = `e2e-acc-invitee-${owner.run}@example.com`;
-  const { data: org, error } = await owner.db.from("organisations").insert({ name: orgName, slug }).select("id").single();
+  const { data: org, error } = await owner.db.from("organisations").insert({ name: orgName, slug, is_test: true }).select("id").single();
   if (error) throw new Error(error.message);
   owner.trackOrganisation(slug);
   await owner.db.from("events").insert({ organisation_id: org.id, name: "Access event", slug: `${slug}-ev`, status: "draft", timezone: "Africa/Cairo" });

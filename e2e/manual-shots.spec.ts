@@ -253,7 +253,7 @@ test("manual screenshots", async ({ page, context, browser }) => {
     const { data: me } = await db.auth.admin.listUsers({ perPage: 1000 });
     const ownerId = me.users.find((u) => u.email === org.email)?.id;
     await db.from("feedback_notes").insert({ organisation_id: org.orgId, author_user_id: ownerId!, author_role: "organiser", event_id: event.id, page: `/org/events/${event.id}/schedule`, page_label: "Run order step", body: "The lunch break should move with the wind hold.", tag: "idea", organisation_name: "Gouna Big Air (sample)", event_name: "Gouna Big Air (sample)" } as never);
-    for (const [url, name] of [[`/admin?q=${encodeURIComponent("Gouna Big Air")}`, "admin-organisations"], [`/admin/organisations/${org.orgId}`, "admin-organisation"], [`/admin/organisations/${org.orgId}#invite-h`, "admin-invite"], ["/admin/settings", "admin-settings"], [`/admin/feedback?event=${event.id}`, "admin-feedback"], ["/admin/health", "admin-health"]] as const) {
+    for (const [url, name] of [[`/admin?test=1&q=${encodeURIComponent("Gouna Big Air")}`, "admin-organisations"], [`/admin/organisations/${org.orgId}`, "admin-organisation"], [`/admin/organisations/${org.orgId}#invite-h`, "admin-invite"], ["/admin/settings", "admin-settings"], [`/admin/feedback?event=${event.id}`, "admin-feedback"], ["/admin/health", "admin-health"]] as const) {
       await open(page, url);
       await page.waitForLoadState("networkidle").catch(() => undefined);
       if (name === "admin-invite") await page.locator("#invite-h").scrollIntoViewIfNeeded().catch(() => undefined);
@@ -360,10 +360,6 @@ test("manual screenshots", async ({ page, context, browser }) => {
       await shot(pub, "public-rider", PHONE, 2000, true);
     }
   } finally {
-    for (const id of simIds) {
-      const { data } = await db.from("sim_seats").select("virtual_user").eq("event_id", id);
-      for (const r of data ?? []) if (r.virtual_user) await db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
-    }
     await org.cleanup();
   }
 });
@@ -509,7 +505,7 @@ test("manual screenshots: releases", async ({ page }) => {
     await shot(page, "admin-releases", PHONE, 1500);
     await open(page, "/admin/health");
     await shot(page, "admin-health", LAPTOP, 1500);
-    await open(page, `/admin?q=${encodeURIComponent("Gouna Big Air")}`);
+    await open(page, `/admin?test=1&q=${encodeURIComponent("Gouna Big Air")}`);
     const search = page.getByRole("searchbox").first();
     if (await search.isVisible().catch(() => false)) await search.fill("Gouna Big Air");
     await shot(page, "admin-organisations", LAPTOP, 1500);
@@ -601,10 +597,6 @@ test("manual screenshots: observer", async ({ page, browser }) => {
     await page.getByTestId("sim-stop").click().catch(() => undefined);
   } finally {
     await watcher.close().catch(() => undefined);
-    if (simId) {
-      const { data } = await db.from("sim_seats").select("virtual_user").eq("event_id", simId);
-      for (const r of data ?? []) if (r.virtual_user) await db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
-    }
     await w.cleanup();
   }
 });

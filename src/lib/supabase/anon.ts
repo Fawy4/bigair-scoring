@@ -1,4 +1,5 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { testOrganisationHeaders } from "@/lib/public/test-events";
 import type { Database } from "./database.types";
 
 /**
@@ -8,6 +9,6 @@ import type { Database } from "./database.types";
 export function createAnonClient() {
   return createSupabaseClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },
+    global: { headers: testOrganisationHeaders(), fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },
   });
 }

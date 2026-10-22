@@ -34,7 +34,7 @@ describe.skipIf(!ENV_OK)("Public site functions (hosted development project)", (
       if (error) throw new Error(error.message);
       return { slug, id: data.id as string };
     };
-    orgC = (await s.from("organisations").insert({ name: `RLS archived ${f.ids.orgA.slice(0, 6)}`, slug: `rls-p6-org-${f.ids.orgA.slice(0, 6)}`, archived_at: new Date().toISOString() }).select("id").single()).data!.id;
+    orgC = (await s.from("organisations").insert({ name: `RLS archived ${f.ids.orgA.slice(0, 6)}`, slug: `rls-p6-org-${f.ids.orgA.slice(0, 6)}`, is_test: true, archived_at: new Date().toISOString() }).select("id").single()).data!.id;
     const open = { slug: (await s.from("events").select("slug").eq("id", f.ids.evA1).single()).data!.slug as string, id: f.ids.evA1 };
     const draft = { slug: (await s.from("events").select("slug").eq("id", f.ids.evA2).single()).data!.slug as string, id: f.ids.evA2 };
     const sim = await mk("sim", { is_simulation: true });
@@ -53,7 +53,6 @@ describe.skipIf(!ENV_OK)("Public site functions (hosted development project)", (
     unlocked = await mkLadder(f, { name: "Unlocked", locked: false });
   });
   afterAll(async () => {
-    if (orgC) await f.s.rpc("purge_organisation", { p_org: orgC });
     await f?.cleanup();
   });
 

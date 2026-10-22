@@ -6,8 +6,17 @@ export const PUBLISHABLE = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 export const SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY;
 export const ENV_OK = Boolean(URL_ && PUBLISHABLE && SECRET);
 
-const opts = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
+/**
+ * Test organisations are marked as test and the live site hides them from visitors (migration 20261113100100). These tests look at exactly those organisations as a visitor
+ * would, so every connection they make carries the header that lets a request see them. The live site never sends it.
+ */
+export const SHOW_TEST_ORGANISATIONS = { "x-sendbook-test-organisations": "show" };
+const opts = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { headers: SHOW_TEST_ORGANISATIONS } };
 export const service = (): SupabaseClient => createClient(URL_!, SECRET!, opts);
+/** The same connections as a visitor of the live site makes them: without the header, so test organisations are hidden. */
+const plain = { auth: opts.auth };
+export const visitorClient = (): SupabaseClient => createClient(URL_!, PUBLISHABLE!, plain);
+export const serverAsVisitorClient = (): SupabaseClient => createClient(URL_!, SECRET!, plain);
 export const anonClient = (): SupabaseClient => createClient(URL_!, PUBLISHABLE!, opts);
 
 export async function signedIn(email: string, password: string): Promise<SupabaseClient> {
@@ -60,8 +69,8 @@ export async function buildFixture(): Promise<Fixture> {
   // Organisations and organisers
   const oa = await user("orgA");
   const ob = await user("orgB");
-  ids.orgA = (await ins("organisations", { name: `RLS test A ${run}`, slug: `rls-a-${run}` })).id;
-  ids.orgB = (await ins("organisations", { name: `RLS test B ${run}`, slug: `rls-b-${run}` })).id;
+  ids.orgA = (await ins("organisations", { name: `RLS test A ${run}`, slug: `rls-a-${run}`, is_test: true })).id;
+  ids.orgB = (await ins("organisations", { name: `RLS test B ${run}`, slug: `rls-b-${run}`, is_test: true })).id;
   await ins("memberships", { organisation_id: ids.orgA, user_id: oa.id, role: "owner" });
   await ins("memberships", { organisation_id: ids.orgB, user_id: ob.id, role: "owner" });
 
@@ -129,11 +138,10 @@ export async function buildFixture(): Promise<Fixture> {
   clients.orgA = await signedIn(oa.email, password);
   clients.orgB = await signedIn(ob.email, password);
 
+  // Nothing is deleted from the hosted database (the owner's rule). The organisations, logins and files a run makes stay, marked as test: hidden from the public site and
+  // from the default Organisations list. The one row removed is the throwaway SYSTEM preset (it has no organisation, so organisers of real organisations would see it).
   const cleanup = async () => {
     await s.from("scoring_models").delete().eq("key", `rls-${run}-system`);
-    for (const org of [ids.orgA, ids.orgB]) if (org) await s.rpc("purge_organisation", { p_org: org });
-    if (userIds.newphone) created.push(userIds.newphone);
-    for (const id of [...created, ...extraUsers]) await s.auth.admin.deleteUser(id);
   };
   Object.defineProperty(userIds, "__track", { value: (id: string) => extraUsers.push(id), enumerable: false });
   return { s, clients: clients as Fixture["clients"], ids, userIds, cleanup };
