@@ -98,6 +98,21 @@ describe("rider reports: the words follow the event", () => {
   });
 });
 
+describe("rider reports: the keep-doing goals read as the owner wrote them", () => {
+  it("the winner's two goals are about his own trick and his own heats", () => {
+    const r = rep(scenario(), "d");
+    expect(r.suggested.map((g) => factText(g, r))).toEqual(["Your Kiteloop scored 7.00: keep one like it in every heat.", "You banked a counting trick in the first third of every heat you won (2 of 2): keep doing it."]);
+  });
+  it("every keep-doing sentence names no one else, never a missing number, and always says what to keep doing", () => {
+    const r = rep(scenario(), "d");
+    for (const code of ["top_trick", "loops", "growth", "landing_rate", "every_attempt", "impression_above", "variety_per_heat", "both_sides", "totals_growth", "early_banker_all", "early_banker", "best_late"]) {
+      const text = factText({ code: `keep_${code}`, nums: [3, 2, 60, 50], trick: "Kiteloop", round: "Round 1" }, r);
+      expect(text).not.toMatch(/NaN|undefined|null/);
+      expect(text).toMatch(/keep/i);
+    }
+  });
+});
+
 describe("rider reports: small formatters", () => {
   it("places, clock times and scores", () => {
     expect([1, 2, 3, 4, 11, 12, 13, 21, 22].map(ordinal)).toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd"]);

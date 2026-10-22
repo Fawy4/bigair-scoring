@@ -3199,6 +3199,21 @@ export const copy = {
       repeat_same_side: (trick: string, n: number, side: string, round: string) => `${trick} landed ${n} times on the ${side} side in ${round}.`,
       impression_below: (name: string, mine: string, field: string) => `Your ${name} averaged ${mine}; the field averaged ${field}.`,
     },
+    /** A suggested goal for a rider with nothing to train: what he already does well, as something to keep doing. */
+    keep: {
+      top_trick: (trick: string, score: string) => `Your ${trick} scored ${score}: keep one like it in every heat.`,
+      loops: (n: number) => `You landed ${n} ${n === 1 ? "loop" : "loops"}: keep one in every heat.`,
+      growth: (a: string, b: string) => `You went from ${a} landed to ${b} through the day: keep building like that.`,
+      landing_rate: (pct: string, field: string) => `You landed ${pct} of your jumps, the field ${field}: keep that consistency.`,
+      every_attempt: (jumps: number, allowed: number) => `You used ${jumps} of ${allowed} attempts: keep using every one.`,
+      impression_above: (name: string, mine: string, field: string) => `Your ${name} averaged ${mine}, the field ${field}: keep it up.`,
+      variety_per_heat: (mine: string, field: string) => `You landed ${mine} different tricks a heat, the field ${field}: keep mixing them.`,
+      both_sides: (n: number, trick: string) => (n === 1 ? `You landed ${trick} on both sides: keep using both.` : `You landed ${n} tricks on both sides, for example ${trick}: keep using both.`),
+      totals_growth: (first: string, last: string) => `Your heat totals grew from ${first} to ${last}: keep building through the event.`,
+      early_banker_all: (n: number) => `You banked a counting trick in the first third of every heat you won (${n} of ${n}): keep doing it.`,
+      early_banker: (round: string, at: string) => `In ${round} you banked a counting trick within the first ${at}: keep doing it.`,
+      best_late: (round: string, at: string) => `In ${round} your best trick came in the second half, at ${at}: keep something for the end.`,
+    },
     strategy: {
       gap_out: (round: string, target: string | null, miss: string, above: string, replaces: string | null) =>
         `In ${round} you missed ${target ?? "going through"} by ${miss} points. One more trick scoring above ${above}${replaces ? `, in place of your ${replaces},` : ""} would have taken you through.`,

@@ -112,7 +112,9 @@ describe("report: what to train, the first that applies", () => {
     const ctx = make([H(1, mixed(3, 7), mixed(3, 3))]);
     const r = rep(ctx);
     expect(r.takeaways.train).toBeNull();
-    expect(r.suggested).toEqual([]);
+    // nothing to train: the goals are about what he already does well, never a line that is not about him
+    expect(r.suggested.length).toBeGreaterThan(0);
+    expect(r.suggested.every((g) => g.code.startsWith("keep_"))).toBe(true);
   });
   it("the suggested goals are the first two things to train", () => {
     const a = [...varied(2, { kind: "kiteloop", score: 6 }), ...crashes(3, 3, { kind: "kiteloop" })];

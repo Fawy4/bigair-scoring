@@ -2,7 +2,7 @@ import { aggregate, didRide, everyone, finalistIds, indexOf, riderHeats, roundNa
 import { bestTricks, compareOf, mixOf, tilesOf } from "./figures";
 import { heatRow } from "./heats";
 import { highlightsOf } from "./highlights";
-import { strategyOf, strengthOf, trainList, type TakeInput } from "./takeaways";
+import { keepGoals, strategyOf, trainList, strengthOf, type TakeInput } from "./takeaways";
 import { hasLoop } from "./tricks";
 import type { Headline, PathStep, ReportContext, ReportResultOrNone, ReportRound } from "./types";
 
@@ -88,6 +88,7 @@ export function buildRiderReport(ctx: ReportContext, entryId: string): ReportRes
   };
   const bestLanded = take.allScores.length ? Math.max(...take.allScores) : null;
   const trains = trainList(take);
+  const strength = strengthOf(take);
   const ridden = rhs.filter(didRide);
   const days = [...new Set(ridden.map((rh) => dayOf(rh.heat.started_at ?? rh.heat.published_at, ctx.data.event.timezone)).filter((d): d is string => d !== null))].sort();
 
@@ -109,12 +110,12 @@ export function buildRiderReport(ctx: ReportContext, entryId: string): ReportRes
     headline: headlineOf(ctx, entryId, rounds, rhs),
     highlights: highlightsOf(me, riders),
     tiles: tilesOf(me, riders, finalists, rules),
-    takeaways: { strength: strengthOf(take), train: trains[0] ?? null, strategy: strategyOf(take, bestLanded) },
+    takeaways: { strength, train: trains[0] ?? null, strategy: strategyOf(take, bestLanded) },
     bestTricks: bestTricks(me),
     heats: ridden.map((rh) => heatRow(rh, ctx, rounds, rules?.attemptCap ?? null)),
     mix: mixOf(ridden, Object.keys(ctx.familyLabels ?? {})),
     compare: compareOf(me, riders, finalists, rules),
     fieldSize: { riders: riders.length, finalists: finalistAggs.length },
-    suggested: trains.slice(0, MAX_SUGGESTED),
+    suggested: trains.length ? trains.slice(0, MAX_SUGGESTED) : keepGoals(me, strength).slice(0, MAX_SUGGESTED),
   };
 }

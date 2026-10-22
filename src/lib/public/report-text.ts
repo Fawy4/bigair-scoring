@@ -103,6 +103,7 @@ export function trainText(p: Point, r: RiderReport): string {
 /** The fact behind a thing to train, for the suggested goals. */
 export function factText(p: Point, r: RiderReport): string {
   const F = R.fact;
+  if (p.code.startsWith("keep_")) return keepText(p, r);
   switch (p.code) {
     case "never_landed":
       return F.never_landed(p.trick ?? "", num(p, 0));
@@ -120,6 +121,37 @@ export function factText(p: Point, r: RiderReport): string {
       return F.repeat_same_side(p.trick ?? "", num(p, 0), side(r, p.side), the(p.round ?? ""));
     default:
       return F.impression_below(r.scoreName, score(r, num(p, 0)), score(r, num(p, 1)));
+  }
+}
+
+/** A suggested goal that says what to keep doing: the rider's own strength, or the habit of the heats he won. */
+export function keepText(p: Point, r: RiderReport): string {
+  const K = R.keep;
+  switch (p.code.slice("keep_".length)) {
+    case "top_trick":
+      return K.top_trick(p.trick ?? "", score(r, num(p, 0)));
+    case "loops":
+      return K.loops(num(p, 0));
+    case "growth":
+      return K.growth(`${num(p, 0)}%`, `${num(p, 1)}%`);
+    case "landing_rate":
+      return K.landing_rate(`${num(p, 2)}%`, `${num(p, 3)}%`);
+    case "every_attempt":
+      return K.every_attempt(num(p, 0), num(p, 1));
+    case "impression_above":
+      return K.impression_above(r.scoreName, score(r, num(p, 0)), score(r, num(p, 1)));
+    case "variety_per_heat":
+      return K.variety_per_heat(String(Math.round(num(p, 0) * 10) / 10), String(Math.round(num(p, 1) * 10) / 10));
+    case "both_sides":
+      return K.both_sides(num(p, 0), p.trick ?? "");
+    case "totals_growth":
+      return K.totals_growth(score(r, num(p, 0)), score(r, num(p, 1)));
+    case "early_banker_all":
+      return K.early_banker_all(num(p, 0));
+    case "early_banker":
+      return K.early_banker(the(p.round ?? ""), clock(num(p, 0)));
+    default:
+      return K.best_late(the(p.round ?? ""), clock(num(p, 0)));
   }
 }
 

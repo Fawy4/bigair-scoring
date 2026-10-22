@@ -249,3 +249,27 @@ export function strategyOf(t: TakeInput, bestLanded: number | null): Point | nul
   }
   return null;
 }
+
+/**
+ * The goals for a rider with nothing to train: what he already does well, written as something to keep doing. The first is his strength (the same point as his strength takeaway),
+ * the second a habit of the heats he won: a counting trick banked in the first third of every heat he won (when he won two or more), else in the first won heat that has one, else the
+ * best trick kept for the second half. Nothing that is not about him: no strength, no won heat with a habit, no goal.
+ */
+export function keepGoals(me: Agg, strength: Point | null): Point[] {
+  const out: Point[] = [];
+  if (strength) out.push({ ...strength, code: `keep_${strength.code}` });
+  const won = me.heats.filter((rh) => didRide(rh) && rh.outcome === "won");
+  const banked = (rh: RiderHeat): boolean => rh.attempts.some((a) => a.counted && a.at_sec !== null && (a.at_sec as number) <= rh.lengthSec / 3);
+  if (won.length >= 2 && won.every(banked)) {
+    out.push({ code: "keep_early_banker_all", nums: [won.length] });
+  } else {
+    for (const rh of won) {
+      const p = wonHeatPoint(rh);
+      if (p) {
+        out.push({ ...p, code: `keep_${p.code}` });
+        break;
+      }
+    }
+  }
+  return out;
+}

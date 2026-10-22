@@ -198,3 +198,31 @@ describe('report: "so far" shows only while the division can still change', () =
     expect([isSoFar("live", 2), isSoFar("live", 0), isSoFar("complete", 2), isSoFar("complete", 0)]).toEqual([true, false, false, false]);
   });
 });
+
+describe("report: suggested goals for a rider with nothing to train", () => {
+  it("the winner of the example event has no thing to train, and gets two goals about what he already does", () => {
+    const r = rep("d");
+    expect(r.takeaways.train).toBeNull();
+    expect(r.suggested.map((g) => g.code)).toEqual(["keep_top_trick", "keep_early_banker_all"]);
+    expect(r.suggested[0]).toMatchObject({ trick: "Kiteloop", nums: [7, 1] });
+    expect(r.suggested[1].nums).toEqual([2]);
+  });
+  it("a rider who has something to train keeps getting those goals, not the keep-doing ones", () => {
+    expect(rep("a").suggested.every((g) => !g.code.startsWith("keep_"))).toBe(true);
+  });
+  it("no strength and no won heat: no goal is made up", () => {
+    const high = Array.from({ length: 6 }, (_, i) => att(i + 1, { score: 9, at: (i + 1) * 40, kind: "backroll" }));
+    const c = ctxOf([round("R1", "Round 1", 1, [heat(1, [res("b", 1, high), res("a", 2, [att(1, { kind: "backroll", score: 8.5, counted: true })])])], R1_ADVANCE)]);
+    const r = rep("a", c);
+    expect(r.takeaways.train).toBeNull();
+    expect(r.suggested).toEqual([]);
+  });
+  it("only a heat he won counts for the habit: in one won heat with an early counting trick it names that heat; with none early, the best trick kept for the end", () => {
+    const early = [att(1, { kind: "backroll", score: 6, at: 100, counted: true }), att(2, { kind: "frontroll", score: 6, at: 300, counted: true })];
+    const one = rep("a", ctxOf([round("R1", "Round 1", 1, [heat(1, [res("a", 1, early), res("b", 2, [att(1, { kind: "backroll", score: 3, counted: true })])])], R1_ADVANCE)]));
+    expect(one.suggested.map((g) => g.code)).toContain("keep_early_banker");
+    const late = [att(1, { kind: "backroll", score: 5, at: 350, counted: true }), att(2, { kind: "frontroll", score: 6, at: 500, counted: true })];
+    const two = rep("a", ctxOf([round("R1", "Round 1", 1, [heat(1, [res("a", 1, late), res("b", 2, [att(1, { kind: "backroll", score: 3, counted: true })])])], R1_ADVANCE)]));
+    expect(two.suggested.map((g) => g.code)).toContain("keep_best_late");
+  });
+});
