@@ -78,7 +78,7 @@ describe("1H-1 buildMatrix", () => {
     expect(row.cells.map((c) => c.state)).toEqual(["scored", "scored", "outlier"]);
   });
   it("open flags ride on the row; resolved ones do not", () => {
-    const f = (id: string, resolved: string | null): FlagRow => ({ id, heat_id: "h", attempt_id: "a4", judge_seat_id: "J1", kind: "landed", created_at: "", resolved_at: resolved, updated_at: "" });
+    const f = (id: string, resolved: string | null): FlagRow => ({ id, heat_id: "h", attempt_id: "a4", judge_seat_id: "J1", kind: "landed", note: null, created_at: "", resolved_at: resolved, updated_at: "" });
     const row = build(attempts, allScores(), [f("f1", null), f("f2", "2026-10-02T10:40:00Z")]).rows[3];
     expect(row.openFlags.map((x) => x.id)).toEqual(["f1"]);
   });

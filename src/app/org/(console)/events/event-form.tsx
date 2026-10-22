@@ -387,6 +387,19 @@ export function EventForm({ initial, timeZones, schemes, impressionNames = [] }:
             {showError("settings.flags.lastMinuteSec")}
           </>
         ) : null}
+        <SettingRow id="ev-start-next" label={T.startNextHeat} {...h("event.startNextHeat")}>
+          <div role="radiogroup" aria-label={T.startNextHeat} data-testid="start-next-heat" className="flex flex-wrap gap-x-4">
+            {(["manual", "after_publish", "run_order"] as const).map((m) => (
+              <label key={m} className="flex min-h-[var(--org-ctl)] items-center gap-2 text-body font-semibold">
+                <input type="radio" name="start-next-heat" data-testid={`start-next-${m}`} checked={form.settings.startNextHeat === m} onChange={() => set(["settings", "startNextHeat"], m)} />
+                {T.startNextHeatOptions[m]}
+              </label>
+            ))}
+          </div>
+        </SettingRow>
+        <p data-testid="start-next-line" className="text-small font-medium text-beach-muted">
+          {T.startNextHeatLine}
+        </p>
       </FoldCard>
 
       <FoldCard id="public-page" title={T.publicPage} className={group} titleClassName={groupTitle} testId="public-page-settings">

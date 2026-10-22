@@ -17,7 +17,7 @@ const H = copy.headLive;
  * the order. The answer of the server (not the screen's own working) decides: a heat that has already been published answers "Already published" and nothing
  * is written twice.
  */
-export function PublishDialog({ heatId, title, items, canOverride, nobodyRode = false, onChooseOrder, onFix, onClose, onDone }: { heatId: string; title: string; items: ChecklistItem[]; canOverride: boolean; /** Nobody has ridden this heat: the question names Walkover and asks once. */ nobodyRode?: boolean; onChooseOrder: (riders: string[]) => void; /** "Fix" on a line: closes the dialog and opens the place on the console. */ onFix?: (target: FixTarget) => void; onClose: () => void; onDone: (text: string) => void }) {
+export function PublishDialog({ heatId, title, items, canOverride, nobodyRode = false, openParts = [], onChooseOrder, onFix, onClose, onDone }: { heatId: string; title: string; items: ChecklistItem[]; canOverride: boolean; /** Nobody has ridden this heat: the question names Walkover and asks once. */ nobodyRode?: boolean; /** HE1: what is still open (the spotter, a judge's lines, a flag). Publish asks once about it and never blocks. */ openParts?: string[]; onChooseOrder: (riders: string[]) => void; /** "Fix" on a line: closes the dialog and opens the place on the console. */ onFix?: (target: FixTarget) => void; onClose: () => void; onDone: (text: string) => void }) {
   const [reason, setReason] = useState("");
   const [answer, setAnswer] = useState<PublishResult | null>(null);
   const [pending, start] = useTransition();
@@ -32,6 +32,11 @@ export function PublishDialog({ heatId, title, items, canOverride, nobodyRode = 
   const withBlockers = blocked.length > 0;
   return (
     <Modal screen title={H.publishTitle(title)} onClose={onClose}>
+      {openParts.length > 0 ? (
+        <p data-testid="publish-open" className="rounded-lg border-2 border-beach-ink bg-beach-surface px-2 py-1 text-body font-semibold">
+          {copy.heatEnd.publishOpen(openParts.join("; "))} {copy.heatEnd.publishAskOpen}
+        </p>
+      ) : null}
       {withBlockers ? (
         <>
           {nobodyRode ? <p data-testid="publish-nobody-rode" className="text-body font-semibold">{copy.walkover.publishAsk}</p> : null}
@@ -80,7 +85,7 @@ export function PublishDialog({ heatId, title, items, canOverride, nobodyRode = 
         canSave={!pending && (!withBlockers || (override))}
         onSave={go}
         onCancel={onClose}
-        saveLabel={pending ? H.working : withBlockers ? H.publishWithReason : nobodyRode ? copy.walkover.publishAnyway : H.publishYes}
+        saveLabel={pending ? H.working : withBlockers ? H.publishWithReason : nobodyRode ? copy.walkover.publishAnyway : openParts.length > 0 ? copy.heatEnd.publishAnyway : H.publishYes}
       />
     </Modal>
   );

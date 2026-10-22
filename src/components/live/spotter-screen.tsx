@@ -8,6 +8,7 @@ import { LiveShell, useLiveSettings } from "./live-shell";
 import { PillSwitch } from "./chip";
 import { Pill } from "./pill";
 import { SpotterSheetView, type LineEdit } from "./spotter-sheet";
+import { HeatEndedStrip } from "./heat-ended-strip";
 import { ScreenHeader } from "./screen-header";
 import { useLiveHeat } from "./use-live-heat";
 import { useSendQueue } from "./use-send-queue";
@@ -104,6 +105,9 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
 
   const remaining = heat ? remainingMs({ status: heat.status, durationSec: heat.duration_sec, startedAt: heat.started_at, pausedAt: heat.paused_at, pausedTotalSec: heat.paused_total_sec }, nowServer) : 0;
   const running = live.phase === "running";
+  // HE1: the clock reaching 0 or End heat takes nothing away: the spotter logs, corrects and undoes until the head judge publishes (a published or cancelled heat is closed)
+  const afterEnd = live.phase === "ended" && heat?.status !== "published" && heat?.status !== "cancelled";
+  const canLog = running || afterEnd;
   useEndAtZero(supabase, heat?.id ?? null, Boolean(heat) && live.phase !== "paused" && remaining <= 0 && heat?.status === "running", heat?.status);
   const flag = useFlagStrip(ctx, live.heats, live.plans, live.heat, nowServer);
   useTimerSound(remaining, running && !flag, settings.soundOn);
@@ -185,6 +189,7 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
     <ScreenHeader heatName={ctx.event.name} seat={viewer?.name ?? ""} remainingMs={0} showTimer={false} connection={badge.status} pending={badge.pending} onRetry={() => q.queue.retryFailed()} clock={{ timezone: ctx.event.timezone, nowMs: nowServer }} flag={flag} details={feedOpen} detailsLabels={{ off: T.feed, on: T.feedOn }} onToggleDetails={() => setFeedOpen((v) => !v)} />
   );
 
+  const endedStrip = afterEnd ? <HeatEndedStrip>{copy.heatEnd.spotter}</HeatEndedStrip> : null;
   const noticeList =
     notices.length > 0 ? (
       <div className="flex flex-col gap-1 px-2 pt-1" data-testid="notices">
@@ -218,6 +223,7 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
     <>
       <SeatHeartbeat simEventId={ctx.event.isSimulation ? ctx.event.id : undefined} />
       {header}
+      {endedStrip}
       {noticeList}
       {q.memoryOnly ? <p className="px-2 pt-1 text-small font-semibold text-beach-muted">{copy.live.queue.memoryOnly}</p> : null}
       {feedOpen ? (
@@ -256,7 +262,7 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
           attempts={sheetAttempts}
           queued={sheetQueued}
           changing={changing}
-          canLog={running}
+          canLog={canLog}
           disabledNote={live.phase === "paused" ? T.paused : T.notRunning}
           onLog={log}
           onEdit={edit}
@@ -272,7 +278,7 @@ function SpotterScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHeatId?:
           vocab={kit.vocab}
           view={blocksView}
           enabledIds={enabledIds}
-          canLog={running}
+          canLog={canLog}
           disabledNote={live.phase === "paused" ? T.paused : T.notRunning}
           onLog={log}
           onUndo={(k) => void undo(k)}

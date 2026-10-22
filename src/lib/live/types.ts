@@ -7,6 +7,7 @@ import type { LocalBlock, VocabularyJson } from "@/lib/trick-base";
 import type { LabelRider } from "@/lib/identification/rider-label";
 import type { ScheduleDefaults } from "@/lib/schemas/schedule";
 import type { HeatMeta } from "./run-order";
+import type { StartNextHeat } from "@/lib/schemas/event-settings";
 
 /** Rows as the live screens read them (named columns only: hashes are never readable). */
 export interface HeatRow {
@@ -41,9 +42,12 @@ export interface HeatRow {
   armed_paused_at?: string | null;
   /** The simulator's speed this heat runs at (1 on a real event). */
   time_scale?: number;
+  /** "Start the next heat" (HE1): the moment the heat's start sequence begins by itself (the notice shows the last 10 seconds before it), and what set it. Null: no notice. */
+  auto_start_at?: string | null;
+  auto_start_mode?: "after_publish" | "run_order" | null;
   updated_at: string;
 }
-export const HEAT_COLUMNS = "id, division_id, round_id, number, number_suffix, name, status, duration_sec, warm_up_sec, started_at, paused_at, paused_total_sec, ended_at, draw_uid, rerun_of, public_live, reopened_at, publish_hold, paused_reason, armed_at, prestart_sec, armed_paused_at, time_scale, updated_at";
+export const HEAT_COLUMNS = "id, division_id, round_id, number, number_suffix, name, status, duration_sec, warm_up_sec, started_at, paused_at, paused_total_sec, ended_at, draw_uid, rerun_of, public_live, reopened_at, publish_hold, paused_reason, armed_at, prestart_sec, armed_paused_at, time_scale, auto_start_at, auto_start_mode, updated_at";
 
 export interface SlotRow {
   id: string;
@@ -114,11 +118,13 @@ export interface FlagRow {
   attempt_id: string;
   judge_seat_id: string;
   kind: string;
+  /** What the judge wrote with the flag (optional). */
+  note: string | null;
   created_at: string;
   resolved_at: string | null;
   updated_at: string;
 }
-export const FLAG_COLUMNS = "id, heat_id, attempt_id, judge_seat_id, kind, created_at, resolved_at, updated_at";
+export const FLAG_COLUMNS = "id, heat_id, attempt_id, judge_seat_id, kind, note, created_at, resolved_at, updated_at";
 
 export interface SheetRow {
   id: string;
@@ -174,7 +180,7 @@ export interface LiveRiderInfo extends LabelRider {
 export interface LiveContext {
   /** True only on a test server that may open the hidden Queue and Trick list (SHOW_HIDDEN_OFFICIAL_VIEWS=1, never set on the live site); see lib/live/official-views.ts. */
   hiddenViewsTest?: boolean;
-  event: { id: string; name: string; slug: string; timezone: string; judgesMayLogAttempts: boolean; maxRunningHeats: number; isSimulation: boolean; readyCallMin: number; publicLiveScores: string; flags: FlagSettings };
+  event: { id: string; name: string; slug: string; timezone: string; judgesMayLogAttempts: boolean; maxRunningHeats: number; isSimulation: boolean; readyCallMin: number; publicLiveScores: string; flags: FlagSettings; /** "Start the next heat" (Event step): by hand (the default), automatically after Publish, or at the run order time. */ startNextHeat: StartNextHeat; /** The head judge's switch: auto start is off for the rest of the event. */ autoStartOff: boolean };
   /** Who is looking: a seat, or an organiser of the event (the head page only). */
   viewer:
     | {

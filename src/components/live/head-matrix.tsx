@@ -1,4 +1,5 @@
 import { Copy, EyeOff, Flag, Flame, MoreVertical, Minus, Trash2, UserX } from "lucide-react";
+import { FLAG_LOOK } from "./flag-look";
 import { RiderLabel } from "@/components/rider-label";
 import { cellTone, outlierTolerance } from "@/lib/live/cell-tone";
 import { KOTA } from "@/lib/live/design-fixtures";
@@ -65,11 +66,11 @@ function Cell({ cell, panel, onTap, label, tolerance }: { cell: MatrixCell; pane
   );
 }
 
-function Row({ row, actions, tolerance, judges }: { row: Row; actions: MatrixActions; tolerance: number; judges?: JudgeName[] }) {
+function Row({ row, actions, tolerance, judges, highlight }: { row: Row; actions: MatrixActions; tolerance: number; judges?: JudgeName[]; /** The row a flag's "Go to attempt" pointed at. */ highlight?: boolean }) {
   const judgeWord = (i: number) => (judges?.[i] ? judgeWordOf(judges[i]) : T.judge(i + 1));
   const struck = row.state === "deleted";
   return (
-    <tr data-testid="matrix-row" data-row-id={row.id} data-row-state={row.state} className="border-t border-beach-line align-middle">
+    <tr data-testid="matrix-row" data-row-id={row.id} data-row-state={row.state} data-highlight={highlight ? "true" : undefined} className={cn("border-t border-beach-line align-middle", highlight && "outline outline-4 -outline-offset-4 outline-beach-ink")}>
       <td className="px-1 py-0.5">
         {actions.onSelect && row.state !== "deleted" ? (
           <label className="flex min-h-tap min-w-tap cursor-pointer items-center justify-center">
@@ -99,7 +100,7 @@ function Row({ row, actions, tolerance, judges }: { row: Row; actions: MatrixAct
       <td className={cn("min-w-[6rem] px-1.5 py-1 text-body font-medium", (struck || row.status === "crashed") && "line-through")}>
         {row.trick}
         {row.openFlags?.length ? (
-          <span data-testid="row-flag" className="mt-0.5 flex items-center gap-1 text-small font-semibold text-beach-outlier">
+          <span data-testid="row-flag" className={cn("mt-0.5 flex w-fit items-center gap-1 rounded-md px-1.5 py-0.5 text-small font-bold", FLAG_LOOK)}>
             <Flag aria-hidden className="size-3.5" />
             {row.openFlags.map((f) => copy.headLive.flagKinds[f.kind] ?? f.kind).join(", ")}
           </span>
@@ -187,7 +188,7 @@ function PendingRowView({ row, judges, onClear }: { row: PendingMatrixRow; judge
  * The head judge's score table: attempts down, judges across, the panel score last. For a tablet or laptop. With `actions` it is a working tool:
  * tap a score to edit it, tap the attempt number for its menu, tap the rider for theirs.
  */
-export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE, judges, pending = [], pendingAfterRider = false, onClearNote }: { model: MatrixModel & { rows: Row[] }; actions?: MatrixActions; tolerance?: number; /** Pending rows (Rider sheet notes with no attempt): after the attempts, or (grouped by rider) after each rider's own. */ pending?: PendingMatrixRow[]; pendingAfterRider?: boolean; /** The head judge's Clear on a pending note (only while the heat can still be changed). */ onClearNote?: (row: PendingMatrixRow, judgeId: string, noteId: string) => void; /** The judges as the seat names they were given ("Fawy", with "J1" under it). Without it the columns read "Judge 1" (the design preview). */ judges?: JudgeName[] }) {
+export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE, judges, pending = [], pendingAfterRider = false, onClearNote, highlightId }: { model: MatrixModel & { rows: Row[] }; actions?: MatrixActions; tolerance?: number; /** Pending rows (Rider sheet notes with no attempt): after the attempts, or (grouped by rider) after each rider's own. */ pending?: PendingMatrixRow[]; pendingAfterRider?: boolean; /** The attempt a flag's "Go to attempt" pointed at: its row is outlined for a moment. */ highlightId?: string | null; /** The head judge's Clear on a pending note (only while the heat can still be changed). */ onClearNote?: (row: PendingMatrixRow, judgeId: string, noteId: string) => void; /** The judges as the seat names they were given ("Fawy", with "J1" under it). Without it the columns read "Judge 1" (the design preview). */ judges?: JudgeName[] }) {
   return (
     <div data-testid="matrix-scroll" className="overflow-x-auto rounded-card border border-beach-line bg-beach-bg">
       <table data-testid="head-matrix" className="min-w-[34rem] border-collapse text-beach-ink">
@@ -229,7 +230,7 @@ export function HeadMatrix({ model, actions = {}, tolerance = DEFAULT_TOLERANCE,
           </tr>
         </thead>
         <tbody>
-          {withPending(model.rows, pending, pendingAfterRider).map((x) => (x.pending ? <PendingRowView key={x.pending.id} row={x.pending} judges={judges} onClear={onClearNote} /> : <Row key={x.row.id} row={x.row} actions={actions} tolerance={tolerance} judges={judges} />))}
+          {withPending(model.rows, pending, pendingAfterRider).map((x) => (x.pending ? <PendingRowView key={x.pending.id} row={x.pending} judges={judges} onClear={onClearNote} /> : <Row key={x.row.id} row={x.row} actions={actions} tolerance={tolerance} judges={judges} highlight={Boolean(highlightId) && (x.row as { attemptId?: string }).attemptId === highlightId} />))}
         </tbody>
       </table>
     </div>

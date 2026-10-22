@@ -33,9 +33,23 @@ describe("which heat a phone opens by itself", () => {
     const next = heat("h9", "men", { status: "running", started_at: iso("10:04:00") });
     expect(pickCurrentHeat({ ...base, heats: [late, next], viewer: { role: "judge", seatId: "j1" } }).heat?.id).toBe("h9");
   });
-  it("a spotter is not held on an ended heat: between heats they see 'Next'", () => {
+  it("HE1: the spotter stays on a heat that has ended (the clock at 0:00, End heat, under review) until the head judge publishes it", () => {
     const done = heat("h5", "men", { status: "ended", started_at: iso("09:40:00"), ended_at: iso("09:50:00") });
-    expect(pickCurrentHeat({ ...base, heats: [done], viewer: { role: "spotter" } })).toEqual({ heat: null, phase: "none" });
+    expect(pickCurrentHeat({ ...base, heats: [done], viewer: { role: "spotter" } })).toMatchObject({ phase: "ended", heat: { id: "h5" } });
+    const clock = heat("h4", "men", { status: "running", started_at: iso("09:50:00") }); // 600 s long: over at 10:00, stored status still running
+    expect(pickCurrentHeat({ ...base, heats: [clock], viewer: { role: "spotter" } })).toMatchObject({ phase: "ended", heat: { id: "h4" } });
+    const review = heat("h8", "men", { status: "under_review", started_at: iso("09:40:00"), ended_at: iso("09:50:00") });
+    expect(pickCurrentHeat({ ...base, heats: [review], viewer: { role: "spotter" } })).toMatchObject({ phase: "ended", heat: { id: "h8" } });
+    const published = heat("h9", "men", { status: "published", started_at: iso("09:40:00"), ended_at: iso("09:50:00") });
+    expect(pickCurrentHeat({ ...base, heats: [published], viewer: { role: "spotter" } })).toEqual({ heat: null, phase: "none" });
+  });
+  it("HE1: the next heat that starts takes the spotter on; an old ended heat does not hold him for ever; an announcer is not held", () => {
+    const done = heat("h5", "men", { status: "ended", started_at: iso("09:40:00"), ended_at: iso("09:50:00") });
+    const next = heat("h6", "men", { status: "running", started_at: iso("10:04:00") });
+    expect(pickCurrentHeat({ ...base, heats: [done, next], viewer: { role: "spotter" } }).heat?.id).toBe("h6");
+    const old = heat("h7", "men", { status: "ended", started_at: "2026-09-30T20:00:00.000Z", ended_at: "2026-09-30T20:10:00.000Z" });
+    expect(pickCurrentHeat({ ...base, heats: [old], viewer: { role: "spotter" } }).heat).toBeNull();
+    expect(pickCurrentHeat({ ...base, heats: [done], viewer: { role: "announcer" } })).toEqual({ heat: null, phase: "none" });
   });
   it("an old unsubmitted heat does not hold a judge for ever", () => {
     const old = heat("h6", "men", { status: "ended", started_at: "2026-09-30T20:00:00.000Z", ended_at: "2026-09-30T20:10:00.000Z" });

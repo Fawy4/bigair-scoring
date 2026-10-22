@@ -17,6 +17,10 @@ export interface ReviewProps {
   onChanged: () => void;
   /** A blocker line's "Fix": opens that cell / Impression / Variety score / judge on the console (laptop only; absent on a phone). */
   onFix?: (target: FixTarget) => void;
+  /** HE1: what is still open when Publish is pressed ("Spotter still logging", "Judge 2: 1 line to score", "1 open flag"). Publish asks once about it and never blocks. */
+  openParts?: string[];
+  /** HE1: a heat was published: the console selects the next heat of the run order (and, with auto start after Publish, raises the ten-second notice). */
+  onPublished?: (heatId: string) => string | void;
 }
 
 /**

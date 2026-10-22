@@ -28,7 +28,7 @@ function heatOf(data: unknown): Partial<HeatRow> | undefined {
 const fail = (code: string | null, message?: string): { ok: false; code: string | null; message: string } => ({ ok: false, code, message: message ?? errorSentence(code) });
 
 /** Every heat change goes through the database's own functions (they check who may, the rules, and write the audit line). */
-async function heatRpc(fn: "start_heat" | "pause_heat" | "resume_heat" | "end_heat" | "abort_start", heatId: string): Promise<ActionResult> {
+async function heatRpc(fn: "start_heat" | "pause_heat" | "resume_heat" | "end_heat" | "abort_start" | "stop_auto_start", heatId: string): Promise<ActionResult> {
   if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
   const supabase = await createClient();
   const { data, error } = await supabase.rpc(fn, { p_heat: heatId });
@@ -62,6 +62,29 @@ export async function extendHeat(heatId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("extend_heat", { p_heat: heatId });
   return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, heat: heatOf(data) };
+}
+/**
+ * "Start the next heat" (HE1): the console raises the ten-second notice. After Publish the sequence starts 10 s from now; at the run order time the console passes the moment the
+ * heat itself should begin and the database works back from it (less the pre-start). The database decides whether it may (the event's setting, the head judge's switch, the
+ * heat before it published, no Hold, no Stop or Hold wind call, every seat filled, two riders) and refuses with a code that names the rule.
+ */
+export async function planAutoStart(heatId: string, mode: "after_publish" | "run_order", heatStartAtIso?: string): Promise<ActionResult> {
+  if (!uuid.safeParse(heatId).success) return fail("HEAT_NOT_FOUND");
+  if (mode === "run_order" && (!heatStartAtIso || Number.isNaN(Date.parse(heatStartAtIso)))) return fail("BAD_AUTO_START");
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("plan_auto_start", { p_heat: heatId, p_mode: mode, ...(mode === "run_order" ? { p_heat_start_at: heatStartAtIso as string } : {}) });
+  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, heat: heatOf(data) };
+}
+/** Stop: the notice ends and the next heat is not started by itself this time. */
+export async function stopAutoStart(heatId: string): Promise<ActionResult> {
+  return heatRpc("stop_auto_start", heatId);
+}
+/** The head judge's switch for the rest of the event: off ends a notice that is running; on gives auto start back. */
+export async function setAutoStart(eventId: string, on: boolean): Promise<{ ok: true; on: boolean } | { ok: false; code: string | null; message: string }> {
+  if (!uuid.safeParse(eventId).success) return fail("NOT_ALLOWED");
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_auto_start", { p_event: eventId, p_on: on });
+  return error ? { ok: false, code: parseError(error.message).code, message: errorSentence(error.message) } : { ok: true, on: data === true };
 }
 export async function abortStart(heatId: string): Promise<ActionResult> {
   return heatRpc("abort_start", heatId);

@@ -118,6 +118,15 @@ export function auditLine(r: AuditRow, w: AuditWords): string {
       return `${T.reopened}${because}`;
     case "sheet_reopened":
       return `${T.sheetReopened}${because}`;
+    case "sheet_reopened_by_new_attempt":
+      return `${w.judgeWord(String(after.judge_seat_id ?? before.judge_seat_id ?? ""))}: ${T.sheetReopenedByNewAttempt}`;
+    // Start the next heat: the database writes the sentence in the reason ("Next heat started by itself after Publish")
+    case "heat_auto_started":
+    case "auto_start_planned":
+    case "auto_start_stopped":
+    case "auto_start_blocked":
+    case "auto_start_switched":
+      return r.reason ?? rowFallback(r, "");
     case "sheet_submitted_by_head":
       return `${w.judgeWord(String(after.judge_seat_id ?? ""))}: ${T.sheetSubmittedByHead}${because}`;
     case "flag_resolved":

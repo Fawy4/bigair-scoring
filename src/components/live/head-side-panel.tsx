@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Chip } from "./chip";
+import { Flag } from "lucide-react";
+import { FLAG_LOOK } from "./flag-look";
 import { Pill } from "./pill";
 import type { LiveHeatState } from "./use-live-heat";
 import { auditLine, isScoreChange, timeOfDay, type AuditRow } from "@/lib/live/audit-lines";
 import { resolveFlag } from "@/lib/live/head-actions";
 import type { HeadModel } from "@/lib/live/head-model";
+import { openFlagsOf } from "@/lib/live/heat-end";
 import { judgeNames, judgeWordOf } from "@/lib/live/judge-names";
 import { watchingCount } from "@/lib/live/observer";
 import type { HeatRow } from "@/lib/live/types";
@@ -33,6 +35,8 @@ export function useSideData(supabase: SupabaseClient, eventId: string, heat: Hea
   const [seats, setSeats] = useState<SeatInfo[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [observers, setObservers] = useState<Array<{ role: string; last_seen_at: string | null }>>([]);
+  // the event's spotters (HE1): "Spotter still logging" needs to know whose lines are the spotters' and whether a spotter's phone is connected
+  const [spotters, setSpotters] = useState<Array<{ id: string; last_seen_at: string | null }>>([]);
 
   const loadSeats = useCallback(async () => {
     if (panel.length === 0) return;
@@ -57,15 +61,22 @@ export function useSideData(supabase: SupabaseClient, eventId: string, heat: Hea
     if (data) setObservers(data as Array<{ role: string; last_seen_at: string | null }>);
   }, [supabase, eventId]);
 
+  const loadSpotters = useCallback(async () => {
+    const { data } = await supabase.from("judge_seats").select("id, last_seen_at").eq("event_id", eventId).eq("role", "spotter").eq("active", true).eq("status", "active");
+    if (data) setSpotters(data as Array<{ id: string; last_seen_at: string | null }>);
+  }, [supabase, eventId]);
+
   useEffect(() => {
     void loadSeats();
     void loadObservers();
+    void loadSpotters();
     const t = setInterval(() => {
       void loadSeats();
       void loadObservers();
+      void loadSpotters();
     }, 10_000);
     return () => clearInterval(t);
-  }, [loadSeats, loadObservers]);
+  }, [loadSeats, loadObservers, loadSpotters]);
   useEffect(() => {
     if (!wanted.audit) return;
     void loadAudit();
@@ -74,7 +85,7 @@ export function useSideData(supabase: SupabaseClient, eventId: string, heat: Hea
   }, [loadAudit, refreshKey, wanted.audit]);
 
   const names = { ...seatNames, ...Object.fromEntries(seats.map((s) => [s.id, s.name])) };
-  return { seats, audit, observers, judges: judgeNames(panel, names) };
+  return { seats, audit, observers, spotters, judges: judgeNames(panel, names) };
 }
 export type SideData = ReturnType<typeof useSideData>;
 
@@ -110,34 +121,56 @@ export function JudgesStatus({ side, nowServer, highlight }: { side: SideData; n
   );
 }
 
-/** Flags a judge raised on an attempt that nobody has resolved yet. */
-export function OpenFlags({ side, live, head, heat, wordFor, onChanged }: { side: SideData; live: LiveHeatState; head: HeadModel; heat: HeatRow; wordFor: (entryId: string) => string; onChanged: () => void }) {
+/**
+ * The judges' flags that nobody has resolved yet, in a box of their own (HE1): the brand's ink, filled, with a flag icon and the judge's note, and a jump to the attempt in
+ * the table. Fixing the attempt resolves its flag by itself; Resolve closes a flag that needed no fix. On a narrow screen the console draws this box above the table.
+ */
+export function OpenFlags({ side, live, head, heat, wordFor, onChanged, onJump }: { side: SideData; live: LiveHeatState; head: HeadModel; heat: HeatRow; wordFor: (entryId: string) => string; onChanged: () => void; onJump?: (attemptId: string) => void }) {
   const [pending, start] = useTransition();
   const word = (seatId: string) => judgeWordOf(side.judges.find((j) => j.id === seatId) ?? { name: null, tag: copy.live.matrix.aJudge });
   const attemptWord = (attemptId: string) => {
     const row = head.matrix.rows.find((r) => r.attemptId === attemptId);
     return row ? H.attemptWord(wordFor(row.riderKey), row.seq) : "";
   };
-  const open = live.flags.filter((f) => !f.resolved_at && f.heat_id === heat.id);
+  const open = openFlagsOf(live.flags, live.attempts, heat.id);
   return (
-    <section data-testid="flags" className="flex flex-col gap-1 rounded-card border border-beach-line bg-beach-surface p-2" aria-label={H.flagsHeading}>
-      <h3 className="text-heading font-semibold text-beach-muted">{H.flagsHeading}</h3>
+    <section data-testid="flags" data-open={open.length} className={cn("flex flex-col gap-1 rounded-card border-2 border-beach-ink bg-beach-surface p-2")} aria-label={H.flagsHeading}>
+      <h3 className="flex items-center gap-1 text-heading font-semibold text-beach-ink">
+        <Flag aria-hidden className="size-4 shrink-0" />
+        {H.flagsHeading}
+      </h3>
       {open.length === 0 ? <p className="text-small font-medium text-beach-muted">{H.flagsNone}</p> : null}
       {open.map((f) => (
-        <div key={f.id} data-testid="flag-row" className="flex flex-wrap items-center justify-between gap-2">
-          <span className="min-w-0 text-body font-medium">{H.flagLine(word(f.judge_seat_id), H.flagKinds[f.kind] ?? f.kind, attemptWord(f.attempt_id))}</span>
-          <Chip
-            data-testid="resolve-flag"
-            disabled={pending}
-            onClick={() =>
-              start(async () => {
-                await resolveFlag(f.id, "");
-                onChanged();
-              })
-            }
-          >
-            {H.resolve}
-          </Chip>
+        <div key={f.id} data-testid="flag-row" className={cn("flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-lg px-2 py-1", FLAG_LOOK)}>
+          <span className="min-w-0 flex-1 basis-40 text-body font-semibold">
+            {H.flagLine(word(f.judgeId), H.flagKinds[f.kind] ?? f.kind, attemptWord(f.attemptId))}
+            {f.note ? (
+              <span data-testid="flag-note" className="block font-medium">
+                {copy.heatEnd.flagNote(f.note)}
+              </span>
+            ) : null}
+          </span>
+          <span className="flex flex-wrap gap-1">
+            {onJump ? (
+              <button type="button" data-testid="flag-jump" onClick={() => onJump(f.attemptId)} className="min-h-tap rounded-lg border-2 border-beach-bg bg-beach-bg px-2 text-small font-semibold text-beach-ink">
+                {copy.heatEnd.goToAttempt}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              data-testid="resolve-flag"
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  await resolveFlag(f.id, "");
+                  onChanged();
+                })
+              }
+              className="min-h-tap rounded-lg border-2 border-beach-bg px-2 text-small font-semibold text-beach-bg disabled:opacity-60"
+            >
+              {H.resolve}
+            </button>
+          </span>
         </div>
       ))}
     </section>

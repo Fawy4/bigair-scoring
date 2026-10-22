@@ -161,7 +161,8 @@ test("Publish is blocked until the second judge submits, then publishes; the win
   expect(await results(heat)).toHaveLength(0);
 
   // Judge 2 submits: the blocker goes, Publish asks once and publishes
-  await w.db.from("judge_sheets").upsert({ event_id: w.eventId, heat_id: heat, judge_seat_id: w.seats.j2.id, submitted_at: new Date().toISOString() }, { onConflict: "heat_id,judge_seat_id" });
+  const sub = await w.db.from("judge_sheets").upsert({ event_id: w.eventId, heat_id: heat, judge_seat_id: w.seats.j2.id, submitted_at: new Date().toISOString() }, { onConflict: "heat_id,judge_seat_id" });
+  expect(sub.error).toBeNull();
   await expect(head.getByTestId("blockers")).toContainText("Nothing blocks Publish", { timeout: 40_000 });
   await head.getByTestId("publish").click();
   await expect(dialog(head)).toContainText("Publish this result?");
@@ -173,7 +174,7 @@ test("Publish is blocked until the second judge submits, then publishes; the win
   await head2.getByTestId("publish").click();
   await expect(dialog(head2)).toContainText("Publish this result?");
   await Promise.all([dialog(head).getByTestId("dialog-save").click(), dialog(head2).getByTestId("dialog-save").click()]);
-  await expect(head.getByTestId("control-message")).toContainText("Published", { timeout: 60_000 });
+  await expect(head.getByTestId("control-message")).toContainText(/published/i, { timeout: 60_000 }); // whichever head judge wins the race, the other is told "Already published"
   const first = await results(heat);
   expect(first).toHaveLength(3);
   expect(new Set(first.map((r) => r.version))).toEqual(new Set([1]));
@@ -191,6 +192,8 @@ test("Publish is blocked until the second judge submits, then publishes; the win
   await expect(orgPage.locator('[data-seat="F-H1:0"]')).toContainText(ladder.names[ladder.entries.indexOf(entries[0])].split(" ")[0], { timeout: 60_000 });
 
   // Re-open (one confirmation, a reason), change one score so rider 2 wins, publish again: version 2, the Final's seat changes
+  await head.reload(); // the second head judge's Publish may have won the race; start from what the server holds
+  await pickHeat(head, heat); // after Publish the console moved on to the next heat in the run order (HE1)
   await head.getByTestId("reopen").click();
   await dialog(head).getByTestId("reason-input").fill("a paper sheet showed a different score");
   await dialog(head).getByTestId("dialog-save").click();
@@ -289,6 +292,9 @@ test("visibility: the head judge's per-heat live switch, and a held result stays
   expect((await w.db.from("heats").select("publish_hold").eq("id", heat).single()).data!.publish_hold).toBe(true);
   const anon = (await import("@supabase/supabase-js")).createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
   expect(((await anon.from("heat_results").select("entry_id").eq("heat_id", heat)).data ?? []).length).toBe(0);
+  await head.reload(); // start from what the server holds
+  await pickHeat(head, heat); // the console moved on to the next heat after Publish (HE1)
+  await openMore(head);
   await expect(head.getByTestId("held-note")).toBeVisible({ timeout: 40_000 });
   // the release control is a visible button beside Publish (not in the menu); it says "Release result"
   await expect(head.getByTestId("more-panel").getByTestId("release")).toHaveCount(0);

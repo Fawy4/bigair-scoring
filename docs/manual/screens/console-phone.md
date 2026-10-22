@@ -2,7 +2,7 @@
 
 The head judge's /head/‹event› page on a phone: the same controls as the laptop console in one column, and a Score tab when the head judge also scores.
 
-Last checked: 16 Oct 2026 · Product version 0.24.2
+Last checked: 21 Oct 2026 · Product version 0.25.0
 
 ## What it is for {#cp-purpose}
 
@@ -18,6 +18,7 @@ Running heats from the beach without a laptop. The score table needs a wider scr
 | **Score** / **Control** tabs | Only when the head judge also scores (“Head judge also scores” in Officials): **Score** is exactly a judge's Rider sheet ([Judge](judge.md)), with no view switch; **Control** holds the controls. Otherwise the page is just the controls. |
 | Division selector | The same divisions as the laptop's tabs, remembered on the device. |
 | **Review bar** | At the top of the **Control** tab, under the heat's header, from **End heat** until **Publish**: amber “Waiting for 2 of 4 judges: …” (tap a name to open that judge's sheet: **Save and submit** or **Absent**), red “Blocked: …” with **Fix** and **Absent**, green “All 4 judges submitted — ready to publish”; a quiet “3 of 4 judges scoring” while the heat is on. |
+| **Heat ended** strip, **open flags**, **auto start** | The same as on the laptop ([Start the next heat](console-laptop.md#cl-auto-start), [the strip, who is still working and the flags](console-laptop.md#cl-middle)): the teal **Next heat sequence starts in 10 s — Stop** row is the first thing in the **Control** tab, with a Stop button at least 56 px tall; under the heat's header are “1 open flag”, the **Heat ended** strip, the review bar (it lists each open flag with the judge's note; a phone has no table, so no “Go to attempt”) and the flags box. **Publish** asks once about what is still open (“Publish anyway”) and then selects the next heat. |
 | **Impression** card (named by the Event step's **Name of the impression score**) | A block under the heat buttons, headed by that name, open by default once the heat has ended (not for a division without an Impression / Variety scale): one column per judge and a **Panel** column, one row per rider, outlier colours like the trick scores; tap a cell to correct it. |
 | **Release result** | Beside **Publish**, only when the heat's result is held back. |
 | Flag strip | The timer is the **flag strip** (flags on): the flag's colour, the state's words, the countdown and the heat name ([Flags](flags.md)). |

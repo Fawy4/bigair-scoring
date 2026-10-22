@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SEEN_WITHIN_MS, type SideData } from "./head-side-panel";
 import type { LiveHeatState } from "./use-live-heat";
 import { headSetImpression, headSetScore } from "@/lib/live/head-actions";
+import { heatEndedAtMs, judgesWithLines, noOpenWork, openFlagsOf, spotterStillLogging, type OpenWork } from "@/lib/live/heat-end";
 import { sheetSubmitted } from "@/lib/live/head-model";
 import type { JudgeImpressions } from "@/lib/live/impression-status";
 import type { ChecklistItem, FixTarget } from "@/lib/live/publish-checklist";
@@ -39,7 +40,22 @@ export function useReview(i: {
     const seen = seat?.last_seen_at ? i.nowServer - Date.parse(seat.last_seen_at) : null;
     return { id: j.id, word: i.judgeWord(j.id), live: seen !== null && seen <= SEEN_WITHIN_MS, submitted: sheetSubmitted(i.live.sheets.find((s) => s.judge_seat_id === j.id)) };
   });
-  const bar = reviewBarState({ status: i.heat.status, judges, items: i.blockerItems });
+  // HE1: who is still working once the heat has ended, and the judges' flags that are open
+  const spotterIds = new Set(i.side.spotters.map((x) => x.id));
+  const work: OpenWork = i.closing
+    ? {
+        spotter: spotterStillLogging({
+          endedAtMs: heatEndedAtMs(i.heat),
+          nowMs: i.nowServer,
+          attempts: i.live.attempts.filter((a) => a.heat_id === i.heat.id && a.created_by_seat !== null && spotterIds.has(a.created_by_seat)),
+          spotterSeenMsAgo: i.side.spotters.map((x) => (x.last_seen_at ? i.nowServer - Date.parse(x.last_seen_at) : null)),
+          seenWithinMs: SEEN_WITHIN_MS,
+        }),
+        judges: judgesWithLines({ panelSeatIds: i.side.judges.map((j) => j.id), attempts: i.live.attempts.filter((a) => a.heat_id === i.heat.id), scores: i.live.scores.filter((x) => x.heat_id === i.heat.id), notRiding: new Set(i.live.slots.filter((x) => x.heat_id === i.heat.id && x.modifier !== null && x.entry_id).map((x) => x.entry_id as string)) }),
+        flags: openFlagsOf(i.live.flags, i.live.attempts, i.heat.id),
+      }
+    : noOpenWork;
+  const bar = reviewBarState({ status: i.heat.status, judges, items: i.blockerItems, work });
   const scale = i.model.heat.impression?.scale;
 
   const openSheet = (seatId: string) => {
@@ -63,6 +79,7 @@ export function useReview(i: {
   };
   return {
     bar,
+    work,
     barPending,
     barError,
     openSheet,

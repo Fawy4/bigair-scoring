@@ -134,6 +134,17 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
     return () => clearInterval(t);
   }, [supabase, dueId, mayWrite]);
 
+  // HE1, Start the next heat: when a notice has run out every official phone and console asks the database to start the sequence (it acts only on its own clock and only if every
+  // rule still holds; a second call changes nothing). An observer only watches.
+  const noticeDue = rawHeats.find((h) => h.status === "scheduled" && !h.armed_at && h.auto_start_at && nowServer >= Date.parse(h.auto_start_at))?.id ?? null;
+  useEffect(() => {
+    if (!noticeDue || !mayWrite) return;
+    const call = () => void Promise.resolve(supabase.rpc("auto_start_if_due", { p_event: ctx.event.id })).then(() => refreshHeatsRef.current()).catch(() => {});
+    call();
+    const t = setInterval(call, 2000);
+    return () => clearInterval(t);
+  }, [supabase, noticeDue, mayWrite, ctx.event.id]);
+
   // ---- the event's heats
   const refreshHeats = useCallback(async () => {
     // a read that fails is asked again (twice at most): one lost answer used to leave the console unchanged until some other live update arrived
@@ -147,6 +158,8 @@ export function useLiveHeat(supabase: SupabaseClient, ctx: LiveContext, nowServe
       await new Promise((r) => setTimeout(r, 700));
     }
   }, [supabase, ctx.event.id]);
+  const refreshHeatsRef = useRef(refreshHeats);
+  refreshHeatsRef.current = refreshHeats;
   const refreshPlans = useCallback(async () => {
     const { data } = await supabase.from("schedule_plans").select("id, event_id, day, name, items, anchors, actual_starts, hold, defaults, active, updated_at").eq("event_id", ctx.event.id).eq("active", true);
     if (!data) return;

@@ -1,8 +1,8 @@
 # Judge screen
 
-The judge's phone at /judge/‹event›: the Rider sheet during the heat, then the Impression / Variety score for every rider and Submit.
+The judge's phone at /judge/‹event›: the Rider sheet during the heat and after the horn, then — when you press **Done** — the Impression / Variety score for every rider and Submit.
 
-Last checked: 17 Oct 2026 · Product version 0.24.4
+Last checked: 21 Oct 2026 · Product version 0.25.0
 
 ## What it is for {#ju-purpose}
 
@@ -22,10 +22,12 @@ Judges watch the water, not the phone. Every judge, in every division, scores on
 | **Missed** | “I did not see it. No score from me; the panel average uses the others.” |
 | **Flag** | “alert the head judge. I still score.” — That was a crash / That was a landing / Wrong rider / Duplicate / Other. |
 | **Log an attempt** | Only when the Event step allows judges to log attempts: under the rider's name, opens the spotter's logger for that rider. |
-| Impression step (named by the Event step's **Name of the impression score**: “Variety score”, “Impression score”) | After the heat ends: one score per rider (a summary card above the pad: attempts, landed, crashed, repeats, left / right, landed tricks with your scores), “‹done› / ‹total› riders”, **Submit** (“Submit your scores? You cannot change them afterwards.”). Submit is on when every rider has a score. |
+| **Heat ended** strip | From the moment the clock reaches 0 (or the head judge presses End heat) until the heat is published: its own full-width row under the header, “Heat ended — finish scoring your lines, then press Done.” **Nothing is taken away and nothing is locked**: you stay on your Rider sheet and keep scoring, changing and flagging your lines. The last jumps of a heat are often logged after the horn; they arrive on your sheet as usual. |
+| **Done — ‹name›** (in the strip; “Done — Variety”, “Done — Impression”, or “Done — Submit” when the division has no separate score) | You move to the Impression step yourself, when you have scored your lines. |
+| Impression step (named by the Event step's **Name of the impression score**: “Variety score”, “Impression score”) | One score per rider (a summary card above the pad: attempts, landed, crashed, repeats, left / right, landed tricks with your scores), “‹done› / ‹total› riders”, **Submit** (“Submit your scores? You cannot change them afterwards.”). Submit is on when every rider has a score. The header's **Back to my lines** returns to the Rider sheet. If a landed line still has no score from you the strip says so (“Heat ended — 1 line has no score from you.”) with **Back to my lines**. |
 | **Settings** (round button at the end of the header) | Opens a small sheet with Daylight / Dark, Normal / Large and Sound (sound is off until you tap it); remembered on this phone only. A second tap, **Esc** or a tap anywhere else closes it. There is no settings row at the bottom of the screen any more. |
 
-After Submit, or when the head judge takes the heat into review, scores are locked (“Your sheet is locked. Ask the head judge to reopen it.”); the head judge can reopen one judge's sheet or edit a score with a reason.
+After Submit, or when the head judge takes the heat into review, scores are locked (“Your sheet is locked. Ask the head judge to reopen it.”); the head judge can reopen one judge's sheet or edit a score with a reason. **A line logged after you submitted opens your sheet again by itself** ([below](#ju-heat-end)).
 
 ## Rider sheet {#ju-rider-sheet}
 
@@ -49,9 +51,21 @@ The judge's one view (since 0.24.0; it was the default since 0.20.0), for scorin
 - **If the spotter's Undo removes an attempt that had taken your note**, the note goes back to pending on that line: the trick text vanishes from the line and your score stays, shown as pending, until the spotter logs the right attempt. (If a later attempt of the rider has been logged already, nothing moves and the score stays on the removed attempt.)
 - **If the head judge clears your note** from the console (your phone was dead, say), the line shows empty again within a second.
 - **If the head judge deletes or merges an attempt**, the lines renumber and the notes behind it move up to the next real attempt; the scores on the deleted attempt go as they always do.
-- **At the end of the heat.** A note that never got an attempt shows **no attempt logged here** with **Clear**. **Submit** is refused while you still hold one (“You still have scores with no attempt: Red, attempt 4. Clear them, then submit.”): the Impression step shows the same sentence with **Open the Rider sheet**. Press **Clear** on each line, then Submit.
+- **At the end of the heat** ([the section below](#ju-heat-end)). A note that never got an attempt shows **no attempt logged here** with **Clear**. **Submit** is refused while you still hold one (“You still have scores with no attempt: Red, attempt 4. Clear them, then submit.”): the Impression step shows the same sentence with **Open the Rider sheet**. Press **Clear** on each line, then Submit.
 - **Taking a score back, or a crash called wrong.** A line greyed by a crash has **Flag** with “That was a landing”: the head judge decides. A line you scored by mistake can be changed by typing the new score; a score you gave can never be deleted, only changed (or set to Missed).
 - **Log an attempt.** When the Event step lets judges log attempts, a **Log an attempt** button sits under the heading of the rider's sheet (while the heat is running). It opens the spotter's logger for that rider and nothing else changes.
+
+## When the heat ends {#ju-heat-end}
+
+The clock reaching 0:00, or the head judge pressing **End heat**, **does not move you off your sheet and does not lock it** (before 0.25.0 the phone jumped to the Impression step and a late jump could no longer be scored in the same place).
+
+- **The strip.** “Heat ended — finish scoring your lines, then press Done.” It stays until the head judge publishes the heat.
+- **Keep scoring.** Every line works as during the heat: type, change, Missed, Flag. A jump the spotter logs after the horn appears on its line as usual; a score you typed ahead of it settles onto it.
+- **Done — Variety** (the name follows the Event step) moves you to the Impression step. Give every rider a score, then **Submit** (“Yes, submit”). Until you Submit you can go back with **Back to my lines**.
+- **A line logged after you submitted.** If the spotter logs a landed jump after your Submit, **your sheet opens again for that line**: the phone takes you back to the Rider sheet, the strip says “1 new attempt to score — Your sheet is open again for a new line. Score it, then Submit.”, the line carries the tag **New attempt to score** (the same orange bar as “Needs your score”), and the head judge's console shows you as not finished again (“Judge 2: 1 line to score”). Score the line, press **Done — Variety**, **Submit** again. A crash opens nothing (judges never score a crash); correcting a crash to a landing does. This works the same in a division scored by criteria (one box per criterion).
+- **The audit log** says “‹judge›: sheet opened again: a new attempt was logged after Submit”.
+- **After Publish** the heat is closed for everyone; a line that is still missing is added by the head judge (**Re-open**).
+- **A flag can carry a note.** Under the choices of **Flag** is a one-line box, “Note for the head judge (optional)”, up to 140 letters; the note travels with the flag and the head judge reads it in the review bar and in the flags box.
 
 ### A division scored by criteria {#ju-criteria}
 

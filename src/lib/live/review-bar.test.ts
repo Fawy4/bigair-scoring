@@ -34,4 +34,19 @@ describe("the review bar", () => {
   it("green: everything submitted and nothing blocks", () => {
     expect(reviewBarState({ status: "ended", judges: judges([true, true, true, true]), items: [] })).toEqual({ kind: "ready", total: 4 });
   });
+  it("HE1: who is still working rides on amber and red, and turns an otherwise green bar amber (\"Still open\")", () => {
+    const work = { spotter: true, judges: [{ seatId: "s2", lines: 1 }], flags: [] };
+    expect(reviewBarState({ status: "ended", judges: judges([true, false]), items: [sheet(2)], work })).toMatchObject({ kind: "waiting", work });
+    expect(reviewBarState({ status: "ended", judges: judges([true, false]), items: [imp(2)], work })).toMatchObject({ kind: "blocked", work });
+    expect(reviewBarState({ status: "ended", judges: judges([true, true]), items: [], work })).toEqual({ kind: "open", total: 2, work });
+  });
+  it("HE1: an empty piece of work changes nothing", () => {
+    const none = { spotter: false, judges: [], flags: [] };
+    expect(reviewBarState({ status: "ended", judges: judges([true, true]), items: [], work: none })).toEqual({ kind: "ready", total: 2 });
+    expect(reviewBarState({ status: "ended", judges: judges([true, false]), items: [sheet(2)], work: none })).not.toHaveProperty("work");
+  });
+  it("HE1: a flag alone keeps the bar open", () => {
+    const flags = [{ id: "f", attemptId: "a", judgeId: "s1", kind: "crash", note: null, at: 0 }];
+    expect(reviewBarState({ status: "under_review", judges: judges([true]), items: [], work: { spotter: false, judges: [], flags } })).toMatchObject({ kind: "open" });
+  });
 });

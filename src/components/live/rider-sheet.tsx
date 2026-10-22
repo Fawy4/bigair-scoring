@@ -196,7 +196,7 @@ function LineRow({
   /** The question, when it is open on this line. */
   ask: { text: string; onConfirm: () => void; onCancel: () => void } | null;
   /** The Flag choices, when they are open on this line. */
-  flagSheet: { onPick: (kind: string) => void; onClose: () => void } | null;
+  flagSheet: { onPick: (kind: string, note: string) => void; onClose: () => void } | null;
   /** A division scored by criteria: the criteria in the division's order (one box each, under the trick). Null: one score box. */
   criteria: CriterionRow[] | null;
   onAsk: (line: SheetLine) => void;
@@ -211,6 +211,7 @@ function LineRow({
   const [draft, setDraft] = useState<string | null>(null);
   const [refOpen, setRefOpen] = useState(false);
   const [critRefused, setCritRefused] = useState<Record<string, ReturnType<typeof padRefusal>>>({});
+  const [flagNote, setFlagNote] = useState("");
   // the trick name wraps to two lines; one that still does not fit shrinks (down to 12 px) rather than being cut
   const trickBox = useRef<HTMLSpanElement>(null);
   useShrinkToLines(trickBox, `${line.trickName ?? ""}|${line.direction ?? ""}`);
@@ -280,7 +281,7 @@ function LineRow({
               className="mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-beach-attention bg-[color-mix(in_srgb,var(--beach-attention)_9%,transparent)] px-2 py-0.5 text-small font-bold text-beach-ink"
             >
               <span aria-hidden data-testid="line-needs-dot" className={cn("size-2 rounded-full bg-beach-attention", pulse && "motion-safe:animate-pulse")} />
-              {T.needsScore}
+              {line.fresh ? copy.heatEnd.newAttempt : T.needsScore}
             </span>
           ) : null}
           {line.kind === "empty" && line.pending !== null && !orphan && !isMissed ? (
@@ -394,9 +395,20 @@ function LineRow({
       {flagSheet ? (
         <div role="dialog" aria-label={copy.judge.flag.title} data-testid="line-flag-sheet" className="flex scroll-mb-3 scroll-mt-20 flex-col gap-1 rounded-lg border border-beach-border bg-beach-surface p-1.5">
           <p className="text-small font-semibold">{copy.judge.flag.title}</p>
+          <input
+            data-testid="flag-note"
+            type="text"
+            maxLength={140}
+            autoComplete="off"
+            aria-label={copy.heatEnd.flagNoteLabel}
+            placeholder={copy.heatEnd.flagNotePlaceholder}
+            value={flagNote}
+            onChange={(e) => setFlagNote(e.target.value)}
+            className="h-11 w-full rounded-lg border border-beach-line bg-beach-fill px-2 text-body font-medium text-beach-ink placeholder:text-beach-hint"
+          />
           <div className="flex flex-wrap gap-1">
             {flagKindsFor(line).map((k) => (
-              <Chip key={k} data-flag={k} onClick={() => flagSheet.onPick(k)}>
+              <Chip key={k} data-flag={k} onClick={() => flagSheet.onPick(k, flagNote.trim())}>
                 {copy.judge.flag.kinds[k]}
               </Chip>
             ))}
@@ -460,7 +472,7 @@ export interface RiderSheetViewProps {
   onMissed: (riderId: string, line: SheetLine) => void;
   onClear: (riderId: string, line: SheetLine) => void;
   /** Flag the attempt on a line for the head judge: the same as the Queue's Flag. */
-  onFlag: (attemptId: string, kind: string) => void;
+  onFlag: (attemptId: string, kind: string, note?: string) => void;
 }
 
 /**
@@ -559,7 +571,7 @@ export function RiderSheetView(p: RiderSheetViewProps) {
                       criteria={p.criteria && p.criteria.length ? p.criteria : null}
                       onCriterion={(l, k, v) => p.onCriterion?.(rider.id, l, k, v)}
                       onCriterionEmpty={(l, k) => p.onCriterionEmpty?.(rider.id, l, k)}
-                      flagSheet={mine(here(flagAt)) && line.attemptId ? { onPick: (kind) => { p.onFlag(line.attemptId as string, kind); closeAll(); }, onClose: closeAll } : null}
+                      flagSheet={mine(here(flagAt)) && line.attemptId ? { onPick: (kind, note) => { p.onFlag(line.attemptId as string, kind, note); closeAll(); }, onClose: closeAll } : null}
                       onAsk={(l) => { closeAll(); setAsking({ riderId: rider.id, n: l.n }); }}
                       onClosed={(l) => { closeAll(); setClosedAt({ riderId: rider.id, n: l.n }); }}
                       onFlagOpen={(l) => { const open = mine(here(flagAt)); closeAll(); if (!open) setFlagAt({ riderId: rider.id, n: l.n }); }}

@@ -1489,3 +1489,43 @@ Release entry 0.19.0 (`docs/RELEASES.md`). `npm run typecheck && npm test`; `npm
 
 ### How to test on a phone
 - Release entry 0.24.3 in `docs/RELEASES.md`.
+
+## HE1 – Heat end, auto start, next heat (0.25.0)
+
+### Why
+Twice (Gouna 8–9 Oct, Red Bull 19 Oct) a heat's clock reached 0 and the spotter could no longer log or correct tricks, so the late jumps were lost; the judges were moved to the Impression step by themselves.
+
+### Step 1 – what 0.24.4 did (reproduced on throwaway events, before any change)
+- **Spotter** (his phone, not pinned): at 0:00 the Rider sheet was replaced by “Between heats — No heat is running. Next: …”; only “Feed” was left. (Pinned to the heat with `?heat=`: the sheet stayed but “The heat is not running, so nothing can be logged.” and every empty line was disabled.)
+- **Judge**: at 0:00 / End heat the phone moved by itself to the Variety (Impression) step; one small button, “Review”, went back to the Rider sheet. No strip.
+- **Head judge**: the console stayed on the ended heat (“Ended”, “0:00 Time up”, review bar “Blocked: Judge 1: Variety score for Red missing”); End heat disabled; no strip.
+- **Database**: a spotter's new line after the end → `HEAT_NOT_RUNNING` (clock at 0, End heat and under review alike; the head judge's line was accepted); a spotter's correction and undo were accepted (the screen, not the database, took them away); a judge's score or Impression before Submit accepted, after Submit `SHEET_LOCKED`; a line logged after a judge had submitted left his sheet “submitted” (`SHEET_LOCKED` for that line, the console counted him as finished); under review every judge write → `SHEET_LOCKED`; published → everything refused.
+
+### Done
+- Migration `20261111100000_he1_heat_end_auto_start.sql` (additive, applied to the hosted development project): `add_attempt` accepts an ended / under-review heat for everyone allowed to log, refuses a published one (`HEAT_PUBLISHED`); a trigger reopens the sheet of a judge who had submitted when a landed line appears; a trigger resolves flags when their attempt is fixed; `heats.auto_start_at/auto_start_mode`; `plan_auto_start`, `stop_auto_start`, `set_auto_start`, `auto_start_if_due`; `arm_heat` now calls `private.arm_heat_core` (same behaviour).
+- Screens: the “Heat ended” strip (spotter, judge, head, laptop and phone), the spotter stays until Publish, the judge stays on the sheet with **Done — ‹name›**, “New attempt to score”, the review bar's “Still working” row and “Still open” state, the flag look / count / bar rows / box above the table on a narrow console, Publish asks once (“Publish anyway”), the next heat is selected after Publish, the Start-the-next-heat notice with Stop, the switch, the Event step setting.
+- Tests: see the PR description.
+
+### Decisions taken (please confirm or change)
+1. **"Done — Impression"** reads with the name the event gives the separate score: **Done — Impression** or **Done — Variety** or whatever the event calls it, **Done — Submit** for a division that has no separate score.
+2. **A late line reopens the judge's whole sheet**, not only the new line (the same state as when the head judge reopens a sheet): until he submits again he can also change his earlier scores; every change is in the audit log as always. Only a landed line reopens (a crash opens nothing; correcting a crash to a landing does). A published or cancelled heat never reopens anything.
+3. **"Spotter still logging"** = a spotter logged a line in the last 45 seconds, or the heat ended less than 45 seconds ago and a spotter's phone was seen lately. A correction does not count. It is a guess: the phone does not report "I am still typing".
+4. **The spotter may write on an ended or under-review heat; a paused heat is still the head judge's** (as before). A published heat refuses everyone, the head judge included, with "This heat is already published."
+5. **Flags are resolved by fixing the attempt:** switched to a crash resolves "That was a crash", to a landing resolves "That was a landing", moved to another rider resolves "Wrong rider", taken out (delete, merge, undo) resolves every flag about it, any change resolves "Other"; "Duplicate" is resolved when the attempt is taken out. **Resolve** stays for a flag that needed no fix.
+6. **The flag look** uses only the brand: near-black filled (white in Dark) with a flag icon. No new colour.
+7. **A judge can add a short note when flagging** (the database already had the column; the sheet had no box for it). One line, 140 letters.
+8. **Stop = this heat only.** The switch ("Auto start is on / off") = the rest of the event. Switching off also ends a notice that is running.
+9. **After Publish the notice is raised only when the heat just published is the latest one started** — publishing an older heat again after a correction never starts anything.
+10. **A wind call "is active" when the latest call is Red (Stop) or Amber (Hold).** Green and a cleared banner do not stop it. **A Hold is active** while the active run order has a hold.
+11. **A heat with fewer than two riders is never started by itself** (the walkover is the head judge's to give); neither is a heat with an empty seat.
+12. **"The previous heat is unpublished"** = any heat of the event that is running, paused, in its pre-start, ended or under review.
+13. **Run order time** = the timetable's start of the heat (pinned or estimated); the sequence starts at that time less the pre-start. A head judge who is late gets the full ten-second notice and then the sequence. Without flags the sequence is just Start heat.
+14. **The notice is held on the heat** (`heats.auto_start_at`) and the start is done by the database when any official's phone asks after the notice has run out: no phone has to stay awake. The head judge's console (or an organiser's) raises the notice; if nobody has the console open nothing starts.
+15. **After Publish with no run order** the next heat is the next one that has not started, division by division in their order.
+
+### Not done / known
+- A judge's phone does not go back to a heat re-opened after Publish (the head judge scores the missing line for him or reopens his sheet).
+- If a late line is taken out again (Undo), the judge's sheet stays open until he submits once more.
+- The manual's pictures of the judge, spotter and console screens are not retaken (see the release entry).
+- **Left for later (owner's call, before merge of PR #60):** (1) the manual's pictures (`npm run manual:shots`) are not retaken; (2) the whole database suite (`npm run test:rls`, about 90 minutes) was not run in one go: the HE1 files, `rls.test.ts`, the observer, flags, live-heat, live-publish, live-spotter, publish-blockers, spotter-sheet, walkover and extend-heat files were run and pass.
+- **Names (follow-up):** the Done button, its strip, the Impression step and the review bar take the name of the separate score from the event (Event step, "Name of the impression score"; without it the division's own scoring gives it: the old Arrow-style model says Variety, the KOTA model Impression). A unit test (`heat-end-names.test.ts`) fails if a fixed sentence of the heat end names the score, and a browser test (`heat-end-names.spec.ts`) runs events named "Impression" and "Flow". Judges are named by the event's own seat names. The two "start by hand" sentences no longer name a button ("Start heat sequence" exists only when Flags are on).
