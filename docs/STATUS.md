@@ -1529,3 +1529,26 @@ Twice (Gouna 8–9 Oct, Red Bull 19 Oct) a heat's clock reached 0 and the spotte
 - The manual's pictures of the judge, spotter and console screens are not retaken (see the release entry).
 - **Left for later (owner's call, before merge of PR #60):** (1) the manual's pictures (`npm run manual:shots`) are not retaken; (2) the whole database suite (`npm run test:rls`, about 90 minutes) was not run in one go: the HE1 files, `rls.test.ts`, the observer, flags, live-heat, live-publish, live-spotter, publish-blockers, spotter-sheet, walkover and extend-heat files were run and pass.
 - **Names (follow-up):** the Done button, its strip, the Impression step and the review bar take the name of the separate score from the event (Event step, "Name of the impression score"; without it the division's own scoring gives it: the old Arrow-style model says Variety, the KOTA model Impression). A unit test (`heat-end-names.test.ts`) fails if a fixed sentence of the heat end names the score, and a browser test (`heat-end-names.spec.ts`) runs events named "Impression" and "Flow". Judges are named by the event's own seat names. The two "start by hand" sentences no longer name a button ("Start heat sequence" exists only when Flags are on).
+
+## RA1 – Rider reports in the app (0.26.0)
+
+### Done
+- Event step setting **Rider reports** (Public page card): Off (default of every event) / After each heat / When the event is complete; **Preview a rider's report** in the same card.
+- Migration `20261112100000_ra1_rider_reports.sql` (applied to the hosted project): `get_rider_report(p_event)` (visitor, shared 3 s cache) and `preview_rider_report(p_event)` (organisers). Answers only for a public event, only the published and released heats, never a judge's score, outlier or Missed, pending row, flag, reference hint, raw text, contact detail or date of birth; `report_withheld` marks a rider whose date of birth says under 18 at the event's first day.
+- Pure module `src/lib/engine/report/` (tiles, highlights, takeaways, strategy, gap line, heat by heat, trick mix, comparison, goals) with fixed example data (`fixture.ts`, `scenario.ts`) and a test per rule; the words are in `ui-copy.ts` (`copy.report`) and `src/lib/public/report-text.ts`.
+- Page `/e/<event>/riders/<id>/report` (`?preview=1` for the organiser), the link on the rider page, the report view (`src/components/report`, `src/app/report.css`) with the owner's palette in Day and Dark and its own switch.
+- Manual: new page `screens/public-rider-report.md`, pictures retaken from a throwaway event, changelog, release entry 0.26.0.
+
+### Decisions taken
+1. Reports show trick names, sides and times of published heats even where a division's results page shows numbers only (Arrow's and Red Bull's main divisions do): the report cannot work without them. The setting's help text and the manual say so.
+2. A trick is the SET of its blocks (same matcher as the reference scores): the order they were tapped in does not matter; the side is not part of the trick; typed words the trick base did not recognise stay as typed.
+3. Loops = a block of the trick base's `kiteloop` category; the family of a trick on the trick mix = the category the spotter's line carries.
+4. Tricks "tried at least twice and never landed" need the trick name of a crash; crashes seldom carry one (Red Bull: 7 of 156), so that rule rarely fires.
+5. "Tricks landed in both directions" = the same trick landed on both sides; "growth" = the last heat's total higher than the first's; "early banker" = a counting trick in the first third of the heat.
+6. The gap line is left out when the heat total is not a plain sum of the best N tricks (weights, per-category limits).
+7. A rider's reports are per entry: a rider in the reserve qualifier and the main draw has two.
+8. A rider under 18 (date of birth after the event's first day minus 18 years) gets no link and the same "not available" page as a closed report, so nothing says why. A missing date of birth means a report shows.
+
+### Not done / not proven
+- The Vercel preview with the real Arrow and Red Bull events opened as their organiser: not done from this session (no sign-in as their organisers); the same data was run through the module and compared line by line with the published results (see the PR).
+- `npm run test:rls` in one go (about 90 minutes) was not run; the new file and the public ones were.
