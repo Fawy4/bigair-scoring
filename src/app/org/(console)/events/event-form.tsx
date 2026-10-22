@@ -25,6 +25,7 @@ import { impressionPlaceholder } from "@/lib/org/impression-names";
 import { EventFormSchema, slugify, type EventForm as EventFormValues } from "@/lib/schemas/event-settings";
 import type { IdentificationScheme } from "@/lib/schemas/identification";
 import { copy, help, orgCopy } from "@/lib/ui-copy";
+import { previewHref } from "@/lib/public/report-links";
 import { saveEvent } from "./actions";
 import { IdentificationEditor, LycraQuestion } from "./identification-editor";
 
@@ -38,7 +39,13 @@ export interface EventFormInitial {
   savedSlug: string | null;
 }
 
-export function EventForm({ initial, timeZones, schemes, impressionNames = [] }: { initial: EventFormInitial; timeZones: string[]; schemes: IdentificationScheme[]; /** What the event's divisions call their separate score now; shown in the empty field. */ impressionNames?: string[] }) {
+export interface PreviewRider {
+  id: string;
+  name: string;
+  division: string;
+}
+
+export function EventForm({ initial, timeZones, schemes, impressionNames = [], previewRiders = [] }: { initial: EventFormInitial; timeZones: string[]; schemes: IdentificationScheme[]; /** What the event's divisions call their separate score now; shown in the empty field. */ impressionNames?: string[]; /** The riders of the saved event, for "Preview a rider's report". */ previewRiders?: PreviewRider[] }) {
   const router = useRouter();
   const refreshSoon = useRefreshSoon();
   const laptop = useShellLayout() === "laptop";
@@ -52,6 +59,7 @@ export function EventForm({ initial, timeZones, schemes, impressionNames = [] }:
   const [savedSlug, setSavedSlug] = useState(initial.savedSlug);
   const [saved, setSaved] = useState(() => JSON.stringify({ form: initial.values, published: initial.status === "published" }));
   const [origin, setOrigin] = useState("");
+  const [previewEntry, setPreviewEntry] = useState("");
   const [pending, start] = useTransition();
   useEffect(() => setOrigin(window.location.origin), []);
 
@@ -116,6 +124,8 @@ export function EventForm({ initial, timeZones, schemes, impressionNames = [] }:
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-registered on every change so the guard sees the current form
   }, [form, published, understood, dirty, initial.id]);
 
+  // the preview address comes only from the list of this event's riders, never from the text of the screen
+  const previewLink = previewHref(savedSlug, previewEntry, previewRiders);
   const group = "flex flex-col gap-3 border-t border-beach-line py-4";
   const groupTitle = "text-[14px] font-semibold";
   const inputCls = "h-[var(--org-ctl)] w-full rounded-[8px] border border-beach-border bg-transparent px-3 text-body font-semibold";
@@ -431,6 +441,47 @@ export function EventForm({ initial, timeZones, schemes, impressionNames = [] }:
           })}
         </ul>
         {showError("settings.publicTabsOff")}
+        <SettingRow id="ev-rider-reports" label={T.riderReports} {...h("event.riderReports")}>
+          <div role="radiogroup" aria-label={T.riderReports} data-testid="rider-reports" className="flex flex-wrap gap-x-4">
+            {(["off", "after_heat", "after_event"] as const).map((m) => (
+              <label key={m} className="flex min-h-[var(--org-ctl)] items-center gap-2 text-body font-semibold">
+                <input type="radio" name="rider-reports" data-testid={`rider-reports-${m}`} checked={form.settings.riderReports === m} onChange={() => set(["settings", "riderReports"], m)} />
+                {T.riderReportsOptions[m]}
+              </label>
+            ))}
+          </div>
+        </SettingRow>
+        <p data-testid="rider-reports-line" className="text-small font-medium text-beach-muted">
+          {T.riderReportsLine} {T.riderReportsShows}
+        </p>
+        <div data-testid="rider-reports-preview" className="flex flex-wrap items-end gap-2">
+          {initial.id && savedSlug ? (
+            previewRiders.length ? (
+              <>
+                <label className="flex flex-col gap-1 text-small font-semibold">
+                  {T.riderReportsPreview}
+                  <select aria-label={T.riderReportsPreviewPick} data-testid="rider-reports-pick" value={previewEntry} onChange={(e) => setPreviewEntry(e.target.value)} className={`${inputCls} w-72 max-w-full`}>
+                    <option value="">{T.riderReportsPreviewPick}…</option>
+                    {previewRiders.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} · {r.division}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {previewLink ? (
+                  <a data-testid="rider-reports-open" href={previewLink} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[var(--org-ctl)] items-center rounded-[8px] border border-beach-accent bg-beach-accent px-3 text-body font-semibold text-beach-on-accent">
+                    {T.riderReportsPreviewOpen}
+                  </a>
+                ) : null}
+              </>
+            ) : (
+              <p className="text-small font-medium text-beach-muted">{T.riderReportsPreviewNone}</p>
+            )
+          ) : (
+            <p className="text-small font-medium text-beach-muted">{T.riderReportsPreviewSave}</p>
+          )}
+        </div>
       </FoldCard>
 
       <FoldCard id="registration" title={T.registration} className={group} titleClassName={groupTitle} testId="registration-settings">

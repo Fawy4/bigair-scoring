@@ -22,6 +22,10 @@ export type ExternalLeaderboard = z.infer<typeof ExternalLeaderboardSchema>;
 export const START_NEXT_HEAT = ["manual", "after_publish", "run_order"] as const;
 export type StartNextHeat = (typeof START_NEXT_HEAT)[number];
 
+/** Rider reports (RA1): never shown (the default of every event, old and new), after each heat is published, or once the event is marked complete. */
+export const RIDER_REPORTS = ["off", "after_heat", "after_event"] as const;
+export type RiderReports = (typeof RIDER_REPORTS)[number];
+
 /** Everything on `events.settings` that the Event step edits. Unknown keys written by later phases are kept. */
 export const EventSettingsSchema = z.looseObject({
   /** "live" = the public may follow scores during a heat; anything else = nothing before the head judge publishes. */
@@ -52,6 +56,8 @@ export const EventSettingsSchema = z.looseObject({
   flags: FlagSettingsSchema.default(() => FlagSettingsSchema.parse({})),
   /** "Start the next heat" (the Flags card of the Event step): by hand (the default of every event, old and new), automatically after Publish, or at the heat's run order time. */
   startNextHeat: z.enum(START_NEXT_HEAT).default("manual"),
+  /** "Rider reports" (the Public page card of the Event step): off for every event until the organiser chooses; read by the database function get_rider_report, which also treats any other value as off. */
+  riderReports: z.enum(RIDER_REPORTS).default("off"),
   /** The head judge's switch on the console: auto start is off for the rest of the event, whatever startNextHeat says. Written by the database function set_auto_start, not by the Event step. */
   autoStartOff: z.boolean().default(false),
   /** Heats that may run (or be paused) at the same time in this event. */

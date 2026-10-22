@@ -1,0 +1,234 @@
+/* Rider report (RA1), made to look exactly like the owner's reference page. Its colours are the owner's palette (a test reads these tokens and computes the contrast of every
+   pair a word is set in: src/lib/public/report-tokens.test.ts). Orange on orange, on the home page's still megaloop, air and water background (the page adds .home .home-sky). */
+.report {
+  --r-bg: #ffffff;
+  --r-tint: #fff1e6;
+  --r-soft: #fff0e5;
+  --r-card: #ffffff;
+  --r-edge: #d3dedf;
+  --r-text: #111111;
+  --r-muted: #475659;
+  --r-accent: #ba4800;
+  --r-on-accent: #ffffff;
+  --r-accent-soft: #fff0e5;
+  --r-crash: #b42318;
+  --r-crash-bg: #fcebe9;
+  --r-grey: #8c9a9c;
+  --r-f1: #ba4800;
+  --r-f2: #ff6a00;
+  --r-f3: #fdba74;
+  --r-f4: #99a9ab;
+  --r-f5: #d3dedf;
+}
+.report[data-theme="dark"] {
+  --r-bg: #000000;
+  --r-tint: #160a03;
+  --r-soft: #1a0c03;
+  --r-card: #111111;
+  --r-edge: #2a3335;
+  --r-text: #ffffff;
+  --r-muted: #b0b0b0;
+  --r-accent: #ff6a00;
+  --r-on-accent: #000000;
+  --r-accent-soft: #2a1405;
+  --r-crash: #ff6b6b;
+  --r-crash-bg: #2a1212;
+  --r-grey: #6b7a7c;
+  --r-f1: #ff8a3d;
+  --r-f2: #ff6a00;
+  --r-f3: #9a3b00;
+  --r-f4: #56666a;
+  --r-f5: #2a3335;
+}
+/* the names the reference page's own rules use, from the tokens above */
+.report {
+  --bg: var(--r-bg);
+  --bg2: var(--r-soft);
+  --card: var(--r-card);
+  --edge: var(--r-edge);
+  --ink: var(--r-text);
+  --muted: var(--r-muted);
+  --teal: var(--r-accent);
+  --teal-ink: var(--r-on-accent);
+  --teal-soft: var(--r-accent-soft);
+  --crash: var(--r-crash);
+  --crash-soft: var(--r-crash-bg);
+  --grey: var(--r-grey);
+  --f0: var(--r-f1);
+  --f1: var(--r-f2);
+  --f2: var(--r-f3);
+  --f3: var(--r-f4);
+  --f4: var(--r-f5);
+  color: var(--r-text);
+  font-family: var(--font-rubik), "Rubik", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.45;
+}
+.report.home.home-sky {
+  --h-bg: var(--r-bg);
+  --h-ink: var(--r-text);
+  --h-muted: var(--r-muted);
+  background-color: var(--r-bg);
+  background-image: linear-gradient(180deg, var(--r-tint) 0%, var(--r-bg) 50%);
+  min-height: 100dvh;
+}
+body:has(.report[data-theme="dark"]) {
+  background: #000000;
+}
+.report * {
+  box-sizing: border-box;
+}
+.report .wrap {
+  position: relative;
+  z-index: 1;
+}
+/* the Daylight / Dark switch sits under the header, on the right */
+.report .theme-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-block: -4px 8px;
+}
+.report .home-theme button[aria-pressed="true"] {
+  background: var(--r-accent);
+  color: var(--r-on-accent);
+}
+.report a.back {
+  color: var(--r-accent);
+  font-weight: 600;
+}
+.report .preview-banner {
+  border: 1px solid var(--r-accent);
+  background: var(--r-accent-soft);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-block-end: 10px;
+}
+.report .notes textarea::placeholder { color: var(--muted); opacity: 1; }
+/* Tailwind's reset removes the bullets of a list: the highlights bring theirs back, in the accent colour, as in the reference */
+.report .hl, .report .sugg ul { list-style: disc; }
+.report .sofar { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-inline-start: 8px; }
+@media print {
+  .report .top { margin-block-end: 10px; }
+}
+/* ---- the reference page's own rules ---- */
+.report .wrap{position:relative;z-index:1;max-inline-size:560px;margin-inline:auto;padding:14px 14px 48px}
+.report .top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-block:4px 10px}
+.report .brand{font-weight:800;font-size:20px;letter-spacing:-.01em}
+.report .brand small{display:block;font-weight:500;font-size:12px;color:var(--muted);letter-spacing:0}
+.report select{font:inherit;font-size:16px;color:var(--ink);background:var(--card);border:1px solid var(--edge);border-radius:999px;padding:9px 14px;max-inline-size:62vw}
+.report .owner{background:var(--teal-soft);color:var(--ink);border:1px solid var(--edge);border-radius:14px;padding:10px 12px;font-size:13px;line-height:1.4;margin-block-end:10px}
+.report .hl{margin:0;padding-inline-start:18px;display:grid;gap:6px;font-size:15px;line-height:1.4}
+.report .hl li::marker{color:var(--teal)}
+.report .card{background:var(--card);border:1px solid var(--edge);border-radius:18px;padding:16px;margin-block:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.report h2, .report h3, .report h4{margin:0}
+.report h3{font-size:17px;font-weight:700;margin-block-end:6px}
+.report h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-block:14px 6px}
+.report .note{font-size:12.5px;color:var(--muted);margin:2px 0 10px;line-height:1.4}
+.report .muted{color:var(--muted)}
+.report .hero{background:var(--card);overflow:hidden;position:relative}
+.report .hero-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.report .eyebrow{font-size:12px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.06em}
+.report .rname{font-size:28px;font-weight:800;line-height:1.1;margin-block:4px 2px;letter-spacing:-.01em}
+.report .sub{font-size:13px;color:var(--muted)}
+.report .place{text-align:end;min-inline-size:84px}
+.report .pbig{font-size:34px;font-weight:800;color:var(--teal);line-height:1;letter-spacing:-.02em}
+.report .pmid{font-size:22px;line-height:1.1}
+.report .psmall{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-block-start:4px}
+.report .path{list-style:none;display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:14px 0 0}
+.report .path li{display:flex;align-items:center;gap:6px;border:1px solid var(--edge);border-radius:999px;padding:5px 10px;font-size:12.5px}
+.report .path li .pr{color:var(--muted)}
+.report .path li .pp{font-weight:700}
+.report .path li.wo .pp{color:var(--muted);font-weight:600}
+.report .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-block:12px}
+.report .tile:nth-child(n+7){background:var(--teal-soft)}
+.report .tile{background:var(--card);border:1px solid var(--edge);border-radius:16px;padding:10px}
+.report .tl{font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.report .tv{font-size:26px;font-weight:800;margin-block:2px;font-variant-numeric:tabular-nums}
+.report .tv small{font-size:15px;color:var(--muted);font-weight:600}
+.report .ts{font-size:11.5px;color:var(--muted);line-height:1.3}
+.report .takes{display:grid;gap:8px}
+.report .take{border-inline-start:4px solid var(--teal);background:var(--teal-soft);border-radius:12px;padding:10px 12px}
+.report .take p{margin:4px 0 0;font-size:15px;line-height:1.45}
+.report .tk-l{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--teal);display:flex;align-items:center;gap:6px}
+.report .tk-i{font-size:13px}
+.report .best{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.report .best li{display:grid;grid-template-columns:32px 1fr auto;grid-template-rows:auto auto;column-gap:10px;align-items:center;border:1px solid var(--edge);border-radius:14px;padding:8px 10px}
+.report .rk{grid-row:1/3;inline-size:32px;block-size:32px;border-radius:50%;background:var(--teal);color:var(--teal-ink);display:grid;place-items:center;font-weight:800}
+.report .bn{font-weight:700;font-size:15px}
+.report .bh{font-size:12px;color:var(--muted)}
+.report .heat{border-block-start:1px solid var(--edge);padding-block:12px 4px}
+.report .heat:first-of-type{border-block-start:0;padding-block-start:4px}
+.report .hh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.report .hno{color:var(--muted);font-size:13px}
+.report .lyc{display:inline-block;inline-size:12px;block-size:12px;border-radius:3px;background:var(--lyc);border:1px solid var(--grey);margin-inline-end:6px;vertical-align:-1px}
+.report .res{font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px;border:1px solid var(--edge);white-space:nowrap}
+.report .res.win{background:var(--teal);color:var(--teal-ink);border-color:var(--teal)}
+.report .res.out{color:var(--muted)}
+.report .hm{font-size:12.5px;color:var(--muted);margin-block:6px 2px}
+.report .strip{inline-size:100%;block-size:84px;display:block}
+.report .strip .avg{stroke:var(--grey);stroke-width:1;stroke-dasharray:3 3}
+.report .strip .avgl{font-size:7.5px;fill:var(--muted);text-anchor:end}
+.report .strip .stem{stroke:var(--teal);stroke-width:1;opacity:.35}
+.report .tot{font-size:12.5px;margin-block:2px 2px}
+.report .bs{grid-row:1/3;grid-column:3;font-size:18px;font-weight:800;color:var(--teal);font-variant-numeric:tabular-nums}
+.report .ct .jn{font-weight:700}
+.report .strip .base{stroke:var(--edge);stroke-width:2}
+.report .strip .tick{stroke:var(--edge);stroke-width:1}
+.report .strip .tlab{font-size:8px;fill:var(--muted);text-anchor:middle}
+.report .strip .dot{fill:var(--teal)}
+.report .strip .dot.best{fill:var(--teal);stroke:var(--card);stroke-width:2}
+.report .strip .blab{font-size:9px;font-weight:700;fill:var(--teal);text-anchor:middle}
+.report .strip .x line{stroke:var(--crash);stroke-width:2;stroke-linecap:round}
+.report .jumps{list-style:none;padding:0;margin:4px 0 8px;display:grid;gap:2px}
+.report .jumps li{display:grid;grid-template-columns:40px 1fr auto auto;gap:8px;align-items:center;font-size:14px;padding:5px 0;border-block-end:1px dashed var(--edge)}
+.report .jumps li:last-child{border-block-end:0}
+.report .jt{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px}
+.report .jn{font-weight:600}
+.report .jn.muted{font-weight:400;font-style:italic}
+.report .jd{font-size:11px;font-weight:700;color:var(--muted);min-inline-size:12px;text-align:center}
+.report .js{font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 8px}
+.report .ok .js{background:var(--teal-soft);color:var(--teal)}
+.report .cr .js{background:var(--crash-soft);color:var(--crash)}
+.report .jb{grid-column:2/5;justify-self:start;font-size:11px;font-weight:700;color:var(--teal);margin-block-start:-2px}
+.report .mix{display:flex;block-size:14px;border-radius:999px;overflow:hidden;background:var(--edge);margin-block:8px}
+.report .seg{display:block;block-size:100%}
+.report .f0{background:var(--f0)}
+.report .f1{background:var(--f1)}
+.report .f2{background:var(--f2)}
+.report .f3{background:var(--f3)}
+.report .f4{background:var(--f4)}
+.report .legend{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}
+.report .legend li{display:flex;align-items:center;gap:6px}
+.report .sw{inline-size:10px;block-size:10px;border-radius:3px;display:inline-block}
+.report .tags{display:flex;flex-wrap:wrap;gap:6px}
+.report .tag{font-size:13px;border:1px solid var(--edge);border-radius:999px;padding:4px 10px;background:var(--card)}
+.report .tag.red{border-color:var(--crash);color:var(--crash)}
+.report .cmp{margin-block:12px}
+.report .cmp-l{font-size:13px;font-weight:700;margin-block-end:4px}
+.report .bar{display:grid;grid-template-columns:66px 1fr 44px;align-items:center;gap:8px;font-size:12.5px;margin-block:3px}
+.report .who{color:var(--muted)}
+.report .track{block-size:10px;background:var(--bg2);border-radius:999px;overflow:hidden;display:block}
+.report .fill{display:block;block-size:100%;border-radius:999px}
+.report .you .fill{background:var(--teal)}
+.report .fieldb .fill{background:var(--grey)}
+.report .fin .fill{background:var(--f2)}
+.report .val{text-align:end;font-variant-numeric:tabular-nums;font-weight:700}
+.report .notes label{display:block;font-size:13.5px;font-weight:700;margin-block:10px 0}
+.report .notes textarea{display:block;inline-size:100%;margin-block-start:6px;font:inherit;font-size:16px;color:var(--ink);background:var(--card);border:1px solid var(--edge);border-radius:12px;padding:10px;resize:vertical}
+.report .sugg{background:var(--teal-soft);border-radius:12px;padding:10px 12px;margin-block:6px 4px}
+.report .sugg ul{margin:6px 0 0;padding-inline-start:18px;font-size:14px;line-height:1.45}
+.report details{font-size:13px;line-height:1.5}
+.report summary{font-weight:700;cursor:pointer}
+.report .foot{font-size:12px;color:var(--muted);text-align:center;margin-block-start:18px}
+@media (max-width:380px){.report .tiles{grid-template-columns:repeat(2,1fr)}.report .rname{font-size:24px}}
+.report .rk, .report .win{background:#FF6A00;color:#111111;border-color:#FF6A00}
+.report .fill{background:#FF6A00}
+/* the owner's late rules: orange circles and win pills, orange bars */
+.report .rk,.report .win{background:#FF6A00;color:#111111;border-color:#FF6A00}.report .fill{background:#FF6A00}
+.report .res.win{background:var(--teal);color:var(--teal-ink);border-color:var(--teal)}
+.report .you .fill{background:var(--teal)}
+.report .fieldb .fill{background:var(--grey)}
+.report .fin .fill{background:var(--f2)}

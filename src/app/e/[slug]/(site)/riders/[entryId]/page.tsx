@@ -7,6 +7,9 @@ import { RiderRow } from "@/components/public/heat-summary";
 import { RiderLabel } from "@/components/rider-label";
 import { publicMetadata } from "@/lib/public/meta";
 import { loadCore } from "@/lib/public/page-data";
+import { loadRiderReportData } from "@/lib/public/load";
+import { reportAvailable } from "@/lib/public/rider-report";
+import { reportHref } from "@/lib/public/report-links";
 import { buildRiderPage } from "@/lib/public/rider-model";
 import { eventUrl, whatsappLink } from "@/lib/public/share";
 import { requestOrigin } from "@/lib/platform/origin";
@@ -47,6 +50,8 @@ export default async function RiderPage({ params }: { params: Promise<{ slug: st
   const { core, vm } = got;
   const origin = await requestOrigin();
   const url = eventUrl(origin, core.site.event.slug, `/riders/${entryId}`);
+  // Rider reports: one more shared read per event (not per visitor); nothing at all unless the organiser switched reports on and this rider has a published heat
+  const hasReport = reportAvailable(await loadRiderReportData(core.site.event.id), entryId);
   return (
     <>
       <section data-testid="rider-card" className="flex flex-col gap-2 rounded-card border border-beach-line bg-beach-surface p-3">
@@ -59,6 +64,13 @@ export default async function RiderPage({ params }: { params: Promise<{ slug: st
         </p>
         <ClockText timezone={core.site.event.timezone} serverNow={core.now} />
       </section>
+
+      {hasReport ? (
+        <Link prefetch={false} data-testid="open-report" href={reportHref(core.site.event.slug, entryId)} className="flex flex-col gap-0.5 rounded-card border border-beach-accent bg-beach-surface p-3">
+          <span className="text-name font-semibold">{copy.report.openReport}</span>
+          <span className="text-small font-medium text-beach-muted">{copy.report.openReportLine}</span>
+        </Link>
+      ) : null}
 
       <section aria-label={T.heats} className="flex flex-col gap-1.5">
         <h2 className="text-heading font-semibold text-beach-muted">{T.heats}</h2>

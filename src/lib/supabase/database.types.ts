@@ -3468,6 +3468,7 @@ export type Database = {
       get_public_rules: { Args: { p_event: string }; Returns: Json }
       get_public_site: { Args: { p_slug: string }; Returns: Json }
       get_public_timetable: { Args: { p_event: string }; Returns: Json }
+      get_rider_report: { Args: { p_event: string }; Returns: Json }
       get_seat_contacts: {
         Args: { p_event: string }
         Returns: {
@@ -3778,6 +3779,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      preview_rider_report: { Args: { p_event: string }; Returns: Json }
       public_platform_settings: { Args: never; Returns: Json }
       public_registration_info: { Args: { p_slug: string }; Returns: Json }
       publish_heat_commit: {

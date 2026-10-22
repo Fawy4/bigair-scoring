@@ -2,7 +2,17 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 21 Oct 2026 · Product version 0.25.0
+Last checked: 22 Oct 2026 · Product version 0.26.0
+
+## 0.26.0 — 22 Oct 2026 {#cl-0-26-0}
+
+Release entry: [0.26.0](/admin/releases#release-0-26-0) (platform owner only)
+
+**What changed for users**
+- **Rider reports.** New Event step setting **Rider reports** (Public page card): Off (the default for every event), After each heat, or When the event is complete. When on, each rider's page offers **Open the report**: a **Rider** list at the top, place and path, thirteen numbers beside the field's, highlights, three takeaways, best tricks, every heat jump by jump with a timeline, trick mix, you against the field, and **My notes**: suggested goals and three boxes whose words are kept on that phone only. **so far** shows only while a heat of the division is not published. It looks like the reference page, with the Sendbook background. Anyone can read any rider's report; a rider under 18 has none.
+- **Preview a rider's report** in the same card, for the organiser while the setting is Off. Reports show trick names, sides and times of published heats, never a single judge's score.
+
+**Manual pages updated:** [The rider report](screens/public-rider-report.md) (new), [Rider page](screens/public-rider.md), [Event step](screens/organiser-event.md), [Settings](settings.md).
 
 ## 0.25.0 — 21 Oct 2026 {#cl-0-25-0}
 

@@ -147,6 +147,7 @@ const EVENT_FIELDS: Array<[string, string, string]> = [
   ["event.startNextHeat", copy.event.startNextHeat, "settings.startNextHeat (the head judge's switch: settings.autoStartOff)"],
   ["event.leaderboards", copy.event.leaderboards, "settings.externalLeaderboards"],
   ["event.publicTabs", copy.event.publicPage, "settings.publicTabsOff"],
+  ["event.riderReports", copy.event.riderReports, "settings.riderReports"],
   ["event.maxRunning", copy.event.maxRunning, "settings.maxRunningHeats"],
   ["event.judgesLog", copy.event.judgesLog, "settings.judgesMayLogAttempts"],
   ["event.windBanner", copy.event.windBanner, "settings.windCallBanner"],
