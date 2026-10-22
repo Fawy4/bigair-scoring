@@ -21,7 +21,9 @@ export async function endedHeat(w: LiveWorld, heat: string, o: { riders?: number
   await w.db.from("heats").update({ status: "ended", started_at: ago((o.endedAgoSec ?? 60) + 600), ended_at: ago(o.endedAgoSec ?? 60) }).eq("id", heat);
   const ids: string[] = [];
   for (const [i, entry] of w.entries.slice(0, o.riders ?? 4).entries()) {
-    const a = await w.db.from("trick_attempts").insert({ heat_id: heat, entry_id: entry, seq: 1, status: "landed", trick_name: "Backroll", direction: "left", client_key: crypto.randomUUID(), created_by_seat: w.seats.spotter.id }).select("id").single();
+    // logged a few minutes ago: the spotter is not "still logging" unless a test makes him so
+    const then = ago((o.endedAgoSec ?? 60) + 300);
+    const a = await w.db.from("trick_attempts").insert({ heat_id: heat, entry_id: entry, seq: 1, status: "landed", trick_name: "Backroll", direction: "left", client_key: crypto.randomUUID(), created_by_seat: w.seats.spotter.id, created_at: then, updated_at: then }).select("id").single();
     ids.push(a.data!.id);
     void i;
   }

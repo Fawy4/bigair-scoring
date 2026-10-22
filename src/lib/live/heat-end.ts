@@ -5,7 +5,7 @@ import type { AttemptRow, FlagRow } from "./types";
  * should ask about. The clock reaching 0 never takes an official off his screen and never locks it; the head judge sees who is still at work and publishes when ready.
  */
 
-/** "Spotter still logging": a line was logged or changed this recently (or the heat ended this recently and a spotter's phone is connected). */
+/** "Spotter still logging": a spotter logged a line this recently (or the heat ended this recently and a spotter's phone is connected). */
 export const SPOTTER_QUIET_MS = 45_000;
 
 /** When the heat's time ran out or End heat was pressed (epoch ms), or null. */
@@ -16,11 +16,12 @@ export function heatEndedAtMs(h: { ended_at: string | null; started_at: string |
 }
 
 /**
- * Is a spotter still logging? Yes when a line of this heat was logged or changed within the last 45 seconds, or when the heat ended less than 45 seconds ago and
- * a spotter's phone was seen lately (the last jumps are logged after the horn). Otherwise no: the head judge can publish.
+ * Is a spotter still logging? Yes when a spotter logged a line of this heat within the last 45 seconds, or when the heat ended less than 45 seconds ago and
+ * a spotter's phone was seen lately (the last jumps are logged after the horn). Otherwise no: the head judge can publish. (A correction does not count: the head judge's own
+ * edits change the same lines, and a corrected line is not a missing one.)
  */
-export function spotterStillLogging(i: { endedAtMs: number | null; nowMs: number; attempts: Array<Pick<AttemptRow, "created_at" | "updated_at">>; spotterSeenMsAgo: Array<number | null>; seenWithinMs: number }): boolean {
-  const recent = i.attempts.some((a) => i.nowMs - Math.max(Date.parse(a.created_at), Date.parse(a.updated_at)) <= SPOTTER_QUIET_MS);
+export function spotterStillLogging(i: { endedAtMs: number | null; nowMs: number; attempts: Array<Pick<AttemptRow, "created_at">>; spotterSeenMsAgo: Array<number | null>; seenWithinMs: number }): boolean {
+  const recent = i.attempts.some((a) => i.nowMs - Date.parse(a.created_at) <= SPOTTER_QUIET_MS);
   if (recent) return true;
   const justEnded = i.endedAtMs !== null && i.nowMs - i.endedAtMs <= SPOTTER_QUIET_MS;
   return justEnded && i.spotterSeenMsAgo.some((ago) => ago !== null && ago <= i.seenWithinMs);

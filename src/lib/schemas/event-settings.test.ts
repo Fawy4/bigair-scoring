@@ -134,3 +134,25 @@ describe("registration settings", () => {
     expect(form({ registrationClosedMessage: "x".repeat(301) }).success).toBe(false);
   });
 });
+
+describe("Start the next heat (HE1)", () => {
+  it("is by hand for every event: an old event with no such setting, a new one, and a damaged one", () => {
+    expect(parseEventSettings({}).startNextHeat).toBe("manual");
+    expect(parseEventSettings({ publicLiveScores: "live", flags: { enabled: true } }).startNextHeat).toBe("manual");
+    expect(parseEventSettings({ startNextHeat: "sometimes" }).startNextHeat).toBe("manual");
+    expect(parseEventSettings({}).autoStartOff).toBe(false);
+  });
+  it("takes the two automatic choices and the head judge's switch", () => {
+    expect(parseEventSettings({ startNextHeat: "after_publish" }).startNextHeat).toBe("after_publish");
+    expect(parseEventSettings({ startNextHeat: "run_order", autoStartOff: true })).toMatchObject({ startNextHeat: "run_order", autoStartOff: true });
+  });
+  it("the Event step form keeps the choice and the switch as they are", () => {
+    const form = {
+      name: "Arrow", slug: "arrow", location: "", start_date: "2026-10-08", end_date: "2026-10-09", timezone: "Africa/Cairo", branding: {}, isSimulation: false,
+      settings: { startNextHeat: "after_publish", autoStartOff: true },
+    };
+    const parsed = EventFormSchema.parse(form);
+    expect(parsed.settings).toMatchObject({ startNextHeat: "after_publish", autoStartOff: true });
+  });
+});
+

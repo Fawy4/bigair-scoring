@@ -112,8 +112,9 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   };
   const [saved, setSaved] = useState<string | null>(null);
   const [flagged, setFlagged] = useState<Set<string | number>>(new Set());
-  // HE1: after the horn the judge stays on his Rider sheet; he moves to Impression himself ("Done"), and a new line sends him back to it
-  const [tab, setTab] = useState<"impression" | "review">("review");
+  // HE1: after the horn the judge stays on his Rider sheet; he moves to Impression himself ("Done"), and a new line sends him back to it. (The hidden Queue keeps its old
+  // way: it opens on the Impression step.)
+  const [chosenTab, setTab] = useState<"impression" | "review" | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submittedLocal, setSubmittedLocal] = useState<Set<string>>(new Set());
   const [notices, setNotices] = useState<Array<{ key: string; text: string }>>([]);
@@ -446,6 +447,7 @@ export function JudgeScreen({ ctx, pinnedHeatId }: { ctx: LiveContext; pinnedHea
   const heldLines = useMemo(() => submitBlockLines(myNotes, (id) => ({ attempts: attemptsOf(id) })), [myNotes, attemptsOf]);
   // the Rider sheet in every division (one box per criterion where the division scores by criteria); the switch and the Queue are hidden code (lib/live/official-views.ts)
   const effectiveView: JudgeView = view;
+  const tab: "impression" | "review" = chosenTab ?? (effectiveView === "sheet" ? "review" : "impression");
   const switcher = switchShown ? <ViewSwitch view={effectiveView} onChange={chooseView} /> : null;
   const heldSentence = heldLines.length ? copy.riderSheet.submitHeld(heldLines.map((h) => copy.riderSheet.submitHeldPart(labelOf(h.entryId)?.primary.text ?? "", h.lines)).join("; ")) : null;
 

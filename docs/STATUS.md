@@ -1507,4 +1507,23 @@ Twice (Gouna 8–9 Oct, Red Bull 19 Oct) a heat's clock reached 0 and the spotte
 - Tests: see the PR description.
 
 ### Decisions taken (please confirm or change)
-See the release report in the pull request.
+1. **"Done — Impression"** reads with the name the event gives the separate score: **Done — Variety** on Arrow's scoring, **Done — Submit** for a division that has no separate score.
+2. **A late line reopens the judge's whole sheet**, not only the new line (the same state as when the head judge reopens a sheet): until he submits again he can also change his earlier scores; every change is in the audit log as always. Only a landed line reopens (a crash opens nothing; correcting a crash to a landing does). A published or cancelled heat never reopens anything.
+3. **"Spotter still logging"** = a spotter logged a line in the last 45 seconds, or the heat ended less than 45 seconds ago and a spotter's phone was seen lately. A correction does not count. It is a guess: the phone does not report "I am still typing".
+4. **The spotter may write on an ended or under-review heat; a paused heat is still the head judge's** (as before). A published heat refuses everyone, the head judge included, with "This heat is already published."
+5. **Flags are resolved by fixing the attempt:** switched to a crash resolves "That was a crash", to a landing resolves "That was a landing", moved to another rider resolves "Wrong rider", taken out (delete, merge, undo) resolves every flag about it, any change resolves "Other"; "Duplicate" is resolved when the attempt is taken out. **Resolve** stays for a flag that needed no fix.
+6. **The flag look** uses only the brand: near-black filled (white in Dark) with a flag icon. No new colour.
+7. **A judge can add a short note when flagging** (the database already had the column; the sheet had no box for it). One line, 140 letters.
+8. **Stop = this heat only.** The switch ("Auto start is on / off") = the rest of the event. Switching off also ends a notice that is running.
+9. **After Publish the notice is raised only when the heat just published is the latest one started** — publishing an older heat again after a correction never starts anything.
+10. **A wind call "is active" when the latest call is Red (Stop) or Amber (Hold).** Green and a cleared banner do not stop it. **A Hold is active** while the active run order has a hold.
+11. **A heat with fewer than two riders is never started by itself** (the walkover is the head judge's to give); neither is a heat with an empty seat.
+12. **"The previous heat is unpublished"** = any heat of the event that is running, paused, in its pre-start, ended or under review.
+13. **Run order time** = the timetable's start of the heat (pinned or estimated); the sequence starts at that time less the pre-start. A head judge who is late gets the full ten-second notice and then the sequence. Without flags the sequence is just Start heat.
+14. **The notice is held on the heat** (`heats.auto_start_at`) and the start is done by the database when any official's phone asks after the notice has run out: no phone has to stay awake. The head judge's console (or an organiser's) raises the notice; if nobody has the console open nothing starts.
+15. **After Publish with no run order** the next heat is the next one that has not started, division by division in their order.
+
+### Not done / known
+- A judge's phone does not go back to a heat re-opened after Publish (the head judge scores the missing line for him or reopens his sheet).
+- If a late line is taken out again (Undo), the judge's sheet stays open until he submits once more.
+- The manual's pictures of the judge, spotter and console screens are not retaken (see the release entry).

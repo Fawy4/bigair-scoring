@@ -4,7 +4,7 @@ import { createLiveWorld, type LiveWorld } from "./live-world";
 // HE1: the Event step's "Start the next heat" sits in the Flags card with a one-line explanation, is "By hand" for every event (old and new), and is saved.
 let w: LiveWorld;
 test.beforeEach(async () => {
-  w = await createLiveWorld({ headScores: false });
+  w = await createLiveWorld({ headScores: false, flags: true });
 });
 test.afterEach(async () => {
   await w?.cleanup();
@@ -27,7 +27,7 @@ test("Event step: Start the next heat is by hand by default, has its one-line ex
   await expect(card.getByTestId("start-next-manual")).toBeChecked();
   await expect(card.getByTestId("start-next-line")).toHaveText(/^Who starts the next heat: the head judge by hand/);
   // next to the flag settings: after the last-minute length, in the same card
-  const last = (await card.getByLabel("Last-minute length").first().boundingBox())!;
+  const last = (await card.locator("#ev-lastminute").boundingBox())!;
   const mine = (await group.boundingBox())!;
   expect(mine.y).toBeGreaterThan(last.y);
 
@@ -36,6 +36,5 @@ test("Event step: Start the next heat is by hand by default, has its one-line ex
   await expect.poll(async () => ((await w.db.from("events").select("settings").eq("id", w.eventId).single()).data?.settings as { startNextHeat?: string }).startNextHeat, { timeout: 30_000 }).toBe("after_publish");
   await page.reload();
   await expect(page.getByTestId("event-panel")).toBeVisible({ timeout: 60_000 });
-  if (!(await page.getByTestId("flags-card").isVisible())) await page.getByTestId("advanced-toggle").click();
-  await expect(page.getByTestId("start-next-after_publish")).toBeChecked();
+  await expect(page.getByTestId("start-next-after_publish")).toBeChecked({ timeout: 30_000 }); // the fold above stays open on this device
 });

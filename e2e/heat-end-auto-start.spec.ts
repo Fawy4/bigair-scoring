@@ -22,14 +22,15 @@ const audits = async (action: string) => (await w.db.from("audit_log").select("a
 async function publishFirstHeat(head: Page) {
   await endedHeat(w, w.heats[0]);
   await judgesFinish(w, w.heats[0]);
+  await head.getByRole("button", { name: "Pro Men", exact: true }).first().click(); // the division of the heat (the console follows the next heat's division when nothing is picked)
   await head.locator(`[data-testid="order-row"][data-heat="${w.heats[0]}"]`).click({ timeout: 60_000 });
   await expect(head.getByTestId("review-bar")).toHaveAttribute("data-state", "ready", { timeout: 60_000 });
   await head.getByTestId("publish").click();
-  await head.getByRole("button", { name: "Yes, publish" }).click();
+  await head.getByTestId("dialog-save").click();
 }
 
 test("by hand (the default): Publish selects the next heat and nothing starts", async ({ browser }) => {
-  test.setTimeout(400_000);
+  test.setTimeout(240_000);
   const head = await phone(browser, "head", `/head/${w.eventId}`, laptop);
   await publishFirstHeat(head);
   await expect(head.getByTestId("control-message").first()).toContainText("Next heat: Pro Men · R1 · Heat 2", { timeout: 60_000 });
@@ -40,7 +41,7 @@ test("by hand (the default): Publish selects the next heat and nothing starts", 
 });
 
 test("after the last heat the console says so", async ({ browser }) => {
-  test.setTimeout(400_000);
+  test.setTimeout(240_000);
   const head = await phone(browser, "head", `/head/${w.eventId}`, laptop);
   await w.db.from("heats").update({ status: "published", started_at: new Date(Date.now() - 3_000_000).toISOString(), ended_at: new Date(Date.now() - 2_400_000).toISOString(), published_at: new Date(Date.now() - 2_300_000).toISOString() }).eq("id", w.heats[1]);
   await publishFirstHeat(head);
@@ -48,7 +49,7 @@ test("after the last heat the console says so", async ({ browser }) => {
 });
 
 test("Publish in the next division selects that division's first heat", async ({ browser }) => {
-  test.setTimeout(400_000);
+  test.setTimeout(240_000);
   const { addLadder } = await import("./live-world");
   const ladder = await addLadder(w);
   // the run order: heat 1 of Pro Men, then the first heat of the other division
@@ -61,7 +62,7 @@ test("Publish in the next division selects that division's first heat", async ({
 });
 
 test("automatically after Publish: the notice counts down with Stop; not stopped, the heat's start sequence begins and the audit log says so", async ({ browser }) => {
-  test.setTimeout(400_000);
+  test.setTimeout(240_000);
   await eventSettings(w, { startNextHeat: "after_publish", flags: { enabled: true, prestartSec: 30 } });
   const head = await phone(browser, "head", `/head/${w.eventId}`, laptop);
   await publishFirstHeat(head);
@@ -79,7 +80,7 @@ test("automatically after Publish: the notice counts down with Stop; not stopped
 });
 
 test("Stop pressed during the notice: nothing starts, the head judge starts it by hand; the switch turns auto start off and on", async ({ browser }) => {
-  test.setTimeout(400_000);
+  test.setTimeout(240_000);
   await eventSettings(w, { startNextHeat: "after_publish", flags: { enabled: true, prestartSec: 30 } });
   const head = await phone(browser, "head", `/head/${w.eventId}`, laptop);
   await publishFirstHeat(head);
@@ -106,7 +107,7 @@ test("Stop pressed during the notice: nothing starts, the head judge starts it b
 });
 
 test("a Hold that starts during the notice blocks the start: the notice ends, nothing starts, the audit log says why", async ({ browser }) => {
-  test.setTimeout(400_000);
+  test.setTimeout(240_000);
   await eventSettings(w, { startNextHeat: "after_publish", flags: { enabled: true, prestartSec: 30 } });
   const head = await phone(browser, "head", `/head/${w.eventId}`, laptop);
   await publishFirstHeat(head);
@@ -119,7 +120,7 @@ test("a Hold that starts during the notice blocks the start: the notice ends, no
 });
 
 test("a Stop or Hold wind call blocks the start; with the run order already on Hold or a wind call on when Publish is pressed, no notice is raised and the console says why", async ({ browser }) => {
-  test.setTimeout(400_000);
+  test.setTimeout(240_000);
   await eventSettings(w, { startNextHeat: "after_publish", flags: { enabled: true, prestartSec: 30 } });
   await w.db.from("wind_calls").insert({ event_id: w.eventId, status: "amber", message: "Gusty" });
   const head = await phone(browser, "head", `/head/${w.eventId}`, laptop);
@@ -131,14 +132,15 @@ test("a Stop or Hold wind call blocks the start; with the run order already on H
 });
 
 test("on a phone the notice and Stop are there and big enough", async ({ browser }) => {
-  test.setTimeout(400_000);
+  test.setTimeout(240_000);
   await eventSettings(w, { startNextHeat: "after_publish", flags: { enabled: true, prestartSec: 30 } });
   await endedHeat(w, w.heats[0]);
   await judgesFinish(w, w.heats[0]);
   const head = await phone(browser, "head", `/head/${w.eventId}`, phoneSize);
+  await head.locator(`[data-testid="order-row"][data-heat="${w.heats[0]}"]`).click({ timeout: 60_000 });
   await expect(head.getByTestId("review-bar")).toHaveAttribute("data-state", "ready", { timeout: 60_000 });
   await head.getByTestId("publish").click();
-  await head.getByRole("button", { name: "Yes, publish" }).click();
+  await head.getByTestId("dialog-save").click();
   const stop = head.getByTestId("auto-start-stop");
   await expect(stop).toBeVisible({ timeout: 60_000 });
   const b = (await stop.boundingBox())!;

@@ -18,12 +18,12 @@ describe("when the heat ended", () => {
 
 describe("Spotter still logging", () => {
   const base = { endedAtMs: T0, spotterSeenMsAgo: [] as Array<number | null>, seenWithinMs: 90_000 };
-  it("a line logged or changed in the last 45 seconds: yes", () => {
+  it("a line a spotter logged in the last 45 seconds: yes", () => {
     expect(spotterStillLogging({ ...base, nowMs: T0 + 60_000, attempts: [attempt("a", 40)] })).toBe(true); // logged 20 s ago
-    expect(spotterStillLogging({ ...base, nowMs: T0 + 120_000, attempts: [attempt("a", 10, 100)] })).toBe(true); // changed 20 s ago
   });
-  it("quiet for more than 45 seconds: no", () => {
+  it("quiet for more than 45 seconds: no — and a correction of an old line (the head judge's edits too) does not count", () => {
     expect(spotterStillLogging({ ...base, nowMs: T0 + 120_000, attempts: [attempt("a", 10, 60)] })).toBe(false);
+    expect(spotterStillLogging({ ...base, nowMs: T0 + 120_000, attempts: [attempt("a", 10, 100)] })).toBe(false); // changed 20 s ago, logged 110 s ago
     expect(SPOTTER_QUIET_MS).toBe(45_000);
   });
   it("just after the horn, with a spotter's phone connected: yes, even before the first late line; with no spotter connected: no", () => {

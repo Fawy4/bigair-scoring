@@ -22,7 +22,6 @@ test("a judge flags a line with a note: the head judge sees the count, the bar, 
   test.setTimeout(600_000);
   const H = w.heats[0];
   const [attempt] = await endedHeat(w, H);
-  await w.db.from("trick_attempts").update({ updated_at: new Date(Date.now() - 600_000).toISOString() }).eq("id", attempt); // the spotter is long quiet
   const j1 = await phone(browser, "j1", `/judge/${w.eventId}`);
   await expect(j1.getByTestId("heat-ended-strip")).toBeVisible({ timeout: 60_000 }); // the judge is still on his sheet
   await expect(jline(j1, 1)).toContainText("Backroll", { timeout: 40_000 });
@@ -75,7 +74,7 @@ test("a judge flags a line with a note: the head judge sees the count, the bar, 
   await expect(head.getByTestId("flags")).toContainText("No open flags");
   await head.getByTestId("publish").click();
   await expect(head.getByTestId("publish-open")).toHaveCount(0);
-  await expect(head.getByRole("button", { name: "Yes, publish" })).toBeVisible();
+  await expect(head.getByTestId("dialog-save")).toHaveText("Publish");
 });
 
 test("on a narrow console the flags box sits above the table; on a phone the count, the bar and the box are there without a table", async ({ browser }) => {
@@ -87,9 +86,17 @@ test("on a narrow console the flags box sits above the table; on a phone the cou
   const narrow = await phone(browser, "head", `/head/${w.eventId}`, { width: 1100, height: 900 });
   await narrow.locator(`[data-testid="order-row"][data-heat="${H}"]`).click({ timeout: 60_000 });
   await expect(narrow.getByTestId("flags")).toBeVisible({ timeout: 60_000 });
-  const flags = (await narrow.getByTestId("flags").boundingBox())!;
-  const table = (await narrow.getByTestId("head-matrix").boundingBox())!;
-  expect(flags.y + flags.height).toBeLessThanOrEqual(table.y + 1);
+  await expect(narrow.getByTestId("flag-row")).toContainText("That was Blue", { timeout: 40_000 }); // settled: the box has its final height
+  // both rectangles read at the same instant (a font arriving moves things between two separate reads)
+  const placed = await narrow.evaluate(() => {
+    const f = document.querySelector('[data-testid="flags"]')!;
+    const t = document.querySelector('[data-testid="head-matrix"]')!;
+    const fr = f.getBoundingClientRect();
+    const tr = t.getBoundingClientRect();
+    return { flagsBottom: fr.bottom, tableTop: tr.top, before: Boolean(f.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_FOLLOWING) };
+  });
+  expect(placed.before).toBe(true);
+  expect(placed.flagsBottom).toBeLessThanOrEqual(placed.tableTop + 1);
   await expect(narrow.getByTestId("flag-row")).toContainText("That was Blue");
   await expect(narrow.getByTestId("open-flag-count")).toHaveText("1 open flag");
 

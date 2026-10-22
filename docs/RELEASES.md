@@ -37,7 +37,7 @@ PR: #60
 
 ### Known issues
 - The heat the judge sees after Re-open: a judge's phone does not go back to a heat that was re-opened after Publish (the head judge scores a missing line for the judge, or reopens the sheet).
-- “Spotter still logging” is a guess from what the spotter logged in the last 45 seconds (or the first 45 seconds after the horn with a spotter's phone connected); it is not something the phone reports.
+- “Spotter still logging” is a guess from what the spotter logged in the last 45 seconds (or the first 45 seconds after the horn with a spotter's phone connected); it is not something the phone reports, and a correction does not count.
 - If a late line is taken out again (Undo) the judge's sheet stays open until he presses Submit once more.
 - The manual's pictures of the judge, spotter and console screens are not retaken yet.
 

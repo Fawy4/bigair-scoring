@@ -140,13 +140,12 @@ test("the whole flow: late log after 0:00, the judge's sheet reopens, Publish, t
   await judgesTwoAndThreeFinish(H); // the late line needs judges 2 and 3's scores as well
 
   // ---- Publish asks once about what is still open (the spotter logged moments ago), never blocks; then the next heat is selected
-  // the spotter corrects line 3's direction just now (a correction, not a new line: nothing reopens) — he is "still logging" for 45 seconds
-  await sline(spotter, 3).getByTestId("line-left").click();
-  await expect.poll(async () => ((await attempts(H, E)).at(2) as { direction?: string } | undefined)?.direction ?? null, { timeout: 30_000 }).toBe("left");
+  // the spotter's last line was logged moments ago (the line's time is set to now so that this step does not depend on how long the steps above took): he is "still logging" for 45 seconds
+  await w.db.from("trick_attempts").update({ created_at: new Date().toISOString() }).eq("id", (await attempts(H, E))[2].id);
   await expect(head.getByTestId("review-work-spotter")).toBeVisible({ timeout: 40_000 });
   await head.getByTestId("publish").click();
   await expect(head.getByTestId("publish-open")).toContainText("Spotter still logging", { timeout: 40_000 });
-  await head.getByRole("button", { name: "Publish anyway" }).click();
+  await head.getByTestId("dialog-save").click();
   await expect(head.getByTestId("control-message").first()).toContainText("Next heat:", { timeout: 60_000 });
   await expect(head.getByTestId("head-live-console")).toHaveAttribute("data-heat", w.heats[1], { timeout: 60_000 });
   expect((await w.db.from("heats").select("status").eq("id", H).single()).data!.status).toBe("published");
