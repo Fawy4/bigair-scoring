@@ -92,6 +92,7 @@ export function buildRiderReport(ctx: ReportContext, entryId: string): ReportRes
     eventName,
     scoreName,
     sideWords: ctx.sideWords,
+    familyLabels: ctx.familyLabels ?? {},
     soFar: ctx.data.event.status !== "complete",
     headline: headlineOf(ctx, entryId, entry.division_id, rhs),
     tiles: tilesOf(me, riders, finalists, rules),

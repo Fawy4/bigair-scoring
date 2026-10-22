@@ -139,6 +139,8 @@ export interface ReportContext {
   placings: Record<string, Placing>;
   /** Categories that count as "loops". */
   loopCategories?: string[];
+  /** The names of the trick base's categories, as the event's scoring gives them (key → label); a key without a name is shown from its key. */
+  familyLabels?: Record<string, string>;
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -255,6 +257,8 @@ export interface GapLine {
   needAbove: number;
   /** The counted trick it would replace (his lowest), or null when he had a free counting place. */
   replaces: number | null;
+  /** Which of his counting tricks it replaces: 3 = the third best. */
+  rank: number | null;
 }
 
 export interface Takeaways {
@@ -352,6 +356,7 @@ export interface RiderReport {
   /** Names come from the event. */
   scoreName: string;
   sideWords: { left: string; right: string };
+  familyLabels: Record<string, string>;
   /** The report counts only the heats published so far: show "so far". */
   soFar: boolean;
   headline: Headline;

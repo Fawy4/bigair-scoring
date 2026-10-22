@@ -49,7 +49,7 @@ export function bestTricks(me: Agg): BestTrick[] {
       if (!prev || t.score > prev.score) best.set(k, { trick: t.label, score: t.score, side: t.direction, heatLabel: rh.title, sort: k });
     }
   }
-  return [...best.values()].sort((a, b) => b.score - a.score || a.sort.localeCompare(b.sort)).slice(0, 3).map(({ sort: _s, ...rest }) => rest);
+  return [...best.values()].sort((a, b) => b.score - a.score || a.sort.localeCompare(b.sort)).slice(0, 3).map((b) => ({ trick: b.trick, score: b.score, side: b.side, heatLabel: b.heatLabel }));
 }
 
 export function mixOf(rhs: RiderHeat[]): FamilyRow[] {

@@ -143,7 +143,10 @@ describe.skipIf(!ENV_OK)("RA1: the rider report's read (hosted development proje
       const keys = new Set<string>();
       const walk = (v: unknown) => {
         if (Array.isArray(v)) v.forEach(walk);
-        else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) (keys.add(k), walk(x));
+        else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) {
+          keys.add(k);
+          walk(x);
+        }
       };
       walk(res);
       for (const k of keys) expect(k, "a key that names a hint, a pending row or a flag").not.toMatch(/ref|hint|pending|flag|note|email|phone|judge/i);

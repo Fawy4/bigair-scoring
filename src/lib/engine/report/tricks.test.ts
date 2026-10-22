@@ -3,7 +3,7 @@ import { att, BLOCKS, P } from "./fixture";
 import { buildTrickIndex, hasLoop, trickKey, trickLabel } from "./tricks";
 
 const idx = buildTrickIndex(BLOCKS, ["kiteloop"]);
-const key = (parts: Parameters<typeof att>[1]["kind"]) => trickKey(idx, att(1, { kind: parts }));
+const key = (parts: NonNullable<Parameters<typeof att>[1]>["kind"]) => trickKey(idx, att(1, { kind: parts }));
 
 describe("report: trick names are grouped by meaning (item 5)", () => {
   it("'Double backroll board off' and '×2 Backroll Board-off' are one trick, whatever the order they were tapped in", () => {

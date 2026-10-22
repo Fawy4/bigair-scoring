@@ -7,6 +7,7 @@ import { createAnonClient } from "@/lib/supabase/anon";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createSharedCache, createValve } from "./shared-cache";
+import type { ReportData } from "@/lib/engine/report";
 import type { PublicDrawPayload, PublicLiveHeat, PublicResults, PublicRules, PublicSite, PublicTimetable } from "./types";
 
 /**
@@ -70,6 +71,17 @@ export const loadTimetable = cache(async (eventId: string) => allowed(await call
 export const loadResults = cache(async (eventId: string) => allowed(await call<PublicResults | { allowed: false }>("get_public_results", { p_event: eventId })) as PublicResults | null);
 export const loadDraw = cache(async (eventId: string) => allowed(await call<PublicDrawPayload | { allowed: false }>("get_public_draw", { p_event: eventId })) as PublicDrawPayload | null);
 export const loadRules = cache(async (eventId: string) => allowed(await call<PublicRules | { allowed: false }>("get_public_rules", { p_event: eventId })) as PublicRules | null);
+/**
+ * Rider reports (RA1): the one database function behind every report of an event, read as a visitor and shared for a few seconds like the other public answers, so a rider
+ * page and a report page cost one more read per event per 3 s, not one per visitor. Null while the event's setting keeps reports closed.
+ */
+export const loadRiderReportData = cache(async (eventId: string) => allowed(await call<ReportData | { allowed: false }>("get_rider_report", { p_event: eventId })) as ReportData | null);
+/** The organiser's preview of the same data (the Event step's "Preview a rider's report"): read as the signed-in organiser, never shared or kept. Null for anybody else. */
+export const loadRiderReportPreview = cache(async (eventId: string) => {
+  const { data, error } = await (await createClient()).rpc("preview_rider_report", { p_event: eventId });
+  if (error || !data) return null;
+  return allowed(data as unknown as ReportData | { allowed: false }) as ReportData | null;
+});
 /**
  * The live view of a heat WITH the panel's scores by seat number, for the server only: the pages work the totals out here and send the browser nothing but the
  * panel's results. A visitor calling `get_public_live_heat` gets no scores at all. The same rules decide whether it is shown (the database answers "not allowed"

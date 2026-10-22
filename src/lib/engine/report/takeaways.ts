@@ -66,16 +66,16 @@ export function trainOf(me: Agg, finalistLoopJumps: number | null): Train | null
   if (crashed) return { code: "crashed_half", n: crashed.attempts.filter((t) => t.status === "crashed").length, m: crashed.attempts.length, heatLabel: crashed.title };
   // the same trick landed twice on the same side in one heat
   for (const rh of me.heats) {
-    const seen = new Map<string, { n: number; label: string }>();
+    const seen = new Map<string, { n: number; label: string; side: "left" | "right" }>();
     for (const t of rh.attempts) {
       if (t.status !== "landed" || !t.key || !t.direction) continue;
       const k = `${t.key}|${t.direction}`;
-      const e = seen.get(k) ?? { n: 0, label: t.label };
+      const e = seen.get(k) ?? { n: 0, label: t.label, side: t.direction === "right" ? ("right" as const) : ("left" as const) };
       e.n++;
       seen.set(k, e);
     }
     const twice = [...seen.values()].find((e) => e.n >= 2);
-    if (twice) return { code: "repeat_same_side", n: twice.n, m: null, trick: twice.label, heatLabel: rh.title };
+    if (twice) return { code: "repeat_same_side", n: twice.n, m: null, trick: twice.label, side: twice.side, heatLabel: rh.title };
   }
   return null;
 }
@@ -155,7 +155,7 @@ export function gapOf(ctx: ReportContext, rh: RiderHeat | undefined, rules: Divi
   if (bestLanded === null || bestLanded <= needAbove) return null;
   const rule = (rh.round.advance ?? []).find((a) => Array.isArray(a.places) && a.places.includes(1));
   const target = ctx.data.divisions.find((d) => d.id === rh.divisionId)?.rounds.find((r) => r.draw_round === rule?.to);
-  return { heatId: rh.heat.id, heatLabel: rh.title, miss, toRound: target ? roundName(target) : null, needAbove, replaces };
+  return { heatId: rh.heat.id, heatLabel: rh.title, miss, toRound: target ? roundName(target) : null, needAbove, replaces, rank: replaces === null ? null : n };
 }
 
 export function takeawaysOf(parts: { strength: Strength | null; train: Train | null; strategy: Strategy | null; gap: GapLine | null }): Takeaways {
