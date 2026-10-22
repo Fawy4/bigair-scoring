@@ -71,7 +71,7 @@ describe("rider reports: the words follow the event", () => {
       ...r.highlights.map((h) => highlightText(h, r)),
       r.takeaways.strength ? strengthText(r.takeaways.strength, r) : "",
       r.takeaways.train ? trainText(r.takeaways.train, r) : "",
-      r.takeaways.strategy ? strategyText(r.takeaways.strategy, r) : "",
+      r.takeaways.strategy ? strategyText(r.takeaways.strategy) : "",
       ...r.suggested.map((g) => factText(g, r)),
     ].join(" | ");
   it("an event using Impression and In / Out says those, and Variety, Left and Right never appear", () => {
@@ -101,7 +101,7 @@ describe("rider reports: the words follow the event", () => {
 describe("rider reports: the keep-doing goals read as the owner wrote them", () => {
   it("the winner's two goals are about his own trick and his own heats", () => {
     const r = rep(scenario(), "d");
-    expect(r.suggested.map((g) => factText(g, r))).toEqual(["Your Kiteloop scored 7.00: keep one like it in every heat.", "You banked a counting trick in the first third of every heat you won (2 of 2): keep doing it."]);
+    expect(r.suggested.map((g) => factText(g, r))).toEqual(["Your Kiteloop scored 7.0: keep one like it in every heat.", "You banked a counting trick in the first third of every heat you won (2 of 2): keep doing it."]);
   });
   it("every keep-doing sentence names no one else, never a missing number, and always says what to keep doing", () => {
     const r = rep(scenario(), "d");
@@ -110,6 +110,32 @@ describe("rider reports: the keep-doing goals read as the owner wrote them", () 
       expect(text).not.toMatch(/NaN|undefined|null/);
       expect(text).toMatch(/keep/i);
     }
+  });
+});
+
+describe("rider reports: scores inside sentences have one decimal, the tables keep the event's", () => {
+  const sentences = (r: ReturnType<typeof rep>): string[] => [
+    r.takeaways.strength ? strengthText(r.takeaways.strength, r) : "",
+    r.takeaways.train ? trainText(r.takeaways.train, r) : "",
+    r.takeaways.strategy ? strategyText(r.takeaways.strategy) : "",
+    ...r.suggested.map((g) => factText(g, r)),
+  ];
+  it("no takeaway or goal sentence of any rider of the example event has a score with two decimals (the event shows two)", () => {
+    for (const id of ["a", "b", "c", "d", "e", "f"]) {
+      const r = rep(scenario(), id);
+      expect(r.decimals).toBe(2);
+      for (const text of sentences(r)) expect(text, text).not.toMatch(/\d\.\d\d/);
+    }
+  });
+  it("the strength and the gap line read with one decimal", () => {
+    const r = rep(scenario(), "a");
+    expect(strengthText(r.takeaways.strength!, r)).toContain("scored 6.5,");
+    expect(strategyText(r.takeaways.strategy!)).toContain("2.0 points from 1st place. One more trick scoring above 6.5, in place of your third-best (4.5)");
+  });
+  it("the two reworded keep-doing goals read exactly as the owner wrote them, with the real numbers", () => {
+    const r = rep(scenario(), "d");
+    expect(factText({ code: "keep_variety_per_heat", nums: [4.74, 4.6] }, r)).toBe("You landed more different tricks a heat than the field (4.7 against 4.6). Keep mixing your tricks like this.");
+    expect(factText({ code: "keep_best_late", nums: [592], round: "Round 1" }, r)).toBe("Your best trick came late in the heat, at 9:52. Keep saving a big one for the end.");
   });
 });
 

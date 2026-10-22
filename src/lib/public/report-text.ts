@@ -14,6 +14,9 @@ type Fmt = Pick<RiderReport, "decimals">;
 /** A score or total the way the division shows scores. */
 export const score = (r: Fmt, n: number | null | undefined): string => (n === null || n === undefined || Number.isNaN(n) ? "–" : n.toFixed(r.decimals));
 /** Rounds half to even (62.5 → 62, 37.5 → 38), the way the reference page rounds its percentages. */
+/** A score inside a sentence of the takeaways and goals: one decimal, as the rest of the report reads, whatever decimals the event shows its tables in. */
+export const oneDecimal = (n: number | null | undefined): string => score({ decimals: 1 }, n);
+
 export const roundHalfEven = (x: number): number => {
   const f = Math.floor(x);
   const d = x - f;
@@ -57,7 +60,7 @@ export function strengthText(p: Point, r: RiderReport): string {
   const S = R.strength;
   switch (p.code) {
     case "top_trick":
-      return S.top_trick(p.trick ?? "", the(p.round ?? ""), score(r, num(p, 0)), rankWord(num(p, 1)));
+      return S.top_trick(p.trick ?? "", the(p.round ?? ""), oneDecimal(num(p, 0)), rankWord(num(p, 1)));
     case "loops":
       return S.loops(num(p, 0));
     case "growth":
@@ -67,13 +70,13 @@ export function strengthText(p: Point, r: RiderReport): string {
     case "every_attempt":
       return S.every_attempt(num(p, 0), num(p, 1));
     case "impression_above":
-      return S.impression_above(r.scoreName, score(r, num(p, 0)), score(r, num(p, 1)));
+      return S.impression_above(r.scoreName, oneDecimal(num(p, 0)), oneDecimal(num(p, 1)));
     case "variety_per_heat":
       return S.variety_per_heat(String(Math.round(num(p, 0) * 10) / 10), String(Math.round(num(p, 1) * 10) / 10));
     case "both_sides":
       return S.both_sides(num(p, 0), p.trick ?? "");
     default:
-      return S.totals_growth(score(r, num(p, 0)), score(r, num(p, 1)));
+      return S.totals_growth(oneDecimal(num(p, 0)), oneDecimal(num(p, 1)));
   }
 }
 
@@ -90,13 +93,13 @@ export function trainText(p: Point, r: RiderReport): string {
     case "one_side":
       return T.one_side(num(p, 0), num(p, 1), side(r, p.side), otherSide(r, p.side));
     case "landed_average_low":
-      return T.landed_average_low(score(r, num(p, 0)), score(r, num(p, 1)));
+      return T.landed_average_low(oneDecimal(num(p, 0)), oneDecimal(num(p, 1)));
     case "crashed_half":
       return T.crashed_half(p.round ?? "", num(p, 0), num(p, 1));
     case "repeat_same_side":
       return T.repeat_same_side(p.trick ?? "", num(p, 0), side(r, p.side), the(p.round ?? ""));
     default:
-      return T.impression_below(r.scoreName, score(r, num(p, 0)), score(r, num(p, 1)));
+      return T.impression_below(r.scoreName, oneDecimal(num(p, 0)), oneDecimal(num(p, 1)));
   }
 }
 
@@ -114,13 +117,13 @@ export function factText(p: Point, r: RiderReport): string {
     case "one_side":
       return F.one_side(num(p, 0), num(p, 1), side(r, p.side));
     case "landed_average_low":
-      return F.landed_average_low(score(r, num(p, 0)), score(r, num(p, 1)));
+      return F.landed_average_low(oneDecimal(num(p, 0)), oneDecimal(num(p, 1)));
     case "crashed_half":
       return F.crashed_half(p.round ?? "", num(p, 0), num(p, 1));
     case "repeat_same_side":
       return F.repeat_same_side(p.trick ?? "", num(p, 0), side(r, p.side), the(p.round ?? ""));
     default:
-      return F.impression_below(r.scoreName, score(r, num(p, 0)), score(r, num(p, 1)));
+      return F.impression_below(r.scoreName, oneDecimal(num(p, 0)), oneDecimal(num(p, 1)));
   }
 }
 
@@ -129,7 +132,7 @@ export function keepText(p: Point, r: RiderReport): string {
   const K = R.keep;
   switch (p.code.slice("keep_".length)) {
     case "top_trick":
-      return K.top_trick(p.trick ?? "", score(r, num(p, 0)));
+      return K.top_trick(p.trick ?? "", oneDecimal(num(p, 0)));
     case "loops":
       return K.loops(num(p, 0));
     case "growth":
@@ -139,32 +142,32 @@ export function keepText(p: Point, r: RiderReport): string {
     case "every_attempt":
       return K.every_attempt(num(p, 0), num(p, 1));
     case "impression_above":
-      return K.impression_above(r.scoreName, score(r, num(p, 0)), score(r, num(p, 1)));
+      return K.impression_above(r.scoreName, oneDecimal(num(p, 0)), oneDecimal(num(p, 1)));
     case "variety_per_heat":
-      return K.variety_per_heat(String(Math.round(num(p, 0) * 10) / 10), String(Math.round(num(p, 1) * 10) / 10));
+      return K.variety_per_heat(oneDecimal(num(p, 0)), oneDecimal(num(p, 1)));
     case "both_sides":
       return K.both_sides(num(p, 0), p.trick ?? "");
     case "totals_growth":
-      return K.totals_growth(score(r, num(p, 0)), score(r, num(p, 1)));
+      return K.totals_growth(oneDecimal(num(p, 0)), oneDecimal(num(p, 1)));
     case "early_banker_all":
       return K.early_banker_all(num(p, 0));
     case "early_banker":
       return K.early_banker(the(p.round ?? ""), clock(num(p, 0)));
     default:
-      return K.best_late(the(p.round ?? ""), clock(num(p, 0)));
+      return K.best_late(clock(num(p, 0)));
   }
 }
 
-export function strategyText(p: Point, r: RiderReport): string {
+export function strategyText(p: Point): string {
   const G = R.strategy;
   const round = the(p.round ?? "");
   switch (p.code) {
     case "gap_out":
-      return G.gap_out(round, p.target ? the(p.target) : null, score(r, num(p, 0)), score(r, num(p, 1)), R.replaces(maybe(num(p, 3)), score(r, num(p, 2))));
+      return G.gap_out(round, p.target ? the(p.target) : null, oneDecimal(num(p, 0)), oneDecimal(num(p, 1)), R.replaces(maybe(num(p, 3)), oneDecimal(num(p, 2))));
     case "gap_direct":
-      return G.gap_direct(round, p.target ? the(p.target) : null, score(r, num(p, 0)), score(r, num(p, 1)), R.replaces(maybe(num(p, 3)), score(r, num(p, 2))));
+      return G.gap_direct(round, p.target ? the(p.target) : null, oneDecimal(num(p, 0)), oneDecimal(num(p, 1)), R.replaces(maybe(num(p, 3)), oneDecimal(num(p, 2))));
     case "gap_place":
-      return G.gap_place(round, p.target ?? "", score(r, num(p, 0)), score(r, num(p, 1)), R.replaces(maybe(num(p, 3)), score(r, num(p, 2))));
+      return G.gap_place(round, p.target ?? "", oneDecimal(num(p, 0)), oneDecimal(num(p, 1)), R.replaces(maybe(num(p, 3)), oneDecimal(num(p, 2))));
     case "unused_attempts":
       return G.unused_attempts(round, num(p, 0), num(p, 1));
     case "winner_fewer":

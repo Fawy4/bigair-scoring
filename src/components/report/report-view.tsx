@@ -142,7 +142,7 @@ function Takeaways({ report }: { report: RiderReport }) {
               </span>
               {R.strategyLabel}
             </div>
-            <p>{strategyText(t.strategy, report)}</p>
+            <p>{strategyText(t.strategy)}</p>
           </div>
         ) : null}
       </div>

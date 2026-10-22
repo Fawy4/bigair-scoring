@@ -3207,12 +3207,12 @@ export const copy = {
       landing_rate: (pct: string, field: string) => `You landed ${pct} of your jumps, the field ${field}: keep that consistency.`,
       every_attempt: (jumps: number, allowed: number) => `You used ${jumps} of ${allowed} attempts: keep using every one.`,
       impression_above: (name: string, mine: string, field: string) => `Your ${name} averaged ${mine}, the field ${field}: keep it up.`,
-      variety_per_heat: (mine: string, field: string) => `You landed ${mine} different tricks a heat, the field ${field}: keep mixing them.`,
+      variety_per_heat: (mine: string, field: string) => `You landed more different tricks a heat than the field (${mine} against ${field}). Keep mixing your tricks like this.`,
       both_sides: (n: number, trick: string) => (n === 1 ? `You landed ${trick} on both sides: keep using both.` : `You landed ${n} tricks on both sides, for example ${trick}: keep using both.`),
       totals_growth: (first: string, last: string) => `Your heat totals grew from ${first} to ${last}: keep building through the event.`,
       early_banker_all: (n: number) => `You banked a counting trick in the first third of every heat you won (${n} of ${n}): keep doing it.`,
       early_banker: (round: string, at: string) => `In ${round} you banked a counting trick within the first ${at}: keep doing it.`,
-      best_late: (round: string, at: string) => `In ${round} your best trick came in the second half, at ${at}: keep something for the end.`,
+      best_late: (at: string) => `Your best trick came late in the heat, at ${at}. Keep saving a big one for the end.`,
     },
     strategy: {
       gap_out: (round: string, target: string | null, miss: string, above: string, replaces: string | null) =>
