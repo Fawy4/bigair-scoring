@@ -21,14 +21,17 @@ export function HeatStrip({ heat, top, decimals }: { heat: HeatRow; top: number;
   const ticks: number[] = [];
   for (let t = 0; t <= len; t += 60) ticks.push(t);
   const fmt = { decimals };
+  const avgY = heat.fieldAverage === null ? 0 : BASE - heat.fieldAverage * px;
+  const avgWords = heat.fieldAverage === null ? "" : `${R.fieldAverage} ${score(fmt, heat.fieldAverage)}`;
+  const avgSpot = heat.fieldAverage === null ? null : averageLabelSpot(heat, avgWords.length * 3.8, avgY, x, px);
   return (
     <svg className="strip" viewBox="0 0 320 82" role="img" aria-label={R.timelineLabel} data-testid="heat-timeline">
       <line className="base" x1={X0} x2={X1} y1={BASE} y2={BASE} />
       {heat.fieldAverage !== null ? (
         <>
           <line className="avg" x1={X0} x2={X1} y1={BASE - heat.fieldAverage * px} y2={BASE - heat.fieldAverage * px} data-testid="field-average-line" />
-          <text className="avgl" x={X1} y={BASE - heat.fieldAverage * px - 3}>
-            {R.fieldAverage} {score(fmt, heat.fieldAverage)}
+          <text className="avgl" x={avgSpot?.x} y={avgSpot?.y} textAnchor="end">
+            {avgWords}
           </text>
         </>
       ) : null}
@@ -70,4 +73,27 @@ export function HeatStrip({ heat, top, decimals }: { heat: HeatRow; top: number;
       })}
     </svg>
   );
+}
+
+/**
+ * Where the "field average" words go: along the dashed line, above it or below it, from the right end towards the left in steps, the first place no dot or score touches (a stem is a
+ * thin pale line: words over it stay readable, so it does not count). The words are never written over a dot or a score.
+ */
+function averageLabelSpot(heat: HeatRow, width: number, lineY: number, x: (f: number) => number, px: number): { x: number; y: number; anchor: "start" | "end" } {
+  const marks = heat.timeline.filter((p) => p.landed).map((p) => ({ cx: x(p.x), cy: BASE - (p.score ?? 0) * px, big: p.counted }));
+  const touches = (right: number, y: number): boolean => {
+    const x0 = right - width - 3;
+    const x1 = right + 3;
+    const y0 = y - 9;
+    const y1 = y + 4;
+    return marks.some((m) => {
+      const r = m.big ? 7 : 5.5;
+      const dotHit = m.cx + r >= x0 && m.cx - r <= x1 && m.cy + r >= y0 && m.cy - r <= y1;
+      // the score written above a counting trick
+      const labelHit = m.big && m.cx + 10 >= x0 && m.cx - 10 <= x1 && m.cy - 16 <= y1 && m.cy - 8 >= y0 - 8;
+      return dotHit || labelHit;
+    });
+  };
+  for (const y of [lineY - 3, lineY + 9]) for (let right = X1; right - width >= X0; right -= 6) if (!touches(right, y) && y > 6 && y < BASE - 1) return { x: right, y, anchor: "end" };
+  return { x: X1, y: lineY - 3, anchor: "end" };
 }

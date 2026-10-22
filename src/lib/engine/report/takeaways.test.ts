@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildRiderReport } from "./build";
+import { scenario } from "./scenario";
 import { att, ctxOf, heat, R1_ADVANCE, res, round } from "./fixture";
 import type { DivisionRules, ReportAttempt, ReportContext, ReportResult, RiderReport } from "./types";
 
@@ -136,5 +137,88 @@ describe("report: strategy", () => {
     const early = mixed(3, 6).map((x, i) => ({ ...x, counted: true, at_sec: 30 + i * 100 }));
     const r = rep(make([H(1, early, mixed(3, 3).map((x) => ({ ...x, counted: true })))]));
     expect(r.takeaways.strategy?.code).toMatch(/early_banker|best_late/);
+  });
+});
+
+// the rules that have no loop in them: three plain tricks, so nothing here is a loop
+const PLAIN = ["backroll", "frontroll", "jump"] as const;
+const plain = (n: number, score: number, o: O = {}, from = 1): A[] => Array.from({ length: n }, (_, i) => att(from + i, { score, at: (from + i) * 50, kind: PLAIN[i % PLAIN.length], ...o }));
+/** Six landings of one trick at 9: the event's six highest scores, so nobody else is in the top five, and one different trick a heat. */
+const sixNines = (): A[] => Array.from({ length: 6 }, (_, i) => att(i + 1, { score: 9, at: (i + 1) * 40, kind: "backroll" }));
+const counted = (xs: A[], n: number): A[] => xs.map((x, i) => ({ ...x, counted: i < n && x.status === "landed" }));
+
+describe("report: the other strengths, each on its own", () => {
+  it("every attempt used in every heat", () => {
+    const ctx = make([H(1, [...counted(plain(4, 4), 3), ...crashes(5, 3)], counted(sixNines(), 3))]);
+    expect(rep(ctx).takeaways.strength).toMatchObject({ code: "every_attempt", nums: [7, 7] });
+  });
+  it("more different tricks a heat than the field", () => {
+    const ctx = make([H(1, counted(plain(3, 4), 3), counted(sixNines(), 3))]);
+    expect(rep(ctx).takeaways.strength).toMatchObject({ code: "variety_per_heat", nums: [3, 2] });
+  });
+  it("a trick landed on both sides", () => {
+    const a = [att(1, { kind: "backroll", score: 4, side: "left", counted: true }), att(2, { kind: "backroll", score: 4, side: "right", at: 100, counted: true })];
+    expect(rep(make([H(1, a, counted(sixNines(), 3))])).takeaways.strength).toMatchObject({ code: "both_sides", nums: [1], trick: "Backroll" });
+  });
+  it("the totals rising from the first heat to the last", () => {
+    const one = (score: number) => [att(1, { kind: "backroll", score, counted: true })];
+    const ctx = make([H(1, one(4), counted(sixNines(), 3)), H(2, one(5), counted(sixNines(), 3))]);
+    expect(rep(ctx).takeaways.strength).toMatchObject({ code: "totals_growth", nums: [9, 10] });
+  });
+});
+
+describe("report: the other things to train, each on its own", () => {
+  it("one side on three quarters of the jumps with a side (from eight jumps)", () => {
+    const ctx = make([H(1, counted(plain(8, 4, { side: "left" }), 3), counted(sixNines(), 3))]);
+    expect(rep(ctx).takeaways.train).toMatchObject({ code: "one_side", nums: [8, 8], side: "left" });
+  });
+  it("loops landed less than half the time", () => {
+    const a = [att(1, { kind: "kiteloop", score: 5 }), att(2, { kind: "kiteloop", status: "crashed", at: 100 }), att(3, { kind: "kiteloop", status: "crashed", at: 150 }), ...plain(3, 5, { side: "right" }, 4).map((x, i) => ({ ...x, direction: i % 2 ? "left" : "right" }) as A)];
+    expect(rep(make([H(1, counted(a, 3), counted(plain(6, 5, { side: "right" }), 3))])).takeaways.train).toMatchObject({ code: "loops_half", nums: [1, 3] });
+  });
+  it("a trick tried at least twice and never landed", () => {
+    const a = [...counted([att(1, { kind: "backroll", score: 5, at: 50 }), att(2, { kind: "jump", score: 5, at: 100, side: "right" }), att(3, { kind: "jump", score: 5, at: 150, side: "left" })], 3), att(5, { kind: "frontroll", status: "crashed", at: 300 }), att(6, { kind: "frontroll", status: "crashed", at: 350, side: "right" })];
+    expect(rep(make([H(1, a, counted(plain(6, 5), 3))])).takeaways.train).toMatchObject({ code: "never_landed", nums: [2], trick: "Frontroll" });
+  });
+  it("the same trick landed twice on the same side in one heat", () => {
+    const a = [att(1, { kind: "backroll", score: 5, counted: true }), att(2, { kind: "backroll", score: 5, at: 100, counted: true })];
+    expect(rep(make([H(1, a, counted(plain(6, 5), 3))])).takeaways.train).toMatchObject({ code: "repeat_same_side", nums: [2], trick: "Backroll", side: "left", round: "Round 1" });
+  });
+});
+
+describe("report: the heat strategy, each point on its own", () => {
+  // weighted: the gap line is not drawn, so the other points can be seen
+  const lost = (a: A[], b: A[]) => rep(make([H(1, a, b)], { weighted: true })).takeaways.strategy;
+  const winnerOf = (n: number, o: O = {}): A[] => [...counted(plain(n, 6, o), 3), ...crashes(n + 1, 7 - n)];
+  it("the winner landed fewer tricks than you", () => {
+    expect(lost([...plain(5, 3, { at: 40 }), ...crashes(6, 2)].map((x, i) => ({ ...x, at_sec: 40 + i * 40 })), winnerOf(4))).toMatchObject({ code: "winner_fewer", nums: [5, 4] });
+  });
+  it("your first trick came after half the heat", () => {
+    const a = [...crashes(1, 5), att(6, { score: 3, at: 400 }), att(7, { score: 3, at: 450 })];
+    expect(lost(a, winnerOf(3))).toMatchObject({ code: "late_first_trick", nums: [400, 600] });
+  });
+  it("the winner landed more loops", () => {
+    const w = [...counted([att(1, { kind: "kiteloop", score: 6 }), att(2, { kind: "megaloop", score: 6, at: 100 }), att(3, { kind: "backroll", score: 6, at: 150 })], 3), ...crashes(4, 4)];
+    expect(lost([...plain(3, 3, { at: 40 }), ...crashes(4, 4)], w)).toMatchObject({ code: "winner_more_loops", nums: [2, 0] });
+  });
+  it("the winner landed more tricks", () => {
+    expect(lost([...plain(3, 3, { at: 40 }), ...crashes(4, 4)], winnerOf(5))).toMatchObject({ code: "winner_more_tricks", nums: [5, 3] });
+  });
+  it("as many tricks as the winner: the difference was in the tricks themselves", () => {
+    expect(lost([...plain(3, 3, { at: 40 }), ...crashes(4, 4)], winnerOf(3))).toMatchObject({ code: "same_tricks_as_winner", nums: [3] });
+  });
+  it("a won heat: a counting trick banked in the first third, else the best trick in the second half", () => {
+    const early = [att(1, { kind: "backroll", score: 6, at: 100, counted: true }), att(2, { kind: "frontroll", score: 6, at: 300, counted: true })];
+    expect(rep(make([H(1, early, counted(plain(3, 3), 3))])).takeaways.strategy).toMatchObject({ code: "early_banker", nums: [100], round: "Round 1" });
+    const late = [att(1, { kind: "backroll", score: 5, at: 350, counted: true }), att(2, { kind: "frontroll", score: 6, at: 500, counted: true })];
+    expect(rep(make([H(1, late, counted(plain(3, 3), 3))])).takeaways.strategy).toMatchObject({ code: "best_late", nums: [500] });
+  });
+  it("the gap line, in its three forms: out of the event, straight on to the next round, and to the place above", () => {
+    const a = counted(mixed(7, 5), 3);
+    const b = [...counted(mixed(6, 6), 3), att(7, { kind: "megaloop", score: 9, at: 400 })];
+    expect(rep(make([H(1, a, b)])).takeaways.strategy).toMatchObject({ code: "gap_out" });
+    const direct = ctxOf([round("R1", "Round 1", 1, [H(1, a, b)], [{ to: "R2", places: [1] }, { to: "R2b", places: [2] }, { to: "eliminated", places: "rest" }])], {});
+    expect(rep(direct).takeaways.strategy).toMatchObject({ code: "gap_direct" });
+    expect(rep(scenario()).takeaways.strategy).toMatchObject({ code: "gap_place", nums: [2, 6.5, 4.5, 3], target: "1st", round: "Final" });
   });
 });
