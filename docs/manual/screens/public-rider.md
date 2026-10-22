@@ -2,7 +2,7 @@
 
 /e/‹event›/riders/‹id›: one rider's next heat with its ready time, their heats and their results; and /e/‹event›/riders, the list of everybody that opens these pages.
 
-Last checked: 14 Oct 2026 · Product version 0.23.0
+Last checked: 22 Oct 2026 · Product version 0.26.0
 
 ## What it is for {#pri-purpose}
 
@@ -22,6 +22,7 @@ The **Riders** tab of the public event page (/e/‹event›/riders) lists every 
 | Next heat | “Your next heat: ‹heat› — est. 14:35 — be ready 14:20” (the ready call from the Event step), “— time to be announced” without a time, or “No more heats to ride on the timetable.” |
 | **Your heats** | Every heat with seat and state (“To come” for a seat not decided yet). |
 | **Your results** | Published results (nothing held back or unpublished), with each attempt as a box exactly as on the Results page: in a division on “trick name + score” the box carries the trick in short form (“1 · L ×2 BR · 7.33”), see [Short trick names](public-results.md#pr-short-tricks). |
+| **Open the report** | Only when the organiser switched **Rider reports** on and the rider has a published heat: opens [the rider report](public-rider-report.md). |
 | **Share your result** | The one-line result to share, a **QR code** to this page and its **address** (a link that opens this same page), **Share on WhatsApp** and **Copy link**, and the hint **Add this page to your home screen** to open it like an app (iPhone: Share, then “Add to Home Screen”; Android: the ⋮ menu, then “Add to Home screen”). |
 | Rider label | The seat colour of the next heat (with a per-heat Lycra scheme and no heat yet, the name). The time now in the event's time zone. |
 

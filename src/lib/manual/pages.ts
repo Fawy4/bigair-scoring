@@ -34,6 +34,7 @@ export const MANUAL_PAGES: ManualPage[] = [
   { file: "screens/public-results.md", group: "Screens" },
   { file: "screens/public-ladder.md", group: "Screens" },
   { file: "screens/public-rider.md", group: "Screens" },
+  { file: "screens/public-rider-report.md", group: "Screens" },
   { file: "screens/public-rules.md", group: "Screens" },
   { file: "screens/public-join.md", group: "Screens" },
   { file: "screens/big-screen.md", group: "Screens" },

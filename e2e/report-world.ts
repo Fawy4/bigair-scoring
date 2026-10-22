@@ -79,7 +79,7 @@ export async function createReportWorld(opts: { impressionName?: string; setting
       .from("events")
       .insert({
         organisation_id: org.orgId,
-        name: `Report sample ${org.run}`,
+        name: "Sample Open",
         slug: `e2e-report-${org.run}`,
         status: "live",
         timezone: "Africa/Cairo",
