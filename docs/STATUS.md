@@ -1581,7 +1581,7 @@ Twice (Gouna 8–9 Oct, Red Bull 19 Oct) a heat's clock reached 0 and the spotte
 ### Not done / left for the owner
 - Nothing else in the list of deleting tests was removed: the ones that are only refusals stay on.
 - `npm run manual:shots` was not run in full; only the one picture this change touches was retaken.
-- The browser tests other than the new `e2e/test-organisations.spec.ts` were not run.
+- Browser tests: only `e2e/test-organisations.spec.ts` was run (passes); the switched-off specs were run once to confirm they skip (26 skipped). Database tests run with both flags off: `test-organisations`, `public-site`, `live-visibility`, `v-entries-function`, and the changed mixed files (`audit-1b-integrity`, `draw-timetable`, `heat-length`, `public-trick-names`, `organiser-access`, `live-publish`, `audit-1b-security`, `observer`, `rider-sheet`, `riders-officials`, `rls`, `audit-1b-ladder`): all pass except one `observer` test that already failed before this PR (`get_rider_report` and `preview_rider_report`, added by PR #61, are missing from its list of functions).
 
 ### How to test
 - See the 0.26.1 release entry (/admin/releases): home page shows only real events; Organisations shows Arrow, Redbull, EKL by default; the switch shows the rest; Red Bull and Arrow open with full results.
