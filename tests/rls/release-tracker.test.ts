@@ -2,12 +2,14 @@ import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildFixture, ENV_OK, failed, run, signedIn, type Fixture } from "./helpers";
+import { OFF_UNLESS_BOTH } from "../live-guard";
+
 
 // Release tracker: platform admins read the ticks, only the owner ticks and confirms a version; organisers and visitors see and change nothing.
 // It uses a version no real release has (999.0.x), and removes every row it makes.
 const V = `999.0.${Math.floor(Math.random() * 1000)}`;
 
-describe.skipIf(!ENV_OK)("Release tracker (hosted development project)", () => {
+describe.skipIf(!ENV_OK || OFF_UNLESS_BOTH)("Release tracker (hosted development project)", () => {
   let f: Fixture;
   const password = `Pw-${randomBytes(12).toString("hex")}`;
   const users: string[] = [];

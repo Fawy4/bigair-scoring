@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes, randomUUID } from "node:crypto";
+import { MAY_WRITE_SHARED } from "../live-guard";
 
 export const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL;
 export const PUBLISHABLE = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -141,7 +142,8 @@ export async function buildFixture(): Promise<Fixture> {
   // Nothing is deleted from the hosted database (the owner's rule). The organisations, logins and files a run makes stay, marked as test: hidden from the public site and
   // from the default Organisations list. The one row removed is the throwaway SYSTEM preset (it has no organisation, so organisers of real organisations would see it).
   const cleanup = async () => {
-    await s.from("scoring_models").delete().eq("key", `rls-${run}-system`);
+    // that preset is only made by the test that is off unless TESTS_MAY_WRITE_SHARED=1; the delete never runs otherwise
+    if (MAY_WRITE_SHARED) await s.from("scoring_models").delete().eq("key", `rls-${run}-system`);
   };
   Object.defineProperty(userIds, "__track", { value: (id: string) => extraUsers.push(id), enumerable: false });
   return { s, clients: clients as Fixture["clients"], ids, userIds, cleanup };

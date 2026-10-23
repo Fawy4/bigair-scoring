@@ -1,6 +1,7 @@
 import type { Browser, Page } from "@playwright/test";
 import { test, expect, installSupabaseProxy } from "./base";
 import { createOrganiser } from "./organiser";
+import { OFF_UNLESS_DELETE } from "../tests/live-guard";
 
 // Polish 1, item 2: organiser access, the way the owner uses it for a second customer. A throwaway platform owner invites a person to a throwaway organisation:
 // the e-mailed link signs them in (in a private window), they choose a password, sign out and in again with it; the owner removes them (locked out at once) and
@@ -38,6 +39,7 @@ const privateWindow = async (browser: Browser, baseURL: string) => {
 };
 
 test("invite, sign in with the link, set a password, sign in with it; remove, locked out; invite again", async ({ page, browser }) => {
+  test.skip(OFF_UNLESS_DELETE, "off unless TESTS_MAY_DELETE=1: it deletes or resets rows on the live database");
   test.setTimeout(240_000);
   const slug = `e2e-acc-${owner.run}`;
   const orgName = `E2E Access ${owner.run}`;

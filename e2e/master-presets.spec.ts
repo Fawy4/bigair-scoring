@@ -1,5 +1,8 @@
 import { test, expect } from "./base";
 import { createOrganiser } from "./organiser";
+import { OFF_UNLESS_BOTH } from "../tests/live-guard";
+
+test.skip(OFF_UNLESS_BOTH, "off unless TESTS_MAY_DELETE=1 and TESTS_MAY_WRITE_SHARED=1: it deletes rows and writes tables real organisers or the owner see");
 
 // Polish 4, item 3: the owner manages built-in presets in /admin without touching JSON: add, rename, edit (a new version), retire, restore, DEFAULT, delete.
 // Throwaway built-in (its own key); the real DEFAULT is put back; no Arrow / EKL / Demo preset is touched.

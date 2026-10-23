@@ -4,6 +4,7 @@ import { applyDrawEdit, expandFormat, type DivisionDraw } from "@/lib/engine/lad
 import { drawProjection } from "@/lib/draw/projection";
 import { parseFormatTemplate } from "@/lib/schemas/format-template";
 import { buildFixture, ENV_OK, type Fixture } from "./helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
 
 // Phase 4b: the draw (generate, edit, lock, unlock with a reason), the started-heat rule, the public role not seeing the draw,
 // and the run order plans (only the organisation's organisers, one active per day, audited). Each `it` is one plain sentence.
@@ -198,7 +199,7 @@ describe.skipIf(!ENV_OK)("Draw, lock, run order and plans (hosted development pr
     expect((await f.s.from("heats").select("name").eq("id", live.id).single()).data!.name).toBe("Opening");
   });
 
-  it("deleting the whole event still works with started heats and a locked draw (nothing in the guards blocks a cascade)", async () => {
+  it.skipIf(OFF_UNLESS_DELETE)("deleting the whole event still works with started heats and a locked draw (nothing in the guards blocks a cascade)", async () => {
     await f.clients.orgA.rpc("lock_division_draw", { p_division: div });
     const ev = (await f.s.from("events").insert({ organisation_id: f.ids.orgA, name: "Throwaway", slug: `rls-tw-${f.ids.evA1.slice(0, 6)}`, status: "draft" }).select("id").single()).data!.id;
     const d2 = (await f.s.from("divisions").insert({ event_id: ev, name: "D", sort_order: 1 }).select("id").single()).data!.id;
@@ -244,7 +245,7 @@ describe.skipIf(!ENV_OK)("Draw, lock, run order and plans (hosted development pr
     expect(codeOf(clash)).not.toBe("");
   });
 
-  it("creating and deleting a plan is audited, and the public sees only the active plan of a published event", async () => {
+  it.skipIf(OFF_UNLESS_DELETE)("creating and deleting a plan is audited, and the public sees only the active plan of a published event", async () => {
     expect(((await f.clients.anon.from("schedule_plans").select("id, active").eq("event_id", f.ids.evA1)).data ?? []).map((r) => r.id)).toEqual([planB]);
     expect(codeOf(await f.clients.orgA.from("schedule_plans").delete().eq("id", planA))).toBe("");
     const lines = (await f.s.from("audit_log").select("action").eq("row_id", planA)).data ?? [];

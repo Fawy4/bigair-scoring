@@ -10,10 +10,12 @@ import { parseFormatTemplate } from "@/lib/schemas/format-template";
 import type { SchedulePlan } from "@/lib/schemas/schedule";
 import { buildFixture, ENV_OK, type Fixture } from "./helpers";
 import { ago, codeOf, key, mkDivision } from "./live-helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
+
 
 // Phase 5c "Re-run heat": cancel a heat and create its re-run (3R) with the same riders, seats and Lycras; later seats follow it; the draw stays locked and
 // unchanged; riders left out are ranked last (DSQ below DNS). docs/08 §1H-10.
-describe.skipIf(!ENV_OK)("Re-run heat (hosted development project)", () => {
+describe.skipIf(!ENV_OK || OFF_UNLESS_DELETE)("Re-run heat (hosted development project)", () => {
   let f: Fixture;
   let div: string;
   let entries: string[];

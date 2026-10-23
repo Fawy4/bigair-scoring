@@ -41,6 +41,8 @@ An organisation is **labelled as test** by a label on the organisation itself (n
 
 To label or unlabel one, from the project folder: `npm run orgs:test -- mark <web address>`, `npm run orgs:test -- unmark <web address>`, or `npm run orgs:test -- list` to see which are labelled. The script refuses Arrow, Redbull and EKL. The helper that removes a whole organisation (used only for test clean-up) refuses every organisation that is not labelled as test.
 
+**The phone preview is public while it runs.** `npm run preview:public -- create` makes a throwaway event so you can look at the public site on a real phone. A phone can only look at a public event, so this one is **public while it runs**: it is not labelled as test, it appears on the home page list, and anybody can open it. Remove it with `npm run preview:public -- remove <code>` when you are done; that labels it as test again just before it removes it.
+
 ## What it depends on {#ao-depends}
 
 A platform owner or staff login (`npm run bootstrap:platform-admin`). Email limits of the hosting plan for invitations.

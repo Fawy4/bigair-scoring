@@ -3,6 +3,7 @@ import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildFixture, ENV_OK, signedIn, uuid, type Fixture } from "./helpers";
 import { ago, codeOf, key, mkDivision, mkHeat, type LiveDivision } from "./live-helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
 
 // Rider sheet: a judge types a score on a numbered line before the spotter logs the attempt. The score is a private "pending" note until an attempt takes the line.
 // These tests prove the database half: who may write and read notes, the cap, the matching (in order of logging; a crash discards; delete / merge shift), Submit and
@@ -258,7 +259,7 @@ describe.skipIf(!ENV_OK)("Rider sheet: pending notes (hosted development project
   });
 
   // ---------------------------------------------------------------- reset, public
-  it("sending a heat back to scheduled (a reset) and deleting its attempts both remove its notes", async () => {
+  it.skipIf(OFF_UNLESS_DELETE)("sending a heat back to scheduled (a reset) and deleting its attempts both remove its notes", async () => {
     const h = await running();
     await note("j1", h, d.entries[0], 2, 6);
     await f.s.from("heats").update({ status: "scheduled" }).eq("id", h);

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { anonClient, buildFixture, ENV_OK, signedIn, type Fixture } from "./helpers";
 import { ago, codeOf, key, mkDivision, mkHeat, type LiveDivision } from "./live-helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
 
 // The Observer seat (a read-only official): it reads everything the head judge reads, live, and the database refuses every write it tries, through every
 // function an official (or an organiser, or the simulator) can call and every table an official can write. Its one call that changes a row is touch_seat
@@ -354,7 +355,7 @@ describe.skipIf(!ENV_OK)("Observer seat (hosted development project)", () => {
     expect((await f.s.from("judge_seats").select("scores").eq("id", obsSeat).single()).data?.scores).toBe(false);
   });
 
-  it("an organiser can add an observer seat; several observers are allowed", async () => {
+  it.skipIf(OFF_UNLESS_DELETE)("an organiser can add an observer seat; several observers are allowed", async () => {
     const a = await f.clients.orgA.from("judge_seats").insert({ event_id: f.ids.evA1, name: "Journalist", role: "observer", status: "active", active: true }).select("id").single();
     const b = await f.clients.orgA.from("judge_seats").insert({ event_id: f.ids.evA1, name: "Trainee", role: "observer", status: "active", active: true }).select("id").single();
     expect(codeOf(a)).toBe("");

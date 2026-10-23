@@ -2,6 +2,8 @@ import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { anonClient, ENV_OK, failed, run, service, signedIn } from "./helpers";
+import { OFF_UNLESS_BOTH } from "../live-guard";
+
 
 // Phase 4a-1c: the platform-owner layer. Each `it` is one plain sentence about who may (or may not) do what.
 // Three kinds of signed-in people: platform admins (owner / staff), organisers of ONE organisation, and officials (PIN, tested elsewhere).
@@ -17,7 +19,7 @@ interface World {
   userIds: Record<string, string>;
 }
 
-describe.skipIf(!ENV_OK)("Platform owner layer (hosted development project)", () => {
+describe.skipIf(!ENV_OK || OFF_UNLESS_BOTH)("Platform owner layer (hosted development project)", () => {
   const w = {} as World;
   const users: string[] = [];
   const orgs: string[] = [];

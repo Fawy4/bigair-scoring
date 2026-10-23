@@ -11,6 +11,9 @@ import { expect, test } from "./base";
 import { record } from "./cleanup";
 import { createPublicWorld } from "./public-world";
 import { createOrganiser } from "./organiser";
+import { OFF_UNLESS_BOTH } from "../tests/live-guard";
+
+test.skip(OFF_UNLESS_BOTH, "off unless TESTS_MAY_DELETE=1 and TESTS_MAY_WRITE_SHARED=1: it deletes rows and writes tables real organisers or the owner see");
 
 /**
  * The manual's screenshots (docs/manual/img), retaken with `npm run manual:shots` after every change (docs/manual/README.md, the update rule).

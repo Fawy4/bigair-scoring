@@ -2,12 +2,14 @@ import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ENV_OK, run, service, signedIn } from "./helpers";
+import { OFF_UNLESS_BOTH } from "../live-guard";
+
 
 // Polish 4: organisations manage their own presets, hide built-ins for themselves; the owner manages built-ins.
 // Throwaway organisations and throwaway built-in keys only: no real preset is changed (the real DEFAULT is put back at the end).
 const msg = (r: { error: { message: string } | null }): string => r.error?.message ?? "";
 
-describe.skipIf(!ENV_OK)("Preset management (hosted development project)", () => {
+describe.skipIf(!ENV_OK || OFF_UNLESS_BOTH)("Preset management (hosted development project)", () => {
   const s = service();
   const password = `Pw-${randomBytes(12).toString("hex")}`;
   const users: string[] = [];

@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { anonClient, ENV_OK, run, service, signedIn } from "./helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
 
 // Polish 1, item 2: organiser access. Who sees which organisation, who may add or remove an organiser, and what removal does (access ends at once, sessions are
 // signed out, the login stays so the person can be invited again).
@@ -88,7 +89,7 @@ describe.skipIf(!ENV_OK)("Organiser access (hosted development project)", () => 
       expect((await owner.rpc("admin_remove_organiser", { p_org: id.A, p_user: id.owner })).error?.message).toContain("CANNOT_REMOVE_SELF");
       expect((await owner.rpc("admin_remove_organiser", { p_org: id.A, p_user: id.orgB })).error?.message).toContain("NOT_A_MEMBER");
     });
-    it("ends access at once, signs the person out everywhere, keeps the login, and is audited", async () => {
+    it.skipIf(OFF_UNLESS_DELETE)("ends access at once, signs the person out everywhere, keeps the login, and is audited", async () => {
       // the invitee can read the organisation, and is also an organiser of B: only A is taken away
       await s.from("memberships").insert({ organisation_id: id.B, user_id: id.invitee, role: "owner" });
       expect(((await invitee.from("events").select("id").eq("id", id.evA)).data ?? []).length).toBe(1);
@@ -111,7 +112,7 @@ describe.skipIf(!ENV_OK)("Organiser access (hosted development project)", () => 
       expect(audit.data?.length).toBe(1);
       expect(audit.data?.[0].before).toMatchObject({ user_id: id.invitee });
     });
-    it("can be undone by inviting the same login again: it signs in and sees the organisation", async () => {
+    it.skipIf(OFF_UNLESS_DELETE)("can be undone by inviting the same login again: it signs in and sees the organisation", async () => {
       expect((await owner.rpc("admin_add_organiser", { p_org: id.A, p_user: id.invitee, p_role: "owner" })).error).toBeNull();
       const again = await signedIn(email.invitee, password);
       expect(((await again.from("events").select("id").eq("id", id.evA)).data ?? []).length).toBe(1);

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildFixture, ENV_OK, type Fixture } from "./helpers";
 import { codeOf, mkDivision, mkHeat, type LiveDivision } from "./live-helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
 
 // Fix: the heat clock runs the RUN ORDER's length. The run order's `durationMin` of a heat's row (active plan) is the one source; heats.duration_sec of a heat that has not
 // started follows it, is read again when the start sequence begins, and a heat in no plan (or whose row has no length) keeps the draw's own copy. Started heats never change.
@@ -111,14 +112,14 @@ describe.skipIf(!ENV_OK)("heat length follows the run order (hosted development 
     await f.s.from("heats").update({ status: "cancelled" }).eq("id", h);
   });
 
-  it("a deleted run order gives the heats of its rows their draw length back", async () => {
+  it.skipIf(OFF_UNLESS_DELETE)("a deleted run order gives the heats of its rows their draw length back", async () => {
     const h = await mkHeat(f, d, { duration_sec: 600 });
     const p2 = (await f.s.from("schedule_plans").insert({ event_id: f.ids.evA1, name: "Gone", day: "2026-10-12", active: true, items: [{ id: "g1", kind: "heat", heatId: h, durationMin: 3 }] }).select("id").single()).data!.id;
     expect((await heatRow(h)).duration_sec).toBe(180);
     await f.s.from("schedule_plans").delete().eq("id", p2);
     expect((await heatRow(h)).duration_sec).toBe(600);
   });
-  it("in a simulation at every speed the clock is the run order's length divided by the speed; an aborted start sequence stays scaled from the new length", async () => {
+  it.skipIf(OFF_UNLESS_DELETE)("in a simulation at every speed the clock is the run order's length divided by the speed; an aborted start sequence stays scaled from the new length", async () => {
     await f.s.from("events").update({ is_simulation: true }).eq("id", f.ids.evA1);
     try {
       for (const speed of [5, 10, 20]) {

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { test, expect } from "./base";
 import { createOrganiser, effectiveProductName } from "./organiser";
+import { MAY_WRITE_SHARED, OFF_UNLESS_DELETE, OFF_UNLESS_SHARED, OFF_UNLESS_BOTH } from "../tests/live-guard";
 
 // Platform owner layer (/admin). Needs Supabase keys and the 4a-1c migration. Creates and removes its own logins and organisations.
 type Organiser = Awaited<ReturnType<typeof createOrganiser>>;
@@ -15,11 +16,14 @@ test.beforeAll(async () => {
   for (const r of data ?? []) saved[r.key] = r.value;
 });
 test.afterAll(async () => {
-  // put the platform settings back exactly as they were: restore the old rows and remove the ones the tests added
-  for (const [k, v] of Object.entries(saved)) await admin?.db.from("platform_settings").upsert({ key: k, value: v as never });
-  const keep = Object.keys(saved);
-  const { data: now } = await admin.db.from("platform_settings").select("key");
-  for (const r of now ?? []) if (!keep.includes(r.key)) await admin.db.from("platform_settings").delete().eq("key", r.key);
+  // put the platform settings back exactly as they were: restore the old rows and remove the ones the tests added (only the tests that change them run when
+  // TESTS_MAY_WRITE_SHARED=1; otherwise nothing was changed and nothing is touched)
+  if (MAY_WRITE_SHARED) {
+    for (const [k, v] of Object.entries(saved)) await admin?.db.from("platform_settings").upsert({ key: k, value: v as never });
+    const keep = Object.keys(saved);
+    const { data: now } = await admin.db.from("platform_settings").select("key");
+    for (const r of now ?? []) if (!keep.includes(r.key)) await admin.db.from("platform_settings").delete().eq("key", r.key);
+  }
   await admin?.cleanup();
   await plain?.cleanup();
 });
@@ -42,6 +46,7 @@ test("an organiser gets a plain 404 on every admin page and never sees the admin
 });
 
 test("the owner runs the platform: create, invite, rename, open as organiser, archive, delete", async ({ page }) => {
+  test.skip(OFF_UNLESS_DELETE, "off unless TESTS_MAY_DELETE=1: it deletes or resets rows on the live database");
   test.setTimeout(240_000);
   const field = (label: string) => page.getByLabel(label, { exact: true });
   const slug = `e2e-new-${admin.run}`;
@@ -163,6 +168,7 @@ test("an organisation with published results cannot be deleted, and says why", a
 });
 
 test("platform settings: the product name replaces the built-in name on the public home page", async ({ page }) => {
+  test.skip(OFF_UNLESS_SHARED, "off unless TESTS_MAY_WRITE_SHARED=1: it writes tables real organisers or the owner see");
   await admin.signIn(page, "/admin/settings");
   await expect(page.getByRole("heading", { name: "Platform settings", exact: true })).toBeVisible();
   const field = (label: string) => page.getByLabel(label, { exact: true });
@@ -199,6 +205,7 @@ test("master presets, audit log and health pages open", async ({ page }) => {
 });
 
 test("master presets: edit makes a new draft version, and publishing makes it the default", async ({ page }) => {
+  test.skip(OFF_UNLESS_BOTH, "off unless TESTS_MAY_DELETE=1 and TESTS_MAY_WRITE_SHARED=1: it deletes rows and writes tables real organisers or the owner see");
   test.setTimeout(180_000);
   // a throwaway system preset (copied from a real one), so the real presets are never touched
   const key = `e2e-${admin.run}`;
@@ -333,6 +340,7 @@ test("Move event to another organisation: the owner sees the action and can use 
 });
 
 test("Organisations list: test data is flagged, and every row has a ⋯ menu with Rename, Archive, Delete (owner) and Invite organiser", async ({ page }) => {
+  test.skip(OFF_UNLESS_DELETE, "off unless TESTS_MAY_DELETE=1: it deletes or resets rows on the live database");
   test.setTimeout(240_000);
   const slug = `e2e-menu-${admin.run}`;
   const name = `E2E Menu ${admin.run}`;

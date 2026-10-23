@@ -1,5 +1,8 @@
 import { test, expect } from "./base";
 import { createOrganiser } from "./organiser";
+import { OFF_UNLESS_DELETE } from "../tests/live-guard";
+
+test.skip(OFF_UNLESS_DELETE, "off unless TESTS_MAY_DELETE=1: it deletes or resets rows on the live database");
 
 // Delete or archive an event: organisers in the Event step, owners in the admin events table.
 // Needs Supabase keys and the event delete/archive migration. Everything created here is removed by the afterAll hook

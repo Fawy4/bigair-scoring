@@ -3,6 +3,7 @@ import { createOrganiser } from "./organiser";
 import { createLiveWorld } from "./live-world";
 import { builtInSchemes } from "../src/lib/schemas/identification";
 import type { BrowserContext } from "@playwright/test";
+import { OFF_UNLESS_DELETE } from "../tests/live-guard";
 
 // Seat colours follow the event's own list (Red, Black, White), in the organiser's order. Throwaway organisations only; Arrow, EKL and Demo are never touched. One worker, no retries.
 const base = builtInSchemes().find((s) => s.id === "vests-per-heat")!;
@@ -94,6 +95,7 @@ test("a division with its own list uses its own, and the Draw page says so", asy
 });
 
 test("the judge's phone shows the same colour words and names in a heat of three", async ({ browser }) => {
+  test.skip(OFF_UNLESS_DELETE, "off unless TESTS_MAY_DELETE=1: it deletes or resets rows on the live database");
   test.setTimeout(240_000);
   const w = await createLiveWorld();
   const contexts: BrowserContext[] = [];

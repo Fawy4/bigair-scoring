@@ -2,12 +2,14 @@ import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { anonClient, ENV_OK, run, service, signedIn } from "./helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
+
 
 // Deleting and archiving an event. Organisers of the event's organisation and platform owners may; nobody else.
 // Deleting is refused once any result is published (then only Archive is offered).
 const codeOf = (r: { error: { message: string } | null }): string => r.error?.message ?? "";
 
-describe.skipIf(!ENV_OK)("Delete and archive an event (hosted development project)", () => {
+describe.skipIf(!ENV_OK || OFF_UNLESS_DELETE)("Delete and archive an event (hosted development project)", () => {
   const s = service();
   const password = `Pw-${randomBytes(12).toString("hex")}`;
   const users: string[] = [];

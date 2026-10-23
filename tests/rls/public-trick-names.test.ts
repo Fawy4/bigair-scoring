@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildFixture, ENV_OK, type Fixture } from "./helpers";
 import { key, mkDivision, mkHeat, ago, type LiveDivision } from "./live-helpers";
 import { breakdownOf, mkLadder, publishLadderHeat, type Ladder } from "./public-helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
 
 // Public scores – short trick names. What a visitor is sent per attempt: the trick ONLY for a division on "trick name + score", ONLY for a landed attempt whose
 // score is in the result, never for a crash; nothing else from the spotter's lines. Everything runs in the fixture's own throwaway organisation.
@@ -112,7 +113,7 @@ describe.skipIf(!ENV_OK)("Public trick names: what the public functions send per
     }
   });
 
-  it("the rules answer carries the event's trick base (words only), so a block added later gets its letters; it is the same single call every public page already makes", async () => {
+  it.skipIf(OFF_UNLESS_DELETE)("the rules answer carries the event's trick base (words only), so a block added later gets its letters; it is the same single call every public page already makes", async () => {
     await f.s.from("trick_vocabularies").delete().eq("event_id", f.ids.evA1).eq("key", "event-additions");
     const added = await f.s.from("trick_vocabularies").insert({ organisation_id: f.ids.orgA, event_id: f.ids.evA1, key: "event-additions", json: { blocks: [{ family: "base", key: "sushi_roll", label: "Sushi roll", category: "rotation" }] }, content_hash: key() });
     expect(added.error?.message ?? null).toBeNull();

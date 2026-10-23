@@ -1,5 +1,6 @@
 import { test, expect } from "./base";
 import { createOrganiser, PNG } from "./organiser";
+import { OFF_UNLESS_DELETE } from "../tests/live-guard";
 
 // Needs Supabase keys in the environment and the Phase 4a-1 migrations. Creates and removes its own organiser and organisation.
 type Organiser = Awaited<ReturnType<typeof createOrganiser>>;
@@ -117,6 +118,7 @@ test("organiser: settings, then the Event step", async ({ page }) => {
 });
 
 test("organiser: Divisions step (Simple, Show all settings, presets, ladder choice and diagram, import/export, lock)", async ({ page }) => {
+  test.skip(OFF_UNLESS_DELETE, "off unless TESTS_MAY_DELETE=1: it deletes or resets rows on the live database");
   test.setTimeout(300_000);
   const field = (label: string) => page.getByLabel(label, { exact: true });
   const slug = `divs-${org.run}`;

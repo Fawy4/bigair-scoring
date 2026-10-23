@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildFixture, ENV_OK, failed, run, anonClient, uuid, type Fixture } from "./helpers";
+import { OFF_UNLESS_BOTH, OFF_UNLESS_DELETE } from "../live-guard";
 
 // Plain-language guide: each `it` below is one sentence about who may (or may not) do what.
 // Join failures are returned ({ ok: false, error }) rather than raised, so the failure log survives for rate limiting.
@@ -445,7 +446,7 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
   describe("generic presets table", () => {
     const own = () => ({ organisation_id: f.ids.orgA, kind: "identification", key: `rls-${run}`, name: "Mine", version: 1, json: { hello: 1 }, content_hash: "h" });
 
-    it("published system rows are readable by signed-in organisers, not by visitors; nobody but the server writes them", async () => {
+    it.skipIf(OFF_UNLESS_BOTH)("published system rows are readable by signed-in organisers, not by visitors; nobody but the server writes them", async () => {
       const sys = await f.s.from("presets").insert({ organisation_id: null, kind: "identification", key: `rls-${run}-sys`, name: "System", version: 1, json: {}, content_hash: "s", published_at: new Date().toISOString() }).select().single();
       expect(sys.error).toBeNull();
       expect(((await f.clients.orgB.from("presets").select("id").eq("id", sys.data!.id)).data ?? []).length).toBe(1);
@@ -504,7 +505,7 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
       expect(failed(await upload(f.clients.orgA, `${f.ids.orgA}/huge-${run}.png`, new Uint8Array(2 * 1024 * 1024 + 1)))).not.toBe("");
     });
 
-    it("another organisation cannot replace or delete a file", async () => {
+    it.skipIf(OFF_UNLESS_DELETE)("another organisation cannot replace or delete a file", async () => {
       const path = `${f.ids.orgA}/logo-${run}.png`;
       expect(failed(await upload(f.clients.orgB, path))).not.toBe("");
       await f.clients.orgB.storage.from("branding").remove([path]);
@@ -513,7 +514,7 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
       expect((await f.s.storage.from("branding").list(f.ids.orgA)).data?.map((o) => o.name)).not.toContain(`logo-${run}.png`);
     });
 
-    it("cleanup", async () => {
+    it.skipIf(OFF_UNLESS_DELETE)("cleanup", async () => {
       if (uploaded.length) await f.s.storage.from("branding").remove(uploaded);
     });
   });
@@ -557,7 +558,7 @@ describe.skipIf(!ENV_OK)("Row Level Security (hosted development project)", () =
       expect(log.filter((l) => l.action === "update").length).toBeGreaterThanOrEqual(1); // the edit after the unlock
     });
 
-    it("a division with heats cannot be deleted directly; one without heats can (own organisation only)", async () => {
+    it.skipIf(OFF_UNLESS_DELETE)("a division with heats cannot be deleted directly; one without heats can (own organisation only)", async () => {
       expect(failed(await f.clients.orgA.from("divisions").delete().eq("id", f.ids.divA1))).toContain("DIVISION_HAS_HEATS");
       await f.clients.orgB.from("divisions").delete().eq("id", f.ids.divA2);
       expect(((await f.s.from("divisions").select("id").eq("id", f.ids.divA2)).data ?? []).length).toBe(1);

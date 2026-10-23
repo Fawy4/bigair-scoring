@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { anonClient, buildFixture, ENV_OK, type Fixture } from "./helpers";
 import { ago, codeOf, key } from "./live-helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
 
 // Audit 1b, part 5 — security, the gaps the existing RLS suite does not cover (docs/AUDIT.md, A1b-n). Throwaway organisations only.
 const errOf = (r: { data: unknown; error: { message: string } | null }) => r.error?.message ?? ((r.data as { error?: string } | null)?.error ?? "");
@@ -33,7 +34,7 @@ describe.skipIf(!ENV_OK)("Audit 1b — security (hosted development project)", (
       expect(errOf(await bind("604214", u, `ip-new-${randomUUID()}`))).toBe("");
     });
 
-    it("a seat of a deleted event: the phone that held it reads nothing, and its PIN joins nothing", async () => {
+    it.skipIf(OFF_UNLESS_DELETE)("a seat of a deleted event: the phone that held it reads nothing, and its PIN joins nothing", async () => {
       const ev = (await f.s.from("events").insert({ organisation_id: f.ids.orgA, name: "A1b doomed", slug: `a1b-doomed-${randomUUID().slice(0, 6)}`, status: "published", timezone: "Africa/Cairo", start_date: "2026-10-10", end_date: "2026-10-11" }).select("id").single()).data!;
       const seat = (await f.s.from("judge_seats").insert({ event_id: ev.id, name: "Doomed judge", role: "judge", scores: true, status: "active", active: true }).select("id").single()).data!;
       expect((await f.s.rpc("set_seat_pin", { p_seat: seat.id, p_pin: "771234" })).error).toBeNull();
@@ -53,7 +54,7 @@ describe.skipIf(!ENV_OK)("Audit 1b — security (hosted development project)", (
     });
 
     // A1b-7 (fixed in Fix 2): the lockout counts per device AND address; a stranger's wrong guesses never stop an official with the right PIN.
-    it("A1b-7: 100+ wrong guesses by strangers from rotating addresses and devices never stop an official with the right PIN from joining", async () => {
+    it.skipIf(OFF_UNLESS_DELETE)("A1b-7: 100+ wrong guesses by strangers from rotating addresses and devices never stop an official with the right PIN from joining", async () => {
       await f.s.rpc("set_seat_pin", { p_seat: f.ids.seat_spotter, p_pin: "918273" });
       await f.s.from("join_attempts").insert(Array.from({ length: 120 }, (_, i) => ({ event_id: f.ids.evA1, ip: `stranger-${i}-${randomUUID()}`, user_id: randomUUID(), ok: false })));
       const u = await phone();
@@ -63,7 +64,7 @@ describe.skipIf(!ENV_OK)("Audit 1b — security (hosted development project)", (
       await f.s.from("join_attempts").delete().eq("event_id", f.ids.evA1);
     });
 
-    it("A1b-7: the same phone on the same connection is refused after 10 wrong tries (even with the right PIN); another phone on that connection, and that phone on another connection, are not", async () => {
+    it.skipIf(OFF_UNLESS_DELETE)("A1b-7: the same phone on the same connection is refused after 10 wrong tries (even with the right PIN); another phone on that connection, and that phone on another connection, are not", async () => {
       await f.s.rpc("set_seat_pin", { p_seat: f.ids.seat_spotter, p_pin: "918275" });
       const ip = `wifi-${randomUUID()}`;
       const bad = await phone();
@@ -77,7 +78,7 @@ describe.skipIf(!ENV_OK)("Audit 1b — security (hosted development project)", (
       await f.s.from("join_attempts").delete().eq("event_id", f.ids.evA1);
     });
 
-    it("A1b-7: the only per-event brake is slow: after 20 wrong tries a wrong guess takes about a second and only one is weighed at a time; the right PIN is never slowed; joined officials are untouched", async () => {
+    it.skipIf(OFF_UNLESS_DELETE)("A1b-7: the only per-event brake is slow: after 20 wrong tries a wrong guess takes about a second and only one is weighed at a time; the right PIN is never slowed; joined officials are untouched", async () => {
       await f.s.rpc("set_seat_pin", { p_seat: f.ids.seat_spotter, p_pin: "918276" });
       await f.s.from("join_attempts").insert(Array.from({ length: 25 }, (_, i) => ({ event_id: f.ids.evA1, ip: `s-${i}-${randomUUID()}`, user_id: randomUUID(), ok: false })));
       const u = await phone();

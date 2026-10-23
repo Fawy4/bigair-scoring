@@ -6,11 +6,13 @@ import { expandFormat, lockDraw, type DivisionDraw } from "@/lib/engine/ladder";
 import { parseFormatTemplate } from "@/lib/schemas/format-template";
 import { resetTarget } from "@/lib/reset/plan";
 import { anonClient, ENV_OK, run, service, signedIn } from "./helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
+
 
 // Reset event and Restore (docs/PLAN-phase-7a.md step 8d) on the hosted development project: throwaway organisations only.
 const codeOf = (r: { error: { message: string } | null }): string => r.error?.message ?? "";
 
-describe.skipIf(!ENV_OK)("Reset event and Restore (hosted development project)", () => {
+describe.skipIf(!ENV_OK || OFF_UNLESS_DELETE)("Reset event and Restore (hosted development project)", () => {
   const s = service();
   const password = `Pw-${randomBytes(12).toString("hex")}`;
   const users: string[] = [];
