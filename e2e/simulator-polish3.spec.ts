@@ -2,14 +2,6 @@ import { expect, test } from "./base";
 import { createLiveWorld, type LiveWorld } from "./live-world";
 import type { Page } from "@playwright/test";
 
-/** Polish 3 on the simulator, each test on its own throwaway organisation (the Demo, Arrow and EKL are never touched). */
-async function removeSimulatorUsers(w: LiveWorld, eventIds: string[]) {
-  for (const id of eventIds) {
-    const { data } = await w.db.from("sim_seats").select("virtual_user").eq("event_id", id);
-    for (const r of data ?? []) if (r.virtual_user) await w.db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
-  }
-}
-
 /** Speed, then Start. A click that lands before the panel is live is pressed again. */
 async function startAt(page: Page, speed: 1 | 5 | 10 | 20) {
   await expect(async () => {
@@ -46,7 +38,6 @@ test("item 4: on the simulator page the left rail opens the step you click, and 
     await expect(page.getByTestId("rail-draw")).toHaveAttribute("aria-current", "step");
     await expect(page.getByTestId("rail-golive")).not.toHaveAttribute("aria-current", "step");
   } finally {
-    await removeSimulatorUsers(w, simIds);
     await w.cleanup();
   }
 });
@@ -108,7 +99,6 @@ test.describe("Follow the heat shows every trick's score as it lands (items 6, 7
       for (const k of common.slice(0, 4)) expect(lag[0][k] - lag[1][k], `chip ${k}: TV behind the public page by`).toBeLessThan(4_000);
       await page.getByTestId("sim-stop").click();
     } finally {
-      await removeSimulatorUsers(w, simIds);
       await w.cleanup();
     }
   });
@@ -151,7 +141,6 @@ test("item 9: the simulator follows the real event's attempt limit after 'Refres
     await expect(page.getByTestId("sim-refresh-why")).toBeVisible();
     await page.getByTestId("sim-stop").click();
   } finally {
-    await removeSimulatorUsers(w, simIds);
     await w.cleanup();
   }
 });
@@ -184,7 +173,6 @@ test("item 3: auto-play waits for the break — 4 min at ×10 with a 1-min pre-s
     expect(afterPublish, "and not at once after the publish").toBeGreaterThan(8);
     await page.getByTestId("sim-stop").click();
   } finally {
-    await removeSimulatorUsers(w, simIds);
     await w.cleanup();
   }
 });

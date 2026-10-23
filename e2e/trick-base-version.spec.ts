@@ -2,6 +2,9 @@ import { randomUUID } from "node:crypto";
 import { test, expect } from "./base";
 import { record } from "./cleanup";
 import { createLiveWorld, type LiveWorld } from "./live-world";
+import { OFF_UNLESS_SHARED } from "../tests/live-guard";
+
+test.skip(OFF_UNLESS_SHARED, "off unless TESTS_MAY_WRITE_SHARED=1: it writes tables real organisers or the owner see");
 
 // Fix 2, bug T1: after a master version renames a family and the event is updated to latest, the Divisions step's Trick base panel, "+ Add block" and the spotter
 // all show the new name — they read the same source (the event's trick base version and the division's layout) — and saving the panel never writes the old

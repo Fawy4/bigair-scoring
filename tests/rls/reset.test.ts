@@ -6,11 +6,13 @@ import { expandFormat, lockDraw, type DivisionDraw } from "@/lib/engine/ladder";
 import { parseFormatTemplate } from "@/lib/schemas/format-template";
 import { resetTarget } from "@/lib/reset/plan";
 import { anonClient, ENV_OK, run, service, signedIn } from "./helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
+
 
 // Reset event and Restore (docs/PLAN-phase-7a.md step 8d) on the hosted development project: throwaway organisations only.
 const codeOf = (r: { error: { message: string } | null }): string => r.error?.message ?? "";
 
-describe.skipIf(!ENV_OK)("Reset event and Restore (hosted development project)", () => {
+describe.skipIf(!ENV_OK || OFF_UNLESS_DELETE)("Reset event and Restore (hosted development project)", () => {
   const s = service();
   const password = `Pw-${randomBytes(12).toString("hex")}`;
   const users: string[] = [];
@@ -101,8 +103,8 @@ describe.skipIf(!ENV_OK)("Reset event and Restore (hosted development project)",
 
   let main: World;
   beforeAll(async () => {
-    ids.orgX = (await ins("organisations", { name: `Reset X ${run}`, slug: `reset-x-${run}` })).id;
-    ids.orgY = (await ins("organisations", { name: `Reset Y ${run}`, slug: `reset-y-${run}` })).id;
+    ids.orgX = (await ins("organisations", { name: `Reset X ${run}`, slug: `reset-x-${run}`, is_test: true })).id;
+    ids.orgY = (await ins("organisations", { name: `Reset Y ${run}`, slug: `reset-y-${run}`, is_test: true })).id;
     orgs.push(ids.orgX, ids.orgY);
     const ux = await user("x");
     const uy = await user("y");
@@ -122,8 +124,6 @@ describe.skipIf(!ENV_OK)("Reset event and Restore (hosted development project)",
     expect(codeOf(locked)).toBe("");
   });
   afterAll(async () => {
-    for (const o of orgs) await s.rpc("purge_organisation", { p_org: o });
-    for (const id of users) await s.auth.admin.deleteUser(id);
   });
 
   describe("the copy of the draw", () => {

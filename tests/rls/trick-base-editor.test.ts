@@ -2,12 +2,14 @@ import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildFixture, ENV_OK, failed, run, signedIn, type Fixture } from "./helpers";
+import { OFF_UNLESS_SHARED } from "../live-guard";
+
 
 // Master trick base editor: owner only for every write; organisers read the published version; an event keeps its version until "Update to latest";
 // proposals are written by their organiser and answered by the owner. Every master version this file makes is removed afterwards.
 const KEY = "big-air-vocabulary";
 
-describe.skipIf(!ENV_OK)("Master trick base editor (hosted development project)", () => {
+describe.skipIf(!ENV_OK || OFF_UNLESS_SHARED)("Master trick base editor (hosted development project)", () => {
   let f: Fixture;
   const password = `Pw-${randomBytes(12).toString("hex")}`;
   const extraUsers: string[] = [];
@@ -37,8 +39,6 @@ describe.skipIf(!ENV_OK)("Master trick base editor (hosted development project)"
   afterAll(async () => {
     await f?.cleanup(); // the throwaway events first: none may point at a version removed below
     if (madeVersions.length) await f?.s.from("trick_vocabularies").delete().in("id", madeVersions);
-    await f?.s.from("platform_admins").delete().in("user_id", extraUsers);
-    for (const id of extraUsers) await f?.s.auth.admin.deleteUser(id);
   });
 
   it("a new event starts on the newest published version; organisers and visitors read that version", async () => {

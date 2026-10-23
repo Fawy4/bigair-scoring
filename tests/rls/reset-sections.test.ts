@@ -7,11 +7,13 @@ import { heatResetPlan, rebuildTarget, resetTarget } from "@/lib/reset/plan";
 import { parseFormatTemplate } from "@/lib/schemas/format-template";
 import { buildFixture, ENV_OK, type Fixture } from "./helpers";
 import { ago, codeOf } from "./live-helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
+
 
 // Reset per section (branch fix-reset-visibility) on the hosted development project, throwaway organisations only:
 //   Reset this division (reset_division), Clear actual times (clear_plan_actuals), Reset this heat (reset_heat), and Reset event for a division with no saved copy (rebuild).
 // Each: the organiser is allowed; judge, spotter and another organisation are refused; any heat running or paused refuses it.
-describe.skipIf(!ENV_OK)("Reset per section (hosted development project)", () => {
+describe.skipIf(!ENV_OK || OFF_UNLESS_DELETE)("Reset per section (hosted development project)", () => {
   let f: Fixture;
   const s = () => f.s;
   const as = (who: "orgA" | "orgB" | "head" | "j1" | "spotter" | "announcer") => f.clients[who];

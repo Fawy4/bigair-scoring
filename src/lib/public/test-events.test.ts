@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isThrowawayTestEvent, withoutTestEvents } from "./test-events";
+import { isThrowawayTestEvent, TEST_ORGANISATIONS_HEADER, testOrganisationHeaders, withoutTestEvents } from "./test-events";
 
 const ev = (organisation_name: string | null) => ({ id: organisation_name ?? "none", organisation_name });
 
@@ -20,5 +20,24 @@ describe("test events on the public home page", () => {
     const { readFileSync } = await import("node:fs");
     expect(readFileSync("src/app/page.tsx", "utf8")).toContain("withoutTestEvents(");
     expect(readFileSync("playwright.config.ts", "utf8").match(/SHOW_TEST_EVENTS=1/g)).toHaveLength(2);
+  });
+});
+
+describe("the header that lets a request see test organisations (CL1)", () => {
+  it("is sent by test servers only; the live site sends nothing", () => {
+    expect(testOrganisationHeaders(false)).toEqual({});
+    expect(testOrganisationHeaders(true)).toEqual({ [TEST_ORGANISATIONS_HEADER]: "show" });
+  });
+  it("every server-side connection to the database adds it", async () => {
+    const { readFileSync } = await import("node:fs");
+    for (const f of ["server", "anon", "service"]) expect(readFileSync(`src/lib/supabase/${f}.ts`, "utf8")).toContain("testOrganisationHeaders()");
+  });
+  it("the browser connection never sends it", async () => {
+    const { readFileSync } = await import("node:fs");
+    expect(readFileSync("src/lib/supabase/browser.ts", "utf8")).not.toContain("testOrganisationHeaders");
+  });
+  it("the database function and this header name agree", async () => {
+    const { readFileSync } = await import("node:fs");
+    expect(readFileSync("supabase/migrations/20261113100100_cl1_hide_test_organisations.sql", "utf8")).toContain(`'${TEST_ORGANISATIONS_HEADER}'`);
   });
 });

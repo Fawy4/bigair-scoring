@@ -1,4 +1,3 @@
-import type { Page } from "@playwright/test";
 import { expect, test } from "./base";
 import { createLiveWorld } from "./live-world";
 
@@ -41,10 +40,6 @@ test("a simulation's auto-play does not start the sequence again after the head 
     await expect(page.getByTestId("sim-state")).toHaveAttribute("data-state", "playing"); // Abort only aborts the start sequence: the simulator keeps playing
     await expect(head.getByTestId("start")).toBeEnabled();
   } finally {
-    for (const id of simIds) {
-      const { data } = await w.db.from("sim_seats").select("virtual_user").eq("event_id", id);
-      for (const r of data ?? []) if (r.virtual_user) await w.db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
-    }
     await w.cleanup();
   }
 });

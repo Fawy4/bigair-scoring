@@ -23,9 +23,24 @@ export function inviteConfirmLink(siteUrl: string, hashedToken: string): string 
   return url.toString();
 }
 
-/** Web addresses that start with e2e- (browser tests) or rls-, plat-, evdel- (database tests) are automated test data; the admin list flags them. */
+/**
+ * Web addresses that tests and scripts create organisations with. The database marks such an organisation as test the moment it is created (trigger
+ * label_test_organisation, migration 20261113100000, which holds the same pattern; a unit test keeps the two equal). Every test also sets the label itself.
+ */
+export const TEST_SLUG_PATTERN = /^(e2e|rls|plat|evdel|p4|reset)-/;
+
 export function isTestData(slug: string): boolean {
-  return /^(e2e|rls|plat|evdel)-/.test(slug);
+  return TEST_SLUG_PATTERN.test(slug);
+}
+
+/** The Organisations list: test organisations are left out unless the owner switched "Show test organisations" on. Nothing else about the rows changes. */
+export function listedOrganisations<T extends { is_test: boolean }>(rows: T[], showTest: boolean): T[] {
+  return showTest ? rows : rows.filter((o) => !o.is_test);
+}
+
+/** The "Create demo organisation" button is offered only while no demo organisation exists, counted over ALL organisations, marked as test or not. */
+export function demoOrganisationMissing(rows: Array<{ slug: string }>): boolean {
+  return !rows.some((o) => o.slug === "demo" || o.slug === "demo-org");
 }
 
 /** Why an event cannot be deleted (published results are permanent), or null when it can. */

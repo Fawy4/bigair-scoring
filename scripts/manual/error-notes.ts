@@ -428,6 +428,8 @@ export const CODES_WITHOUT_SENTENCE: Record<string, { shown: string; meaning: st
   BAD_ENTRY: { shown: "“That did not work. Nothing was changed.” (Draw step)", meaning: "A seat names a rider who is not in the division." },
   DIVISION_HAS_HEATS: { shown: "“This division already has heats, so it cannot be deleted.”", meaning: "Deleting a division with heats is refused." },
   DRAW_FUNCTION_ONLY: { shown: "the Draw step's general sentence", meaning: "The draw and its lock change only through the Draw step's buttons." },
+  NOT_A_TEST_ORGANISATION: { shown: "Not shown on a screen: only the test clean-up helper (purge_organisation) can say it.", meaning: "The helper that removes a whole organisation refuses any organisation that is not labelled as test, so Arrow, Redbull and EKL can never be removed with it." },
+  PROBE_NOT_REFUSED: { shown: "Not shown on a screen: only the safety probe used by the tests can say it.", meaning: "The probe asked the helper about an organisation and it did not refuse; the probe always undoes whatever it did, so nothing is lost." },
   DRAW_LOCKED: { shown: "“The draw is locked. Unlock it (with a reason) to change it.”", meaning: "A seat of a locked draw cannot be moved." },
   INVALID_JSON: { shown: "“The settings could not be saved…” (Platform settings)", meaning: "A platform setting was not valid." },
   INVALID_KEY: { shown: "“The settings could not be saved…” (Platform settings)", meaning: "An unknown platform setting." },

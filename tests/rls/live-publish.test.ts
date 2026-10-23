@@ -8,6 +8,7 @@ import { publishHeatCore } from "@/lib/live/publish-core";
 import { parseFormatTemplate } from "@/lib/schemas/format-template";
 import { buildFixture, ENV_OK, type Fixture } from "./helpers";
 import { ago, codeOf, key, mkDivision, mkHeat, type LiveDivision } from "./live-helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
 
 // Phase 5c step 5: Publish is one server transaction, safe to press twice, and it fills the next heats' seats (docs/08 §1H-9).
 const hetx = (h: number, e: number, t: number, x: number) => ({ height: h, extremity: e, technicality: t, execution: x });
@@ -167,7 +168,7 @@ describe.skipIf(!ENV_OK)("Publish, re-open, ladder progression (hosted developme
   });
 
   // ---------------------------------------------------------------- the ladder
-  describe("knockout: the winner takes the next round's seat", () => {
+  describe.skipIf(OFF_UNLESS_DELETE)("knockout: the winner takes the next round's seat", () => {
     let div: string;
     let entries: string[];
     let draw: DivisionDraw;

@@ -1,6 +1,9 @@
 import { test, expect } from "./base";
 import { addLadder, createLiveWorld, type LiveWorld } from "./live-world";
 import { createOrganiser } from "./organiser";
+import { OFF_UNLESS_DELETE } from "../tests/live-guard";
+
+test.skip(OFF_UNLESS_DELETE, "off unless TESTS_MAY_DELETE=1: it deletes or resets rows on the live database");
 
 // Phase 7a-1, step 8d: Reset event on the dashboard and Restore in /admin. A throwaway event with a ladder; Arrow, EKL and Demo are never touched.
 let w: LiveWorld;

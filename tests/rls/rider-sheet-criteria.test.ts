@@ -54,7 +54,6 @@ describe.skipIf(!ENV_OK)("Rider sheet: criteria lines (hosted development projec
   afterAll(async () => {
     if (!f) return;
     await f.cleanup();
-    for (const id of users) await f.s.auth.admin.deleteUser(id).catch(() => undefined);
   });
 
   it("only that judge's own seat writes a criteria line: another seat, an observer, another event's official and a visitor are refused", async () => {

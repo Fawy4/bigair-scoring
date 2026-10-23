@@ -1397,6 +1397,7 @@ export type Database = {
           branding: Json
           created_at: string
           id: string
+          is_test: boolean
           name: string
           plan: string
           settings: Json
@@ -1409,6 +1410,7 @@ export type Database = {
           branding?: Json
           created_at?: string
           id?: string
+          is_test?: boolean
           name: string
           plan?: string
           settings?: Json
@@ -1421,6 +1423,7 @@ export type Database = {
           branding?: Json
           created_at?: string
           id?: string
+          is_test?: boolean
           name?: string
           plan?: string
           settings?: Json
@@ -3799,6 +3802,7 @@ export type Database = {
       publish_heat_inputs: { Args: { p_heat: string }; Returns: Json }
       purge_expired_reset_snapshots: { Args: never; Returns: number }
       purge_organisation: { Args: { p_org: string }; Returns: undefined }
+      purge_refusal_probe: { Args: { p_org: string }; Returns: string }
       regenerate_seat_pin: {
         Args: { p_actor?: string; p_enc: string; p_pin: string; p_seat: string }
         Returns: Json

@@ -1,6 +1,6 @@
 {
   "name": "bigair-scoring",
-  "version": "0.26.0",
+  "version": "0.26.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,6 +13,7 @@
     "lint": "eslint .",
     "seed:presets": "tsx scripts/seed-presets.ts",
     "db:apply": "node scripts/apply-sql.mjs",
+    "orgs:test": "node scripts/mark-test-organisations.mjs",
     "db:status": "node scripts/apply-sql.mjs --status",
     "db:combine": "node scripts/combine-sql.mjs",
     "db:types": "node scripts/gen-types.mjs",

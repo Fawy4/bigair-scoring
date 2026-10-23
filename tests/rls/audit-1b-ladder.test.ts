@@ -10,6 +10,7 @@ import { drawProjection } from "@/lib/draw/projection";
 import { anonClient, ENV_OK } from "./helpers";
 import { ago, codeOf } from "./live-helpers";
 import { buildGouna, sharedFixture, type GounaWorld } from "./audit-1b-world";
+import { OFF_UNLESS_DELETE } from "../live-guard";
 
 afterAll(async () => {
   if (ENV_OK) await (await sharedFixture()).cleanup();
@@ -313,7 +314,7 @@ describe.skipIf(!ENV_OK)("Audit 1b — Reset event restores the locked copy exac
     atLock = await shape();
   }, 600_000);
 
-  it("after Round 1 and Round 2 published, a re-run and a correction, Reset event gives back the heats, seats, Lycras and stored draw of the moment of locking, byte for byte", async () => {
+  it.skipIf(OFF_UNLESS_DELETE)("after Round 1 and Round 2 published, a re-run and a correction, Reset event gives back the heats, seats, Lycras and stored draw of the moment of locking, byte for byte", async () => {
     for (const uid of [...w.uids[0], ...w.uids[1].slice(1)]) {
       const h = await w.heatByUid(uid);
       await w.scoreAndEnd(h.id);

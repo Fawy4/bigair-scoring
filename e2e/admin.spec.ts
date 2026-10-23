@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { test, expect } from "./base";
 import { createOrganiser, effectiveProductName } from "./organiser";
+import { MAY_WRITE_SHARED, OFF_UNLESS_DELETE, OFF_UNLESS_SHARED, OFF_UNLESS_BOTH } from "../tests/live-guard";
 
 // Platform owner layer (/admin). Needs Supabase keys and the 4a-1c migration. Creates and removes its own logins and organisations.
 type Organiser = Awaited<ReturnType<typeof createOrganiser>>;
@@ -15,11 +16,14 @@ test.beforeAll(async () => {
   for (const r of data ?? []) saved[r.key] = r.value;
 });
 test.afterAll(async () => {
-  // put the platform settings back exactly as they were: restore the old rows and remove the ones the tests added
-  for (const [k, v] of Object.entries(saved)) await admin?.db.from("platform_settings").upsert({ key: k, value: v as never });
-  const keep = Object.keys(saved);
-  const { data: now } = await admin.db.from("platform_settings").select("key");
-  for (const r of now ?? []) if (!keep.includes(r.key)) await admin.db.from("platform_settings").delete().eq("key", r.key);
+  // put the platform settings back exactly as they were: restore the old rows and remove the ones the tests added (only the tests that change them run when
+  // TESTS_MAY_WRITE_SHARED=1; otherwise nothing was changed and nothing is touched)
+  if (MAY_WRITE_SHARED) {
+    for (const [k, v] of Object.entries(saved)) await admin?.db.from("platform_settings").upsert({ key: k, value: v as never });
+    const keep = Object.keys(saved);
+    const { data: now } = await admin.db.from("platform_settings").select("key");
+    for (const r of now ?? []) if (!keep.includes(r.key)) await admin.db.from("platform_settings").delete().eq("key", r.key);
+  }
   await admin?.cleanup();
   await plain?.cleanup();
 });
@@ -42,12 +46,13 @@ test("an organiser gets a plain 404 on every admin page and never sees the admin
 });
 
 test("the owner runs the platform: create, invite, rename, open as organiser, archive, delete", async ({ page }) => {
+  test.skip(OFF_UNLESS_DELETE, "off unless TESTS_MAY_DELETE=1: it deletes or resets rows on the live database");
   test.setTimeout(240_000);
   const field = (label: string) => page.getByLabel(label, { exact: true });
   const slug = `e2e-new-${admin.run}`;
   admin.trackOrganisation(slug);
 
-  await admin.signIn(page, "/admin");
+  await admin.signIn(page, "/admin?test=1");
   await expect(page.getByRole("heading", { name: "Organisations", exact: true })).toBeVisible();
   // the list shows the owner's own organisation with its columns
   const ownRow = page.getByRole("row").filter({ hasText: `E2E Big Air ${admin.run}` });
@@ -100,7 +105,7 @@ test("the owner runs the platform: create, invite, rename, open as organiser, ar
   await expect(page.getByText("Organisation renamed").first()).toBeVisible();
 
   // open as this organiser: banner, working organiser screens, back to admin
-  await page.goto("/admin");
+  await page.goto("/admin?test=1");
   const row = page.getByRole("row").filter({ hasText: `E2E Renamed ${admin.run}` });
   await row.getByRole("button", { name: "Open as this organiser" }).click();
   await expect(page).toHaveURL(/\/org$/);
@@ -122,7 +127,7 @@ test("the owner runs the platform: create, invite, rename, open as organiser, ar
   await expect(page.getByRole("row").filter({ hasText: "Organisation created" }).filter({ hasText: `E2E Renamed ${admin.run}` }).first()).toBeVisible();
 
   // archive and unarchive (one confirmation each)
-  await page.goto("/admin");
+  await page.goto("/admin?test=1");
   await page.getByRole("row").filter({ hasText: `E2E Renamed ${admin.run}` }).getByRole("link", { name: "Manage" }).click();
   await page.getByRole("button", { name: "Archive organisation" }).click();
   await page.getByRole("button", { name: "Yes, archive" }).click();
@@ -156,13 +161,14 @@ test("an organisation with published results cannot be deleted, and says why", a
   const { data: heat } = await db.from("heats").insert({ round_id: round!.id, division_id: div!.id, event_id: ev!.id, number: 1, duration_sec: 600, status: "ended" }).select("id").single();
   await db.from("heat_results").insert({ heat_id: heat!.id, entry_id: entry!.id, place: 1, total: 9 });
 
-  await admin.signIn(page, "/admin");
+  await admin.signIn(page, "/admin?test=1");
   await page.getByRole("row").filter({ hasText: `E2E Big Air ${admin.run}` }).getByRole("link", { name: "Manage" }).click();
   await expect(page.getByText(/published results/i).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Delete organisation permanently" })).toBeDisabled();
 });
 
 test("platform settings: the product name replaces the built-in name on the public home page", async ({ page }) => {
+  test.skip(OFF_UNLESS_SHARED, "off unless TESTS_MAY_WRITE_SHARED=1: it writes tables real organisers or the owner see");
   await admin.signIn(page, "/admin/settings");
   await expect(page.getByRole("heading", { name: "Platform settings", exact: true })).toBeVisible();
   const field = (label: string) => page.getByLabel(label, { exact: true });
@@ -199,6 +205,7 @@ test("master presets, audit log and health pages open", async ({ page }) => {
 });
 
 test("master presets: edit makes a new draft version, and publishing makes it the default", async ({ page }) => {
+  test.skip(OFF_UNLESS_BOTH, "off unless TESTS_MAY_DELETE=1 and TESTS_MAY_WRITE_SHARED=1: it deletes rows and writes tables real organisers or the owner see");
   test.setTimeout(180_000);
   // a throwaway system preset (copied from a real one), so the real presets are never touched
   const key = `e2e-${admin.run}`;
@@ -288,7 +295,9 @@ test("Create demo organisation: hidden while a demo exists, and builds the demo 
   await page.getByRole("button", { name: "Yes, create it" }).click();
   await expect(page.getByRole("row").filter({ hasText: "/demo-org" })).toBeVisible({ timeout: 90_000 });
   await expect(button).toHaveCount(0);
-  admin.trackOrganisation("demo-org"); // only reached on a project that had no demo: leave the project as it was
+  // only reached on a project that had no demo: the demo made here is a test organisation like everything else this run creates (hidden from visitors and the default list)
+  await admin.db.from("organisations").update({ is_test: true }).eq("slug", "demo-org");
+  admin.trackOrganisation("demo-org");
 });
 
 test("Move event to another organisation: the owner sees the action and can use it; staff only see who may", async ({ page, browser, baseURL }) => {
@@ -331,17 +340,18 @@ test("Move event to another organisation: the owner sees the action and can use 
 });
 
 test("Organisations list: test data is flagged, and every row has a ⋯ menu with Rename, Archive, Delete (owner) and Invite organiser", async ({ page }) => {
+  test.skip(OFF_UNLESS_DELETE, "off unless TESTS_MAY_DELETE=1: it deletes or resets rows on the live database");
   test.setTimeout(240_000);
   const slug = `e2e-menu-${admin.run}`;
   const name = `E2E Menu ${admin.run}`;
   admin.trackOrganisation(slug);
-  await admin.db.from("organisations").insert({ name, slug });
+  await admin.db.from("organisations").insert({ name, slug, is_test: true });
 
-  await admin.signIn(page, "/admin");
+  await admin.signIn(page, "/admin?test=1");
   const row = () => page.getByRole("row").filter({ hasText: slug });
   await expect(row()).toBeVisible({ timeout: 90_000 });
-  await expect(row()).toContainText("Test data"); // web address starts with e2e-
-  await expect(page.getByRole("row").filter({ hasText: "arrow" }).filter({ hasNotText: "e2e-" }).getByText("Test data")).toHaveCount(0);
+  await expect(row()).toContainText("Test organisation"); // marked as test when it was created (its web address starts with e2e-)
+  await expect(page.getByRole("row").filter({ hasText: "arrow" }).filter({ hasNotText: "e2e-" }).getByText("Test organisation")).toHaveCount(0);
 
   const openMenu = async () => {
     await row().getByRole("button", { name: `More actions for ${name}` }).click();

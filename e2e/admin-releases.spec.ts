@@ -4,6 +4,9 @@ import { PRODUCT_VERSION } from "../src/lib/product-version";
 import { parseReleases } from "../src/lib/releases/releases";
 import { expect, test } from "./base";
 import { createOrganiser } from "./organiser";
+import { OFF_UNLESS_SHARED } from "../tests/live-guard";
+
+test.skip(OFF_UNLESS_SHARED, "off unless TESTS_MAY_WRITE_SHARED=1: it writes tables real organisers or the owner see");
 
 // Admin → Releases on the hosted project. The ticks are real shared state (the owner ticks the same checks on the live address), so this test
 // ticks only a check nobody has ticked, unticks it again, and finally removes every tick its throwaway login left. It never confirms a version.

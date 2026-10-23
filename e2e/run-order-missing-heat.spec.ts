@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { test, expect } from "./base";
 import { createOrganiser } from "./organiser";
+import { OFF_UNLESS_DELETE } from "../tests/live-guard";
+
+test.skip(OFF_UNLESS_DELETE, "off unless TESTS_MAY_DELETE=1: it deletes or resets rows on the live database");
 
 // fix-run-order-duration, on a throwaway organisation: two divisions are drawn and locked on the Draw screen, both go into today's run order, then the second
 // division's draw is made again so one of its heats is gone while a run-order row still names it (what happened to Demo Cup). The head console and the Run order

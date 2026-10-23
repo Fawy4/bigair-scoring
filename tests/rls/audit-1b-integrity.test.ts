@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ENV_OK } from "./helpers";
 import { ago, codeOf, key } from "./live-helpers";
 import { buildGouna, sharedFixture, type GounaWorld } from "./audit-1b-world";
+import { OFF_UNLESS_DELETE } from "../live-guard";
 
 // Audit 1b, part 6 — data integrity on the hosted development project (docs/AUDIT.md). Throwaway organisation only.
 describe.skipIf(!ENV_OK)("Audit 1b — data integrity", () => {
@@ -16,7 +17,7 @@ describe.skipIf(!ENV_OK)("Audit 1b — data integrity", () => {
   // A1b-16: the Riders step refuses "Remove" for a rider already in the draw only when the database says 23503 (a row that points at the entry). heat_slots point
   // at entries with ON DELETE SET NULL, so a rider who has a seat but no attempt yet is removed without a word: the seat goes empty, the stored draw still names the
   // rider, and Start heat is then refused "a seat is still waiting for a place" on a locked draw nobody can re-arrange.
-  it("A1b-16 (fixed in Fix 2): removing a rider who has a seat in a locked draw is refused (ENTRY_IN_DRAW), nothing changes; a rider without a seat can still be removed", async () => {
+  it.skipIf(OFF_UNLESS_DELETE)("A1b-16 (fixed in Fix 2): removing a rider who has a seat in a locked draw is refused (ENTRY_IN_DRAW), nothing changes; a rider without a seat can still be removed", async () => {
     const victim = w.entries[13];
     const seat = (await w.f.s.from("heat_slots").select("heat_id, position").eq("entry_id", victim).single()).data!;
     const r = await w.f.clients.orgA.from("entries").delete().eq("id", victim).select("id");

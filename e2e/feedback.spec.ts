@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { test, expect } from "./base";
 import { createOrganiser, PNG } from "./organiser";
+import { OFF_UNLESS_SHARED } from "../tests/live-guard";
+
+test.skip(OFF_UNLESS_SHARED, "off unless TESTS_MAY_WRITE_SHARED=1: it writes tables real organisers or the owner see");
 
 test.use({ permissions: ["clipboard-read", "clipboard-write"] });
 

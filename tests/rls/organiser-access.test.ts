@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { anonClient, ENV_OK, run, service, signedIn } from "./helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
 
 // Polish 1, item 2: organiser access. Who sees which organisation, who may add or remove an organiser, and what removal does (access ends at once, sessions are
 // signed out, the login stays so the person can be invited again).
@@ -35,8 +36,8 @@ describe.skipIf(!ENV_OK)("Organiser access (hosted development project)", () => 
   beforeAll(async () => {
     for (const k of ["owner", "staff", "orgA", "orgB", "invitee"]) await makeUser(k);
     await s.from("platform_admins").insert([{ user_id: id.owner, role: "owner" }, { user_id: id.staff, role: "staff" }]);
-    id.A = await ins("organisations", { name: `Acc A ${run}`, slug: `plat-acc-a-${run}` });
-    id.B = await ins("organisations", { name: `Acc B ${run}`, slug: `plat-acc-b-${run}` });
+    id.A = await ins("organisations", { name: `Acc A ${run}`, slug: `plat-acc-a-${run}`, is_test: true });
+    id.B = await ins("organisations", { name: `Acc B ${run}`, slug: `plat-acc-b-${run}`, is_test: true });
     orgs.push(id.A, id.B);
     await s.from("memberships").insert([
       { organisation_id: id.A, user_id: id.orgA, role: "owner" },
@@ -54,8 +55,6 @@ describe.skipIf(!ENV_OK)("Organiser access (hosted development project)", () => 
   });
 
   afterAll(async () => {
-    for (const o of orgs) await s.rpc("purge_organisation", { p_org: o });
-    for (const u of users) await s.auth.admin.deleteUser(u);
   });
 
   describe("an organiser sees only their own organisation", () => {
@@ -90,7 +89,7 @@ describe.skipIf(!ENV_OK)("Organiser access (hosted development project)", () => 
       expect((await owner.rpc("admin_remove_organiser", { p_org: id.A, p_user: id.owner })).error?.message).toContain("CANNOT_REMOVE_SELF");
       expect((await owner.rpc("admin_remove_organiser", { p_org: id.A, p_user: id.orgB })).error?.message).toContain("NOT_A_MEMBER");
     });
-    it("ends access at once, signs the person out everywhere, keeps the login, and is audited", async () => {
+    it.skipIf(OFF_UNLESS_DELETE)("ends access at once, signs the person out everywhere, keeps the login, and is audited", async () => {
       // the invitee can read the organisation, and is also an organiser of B: only A is taken away
       await s.from("memberships").insert({ organisation_id: id.B, user_id: id.invitee, role: "owner" });
       expect(((await invitee.from("events").select("id").eq("id", id.evA)).data ?? []).length).toBe(1);
@@ -113,7 +112,7 @@ describe.skipIf(!ENV_OK)("Organiser access (hosted development project)", () => 
       expect(audit.data?.length).toBe(1);
       expect(audit.data?.[0].before).toMatchObject({ user_id: id.invitee });
     });
-    it("can be undone by inviting the same login again: it signs in and sees the organisation", async () => {
+    it.skipIf(OFF_UNLESS_DELETE)("can be undone by inviting the same login again: it signs in and sees the organisation", async () => {
       expect((await owner.rpc("admin_add_organiser", { p_org: id.A, p_user: id.invitee, p_role: "owner" })).error).toBeNull();
       const again = await signedIn(email.invitee, password);
       expect(((await again.from("events").select("id").eq("id", id.evA)).data ?? []).length).toBe(1);

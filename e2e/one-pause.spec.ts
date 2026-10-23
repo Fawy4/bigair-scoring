@@ -6,13 +6,6 @@ import { createLiveWorld, type LiveWorld } from "./live-world";
  * Polish 2b, item 1 — heat pause and simulator pause are ONE state. A simulation at ×10, the owner views it as head judge: Pause on the console stops the virtual
  * officials and the simulator panel says Paused; Resume from the simulator runs both again; then the other way round (Pause on the simulator, Resume on the console).
  */
-async function removeSimulatorUsers(w: LiveWorld, eventIds: string[]) {
-  for (const id of eventIds) {
-    const { data } = await w.db.from("sim_seats").select("virtual_user").eq("event_id", id);
-    for (const r of data ?? []) if (r.virtual_user) await w.db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
-  }
-}
-
 async function makeSimulation(page: Page, w: LiveWorld): Promise<string> {
   await w.org.signIn(page, `/org/events/${w.eventId}/simulate`);
   await page.getByTestId("run-as-simulation-button").click();
@@ -96,7 +89,6 @@ test("pausing from the console or the simulator is one pause: the heat clock and
     await grows();
     await page.getByTestId("sim-stop").click();
   } finally {
-    await removeSimulatorUsers(w, simIds);
     await w.cleanup();
   }
 });

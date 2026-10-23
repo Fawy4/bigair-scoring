@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { drawDemoEvent } from "@/lib/demo/draw";
 import { ENV_OK, run, service } from "./helpers";
 
@@ -14,7 +14,7 @@ describe.skipIf(!ENV_OK)("demo draw", () => {
       if (error) throw new Error(`insert ${table}: ${error.message}`);
       return data as T & { id: string };
     };
-    orgId = (await ins("organisations", { name: `Draw test ${run}`, slug: `plat-draw-${run}` })).id;
+    orgId = (await ins("organisations", { name: `Draw test ${run}`, slug: `plat-draw-${run}`, is_test: true })).id;
     eventId = (await ins("events", { organisation_id: orgId, name: "Draw event", slug: `plat-draw-ev-${run}`, status: "draft" })).id;
     const { data: fmt } = await s.from("format_templates").select("id").is("organisation_id", null).eq("key", "kota-dingle").not("published_at", "is", null).order("version", { ascending: false }).limit(1).single();
     const div = await ins<{ id: string }>("divisions", { event_id: eventId, name: "Pro", sort_order: 1, format_template_id: fmt!.id });
@@ -22,9 +22,6 @@ describe.skipIf(!ENV_OK)("demo draw", () => {
       const rider = await ins<{ id: string }>("riders", { organisation_id: orgId, first_name: `Rider${i}`, last_name: "Draw" });
       await ins("entries", { division_id: div.id, rider_id: rider.id, seed: i, status: "confirmed", source: "manual" });
     }
-  });
-  afterAll(async () => {
-    if (orgId) await s.rpc("purge_organisation", { p_org: orgId });
   });
 
   it("draws every division once with rounds, heats and slots, and a second run changes nothing", async () => {

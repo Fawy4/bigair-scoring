@@ -8,13 +8,6 @@ import { createLiveWorld, type LiveWorld } from "./live-world";
  * every control of every observed screen is disabled, a write sent with the observer's own sign-in is refused by the database, switching the seat off ends
  * the view at once, and the simulator's View as… opens the observer view.
  */
-async function removeSimulatorUsers(w: LiveWorld, eventIds: string[]) {
-  for (const id of eventIds) {
-    const { data } = await w.db.from("sim_seats").select("virtual_user").eq("event_id", id);
-    for (const r of data ?? []) if (r.virtual_user) await w.db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
-  }
-}
-
 async function makeSimulation(page: Page, w: LiveWorld): Promise<string> {
   await w.org.signIn(page, `/org/events/${w.eventId}/simulate`);
   await page.getByTestId("run-as-simulation-button").click();
@@ -183,7 +176,6 @@ test("an Observer joins with its PIN, flips through every official's screen on a
     await page.getByTestId("sim-stop").click();
   } finally {
     await closePhones(phones);
-    await removeSimulatorUsers(w, simIds);
     await w.cleanup();
   }
 });

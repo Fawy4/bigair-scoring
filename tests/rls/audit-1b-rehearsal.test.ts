@@ -57,10 +57,6 @@ describe.skipIf(!ENV_OK)("Audit 1b — event-day rehearsal at ×20, three runs",
   afterAll(async () => {
     if (!ENV_OK) return;
     const f = await sharedFixture();
-    for (const ev of simEvents) {
-      const { data } = await f.s.from("sim_seats").select("virtual_user").eq("event_id", ev);
-      for (const r of data ?? []) if (r.virtual_user) await f.s.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
-    }
     console.info("A1b 8 rehearsal:", JSON.stringify(report, null, 1));
     await f.cleanup();
   });

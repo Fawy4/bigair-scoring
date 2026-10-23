@@ -12,6 +12,32 @@ How to write an entry (copy the newest one):
 - A heading `## ‹version› — ‹date› {#release-‹version with dashes›}`, then a line `PR: #‹number›`.
 - `### What changed` (a short list in plain words), `### What to test` (one `- [ ] ` line per check, or "Nothing to test on the live address."), `### Known issues` (a short list, or "None known.").
 
+## 0.26.1 — 22 Oct 2026 {#release-0-26-1}
+
+PR: #62
+
+### What changed
+- **Test organisations are hidden from visitors.** An organisation can now be marked as **test**. A test organisation and everything in it never appears on the public home page, in the event code box, on any public results page or list, or on its public organisation page, even when its events are published. Nothing inside it is changed, removed or moved: it is a label only, and one command switches it back (`npm run orgs:test -- unmark <web address>`).
+- **Organisations list (platform owner).** It now shows only the real organisations by default (Arrow, Redbull and EKL). A new button **Show test organisations** brings the test ones back, each with a **Test organisation** tag, and **Hide test organisations** hides them again.
+- **Labelled as test today:** the 7 "RLS test" organisations left behind by the database tests, and the Demo organisation. Arrow, Redbull and EKL are not labelled, and the script refuses to label them.
+- **It cannot come back.** Every organisation a browser test, a database test or a setup script creates is labelled as test the moment it is created (the database does it by the web address even if a test forgets). The tests' old clean-up (removing organisations, logins and uploaded files) is gone, so a test run leaves its data behind, labelled as test.
+- **Tests that delete, or that write what real organisers and you see, are switched off.** A test that removes rows on purpose (Delete event, Delete organisation, Reset, Restore, delete a preset, delete a simulation, remove an organiser, or a scenario step that deletes a row) only runs when `TESTS_MAY_DELETE=1` is set. A test that writes system presets, the default preset, master trick base versions, platform settings, release ticks or your feedback notes only runs when `TESTS_MAY_WRITE_SHARED=1` is set; some need both. They come back for good when the separate test database exists. `src/lib/platform/test-hygiene.test.ts` lists each one with its flag, and a test fails if a new one appears without a guard.
+- **Safety net for removal.** The helper that removes a whole organisation (`purge_organisation`) now refuses any organisation that is not labelled as test, so it can never remove Arrow, Redbull or EKL. A test proves the refusal on those three without risk (the check always undoes itself).
+- Nothing about how Arrow, Redbull or EKL events look, score or publish is changed.
+
+### What to test
+- [ ] After this deploys, open the home page (/) signed out: **Red Bull Winds of Sinai 2026** and **Arrow Big Air 2026** still show under Results, and each one opens with its full results (every division, heat and ladder as before this release).
+- [ ] The same Results list shows nothing else: no "A1 published", no "B1 published", no "Gouna rehearsal source" and no event of an "RLS test" organisation.
+- [ ] Sendbook admin → **Organisations**: the list shows only Arrow, Redbull and EKL, with the line "‹n› test organisations are hidden." and a **Show test organisations** button. There is no **Create demo organisation** button.
+- [ ] Press **Show test organisations**: the Demo organisation and the "RLS test" organisations appear, each with a **Test organisation** tag, and the button now says **Hide test organisations**. Press it again: they are gone.
+- [ ] Open /e/a1b-reh-0657d5 (the old "Gouna rehearsal source") and /o/rls-a-f2156156: both say the page is not available. Type a made-up event code in the code box on the home page: it says it cannot be found.
+
+### Known issues
+- A test run now leaves its organisations and logins behind (hidden). The hosted database grows by a few MB per full run; check **Settings → Usage** on Supabase now and then (the Free plan's published limit is 500 MB for the database).
+- About 170 of the 673 database tests and 40 of the 409 browser tests are off in a normal run (counted by reading the code). What still runs covers: the scoring, ladder, draw and heat-start logic; judges, spotters, head judge and observers (what each may do, scores, publishing, flags, the start sequence); public pages and what visitors can and cannot see; registration and rider lists; riders' reports; every refusal that asks for a delete and must be told no. Functions that clear or replace the working rows of their own scenario (regenerating a draw, clearing a score line, the simulator trimming its log) still run: they touch only rows the same test made minutes earlier.
+- Only the starting point of each public page (home list, organisation page, event page, registration page) checks the label. Someone who calls the database's public interface directly with an event's internal id could still read a published test event's results; the website never shows it.
+- `npm run preview:public` (the owner's own preview-event script) switches the label off on purpose so a phone can see the preview, and switches it back on before it removes it.
+
 ## 0.26.0 — 22 Oct 2026 {#release-0-26-0}
 
 PR: #61

@@ -3,6 +3,9 @@ import { test, expect } from "./base";
 import { record } from "./cleanup";
 import { createLiveWorld } from "./live-world";
 import { createOrganiser } from "./organiser";
+import { OFF_UNLESS_SHARED } from "../tests/live-guard";
+
+test.skip(OFF_UNLESS_SHARED, "off unless TESTS_MAY_WRITE_SHARED=1: it writes tables real organisers or the owner see");
 
 // The master trick base editor on throwaway organisations (docs/08 §1I). Each test saves (and some publish) real master versions on the hosted project:
 // every version a test makes is written to the ledger and removed after its throwaway events, so the master base ends as it started. The tests run one

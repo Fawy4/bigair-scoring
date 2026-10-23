@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { anonClient, buildFixture, ENV_OK, failed, run, signedIn, uuid, type Fixture } from "./helpers";
+import { OFF_UNLESS_DELETE, OFF_UNLESS_SHARED, MAY_WRITE_SHARED } from "../live-guard";
 
 // Phase 4a-2: riders, officials, registration, trick base, feedback notes. Each `it` is one plain sentence about who may (or may not) do what.
 const codeOf = (r: { error: { message: string } | null; data: unknown }): string => r.error?.message ?? (r.data as { error?: string } | null)?.error ?? "";
@@ -55,11 +56,8 @@ describe.skipIf(!ENV_OK)("Riders, officials, registration, trick base and feedba
   });
   afterAll(async () => {
     // the owner's note has no organisation, so deleting an organisation would not remove it
-    if (ownerId) await f?.s.from("feedback_notes").delete().eq("author_user_id", ownerId);
-    if (ids.pendingPhoto) await f?.s.storage.from("rider-photos").remove([ids.pendingPhoto]);
-    await f?.s.from("platform_admins").delete().in("user_id", extraUsers);
+    if (ownerId && MAY_WRITE_SHARED) await f?.s.from("feedback_notes").delete().eq("author_user_id", ownerId);
     await f?.cleanup();
-    for (const id of extraUsers) await f?.s.auth.admin.deleteUser(id);
   });
 
   // ------------------------------------------------------------------ small fix: does this login have a password?
@@ -239,7 +237,6 @@ describe.skipIf(!ENV_OK)("Riders, officials, registration, trick base and feedba
       const foreign = `${f.ids.orgB}/reg/${uuid()}.png`;
       await f.s.storage.from("rider-photos").upload(foreign, PNG, { contentType: "image/png" });
       expect(codeOf(await reg(`rls-a1-${run}`, f.ids.divA1, "photo1@example.com", {}, foreign))).toBe("INVALID_PHOTO");
-      await f.s.storage.from("rider-photos").remove([foreign]);
       ids.pendingPhoto = `${f.ids.orgA}/reg/${uuid()}.png`;
       expect((await f.s.storage.from("rider-photos").upload(ids.pendingPhoto, PNG, { contentType: "image/png" })).error).toBeNull();
       expect(codeOf(await reg(`rls-a1-${run}`, f.ids.divA1, "photo2@example.com", {}, ids.pendingPhoto))).toBe("");
@@ -291,7 +288,6 @@ describe.skipIf(!ENV_OK)("Riders, officials, registration, trick base and feedba
       expect((await f.clients.anon.storage.from("rider-photos").upload(`${f.ids.orgA}/${uuid()}.png`, PNG, { contentType: "image/png" })).error).not.toBeNull();
       expect((await f.clients.orgB.storage.from("rider-photos").download(mine)).error).not.toBeNull();
       expect((await f.clients.orgA.storage.from("rider-photos").download(mine)).error).toBeNull();
-      await f.clients.orgA.storage.from("rider-photos").remove([mine]);
     });
   });
 
@@ -487,7 +483,7 @@ describe.skipIf(!ENV_OK)("Riders, officials, registration, trick base and feedba
   });
 
   // ------------------------------------------------------------------ feedback notes
-  describe("feedback notes", () => {
+  describe.skipIf(OFF_UNLESS_SHARED)("feedback notes", () => {
     const note = (client: SupabaseClient, author: string, org: string | null, extra: Record<string, unknown> = {}) =>
       client.from("feedback_notes").insert({ author_user_id: author, author_role: "organiser", organisation_id: org, page: "/org/events/x/riders", page_label: "Riders step", body: "Seed column too narrow", tag: "layout", ...extra }).select("id").single();
 
@@ -541,9 +537,8 @@ describe.skipIf(!ENV_OK)("Riders, officials, registration, trick base and feedba
       expect((await owner.storage.from("feedback").download(path)).error).toBeNull();
       expect((await f.clients.anon.storage.from("feedback").download(path)).error).not.toBeNull();
       expect((await f.s.storage.getBucket("feedback")).data!.public).toBe(false);
-      await f.s.storage.from("feedback").remove([path]);
     });
-    it("deleting an organisation deletes its notes", async () => {
+    it.skipIf(OFF_UNLESS_DELETE)("deleting an organisation deletes its notes", async () => {
       const r = await note(f.clients.orgB, f.userIds.orgB, f.ids.orgB);
       expect(r.error).toBeNull();
       await f.s.rpc("purge_organisation", { p_org: f.ids.orgB });

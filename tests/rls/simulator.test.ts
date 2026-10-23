@@ -2,10 +2,12 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildFixture, ENV_OK, anonClient, type Fixture } from "./helpers";
 import { codeOf } from "./live-helpers";
+import { OFF_UNLESS_DELETE } from "../live-guard";
+
 
 // The event simulator: every function is refused on an event that is not a simulation, and for anybody who is not an organiser of it; a copy is never public (its own
 // organiser can preview it); a virtual seat acts through the same functions a phone uses; the fast clock divides the heat; Reset and delete work and touch only the copy.
-describe.skipIf(!ENV_OK)("Simulator (hosted development project)", () => {
+describe.skipIf(!ENV_OK || OFF_UNLESS_DELETE)("Simulator (hosted development project)", () => {
   let f: Fixture;
   let real: string; // a real (non-simulation) event of organisation A, not run yet
   let heat0: string;
@@ -55,7 +57,6 @@ describe.skipIf(!ENV_OK)("Simulator (hosted development project)", () => {
 
   afterAll(async () => {
     if (!f) return;
-    for (const u of virtualUsers) await f.s.auth.admin.deleteUser(u).catch(() => undefined);
     await f.cleanup();
   });
 

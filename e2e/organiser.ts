@@ -1,11 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import type { Page } from "@playwright/test";
-import { record, removeOrganisationFiles } from "./cleanup";
+import { record } from "./cleanup";
 
 /**
  * A throwaway organiser (login + organisation) created with the service key, signed in through a magic-link token
- * so the test never depends on an inbox. Everything it creates is removed by `cleanup()`.
+ * so the test never depends on an inbox. The organisation is marked as test when it is created; nothing is deleted afterwards (the owner's rule).
  */
 export async function createOrganiser(options: { password?: string; platformAdmin?: "owner" | "staff" } = {}) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -18,11 +18,8 @@ export async function createOrganiser(options: { password?: string; platformAdmi
   // written down before anything else can fail, so the global teardown removes it whatever happens next
   record({ userId: created.user.id });
   record({ orgSlug: `e2e-${run}` });
-  const { data: org, error: orgError } = await db.from("organisations").insert({ name: `E2E Big Air ${run}`, slug: `e2e-${run}` }).select("id").single();
-  if (orgError) {
-    await db.auth.admin.deleteUser(created.user.id);
-    throw new Error(orgError.message);
-  }
+  const { data: org, error: orgError } = await db.from("organisations").insert({ name: `E2E Big Air ${run}`, slug: `e2e-${run}`, is_test: true }).select("id").single();
+  if (orgError) throw new Error(orgError.message);
   await db.from("memberships").insert({ organisation_id: org.id, user_id: created.user.id, role: "owner" });
   if (options.platformAdmin) {
     const { error: adminError } = await db.from("platform_admins").insert({ user_id: created.user.id, role: options.platformAdmin });
@@ -49,28 +46,9 @@ export async function createOrganiser(options: { password?: string; platformAdmi
       extraUsers.push(id);
       record({ userId: id });
     },
-    /** Every step is attempted even if an earlier one fails; the global teardown is the backstop. */
+    /** Nothing is deleted. Kept so every test can call it; the organisation, its logins and files stay, marked as test. */
     async cleanup() {
-      const step = async (fn: () => PromiseLike<unknown>) => {
-        try {
-          await fn();
-        } catch {
-          // keep going: one failed step must not leave the rest behind
-        }
-      };
-      for (const slug of extraOrgSlugs) {
-        await step(async () => {
-          const { data: o } = await db.from("organisations").select("id").eq("slug", slug).maybeSingle();
-          if (o) {
-            await removeOrganisationFiles(db, o.id);
-            await db.rpc("purge_organisation", { p_org: o.id });
-          }
-        });
-      }
-      for (const id of extraUsers) await step(() => db.auth.admin.deleteUser(id));
-      await step(() => removeOrganisationFiles(db, org.id));
-      await step(() => db.rpc("purge_organisation", { p_org: org.id }));
-      await step(() => db.auth.admin.deleteUser(created.user.id));
+      // intentionally empty
     },
     db,
   };

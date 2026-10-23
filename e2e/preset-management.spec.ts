@@ -1,5 +1,8 @@
 import { test, expect } from "./base";
 import { createOrganiser } from "./organiser";
+import { OFF_UNLESS_DELETE } from "../tests/live-guard";
+
+test.skip(OFF_UNLESS_DELETE, "off unless TESTS_MAY_DELETE=1: it deletes or resets rows on the live database");
 
 // Polish 4, items 1, 2 and 4: the organisation's own presets (rename, delete, update from a division), hiding built-ins, and the Load… menu staying on screen.
 // A throwaway organisation with its own event; no built-in preset is changed.

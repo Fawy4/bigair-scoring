@@ -2,7 +2,18 @@
 
 One entry per product version: the date, what changed for users, and which manual pages were updated. Each entry links to its **release entry** (what to test on the live address, known issues), which the platform owner ticks off on Admin → [Releases](screens/admin-releases.md).
 
-Last checked: 22 Oct 2026 · Product version 0.26.0
+Last checked: 22 Oct 2026 · Product version 0.26.1
+
+## 0.26.1 — 22 Oct 2026 {#cl-0-26-1}
+
+Release entry: [0.26.1](/admin/releases#release-0-26-1) (platform owner only)
+
+**What changed for users**
+- **Test organisations.** An organisation labelled as test, and everything in it, is never shown on the public home page, in the event code box, on public results pages or lists, or on its public organisation page. The platform owner's **Organisations** list shows only the real organisations by default; **Show test organisations** brings the others back, tagged **Test organisation**. A label only: nothing inside is changed or removed.
+- Organisations made by the automated tests are labelled as test when they are created, and the tests no longer delete anything from the hosted database.
+
+**Manual pages updated**
+- [Admin: organisations](screens/admin-organisations.md) (the new switch and tag, a new section on test organisations, picture retaken), [Errors](errors.md) (two new codes of the test clean-up helper).
 
 ## 0.26.0 — 22 Oct 2026 {#cl-0-26-0}
 

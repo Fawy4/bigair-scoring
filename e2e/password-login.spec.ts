@@ -65,7 +65,7 @@ test("password sign-in keeps the page you were going to", async ({ page }) => {
 test("invite-only: an account that is not an organiser is refused and signed out; no sign-up form exists", async ({ page }) => {
   const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
   const email = `stranger-${randomBytes(4).toString("hex")}@example.com`;
-  const { data: stranger, error } = await db.auth.admin.createUser({ email, password: PASSWORD, email_confirm: true });
+  const { error } = await db.auth.admin.createUser({ email, password: PASSWORD, email_confirm: true });
   expect(error).toBeNull();
   try {
     await page.goto("/org/login");
@@ -77,7 +77,7 @@ test("invite-only: an account that is not an organiser is refused and signed out
     await expect(page).toHaveURL(/\/org\/login/); // signed out again
     await expect(page.getByRole("button", { name: /sign ?up|register|create account/i })).toHaveCount(0);
   } finally {
-    await db.auth.admin.deleteUser(stranger.user!.id);
+    // the stranger login stays (nothing is deleted from the hosted database); it is a throwaway @example.com address
   }
 });
 

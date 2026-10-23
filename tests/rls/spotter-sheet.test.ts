@@ -50,7 +50,6 @@ describe.skipIf(!ENV_OK)("Rider sheets: spotter corrections and Missed notes (ho
   afterAll(async () => {
     if (!f) return;
     await f.cleanup();
-    for (const id of users) await f.s.auth.admin.deleteUser(id).catch(() => undefined);
   });
 
   it("the spotter changes the trick, the direction and the crash of an attempt it logged, and it is the same attempt every time", async () => {

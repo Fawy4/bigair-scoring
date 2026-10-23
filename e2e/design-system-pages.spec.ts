@@ -1,6 +1,7 @@
 import { test, expect } from "./base";
 import { createLiveWorld, type LiveWorld } from "./live-world";
 import { createOrganiser } from "./organiser";
+import { OFF_UNLESS_DELETE } from "../tests/live-guard";
 
 // Phase 7a-2, step 3: the page layouts of the design system (two-column Event form, the Riders grid with search and a bulk bar, the Officials and
 // Organisations tables, the Go live and Run order date notes). Throwaway organisation; Arrow, EKL and Demo are never touched.
@@ -66,6 +67,7 @@ test("Run order says which day the heats already ran on, once a plan's heats hav
 });
 
 test("Riders: search narrows the list, ticked riders get a bulk bar, and a bulk status change and a bulk remove are saved", async ({ page }) => {
+  test.skip(OFF_UNLESS_DELETE, "off unless TESTS_MAY_DELETE=1: it deletes or resets rows on the live database");
   test.setTimeout(180_000);
   await w.org.signIn(page, `/org/events/${w.eventId}/riders`);
   const rows = page.getByTestId("rider-row");

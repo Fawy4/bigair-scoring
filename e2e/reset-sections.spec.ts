@@ -3,6 +3,9 @@ import { test, expect, installSupabaseProxy, closePhones } from "./base";
 import { addLadder, createLiveWorld, type LiveWorld } from "./live-world";
 import { createClient } from "@supabase/supabase-js";
 import type { BrowserContext, Page } from "@playwright/test";
+import { OFF_UNLESS_DELETE } from "../tests/live-guard";
+
+test.skip(OFF_UNLESS_DELETE, "off unless TESTS_MAY_DELETE=1: it deletes or resets rows on the live database");
 
 // Reset per section (branch fix-reset-visibility) on a throwaway organisation: Reset this heat from the head console, Reset this division, Clear actual times and
 // Reset event (a division with no saved copy is rebuilt). Arrow, EKL and Demo are never touched.

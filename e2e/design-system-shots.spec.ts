@@ -31,8 +31,6 @@ test.beforeAll(async ({ browser }) => {
 });
 test.afterAll(async () => {
   if (w && simId) {
-    const { data } = await w.db.from("sim_seats").select("virtual_user").eq("event_id", simId);
-    for (const r of data ?? []) if (r.virtual_user) await w.db.auth.admin.deleteUser(r.virtual_user).catch(() => undefined);
   }
   await w?.cleanup();
   await owner?.cleanup();
